@@ -120,6 +120,16 @@ export const NODE_TYPE_ARCHETYPE_WEIGHTS = {
     dungeonHalls: 0.15
   },
 
+  /**
+   * Guild advancement battles - formal stone training halls with enough
+   * structural variation to keep repeated class challenges distinct.
+   */
+  guild: {
+    arena: 0.50,
+    dungeonHalls: 0.30,
+    ruinedCastle: 0.20
+  },
+
   // --------------------------------------------------------------------------
   // RACE SUBTYPE NODE MAPPINGS
   // --------------------------------------------------------------------------
@@ -129,7 +139,7 @@ export const NODE_TYPE_ARCHETYPE_WEIGHTS = {
    */
   elven_grove: {
     forestClearing: 0.50,
-    forest: 0.25,
+    openField: 0.25,
     swamp: 0.15,
     ruinedCastle: 0.10
   },

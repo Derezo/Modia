@@ -278,6 +278,7 @@ Turn Transition Flow:
 | [TECHNICAL_ARCHITECTURE.md](TECHNICAL_ARCHITECTURE.md) | Database schemas, system design |
 | [API_SPECIFICATION.md](API_SPECIFICATION.md) | Battle REST endpoints |
 | [FRONTEND_TECHNICAL_PATTERNS.md](FRONTEND_TECHNICAL_PATTERNS.md) | Canvas rendering, deltaTime |
+| [ISOMETRIC_TILE_SYSTEM.md](ISOMETRIC_TILE_SYSTEM.md) | Battle terrain geometry, compiler, renderer contract, and validation |
 | [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) | Parchment UI components |
 
 ---

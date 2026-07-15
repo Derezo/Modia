@@ -140,6 +140,10 @@ function getAssetImagePath(asset) {
   if (category === 'tiles') {
     const biome = asset._biome || asset.biome;
     if (biome) {
+      const webpPath = path.join(baseDir, biome, `${asset.id}.webp`);
+      // The canonical deterministic compiler emits lossless WebP. Preserve
+      // compatibility with older PNG-only tile sets during migration.
+      if (fileExists(webpPath)) return webpPath;
       return path.join(baseDir, biome, `${asset.id}.png`);
     }
     return null;

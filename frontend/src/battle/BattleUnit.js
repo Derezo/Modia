@@ -324,6 +324,26 @@ export class BattleUnit {
   }
 
   /**
+   * Painter-order depth at the current visual footpoint. Logical grid position
+   * changes at movement start for gameplay synchronization, so render ordering
+   * must interpolate from the previous tile until the walk completes.
+   */
+  getRenderDepth() {
+    const position = this.getRenderGridPosition();
+    return position.x + position.y;
+  }
+
+  getRenderGridPosition() {
+    if (!this.isMoving) return { x: this.gridX, y: this.gridY, elevation: this.elevation };
+    const progress = this.movementProgress;
+    return {
+      x: (this.prevGridX ?? this.gridX) + (this.gridX - (this.prevGridX ?? this.gridX)) * progress,
+      y: (this.prevGridY ?? this.gridY) + (this.gridY - (this.prevGridY ?? this.gridY)) * progress,
+      elevation: this.sourceElevation + (this.targetElevation - this.sourceElevation) * progress
+    };
+  }
+
+  /**
    * Start moving to a new grid position
    */
   moveTo(gridX, gridY) {
@@ -717,6 +737,20 @@ export class BattleUnit {
     }
 
     const unitRadius = 16;
+
+    // Sprites otherwise carry no reliable allegiance signal. Keep this at the
+    // unit's footpoint so it remains readable for every art style and team.
+    if (this.isAlive()) {
+      const isAlly = this.teamId === localTeamId;
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(drawX, drawY + 5, unitRadius, unitRadius * 0.42, 0, 0, Math.PI * 2);
+      ctx.strokeStyle = isAlly ? '#64b5f6' : '#ff6b6b';
+      ctx.lineWidth = this.isSelected ? 3 : 2;
+      if (!isAlly) ctx.setLineDash([4, 3]);
+      ctx.stroke();
+      ctx.restore();
+    }
 
     // Draw shadow - follows terrain during movement (not the unit's arc)
     let shadowY = drawY + 4;

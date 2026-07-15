@@ -59,6 +59,9 @@ export function generateBattleTerrain(mapSeed, nodeType, width = DEFAULT_MAP_WID
   return {
     terrain,
     elevation,
+    elevationFormat: mapData.elevationFormat,
+    obstacles: mapData.obstacles,
+    variants: mapData.variants,
     mapSeed,
     mapWidth: width,
     mapHeight: height

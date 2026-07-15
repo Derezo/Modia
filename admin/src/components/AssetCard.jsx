@@ -85,6 +85,7 @@ export function AssetStateBadge({ state }) {
 const AssetCard = memo(function AssetCard({
   asset,
   category,
+  selectionId,
   selected = false,
   onSelect,
   onClick,
@@ -108,7 +109,7 @@ const AssetCard = memo(function AssetCard({
    */
   const handleCheckboxClick = (e) => {
     e.stopPropagation();
-    onSelect?.(id, !selected);
+    onSelect?.(selectionId || id, !selected);
   };
 
   /**
@@ -147,8 +148,8 @@ const AssetCard = memo(function AssetCard({
    */
   const handleRegenerate = useCallback((e) => {
     e.stopPropagation();
-    onRegenerate?.(id);
-  }, [id, onRegenerate]);
+    onRegenerate?.(asset);
+  }, [asset, onRegenerate]);
 
   /**
    * Handle toggle mark for regeneration

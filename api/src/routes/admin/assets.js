@@ -343,7 +343,7 @@ router.post('/generate/regeneration-queue', asyncHandler(async (req, res) => {
 /**
  * PUT /mark-multiple
  * Mark multiple assets for regeneration at once
- * Body: { category: string, ids: string[], mark: boolean, biome?: string }
+ * Body: { category: string, ids: string[], mark: boolean, biome?: string, subcategory?: string }
  * Note: For tiles, biome is required to disambiguate assets with same ID
  *
  * SECURITY: Validates all IDs before processing
@@ -352,7 +352,7 @@ router.post('/generate/regeneration-queue', asyncHandler(async (req, res) => {
 router.put('/mark-multiple', asyncHandler(async (req, res) => {
   ensureUtilities();
 
-  const { category, ids, mark = true, biome } = req.body;
+  const { category, ids, mark = true, biome, subcategory } = req.body;
 
   if (!category || !Array.isArray(ids)) {
     throw new AppError('category and ids array required', 400);
@@ -389,7 +389,7 @@ router.put('/mark-multiple', asyncHandler(async (req, res) => {
   // Group assets by source file to enable atomic updates per file
   const byFile = new Map();
   for (const id of ids) {
-    const asset = findAssetById(data, category, id, { biome });
+    const asset = findAssetById(data, category, id, { biome, tileCategory: subcategory });
     if (!asset) {
       results.notFound++;
       continue;
@@ -410,7 +410,10 @@ router.put('/mark-multiple', asyncHandler(async (req, res) => {
 
       for (const { id, asset: _asset } of assets) {
         // Re-verify asset exists with fresh data - use same disambiguation
-        const freshAsset = findAssetById(freshData, category, id, { biome });
+        const freshAsset = findAssetById(freshData, category, id, {
+          biome,
+          tileCategory: subcategory,
+        });
         if (!freshAsset) {
           results.errors.push({ id, error: 'Asset disappeared during update' });
           continue;
@@ -451,7 +454,7 @@ router.put('/mark-multiple', asyncHandler(async (req, res) => {
 /**
  * POST /bulk-update
  * Bulk update metadata for multiple assets
- * Body: { assetIds: string[], category: string, updates: { loraModel?, priority?, qualityScore?, note? }, biome?: string }
+ * Body: { assetIds: string[], category: string, updates: { loraModel?, priority?, qualityScore?, note? }, biome?: string, subcategory?: string }
  * Note: For tiles, biome is required to disambiguate assets with same ID
  *
  * SECURITY: Validates all IDs before processing
@@ -460,7 +463,7 @@ router.put('/mark-multiple', asyncHandler(async (req, res) => {
 router.post('/bulk-update', asyncHandler(async (req, res) => {
   ensureUtilities();
 
-  const { assetIds, category, updates, biome } = req.body;
+  const { assetIds, category, updates, biome, subcategory } = req.body;
 
   if (!category || !Array.isArray(assetIds) || !updates) {
     throw new AppError('category, assetIds array, and updates object required', 400);
@@ -530,7 +533,7 @@ router.post('/bulk-update', asyncHandler(async (req, res) => {
   // Group assets by source file to enable atomic updates per file
   const byFile = new Map();
   for (const id of assetIds) {
-    const asset = findAssetById(data, category, id, { biome });
+    const asset = findAssetById(data, category, id, { biome, tileCategory: subcategory });
     if (!asset) {
       results.notFound++;
       continue;
@@ -551,7 +554,10 @@ router.post('/bulk-update', asyncHandler(async (req, res) => {
 
       for (const { id } of assets) {
         // Re-verify asset exists with fresh data - use same disambiguation
-        const freshAsset = findAssetById(freshData, category, id, { biome });
+        const freshAsset = findAssetById(freshData, category, id, {
+          biome,
+          tileCategory: subcategory,
+        });
         if (!freshAsset) {
           results.errors.push({ id, error: 'Asset disappeared during update' });
           continue;

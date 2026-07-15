@@ -42,6 +42,8 @@ load_env() {
     DB_NAME="${DB_NAME:-modia}"
     DB_USER="${DB_USER:-modia}"
     DB_PASSWORD="${DB_PASSWORD:-modia_dev_password}"
+    PORT="${PORT:-3000}"
+    FRONTEND_PORT="${VITE_FRONTEND_PORT:-8080}"
 }
 
 # =============================================================================
@@ -115,8 +117,8 @@ check_and_kill_port() {
 }
 
 cleanup_ports() {
-    check_and_kill_port 3000
-    check_and_kill_port 8080
+    check_and_kill_port "$PORT"
+    check_and_kill_port "$FRONTEND_PORT"
     echo ""
 }
 
@@ -395,8 +397,8 @@ launch_dev() {
     echo -e "[Launch] Starting development servers..."
     echo ""
     echo -e "${CYAN}========================================${NC}"
-    echo -e "${CYAN}  API: http://localhost:3000${NC}"
-    echo -e "${CYAN}  Frontend: http://localhost:8080${NC}"
+    echo -e "${CYAN}  API: http://localhost:${PORT}${NC}"
+    echo -e "${CYAN}  Frontend: http://localhost:${FRONTEND_PORT}${NC}"
     echo -e "${CYAN}========================================${NC}"
     echo ""
 

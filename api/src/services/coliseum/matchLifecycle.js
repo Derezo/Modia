@@ -41,6 +41,7 @@ import {
   FORMATION_SELECTION_TIMEOUT,
   FORMATION_TIMEOUT_BAN_DURATION
 } from './constants.js';
+import { validateFormationPayload } from '../battle/formationValidation.js';
 import { broadcastQueueUpdate } from './queueBroadcaster.js';
 import { captureTeamSnapshots, calculateMatchStats, calculateEnhancedMatchStats, getPlayerRank } from './statistics.js';
 import { setCompleteMatchFn, cancelTurnTimer, startTurnTimer } from './turnTimer.js';
@@ -346,18 +347,9 @@ export async function submitFormation(matchId, userId, formation) {
  * @returns {Promise<Object>} Validation result
  */
 async function validateFormation(userId, formation, _queueType) {
-  if (!formation || typeof formation !== 'object') {
-    return { success: false, error: 'Invalid formation data' };
-  }
-
-  const characterIds = Object.keys(formation).map(id => parseInt(id, 10));
-  if (characterIds.length === 0 || characterIds.some(id => isNaN(id) || id <= 0)) {
-    return { success: false, error: 'Invalid formation data' };
-  }
-
-  if (characterIds.length > 5) {
-    return { success: false, error: 'Formation cannot have more than 5 characters' };
-  }
+  const payloadValidation = validateFormationPayload(formation, { required: true });
+  if (!payloadValidation.success) return payloadValidation;
+  const { characterIds } = payloadValidation;
 
   // Verify all characters belong to the user and are in battle party
   const result = await query(
@@ -368,22 +360,6 @@ async function validateFormation(userId, formation, _queueType) {
 
   if (result.rows.length !== characterIds.length) {
     return { success: false, error: 'Invalid character selection' };
-  }
-
-  // Validate positions are within grid bounds (5x4 grid)
-  const positions = new Set();
-  for (const [_charId, pos] of Object.entries(formation)) {
-    if (typeof pos.tileX !== 'number' || typeof pos.tileY !== 'number') {
-      return { success: false, error: 'Invalid position data' };
-    }
-    if (pos.tileX < 0 || pos.tileX > 4 || pos.tileY < 0 || pos.tileY > 3) {
-      return { success: false, error: 'Position out of bounds' };
-    }
-    const key = `${pos.tileX},${pos.tileY}`;
-    if (positions.has(key)) {
-      return { success: false, error: 'Duplicate positions not allowed' };
-    }
-    positions.add(key);
   }
 
   return { success: true };
@@ -724,6 +700,9 @@ async function startMatchWithFormations(matchId) {
       units: [],
       terrain: mapData.terrain,
       elevation: mapData.elevation,
+      elevationFormat: mapData.elevationFormat,
+      obstacles: mapData.obstacles,
+      variants: mapData.variants,
       mapWidth: 32,
       mapHeight: 32,
       consumables: [],

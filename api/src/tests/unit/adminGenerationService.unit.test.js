@@ -12,14 +12,25 @@
  * These tests focus on business logic validation and error handling.
  */
 
-import { describe, it, beforeEach } from 'node:test';
+import { after, describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert';
+import { readFileSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 // =============================================================================
 // IMPORT SERVICE
 // =============================================================================
 
-import {
+const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
+const THEME_PATH = path.resolve(TEST_DIR, '../../../../ai-image-metadata/theme.json');
+const ORIGINAL_THEME = readFileSync(THEME_PATH, 'utf8');
+
+// This file queues jobs to exercise validation. It must never launch the real
+// asset backends when invoked directly with `node --test`.
+process.env.NODE_ENV = 'test';
+
+const {
   queueJob,
   getValidCategories,
   getValidLoraModels,
@@ -28,7 +39,11 @@ import {
   setGenerationBackend,
   getGenerationBackend,
   resetIncrementalSeed
-} from '../../services/adminGenerationService.js';
+} = await import('../../services/adminGenerationService.js');
+
+after(() => {
+  writeFileSync(THEME_PATH, ORIGINAL_THEME);
+});
 
 // =============================================================================
 // TEST DATA FACTORIES
@@ -180,6 +195,11 @@ describe('adminGenerationService', () => {
         const result = queueJob('tiles', {}, { seedMode });
         assert.ok(result.jobId);
       }
+    });
+
+    it('should preserve a trailing newline when persisting the backend', () => {
+      setGenerationBackend('comfyui');
+      assert.ok(readFileSync(THEME_PATH, 'utf8').endsWith('\n'));
     });
   });
 

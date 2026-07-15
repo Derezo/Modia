@@ -43,6 +43,35 @@ import {
 // ============================================================
 
 /**
+ * Build a complete battle snapshot for explicit resync requests.
+ * Known transient fields retain their backwards-compatible defaults, while
+ * every stored map, unit, and battle field remains present in the response.
+ *
+ * @param {Object} state - Stored battle state
+ * @returns {Object} Complete battle state snapshot
+ */
+function buildBattleStateForSync(state) {
+  const storedState = state && typeof state === 'object' ? state : {};
+
+  return {
+    ...storedState,
+    turnCount: storedState.turnCount ?? storedState.turn ?? 0,
+    status: storedState.status ?? 'active',
+    units: Array.isArray(storedState.units)
+      ? storedState.units.map(unit => ({
+        ...unit,
+        ct: unit.ct ?? 0,
+        hasActed: unit.hasActed ?? false,
+        moveUsed: unit.moveUsed ?? false,
+        actUsed: unit.actUsed ?? false,
+        turnPhase: unit.turnPhase ?? 'ready',
+        statusEffects: unit.statusEffects ?? []
+      }))
+      : []
+  };
+}
+
+/**
  * Get battle state for sync request
  * @param {number} battleId - Battle ID
  * @returns {Object|null} Battle state or null if not found
@@ -58,25 +87,7 @@ async function getBattleStateForSync(battleId) {
       return null;
     }
 
-    const state = result.rows[0].battle_state;
-    return {
-      activeUnitId: state.activeUnitId,
-      turnCount: state.turnCount || 0,
-      status: state.status || 'active',
-      units: state.units?.map(u => ({
-        id: u.id,
-        tileX: u.tileX,
-        tileY: u.tileY,
-        hp: u.hp,
-        mp: u.mp,
-        ct: u.ct || 0,
-        hasActed: u.hasActed || false,
-        moveUsed: u.moveUsed ?? false,
-        actUsed: u.actUsed ?? false,
-        turnPhase: u.turnPhase ?? 'ready',
-        statusEffects: u.statusEffects || []
-      })) || []
-    };
+    return buildBattleStateForSync(result.rows[0].battle_state);
   } catch (error) {
     console.error('Error getting battle state for sync:', error);
     return null;
@@ -575,6 +586,17 @@ async function handleBattleSyncRequest(ws, userId, message) {
     ws.send(JSON.stringify({
       type: 'error',
       payload: { message: 'Missing battleId in sync request' }
+    }));
+    return;
+  }
+
+  // Joining a battle room performs the participant authorization check. Do
+  // not expose the now-complete map/unit snapshot to an authenticated user who
+  // merely guesses another active battle ID.
+  if (!isUserInRoom(`battle:${battleId}`, userId)) {
+    ws.send(JSON.stringify({
+      type: 'error',
+      payload: { message: 'Access denied to battle sync' }
     }));
     return;
   }
@@ -1146,6 +1168,9 @@ async function handlePresenceUpdate(ws, userId, username, payload, broadcastPres
 // ============================================================
 
 export {
+  // Battle state helper
+  buildBattleStateForSync,
+
   // Chat
   handleChatMessage,
   handlePrivateMessage,

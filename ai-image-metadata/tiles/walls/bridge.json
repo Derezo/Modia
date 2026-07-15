@@ -85,7 +85,7 @@
       "terrain": "lava",
       "prompt": "seamless vertical heat-damaged bridge wall texture with scorch marks, tileable horizontal pattern, side view cross-section, black orange tones",
       "seed": 41081,
-      "generated": false,
+      "generated": true,
       "needsRegeneration": false,
       "regenerationQueuedAt": null
     },
@@ -94,7 +94,7 @@
       "terrain": "cliff",
       "prompt": "seamless vertical bridge abutment cliff texture with carved stone supports, tileable horizontal pattern, side view cross-section, sandstone tones",
       "seed": 41091,
-      "generated": false,
+      "generated": true,
       "needsRegeneration": false,
       "regenerationQueuedAt": null
     },
@@ -103,7 +103,7 @@
       "terrain": "tree",
       "prompt": "seamless vertical wooden bridge beam texture with timber grain and iron bands, tileable horizontal pattern, side view cross-section, oak brown tones",
       "seed": 41101,
-      "generated": false,
+      "generated": true,
       "needsRegeneration": false,
       "regenerationQueuedAt": null
     }

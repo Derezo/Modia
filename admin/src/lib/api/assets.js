@@ -87,12 +87,19 @@ export const updateAsset = (category, id, updates, options = {}) =>
  * @param {object} updates - Fields to update (qualityScore, priority, loraModel, note)
  * @param {object} options - Additional options
  * @param {string} options.biome - Required for tiles category
+ * @param {string} options.subcategory - Tile category (floors, slopes, walls)
  * @returns {Promise<object>} Result with updated count and any errors
  */
 export const bulkUpdateAssets = (category, assetIds, updates, options = {}) =>
   fetchAPI('/assets/bulk-update', {
     method: 'POST',
-    body: JSON.stringify({ assetIds, category, updates, biome: options.biome }),
+    body: JSON.stringify({
+      assetIds,
+      category,
+      updates,
+      biome: options.biome,
+      subcategory: options.subcategory,
+    }),
   });
 
 // ============================================================================

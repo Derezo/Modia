@@ -43,6 +43,12 @@ export class BattleInputHandler {
     // Mobile long-press state
     this.longPressTimer = null;         // Mobile long-press timer for manual cycling
     this.longPressStartPos = null;      // Position at long-press start
+    this.touchStartPos = null;          // Canvas-space start position for tap/pan discrimination
+    this.touchStartClientPos = null;    // CSS-pixel start position for device-independent touch slop
+    this.touchLastPos = null;           // Most recent canvas-space touch position
+    this.touchMoved = false;            // True once movement exceeds the tap slop
+    this.touchLongPressTriggered = false;
+    this.touchHadMultiplePointers = false;
 
     // Pinch-zoom state — consumed from game.input.getPinchState() each frame
     this.wasPinching = false;
@@ -76,10 +82,11 @@ export class BattleInputHandler {
     window.addEventListener('keydown', (e) => this.handleKeydown(e), opts);
 
     // Touch events for mobile
-    canvas.addEventListener('touchstart', (e) => this.handleTouchStart(e), opts);
-    canvas.addEventListener('touchmove', (e) => this.handleTouchMove(e), opts);
-    canvas.addEventListener('touchend', () => this.handleTouchEnd(), opts);
-    canvas.addEventListener('touchcancel', () => this.handleTouchCancel(), opts);
+    const touchOpts = { signal: this.abortController.signal, passive: false };
+    canvas.addEventListener('touchstart', (e) => this.handleTouchStart(e), touchOpts);
+    canvas.addEventListener('touchmove', (e) => this.handleTouchMove(e), touchOpts);
+    canvas.addEventListener('touchend', (e) => this.handleTouchEnd(e), touchOpts);
+    canvas.addEventListener('touchcancel', (e) => this.handleTouchCancel(e), touchOpts);
   }
 
   /**
@@ -96,6 +103,7 @@ export class BattleInputHandler {
       this.longPressTimer = null;
     }
     this.longPressStartPos = null;
+    this.resetTouchGesture();
     this.tileCandidates = [];
   }
 
@@ -104,8 +112,17 @@ export class BattleInputHandler {
    * @param {MouseEvent} _e - Mouse event (unused, position from input handler)
    */
   handleMouseMove(_e) {
-    const scene = this.scene;
     const pos = this.game.input.getPointerPosition();
+    this.updatePointerInteraction(pos, true);
+  }
+
+  /**
+   * Update hover/cycling state for either a mouse or touch pointer.
+   * @param {{x: number, y: number}} pos Canvas-space pointer position
+   * @param {boolean} updatePan Whether an active camera pan should be advanced
+   */
+  updatePointerInteraction(pos, updatePan = false) {
+    const scene = this.scene;
 
     // Update outro sequence button hover state
     if (scene.outroSequence) {
@@ -113,7 +130,7 @@ export class BattleInputHandler {
     }
 
     // Update pan if dragging
-    if (scene.camera.isPanning) {
+    if (updatePan && scene.camera.isPanning) {
       scene.camera.updatePan(pos.x, pos.y);
     }
 
@@ -124,11 +141,19 @@ export class BattleInputHandler {
     const posKey = `${Math.round(pos.x / 10)},${Math.round(pos.y / 10)}`;
     if (this.lastTileCyclePosition !== posKey) {
       this.lastTileCyclePosition = posKey;
-      this.tileCandidates = candidates;
       this.tileCycleIndex = 0;
       this.tileCycleTimer = 0;
       this.tileCyclePaused = false;
     }
+
+    // Candidate geometry can change within the same coarse position bucket
+    // (for example while the camera moves), so keep the current list fresh
+    // without discarding the user's selected cycle index.
+    this.tileCandidates = candidates;
+    this.tileCycleIndex = Math.min(
+      this.tileCycleIndex,
+      Math.max(0, candidates.length - 1)
+    );
 
     // Update hovered tile based on current cycle index (with bounds check)
     if (candidates.length > 0) {
@@ -141,6 +166,25 @@ export class BattleInputHandler {
 
     // Update target info if hovering over unit
     this.updateHoverTargetInfo(pos);
+  }
+
+  /** Resolve a click to the candidate currently selected by tile cycling. */
+  getCycledTileAtPosition(pos) {
+    const candidates = this.scene.grid.getTileAtScreen(
+      pos.x,
+      pos.y,
+      this.scene.camera,
+      true
+    ) || [];
+    if (candidates.length === 0) return null;
+
+    const selected = this.tileCandidates[this.tileCycleIndex];
+    const matchingCandidate = selected && candidates.find(candidate =>
+      candidate.x === selected.x && candidate.y === selected.y
+    );
+    const fallback = candidates[Math.min(this.tileCycleIndex, candidates.length - 1)];
+    const tile = matchingCandidate || fallback;
+    return { x: tile.x, y: tile.y };
   }
 
   /**
@@ -186,9 +230,10 @@ export class BattleInputHandler {
 
   /**
    * Handle mouse down - start panning
-   * @param {MouseEvent} _e - Mouse event
+   * @param {MouseEvent} e - Mouse event
    */
-  handleMouseDown(_e) {
+  handleMouseDown(e) {
+    if (e?.button !== undefined && e.button !== 0) return;
     if (this.isSuppressedByPinch()) return;
     const pos = this.game.input.getPointerPosition();
     this.scene.camera.startPan(pos.x, pos.y);
@@ -199,6 +244,7 @@ export class BattleInputHandler {
    * @param {MouseEvent} e - Mouse event
    */
   handleMouseUp(e) {
+    if (e?.button !== undefined && e.button !== 0) return;
     const scene = this.scene;
     const panDistance = scene.camera.getPanDistance();
     scene.camera.endPan();
@@ -215,7 +261,7 @@ export class BattleInputHandler {
         return; // Click was handled by outro sequence
       }
 
-      const tile = scene.grid.getTileAtScreen(pos.x, pos.y, scene.camera);
+      const tile = this.getCycledTileAtPosition(pos);
       if (tile) {
         this.handleTileClick(tile.x, tile.y, { mouseX: e.clientX, mouseY: e.clientY });
       }
@@ -286,28 +332,64 @@ export class BattleInputHandler {
    * @param {TouchEvent} e - Touch event
    */
   handleTouchStart(e) {
+    e.preventDefault?.();
+
     // Multi-touch: cancel long-press, leave pinch handling to InputHandler
     if (e.touches.length >= 2) {
-      if (this.longPressTimer) {
-        clearTimeout(this.longPressTimer);
-        this.longPressTimer = null;
-      }
-      this.longPressStartPos = null;
+      this.touchHadMultiplePointers = true;
+      this.cancelLongPress();
+      this.touchStartPos = null;
+      this.touchStartClientPos = null;
+      this.touchLastPos = null;
+      this.touchMoved = true;
+      if (this.scene.camera.isPanning) this.scene.camera.endPan();
       return;
     }
-    if (this.tileCandidates.length <= 1) return;
+
+    if (this.isSuppressedByPinch() || !e.touches[0]) return;
 
     const touch = e.touches[0];
-    this.longPressStartPos = { x: touch.clientX, y: touch.clientY };
+    const pos = this.getTouchCanvasPosition(touch);
+    this.touchHadMultiplePointers = false;
+    this.touchStartPos = pos;
+    this.touchStartClientPos = { x: touch.clientX, y: touch.clientY };
+    this.touchLastPos = pos;
+    this.touchMoved = false;
+    this.touchLongPressTriggered = false;
+    this.longPressStartPos = pos;
+
+    // Touch does not produce a synthetic mouse event because the core input
+    // handler prevents the browser default. Perform hover discovery and start
+    // the camera gesture explicitly.
+    this.updatePointerInteraction(pos, false);
+    this.scene.camera.startPan(pos.x, pos.y);
+
+    if (this.tileCandidates.length <= 1) return;
 
     // Start long-press timer (400ms)
     this.longPressTimer = setTimeout(() => {
+      this.touchLongPressTriggered = true;
       this.cycleTileManual();
       // Provide haptic feedback if available
-      if (navigator.vibrate) {
-        navigator.vibrate(50);
+      if (globalThis.navigator?.vibrate) {
+        globalThis.navigator.vibrate(50);
       }
+      this.longPressTimer = null;
     }, 400);
+  }
+
+  /** Convert a DOM touch to the logical canvas coordinate system. */
+  getTouchCanvasPosition(touch) {
+    if (this.game.input.getCanvasCoords) {
+      return this.game.input.getCanvasCoords(touch.clientX, touch.clientY);
+    }
+
+    const canvas = this.game.canvas;
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (touch.clientX - rect.left) * (canvas.width / rect.width),
+      y: (touch.clientY - rect.top) * (canvas.height / rect.height)
+    };
   }
 
   /**
@@ -360,41 +442,105 @@ export class BattleInputHandler {
    * @param {TouchEvent} e - Touch event
    */
   handleTouchMove(e) {
-    if (!this.longPressTimer || !this.longPressStartPos) return;
+    e.preventDefault?.();
+
+    if (e.touches.length >= 2) {
+      this.touchHadMultiplePointers = true;
+      this.cancelLongPress();
+      if (this.scene.camera.isPanning) this.scene.camera.endPan();
+      return;
+    }
+
+    if (!this.touchStartPos || !this.touchStartClientPos || !e.touches[0]) return;
 
     const touch = e.touches[0];
-    const dx = touch.clientX - this.longPressStartPos.x;
-    const dy = touch.clientY - this.longPressStartPos.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
+    const pos = this.getTouchCanvasPosition(touch);
+    // Gesture slop is a physical CSS-pixel UX threshold. Measuring in the
+    // logical 800x600 canvas made it shrink to ~5px on a 390px phone.
+    const dx = touch.clientX - this.touchStartClientPos.x;
+    const dy = touch.clientY - this.touchStartClientPos.y;
+    const dist = Math.hypot(dx, dy);
+    this.touchLastPos = pos;
 
-    // Cancel long-press if finger moved more than 10px
+    // Cancel long-press if the finger moved more than 10 CSS pixels.
     if (dist > 10) {
-      clearTimeout(this.longPressTimer);
-      this.longPressTimer = null;
-      this.longPressStartPos = null;
+      this.touchMoved = true;
+      this.cancelLongPress();
+      this.scene.camera.updatePan(pos.x, pos.y);
     }
+
+    this.updatePointerInteraction(pos, false);
   }
 
   /**
    * Handle touch end - clear long-press timer
    */
-  handleTouchEnd() {
-    if (this.longPressTimer) {
-      clearTimeout(this.longPressTimer);
-      this.longPressTimer = null;
+  handleTouchEnd(e) {
+    e?.preventDefault?.();
+
+    if (this.touchHadMultiplePointers) {
+      this.cancelLongPress();
+      if (this.scene.camera.isPanning) this.scene.camera.endPan();
+      if (!e?.touches?.length) this.resetTouchGesture();
+      return;
     }
-    this.longPressStartPos = null;
+
+    const touch = e?.changedTouches?.[0];
+    const pos = touch ? this.getTouchCanvasPosition(touch) : this.touchLastPos;
+    const shouldTap = Boolean(
+      this.touchStartPos &&
+      pos &&
+      !this.touchMoved &&
+      !this.touchLongPressTriggered &&
+      !this.isSuppressedByPinch()
+    );
+
+    this.cancelLongPress();
+    if (this.scene.camera.isPanning) this.scene.camera.endPan();
+
+    if (shouldTap) {
+      this.updatePointerInteraction(pos, false);
+
+      if (this.scene.outroSequence?.handleClick(pos.x, pos.y)) {
+        this.resetTouchGesture();
+        return;
+      }
+
+      const tile = this.getCycledTileAtPosition(pos);
+      if (tile) {
+        this.handleTileClick(tile.x, tile.y, {
+          mouseX: touch?.clientX ?? pos.x,
+          mouseY: touch?.clientY ?? pos.y
+        });
+      }
+    }
+
+    this.resetTouchGesture();
   }
 
   /**
    * Handle touch cancel - clear long-press timer
    */
-  handleTouchCancel() {
-    if (this.longPressTimer) {
-      clearTimeout(this.longPressTimer);
-      this.longPressTimer = null;
-    }
+  handleTouchCancel(e) {
+    e?.preventDefault?.();
+    this.cancelLongPress();
+    if (this.scene.camera.isPanning) this.scene.camera.endPan();
+    this.resetTouchGesture();
+  }
+
+  cancelLongPress() {
+    if (this.longPressTimer) clearTimeout(this.longPressTimer);
+    this.longPressTimer = null;
     this.longPressStartPos = null;
+  }
+
+  resetTouchGesture() {
+    this.touchStartPos = null;
+    this.touchStartClientPos = null;
+    this.touchLastPos = null;
+    this.touchMoved = false;
+    this.touchLongPressTriggered = false;
+    this.touchHadMultiplePointers = false;
   }
 
   /**

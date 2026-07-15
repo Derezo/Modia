@@ -87,14 +87,24 @@ export class PathCarverAlgorithm {
 
     // Carve each path
     for (const endpoint of endpoints) {
+      const resolveCoordinate = (point, axis, extent) => {
+        const absolute = point?.[axis];
+        if (Number.isFinite(absolute)) return absolute;
+        const ratio = point?.[`${axis}Ratio`];
+        if (Number.isFinite(ratio)) {
+          return Math.round(Math.max(0, Math.min(1, ratio)) * (extent - 1));
+        }
+        return 0;
+      };
+
       // Adjust endpoints for bounds offset
       const start = {
-        x: bounds.x + endpoint.start.x,
-        y: bounds.y + endpoint.start.y
+        x: bounds.x + resolveCoordinate(endpoint.start, 'x', bounds.width),
+        y: bounds.y + resolveCoordinate(endpoint.start, 'y', bounds.height)
       };
       const end = {
-        x: bounds.x + endpoint.end.x,
-        y: bounds.y + endpoint.end.y
+        x: bounds.x + resolveCoordinate(endpoint.end, 'x', bounds.width),
+        y: bounds.y + resolveCoordinate(endpoint.end, 'y', bounds.height)
       };
 
       // Select carving algorithm based on style
@@ -360,8 +370,10 @@ export class PathCarverAlgorithm {
 
     let x = x0;
     let y = y0;
+    let steps = 0;
+    const maxSteps = (width + height) * 2;
 
-    while (true) {
+    while (steps++ < maxSteps) {
       // Carve at current position
       if (x >= 0 && x < width && y >= 0 && y < height) {
         this._carveCircle(terrain, x, y, Math.floor(this.pathWidth / 2));

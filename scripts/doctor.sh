@@ -205,17 +205,17 @@ check_env_vars() {
 }
 
 # =============================================================================
-# Check 7: Port 3000 available
+# Check 7: API port available
 # =============================================================================
-check_port_3000() {
-    check_port 3000 "API server"
+check_api_port() {
+    check_port "${PORT:-3000}" "API server"
 }
 
 # =============================================================================
-# Check 8: Port 8080 available
+# Check 8: Frontend port available
 # =============================================================================
-check_port_8080() {
-    check_port 8080 "Frontend server"
+check_frontend_port() {
+    check_port "${VITE_FRONTEND_PORT:-8080}" "Frontend server"
 }
 
 # Helper function to check if a port is available
@@ -277,8 +277,8 @@ check_postgres_container
 check_db_connection
 check_env_file
 check_env_vars
-check_port_3000
-check_port_8080
+check_api_port
+check_frontend_port
 
 # =============================================================================
 # Summary

@@ -556,6 +556,54 @@ describe('messageHandlers - Module Structure', () => {
     assert.strictEqual(typeof handlers.handleBattleSyncRequest, 'function');
   });
 
+  it('should preserve the full stored battle state in explicit sync snapshots', async () => {
+    const { buildBattleStateForSync } = await import('../../../websocket/messageHandlers.js');
+    const storedState = {
+      activeUnitId: 'unit_1',
+      turn: 4,
+      mapWidth: 2,
+      mapHeight: 1,
+      terrain: [['grass', 'stone']],
+      elevation: [[0.33, 0.54]],
+      elevationFormat: 'normalized',
+      obstacles: [[null, { type: 'rocks', passable: false }]],
+      variants: [[1, 3]],
+      units: [{
+        id: 'unit_1',
+        tileX: 0,
+        tileY: 0,
+        hp: 20,
+        mp: 5,
+        class: 'warrior',
+        skills: ['slash']
+      }]
+    };
+
+    const snapshot = buildBattleStateForSync(storedState);
+
+    assert.deepStrictEqual(snapshot.terrain, storedState.terrain);
+    assert.deepStrictEqual(snapshot.elevation, storedState.elevation);
+    assert.strictEqual(snapshot.elevationFormat, 'normalized');
+    assert.deepStrictEqual(snapshot.obstacles, storedState.obstacles);
+    assert.deepStrictEqual(snapshot.variants, storedState.variants);
+    assert.strictEqual(snapshot.turnCount, 4);
+    assert.strictEqual(snapshot.status, 'active');
+    assert.strictEqual(snapshot.units[0].class, 'warrior');
+    assert.deepStrictEqual(snapshot.units[0].skills, ['slash']);
+    assert.strictEqual(snapshot.units[0].turnPhase, 'ready');
+  });
+
+  it('should reject full sync snapshots outside an authorized battle room', async () => {
+    const { handleBattleSyncRequest } = await import('../../../websocket/messageHandlers.js');
+    const ws = new MockWebSocketClient(987654, 'outsider');
+
+    await handleBattleSyncRequest(ws, 987654, { battleId: 456789 });
+
+    assert.strictEqual(ws.sentMessages.length, 1);
+    assert.strictEqual(ws.sentMessages[0].type, 'error');
+    assert.strictEqual(ws.sentMessages[0].payload.message, 'Access denied to battle sync');
+  });
+
   it('should export handleMarketplaceSubscribe', async () => {
     const handlers = await import('../../../websocket/messageHandlers.js');
     assert.strictEqual(typeof handlers.handleMarketplaceSubscribe, 'function');

@@ -5,9 +5,26 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { generateTerrain, generateTerrainOnly } from '../mapGeneration.js';
-import { isImpassable, TERRAIN_COSTS, IMPASSABLE_TERRAIN } from '../terrain.js';
+import {
+  generateTerrain,
+  generateTerrainOnly,
+  getSpawnProtectionZones,
+  MIN_MAP_DIMENSION,
+  MIN_ARENA_MAP_WIDTH,
+  MIN_ARENA_MAP_HEIGHT
+} from '../mapGeneration.js';
+import { discretizeElevation, isImpassable, TERRAIN_COSTS, IMPASSABLE_TERRAIN } from '../terrain.js';
 import { hasValidPath } from '../pathfinding.js';
+import { ARCHETYPES } from './archetypes/archetypeDefinitions.js';
+import { NODE_TYPE_ARCHETYPE_WEIGHTS } from './archetypes/ArchetypeSelector.js';
+import {
+  NODE_TYPE_CONFIGS,
+  RACE_SUBTYPE_CONFIGS
+} from './nodeTypeAlgorithms.js';
+import {
+  OBSTACLE_ASSET_CATALOG,
+  getObstacleAssetCategory
+} from '../obstacles.js';
 
 // All valid terrain types (passable + impassable)
 const VALID_TERRAIN_TYPES = [...Object.keys(TERRAIN_COSTS), ...IMPASSABLE_TERRAIN];
@@ -20,6 +37,7 @@ describe('Map Generation', () => {
       const result2 = generateTerrain(seed, 'forest', 16, 16);
 
       assert.deepStrictEqual(result1.terrain, result2.terrain, 'Terrain should be identical');
+      assert.deepStrictEqual(result1.obstacles, result2.obstacles, 'Obstacles should be identical');
       assert.deepStrictEqual(result1.variants, result2.variants, 'Variants should be identical');
     });
 
@@ -62,6 +80,66 @@ describe('Map Generation', () => {
       assert.strictEqual(result.obstacles.length, height, 'Obstacles height should match');
     });
 
+    it('should reject dimensions outside the supported integer contract', () => {
+      assert.throws(
+        () => generateTerrain(12345, 'forest', MIN_MAP_DIMENSION - 1, 32),
+        { name: 'RangeError' }
+      );
+      assert.throws(
+        () => generateTerrain(12345, 'forest', 32, 12.5),
+        { name: 'RangeError' }
+      );
+      assert.throws(
+        () => generateTerrain(12345, 'forest', Number.NaN, 32),
+        { name: 'RangeError' }
+      );
+      assert.throws(
+        () => generateTerrain(12345, 'arena', MIN_ARENA_MAP_WIDTH - 1, MIN_ARENA_MAP_HEIGHT),
+        { name: 'RangeError' }
+      );
+      assert.throws(
+        () => generateTerrain(12345, 'arena', MIN_ARENA_MAP_WIDTH, MIN_ARENA_MAP_HEIGHT - 1),
+        { name: 'RangeError' }
+      );
+    });
+
+    it('should preserve exact dimensions for every public grid at the minimum size', () => {
+      const result = generateTerrain(12345, 'mountain', MIN_MAP_DIMENSION, MIN_MAP_DIMENSION, {
+        elevation: true
+      });
+
+      for (const layer of ['terrain', 'obstacles', 'variants', 'elevation']) {
+        assert.strictEqual(result[layer].length, MIN_MAP_DIMENSION, `${layer} height should match`);
+        for (const row of result[layer]) {
+          assert.strictEqual(row.length, MIN_MAP_DIMENSION, `${layer} row width should match`);
+        }
+      }
+    });
+
+    it('should protect both complete arena formations at its minimum dimensions', () => {
+      const result = generateTerrain(
+        12345,
+        'arena',
+        MIN_ARENA_MAP_WIDTH,
+        MIN_ARENA_MAP_HEIGHT,
+        { elevation: true }
+      );
+
+      for (const zone of getSpawnProtectionZones(
+        'arena',
+        MIN_ARENA_MAP_WIDTH,
+        MIN_ARENA_MAP_HEIGHT
+      )) {
+        for (let y = zone.y; y < zone.y + zone.height; y++) {
+          for (let x = zone.x; x < zone.x + zone.width; x++) {
+            assert.ok(!isImpassable(result.terrain[y][x]));
+            assert.strictEqual(result.obstacles[y][x], null);
+            assert.strictEqual(discretizeElevation(result.elevation[y][x]), 0);
+          }
+        }
+      }
+    });
+
     it('should only contain valid terrain types', () => {
       const result = generateTerrain(12345, 'forest', 20, 20);
 
@@ -83,9 +161,69 @@ describe('Map Generation', () => {
         }
       }
     });
+
+    it('should generate valid blocking props without contaminating spawn strips', () => {
+      const result = generateTerrain(12345, 'forest', 32, 32);
+      const props = result.obstacles.flat().filter(Boolean);
+
+      assert.ok(props.length > 0, 'Forest maps should include environmental props');
+      for (const prop of props) {
+        assert.ok(prop.type === 'rocks' || prop.type === 'trees');
+        assert.equal(prop.passable, false);
+      }
+    });
+
+    it('should report metadata from the final validated obstacle grid', () => {
+      const result = generateTerrain(0, 'forest', 32, 32, { includeMetadata: true });
+      const finalObstacleCount = result.obstacles.flat().filter(Boolean).length;
+      const validation = result.metadata.validationResult;
+
+      assert.strictEqual(result.metadata.obstacleCount, finalObstacleCount);
+      assert.ok(Number.isInteger(validation.iterations));
+      assert.strictEqual(validation.repaired, validation.iterations > 0);
+      assert.ok(validation.finalAnalysis);
+      assert.strictEqual(typeof validation.finalAnalysis.walkableRatio, 'number');
+    });
   });
 
   describe('Node Type Tests', () => {
+    it('should only reference defined archetypes from node weight tables', () => {
+      for (const [nodeType, weights] of Object.entries(NODE_TYPE_ARCHETYPE_WEIGHTS)) {
+        for (const archetypeName of Object.keys(weights)) {
+          assert.ok(ARCHETYPES[archetypeName], `${nodeType} references missing archetype ${archetypeName}`);
+        }
+      }
+    });
+
+    it('should define a deliberate config for every weighted runtime node type', () => {
+      for (const nodeType of Object.keys(NODE_TYPE_ARCHETYPE_WEIGHTS)) {
+        assert.ok(
+          NODE_TYPE_CONFIGS[nodeType] || RACE_SUBTYPE_CONFIGS[nodeType],
+          `${nodeType} must not silently inherit forest configuration`
+        );
+      }
+      assert.ok(NODE_TYPE_CONFIGS.guild, 'Guild advancement battles require an explicit config');
+      assert.ok(NODE_TYPE_ARCHETYPE_WEIGHTS.guild, 'Guild advancement battles require curated archetype weights');
+    });
+
+    it('should only request obstacle variants present in the runtime catalog', () => {
+      const configs = { ...NODE_TYPE_CONFIGS, ...RACE_SUBTYPE_CONFIGS };
+
+      for (const [nodeType, config] of Object.entries(configs)) {
+        for (const [ruleType, rule] of Object.entries(config.obstacleRules || {})) {
+          const category = getObstacleAssetCategory(rule.variants?.[0], ruleType);
+          const available = OBSTACLE_ASSET_CATALOG[category];
+          assert.ok(available, `${nodeType}.${ruleType} resolves to an unknown obstacle category`);
+          for (const variant of rule.variants || []) {
+            assert.ok(
+              available.includes(variant),
+              `${nodeType}.${ruleType} requests missing ${category} variant ${variant}`
+            );
+          }
+        }
+      }
+    });
+
     it('should generate forest maps', () => {
       const result = generateTerrain(12345, 'forest', 20, 20);
       assert.ok(result.terrain, 'Forest map should generate');
@@ -100,6 +238,24 @@ describe('Map Generation', () => {
     it('should generate mountain maps', () => {
       const result = generateTerrain(12345, 'mountain', 20, 20);
       assert.ok(result.terrain, 'Mountain map should generate');
+    });
+
+    it('should generate a finite elevated bridge with normalized elevation', () => {
+      const result = generateTerrain(12345, 'bridge', 32, 32, { elevation: true });
+      const levelsByTerrain = new Map();
+
+      for (let y = 0; y < result.terrain.length; y++) {
+        for (let x = 0; x < result.terrain[y].length; x++) {
+          const terrain = result.terrain[y][x];
+          const rawElevation = result.elevation[y][x];
+          assert.ok(rawElevation >= 0 && rawElevation <= 1, 'Public elevation must be normalized');
+          if (!levelsByTerrain.has(terrain)) levelsByTerrain.set(terrain, new Set());
+          levelsByTerrain.get(terrain).add(discretizeElevation(rawElevation));
+        }
+      }
+
+      assert.deepStrictEqual([...levelsByTerrain.get('water')], [-1]);
+      assert.deepStrictEqual([...levelsByTerrain.get('stone')].sort(), [0, 1]);
     });
 
     it('should handle unknown node type with default', () => {
@@ -131,6 +287,41 @@ describe('Map Generation', () => {
           const terrain = result.terrain[y][x];
           assert.ok(!isImpassable(terrain), `Enemy spawn at (${x},${y}) should be passable`);
           assert.strictEqual(result.obstacles[y][x], null, `Enemy spawn at (${x},${y}) should have no obstacle`);
+        }
+      }
+    });
+
+    it('should protect the exact Coliseum formation rectangles across seeds', () => {
+      for (let seed = 0; seed < 16; seed++) {
+        const result = generateTerrain(seed, 'arena', 32, 32, { elevation: true });
+        const zones = getSpawnProtectionZones('arena', 32, 32);
+
+        for (const zone of zones) {
+          for (let y = zone.y; y < zone.y + zone.height; y++) {
+            for (let x = zone.x; x < zone.x + zone.width; x++) {
+              assert.ok(!isImpassable(result.terrain[y][x]), `Seed ${seed}: arena spawn (${x},${y}) must be passable`);
+              assert.strictEqual(result.obstacles[y][x], null, `Seed ${seed}: arena spawn (${x},${y}) must be empty`);
+              assert.strictEqual(discretizeElevation(result.elevation[y][x]), 0, `Seed ${seed}: arena spawn (${x},${y}) must be flat`);
+              if (zone.forceTerrain) {
+                assert.strictEqual(result.terrain[y][x], 'stone', `Seed ${seed}: formation tile (${x},${y}) must use arena stone`);
+              }
+            }
+          }
+        }
+      }
+    });
+
+    it('should protect every standard PvE and guild enemy coordinate', () => {
+      for (const nodeType of ['forest', 'cave', 'guild']) {
+        for (let seed = 0; seed < 12; seed++) {
+          const result = generateTerrain(seed, nodeType, 32, 32, { elevation: true });
+          for (let y = 0; y < 32; y++) {
+            for (const x of [0, 1, 2, 3, 4, 5, 6, 25, 26, 27, 28, 29, 30, 31]) {
+              assert.ok(!isImpassable(result.terrain[y][x]), `Seed ${seed}: ${nodeType} spawn (${x},${y}) must be passable`);
+              assert.strictEqual(result.obstacles[y][x], null, `Seed ${seed}: ${nodeType} spawn (${x},${y}) must be empty`);
+              assert.strictEqual(discretizeElevation(result.elevation[y][x]), 0, `Seed ${seed}: ${nodeType} spawn (${x},${y}) must be flat`);
+            }
+          }
         }
       }
     });

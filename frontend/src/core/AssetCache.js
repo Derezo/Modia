@@ -17,7 +17,9 @@
 
 export class AssetCache {
   constructor() {
-    this.cacheName = 'modia-assets-v1';
+    // v3 invalidates caches that may have been repopulated from the browser's
+    // immutable HTTP cache after the canonical tile rebuild.
+    this.cacheName = 'modia-assets-v3';
     this.cache = null;
     this.available = 'caches' in window;
   }
@@ -55,9 +57,11 @@ export class AssetCache {
    * @returns {Promise<Response>} Response from cache or network
    */
   async fetchWithCache(url) {
-    // If Cache API not available, fall back to regular fetch
+    // Cache API is the authoritative persistent asset cache. Bypass the
+    // browser HTTP cache on a miss so an immutable, same-URL response cannot
+    // repopulate it with an older terrain build.
     if (!this.available || !this.cache) {
-      return fetch(url);
+      return fetch(url, { cache: 'no-store' });
     }
 
     try {
@@ -68,7 +72,7 @@ export class AssetCache {
       }
 
       // Fetch from network
-      const networkResponse = await fetch(url);
+      const networkResponse = await fetch(url, { cache: 'no-store' });
 
       // Only cache successful responses
       if (networkResponse.ok) {

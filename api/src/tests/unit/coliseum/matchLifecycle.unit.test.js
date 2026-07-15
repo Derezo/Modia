@@ -1545,6 +1545,27 @@ describe('Formation Position Validation (via submitFormation)', () => {
     assert.strictEqual(gridBounds.maxY, 3, 'Grid should be 4 tiles tall (0-3)');
   });
 
+  it('should reject fractional coordinates before querying character ownership', async () => {
+    const matchId = constants.matchIdCounter.value++;
+    const player1 = createMockPlayer();
+    const player2 = createMockPlayer();
+    constants.activeMatches.set(matchId, {
+      id: matchId,
+      queueType: '1v1',
+      player1: { ...player1, ready: true },
+      player2: { ...player2, ready: true },
+      status: 'formation_selection',
+      createdAt: Date.now()
+    });
+    constants.pendingFormations.set(matchId, {});
+
+    const result = await matchLifecycle.submitFormation(matchId, player1.userId, {
+      1: { tileX: 1.5, tileY: 2 }
+    });
+
+    assert.deepStrictEqual(result, { success: false, error: 'Invalid position data' });
+  });
+
   it('should validate position bounds check exists in source', async () => {
     // Verify the source code has the bounds check
     // This is a meta-test to ensure the validation exists

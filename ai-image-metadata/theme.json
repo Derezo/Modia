@@ -94,8 +94,7 @@
     "augments": "augment upgrade icon"
   },
   "loraDefaults": {
-    "_comment": "DOCUMENTATION ONLY - actual defaults set in image-generator/modia-generators/lib/prompt_templates.py",
-    "description": "v2",
+    "_comment": "AI categories only; the tiles value is retained for compatibility and ignored by the deterministic tile compiler",
     "tiles": "v2",
     "portraits": "v2",
     "items": "v2",
@@ -104,5 +103,15 @@
     "obstacles": "v2",
     "overlays": "v2"
   },
-  "generationBackend": "comfyui"
+  "generationBackend": "comfyui",
+  "tilePipeline": {
+    "mode": "material-compiler",
+    "script": "scripts/tiles/generate-isometric-tiles.js",
+    "geometryProfile": "iso64-retina-v3",
+    "logicalTile": "64x64",
+    "sourceTile": "128x128",
+    "sourceFootprint": "128x64",
+    "wallSource": "128x32",
+    "edgeSafe": true
+  }
 }

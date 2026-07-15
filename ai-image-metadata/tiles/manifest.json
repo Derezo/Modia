@@ -1,18 +1,61 @@
 {
   "name": "Battle Map Tiles",
-  "negativePrompt": "square tile, rectangular, circular, rounded corners, irregular shape, perspective view, 3D depth, raised edges, objects on tile, decorations, scattered items, grass clumps, plants, rocks, debris",
-  "version": "2.0.0",
-  "description": "Stacking tile system with floors, walls, and slopes for tactical battle maps",
+  "negativePrompt": "square footprint, circular footprint, rounded corners, perspective camera, raised border, freestanding object, decoration outside footprint, white background, opaque corners, drop shadow",
+  "version": "3.0.0",
+  "description": "Canonical deterministic retina tile system with one shared 2:1 geometry contract for tactical battle maps",
+  "assetCount": 281,
+  "categoryCounts": {
+    "floors": 188,
+    "walls": 53,
+    "slopes": 40
+  },
   "categories": ["floors", "walls", "slopes"],
   "biomes": ["forest", "cave", "mountain", "bridge", "castle"],
-  "stylePrefix": "wbgmsst, isometric floor tile, 30 degree orthographic projection, flat horizontal surface, ink and wash watercolor style, bold black outlines, aged parchment aesthetic, diamond shaped footprint, clean crisp edges, 64x64 game sprite, white background",
-  "wallStylePrefix": "wbgmsst, seamless vertical cliff face texture, ink and wash watercolor style, bold black outlines, tileable pattern, aged parchment aesthetic, 64x16 strip, white background",
-  "slopeStylePrefix": "wbgmsst, isometric ramp tile, 30 degree orthographic projection, smooth elevation transition, ink and wash watercolor style, bold black outlines, diamond footprint, white background",
+  "stylePrefix": "isometric floor material, exact 2:1 diamond footprint, flat horizontal surface, restrained hand-painted texture, edge-safe palette, transparent canvas, no outer outline",
+  "wallStylePrefix": "seamless vertical material strip, restrained hand-painted texture, tileable horizontally and vertically, transparent-capable canvas, no outer outline",
+  "slopeStylePrefix": "isometric directional ramp, exact 2:1 diamond footprint, readable contour bands, restrained hand-painted texture, transparent canvas, no outer outline",
   "outputPath": "frontend/public/assets/sprites/terrain",
+  "geometry": {
+    "profile": "iso64-retina-v3",
+    "projection": "2:1-diamond",
+    "anchor": "center",
+    "format": "webp",
+    "encoding": "lossless",
+    "alpha": {
+      "diamond": "straight-antialiased",
+      "wall": "opaque"
+    },
+    "edgePolicy": "shared-terrain-boundary",
+    "sourceScale": 2,
+    "logical": {
+      "width": 64,
+      "height": 64,
+      "footprintWidth": 64,
+      "footprintHeight": 32
+    },
+    "sources": {
+      "floor": {
+        "width": 128,
+        "height": 128,
+        "footprintWidth": 128,
+        "footprintHeight": 64
+      },
+      "wall": {
+        "width": 128,
+        "height": 32
+      },
+      "slope": {
+        "width": 128,
+        "height": 128,
+        "footprintWidth": 128,
+        "footprintHeight": 64
+      }
+    }
+  },
   "dimensions": {
-    "floor": { "width": 64, "height": 64 },
-    "wall": { "width": 64, "height": 16 },
-    "slope": { "width": 64, "height": 80 }
+    "floor": { "width": 128, "height": 128 },
+    "wall": { "width": 128, "height": 32 },
+    "slope": { "width": 128, "height": 128 }
   },
   "biomeColors": {
     "forest": { "primary": "#6B8E4A", "secondary": "#8B7355", "accent": "#4A6B2A" },

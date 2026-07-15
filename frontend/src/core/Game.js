@@ -255,7 +255,12 @@ export class Game {
   }
 
   getApiUrl() {
-    // In development, API runs on port 3000. In production, same origin with /api prefix
+    // Development requests stay on the Vite origin so its local proxy chooses the API port.
+    if (import.meta.env?.DEV) {
+      return '/api';
+    }
+
+    // Preserve the existing production and local-preview routing behavior.
     if (window.location.hostname === 'localhost') {
       return 'http://localhost:3000/api';
     }
@@ -264,6 +269,11 @@ export class Game {
 
   getWebSocketUrl() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+
+    if (import.meta.env?.DEV) {
+      return `${protocol}//${window.location.host}/ws`;
+    }
+
     const host = window.location.hostname;
     const port = window.location.hostname === 'localhost' ? ':3000' : '';
     return `${protocol}//${host}${port}/ws`;

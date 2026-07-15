@@ -19,12 +19,24 @@
  * @see AssetLoader.js - Provides tile sprites and wall textures
  * @see shared/terrain.js - Terrain types, movement costs, elevation limits
  */
-import { generateTerrain } from '@shared/mapGeneration.js';
-import { isImpassable, getTerrainMovementCost, getTerrainColor, discretizeElevation, getElevationName } from '@shared/terrain.js';
+import { generateTerrain } from '@modia/shared/mapGeneration';
+import {
+  isImpassable,
+  getTerrainMovementCost,
+  getTerrainColor,
+  discretizeElevation,
+  getElevationName,
+  inferElevationFormat
+} from '@modia/shared/terrain';
+import { resolveSpriteBiome } from '../core/BattleAssetConfig.js';
 
 // Stacking tile rendering constants
 const WALL_HEIGHT_PER_LEVEL = 16; // Pixels per elevation level for wall faces
 const OCCLUSION_ALPHA = 0.35; // Transparency for tiles blocking units
+const TILE_WIDTH = 64;
+const TILE_HEIGHT = 32;
+const TILE_SPRITE_SIZE = 64;
+const MAP_EDGE_SKIRT = 4;
 // Note: Elevation limits (-3 to +8) are defined in shared/terrain.js as ELEVATION_LEVELS
 
 export class BattleGrid {
@@ -32,9 +44,11 @@ export class BattleGrid {
     this.canvas = canvas;
     this.width = width;
     this.height = height;
-    this.tileWidth = 64;   // Visual diamond width (for grid spacing)
-    this.tileHeight = 32;  // Visual diamond height (for grid spacing)
-    this.spriteSize = 64;  // Sprite canvas size (64x64 with diamond inscribed)
+    this.tileWidth = TILE_WIDTH;
+    this.tileHeight = TILE_HEIGHT;
+    // Logical draw size. Source sprites are 2x retina assets (128x128), but
+    // geometry and anchoring remain stable at 64x64 CSS pixels.
+    this.spriteSize = TILE_SPRITE_SIZE;
     this.elevationPixelsPerLevel = WALL_HEIGHT_PER_LEVEL; // Pixels per elevation level for rendering
 
     // Stacking tile system state
@@ -54,6 +68,7 @@ export class BattleGrid {
 
     // Elevation data (0 = ground level, 1-3 = elevated, -1 = pit)
     this.elevation = [];
+    this.elevationFormat = 'normalized';
 
     // Asset loader reference (set externally)
     this.assetLoader = null;
@@ -96,11 +111,13 @@ export class BattleGrid {
     // Store elevation data if provided
     if (mapData.elevation) {
       this.elevation = mapData.elevation;
+      this.elevationFormat = 'normalized';
     } else {
       // Initialize flat elevation grid if not provided
       this.elevation = Array.from({ length: this.height }, () =>
         Array(this.width).fill(0)
       );
+      this.elevationFormat = 'discrete';
     }
   }
 
@@ -108,9 +125,12 @@ export class BattleGrid {
    * Set elevation data directly (for server-provided battle state)
    * @param {number[][]} elevationGrid - 2D grid of elevation values
    */
-  setElevation(elevationGrid) {
+  setElevation(elevationGrid, format = 'auto') {
     if (elevationGrid && Array.isArray(elevationGrid)) {
       this.elevation = elevationGrid;
+      // Infer at grid scope so ambiguous individual values 0 and 1 retain the
+      // correct legacy meaning. The inference contract lives in shared code.
+      this.elevationFormat = inferElevationFormat(elevationGrid, format);
     }
   }
 
@@ -124,6 +144,18 @@ export class BattleGrid {
     }
   }
 
+  setTileVariants(variantGrid) {
+    if (variantGrid && Array.isArray(variantGrid)) {
+      this.tileVariants = variantGrid;
+    }
+  }
+
+  setObstacles(obstacleGrid) {
+    if (obstacleGrid && Array.isArray(obstacleGrid)) {
+      this.obstacles = obstacleGrid;
+    }
+  }
+
   /**
    * Get elevation at position (discrete level)
    * Uses shared discretizeElevation for consistency with pathfinding
@@ -134,7 +166,9 @@ export class BattleGrid {
   getElevation(x, y) {
     if (!this.isInBounds(x, y)) return 0;
     const rawElev = this.elevation[y]?.[x] ?? 0;
-    return discretizeElevation(rawElev);
+    return this.elevationFormat === 'discrete'
+      ? Math.round(rawElev)
+      : discretizeElevation(rawElev);
   }
 
   /**
@@ -218,20 +252,15 @@ export class BattleGrid {
     const baseGridX = Math.round((isoX + isoY) / 2);
     const baseGridY = Math.round((isoY - isoX) / 2);
 
-    // Check if base position is in bounds
-    if (!this.isInBounds(baseGridX, baseGridY)) {
-      return { x: baseGridX, y: baseGridY };
-    }
-
     // Check for elevated tiles that might visually overlap
     // Tiles in "front" (higher x+y sum) that are elevated can appear
     // to be at the same visual position as tiles behind them
     const candidates = [];
 
     // Search nearby tiles for elevated ones that might contain the click
-    const searchRadius = 3; // Max elevation is 3, so check 3 rows ahead
-    for (let dy = -1; dy <= searchRadius; dy++) {
-      for (let dx = -1; dx <= searchRadius; dx++) {
+    const searchRadius = 8;
+    for (let dy = -2; dy <= searchRadius; dy++) {
+      for (let dx = -2; dx <= searchRadius; dx++) {
         const checkX = baseGridX + dx;
         const checkY = baseGridY + dy;
 
@@ -441,7 +470,7 @@ export class BattleGrid {
   /**
    * Render a simple terrain diamond (for top surface fallback)
    */
-  renderTerrainDiamond(ctx, screenX, screenY, terrain) {
+  renderTerrainDiamond(ctx, screenX, screenY, terrain, drawOutline = true) {
     const baseColor = this.getTerrainColor(terrain);
 
     ctx.beginPath();
@@ -454,9 +483,11 @@ export class BattleGrid {
     ctx.fillStyle = baseColor;
     ctx.fill();
 
-    ctx.strokeStyle = '#2a2a4a';
-    ctx.lineWidth = 1;
-    ctx.stroke();
+    if (drawOutline) {
+      ctx.strokeStyle = 'rgba(25, 28, 34, 0.55)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
   }
 
   /**
@@ -493,9 +524,10 @@ export class BattleGrid {
    * @returns {boolean} True if the tile occludes the unit
    */
   isUnitOccludedBy(unit, tile) {
-    const unitX = unit.gridX ?? unit.x ?? unit.tileX;
-    const unitY = unit.gridY ?? unit.y ?? unit.tileY;
-    const unitZ = unit.z ?? unit.elevation ?? 0;
+    const renderPosition = unit.getRenderGridPosition?.();
+    const unitX = renderPosition?.x ?? unit.gridX ?? unit.x ?? unit.tileX;
+    const unitY = renderPosition?.y ?? unit.gridY ?? unit.y ?? unit.tileY;
+    const unitZ = renderPosition?.elevation ?? unit.z ?? unit.elevation ?? 0;
 
     const tileX = tile.x;
     const tileY = tile.y;
@@ -601,17 +633,7 @@ export class BattleGrid {
    * @returns {string} Biome directory name
    */
   getSpriteBiome() {
-    const biomeMap = {
-      cave: 'cave',
-      mountain: 'mountain',
-      forest: 'forest',
-      bridge: 'bridge',
-      castle: 'castle',
-      village: 'base',
-      city: 'base',
-      default: 'base'
-    };
-    return biomeMap[this.nodeType] || biomeMap.default;
+    return resolveSpriteBiome(this.nodeType);
   }
 
   /**
@@ -635,22 +657,33 @@ export class BattleGrid {
   /**
    * Render obstacle at screen position
    */
-  renderObstacleAt(ctx, screenX, screenY, obstacle) {
+  renderObstacleAt(ctx, screenX, screenY, obstacle, alpha = 1) {
     if (!obstacle) return;
 
     const sprite = this.assetLoader?.getObstacle(obstacle.variant, obstacle.type);
 
     if (sprite) {
-      // Obstacles are drawn above the tile, offset upward
-      const obstacleHeight = sprite.height || 64;
+      // Generated obstacle sources can be 1024px. Always render against a
+      // logical footprint so an asset's source resolution cannot engulf maps.
+      const isTree = obstacle.type === 'trees' || obstacle.type === 'tree';
+      const maxWidth = isTree ? 64 : 48;
+      const maxHeight = isTree ? 88 : 56;
+      const scale = Math.min(maxWidth / sprite.width, maxHeight / sprite.height, 1);
+      const drawWidth = sprite.width * scale;
+      const drawHeight = sprite.height * scale;
+      ctx.save();
+      ctx.globalAlpha *= alpha;
       ctx.drawImage(
         sprite,
-        screenX - sprite.width / 2,
-        screenY - obstacleHeight + this.tileHeight / 2,
-        sprite.width,
-        sprite.height
+        screenX - drawWidth / 2,
+        screenY - drawHeight + this.tileHeight / 2,
+        drawWidth,
+        drawHeight
       );
+      ctx.restore();
     } else {
+      ctx.save();
+      ctx.globalAlpha *= alpha;
       // Fallback: Draw a simple shape for impassable obstacles
       ctx.fillStyle = obstacle.type === 'trees' ? '#2d4a2d' : '#4a4a4a';
       ctx.beginPath();
@@ -668,6 +701,7 @@ export class BattleGrid {
       ctx.strokeStyle = '#1a1a1a';
       ctx.lineWidth = 1;
       ctx.stroke();
+      ctx.restore();
     }
   }
 
@@ -692,33 +726,29 @@ export class BattleGrid {
       for (let x = 0; x < this.width; x++) {
         const screenPos = this.gridToScreen(x, y, camera);
 
-        // Cull tiles that are off-screen (with margin for elevated tiles)
+        // Camera.isVisible accounts for zoomed-out view bounds. The old screen
+        // rectangle culling dropped valid tiles whenever zoom was below 1.
         if (camera) {
-          const margin = 64; // Extra margin for tall elevated tiles
-          if (screenPos.x < -this.tileWidth - margin ||
-              screenPos.x > (this.canvas.width / (window.devicePixelRatio || 1)) + this.tileWidth + margin ||
-              screenPos.y < -this.tileHeight - margin ||
-              screenPos.y > (this.canvas.height / (window.devicePixelRatio || 1)) + this.tileHeight + margin * 3) {
-            continue;
-          }
+          const worldPos = this.gridToScreenWorld(x, y);
+          if (!camera.isVisible(worldPos.x, worldPos.y, this.tileWidth * 2, 192)) continue;
         }
 
         const elevation = this.getElevation(x, y);
 
         // Depth calculation for painter's algorithm:
         // Base depth is sum of x + y (isometric row)
-        // Subtract small elevation factor so higher tiles render slightly later
-        // This ensures wall faces of elevated tiles render behind adjacent flat tiles
+        // Subtract a small elevation factor so higher tiles render slightly
+        // earlier, keeping their wall faces behind adjacent flat tiles.
         const baseDepth = x + y;
         const elevationFactor = elevation * 0.001; // Small factor to not disrupt row order
         const depth = baseDepth - elevationFactor;
 
-        tiles.push({ x, y, screenX: screenPos.x, screenY: screenPos.y, depth, elevation });
+        tiles.push({ x, y, screenX: screenPos.x, screenY: screenPos.y, baseDepth, depth, elevation });
       }
     }
 
     // Sort back-to-front (lower depth first)
-    tiles.sort((a, b) => a.depth - b.depth);
+    tiles.sort((a, b) => a.depth - b.depth || a.y - b.y || a.x - b.x);
 
     return tiles;
   }
@@ -727,25 +757,60 @@ export class BattleGrid {
    * Render the entire grid with optional camera
    * Uses the unified stacking tile system for consistent elevation rendering
    */
-  render(ctx, highlights = {}, camera = null) {
+  render(ctx, highlights = {}, camera = null, options = {}) {
     // Merge intent highlights with passed highlights
     const combinedHighlights = this.getCombinedHighlights(highlights);
 
     // Build sorted render order
     const renderOrder = this.buildRenderOrder(camera);
 
-    // Render all tiles in sorted order using unified stacking system
-    for (const tile of renderOrder) {
-      const key = `${tile.x},${tile.y}`;
-      const highlight = combinedHighlights[key] || null;
+    // Terrain, props, and units share one painter queue. Fractional entity
+    // depths preserve the visual footpoint while a unit walks between rows.
+    // A half-row bias places a unit on its tile but behind the next foreground
+    // row, allowing cliffs and props to occlude it naturally.
+    const commands = renderOrder.map(tile => ({
+      kind: 'tile',
+      order: tile.depth,
+      tieY: tile.y,
+      tieX: tile.x,
+      tile
+    }));
 
-      // Use unified rendering (stacking system - separate floor + wall tiles)
+    for (const entity of options.entities || []) {
+      const entityDepth = typeof entity.getRenderDepth === 'function'
+        ? entity.getRenderDepth()
+        : (entity.gridX ?? entity.x ?? entity.tileX ?? 0) +
+          (entity.gridY ?? entity.y ?? entity.tileY ?? 0);
+      commands.push({
+        kind: 'entity',
+        order: entityDepth + 0.5,
+        tieY: entity.gridY ?? entity.y ?? 0,
+        tieX: entity.gridX ?? entity.x ?? 0,
+        entity
+      });
+    }
+
+    commands.sort((a, b) =>
+      a.order - b.order ||
+      (a.kind === b.kind ? 0 : a.kind === 'tile' ? -1 : 1) ||
+      a.tieY - b.tieY ||
+      a.tieX - b.tieX
+    );
+
+    for (const command of commands) {
+      if (command.kind === 'entity') {
+        options.renderEntity?.(command.entity);
+        continue;
+      }
+
+      const tile = command.tile;
+      const highlight = combinedHighlights[`${tile.x},${tile.y}`] || null;
       this.renderTileUnified(ctx, tile.screenX, tile.screenY, tile.x, tile.y, highlight);
 
-      // Render obstacle if present (drawn right after its terrain for proper layering)
       const obstacle = this.getObstacle(tile.x, tile.y);
       if (obstacle) {
-        this.renderObstacleAt(ctx, tile.screenX, tile.screenY, obstacle);
+        const obstacleAlpha = this.isTileOccluding(tile.x, tile.y) ? OCCLUSION_ALPHA : 1;
+        this.renderObstacleAt(ctx, tile.screenX, tile.screenY, obstacle, obstacleAlpha);
       }
     }
   }
@@ -869,23 +934,14 @@ export class BattleGrid {
       ctx.globalAlpha = alpha;
     }
 
-    if (elevation > 0) {
-      // Elevated tiles: render wall strips + floor on top
-      // screenY is already elevation-adjusted, so calculate base position
-      const wallHeight = elevation * WALL_HEIGHT_PER_LEVEL;
-      const baseScreenY = screenY + wallHeight; // Ground level position
-
-      // Render wall faces (procedural or textured)
-      this.renderUnifiedWalls(ctx, screenX, baseScreenY, elevation, terrain, biome);
-
-      // Render floor tile on top (at elevated position)
+    if (elevation >= 0) {
+      // Render only the portions of the two camera-facing sides that are
+      // actually exposed relative to their neighbors.
+      this.renderUnifiedWalls(ctx, screenX, screenY, gridX, gridY, elevation, terrain, biome);
       this.renderUnifiedFloor(ctx, screenX, screenY, terrain, biome, variant);
-    } else if (elevation < 0) {
+    } else {
       // Pit tiles: render floor with inset shadow
       this.renderUnifiedPit(ctx, screenX, screenY, terrain, biome, variant, elevation);
-    } else {
-      // Ground level: render floor tile only
-      this.renderUnifiedFloor(ctx, screenX, screenY, terrain, biome, variant);
     }
 
     ctx.restore();
@@ -907,98 +963,95 @@ export class BattleGrid {
    * @param {string} terrain - Terrain type
    * @param {string} biome - Biome type
    */
-  renderUnifiedWalls(ctx, screenX, screenY, elevation, terrain, biome) {
+  renderUnifiedWalls(ctx, screenX, screenY, gridX, gridY, elevation, terrain, biome) {
     const wallTexture = this.assetLoader?.getWallTexture(biome, terrain);
     const halfWidth = this.tileWidth / 2;
     const halfHeight = this.tileHeight / 2;
-    const wallHeight = elevation * WALL_HEIGHT_PER_LEVEL;
-    const topY = screenY - wallHeight; // Where the floor sits
+    const southWestInBounds = this.isInBounds(gridX, gridY + 1);
+    const southEastInBounds = this.isInBounds(gridX + 1, gridY);
+    const southWestElevation = southWestInBounds ? this.getElevation(gridX, gridY + 1) : Math.min(0, elevation);
+    const southEastElevation = southEastInBounds ? this.getElevation(gridX + 1, gridY) : Math.min(0, elevation);
+    const leftExposure = Math.max(0, elevation - southWestElevation) * WALL_HEIGHT_PER_LEVEL +
+      (southWestInBounds ? 0 : MAP_EDGE_SKIRT);
+    const rightExposure = Math.max(0, elevation - southEastElevation) * WALL_HEIGHT_PER_LEVEL +
+      (southEastInBounds ? 0 : MAP_EDGE_SKIRT);
+
+    if (leftExposure <= 0 && rightExposure <= 0) return;
 
     if (wallTexture) {
-      // Textured wall rendering - tile the texture vertically
-      this.renderTexturedWall(ctx, screenX, topY, screenY, wallTexture, halfWidth, halfHeight);
+      this.renderTexturedWall(
+        ctx, screenX, screenY, leftExposure, rightExposure,
+        wallTexture, halfWidth, halfHeight
+      );
     } else {
-      // Procedural wall rendering - colored polygons
-      this.renderProceduralWall(ctx, screenX, topY, screenY, terrain, halfWidth, halfHeight);
+      this.renderProceduralWall(
+        ctx, screenX, screenY, leftExposure, rightExposure,
+        terrain, halfWidth, halfHeight
+      );
     }
   }
 
   /**
    * Render textured wall faces
    */
-  renderTexturedWall(ctx, screenX, topY, bottomY, wallTexture, halfWidth, halfHeight) {
-    const wallHeight = bottomY - topY;
-    const tileH = 16; // Wall strip height
+  renderTexturedWall(ctx, screenX, topY, leftExposure, rightExposure, wallTexture, halfWidth, halfHeight) {
+    const renderFace = (startX, startY, faceX, faceY, exposure, brightness) => {
+      for (let offset = 0; offset < exposure; offset += WALL_HEIGHT_PER_LEVEL) {
+        const segmentHeight = Math.min(WALL_HEIGHT_PER_LEVEL, exposure - offset);
+        ctx.save();
+        // Affine-map the full material strip into the slanted parallelogram.
+        // This fills the lower wedge that the previous rectangular clip missed.
+        ctx.transform(
+          faceX / wallTexture.width,
+          faceY / wallTexture.width,
+          0,
+          segmentHeight / wallTexture.height,
+          startX,
+          startY + offset
+        );
+        ctx.filter = `brightness(${brightness})`;
+        ctx.drawImage(wallTexture, 0, 0);
+        ctx.restore();
+      }
+    };
 
-    // Left wall face (south-west)
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(screenX - halfWidth, topY);
-    ctx.lineTo(screenX, topY + halfHeight);
-    ctx.lineTo(screenX, bottomY + halfHeight);
-    ctx.lineTo(screenX - halfWidth, bottomY);
-    ctx.closePath();
-    ctx.clip();
-
-    for (let h = 0; h < wallHeight; h += tileH) {
-      const drawH = Math.min(tileH, wallHeight - h);
-      ctx.drawImage(
-        wallTexture,
-        0, 0, wallTexture.width, tileH,
-        screenX - halfWidth, topY + h, halfWidth, drawH
-      );
+    if (leftExposure > 0) {
+      renderFace(screenX - halfWidth, topY, halfWidth, halfHeight, leftExposure, 0.94);
     }
-    ctx.restore();
-
-    // Right wall face (south-east) - slightly darker
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(screenX + halfWidth, topY);
-    ctx.lineTo(screenX, topY + halfHeight);
-    ctx.lineTo(screenX, bottomY + halfHeight);
-    ctx.lineTo(screenX + halfWidth, bottomY);
-    ctx.closePath();
-    ctx.clip();
-
-    ctx.globalAlpha = (ctx.globalAlpha || 1.0) * 0.8;
-    for (let h = 0; h < wallHeight; h += tileH) {
-      const drawH = Math.min(tileH, wallHeight - h);
-      ctx.drawImage(
-        wallTexture,
-        0, 0, wallTexture.width, tileH,
-        screenX, topY + h, halfWidth, drawH
-      );
+    if (rightExposure > 0) {
+      renderFace(screenX, topY + halfHeight, halfWidth, -halfHeight, rightExposure, 0.76);
     }
-    ctx.restore();
   }
 
   /**
    * Render procedural (colored) wall faces
    */
-  renderProceduralWall(ctx, screenX, topY, bottomY, terrain, halfWidth, halfHeight) {
+  renderProceduralWall(ctx, screenX, topY, leftExposure, rightExposure, terrain, halfWidth, halfHeight) {
     const baseColor = this.getWallColor(terrain, 1);
     const darkColor = this.darkenColor(baseColor, 0.7);
     const sideColor = this.darkenColor(baseColor, 0.85);
 
-    // Left wall face (south-west, slightly lighter)
-    ctx.beginPath();
-    ctx.moveTo(screenX - halfWidth, topY);
-    ctx.lineTo(screenX, topY + halfHeight);
-    ctx.lineTo(screenX, bottomY + halfHeight);
-    ctx.lineTo(screenX - halfWidth, bottomY);
-    ctx.closePath();
-    ctx.fillStyle = sideColor;
-    ctx.fill();
+    if (leftExposure > 0) {
+      ctx.beginPath();
+      ctx.moveTo(screenX - halfWidth, topY);
+      ctx.lineTo(screenX, topY + halfHeight);
+      ctx.lineTo(screenX, topY + halfHeight + leftExposure);
+      ctx.lineTo(screenX - halfWidth, topY + leftExposure);
+      ctx.closePath();
+      ctx.fillStyle = sideColor;
+      ctx.fill();
+    }
 
-    // Right wall face (south-east, darker)
-    ctx.beginPath();
-    ctx.moveTo(screenX + halfWidth, topY);
-    ctx.lineTo(screenX, topY + halfHeight);
-    ctx.lineTo(screenX, bottomY + halfHeight);
-    ctx.lineTo(screenX + halfWidth, bottomY);
-    ctx.closePath();
-    ctx.fillStyle = darkColor;
-    ctx.fill();
+    if (rightExposure > 0) {
+      ctx.beginPath();
+      ctx.moveTo(screenX, topY + halfHeight);
+      ctx.lineTo(screenX + halfWidth, topY);
+      ctx.lineTo(screenX + halfWidth, topY + rightExposure);
+      ctx.lineTo(screenX, topY + halfHeight + rightExposure);
+      ctx.closePath();
+      ctx.fillStyle = darkColor;
+      ctx.fill();
+    }
   }
 
   /**
@@ -1015,22 +1068,19 @@ export class BattleGrid {
     // Try to get floor tile sprite (base variant, no elevation embedded)
     const sprite = this.assetLoader?.getTile(terrain, biome, variant);
 
-    if (sprite) {
-      const spriteWidth = sprite.width || this.spriteSize;
-      const spriteHeight = sprite.height || this.spriteSize;
+    // A solid underlay prevents sub-pixel cracks when the camera or browser
+    // applies fractional zoom. It also gives graceful output during loading.
+    this.renderTerrainDiamond(ctx, screenX, screenY, terrain, false);
 
-      // Draw sprite centered on the screen position
-      // The diamond center is at spriteSize/2 for standard tiles
+    if (sprite) {
+      ctx.imageSmoothingEnabled = true;
       ctx.drawImage(
         sprite,
-        screenX - spriteWidth / 2,
+        screenX - this.spriteSize / 2,
         screenY - this.spriteSize / 2,
-        spriteWidth,
-        spriteHeight
+        this.spriteSize,
+        this.spriteSize
       );
-    } else {
-      // Fallback: procedural diamond
-      this.renderTerrainDiamond(ctx, screenX, screenY, terrain);
     }
   }
 
@@ -1050,8 +1100,6 @@ export class BattleGrid {
     this.renderUnifiedFloor(ctx, screenX, screenY, terrain, biome, variant);
 
     // Then overlay a darker inset to show depth
-    const baseColor = this.getTerrainColor(terrain);
-    const darkColor = this.darkenColor(baseColor, 0.5);
     const inset = 4 + Math.abs(elevation);
 
     ctx.beginPath();
@@ -1060,7 +1108,7 @@ export class BattleGrid {
     ctx.lineTo(screenX, screenY + this.tileHeight / 2 - inset);
     ctx.lineTo(screenX - this.tileWidth / 2 + inset * 2, screenY);
     ctx.closePath();
-    ctx.fillStyle = darkColor;
+    ctx.fillStyle = `rgba(8, 12, 18, ${Math.min(0.58, 0.2 + Math.abs(elevation) * 0.1)})`;
     ctx.fill();
   }
 
@@ -1191,9 +1239,8 @@ export class BattleGrid {
    * @param {Object} highlights - Regular highlights
    * @param {Object} camera - Camera for screen transforms
    */
-  renderWithIntentHighlights(ctx, highlights = {}, camera = null) {
-    const combinedHighlights = this.getCombinedHighlights(highlights);
-    this.render(ctx, combinedHighlights, camera);
+  renderWithIntentHighlights(ctx, highlights = {}, camera = null, options = {}) {
+    this.render(ctx, highlights, camera, options);
   }
 
   /**

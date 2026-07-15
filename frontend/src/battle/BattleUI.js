@@ -1314,18 +1314,28 @@ export class BattleUI {
   handleModalUnitClick(unit) {
     if (!unit) return;
 
+    // Battle-log rows carry a lightweight unit reference while turn-order rows
+    // normally carry the live BattleUnit. Resolve both to the authoritative
+    // scene object so camera focus and the info card use complete data.
+    const resolvedUnit = this.scene?.units?.get?.(unit.id) || unit;
+
     // Pan camera to unit position
-    if (this.scene && this.scene.camera && unit.position) {
-      this.scene.camera.panTo(unit.position.x, unit.position.y);
+    if (this.scene?.camera && this.scene?.grid) {
+      const gridX = resolvedUnit.gridX ?? resolvedUnit.tileX ?? resolvedUnit.position?.x;
+      const gridY = resolvedUnit.gridY ?? resolvedUnit.tileY ?? resolvedUnit.position?.y;
+      if (Number.isFinite(gridX) && Number.isFinite(gridY)) {
+        const world = this.scene.grid.gridToScreenWorld(gridX, gridY);
+        this.scene.camera.panTo(world.x, world.y);
+      }
     }
 
     // Also trigger the existing preview callback if available
     if (this.actionCallbacks.onUnitPreview) {
-      this.actionCallbacks.onUnitPreview(unit);
+      this.actionCallbacks.onUnitPreview(resolvedUnit);
     }
 
     // Show in target panel
-    this.showTargetInfo(unit);
+    this.showTargetInfo(resolvedUnit);
   }
 
   /**

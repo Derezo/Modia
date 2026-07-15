@@ -344,6 +344,8 @@ npm run audio:status         # Show asset status
 ### 7.4 Post-Processing Pipeline Overhaul (Completed Jan 2026)
 
 > **Note:** Resolutions and size variants superseded by Section 7.16 (Pipeline Refactor). Python now saves 1024x1024 processed originals; Node.js generates all size variants via `generateCanonicalSizeVariants()`.
+>
+> **Historical tile note:** The tile-specific AI masking, wall, slope, LoRA, and resolution work below was replaced by the deterministic `iso64-retina-v3` compiler. It remains here only as implementation history; use [ISOMETRIC_TILE_SYSTEM.md](ISOMETRIC_TILE_SYSTEM.md) for the current contract.
 
 - [x] Removed `--sizes` CLI flag from all generators (hard-coded post-processing per asset type)
 - [x] Added asset-specific post-processing functions in `resizeUtils.js`:
@@ -447,7 +449,7 @@ Unified the generation pipeline to eliminate dual post-processing and quality lo
 **Architecture:**
 - Python: generate 1024x1024 → `process_to_original()` (rembg → crop → square) → save to `originals/`
 - Node.js: read from `originals/` → `generateCanonicalSizeVariants()` (ImageMagick Lanczos) → save to `{size}/`
-- Tiles exempt: diamond masking is type-specific, single output size, no quality loss
+- Historical tile exception: diamond masking was type-specific and single-size; this was later replaced by the deterministic v3 compiler
 
 **Files Changed (Python - image-generator):**
 - `modia-generators/lib/image_processing.py` - Added `process_to_original()`
@@ -543,6 +545,8 @@ Development-only dashboard for AI asset generation and management. Available at 
 ### 7.9 Asset Generation System Refactoring (Completed Jan 2026)
 
 Per-asset LoRA model selection and generation backend switching.
+
+Tile LoRA defaults listed in this historical milestone are now compatibility metadata only. Current terrain generation is backend-independent.
 
 - [x] Per-asset LoRA model selection with priority: asset-level > category defaults > fallback
   - Available models: v1 (flat 2D), v2 (isometric), modern-pixel, retro-pixel

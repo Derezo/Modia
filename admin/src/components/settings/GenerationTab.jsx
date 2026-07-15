@@ -2,9 +2,10 @@
  * GenerationTab - Generation settings tab for Settings page
  *
  * Configures:
- * - Generation backend (Local/HuggingFace)
+ * - AI generation backend (ComfyUI/HuggingFace)
+ * - Deterministic tile compiler contract
  * - Seed settings (random/fixed/incremental)
- * - Advanced options (variants, delay)
+ * - Advanced AI options (node variants, delay)
  * - LoRA model defaults per category
  * - Output paths (display only)
  * - Overlay configuration
@@ -49,10 +50,12 @@ const QUALITY_PRESETS = [
 export function GenerationTab({ theme, status, onThemeUpdate, onLoraUpdate }) {
   const toast = useToast();
   const loraDefaults = useMemo(() => theme?.loraDefaults || {}, [theme?.loraDefaults]);
-  const categories = Object.keys(loraDefaults).filter((k) => !k.startsWith('_'));
+  const categories = Object.keys(loraDefaults).filter(
+    (category) => !category.startsWith('_') && category !== 'description' && category !== 'tiles'
+  );
 
   // Local state for editable settings
-  const [backend, setBackend] = useState(theme?.generationBackend || 'local');
+  const [backend, setBackend] = useState(theme?.generationBackend || 'comfyui');
   const [seedMode, setSeedMode] = useState(theme?.seedMode || 'random');
   const [fixedSeed, setFixedSeed] = useState(theme?.fixedSeed || '');
   const [variants, setVariants] = useState(theme?.variants || 1);
@@ -136,21 +139,43 @@ export function GenerationTab({ theme, status, onThemeUpdate, onLoraUpdate }) {
 
   return (
     <div className="space-y-6">
+      {/* Tile Pipeline */}
+      <div className="card p-6">
+        <h3 className="text-lg font-display font-semibold text-parchment-100 mb-4">
+          Tile Material Pipeline
+        </h3>
+        <div className="flex items-start gap-2 p-3 bg-midnight-800 rounded-lg">
+          <InfoCircledIcon className="w-4 h-4 text-accent-gold flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm text-parchment-200">
+              Deterministic isometric compiler
+            </p>
+            <p className="text-xs text-parchment-400 mt-1">
+              Tile jobs compile seamless, transparent WebP materials using the{' '}
+              <code className="text-accent-gold">
+                {theme?.tilePipeline?.geometryProfile || 'iso64-retina-v3'}
+              </code>{' '}
+              geometry contract. AI backend, LoRA, seed, variants, and request delay do not affect tiles.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Backend Selection */}
       <div className="card p-6">
         <h3 className="text-lg font-display font-semibold text-parchment-100 mb-4">
-          Generation Backend
+          AI Generation Backend
         </h3>
         <p className="text-sm text-parchment-400 mb-4">
-          Choose where to run image generation.
+          Choose where to run AI generation for portraits, items, icons, nodes, and other non-tile assets.
         </p>
         <div className="flex gap-4">
           <button
             type="button"
-            onClick={() => handleBackendChange('local')}
+            onClick={() => handleBackendChange('comfyui')}
             disabled={saving}
             className={`flex-1 p-4 rounded-lg border-2 transition-colors ${
-              backend === 'local'
+              backend === 'comfyui'
                 ? 'border-accent-gold bg-midnight-800 text-parchment-100'
                 : 'border-midnight-700 bg-midnight-900 text-parchment-400 hover:border-midnight-600'
             }`}
@@ -184,7 +209,7 @@ export function GenerationTab({ theme, status, onThemeUpdate, onLoraUpdate }) {
           Seed Settings
         </h3>
         <p className="text-sm text-parchment-400 mb-4">
-          Control randomness in image generation for reproducibility.
+          Control randomness in AI-generated assets. Tile compilation is deterministic.
         </p>
         <div className="space-y-4">
           <div className="flex gap-4">
@@ -248,12 +273,12 @@ export function GenerationTab({ theme, status, onThemeUpdate, onLoraUpdate }) {
           Advanced Generation Options
         </h3>
         <p className="text-sm text-parchment-400 mb-4">
-          Additional options for controlling generation behavior.
+          Additional options for controlling AI generation behavior.
         </p>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-parchment-400 mb-2">Variants per Asset</label>
+              <label className="block text-sm text-parchment-400 mb-2">Node Variants per Asset</label>
               <input
                 type="number"
                 min="1"
@@ -264,7 +289,7 @@ export function GenerationTab({ theme, status, onThemeUpdate, onLoraUpdate }) {
                            text-parchment-200 focus:outline-none focus:border-accent-gold"
               />
               <p className="text-xs text-parchment-500 mt-1">
-                Number of variants to generate for tiles/nodes (1-10)
+                Number of variants to generate for nodes (1-10). Tiles use metadata-defined variants.
               </p>
             </div>
             <div>
@@ -280,7 +305,7 @@ export function GenerationTab({ theme, status, onThemeUpdate, onLoraUpdate }) {
                            text-parchment-200 focus:outline-none focus:border-accent-gold"
               />
               <p className="text-xs text-parchment-500 mt-1">
-                Delay between generation jobs to prevent overload (0-10000ms)
+                Delay between AI generation jobs to prevent overload (0-10000ms)
               </p>
             </div>
           </div>
@@ -303,8 +328,8 @@ export function GenerationTab({ theme, status, onThemeUpdate, onLoraUpdate }) {
         <div className="flex items-start gap-2 mb-4 p-3 bg-midnight-800 rounded-lg">
           <InfoCircledIcon className="w-4 h-4 text-accent-gold flex-shrink-0 mt-0.5" />
           <p className="text-sm text-parchment-400">
-            Select the default LoRA model for each asset category. These can be overridden per-job
-            when queuing generation from the asset browser.
+            Select the default LoRA model for AI-generated asset categories. These can be overridden
+            per job when queuing generation from the asset browser; tiles use the material compiler.
           </p>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">

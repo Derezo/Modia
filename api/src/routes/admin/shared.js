@@ -287,13 +287,14 @@ export function enrichAssetWithPath(asset, category) {
  * @param {string} id - Asset ID
  * @param {object} options - Disambiguation options
  * @param {string} options.biome - For tiles category
+ * @param {string} options.tileCategory - For tiles (floors, slopes, walls)
  * @param {string} options.sourceFile - Most precise (works for any category)
  * @param {string} options.iconCategory - For icons category (status, augments, etc.)
  * @param {string} options.itemCategory - For items category (weapons, armor, etc.)
  * @returns {object|null} Asset or null if not found
  */
 export function findAssetById(data, category, id, options = {}) {
-  const { biome, sourceFile, iconCategory, itemCategory } = options;
+  const { biome, tileCategory, sourceFile, iconCategory, itemCategory } = options;
 
   // sourceFile is most precise - works for any category
   if (sourceFile) {
@@ -306,7 +307,9 @@ export function findAssetById(data, category, id, options = {}) {
   if (category === 'tiles') {
     if (biome) {
       return data.assets.find(a =>
-        (a.id === id || a.key === id) && a._biome === biome
+        (a.id === id || a.key === id) &&
+        a._biome === biome &&
+        (!tileCategory || a._tileCategory === tileCategory)
       ) || null;
     }
     // No disambiguation for tiles - return null

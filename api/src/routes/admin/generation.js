@@ -201,7 +201,7 @@ router.get('/config', asyncHandler(async (req, res) => {
     config,
     validLoraModels: validLora,
     defaultLoraByCategory: defaultLora,
-    validBackends: ['local', 'huggingface'],
+    validBackends: adminGenerationService.getValidBackends(),
     validSeedModes: ['random', 'fixed', 'incremental'],
     validCategories: adminGenerationService.getValidCategories()
   });

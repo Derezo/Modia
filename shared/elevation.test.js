@@ -19,7 +19,10 @@ import {
   getElevationMovementCost,
   canTraverseElevation,
   discretizeElevation,
-  getElevationName
+  getElevationName,
+  elevationLevelToNormalized,
+  inferElevationFormat,
+  normalizeElevationGrid
 } from './terrain.js';
 
 import {
@@ -167,6 +170,32 @@ describe('discretizeElevation', () => {
 
     // But the elevation difference is exactly 1, which is within MAX_CLIMB
     assert.strictEqual(Math.abs(levelB - levelA), ELEVATION_RULES.MAX_CLIMB);
+  });
+});
+
+describe('canonical elevation representation', () => {
+  it('should round-trip every semantic level through its normalized band', () => {
+    for (let level = ELEVATION_LEVELS.DEEP_PIT; level <= ELEVATION_LEVELS.CLOUD; level++) {
+      assert.strictEqual(discretizeElevation(elevationLevelToNormalized(level)), level);
+    }
+  });
+
+  it('should infer legacy integer grids without misreading levels 0 and 1', () => {
+    assert.strictEqual(inferElevationFormat([[0, 1], [-1, 2]]), 'discrete');
+    assert.strictEqual(inferElevationFormat([[0.33, 0.54]]), 'normalized');
+    assert.strictEqual(inferElevationFormat([[0, 1]], 'normalized'), 'normalized');
+  });
+
+  it('should normalize legacy grids while preserving current grids by reference', () => {
+    const legacy = [[-3, 0, 1, 8, Number.NaN]];
+    const normalized = normalizeElevationGrid(legacy, 'discrete');
+    assert.deepStrictEqual(
+      normalized.map(row => row.map(discretizeElevation)),
+      [[-3, 0, 1, 8, 0]]
+    );
+
+    const current = [[0.33, 0.54]];
+    assert.strictEqual(normalizeElevationGrid(current, 'normalized'), current);
   });
 });
 

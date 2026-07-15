@@ -63,6 +63,8 @@ The `shared/assetPaths.js` module is the canonical source for all asset path con
 - **Maintainability**: Path pattern changes require updates in one location
 - **Validation**: Size presets and category validation in a single place
 
+For battle terrain, `64` is the logical renderer size rather than the encoded source size. The deterministic compiler emits 128x128 floor/slope WebPs and 128x32 wall WebPs; see [ISOMETRIC_TILE_SYSTEM.md](ISOMETRIC_TILE_SYSTEM.md). Terrain does not pass through the Python image-generator integration shown below.
+
 ### Key Exports
 
 | Export | Type | Description |
@@ -86,7 +88,7 @@ The `shared/assetPaths.js` module is the canonical source for all asset path con
 
 ```javascript
 SIZE_PRESETS = {
-  tiles: [64],                           // Single size (isometric)
+  tiles: [64],                           // Logical isometric render size; source is retina 2x
   portraits: [32, 48, 64, 128, 256],     // Compact, small, UI, dialog, detail
   items: [32, 64, 128],                  // Inventory, tooltip, detail
   icons: [16, 24, 32, 48, 64, 128, 256], // Various UI contexts

@@ -116,12 +116,24 @@ npm run audio:download
 npm run audio:generate:sfx -- --key attack_sword_1
 ```
 
-### AI Image Generation (requires HuggingFace API token)
+### Deterministic Battle Tiles
+
+Battle tiles do not use an AI backend or API token. See [ISOMETRIC_TILE_SYSTEM.md](ISOMETRIC_TILE_SYSTEM.md) for the geometry contract and admin workflow.
+
+```bash
+npm run tiles:generate                   # Compile missing canonical tiles
+npm run tiles:generate -- --dry-run      # Preview the selection
+npm run tiles:generate -- --biome forest --category floors
+npm run tiles:generate -- --biome forest --category floors --key grass_0 --force
+npm run tiles:rebuild                    # Full rebuild and legacy-file pruning
+npm run tiles:check                      # Compiler tests plus strict live validation
+```
+
+### AI Image Generation
 
 ```bash
 # Category generation
-npm run ai:generate                     # Generate all pending images
-npm run ai:generate:tiles               # Generate terrain tiles only
+npm run ai:generate                     # Generate all pending image categories; tiles compile deterministically
 npm run ai:generate:portraits           # Generate character portraits only
 npm run ai:generate:items               # Generate item sprites only
 npm run ai:generate:icons               # Generate UI icons only
@@ -134,15 +146,13 @@ npm run ai:validate                     # Full validation of image files
 npm run ai:migrate-paths                # Migrate assets to canonical paths with size variants
 
 # Single asset generation
-npm run ai:generate:tiles -- --key forest_grass_1 --force
 npm run ai:generate:portraits -- --race elf --class wizard
 
 # Batch generation by filter
-npm run ai:generate:tiles -- --biome forest
 npm run ai:generate:icons -- --category actions
 
 # Preview without generating
-npm run ai:generate:tiles -- --dry-run
+npm run ai:generate:portraits -- --dry-run
 ```
 
 ### SD1.5 Animation Generation (ControlNet + IP-Adapter)

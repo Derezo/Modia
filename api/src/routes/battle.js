@@ -10,6 +10,7 @@ import * as aiService from '../services/aiService.js';
 import * as enemyService from '../services/enemyService.js';
 import battleWebsocket from '../services/battleWebsocket.js';
 import { createPlayerBattleUnit } from '../services/battleUnitFactory.js';
+import { validateFormationPayload } from '../services/battle/formationValidation.js';
 import * as traitService from '../services/traitService.js';
 import * as bossService from '../services/bossService.js';
 import * as battleTurnManager from '../services/battleTurnManager.js';
@@ -214,6 +215,13 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
   }
 
   const party = partyResult.rows;
+  const formationValidation = validateFormationPayload(formation, {
+    allowedCharacterIds: party.map(character => character.id),
+    maxCharacters: MAX_BATTLE_PARTY_SIZE
+  });
+  if (!formationValidation.success) {
+    throw new AppError(formationValidation.error, 400);
+  }
 
   // Get learned skills for all party members
   const characterIds = party.map(c => c.id);
@@ -312,7 +320,8 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
   }
 
   // Generate battle terrain using encounter service
-  const { terrain, elevation, mapSeed, mapWidth, mapHeight } = battleService.generateEncounterTerrain(node.node_type);
+  const { terrain, elevation, elevationFormat, obstacles, variants, mapSeed, mapWidth, mapHeight } =
+    battleService.generateEncounterTerrain(node.node_type);
 
   // Load character traits for all party members
   const characterTraits = await traitService.loadCharacterTraits(characterIds);
@@ -340,6 +349,9 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
     mapHeight,
     terrain, // Store terrain for server-side movement validation
     elevation, // Store elevation for 3D pathfinding and rendering
+    elevationFormat,
+    obstacles, // Canonical visual/gameplay obstacle grid
+    variants, // Deterministic floor variation grid
     debugOptions, // User's debug settings for AI logging etc.
     units: party.map((char, idx) => {
       // Use formation position if provided, otherwise default layout
@@ -406,7 +418,7 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
   }));
 
   // Extract character IDs from formation (only placed characters count for enemy scaling)
-  const formationCharacterIds = formation ? Object.keys(formation).map(id => parseInt(id, 10)) : null;
+  const formationCharacterIds = formationValidation.characterIds;
 
   // Generate enemies from templates (scaled to formation characters)
   const enemies = await enemyService.generateEncounter(currentNodeId, party, formationCharacterIds);

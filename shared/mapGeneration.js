@@ -20,7 +20,7 @@
 import { isImpassable } from './terrain.js';
 import { AlgorithmPipeline } from './mapgen/AlgorithmPipeline.js';
 import { getNodeConfig } from './mapgen/nodeTypeAlgorithms.js';
-import { SpawnPlacer, AI_SPAWN_CONFIGS } from './mapgen/SpawnPlacer.js';
+import { SpawnPlacer, AI_SPAWN_CONFIGS, scaleSpawnXRange } from './mapgen/SpawnPlacer.js';
 
 // Archetype system (Phase 1)
 import {
@@ -66,6 +66,73 @@ function createSeededRandom(seed) {
 // SPAWN AREA CLEARING
 // ============================================================================
 
+export const MIN_MAP_DIMENSION = 10;
+export const MIN_ARENA_MAP_WIDTH = 11;
+export const MIN_ARENA_MAP_HEIGHT = 16;
+
+/**
+ * Validate the public map-generation size contract before allocating grids.
+ * The algorithms and the two opposing formation zones require at least a
+ * 10x10 battlefield.
+ *
+ * @param {number} width - Requested map width
+ * @param {number} height - Requested map height
+ * @throws {RangeError} When either dimension is not an integer >= 10
+ */
+function validateMapDimensions(width, height, nodeType) {
+  if (!Number.isInteger(width) || !Number.isInteger(height) ||
+      width < MIN_MAP_DIMENSION || height < MIN_MAP_DIMENSION) {
+    throw new RangeError(
+      `Map dimensions must be integers at least ${MIN_MAP_DIMENSION} tiles; received ${width}x${height}`
+    );
+  }
+
+  if (nodeType === 'arena' &&
+      (width < MIN_ARENA_MAP_WIDTH || height < MIN_ARENA_MAP_HEIGHT)) {
+    throw new RangeError(
+      `Arena maps must be at least ${MIN_ARENA_MAP_WIDTH}x${MIN_ARENA_MAP_HEIGHT} tiles ` +
+      `to contain both 5x4 formation zones; received ${width}x${height}`
+    );
+  }
+}
+
+/**
+ * Return every tile rectangle that must remain safe for the battle mode's
+ * actual unit-placement coordinates. Standard PvE and guild battles use the
+ * west/east strips. Coliseum formations use north/south rectangles as well.
+ *
+ * @param {string} nodeType - Battle node type
+ * @param {number} width - Map width
+ * @param {number} height - Map height
+ * @returns {Array<{x: number, y: number, width: number, height: number, forceTerrain?: boolean}>}
+ */
+export function getSpawnProtectionZones(nodeType, width, height) {
+  const stripWidth = width >= 24
+    ? 7
+    : Math.min(5, Math.floor(width / 2));
+  const zones = [
+    { x: 0, y: 0, width: stripWidth, height },
+    { x: width - stripWidth, y: 0, width: stripWidth, height }
+  ];
+
+  if (nodeType === 'arena') {
+    const formationWidth = Math.max(0, Math.min(9, width - 2));
+    const formationHeight = Math.max(0, Math.min(4, height - 4));
+    zones.push(
+      { x: 2, y: 4, width: formationWidth, height: formationHeight, forceTerrain: true },
+      {
+        x: 2,
+        y: Math.max(0, height - 8),
+        width: formationWidth,
+        height: Math.min(4, height),
+        forceTerrain: true
+      }
+    );
+  }
+
+  return zones;
+}
+
 /**
  * Clear spawn areas to ensure walkable tiles for unit placement
  * @param {string[][]} terrain - Terrain grid to modify in place
@@ -73,27 +140,35 @@ function createSeededRandom(seed) {
  * @param {number} width - Map width
  * @param {number} height - Map height
  */
-export function clearSpawnAreas(terrain, obstacles, width, height) {
-  // Player spawn area (left side, columns 0-4)
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < 5; x++) {
-      if (terrain[y] && isImpassable(terrain[y][x])) {
-        terrain[y][x] = 'grass';
-      }
-      if (obstacles[y]) {
-        obstacles[y][x] = null;
-      }
-    }
-  }
+export function clearSpawnAreas(
+  terrain,
+  obstacles,
+  width,
+  height,
+  elevation = null,
+  spawnTerrain = 'grass',
+  nodeType = 'standard'
+) {
+  for (const zone of getSpawnProtectionZones(nodeType, width, height)) {
+    const minX = Math.max(0, zone.x);
+    const minY = Math.max(0, zone.y);
+    const maxX = Math.min(width, zone.x + zone.width);
+    const maxY = Math.min(height, zone.y + zone.height);
 
-  // Enemy spawn area (right side, last 5 columns)
-  for (let y = 0; y < height; y++) {
-    for (let x = width - 5; x < width; x++) {
-      if (terrain[y] && isImpassable(terrain[y][x])) {
-        terrain[y][x] = 'grass';
-      }
-      if (obstacles[y]) {
-        obstacles[y][x] = null;
+    for (let y = minY; y < maxY; y++) {
+      for (let x = minX; x < maxX; x++) {
+        if (terrain[y] &&
+            (zone.forceTerrain || isImpassable(terrain[y][x]) || terrain[y][x] === 'water')) {
+          terrain[y][x] = spawnTerrain;
+        }
+        if (obstacles[y]) {
+          obstacles[y][x] = null;
+        }
+        // 0.33 discretizes to semantic ground level and works for the public
+        // normalized elevation contract.
+        if (elevation?.[y]) {
+          elevation[y][x] = 0.33;
+        }
       }
     }
   }
@@ -335,23 +410,36 @@ function generateWithArchetypes(seed, nodeType, width, height, options = {}) {
 
   const pipelineResult = pipeline.runArchetype(archetype, width, height, streams, {
     nodeConfig,
-    context,
+    layerContext: context,
+    seed,
     styleProfile: effectiveStyleProfile
   });
 
   // Extract results
-  let terrain = pipelineResult.terrain;
-  let obstacles = pipelineResult.obstacles || [];
+  const terrain = pipelineResult.terrain;
+  const obstacles = pipelineResult.obstacles || [];
   const variants = pipelineResult.variants || generateVariants(width, height, () => streams.variants());
 
-  // Phase 6: Generate or use elevation from context
-  let elevationGrid = context.elevation;
-  if (!elevationGrid && includeElevation) {
-    elevationGrid = generateElevationData(terrain, width, height, () => streams.terrain());
-  }
+  // Phase 6: Use profile-authored elevation when available. Fallback
+  // elevation is generated after terrain validation so repaired corridors do
+  // not retain the height of the impassable terrain they replaced.
+  let elevationGrid = pipelineResult.elevation || context.elevation;
 
   // Clear spawn areas before validation
-  clearSpawnAreas(terrain, obstacles, width, height);
+  const spawnTerrain = [
+    'cave',
+    'mountain',
+    'bridge',
+    'castle',
+    'dungeon',
+    'arena',
+    'guild',
+    'dwarven_mine',
+    'vampiric_crypt'
+  ].includes(nodeType)
+    ? 'stone'
+    : 'grass';
+  clearSpawnAreas(terrain, obstacles, width, height, elevationGrid, spawnTerrain, nodeType);
 
   // Phase 4: Validate and repair constraints
   const constraints = archetype.constraints || {};
@@ -364,11 +452,17 @@ function generateWithArchetypes(seed, nodeType, width, height, options = {}) {
     () => streams.repair()
   );
 
-  // Apply any repairs
-  if (validationResult.repaired) {
-    terrain = validationResult.terrain;
-    obstacles = validationResult.obstacles;
+  // ConstraintValidator repairs the authoritative terrain/obstacle arrays in
+  // place and reports the number of iterations in repairIterations.
+
+  if (!elevationGrid && includeElevation) {
+    elevationGrid = generateElevationData(terrain, width, height, () => streams.terrain());
   }
+
+  // Validation may repair tiles and fallback elevation is generated only
+  // afterward. Reapply the exact battle-mode zones so the final public grids,
+  // not merely an intermediate phase, are obstacle-free and ground-flat.
+  clearSpawnAreas(terrain, obstacles, width, height, elevationGrid, spawnTerrain, nodeType);
 
   // Build return value
   const returnValue = {
@@ -380,6 +474,7 @@ function generateWithArchetypes(seed, nodeType, width, height, options = {}) {
   // Include elevation if requested
   if (includeElevation) {
     returnValue.elevation = elevationGrid;
+    returnValue.elevationFormat = 'normalized';
   }
 
   // Generate spawn positions if requested
@@ -410,15 +505,22 @@ function generateWithArchetypes(seed, nodeType, width, height, options = {}) {
 
   // Include metadata if requested
   if (includeMetadata) {
+    const repairIterations = validationResult.repairIterations ?? 0;
+    const finalObstacleCount = obstacles.reduce(
+      (count, row) => count + (Array.isArray(row) ? row.filter(Boolean).length : 0),
+      0
+    );
+
     returnValue.metadata = {
       ...pipelineResult.metadata,
+      obstacleCount: finalObstacleCount,
       archetype: archetype.name,
       styleProfile: effectiveStyleProfile,
       constraints: archetype.constraints,
       validationResult: {
-        iterations: validationResult.iterations,
-        repaired: validationResult.repaired,
-        finalAnalysis: validationResult.finalAnalysis
+        iterations: repairIterations,
+        repaired: repairIterations > 0,
+        finalAnalysis: validationResult.metrics
       },
       context: {
         roomCount: context.rooms.length,
@@ -498,11 +600,11 @@ function mergeObstacles(base, overlay, width, height) {
  *
  * @param {number} seed - Seed value for deterministic generation
  * @param {string} nodeType - Biome/node type (forest, cave, mountain, bridge, castle)
- * @param {number} width - Map width in tiles (default 32)
- * @param {number} height - Map height in tiles (default 32)
+ * @param {number} width - Map width in tiles, integer >= 10 (default 32)
+ * @param {number} height - Map height in tiles, integer >= 10 (default 32)
  * @param {Object} options - Optional generation parameters
  * @param {string} options.archetypeName - Explicit archetype to use (overrides node type selection)
- * @param {boolean} options.elevation - Include elevation data (default false)
+ * @param {boolean} options.elevation - Include elevation data (default true)
  * @param {boolean} options.includeMetadata - Include generation metadata (default false)
  * @param {boolean} options.includeSpawns - Generate spawn positions (default false)
  * @param {number} options.playerCount - Number of player spawn slots (default 15)
@@ -513,6 +615,7 @@ function mergeObstacles(base, overlay, width, height) {
  * @returns {Object} { terrain, obstacles, variants, elevation?, playerSpawns?, enemySpawns?, metadata? }
  */
 export function generateTerrain(seed, nodeType, width = 32, height = 32, options = {}) {
+  validateMapDimensions(width, height, nodeType);
   return generateWithArchetypes(seed, nodeType, width, height, options);
 }
 
@@ -536,7 +639,7 @@ export function generateTerrainOnly(seed, nodeType, width = 32, height = 32) {
 // ============================================================================
 
 // Re-export SpawnPlacer and configs for direct use
-export { SpawnPlacer, AI_SPAWN_CONFIGS };
+export { SpawnPlacer, AI_SPAWN_CONFIGS, scaleSpawnXRange };
 
 /**
  * Generate spawn positions for an existing terrain/obstacle grid

@@ -20,6 +20,7 @@ import { debugLog } from '../utils/debugLogger.js';
 import { ANIMATION_TIMING } from './BattleAnimations.js';
 import { BattleStatePoller } from './BattleStatePoller.js';
 import { connectionQuality } from '../api/connectionQuality.js';
+import { applyBattleMapPatch, mergeBattleStatePatch } from './mergeBattleState.js';
 
 const QUEUE_TIMEOUT_MS = 5000; // 5 second timeout for queue events
 
@@ -436,13 +437,8 @@ export class BattleWebSocketManager {
         // Store server-provided available actions for movement validation
         this.scene.serverAvailableActions = response.availableActions || null;
 
-        // Sync terrain from server state if available
-        if (response.state?.terrain) {
-          this.scene.grid.setTerrain(response.state.terrain);
-        }
-        if (response.state?.elevation) {
-          this.scene.grid.setElevation(response.state.elevation);
-        }
+        // Sync every authoritative map layer from the full rejoin snapshot.
+        applyBattleMapPatch(this.scene.grid, response.state);
 
         // Apply turn state from availableActions (two-action system)
         if (response.availableActions) {
@@ -533,11 +529,14 @@ export class BattleWebSocketManager {
     const preserveActiveUnit = this.isProcessingQueue || this.inEnemySequence;
     const currentActiveId = this.battleState?.activeUnitId;
 
-    this.battleState = payload.state;
-    this.scene.syncUnitsWithState(payload.state.units);
+    this.battleState = mergeBattleStatePatch(this.battleState, payload.state);
+    this.scene.syncUnitsWithState(this.battleState?.units || []);
+    // Explicit battle:request_sync responses arrive on this same event and
+    // include full map layers; apply them as well as the unit snapshot.
+    applyBattleMapPatch(this.scene.grid, payload.state);
 
     // Restore activeUnitId if we should preserve it (queue handles transitions)
-    if (preserveActiveUnit && currentActiveId) {
+    if (preserveActiveUnit && currentActiveId != null) {
       this.battleState.activeUnitId = currentActiveId;
     }
     // Don't call updateUI() - let queue system handle camera and UI updates

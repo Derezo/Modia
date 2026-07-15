@@ -14,6 +14,42 @@
 import { responsive } from '../core/Responsive.js';
 
 /**
+ * Intersect the camera's visible world rectangle with the map bounds and map
+ * the result into minimap coordinates.
+ */
+export function getMinimapViewportRect({
+  camera,
+  mapDim,
+  targetWidth,
+  targetHeight,
+  offsetX,
+  offsetY,
+  scale
+}) {
+  const zoom = Math.max(camera.zoom || 1, Number.EPSILON);
+  const visibleW = targetWidth / zoom;
+  const visibleH = targetHeight / zoom;
+  const mapMinX = mapDim.worldMinX ?? -mapDim.offsetX;
+  const mapMinY = mapDim.worldMinY ?? -mapDim.offsetY;
+  const mapMaxX = mapDim.worldMaxX ?? mapMinX + mapDim.width;
+  const mapMaxY = mapDim.worldMaxY ?? mapMinY + mapDim.height;
+
+  const worldLeft = Math.max(mapMinX, camera.x - visibleW / 2);
+  const worldTop = Math.max(mapMinY, camera.y - visibleH / 2);
+  const worldRight = Math.min(mapMaxX, camera.x + visibleW / 2);
+  const worldBottom = Math.min(mapMaxY, camera.y + visibleH / 2);
+
+  if (worldRight <= worldLeft || worldBottom <= worldTop) return null;
+
+  return {
+    x: offsetX + worldLeft * scale,
+    y: offsetY + worldTop * scale,
+    width: (worldRight - worldLeft) * scale,
+    height: (worldBottom - worldTop) * scale
+  };
+}
+
+/**
  * Render minimap in corner of the battle screen
  * @param {Object} params - Render parameters
  * @param {CanvasRenderingContext2D} params.ctx - Canvas 2D context
@@ -23,7 +59,7 @@ import { responsive } from '../core/Responsive.js';
  * @param {number} params.targetWidth - Logical canvas width
  * @param {number} params.targetHeight - Logical canvas height
  */
-export function renderMinimap({ ctx, units, camera, grid, targetWidth, targetHeight }) {
+export function renderMinimap({ ctx, units, camera, grid, targetWidth, targetHeight, localTeamId = 1 }) {
   const minimapSize = 120;
   // Use logical width, not DPR-backing-store width
   const minimapX = targetWidth - minimapSize - 10;
@@ -48,7 +84,7 @@ export function renderMinimap({ ctx, units, camera, grid, targetWidth, targetHei
 
     ctx.beginPath();
     ctx.arc(dotX, dotY, 3, 0, Math.PI * 2);
-    ctx.fillStyle = unit.type === 'player' ? '#4a90d9' : '#d94a4a';
+    ctx.fillStyle = unit.teamId === localTeamId ? '#4a90d9' : '#d94a4a';
     ctx.fill();
 
     // Highlight active unit
@@ -59,18 +95,35 @@ export function renderMinimap({ ctx, units, camera, grid, targetWidth, targetHei
     }
   }
 
-  // Draw camera viewport rectangle (visible world area shrinks as zoom grows)
-  const zoom = camera.zoom || 1;
-  const visibleW = targetWidth / zoom;
-  const visibleH = targetHeight / zoom;
-  const viewportWidth = visibleW * scale;
-  const viewportHeight = visibleH * scale;
-  const viewportX = offsetX + (camera.x - visibleW / 2) * scale;
-  const viewportY = offsetY + (camera.y - visibleH / 2) * scale;
+  // Draw only the portion of the camera viewport that overlaps the map. At a
+  // mobile fit zoom the visible world can be larger than the map itself.
+  const viewport = getMinimapViewportRect({
+    camera,
+    mapDim,
+    targetWidth,
+    targetHeight,
+    offsetX,
+    offsetY,
+    scale
+  });
 
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(viewportX, viewportY, viewportWidth, viewportHeight);
+  if (viewport) {
+    const mapMinX = mapDim.worldMinX ?? -mapDim.offsetX;
+    const mapMinY = mapDim.worldMinY ?? -mapDim.offsetY;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(
+      offsetX + mapMinX * scale,
+      offsetY + mapMinY * scale,
+      mapDim.width * scale,
+      mapDim.height * scale
+    );
+    ctx.clip();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(viewport.x, viewport.y, viewport.width, viewport.height);
+    ctx.restore();
+  }
 
   // Border
   ctx.strokeStyle = '#4a4a6a';
@@ -81,5 +134,5 @@ export function renderMinimap({ ctx, units, camera, grid, targetWidth, targetHei
   ctx.fillStyle = '#888';
   ctx.font = `${responsive.getCanvasFontSize('sm')}px Arial`;
   ctx.textAlign = 'left';
-  ctx.fillText('WASD/Arrows: Pan | Space: Re-center', minimapX, minimapY + minimapSize + 12);
+  ctx.fillText('Arrows: Pan | Space: Re-center', minimapX, minimapY + minimapSize + 12);
 }

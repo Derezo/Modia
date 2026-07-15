@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Generate All AI Images Script
- * Generates all pending AI image assets across all categories
+ * Generate All Visual Assets Script
+ * Generates pending visual assets; terrain uses the deterministic compiler.
  *
  * Usage:
  *   node scripts/ai-images/generate-all.js                  # Generate all pending
@@ -26,11 +26,14 @@ const {
 const SCRIPT_DIR = __dirname;
 
 const CATEGORY_SCRIPTS = {
-  tiles: 'generate-tiles.js',
+  // Tiles use the deterministic geometry compiler. Keep them in this command
+  // for compatibility, but never send them through an AI backend.
+  tiles: '../tiles/generate-isometric-tiles.js',
   portraits: 'generate-portraits.js',
   items: 'generate-items.js',
   icons: 'generate-icons.js',
   nodes: 'generate-nodes.js',
+  overlays: 'generate-overlays.js',
   obstacles: 'generate-obstacles.js',
   characters: 'generate-characters.js'
 };
@@ -103,29 +106,30 @@ function parseArgs() {
  */
 function showHelp() {
   console.log(`
-Generate All AI Images Script
-Generates all pending AI image assets across all categories
+Generate All Visual Assets Script
+Generates pending visual assets; terrain uses the deterministic compiler
 
 Usage:
   node scripts/ai-images/generate-all.js [options]
 
 Options:
   --dry-run            Show what would be generated without calling APIs
-  --category <cat>     Generate only specific category (tiles, portraits, items, icons, nodes)
+  --category <cat>     Generate one category listed below
   --force              Regenerate even if files exist
   --verbose, -v        Show detailed output including full prompt construction
   --quiet, -q          Suppress all output except errors
   --delay <ms>         Delay between requests in milliseconds (default: 2000)
-  --huggingface, --hf  Use HuggingFace API instead of local ComfyUI
-  --local              Use local ComfyUI (default)
+  --huggingface, --hf  Use HuggingFace API instead of local ComfyUI (AI categories)
+  --local              Use local ComfyUI for AI categories (default)
   --help, -h           Show this help message
 
 Categories:
-  tiles      - Isometric terrain tiles for battle maps
+  tiles      - Deterministically compiled isometric terrain materials
   portraits  - Character portraits (race × gender × class)
   items      - Equipment and consumable sprites
   icons      - UI icons (actions, status, menu, augments)
   nodes      - World map node icons
+  overlays   - Rarity and augment effect overlays
   obstacles  - Environment obstacles for battle maps (rocks, trees)
   characters - Animated character sprite sheets (64x512 vertical strips)
 
@@ -146,18 +150,32 @@ Examples:
  * @param {Object} options - CLI options
  * @returns {Promise<{success: boolean, output: string}>}
  */
-function runCategoryScript(category, options) {
-  return new Promise((resolve) => {
-    const scriptPath = path.join(SCRIPT_DIR, CATEGORY_SCRIPTS[category]);
-    const args = [];
+function buildCategoryArgs(category, options) {
+  const isDeterministicTileJob = category === 'tiles';
+  const args = [];
 
-    if (options.dryRun) args.push('--dry-run');
-    if (options.force) args.push('--force');
-    if (options.verbose) args.push('--verbose');
-    if (options.quiet) args.push('--quiet');
+  if (options.dryRun) args.push('--dry-run');
+  if (options.force) args.push('--force');
+  if (options.verbose) args.push('--verbose');
+  if (options.quiet) args.push('--quiet');
+  if (isDeterministicTileJob) {
+    // Aggregate generation must close the same metadata lifecycle as a direct
+    // admin/queue compile, otherwise ai:status reports a successfully written
+    // tile as pending forever.
+    args.push('--update-metadata');
+  } else {
     if (options.delay !== 2000) args.push('--delay', String(options.delay));
     if (options.huggingface) args.push('--huggingface');
     if (options.local && !options.huggingface) args.push('--local');
+  }
+
+  return args;
+}
+
+function runCategoryScript(category, options) {
+  return new Promise((resolve) => {
+    const scriptPath = path.resolve(SCRIPT_DIR, CATEGORY_SCRIPTS[category]);
+    const args = buildCategoryArgs(category, options);
 
     log(`Running ${category} generator...`, 'info');
 
@@ -187,8 +205,12 @@ function runCategoryScript(category, options) {
 /**
  * Validate required environment variables
  */
-function validateEnvVars(options) {
+function validateEnvVars(options, categories) {
   if (options.dryRun) return;
+
+  // Tile-only jobs never contact an AI backend, even if a compatibility caller
+  // leaves --huggingface or --local on the command line.
+  if (!categories.some(category => category !== 'tiles')) return;
 
   // Only require HuggingFace token when using HuggingFace mode
   if (options.huggingface && !process.env.HUGGINGFACE_API_TOKEN) {
@@ -215,9 +237,19 @@ async function main() {
     process.exit(0);
   }
 
-  validateEnvVars(options);
+  if (options.category && !CATEGORY_SCRIPTS[options.category]) {
+    log(`Unknown category: ${options.category}`, 'error');
+    log(`Valid categories: ${Object.keys(CATEGORY_SCRIPTS).join(', ')}`, 'info');
+    process.exit(1);
+  }
 
-  log('AI Image Generation - All Categories', 'info');
+  const categories = options.category
+    ? [options.category]
+    : Object.keys(CATEGORY_SCRIPTS);
+
+  validateEnvVars(options, categories);
+
+  log('Visual Asset Generation - All Categories', 'info');
   log('=====================================', 'info');
   console.log('');
 
@@ -233,17 +265,6 @@ async function main() {
   console.log('');
   console.log(`  Total: ${stats.total.generated}/${stats.total.total} (${stats.total.percentComplete}%)`);
   console.log('');
-
-  // Determine categories to process
-  const categories = options.category
-    ? [options.category]
-    : Object.keys(CATEGORY_SCRIPTS);
-
-  if (options.category && !CATEGORY_SCRIPTS[options.category]) {
-    log(`Unknown category: ${options.category}`, 'error');
-    log(`Valid categories: ${Object.keys(CATEGORY_SCRIPTS).join(', ')}`, 'info');
-    process.exit(1);
-  }
 
   // Run generators
   const results = {
@@ -301,8 +322,12 @@ async function main() {
   process.exit(results.failed.length > 0 ? 1 : 0);
 }
 
-main().catch(error => {
-  log(`Unexpected error: ${error.message}`, 'error');
-  console.error(error);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch(error => {
+    log(`Unexpected error: ${error.message}`, 'error');
+    console.error(error);
+    process.exit(1);
+  });
+}
+
+module.exports = { buildCategoryArgs, runCategoryScript };

@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "description": "Master manifest for Modia AI-generated image assets",
-  "totalAssets": 778,
+  "description": "Master manifest for Modia generated visual assets, including deterministic battle terrain",
+  "totalAssets": 985,
   "artDirection": {
     "mood": "cozy_nostalgic",
     "technique": "ink_wash",
@@ -10,8 +10,10 @@
   },
   "categories": {
     "tiles": {
-      "description": "Isometric terrain tiles for battle maps",
-      "assetCount": 243,
+      "description": "Deterministically compiled isometric terrain materials for battle maps",
+      "assetCount": 281,
+      "pipeline": "material-compiler",
+      "geometryProfile": "iso64-retina-v3",
       "files": [
         "tiles/floors/forest.json",
         "tiles/floors/cave.json",
@@ -32,9 +34,10 @@
     },
     "portraits": {
       "description": "Character portraits (race × gender × class combinations)",
-      "assetCount": 120,
+      "assetCount": 316,
       "files": [
-        "portraits/combinations.json"
+        "portraits/combinations.json",
+        "portraits/enemies.json"
       ]
     },
     "items": {
@@ -49,25 +52,26 @@
     },
     "icons": {
       "description": "UI icons for actions, status effects, menus, and zodiac crystals",
-      "assetCount": 104,
+      "assetCount": 143,
       "files": [
         "icons/actions.json",
         "icons/status.json",
         "icons/menu.json",
         "icons/augments.json",
+        "icons/resources.json",
         "icons/zodiac.json"
       ]
     },
     "nodes": {
       "description": "World map node icons",
-      "assetCount": 20,
+      "assetCount": 26,
       "files": [
         "nodes/locations.json"
       ]
     },
     "overlays": {
       "description": "Effect overlays for layered item composition - rarity auras and augment effects",
-      "assetCount": 18,
+      "assetCount": 22,
       "files": [
         "overlays/rarity.json",
         "overlays/augments.json"
@@ -83,7 +87,7 @@
     },
     "characters": {
       "description": "Animated character sprite sheets (64x512 vertical strips, 8 frames)",
-      "assetCount": 140,
+      "assetCount": 54,
       "spriteSheets": 34,
       "format": {
         "type": "vertical_strip",
@@ -93,8 +97,7 @@
         "sheetDimensions": "64x512"
       },
       "files": [
-        "characters/player.json",
-        "characters/enemies.json",
+        "characters/players.json",
         "characters/enemies/forest.json",
         "characters/enemies/cave.json",
         "characters/enemies/mountain.json",
@@ -174,7 +177,7 @@
     "v2": {
       "name": "Isometric/Textured",
       "triggerWord": "wbgmsst",
-      "description": "Textured isometric style, good for terrain tiles"
+      "description": "Textured illustration style for isolated AI-generated assets"
     },
     "modern-pixel": {
       "name": "Modern Pixel Art",
@@ -223,6 +226,7 @@
     "obstacles": "v2",
     "characters": "v1"
   },
+  "categoryDefaultsNote": "The tiles value is retained for API compatibility and is ignored by the deterministic tile compiler.",
   "layeredComposition": {
     "enabled": true,
     "description": "Items are generated as clean base sprites. Rarity and augment effects are applied at runtime via overlay compositing.",

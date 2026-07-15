@@ -69,7 +69,9 @@ export async function generateGuildmasterBattle(character, targetClass, _nodeId)
     units: [playerUnit, ...enemies],
     terrain: terrainData.terrain,
     elevation: terrainData.elevation,
+    elevationFormat: terrainData.elevationFormat,
     obstacles: terrainData.obstacles,
+    variants: terrainData.variants,
     mapWidth: 32,
     mapHeight: 32,
     bossStates: {}
@@ -159,8 +161,8 @@ async function createSoloPlayerUnit(character) {
     statusEffects: [],
     moveUsed: false,
     actUsed: false,
-    x: 0,
-    y: 0
+    tileX: 0,
+    tileY: 0
   };
 }
 
@@ -222,8 +224,8 @@ function createGuildmasterUnit(template, challengerLevel) {
     statusEffects: [],
     moveUsed: false,
     actUsed: false,
-    x: 0,
-    y: 0,
+    tileX: 0,
+    tileY: 0,
     isBoss: true,
     currentPhase: 1,
     maxPhases: (template.phases || []).length || 1,
@@ -327,8 +329,8 @@ function createDiscipleUnit(className, challengerLevel, index) {
     statusEffects: [],
     moveUsed: false,
     actUsed: false,
-    x: 0,
-    y: 0,
+    tileX: 0,
+    tileY: 0,
     aiType: 'standard'
   };
 }
@@ -366,11 +368,11 @@ function calculateEquipmentBonuses(equipment) {
 /**
  * Position units on the battle map
  */
-function positionUnits(playerUnits, enemyUnits, mapWidth, mapHeight) {
+export function positionUnits(playerUnits, enemyUnits, mapWidth, mapHeight) {
   // Player unit starts on left side
   for (let i = 0; i < playerUnits.length; i++) {
-    playerUnits[i].x = 2;
-    playerUnits[i].y = Math.floor(mapHeight / 2);
+    playerUnits[i].tileX = 2;
+    playerUnits[i].tileY = Math.floor(mapHeight / 2);
   }
 
   // Enemy units on right side - guildmaster center, disciples around
@@ -380,13 +382,13 @@ function positionUnits(playerUnits, enemyUnits, mapWidth, mapHeight) {
   for (let i = 0; i < enemyUnits.length; i++) {
     if (i === 0) {
       // Guildmaster in center
-      enemyUnits[i].x = startX;
-      enemyUnits[i].y = centerY;
+      enemyUnits[i].tileX = startX;
+      enemyUnits[i].tileY = centerY;
     } else {
       // Disciples in formation around guildmaster
       const offset = Math.floor((i + 1) / 2) * (i % 2 === 1 ? 1 : -1);
-      enemyUnits[i].x = startX - 2;
-      enemyUnits[i].y = centerY + offset * 2;
+      enemyUnits[i].tileX = startX - 2;
+      enemyUnits[i].tileY = centerY + offset * 2;
     }
   }
 }

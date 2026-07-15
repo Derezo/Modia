@@ -67,8 +67,17 @@ async function validateRoomAccess(userId, roomName) {
 
     try {
       const result = await query(
-        `SELECT id FROM battles
-         WHERE id = $1 AND (player1_id = $2 OR player2_id = $2) AND status = 'active'`,
+        `SELECT b.id FROM battles b
+         WHERE b.id = $1
+           AND b.status = 'active'
+           AND (
+             b.player1_id = $2
+             OR b.player2_id = $2
+             OR EXISTS (
+               SELECT 1 FROM battle_players bp
+               WHERE bp.battle_id = b.id AND bp.user_id = $2
+             )
+           )`,
         [battleId, userId]
       );
       if (result.rows.length === 0) {

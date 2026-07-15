@@ -54,8 +54,18 @@ async function getGenerationConfig() {
     const theme = JSON.parse(themeData);
 
     return {
-      // Backend: 'local' (default) or 'huggingface'
-      backend: theme.generationBackend || 'local',
+      // AI backend. Tile jobs use the deterministic material compiler instead.
+      backend: VALID_BACKENDS.includes(theme.generationBackend)
+        ? theme.generationBackend
+        : 'comfyui',
+
+      // Canonical tile-generation contract (informational for clients as well
+      // as the service; admin tile jobs always use the compiler script map).
+      tilePipeline: {
+        mode: 'material-compiler',
+        geometryProfile: 'iso64-retina-v3',
+        ...(theme.tilePipeline || {})
+      },
 
       // Seed settings
       seedMode: theme.seedMode || 'random', // 'random', 'fixed', 'incremental'
@@ -72,7 +82,11 @@ async function getGenerationConfig() {
   } catch (error) {
     console.warn('[AdminGeneration] Could not read theme.json, using defaults:', error.message);
     return {
-      backend: 'local',
+      backend: 'comfyui',
+      tilePipeline: {
+        mode: 'material-compiler',
+        geometryProfile: 'iso64-retina-v3'
+      },
       seedMode: 'random',
       fixedSeed: 42,
       loraDefaults: DEFAULT_LORA,
@@ -86,9 +100,26 @@ async function getGenerationConfig() {
 // Track incremental seed across jobs
 let incrementalSeed = 42;
 
-// In-memory backend selection (can be changed at runtime without modifying theme.json)
-// Valid values: 'comfyui' (local), 'huggingface'
-let generationBackend = 'comfyui';
+/**
+ * Read the persisted AI backend for synchronous status endpoints. Keeping this
+ * lookup here also means changes made through the generic theme editor are
+ * reflected without restarting the API process.
+ */
+function readPersistedGenerationBackend(fallback = 'comfyui') {
+  try {
+    const theme = JSON.parse(readFileSync(THEME_PATH, 'utf-8'));
+    if (VALID_BACKENDS.includes(theme.generationBackend)) {
+      return theme.generationBackend;
+    }
+  } catch {
+    // Fall through to the safe local default when the theme is unavailable.
+  }
+  return fallback;
+}
+
+// In-memory cache used if theme persistence is temporarily unavailable.
+// Valid values: 'comfyui', 'huggingface'.
+let generationBackend = readPersistedGenerationBackend();
 
 // Use imported CATEGORY_SCRIPT_MAP as SCRIPT_MAP
 const SCRIPT_MAP = CATEGORY_SCRIPT_MAP;
@@ -118,6 +149,13 @@ const state = {
  * Wraps processNextJob() with error handling to prevent queue from getting stuck
  */
 function safeProcessNext() {
+  // Unit/integration tests exercise queue semantics and must not silently start
+  // GPU/API generation or rewrite assets. Dedicated pipeline tests can opt in.
+  const isTestRuntime = process.env.NODE_ENV === 'test' || Boolean(process.env.NODE_TEST_CONTEXT);
+  if (isTestRuntime && process.env.RUN_ASSET_GENERATORS_IN_TESTS !== 'true') {
+    return;
+  }
+
   setImmediate(() => {
     processNextJob().catch(err => {
       console.error('[Image Generation] processNextJob failed:', err);
@@ -203,9 +241,26 @@ function broadcastQueueUpdate() {
  * @param {string} line - Stdout line to parse
  * @returns {Object|null} Parsed progress or null
  */
-function parseProgress(line) {
-  // Try base progress patterns (asset, saved, generated)
-  const baseProgress = parseProgressBase(line, { fileExtension: 'png' });
+function parseProgress(line, category, dryRun = false) {
+  // The material compiler emits progress and its WebP output on one line.
+  // Parse it before the generic [X/Y] matcher so the admin can immediately
+  // refresh each compiled asset while still advancing progress.
+  if (category === 'tiles') {
+    const compilerMatch = line.match(/^\[(\d+)\/(\d+)\].*?->\s*(.+\.webp)\s*$/i);
+    if (compilerMatch) {
+      return {
+        type: dryRun ? 'asset' : 'saved',
+        current: parseInt(compilerMatch[1], 10),
+        total: parseInt(compilerMatch[2], 10),
+        path: compilerMatch[3]
+      };
+    }
+  }
+
+  // Try base progress patterns (asset, saved, generated).
+  const baseProgress = parseProgressBase(line, {
+    fileExtension: category === 'tiles' ? 'webp' : 'png'
+  });
   if (baseProgress) return baseProgress;
 
   // Try step progress pattern (image-generation specific)
@@ -220,10 +275,41 @@ function parseProgress(line) {
 function buildScriptArgs(job, config) {
   const args = [];
 
+  // Tile generation is a deterministic material compilation step, not an AI
+  // request. Its CLI deliberately accepts only asset selectors and file-system
+  // controls; backend, LoRA, seed, variants, delay, and limit do not apply.
+  if (job.category === 'tiles') {
+    if (job.filters?.queueMode) {
+      args.push('--queue');
+    }
+
+    if (job.filters?.biome) args.push('--biome', job.filters.biome);
+    if (job.filters?.subcategory) args.push('--category', job.filters.subcategory);
+
+    if (!job.filters?.queueMode) {
+      const keys = Array.isArray(job.filters?.ids) ? job.filters.ids
+        : Array.isArray(job.filters?.keys) ? job.filters.keys
+          : job.filters?.key ? [job.filters.key]
+            : job.filters?.id ? [job.filters.id]
+              : [];
+      keys.forEach(key => args.push('--key', key));
+    }
+
+    if (job.options?.force) args.push('--force');
+    if (job.options?.dryRun) args.push('--dry-run');
+    if (job.options?.backup) args.push('--backup');
+    if (!job.options?.dryRun) args.push('--update-metadata');
+
+    // Per-asset output lines drive progress and live asset refreshes in admin.
+    args.push('--verbose');
+    console.log('[buildScriptArgs] Tile material compiler args:', args.join(' '));
+    return args;
+  }
+
   // === BACKEND SELECTION ===
-  // Priority: job-level override > in-memory state > theme.json config
+  // Priority: job-level override > persisted theme > in-memory fallback
   // If backend is 'huggingface', add the --huggingface flag
-  const backend = job.options?.backend || generationBackend || config.backend;
+  const backend = job.options?.backend || config.backend || generationBackend;
   if (backend === 'huggingface') {
     args.push('--huggingface');
   }
@@ -254,9 +340,9 @@ function buildScriptArgs(job, config) {
   }
 
   // === VARIANTS ===
-  // Only applicable to tiles and nodes
+  // Tile variants are metadata-defined; this option applies to AI node jobs.
   const variants = job.options?.variants || config.variants;
-  if (variants && variants > 1 && ['tiles', 'nodes'].includes(job.category)) {
+  if (variants && variants > 1 && job.category === 'nodes') {
     args.push('--variants', String(variants));
   }
 
@@ -415,7 +501,11 @@ async function processNextJob() {
   const args = buildScriptArgs(job, config);
 
   console.log(`[AdminGeneration] Starting: node ${script} ${args.join(' ')}`);
-  console.log(`[AdminGeneration] Config: backend=${config.backend}, seedMode=${config.seedMode}, lora=${job.options?.lora || config.loraDefaults?.[job.category] || 'default'}`);
+  if (job.category === 'tiles') {
+    console.log(`[AdminGeneration] Tile pipeline: ${config.tilePipeline.mode} (${config.tilePipeline.geometryProfile})`);
+  } else {
+    console.log(`[AdminGeneration] Config: backend=${config.backend}, seedMode=${config.seedMode}, lora=${job.options?.lora || config.loraDefaults?.[job.category] || 'default'}`);
+  }
 
   // Broadcast start event
   broadcast('generation:started', {
@@ -483,7 +573,7 @@ async function processNextJob() {
       }
 
       // Parse progress
-      const progress = parseProgress(line);
+      const progress = parseProgress(line, job.category, job.options?.dryRun === true);
       if (progress) {
         if (progress.type === 'asset') {
           job.progress.current = progress.current;
@@ -492,6 +582,10 @@ async function processNextJob() {
           job.progress.steps.current = progress.current;
           job.progress.steps.total = progress.total;
         } else if (progress.type === 'saved') {
+          if (Number.isInteger(progress.current) && Number.isInteger(progress.total)) {
+            job.progress.current = progress.current;
+            job.progress.total = progress.total;
+          }
           const timestamp = new Date().toISOString();
           state.generatedImages.push({
             path: progress.path,
@@ -770,12 +864,12 @@ function finishJob(job, status, error = null) {
  * @param {string[]} filters.keys - Generate specific assets by key array
  * @param {string[]} filters.ids - Generate specific assets by ID array
  * @param {Object} options - Generation options
- * @param {string} options.backend - 'local' (default) or 'huggingface'
+ * @param {string} options.backend - 'comfyui' (default) or 'huggingface' (AI categories only)
  * @param {string} options.lora - LoRA model: 'v1', 'v2', 'modern-pixel', 'retro-pixel'
  * @param {string} options.seedMode - 'random', 'fixed', or 'incremental'
  * @param {number} options.seed - Specific seed value (overrides seedMode)
  * @param {number} options.fixedSeed - Fixed seed when seedMode='fixed'
- * @param {number} options.variants - Number of variants (tiles/nodes only)
+ * @param {number} options.variants - Number of variants for AI-generated nodes
  * @param {number} options.delay - Delay between requests in ms
  * @param {boolean} options.force - Regenerate even if exists
  * @param {boolean} options.dryRun - Preview without generating
@@ -995,7 +1089,7 @@ export function getDefaultLora() {
 
 /**
  * Get current generation configuration from theme.json
- * @returns {Promise<Object>} Configuration object with backend, seedMode, fixedSeed, loraDefaults, variants, delay, verbose
+ * @returns {Promise<Object>} Configuration including AI settings and the tile compiler contract
  */
 export async function getConfig() {
   return getGenerationConfig();
@@ -1026,7 +1120,9 @@ export function setGenerationBackend(backend) {
     const themeData = readFileSync(THEME_PATH, 'utf-8');
     const theme = JSON.parse(themeData);
     theme.generationBackend = backend;
-    writeFileSync(THEME_PATH, JSON.stringify(theme, null, 2));
+    // Keep metadata files POSIX-text friendly and avoid no-newline churn when
+    // settings are changed repeatedly by the admin UI or its tests.
+    writeFileSync(THEME_PATH, `${JSON.stringify(theme, null, 2)}\n`);
     console.log(`[AdminGeneration] Backend set and persisted to: ${backend}`);
   } catch (err) {
     // Log but don't fail - in-memory value still works
@@ -1039,6 +1135,7 @@ export function setGenerationBackend(backend) {
  * @returns {string} Current backend ('comfyui' or 'huggingface')
  */
 export function getGenerationBackend() {
+  generationBackend = readPersistedGenerationBackend(generationBackend);
   return generationBackend;
 }
 

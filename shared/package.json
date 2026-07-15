@@ -6,7 +6,7 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "test": "node --test *.test.js"
+    "test": "node --test *.test.js mapgen/*.test.js"
   },
   "exports": {
     ".": "./index.js",
@@ -16,6 +16,7 @@
     "./mapGeneration": "./mapGeneration.js",
     "./pathfinding": "./pathfinding.js",
     "./battleMath": "./battleMath.js",
+    "./obstacles": "./obstacles.js",
     "./mapgen/SpawnPlacer": "./mapgen/SpawnPlacer.js"
   }
 }

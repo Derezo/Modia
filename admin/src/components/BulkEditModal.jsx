@@ -14,6 +14,11 @@ import {
 } from '@radix-ui/react-icons';
 
 import { api } from '../lib/api';
+import {
+  getAssetRawId,
+  getSelectedAssets,
+  groupTileAssetsByScope,
+} from '../lib/assetIdentity';
 import { useToast } from '../contexts/ToastContext';
 
 /**
@@ -202,23 +207,13 @@ export default function BulkEditModal({
     try {
       let totalUpdated = 0;
       let totalErrors = [];
+      const selectedAssets = getSelectedAssets(assets, selectedIds, category);
 
-      // For tiles, group by biome since IDs may not be unique across biomes
+      // Tile metadata keys are scoped by both biome and tile category.
       if (category === 'tiles') {
-        // Build biome map from assets
-        const selectedIdSet = new Set(selectedIds);
-        const selectedAssets = assets.filter(a => selectedIdSet.has(a.key || a.id));
-        const byBiome = new Map();
-        for (const asset of selectedAssets) {
-          const biome = asset._biome || 'unknown';
-          if (!byBiome.has(biome)) byBiome.set(biome, []);
-          byBiome.get(biome).push(asset.key || asset.id);
-        }
-
-        // Make parallel API calls for each biome
         const results = await Promise.all(
-          Array.from(byBiome.entries()).map(([biome, ids]) =>
-            api.bulkUpdateAssets(category, ids, updates, { biome })
+          groupTileAssetsByScope(selectedAssets).map(({ biome, subcategory, assetIds }) =>
+            api.bulkUpdateAssets(category, assetIds, updates, { biome, subcategory })
           )
         );
 
@@ -231,7 +226,8 @@ export default function BulkEditModal({
         }
       } else {
         // Non-tiles: IDs are unique, no grouping needed
-        const result = await api.bulkUpdateAssets(category, selectedIds, updates);
+        const assetIds = selectedAssets.map(getAssetRawId);
+        const result = await api.bulkUpdateAssets(category, assetIds, updates);
         totalUpdated = result.updated || 0;
         totalErrors = result.errors || [];
       }

@@ -175,16 +175,16 @@ export class BattleScene extends Scene {
     // Initialize grid with asset loader for sprite rendering
     this.grid = new BattleGrid(this.game.canvas, data.mapWidth || 32, data.mapHeight || 32);
     this.grid.setAssetLoader(this.game.assetLoader);
-    // Prefer server-provided terrain/elevation for consistency
-    // Fall back to regeneration if not provided (backwards compatibility)
-    if (data.state?.terrain && data.state?.elevation) {
-      this.grid.setTerrain(data.state.terrain);
-      this.grid.setElevation(data.state.elevation);
-      this.grid.nodeType = this.getNodeType(); // Still needed for sprite selection
-    } else {
-      // Fallback: regenerate from seed (legacy battles or missing data)
-      this.grid.generateTerrain(this.mapSeed, this.getNodeType());
+    // Generate the complete deterministic visual layers first, then prefer any
+    // authoritative layers supplied by the server. Previously the server path
+    // skipped variants and props entirely, making every tile variant zero.
+    this.grid.generateTerrain(this.mapSeed, this.getNodeType());
+    if (data.state?.terrain) this.grid.setTerrain(data.state.terrain);
+    if (data.state?.elevation) {
+      this.grid.setElevation(data.state.elevation, data.state.elevationFormat || 'auto');
     }
+    if (data.state?.variants) this.grid.setTileVariants(data.state.variants);
+    if (Array.isArray(data.state?.obstacles?.[0])) this.grid.setObstacles(data.state.obstacles);
 
     // Initialize animations
     this.animations = new BattleAnimations();
@@ -227,9 +227,15 @@ export class BattleScene extends Scene {
     // Estimate total assets for accurate progress bar
     const { AssetLoader } = await import('../core/AssetLoader.js');
     const terrainCount = AssetLoader.TERRAIN_TYPES.length * AssetLoader.VARIANTS_PER_TERRAIN + 9; // +9 for walls
-    const obstacleCount = 10; // rocks + trees
-    const enemyCount = enemyIds.length * 4; // 4 animations each
-    const playerCount = playerClasses.length * 5; // 5 animations each
+    const obstacleAssets = Array.from(new Map(
+      this.grid.obstacles.flat().filter(Boolean).map(obstacle => [
+        `${obstacle.type}:${obstacle.variant}`,
+        obstacle
+      ])
+    ).values());
+    const obstacleCount = obstacleAssets.length;
+    const enemyCount = enemyIds.length * AssetLoader.ENEMY_ANIMATIONS.length;
+    const playerCount = playerClasses.length * AssetLoader.CHARACTER_ANIMATIONS.length;
     const totalAssets = terrainCount + obstacleCount + enemyCount + playerCount;
     let loadedTotal = 0;
 
@@ -245,6 +251,7 @@ export class BattleScene extends Scene {
           onProgress: makeProgressCallback('Loading terrain...')
         }),
         this.game.assetLoader.preloadObstacles({
+          obstacles: obstacleAssets,
           onProgress: makeProgressCallback('Loading obstacles...')
         }),
         this.game.assetLoader.preloadEnemies(nodeType, enemyIds, {
@@ -960,8 +967,9 @@ export class BattleScene extends Scene {
    */
   _applyMobileFitZoom(mapDimensions) {
     if (!this.camera || !mapDimensions) return;
+    const preferredZoom = this.game.getUserSetting('display.cameraZoom', 1);
     if (!responsive.isMobile()) {
-      this.camera.setZoom(1);
+      this.camera.setZoom(preferredZoom);
       return;
     }
     const mapW = mapDimensions.worldMaxX - mapDimensions.worldMinX;
@@ -972,7 +980,7 @@ export class BattleScene extends Scene {
       this.game.targetHeight / mapH
     );
     // Keep some padding so the grid isn't edge-to-edge
-    this.camera.setZoom(fit * 0.9);
+    this.camera.setZoom(fit * 0.9 * preferredZoom);
   }
 
   /**
@@ -1011,8 +1019,9 @@ export class BattleScene extends Scene {
       // Fall back to unit's screen position (for keyboard navigation)
       const worldPos = this.grid.gridToScreenWorld(unit.gridX, unit.gridY);
       const screenPos = this.camera.worldToScreen(worldPos.x, worldPos.y);
+      const zoomedPos = this.camera.screenToZoomed(screenPos.x, screenPos.y - 40);
       // Convert canvas coords to overlay coords
-      const overlayPos = this.canvasToOverlayCoords(screenPos.x, screenPos.y - 40);
+      const overlayPos = this.canvasToOverlayCoords(zoomedPos.x, zoomedPos.y);
       menuX = overlayPos.x;
       menuY = overlayPos.y;
     }
@@ -1039,9 +1048,10 @@ export class BattleScene extends Scene {
     // Get unit's screen position in canvas coordinates
     const worldPos = this.grid.gridToScreenWorld(activeUnit.gridX, activeUnit.gridY);
     const screenPos = this.camera.worldToScreen(worldPos.x, worldPos.y);
+    const zoomedPos = this.camera.screenToZoomed(screenPos.x, screenPos.y - 40);
 
     // Convert canvas coords to overlay coords for DOM positioning
-    const overlayPos = this.canvasToOverlayCoords(screenPos.x, screenPos.y - 40);
+    const overlayPos = this.canvasToOverlayCoords(zoomedPos.x, zoomedPos.y);
 
     // Update radial menu segment availability
     this.radialMenu.setSegmentEnabled('move', this.canMove);
@@ -1305,11 +1315,11 @@ export class BattleScene extends Scene {
     }];
 
     // Show aura effect preview on the caster
-    const screenPos = this.grid.tileToScreen(activeUnit.gridX, activeUnit.gridY);
+    const worldPos = this.grid.gridToScreenWorld(activeUnit.gridX, activeUnit.gridY);
     const visualCategory = getVisualCategory(skill);
     this.animations.addSelfAuraEffect(
-      screenPos.x + this.camera.x,
-      screenPos.y + this.camera.y - 32,
+      worldPos.x,
+      worldPos.y - 32,
       visualCategory
     );
 
@@ -2458,10 +2468,7 @@ export class BattleScene extends Scene {
       }
     }
 
-    // Update turn transition animation
-    this.camera.updateTurnTransition(deltaTime);
-
-    // Update camera (smooth interpolation)
+    // Update camera (also advances an active turn transition exactly once)
     this.camera.update(deltaTime);
 
     // Update animations
@@ -2558,8 +2565,13 @@ export class BattleScene extends Scene {
       ctx.translate(-cx, -cy);
     }
 
-    // Render grid with highlights and camera (includes intent highlights from WebSocket)
-    this.grid.renderWithIntentHighlights(ctx, highlights, this.camera);
+    // Render terrain, props, and units through a single painter queue so a
+    // foreground cliff can correctly cover a unit behind it.
+    const allUnits = Array.from(this.units.values());
+    this.grid.renderWithIntentHighlights(ctx, highlights, this.camera, {
+      entities: allUnits,
+      renderEntity: unit => unit.render(ctx, this.camera, localTeamId)
+    });
 
     // Render grid cursor (keyboard navigation)
     if (this.gridCursor) {
@@ -2569,23 +2581,6 @@ export class BattleScene extends Scene {
     // Render tile cycle indicator when multiple tiles overlap (delegated to input handler)
     if (this.inputHandler) {
       this.inputHandler.renderTileCycleIndicator(ctx);
-    }
-
-    // Sort and render units (by Y position for depth)
-    const allUnits = Array.from(this.units.values());
-    const sortedUnits = allUnits
-      .filter(u => u.isAlive())
-      .sort((a, b) => (a.gridX + a.gridY) - (b.gridX + b.gridY));
-
-    for (const unit of sortedUnits) {
-      unit.render(ctx, this.camera);
-    }
-
-    // Render dead units (using dead sprite at full opacity)
-    for (const unit of this.units.values()) {
-      if (!unit.isAlive()) {
-        unit.render(ctx, this.camera);
-      }
     }
 
     // Render animations with camera transform
@@ -2662,13 +2657,18 @@ export class BattleScene extends Scene {
    * Render minimap in corner (delegates to extracted module)
    */
   renderMinimap(ctx) {
+    const localUserId = this.game.localUserId;
+    const localTeamId = this.isPvP
+      ? (Array.from(this.units.values()).find(unit => unit.ownerId === localUserId)?.teamId ?? 1)
+      : 1;
     renderMinimapOverlay({
       ctx,
       units: this.units,
       camera: this.camera,
       grid: this.grid,
       targetWidth: this.game.targetWidth,
-      targetHeight: this.game.targetHeight
+      targetHeight: this.game.targetHeight,
+      localTeamId
     });
   }
 }

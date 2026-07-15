@@ -2,10 +2,11 @@
 
 This document describes Modia's AI image generation system for creating game assets using HuggingFace Flux LoRA models.
 
+> **Terrain boundary:** Battle floor, wall, and slope tiles moved to the deterministic `iso64-retina-v3` material compiler. They do not use ComfyUI, HuggingFace, LoRA, or AI post-processing; metadata prompt text is only a deterministic material hint. See [ISOMETRIC_TILE_SYSTEM.md](ISOMETRIC_TILE_SYSTEM.md). The old AI tile workflow is historical; `ai:generate:tiles` remains only as a compatibility alias to the deterministic compiler.
+
 ## Overview
 
 The AI image generation pipeline integrates with the external `image-generator` project to create:
-- **Terrain tiles** - Isometric tiles for battle maps (floors, walls, slopes)
 - **Character portraits** - Bust shots for all race/gender/class combinations
 - **Item sprites** - Equipment and consumable icons
 - **UI icons** - Action, status, menu, and augment icons
@@ -18,17 +19,19 @@ The AI image generation pipeline integrates with the external `image-generator` 
 npm run ai:status
 
 # Preview what would be generated (dry run)
-npm run ai:generate:tiles -- --dry-run
+npm run ai:generate:portraits -- --dry-run
 
 # Generate a single asset
-npm run ai:generate:tiles -- --key forest_grass_1 --force
+npm run ai:generate:icons -- --key attack --force
 
-# Generate all assets for a biome/category
-npm run ai:generate:tiles -- --biome forest
+# Generate an AI category
 npm run ai:generate:portraits -- --race elf
 
-# Generate everything
+# Generate everything (the tile category is compiled deterministically)
 npm run ai:generate
+
+# Compile battle tiles directly
+npm run tiles:generate -- --biome forest --dry-run
 ```
 
 ## Art Direction
@@ -91,17 +94,20 @@ Modia/
 │   │   ├── metadataUtils.js
 │   │   └── promptBuilder.js
 │   ├── generate-all.js
-│   ├── generate-tiles.js
 │   ├── generate-portraits.js
 │   ├── generate-items.js
 │   ├── generate-icons.js
 │   ├── generate-nodes.js
 │   └── validate-images.js
-└── frontend/public/assets/sprites/  # Output directory
-    ├── terrain/{biome}/         # Generated tiles
-    ├── characters/portraits/    # Generated portraits
-    ├── items/{category}/        # Generated item sprites
-    ├── icons/{category}/        # Generated icons
+├── scripts/tiles/               # Deterministic battle-terrain compiler
+│   ├── generate-isometric-tiles.js
+│   ├── isometricCompiler.js
+│   └── validate-isometric-tiles.js
+└── frontend/public/assets/      # Output directory
+    ├── sprites/terrain/{biome}/ # Deterministically compiled tiles
+    ├── portraits/               # Generated portraits
+    ├── items/                   # Generated item sprites
+    ├── icons/                   # Generated icons
     └── nodes/                   # Generated node icons
 ```
 
@@ -162,7 +168,7 @@ The image-generator project supports multiple LoRA models trained on different p
 | Model ID | Trigger Word | Style | Recommended For |
 |----------|--------------|-------|-----------------|
 | `v1` | GRPZA | Flat 2D pixel art | Icons, items (less detail) |
-| `v2` | wbgmsst | Isometric/textured | Tiles, terrain, obstacles |
+| `v2` | wbgmsst | Isometric/textured | Obstacles and other isolated assets |
 | `modern-pixel` | umempart | Modern pixel art | Stylized contemporary assets |
 | `retro-pixel` | Retro Pixel | Classic 8-bit | Retro-themed special assets |
 
@@ -181,7 +187,6 @@ The manifest defines sensible defaults per category:
 ```json
 {
   "categoryDefaults": {
-    "tiles": "v2",       // Isometric style for terrain
     "portraits": "v1",   // Flat pixel art for faces
     "items": "v1",       // Clean sprites for inventory
     "icons": "v1",       // Simple shapes for UI
@@ -207,15 +212,14 @@ Override the category default by adding `loraModel` to any asset:
 ### Usage Examples
 
 ```bash
-# Use category default (tiles use v2)
-npm run ai:generate:tiles -- --key grass_0
+# Use an asset's category default
+npm run ai:generate:icons -- --key attack
 
 # Override with CLI flag
-npm run ai:generate:tiles -- --key grass_0 --lora v1
+npm run ai:generate:icons -- --key attack --lora v1
 
 # Dry run shows which model will be used
-npm run ai:generate:tiles -- --dry-run --key grass_0
-# Output: LoRA: v2 (default)
+npm run ai:generate:icons -- --dry-run --key attack
 ```
 
 ## Prompt Templates
@@ -223,7 +227,7 @@ npm run ai:generate:tiles -- --dry-run --key grass_0
 ### Master Style Prefixes
 
 Each category uses a default LoRA model (see [LoRA Models](#lora-models) section). The most common triggers are:
-- **V2 (wbgmsst)**: Used for tiles and terrain (isometric/textured style)
+- **V2 (wbgmsst)**: Used for textured isolated assets such as obstacles
 - **V1 (GRPZA)**: Used for icons, items, portraits (flat pixel art style)
 
 **Default Style (V2 LoRA - wbgmsst trigger):**
@@ -248,10 +252,11 @@ top-down 3/4 view, clear silhouette, isolated subject,
 character centered, hands not visible, expressive eyes, isolated on plain background, 64x64 game portrait
 ```
 
-**Terrain Tiles (64×64):**
-```
-{trigger}, {terrain} floor tile, {biome_modifier}, 64x64 diamond shape game tile
-```
+**Terrain tiles:**
+
+Terrain is not generated from a LoRA prompt. The deterministic compiler produces
+lossless 128×128 retina floor/slope sources and 128×32 wall strips from metadata.
+See [ISOMETRIC_TILE_SYSTEM.md](ISOMETRIC_TILE_SYSTEM.md) for the active contract.
 
 **Icons (1024→16-128):**
 ```
@@ -288,8 +293,9 @@ holding objects, hands in frame, full body, weapon in hand, action pose, white f
 
 | Script | Description |
 |--------|-------------|
-| `npm run ai:generate` | Generate all pending images |
-| `npm run ai:generate:tiles` | Generate terrain tiles |
+| `npm run ai:generate` | Generate all pending categories; tile jobs use the deterministic compiler |
+| `npm run tiles:generate` | Compile deterministic terrain tiles |
+| `npm run tiles:check` | Test and strictly validate the tile contract |
 | `npm run ai:generate:portraits` | Generate character portraits |
 | `npm run ai:generate:items` | Generate item sprites |
 | `npm run ai:generate:icons` | Generate UI icons |
@@ -309,33 +315,16 @@ holding objects, hands in frame, full body, weapon in hand, action pose, white f
 | `--race <name>` | Filter portraits by race (human, elf, dwarf, vampire, orc) |
 | `--gender <name>` | Filter portraits by gender (male, female, other) |
 | `--class <name>` | Filter portraits by class (warrior, wizard, monk, chemist) |
-| `--huggingface` | Use HuggingFace Space API instead of local ComfyUI |
+| `--huggingface` | Use HuggingFace Space API instead of local ComfyUI (AI categories only) |
 | `--queue` | Process only assets marked for regeneration (used by admin dashboard) |
-| `--lora <model>` | Override LoRA model selection (v1, v2, pixel-dever, 64bit) |
+| `--lora <model>` | Override LoRA model selection (AI categories only) |
 | `--list-models` | List available LoRA models and exit |
 
 > **Note:** The `--local` flag is deprecated. Local ComfyUI is now the default.
 
-### Tile Category Flags
+### Deterministic terrain exception
 
-Terrain tiles support three categories via `--category`:
-
-```bash
-# Generate floor tiles (default)
-npm run ai:generate:tiles -- --biome forest
-
-# Generate wall tiles
-npm run ai:generate:tiles -- --category walls
-
-# Generate slope tiles
-npm run ai:generate:tiles -- --category slopes
-```
-
-| Category | Description | AI Resolution | Output |
-|----------|-------------|---------------|--------|
-| `floors` | Standard isometric floor tiles | 128x128 | 64x64 (diamond masked) |
-| `walls` | Vertical wall segments | 128x32 | 64x16 |
-| `slopes` | Elevation transition tiles | 128x160 | 64x80 |
+Tiles accept `--biome`, `--category`, repeatable `--key`, `--queue`, `--force`, `--backup`, `--update-metadata`, `--prune`, and `--dry-run`. They reject AI backend and LoRA flags. Their 128px source geometry and 64x32 logical footprint are documented in [ISOMETRIC_TILE_SYSTEM.md](ISOMETRIC_TILE_SYSTEM.md).
 
 ## Post-Processing Pipeline
 
@@ -344,26 +333,17 @@ The pipeline has a two-stage architecture with single responsibility per stage:
 - **Python (image-generator)**: Generates 1024x1024, applies semantic processing (rembg background removal, content cropping, square padding), saves processed original
 - **Node.js (Modia scripts)**: Reads processed original, generates ALL size variants via ImageMagick Lanczos downscaling
 
-Tiles are exempt from this architecture — they use diamond masking (type-specific processing) and a single 64x64 output size.
+Tiles are outside this architecture and are compiled directly from metadata by the deterministic material compiler.
 
 ### Resolution Standards
 
 | Asset Type | Processed Original | Output Sizes |
 |------------|-------------------|--------------|
-| **Tiles (floors)** | 128x128 | 64x64 (diamond masked) |
-| **Tiles (walls)** | 128x32 | 64x16 |
-| **Tiles (slopes)** | 128x160 | 64x80 |
 | **Portraits** | 1024x1024 | 64, 128, 256 |
 | **Items** | 1024x1024 | 32, 64, 128 |
 | **Icons** | 1024x1024 | 16, 24, 32, 48, 64, 128 |
 | **Nodes** | 1024x1024 | 48, 64, 96, 128, 256 |
 | **Overlays** | 1024x1024 | 32, 48, 64, 128 |
-
-### Diamond Mask (Isometric Tiles)
-
-Floor tiles are automatically processed with a diamond-shaped mask to create proper isometric tiles. The mask clips the square image into a diamond shape for seamless tile rendering on the battle grid.
-
-The diamond mask is applied during post-processing after the AI generates the base image. No manual masking is required.
 
 ### Size Variant Generation
 
@@ -393,10 +373,9 @@ Add an entry to the appropriate JSON file in `ai-image-metadata/`:
 
 ```json
 {
-  "id": "forest_mushroom_2",
-  "name": "Glowing Mushroom Patch",
-  "prompt": "forest floor with bioluminescent glowing mushrooms",
-  "variants": 2,
+  "id": "ancient_observatory",
+  "name": "Ancient Observatory",
+  "prompt": "weathered fantasy observatory landmark",
   "seed": 1071,
   "generated": false
 }
@@ -405,13 +384,13 @@ Add an entry to the appropriate JSON file in `ai-image-metadata/`:
 ### 2. Generate
 
 ```bash
-npm run ai:generate:tiles -- --key forest_mushroom_2
+npm run ai:generate:nodes -- --key ancient_observatory
 ```
 
 ### 3. Verify
 
 ```bash
-npm run ai:validate -- --category tiles --verbose
+npm run ai:validate:images -- --category nodes --verbose
 ```
 
 ## Adding New Asset Categories
@@ -550,13 +529,15 @@ npm run dev:admin
 
 | Category | Count | Notes |
 |----------|-------|-------|
-| Terrain Tiles | 243 | Floors, walls, slopes across biomes |
-| Item Sprites | 123 | Weapons, armor, consumables |
-| Icons | 83 | Actions, status, menu, augments, resources |
-| Portraits | 60 | 5 races × 3 genders × 4 base classes |
+| Terrain Tiles | 281 | Deterministic floors, walls, and slopes across biomes |
+| Item Sprites | 133 | Weapons, armor, consumables, accessories |
+| Icons | 143 | Actions, status, menu, augments, resources, zodiac |
+| Portraits | 316 | Race, gender, class, and advanced-class combinations |
 | World Map Nodes | 26 | Location landmarks |
-| Overlays | 18 | Rarity auras, augment effects |
-| **Total** | **612** | |
+| Overlays | 22 | Rarity auras and augment effects |
+| Obstacles | 10 | Runtime rocks and trees |
+| Characters | 54 | Player and enemy sprite definitions |
+| **Total** | **985** | |
 
 ## Troubleshooting
 
@@ -603,14 +584,14 @@ IMAGE_GENERATOR_ROOT=/path/to/image-generator/modia-generators
 
 The scripts include a 2-second delay between generations. For large batches, consider:
 1. Running overnight
-2. Using `--biome` or `--category` to process in smaller batches
+2. Using category-specific filters to process smaller batches
 3. Checking `npm run ai:status` periodically
 
 ### Regenerating Assets
 
 To regenerate an existing asset:
 ```bash
-npm run ai:generate:tiles -- --key forest_grass_1 --force
+npm run ai:generate:icons -- --key attack --force
 ```
 
 This will regenerate even if the file exists and is marked as generated.
@@ -619,13 +600,12 @@ This will regenerate even if the file exists and is marked as generated.
 
 To override the default model for a specific generation:
 ```bash
-npm run ai:generate:tiles -- --key forest_grass_1 --lora v2 --force
+npm run ai:generate:icons -- --key attack --lora v2 --force
 ```
 
 List available models:
 ```bash
-cd ~/Projects/image-generator
-python modia-generators/generate_tile.py --list-models
+npm run ai:generate:icons -- --list-models
 ```
 
 ## Metadata Schema Reference
@@ -666,15 +646,15 @@ This section documents the JSON schema used across all asset metadata files in `
 
 #### Tiles
 
-Tiles use `key` instead of `id` and include terrain metadata:
+Tiles use `key` instead of `id` and include compiler metadata. Legacy prompt, seed, and LoRA fields may remain for provenance but do not select an AI backend:
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `key` | string | Unique identifier (alias for `id`) |
 | `terrain` | string | Terrain type (grass, stone, rock, water, lava, cliff, tree, etc.) |
 | `variant` | integer | Variant number (0-3 for base tiles) |
-| `outputPath` | string | Biome subdirectory for output |
-| `bonus` | boolean | Optional flag for bonus/special tiles |
+| `direction` | string | North, south, east, or west for slopes and stairs |
+| `levels` | integer | Elevation span represented by a slope or stairs asset |
 
 Example:
 ```json
@@ -683,7 +663,6 @@ Example:
   "terrain": "grass",
   "variant": 0,
   "prompt": "lush forest meadow grass with dappled sunlight",
-  "outputPath": "forest",
   "generated": true,
   "generatedAt": "2026-01-25T19:54:17.684Z"
 }
@@ -808,7 +787,7 @@ Example:
 }
 ```
 
-**Note on Overlay Status:** Overlays (18 total: 4 rarity + 14 augments) are defined for future AI generation but currently all have `generated: false`. The game uses CSS/procedural rendering for rarity and augment effects. See the Overlays section in [ASSET_SYSTEM_INDEX.md](ASSET_SYSTEM_INDEX.md) for current implementation details.
+**Note on Overlay Status:** All 22 overlays (4 rarity + 18 augments) are generated. The game can also use CSS/procedural rendering for compatible rarity and augment effects. See the Overlays section in [ASSET_SYSTEM_INDEX.md](ASSET_SYSTEM_INDEX.md) for current implementation details.
 
 ### File-Level Metadata
 
@@ -930,6 +909,6 @@ Generated at `ai-image-metadata/evaluation-report.json`:
 
 **Batch via admin dashboard:**
 1. Mark assets for regeneration in the admin dashboard (sets `needsRegeneration: true`)
-2. Click "Generate All" in the Queue panel, or run: `npm run ai:generate:tiles -- --queue`
+2. Click "Generate All" in the Queue panel. For tiles, the CLI equivalent is `npm run tiles:generate -- --queue`.
 3. The `--queue` flag processes only marked assets and clears their regeneration markers on success
-4. All generator scripts support `--queue`: tiles, portraits, items, icons, nodes
+4. Tile queue jobs use the deterministic compiler; the remaining categories use their category generator.

@@ -11,10 +11,22 @@ import {
   calculatePathCost3D as sharedCalculatePathCost3D,
   getManhattanDistance
 } from '../../../../shared/pathfinding.js';
+import { isImpassable, normalizeElevationGrid } from '../../../../shared/terrain.js';
+import { isBlockingObstacle } from '../../../../shared/obstacles.js';
 import { canUnitMove } from './statusEffectManager.js';
 
 // Default attack range for melee (1 tile adjacent)
 const DEFAULT_ATTACK_RANGE = 1;
+
+function getPathfindingElevation(state) {
+  return normalizeElevationGrid(state.elevation, state.elevationFormat || 'auto');
+}
+
+function getLayerEntry(layer, x, y) {
+  if (!Array.isArray(layer)) return null;
+  if (Array.isArray(layer[y])) return layer[y][x] ?? null;
+  return layer.find(entry => entry?.x === x && entry?.y === y) || null;
+}
 
 /**
  * Get movement range for a unit based on class and traits
@@ -76,16 +88,17 @@ export function getReachableTiles(unit, state) {
   const maxCost = getMovementRange(unit);
   const mapWidth = state.mapWidth || 32;
   const mapHeight = state.mapHeight || 32;
+  const pathfindingElevation = getPathfindingElevation(state);
 
   // Use 3D pathfinding when elevation data is available
-  if (state.elevation) {
+  if (pathfindingElevation) {
     return sharedGetReachableTiles3D(
       unit.tileX,
       unit.tileY,
       null, // startZ will be looked up from elevation grid
       maxCost,
       state.terrain,
-      state.elevation,
+      pathfindingElevation,
       state.elevationConnections || null,
       state.units,
       mapWidth,
@@ -206,15 +219,16 @@ export function findAdjacentTileToTarget(state, unit, targetTile) {
     );
     if (isOccupied) continue;
 
-    // Check if tile is passable (no obstacles)
-    const tile = state.terrain?.find(t => t.x === adjX && t.y === adjY);
-    if (tile && tile.passable === false) continue;
+    // Current battles use row-major terrain strings; retain support for older
+    // coordinate-object state while applying the shared passability contract.
+    const tile = getLayerEntry(state.terrain, adjX, adjY);
+    const terrainType = typeof tile === 'string' ? tile : tile?.terrain ?? tile?.type;
+    if (tile?.passable === false || (terrainType && isImpassable(terrainType))) continue;
 
-    // Check obstacles
-    const hasObstacle = state.obstacles?.some(o =>
-      o.x === adjX && o.y === adjY && o.passable === false
-    );
-    if (hasObstacle) continue;
+    // Obstacle layers follow the same row-major contract. Blocking semantics
+    // live in shared code so leap skills and normal pathfinding cannot diverge.
+    const obstacle = getLayerEntry(state.obstacles, adjX, adjY);
+    if (isBlockingObstacle(obstacle)) continue;
 
     return { x: adjX, y: adjY };
   }
@@ -309,16 +323,17 @@ export function calculatePathCost(startX, startY, targetX, targetY, state, maxCo
 
   const mapWidth = state.mapWidth || 32;
   const mapHeight = state.mapHeight || 32;
+  const pathfindingElevation = getPathfindingElevation(state);
 
   // Use 3D pathfinding when elevation data is available
-  if (state.elevation) {
+  if (pathfindingElevation) {
     return sharedCalculatePathCost3D(
       startX,
       startY,
       targetX,
       targetY,
       state.terrain,
-      state.elevation,
+      pathfindingElevation,
       state.elevationConnections || null,
       state.units,
       maxCost,

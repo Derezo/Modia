@@ -45,6 +45,82 @@ export const ELEVATION_LEVELS = {
 };
 
 /**
+ * Representative normalized values for each semantic tactical level. Values
+ * sit near the middle of discretizeElevation's bands so round-tripping is
+ * stable across generation, rendering, and server pathfinding.
+ */
+export const NORMALIZED_ELEVATION_BY_LEVEL = Object.freeze({
+  [-3]: 0.025,
+  [-2]: 0.075,
+  [-1]: 0.14,
+  [0]: 0.33,
+  [1]: 0.54,
+  [2]: 0.66,
+  [3]: 0.77,
+  [4]: 0.86,
+  [5]: 0.92,
+  [6]: 0.955,
+  [7]: 0.98,
+  [8]: 0.995
+});
+
+/**
+ * Convert a semantic elevation level to the canonical normalized band center.
+ * Invalid values safely resolve to ground.
+ *
+ * @param {number} level - Semantic level (-3..8)
+ * @returns {number} Normalized elevation (0..1)
+ */
+export function elevationLevelToNormalized(level) {
+  if (!Number.isFinite(level)) return NORMALIZED_ELEVATION_BY_LEVEL[0];
+  const rounded = Math.max(
+    ELEVATION_LEVELS.DEEP_PIT,
+    Math.min(ELEVATION_LEVELS.CLOUD, Math.round(level))
+  );
+  return NORMALIZED_ELEVATION_BY_LEVEL[rounded];
+}
+
+/**
+ * Resolve an elevation grid's representation. Explicit formats win; legacy
+ * untagged integer grids are semantic levels, while any fractional sample
+ * identifies the current normalized representation.
+ *
+ * @param {number[][]} elevation - Elevation grid
+ * @param {'auto'|'discrete'|'normalized'} format - Declared representation
+ * @returns {'discrete'|'normalized'} Resolved representation
+ */
+export function inferElevationFormat(elevation, format = 'auto') {
+  if (format === 'discrete' || format === 'normalized') return format;
+  if (!Array.isArray(elevation)) return 'normalized';
+
+  for (const row of elevation) {
+    if (!Array.isArray(row)) continue;
+    for (const value of row) {
+      if (Number.isFinite(value) && !Number.isInteger(value)) return 'normalized';
+    }
+  }
+  return 'discrete';
+}
+
+/**
+ * Adapt legacy semantic elevation grids to the normalized representation used
+ * by shared 3D pathfinding. Normalized inputs are returned without allocation.
+ *
+ * @param {number[][]} elevation - Elevation grid
+ * @param {'auto'|'discrete'|'normalized'} format - Declared representation
+ * @returns {number[][]|*} Canonical normalized grid, or the original non-grid value
+ */
+export function normalizeElevationGrid(elevation, format = 'auto') {
+  if (!Array.isArray(elevation)) return elevation;
+  if (inferElevationFormat(elevation, format) === 'normalized') return elevation;
+
+  return elevation.map(row => Array.isArray(row)
+    ? row.map(elevationLevelToNormalized)
+    : row
+  );
+}
+
+/**
  * Discretize raw elevation value (0-1 float) to elevation level (-3 to +8)
  * SINGLE SOURCE OF TRUTH for elevation discretization used by pathfinding and rendering
  *

@@ -40,19 +40,18 @@ frontend/public/assets/
 │       ├── menu/
 │       ├── resources/
 │       └── stats/
-├── terrain/                            # Battle map tiles (no base/ directory)
-│   ├── originals/
-│   ├── forest/{floors,walls,slopes}/
-│   ├── cave/
-│   ├── mountain/
-│   ├── bridge/
-│   └── castle/
 ├── overlays/
 │   ├── originals/
 │   ├── 32/rarity/rare.png
 │   ├── 64/rarity/rare.png
 │   └── 128/rarity/rare.png
 └── sprites/
+    ├── terrain/                        # Deterministic lossless WebP tiles
+    │   ├── forest/{key}.webp
+    │   ├── cave/{key}.webp
+    │   ├── mountain/{key}.webp
+    │   ├── bridge/{key}.webp
+    │   └── castle/{key}.webp
     └── characters/                     # Animated character sprites (unchanged)
         ├── enemies/{biome}/{enemy}/
         │   └── {enemy}_{action}.png
@@ -126,20 +125,20 @@ Icons use directory-based size organization.
 
 ### Terrain (Battle Tiles)
 
-Terrain tiles organized by biome. No `base/` directory - code falls back to `forest` when biome-specific tiles don't exist.
+Terrain tiles are deterministic lossless WebPs organized by biome. Floors, walls, slopes, and stairs share a flat namespace inside the biome. There is no generated `base/` set; runtime resolution falls back to `forest`.
 
-- **Floors Pattern:** `/assets/sprites/terrain/{biome}/{key}.png`
-- **Walls Pattern:** `/assets/sprites/terrain/{biome}/walls/{terrain}_wall.png`
-- **Slopes Pattern:** `/assets/sprites/terrain/{biome}/slopes/{direction}_{levels}.png`
+- **Pattern:** `/assets/sprites/terrain/{biome}/{key}.webp`
 - **Biomes:** `forest`, `cave`, `mountain`, `bridge`, `castle`
+- **Identity:** `(category, biome, key)` in metadata; `(biome, key)` in the output path
 
 **Examples:**
 ```
-/assets/sprites/terrain/forest/grass_0.png              # Floor tile
-/assets/sprites/terrain/cave/walls/stone_wall.png       # Wall tile
-/assets/sprites/terrain/mountain/slopes/north_1.png     # Slope tile
-/assets/sprites/terrain/bridge/slopes/stairs_east_2.png # Stairs tile
+/assets/sprites/terrain/forest/grass_0.webp
+/assets/sprites/terrain/cave/wall_cave_default.webp
+/assets/sprites/terrain/mountain/slope_mountain_north_1.webp
 ```
+
+See [ISOMETRIC_TILE_SYSTEM.md](ISOMETRIC_TILE_SYSTEM.md) for source dimensions, logical footprint, generation, and validation.
 
 ### Overlays
 
@@ -180,7 +179,6 @@ Every asset category maintains an `originals/` subdirectory containing the full-
 /assets/portraits/originals/enemy_goblin_warrior.png
 /assets/nodes/originals/castle.png
 /assets/items/originals/weapons/sword_iron.png
-/assets/sprites/terrain/originals/forest/grass_0.png
 ```
 
 ## AssetPaths Module API
@@ -193,7 +191,7 @@ The `shared/assetPaths.js` module provides utilities for consistent path constru
 import { SIZE_PRESETS, DEFAULT_SIZES, ASSET_CATEGORIES } from '@shared/assetPaths.js';
 
 SIZE_PRESETS = {
-  tiles: [64],
+  tiles: [64], // Logical render size; encoded terrain sources use the v3 retina contract
   portraits: [32, 48, 64, 128, 256],
   items: [32, 64, 128],
   icons: [16, 24, 32, 48, 64, 128, 256],
@@ -244,7 +242,7 @@ getAssetPath('icons', 'attack', { subcategory: 'actions', size: 32 });
 
 // Terrain tile
 getAssetPath('tiles', 'grass_0', { subcategory: 'forest' });
-// => '/assets/sprites/terrain/forest/grass_0.png'
+// => '/assets/sprites/terrain/forest/grass_0.webp'
 
 // Overlay
 getAssetPath('overlays', 'rare', { subcategory: 'rarity', size: 64 });

@@ -16,6 +16,16 @@
  */
 
 import { isImpassable } from '../terrain.js';
+import { isBlockingObstacle } from '../obstacles.js';
+
+/**
+ * Keep the validator focused on the tactical interior without allowing the
+ * two spawn margins to consume an entire compact map. The historical
+ * five-column margin is preserved for production-sized battlefields.
+ */
+function getAnalysisMargin(width) {
+  return Math.min(5, Math.max(1, Math.floor((width - 1) / 4)));
+}
 
 // ============================================================================
 // CONSTRAINT VIOLATION TYPES
@@ -214,9 +224,10 @@ export class ConstraintValidator {
     // Calculate walkable ratio (excluding spawn areas)
     let walkableCount = 0;
     let totalCount = 0;
+    const margin = getAnalysisMargin(width);
 
     for (let y = 0; y < height; y++) {
-      for (let x = 5; x < width - 5; x++) { // Exclude spawn columns
+      for (let x = margin; x < width - margin; x++) {
         totalCount++;
         if (!isImpassable(terrain[y]?.[x])) {
           if (!this._hasBlockingObstacle(obstacles, x, y)) {
@@ -274,7 +285,7 @@ export class ConstraintValidator {
     if (!obstacles) return false;
     const obstacle = obstacles[y]?.[x];
     if (!obstacle) return false;
-    return obstacle.type === 'trees' || obstacle.type === 'rocks';
+    return isBlockingObstacle(obstacle);
   }
 
   /**
@@ -363,9 +374,10 @@ export class ConstraintValidator {
    */
   _countDeadEnds(terrain, obstacles, width, height) {
     let count = 0;
+    const margin = getAnalysisMargin(width);
 
     for (let y = 1; y < height - 1; y++) {
-      for (let x = 5; x < width - 5; x++) { // Exclude spawn areas
+      for (let x = margin; x < width - margin; x++) {
         if (isImpassable(terrain[y]?.[x])) continue;
         if (this._hasBlockingObstacle(obstacles, x, y)) continue;
 
@@ -471,9 +483,10 @@ export class ConstraintValidator {
    */
   _findMinimumPassageWidth(terrain, obstacles, width, height) {
     let minWidth = Infinity;
+    const margin = getAnalysisMargin(width);
 
     // Check vertical passages at each x
-    for (let x = 5; x < width - 5; x++) {
+    for (let x = margin; x < width - margin; x++) {
       let currentWidth = 0;
       let hasPassage = false;
 
@@ -620,10 +633,11 @@ export class ConstraintValidator {
     const centerX = Math.floor(width / 2);
     const centerY = Math.floor(height / 2);
     const radius = 4 + Math.floor(random() * 3);
+    const margin = getAnalysisMargin(width);
 
     for (let y = centerY - radius; y <= centerY + radius; y++) {
       for (let x = centerX - radius; x <= centerX + radius; x++) {
-        if (x < 5 || x >= width - 5) continue;
+        if (x < margin || x >= width - margin) continue;
         if (y < 0 || y >= height) continue;
 
         const dist = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
@@ -645,8 +659,9 @@ export class ConstraintValidator {
    */
   _fillDeadEnds(terrain, obstacles, width, height, random) {
     // Actually widen dead ends rather than fill
+    const margin = getAnalysisMargin(width);
     for (let y = 1; y < height - 1; y++) {
-      for (let x = 5; x < width - 5; x++) {
+      for (let x = margin; x < width - margin; x++) {
         if (isImpassable(terrain[y]?.[x])) continue;
 
         let walkableNeighbors = 0;
@@ -660,8 +675,13 @@ export class ConstraintValidator {
 
         if (walkableNeighbors <= 1) {
           // Open up a random adjacent wall
-          const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-          const shuffled = [...dirs].sort(() => random() - 0.5);
+          const shuffled = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+          // Fisher-Yates has defined seeded behavior. A random sort comparator
+          // is non-transitive and can produce engine-dependent repair output.
+          for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+          }
 
           for (const [dx, dy] of shuffled) {
             const nx = x + dx;
@@ -687,8 +707,9 @@ export class ConstraintValidator {
     // Carve a relatively direct path
     const startY = Math.floor(height / 2);
     let y = startY;
+    const margin = getAnalysisMargin(width) + 1;
 
-    for (let x = 6; x < width - 6; x++) {
+    for (let x = margin; x < width - margin; x++) {
       // Carve 2-tile wide path
       for (let dy = -1; dy <= 1; dy++) {
         const ny = y + dy;
@@ -715,7 +736,8 @@ export class ConstraintValidator {
    */
   _widenBottlenecks(terrain, obstacles, width, height, random) {
     // Find narrow passages and widen them
-    for (let x = 5; x < width - 5; x++) {
+    const margin = getAnalysisMargin(width);
+    for (let x = margin; x < width - margin; x++) {
       let passageStart = -1;
       let passageEnd = -1;
 

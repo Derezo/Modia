@@ -20,6 +20,7 @@ import {
   getAlliedUnits,
   areOpponents,
   areAllies,
+  getReachableTiles,
   calculatePathCost,
   getManhattanDistance
 } from '../../services/battle/movementService.js';
@@ -407,6 +408,38 @@ describe('findAdjacentTileToTarget', () => {
     assert.ok(!hasObstacle, 'Should avoid obstacles');
   });
 
+  test('should avoid impassable cells in the canonical row-major terrain grid', () => {
+    const unit = createMockPlayerUnit({ id: 'p1', tileX: 3, tileY: 5 });
+    const terrain = Array.from({ length: 8 }, () => Array(8).fill('grass'));
+    terrain[5][4] = 'rock';
+    const state = createMockBattleState({
+      units: [unit],
+      terrain,
+      mapWidth: 8,
+      mapHeight: 8
+    });
+
+    const result = findAdjacentTileToTarget(state, unit, { x: 5, y: 5 });
+
+    assert.deepStrictEqual(result, { x: 4, y: 4 });
+  });
+
+  test('should avoid blocking cells in the canonical row-major obstacle grid', () => {
+    const unit = createMockPlayerUnit({ id: 'p1', tileX: 3, tileY: 5 });
+    const obstacles = Array.from({ length: 8 }, () => Array(8).fill(null));
+    obstacles[5][4] = { type: 'rocks', variant: 'rock_small', passable: false };
+    const state = createMockBattleState({
+      units: [unit],
+      obstacles,
+      mapWidth: 8,
+      mapHeight: 8
+    });
+
+    const result = findAdjacentTileToTarget(state, unit, { x: 5, y: 5 });
+
+    assert.deepStrictEqual(result, { x: 4, y: 4 });
+  });
+
   test('should respect map boundaries', () => {
     const unit = createMockPlayerUnit({ id: 'p1', tileX: 5, tileY: 5 });
     const state = createMockBattleState({
@@ -633,6 +666,37 @@ describe('calculatePathCost', () => {
     const cost = calculatePathCost(5, 5, 5, 5, state, 10);
 
     assert.strictEqual(cost, 0);
+  });
+
+  test('should infer and normalize an untagged legacy discrete elevation grid', () => {
+    const unit = createMockPlayerUnit({ id: 'p1', tileX: 0, tileY: 0 });
+    const state = createMockBattleState({
+      units: [unit],
+      terrain: [['grass', 'grass']],
+      elevation: [[0, 1]],
+      mapWidth: 2,
+      mapHeight: 1
+    });
+
+    const cost = calculatePathCost(0, 0, 1, 0, state, 10);
+
+    assert.strictEqual(cost, 1);
+  });
+
+  test('should normalize tagged discrete elevation for reachable-tile pathfinding', () => {
+    const unit = createMockPlayerUnit({ id: 'p1', tileX: 0, tileY: 0 });
+    const state = createMockBattleState({
+      units: [unit],
+      terrain: [['grass', 'grass']],
+      elevation: [[0, 1]],
+      elevationFormat: 'discrete',
+      mapWidth: 2,
+      mapHeight: 1
+    });
+
+    const reachable = getReachableTiles(unit, state);
+
+    assert.deepStrictEqual(reachable, [{ x: 1, y: 0, z: 1, cost: 1 }]);
   });
 });
 

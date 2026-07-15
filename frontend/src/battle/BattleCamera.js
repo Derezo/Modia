@@ -27,6 +27,8 @@ export class BattleCamera {
     this.isPanning = false;
     this.panStartX = 0;
     this.panStartY = 0;
+    this.panLastX = 0;
+    this.panLastY = 0;
     this.panStartCameraX = 0;
     this.panStartCameraY = 0;
 
@@ -40,7 +42,8 @@ export class BattleCamera {
     // worldToScreen / screenToWorld stay in logical space; screenToWorldZoomed
     // inverts the zoom transform for hit-testing.
     this.zoom = 1.0;
-    this.minZoom = 0.5;
+    // Large 32x32 isometric maps need to reach roughly 0.2 on narrow phones.
+    this.minZoom = 0.15;
     this.maxZoom = 2.0;
   }
 
@@ -76,6 +79,16 @@ export class BattleCamera {
     return {
       x: (screenX - cx) / this.zoom + cx,
       y: (screenY - cy) / this.zoom + cy
+    };
+  }
+
+  /** Apply the same viewport-centred zoom used by the canvas render pass. */
+  screenToZoomed(screenX, screenY) {
+    const cx = this.viewportWidth / 2;
+    const cy = this.viewportHeight / 2;
+    return {
+      x: (screenX - cx) * this.zoom + cx,
+      y: (screenY - cy) * this.zoom + cy
     };
   }
 
@@ -117,10 +130,22 @@ export class BattleCamera {
     const zoom = this.zoom || 1;
     const halfVisibleW = (this.viewportWidth / zoom) / 2;
     const halfVisibleH = (this.viewportHeight / zoom) / 2;
-    this.minX = this.worldBounds.minX + halfVisibleW;
-    this.minY = this.worldBounds.minY + halfVisibleH;
-    this.maxX = Math.max(this.worldBounds.maxX - halfVisibleW, this.minX);
-    this.maxY = Math.max(this.worldBounds.maxY - halfVisibleH, this.minY);
+    const mapWidth = this.worldBounds.maxX - this.worldBounds.minX;
+    const mapHeight = this.worldBounds.maxY - this.worldBounds.minY;
+
+    if (halfVisibleW * 2 >= mapWidth) {
+      this.minX = this.maxX = (this.worldBounds.minX + this.worldBounds.maxX) / 2;
+    } else {
+      this.minX = this.worldBounds.minX + halfVisibleW;
+      this.maxX = this.worldBounds.maxX - halfVisibleW;
+    }
+
+    if (halfVisibleH * 2 >= mapHeight) {
+      this.minY = this.maxY = (this.worldBounds.minY + this.worldBounds.maxY) / 2;
+    } else {
+      this.minY = this.worldBounds.minY + halfVisibleH;
+      this.maxY = this.worldBounds.maxY - halfVisibleH;
+    }
   }
 
   /**
@@ -168,6 +193,8 @@ export class BattleCamera {
     this.isPanning = true;
     this.panStartX = screenX;
     this.panStartY = screenY;
+    this.panLastX = screenX;
+    this.panLastY = screenY;
     this.panStartCameraX = this.x;
     this.panStartCameraY = this.y;
   }
@@ -177,6 +204,9 @@ export class BattleCamera {
    */
   updatePan(screenX, screenY) {
     if (!this.isPanning) return;
+
+    this.panLastX = screenX;
+    this.panLastY = screenY;
 
     // Divide by zoom so 1 screen pixel of finger drag moves the world by
     // 1 screen pixel regardless of current zoom level.
@@ -202,8 +232,10 @@ export class BattleCamera {
    */
   getPanDistance() {
     if (!this.isPanning) return 0;
-    const dx = this.x - this.panStartCameraX;
-    const dy = this.y - this.panStartCameraY;
+    // Pointer displacement is immediate and still works when the camera is
+    // clamped at a map edge or has not yet advanced its interpolation frame.
+    const dx = this.panLastX - this.panStartX;
+    const dy = this.panLastY - this.panStartY;
     return Math.sqrt(dx * dx + dy * dy);
   }
 
@@ -338,6 +370,12 @@ export class BattleCamera {
       this.x = this.targetX;
       this.y = this.targetY;
     }
+  }
+
+  /** Backwards-compatible semantic alias used by modal navigation. */
+  panTo(worldX, worldY) {
+    this.centerOn(worldX, worldY, false);
+    this.enterManualMode();
   }
 
   /**

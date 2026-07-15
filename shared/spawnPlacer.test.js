@@ -9,7 +9,8 @@ import {
   generateSpawnPositions,
   validateSpawnPositions,
   SpawnPlacer,
-  AI_SPAWN_CONFIGS
+  AI_SPAWN_CONFIGS,
+  scaleSpawnXRange
 } from './mapGeneration.js';
 import { isImpassable } from './terrain.js';
 
@@ -166,6 +167,38 @@ describe('SpawnPlacer', () => {
       const roles = spawns.map(s => s.role);
       assert.deepStrictEqual(roles, ['melee', 'ranged', 'support', 'melee']);
     });
+
+    it('should scale authored enemy bands onto compact maps without crossing midfield', () => {
+      assert.deepStrictEqual(scaleSpawnXRange({ min: 25, max: 30 }, 32), { min: 25, max: 30 });
+
+      const compactWidth = 10;
+      const compactHeight = 10;
+      const compactTerrain = Array.from({ length: compactHeight }, () =>
+        Array(compactWidth).fill('grass')
+      );
+      const compactObstacles = Array.from({ length: compactHeight }, () =>
+        Array(compactWidth).fill(null)
+      );
+
+      for (const aiType of Object.keys(AI_SPAWN_CONFIGS)) {
+        const spawner = new SpawnPlacer({ mapWidth: compactWidth, mapHeight: compactHeight });
+        const spawns = spawner.generateEnemySpawns(
+          compactTerrain,
+          compactObstacles,
+          aiType,
+          3,
+          createSeededRandom(seed)
+        );
+
+        assert.strictEqual(spawns.length, 3, `${aiType} should fill every requested slot`);
+        assert.strictEqual(new Set(spawns.map(spawn => `${spawn.x},${spawn.y}`)).size, 3);
+        for (const spawn of spawns) {
+          assert.ok(spawn.x >= compactWidth / 2 && spawn.x < compactWidth);
+          assert.ok(spawn.y >= 0 && spawn.y < compactHeight);
+          assert.ok(!isImpassable(compactTerrain[spawn.y][spawn.x]));
+        }
+      }
+    });
   });
 
   describe('AI_SPAWN_CONFIGS', () => {
@@ -269,6 +302,26 @@ describe('SpawnPlacer', () => {
       assert.ok(result.playerSpawns, 'Should include player spawns');
       assert.strictEqual(result.playerSpawns.length, 5);
       assert.strictEqual(result.enemySpawns, undefined, 'Should not have enemy spawns');
+    });
+
+    it('should return complete, valid formations at the minimum map size', () => {
+      const result = generateTerrain(seed, 'forest', 10, 10, {
+        includeSpawns: true,
+        playerCount: 6,
+        enemyAiType: 'aggressive',
+        enemyCount: 3
+      });
+
+      assert.strictEqual(result.playerSpawns.length, 6);
+      assert.strictEqual(result.enemySpawns.length, 3);
+      assert.strictEqual(
+        validateSpawnPositions(
+          [...result.playerSpawns, ...result.enemySpawns],
+          result.terrain,
+          result.obstacles
+        ).valid,
+        true
+      );
     });
   });
 });

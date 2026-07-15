@@ -1,6 +1,6 @@
 # Asset System Index
 
-This document provides unified navigation for Modia's asset pipeline documentation, covering AI image generation, audio generation, and asset organization.
+This document provides unified navigation for Modia's deterministic tile compiler, AI image generation, audio generation, and asset organization.
 
 ## Table of Contents
 
@@ -17,40 +17,10 @@ This document provides unified navigation for Modia's asset pipeline documentati
 ## Overview Diagram
 
 ```
-                         MODIA ASSET PIPELINE
-                         ====================
-
-  +-----------------+     +-------------------+     +------------------+
-  |   METADATA      |     |   GENERATION      |     |   DEPLOYMENT     |
-  |   DEFINITIONS   |     |   PIPELINE        |     |   STRUCTURE      |
-  +-----------------+     +-------------------+     +------------------+
-         |                        |                        |
-         v                        v                        v
-  +-------------+          +-------------+          +---------------+
-  | ai-image-   |   --->   | HuggingFace |   --->   | frontend/     |
-  | metadata/   |          | Flux LoRA   |          | public/       |
-  |             |          | (External)  |          | assets/       |
-  | - tiles/    |          +-------------+          |               |
-  | - portraits/|                                   | - terrain/    |
-  | - items/    |          +-------------+          | - portraits/  |
-  | - icons/    |   --->   | Sharp.js    |   --->   | - items/      |
-  | - nodes/    |          | Post-Proc   |          | - icons/      |
-  +-------------+          +-------------+          | - nodes/      |
-                                                    +---------------+
-  +-------------+          +-------------+          +---------------+
-  | audio-      |   --->   | Suno AI     |   --->   | frontend/     |
-  | metadata/   |          | (Music)     |          | public/       |
-  |             |          +-------------+          | assets/       |
-  | - music/    |                                   | audio/        |
-  | - sfx/      |          +-------------+          |               |
-  |             |   --->   | ElevenLabs  |   --->   | - music/      |
-  +-------------+          | (SFX)       |          | - sfx/        |
-                           +-------------+          +---------------+
-
-  +-------------+          +-------------+          +---------------+
-  | Design      |   --->   | CSS Vars    |   --->   | Parchment UI  |
-  | System      |          | Tokens      |          | Components    |
-  +-------------+          +-------------+          +---------------+
+tile metadata       -> deterministic material compiler -> terrain WebPs
+image metadata      -> ComfyUI/HuggingFace -> Sharp     -> image assets
+audio metadata      -> Suno/ElevenLabs                  -> audio assets
+design tokens       -> CSS variables                    -> UI components
 ```
 
 ---
@@ -61,10 +31,12 @@ This document provides unified navigation for Modia's asset pipeline documentati
 
 | Command | Description |
 |---------|-------------|
+| `npm run tiles:generate` | Compile missing deterministic terrain assets |
+| `npm run tiles:rebuild` | Rebuild the complete terrain contract and prune legacy files |
+| `npm run tiles:check` | Run tile compiler tests and strict live-asset validation |
 | `npm run ai:status` | Check AI image generation status |
 | `npm run ai:validate` | Full validation of image files |
-| `npm run ai:generate` | Generate all pending images |
-| `npm run ai:generate:tiles` | Generate terrain tiles only |
+| `npm run ai:generate` | Generate all pending categories; tiles are compiled deterministically |
 | `npm run ai:generate:portraits` | Generate character portraits only |
 | `npm run ai:generate:items` | Generate item sprites only |
 | `npm run ai:generate:icons` | Generate UI icons only |
@@ -79,12 +51,12 @@ This document provides unified navigation for Modia's asset pipeline documentati
 ### Single Asset Generation
 
 ```bash
-# AI Images (with options)
-npm run ai:generate:tiles -- --key forest_grass_1 --force
-npm run ai:generate:tiles -- --biome forest
+# Deterministic tiles
+npm run tiles:generate -- --biome forest --category floors --key grass_0 --force
+npm run tiles:generate -- --biome forest --dry-run
+
+# AI images
 npm run ai:generate:portraits -- --race elf --class wizard
-npm run ai:generate:tiles -- --dry-run          # Preview only
-npm run ai:generate:tiles -- --lora v1          # Use specific LoRA model
 
 # Audio (with options)
 npm run audio:generate:music -- --key heartlands_tavern --wait
@@ -99,17 +71,16 @@ The image generation pipeline supports multiple LoRA models for different art st
 | Model | Trigger Word | Style | Recommended For |
 |-------|--------------|-------|-----------------|
 | `v1` | GRPZA | Flat 2D pixel art | Icons, portraits, items |
-| `v2` | wbgmsst | Isometric/textured | Tiles, terrain, obstacles |
+| `v2` | wbgmsst | Isometric/textured | Obstacles and other isolated assets |
 | `modern-pixel` | umempart | Modern pixel art | Stylized assets |
 | `retro-pixel` | Retro Pixel | Classic 8-bit | Retro-themed assets |
 
 **Selection Priority:**
 1. CLI `--lora` flag (override for batch operations)
 2. Asset-level `loraModel` in metadata (per-asset override)
-3. Category default from `manifest.json` (tiles=v2, others=v1)
+3. Category default from `manifest.json`
 
 **Category Defaults:**
-- **Tiles:** `v2` (isometric perspective needs textured style)
 - **Portraits:** `v1` (flat pixel art for character faces)
 - **Items:** `v1` (clean flat sprites for inventory)
 - **Icons:** `v1` (simple shapes for UI clarity)
@@ -134,17 +105,19 @@ Images can be generated via:
 
 ```bash
 # Local ComfyUI (default)
-npm run ai:generate:tiles -- --key grass_0
+npm run ai:generate:icons -- --key attack
 
 # HuggingFace API
-npm run ai:generate:tiles -- --key grass_0 --huggingface
+npm run ai:generate:icons -- --key attack --huggingface
 ```
+
+Terrain tiles do not use either backend. See [ISOMETRIC_TILE_SYSTEM.md](ISOMETRIC_TILE_SYSTEM.md).
 
 ### Asset Directories
 
 | Directory | Purpose | Sizes |
 |-----------|---------|-------|
-| `assets/sprites/terrain/{biome}/` | Battle map tiles | 64x64 |
+| `assets/sprites/terrain/{biome}/` | Lossless WebP battle tiles | 128x128 floor/slope sources; 128x32 walls |
 | `assets/portraits/` | Character/enemy portraits | 32, 48, 64, 128, 256 |
 | `assets/items/{subcategory}/` | Equipment/consumable icons | 32, 64, 128 |
 | `assets/icons/png/` | UI action/status icons | 16, 24, 32, 48, 64 |
@@ -160,7 +133,7 @@ npm run ai:generate:tiles -- --key grass_0 --huggingface
 |------------|---------|---------|
 | Player Portrait | `{race}_{gender}_{class}` | `human_male_warrior.png` |
 | Enemy Portrait | `enemy_{name}` | `enemy_goblin_warrior.png` |
-| Terrain Tile | `{biome}_{variant}` | `forest_grass_1.png` |
+| Terrain Tile | `{biome}/{key}.webp` | `forest/grass_1.webp` |
 | Item | `{type}_{material}` | `sword_iron.png` |
 | Action Icon | `{action}` | `attack.png` |
 | Node | `{type}` | `castle.png`, `tavern.png` |
@@ -175,6 +148,7 @@ npm run ai:generate:tiles -- --key grass_0 --huggingface
 
 | Document | Description | Key Topics |
 |----------|-------------|------------|
+| [ISOMETRIC_TILE_SYSTEM.md](ISOMETRIC_TILE_SYSTEM.md) | Deterministic battle-terrain contract | Geometry, compiler, validation, admin queue |
 | [AI_IMAGE_GENERATION.md](AI_IMAGE_GENERATION.md) | AI image generation pipeline | HuggingFace Flux, prompts, art direction |
 | [AUDIO_STYLE_GUIDE.md](AUDIO_STYLE_GUIDE.md) | Audio generation guidelines | SFX prompts, music, regional profiles |
 | [ASSET_PATH_STANDARD.md](ASSET_PATH_STANDARD.md) | Directory structure and naming | Path patterns, size conventions |
@@ -221,7 +195,7 @@ AI_IMAGE_GENERATION.md         AUDIO_STYLE_GUIDE.md
 
 All asset metadata files follow a consistent JSON schema documented in [ASSET_METADATA_SCHEMA.md](ASSET_METADATA_SCHEMA.md). Key points:
 
-- **Required fields** for all assets: `id` (or `key` for tiles), `name`, `prompt`, `seed`, `generated`
+- **Identity fields** are common; required generation fields are category-specific. Tiles use the stricter versioned manifest contract.
 - **Conditional fields** appear only when relevant: `generatedAt`, `loraModel`, `needsRegeneration`, `evaluation`
 - **Category-specific fields** vary by asset type (see [Category Schemas](ASSET_METADATA_SCHEMA.md#category-schemas))
 - **Underscore prefix** (`_biome`, `_category`, etc.) denotes runtime-enriched fields (see [Underscore Prefix Convention](ASSET_METADATA_SCHEMA.md#underscore-prefix-convention))
@@ -237,15 +211,17 @@ npm run ai:validate
 # Quick status check - summary counts only
 npm run ai:status
 
-# Validate specific category
-npm run ai:validate -- --category tiles --verbose
+# Validate the deterministic tile category
+npm run tiles:validate -- --strict
 ```
 
-The validation script checks:
+AI metadata validation checks:
 - Required fields present in all asset entries
 - `generated: true` assets have corresponding files
 - `generatedAt` timestamp present when `generated: true`
 - No orphaned files without metadata entries
+
+The tile validator additionally checks the v3 manifest geometry, lossless WebP dimensions and alpha, shared variant edges, missing outputs, and unexpected legacy images.
 - Consistent naming conventions
 
 ### Common Schema Patterns
@@ -377,10 +353,11 @@ npm run ai:generate:overlays -- --augments  # Augment overlays only
 Battle map floor, wall, and slope tiles organized by biome.
 
 - **Metadata:** `ai-image-metadata/tiles/floors/`, `walls/`, `slopes/`
-- **Output:** `frontend/public/assets/sprites/terrain/{biome}/{type}/`
+- **Output:** `frontend/public/assets/sprites/terrain/{biome}/{key}.webp`
 - **Biomes:** forest, cave, mountain, bridge, castle
-- **Size:** 64x64 pixels (isometric perspective)
-- **Style:** Ink & wash, watercolor fills
+- **Contract:** `iso64-retina-v3` (128px retina source, 64x32 logical footprint)
+- **Pipeline:** deterministic material compiler; no AI backend or LoRA
+- **Reference:** [ISOMETRIC_TILE_SYSTEM.md](ISOMETRIC_TILE_SYSTEM.md)
 
 #### Character Portraits
 

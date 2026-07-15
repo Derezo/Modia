@@ -36,6 +36,12 @@ import {
   RARITY_ALPHA,
   COMPOSITE_SIZE
 } from './assetLoader/ItemCompositing.js';
+import { OBSTACLE_ASSET_CATALOG, getObstacleAssetCategory } from '@modia/shared/obstacles';
+import {
+  CHARACTER_ANIMATIONS,
+  ENEMY_ANIMATIONS,
+  resolveSpriteBiome
+} from './BattleAssetConfig.js';
 export class AssetLoader {
   constructor() {
     this.cache = new Map();
@@ -245,19 +251,7 @@ export class AssetLoader {
    * @returns {string} Biome directory
    */
   getSpriteBiome(nodeType) {
-    const biomeMap = {
-      forest: 'forest',
-      cave: 'cave',
-      mountain: 'mountain',
-      bridge: 'bridge',
-      castle: 'castle',
-      arena: 'castle',  // Arena uses castle tiles for gladiatorial theme
-      // Village/city use forest since they don't have unique terrain
-      village: 'forest',
-      city: 'forest',
-      default: 'forest'
-    };
-    return biomeMap[nodeType] || biomeMap.default;
+    return resolveSpriteBiome(nodeType);
   }
 
   /**
@@ -785,7 +779,8 @@ export class AssetLoader {
    * @param {string} category - Category (rocks, trees)
    */
   async loadObstacle(obstacleType, category) {
-    const path = `${this.basePath}/obstacles/${category}/${obstacleType}.webp`;
+    const normalizedCategory = this.getObstacleCategory(obstacleType, category);
+    const path = `${this.basePath}/obstacles/${normalizedCategory}/${obstacleType}.webp`;
     try {
       return await this.loadImage(path);
     } catch {
@@ -797,7 +792,12 @@ export class AssetLoader {
    * Get obstacle sprite (sync)
    */
   getObstacle(obstacleType, category) {
-    return this.cache.get(`${this.basePath}/obstacles/${category}/${obstacleType}.webp`) || null;
+    const normalizedCategory = this.getObstacleCategory(obstacleType, category);
+    return this.cache.get(`${this.basePath}/obstacles/${normalizedCategory}/${obstacleType}.webp`) || null;
+  }
+
+  getObstacleCategory(obstacleType, category) {
+    return getObstacleAssetCategory(obstacleType, category);
   }
 
   /**
@@ -1146,6 +1146,8 @@ export class AssetLoader {
   static TERRAIN_TYPES = ['grass', 'stone', 'rock', 'forest', 'water', 'lava', 'cliff', 'tree'];
   static VARIANTS_PER_TERRAIN = 4;
   static ELEVATION_LEVELS = [1, 2, 3];
+  static CHARACTER_ANIMATIONS = CHARACTER_ANIMATIONS;
+  static ENEMY_ANIMATIONS = ENEMY_ANIMATIONS;
 
   /**
    * Size presets from shared module (exposed for convenience)
@@ -1226,7 +1228,7 @@ export class AssetLoader {
    * @param {Function} options.onProgress - Optional callback (loaded, total) for progress tracking
    */
   async preloadCharacter(charClass, options = {}) {
-    const { animations = ['idle', 'walk', 'attack', 'hit', 'death', 'dead'], onProgress } = options;
+    const { animations = AssetLoader.CHARACTER_ANIMATIONS, onProgress } = options;
     const promises = animations.map(anim => this.loadCharacterSprite(charClass, anim));
     let loaded = 0;
 
@@ -1254,7 +1256,7 @@ export class AssetLoader {
    */
   async preloadEnemies(biome, enemyIds, options = {}) {
     const { onProgress } = options;
-    const animations = ['idle', 'attack', 'hit', 'death', 'dead'];
+    const animations = AssetLoader.ENEMY_ANIMATIONS;
     const promises = [];
     let loaded = 0;
 
@@ -1375,19 +1377,27 @@ export class AssetLoader {
    */
   async preloadObstacles(options = {}) {
     const { onProgress } = options;
-    // Define all obstacles by category matching generate-obstacles.js
-    const obstacles = {
-      rocks: ['rock_small', 'rock_medium', 'rock_large', 'stalagmite', 'mountain_boulder'],
-      trees: ['oak_tree', 'pine_tree', 'dead_tree', 'mushroom_large', 'mountain_pine']
-    };
+    // Battles pass their exact map manifest so mobile clients do not decode
+    // every giant obstacle source. Retain the complete set as a compatibility
+    // fallback for callers that do not yet provide a manifest.
+    const defaultObstacles = OBSTACLE_ASSET_CATALOG;
+    const descriptors = Array.isArray(options.obstacles)
+      ? options.obstacles.map(obstacle => ({
+        type: obstacle.variant || obstacle.id || obstacle.type,
+        category: this.getObstacleCategory(obstacle.variant || obstacle.id, obstacle.type || obstacle.category)
+      }))
+      : Object.entries(defaultObstacles).flatMap(([category, types]) =>
+        types.map(type => ({ type, category }))
+      );
+    const uniqueDescriptors = Array.from(new Map(
+      descriptors.filter(item => item.type).map(item => [`${item.category}:${item.type}`, item])
+    ).values());
 
     const promises = [];
     let loaded = 0;
 
-    for (const [category, obstacleTypes] of Object.entries(obstacles)) {
-      for (const obstacleType of obstacleTypes) {
-        promises.push(this.loadObstacle(obstacleType, category));
-      }
+    for (const { type, category } of uniqueDescriptors) {
+      promises.push(this.loadObstacle(type, category));
     }
 
     // Progress tracking wrapper

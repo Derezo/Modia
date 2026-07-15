@@ -22,6 +22,12 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useToast } from '../contexts/ToastContext';
 import { useGenerationContext } from '../contexts/GenerationContext';
 import { api } from '../lib/api';
+import {
+  getAssetRawId,
+  getAssetSelectionId,
+  getSelectedAssets,
+  groupTileAssetsByScope,
+} from '../lib/assetIdentity';
 
 /**
  * Bulk action bar component
@@ -224,24 +230,15 @@ export default function AssetGrid({
         return;
       }
 
-      // Find asset by unique compound key (id + sourceFile for tiles, or just id for others)
-      // This handles cases where multiple assets have the same id (e.g., grass_1 in different biomes)
-      const detailId = detailAsset.key || detailAsset.id;
-      const detailSourceFile = detailAsset._sourceFile;
-      const updatedAsset = data.assets.find(a => {
-        const assetId = a.key || a.id;
-        if (assetId !== detailId) return false;
-        // For tiles (and other categories with _sourceFile), also match by source file
-        if (detailSourceFile && a._sourceFile) {
-          return a._sourceFile === detailSourceFile;
-        }
-        return true;
-      });
+      const detailSelectionId = getAssetSelectionId(detailAsset, category);
+      const updatedAsset = data.assets.find(
+        (asset) => getAssetSelectionId(asset, category) === detailSelectionId
+      );
       if (updatedAsset && JSON.stringify(updatedAsset) !== JSON.stringify(detailAsset)) {
         setDetailAsset(updatedAsset);
       }
     }
-  }, [data?.assets, detailAsset]);
+  }, [category, data?.assets, detailAsset]);
 
   // Restore scroll position after data updates (from detail panel save/regenerate)
   useEffect(() => {
@@ -264,6 +261,13 @@ export default function AssetGrid({
       return id.includes(query);
     });
   }, [data?.assets, searchQuery]);
+
+  // Selection stores scoped UI identities. Resolve those identities back to
+  // full assets before sending raw metadata keys to an API.
+  const selectedAssets = useMemo(
+    () => getSelectedAssets(data?.assets, selectedIds, category),
+    [category, data?.assets, selectedIds]
+  );
 
   // Check if any filters are active
   const hasActiveFilters = useMemo(() => {
@@ -363,23 +367,13 @@ export default function AssetGrid({
     setActionLoading(true);
 
     try {
-      const selectedAssetIds = Array.from(selectedIds);
+      const selectedAssetIds = selectedAssets.map(getAssetRawId);
 
-      // For tiles, group by biome since IDs may not be unique across biomes
+      // Tile keys are scoped by biome and tile category in metadata.
       if (category === 'tiles') {
-        // Get actual asset objects to access biome info
-        const selectedAssets = filteredAssets.filter(a => selectedIds.has(a.key || a.id));
-        const byBiome = new Map();
-        for (const asset of selectedAssets) {
-          const biome = asset._biome || 'unknown';
-          if (!byBiome.has(biome)) byBiome.set(biome, []);
-          byBiome.get(biome).push(asset.key || asset.id);
-        }
-
-        // Make parallel API calls for each biome
         await Promise.all(
-          Array.from(byBiome.entries()).map(([biome, ids]) =>
-            api.markMultipleForRegeneration(category, ids, true, { biome })
+          groupTileAssetsByScope(selectedAssets).map(({ biome, subcategory, assetIds }) =>
+            api.markMultipleForRegeneration(category, assetIds, true, { biome, subcategory })
           )
         );
       } else {
@@ -403,7 +397,7 @@ export default function AssetGrid({
     } finally {
       setActionLoading(false);
     }
-  }, [selectedIds, category, filteredAssets, clearSelection, refetch, toast]);
+  }, [selectedIds.size, selectedAssets, category, clearSelection, refetch, toast]);
 
   /**
    * Generate selected assets immediately (bypasses queue)
@@ -417,16 +411,26 @@ export default function AssetGrid({
     setActionLoading(true);
 
     try {
-      // Get selected asset IDs
-      const selectedAssetIds = Array.from(selectedIds);
+      const selectedAssetIds = selectedAssets.map(getAssetRawId);
 
       // Check how many are already generated (for messaging)
-      const alreadyGenerated = filteredAssets.filter(
-        (a) => selectedIds.has(a.key || a.id) && a.generated
-      ).length;
+      const alreadyGenerated = selectedAssets.filter((asset) => asset.generated).length;
 
       // Use generateAssetsByIds with force:true to allow regeneration
-      await api.generateAssetsByIds(category, selectedAssetIds, { force: true });
+      if (category === 'tiles') {
+        await Promise.all(
+          groupTileAssetsByScope(selectedAssets).map(({ biome, subcategory, assetIds }) =>
+            api.generateAssetsByIds(
+              category,
+              assetIds,
+              { force: true },
+              { biome, subcategory }
+            )
+          )
+        );
+      } else {
+        await api.generateAssetsByIds(category, selectedAssetIds, { force: true });
+      }
 
       const message = alreadyGenerated > 0
         ? `Queued ${selectedAssetIds.length} asset(s) for (re)generation`
@@ -447,21 +451,27 @@ export default function AssetGrid({
     } finally {
       setActionLoading(false);
     }
-  }, [selectedIds, filteredAssets, category, clearSelection, refetch, toast]);
+  }, [selectedIds.size, selectedAssets, category, clearSelection, refetch, toast]);
 
   /**
    * Select/deselect all visible assets
    */
   const handleSelectAll = useCallback(() => {
-    if (selectedIds.size === filteredAssets.length) {
+    const allVisibleSelected = filteredAssets.every((asset) =>
+      selectedIds.has(getAssetSelectionId(asset, category))
+    );
+
+    if (allVisibleSelected) {
       // Deselect all
       setSelectedIds(new Set());
     } else {
       // Select all
-      const allIds = new Set(filteredAssets.map((a) => a.key || a.id));
+      const allIds = new Set(
+        filteredAssets.map((asset) => getAssetSelectionId(asset, category))
+      );
       setSelectedIds(allIds);
     }
-  }, [selectedIds.size, filteredAssets]);
+  }, [category, filteredAssets, selectedIds]);
 
   /**
    * Focus search input
@@ -488,19 +498,26 @@ export default function AssetGrid({
     if (selectedIds.size === 0) return;
 
     // Find first selected asset
-    const firstSelectedId = Array.from(selectedIds)[0];
-    const asset = filteredAssets.find((a) => (a.key || a.id) === firstSelectedId);
+    const asset = selectedAssets[0];
     if (asset) {
       handleAssetClick(asset);
     }
-  }, [selectedIds, filteredAssets, handleAssetClick]);
+  }, [selectedAssets, selectedIds.size, handleAssetClick]);
 
   /**
    * Quick action: Regenerate single asset immediately
    */
-  const handleQuickRegenerate = useCallback(async (id) => {
+  const handleQuickRegenerate = useCallback(async (asset) => {
+    const id = getAssetRawId(asset);
+    const extraFilters = category === 'tiles'
+      ? {
+          biome: asset._biome,
+          subcategory: asset._tileCategory,
+        }
+      : {};
+
     try {
-      await api.generateAssetsByIds(category, [id], { force: true });
+      await api.generateAssetsByIds(category, [id], { force: true }, extraFilters);
       toast.success(`Regenerating ${id}...`);
       // Refresh after a delay (preserve scroll)
       scrollPositionRef.current = window.scrollY;
@@ -575,8 +592,10 @@ export default function AssetGrid({
   const getFocusedIndex = useCallback(() => {
     if (selectedIds.size === 0) return -1;
     const lastSelected = Array.from(selectedIds).pop();
-    return filteredAssets.findIndex((a) => (a.key || a.id) === lastSelected);
-  }, [selectedIds, filteredAssets]);
+    return filteredAssets.findIndex(
+      (asset) => getAssetSelectionId(asset, category) === lastSelected
+    );
+  }, [category, selectedIds, filteredAssets]);
 
   /**
    * Vim-style navigation: Select next asset (j key)
@@ -587,10 +606,10 @@ export default function AssetGrid({
     const currentIndex = getFocusedIndex();
     const nextIndex = currentIndex < filteredAssets.length - 1 ? currentIndex + 1 : 0;
     const nextAsset = filteredAssets[nextIndex];
-    const nextId = nextAsset.key || nextAsset.id;
+    const nextId = getAssetSelectionId(nextAsset, category);
 
     setSelectedIds(new Set([nextId]));
-  }, [filteredAssets, getFocusedIndex]);
+  }, [category, filteredAssets, getFocusedIndex]);
 
   /**
    * Vim-style navigation: Select previous asset (k key)
@@ -601,10 +620,10 @@ export default function AssetGrid({
     const currentIndex = getFocusedIndex();
     const prevIndex = currentIndex > 0 ? currentIndex - 1 : filteredAssets.length - 1;
     const prevAsset = filteredAssets[prevIndex];
-    const prevId = prevAsset.key || prevAsset.id;
+    const prevId = getAssetSelectionId(prevAsset, category);
 
     setSelectedIds(new Set([prevId]));
-  }, [filteredAssets, getFocusedIndex]);
+  }, [category, filteredAssets, getFocusedIndex]);
 
   /**
    * Open selected asset detail (Enter key)
@@ -612,12 +631,11 @@ export default function AssetGrid({
   const handleOpenSelected = useCallback(() => {
     if (selectedIds.size === 0) return;
 
-    const firstSelectedId = Array.from(selectedIds)[0];
-    const asset = filteredAssets.find((a) => (a.key || a.id) === firstSelectedId);
+    const asset = selectedAssets[0];
     if (asset) {
       handleAssetClick(asset);
     }
-  }, [selectedIds, filteredAssets, handleAssetClick]);
+  }, [selectedAssets, selectedIds.size, handleAssetClick]);
 
   /**
    * Regenerate selected assets (r key)
@@ -628,9 +646,22 @@ export default function AssetGrid({
       return;
     }
 
-    const selectedAssetIds = Array.from(selectedIds);
+    const selectedAssetIds = selectedAssets.map(getAssetRawId);
     try {
-      await api.generateAssetsByIds(category, selectedAssetIds, { force: true });
+      if (category === 'tiles') {
+        await Promise.all(
+          groupTileAssetsByScope(selectedAssets).map(({ biome, subcategory, assetIds }) =>
+            api.generateAssetsByIds(
+              category,
+              assetIds,
+              { force: true },
+              { biome, subcategory }
+            )
+          )
+        );
+      } else {
+        await api.generateAssetsByIds(category, selectedAssetIds, { force: true });
+      }
       toast.success(`Regenerating ${selectedAssetIds.length} asset(s)...`);
       // Refresh after a delay (preserve scroll)
       scrollPositionRef.current = window.scrollY;
@@ -641,7 +672,7 @@ export default function AssetGrid({
     } catch (err) {
       toast.error(err.message || 'Failed to regenerate');
     }
-  }, [selectedIds, category, refetch, toast]);
+  }, [selectedIds.size, selectedAssets, category, refetch, toast]);
 
   /**
    * Toggle mark for regeneration on selected assets (m key)
@@ -652,27 +683,17 @@ export default function AssetGrid({
       return;
     }
 
-    const selectedAssetIds = Array.from(selectedIds);
+    const selectedAssetIds = selectedAssets.map(getAssetRawId);
     // Check if any are already marked - if so, unmark all; otherwise mark all
-    const anyMarked = filteredAssets.some(
-      (a) => selectedIds.has(a.key || a.id) && a.needsRegeneration
-    );
+    const anyMarked = selectedAssets.some((asset) => asset.needsRegeneration);
     const mark = !anyMarked;
 
     try {
-      // For tiles, group by biome since IDs may not be unique across biomes
+      // Tile metadata keys are only unique inside a biome/tile category.
       if (category === 'tiles') {
-        const selectedAssets = filteredAssets.filter(a => selectedIds.has(a.key || a.id));
-        const byBiome = new Map();
-        for (const asset of selectedAssets) {
-          const biome = asset._biome || 'unknown';
-          if (!byBiome.has(biome)) byBiome.set(biome, []);
-          byBiome.get(biome).push(asset.key || asset.id);
-        }
-
         await Promise.all(
-          Array.from(byBiome.entries()).map(([biome, ids]) =>
-            api.markMultipleForRegeneration(category, ids, mark, { biome })
+          groupTileAssetsByScope(selectedAssets).map(({ biome, subcategory, assetIds }) =>
+            api.markMultipleForRegeneration(category, assetIds, mark, { biome, subcategory })
           )
         );
       } else {
@@ -693,7 +714,7 @@ export default function AssetGrid({
     } catch (err) {
       toast.error(err.message || 'Failed to update');
     }
-  }, [selectedIds, filteredAssets, category, refetch, toast]);
+  }, [selectedIds.size, selectedAssets, category, refetch, toast]);
 
   // Register keyboard shortcuts with vim-style navigation
   useKeyboardShortcuts({
@@ -732,7 +753,9 @@ export default function AssetGrid({
             onClick={handleSelectAll}
             className="btn-ghost text-sm"
           >
-            {selectedIds.size === filteredAssets.length ? 'Deselect All' : 'Select All'}
+            {filteredAssets.every((asset) =>
+              selectedIds.has(getAssetSelectionId(asset, category))
+            ) ? 'Deselect All' : 'Select All'}
           </button>
         )}
       </div>
@@ -773,27 +796,14 @@ export default function AssetGrid({
       {!loading && filteredAssets.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
           {filteredAssets.map((asset) => {
-            const id = asset.key || asset.id;
-            // Create unique keys across different subcategories:
-            // - Tiles: include biome AND tileCategory (e.g., forest/floors/grass_0 vs cave/floors/grass_0)
-            // - Icons: include iconCategory (e.g., status/poison vs augments/poison)
-            // - Items: include itemCategory (e.g., weapons/sword vs armor/sword)
-            let uniqueKey = id;
-            if (category === 'tiles' && asset._biome && asset._tileCategory) {
-              uniqueKey = `${asset._biome}_${asset._tileCategory}_${id}`;
-            } else if (category === 'tiles' && asset._tileCategory) {
-              uniqueKey = `${asset._tileCategory}_${id}`;
-            } else if (category === 'icons' && asset._iconCategory) {
-              uniqueKey = `${asset._iconCategory}_${id}`;
-            } else if (category === 'items' && asset._itemCategory) {
-              uniqueKey = `${asset._itemCategory}_${id}`;
-            }
+            const selectionId = getAssetSelectionId(asset, category);
             return (
               <AssetCard
-                key={uniqueKey}
+                key={selectionId}
                 asset={asset}
                 category={category}
-                selected={selectedIds.has(id)}
+                selectionId={selectionId}
+                selected={selectedIds.has(selectionId)}
                 onSelect={handleSelect}
                 onClick={handleAssetClick}
                 onRegenerate={handleQuickRegenerate}
@@ -838,7 +848,7 @@ export default function AssetGrid({
         onClose={() => setBulkEditOpen(false)}
         selectedIds={Array.from(selectedIds)}
         category={category}
-        assets={filteredAssets}
+        assets={data?.assets || []}
         onUpdate={handleBulkEditUpdate}
       />
     </div>

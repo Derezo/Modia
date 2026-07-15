@@ -76,7 +76,9 @@ export const DEFAULT_LORA_BY_CATEGORY = {
  * @type {Object<string, string>}
  */
 export const CATEGORY_SCRIPT_MAP = {
-  tiles: 'generate-tiles.js',
+  // Tiles use the deterministic, edge-safe material compiler. Keep the legacy
+  // AI script available as a direct CLI, but do not route admin jobs through it.
+  tiles: '../tiles/generate-isometric-tiles.js',
   portraits: 'generate-portraits.js',
   items: 'generate-items.js',
   icons: 'generate-icons.js',

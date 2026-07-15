@@ -60,6 +60,7 @@ export class BattleFormationScene extends Scene {
     this.placedCharacters = new Map();  // "x,y" -> character object
     this.placementOrder = [];           // Track order for FIFO removal
     this.selectedCharacter = null;      // Currently selected (for detail card)
+    this.rosterPlacementCharacterId = null; // One-shot explicit roster placement choice
 
     // Party data
     this.selectableCharacters = [];  // All party characters (slots 1-12), sorted by level
@@ -71,6 +72,7 @@ export class BattleFormationScene extends Scene {
     this.longPressThreshold = 500;
     this.pressedTile = null;
     this.justRemovedByLongPress = false;
+    this.gridTouchGesture = null;
 
     // Layout state
     this.isMobile = false;
@@ -124,6 +126,12 @@ export class BattleFormationScene extends Scene {
 
     // Preload character sprites for all party classes
     await this.preloadCharacterSprites();
+    if (!this._isActive) return; // Scene exited during async load
+
+    // The formation canvas uses the same canonical terrain source as battle.
+    // Load its representative tile before the first frame so the preview does
+    // not permanently fall back to a differently styled procedural diamond.
+    await this.preloadFormationTerrain();
     if (!this._isActive) return; // Scene exited during async load
 
     // Load enemy preview data
@@ -381,6 +389,29 @@ export class BattleFormationScene extends Scene {
     await Promise.allSettled(promises);
   }
 
+  /**
+   * Preload the representative floor tile used by the formation diorama.
+   * @returns {Promise<void>}
+   * @private
+   */
+  async preloadFormationTerrain() {
+    const terrainByNode = {
+      forest: 'grass',
+      cave: 'stone',
+      mountain: 'stone',
+      bridge: 'stone',
+      castle: 'stone',
+      arena: 'stone'
+    };
+    const terrain = terrainByNode[this.nodeType] || 'grass';
+
+    try {
+      await this.game.assetLoader.loadTile?.(terrain, this.nodeType, 0);
+    } catch (error) {
+      console.warn('[BattleFormationScene] Formation terrain preload failed:', error);
+    }
+  }
+
   async loadEnemies(data) {
     if (data.node?.id) {
       try {
@@ -635,6 +666,9 @@ export class BattleFormationScene extends Scene {
       gridWidth: 5,
       gridHeight: 4
     });
+    this.formationGrid.setPlacedCharacters(this.placedCharacters);
+    this.formationGrid.setHoveredTile(this.hoveredTile);
+    this.formationGrid.setGridLocked(this.gridLocked);
   }
 
   setupEventListeners() {
@@ -651,6 +685,7 @@ export class BattleFormationScene extends Scene {
       this.gridCanvas.addEventListener('click', (e) => this.handleGridClick(e), opts);
       this.gridCanvas.addEventListener('mousemove', (e) => this.handleGridHover(e), opts);
       this.gridCanvas.addEventListener('mouseleave', () => {
+        this.handleGridMouseUp();
         this.hoveredTile = null;
         this.formationGrid?.setHoveredTile(null);
       }, opts);
@@ -660,28 +695,63 @@ export class BattleFormationScene extends Scene {
       this.gridCanvas.addEventListener('mouseup', () => this.handleGridMouseUp(), opts);
 
       // Touch support
+      const touchOpts = { signal: this.abortController.signal, passive: false };
       this.gridCanvas.addEventListener('touchstart', (e) => {
         e.preventDefault();
+        if (e.touches.length !== 1) {
+          this.cancelGridTouchGesture();
+          return;
+        }
         const touch = e.touches[0];
-        const rect = this.gridCanvas.getBoundingClientRect();
-        this.handleGridMouseDown({
-          offsetX: touch.clientX - rect.left,
-          offsetY: touch.clientY - rect.top
-        });
-      }, opts);
+        this.gridTouchGesture = {
+          startX: touch.clientX,
+          startY: touch.clientY,
+          moved: false
+        };
+        this.handleGridMouseDown(touch);
+        this.handleGridHover(touch);
+      }, touchOpts);
+
+      this.gridCanvas.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        if (!this.gridTouchGesture || e.touches.length !== 1) {
+          this.cancelGridTouchGesture();
+          return;
+        }
+
+        const touch = e.touches[0];
+        const distance = Math.hypot(
+          touch.clientX - this.gridTouchGesture.startX,
+          touch.clientY - this.gridTouchGesture.startY
+        );
+        if (distance > 10) {
+          this.gridTouchGesture.moved = true;
+          this.handleGridMouseUp();
+        }
+        this.handleGridHover(touch);
+      }, touchOpts);
 
       this.gridCanvas.addEventListener('touchend', (e) => {
         e.preventDefault();
+        const gesture = this.gridTouchGesture;
+        const touch = e.changedTouches[0];
+        const shouldTap = Boolean(
+          gesture &&
+          !gesture.moved &&
+          !this.justRemovedByLongPress &&
+          touch
+        );
         this.handleGridMouseUp();
-        if (!this.longPressTimer) {
-          const touch = e.changedTouches[0];
-          const rect = this.gridCanvas.getBoundingClientRect();
-          this.handleGridClick({
-            offsetX: touch.clientX - rect.left,
-            offsetY: touch.clientY - rect.top
-          });
-        }
-      }, opts);
+        this.gridTouchGesture = null;
+
+        if (shouldTap) this.handleGridClick(touch);
+        else this.justRemovedByLongPress = false;
+      }, touchOpts);
+
+      this.gridCanvas.addEventListener('touchcancel', (e) => {
+        e.preventDefault();
+        this.cancelGridTouchGesture();
+      }, touchOpts);
     }
 
     // Mobile bottom sheet
@@ -730,6 +800,7 @@ export class BattleFormationScene extends Scene {
     const savedPlaced = new Map(this.placedCharacters);
     const savedOrder = [...this.placementOrder];
     const savedSelected = this.selectedCharacter;
+    const savedRosterPlacementId = this.rosterPlacementCharacterId;
 
     // Cleanup
     if (this.characterCard) {
@@ -752,7 +823,11 @@ export class BattleFormationScene extends Scene {
     this.placedCharacters = savedPlaced;
     this.placementOrder = savedOrder;
     this.selectedCharacter = savedSelected;
+    this.rosterPlacementCharacterId = savedRosterPlacementId;
 
+    this.updateGrid();
+    this.formationGrid?.setHoveredTile(this.hoveredTile);
+    this.formationGrid?.setGridLocked(this.gridLocked);
     this.updateUnplacedRoster();
     this.updateDetailCard();
     this.updateStartButton();
@@ -767,6 +842,28 @@ export class BattleFormationScene extends Scene {
   }
 
   // Grid interactions
+  getGridCanvasPoint(event) {
+    if (!this.gridCanvas || !event) return null;
+    if (Number.isFinite(event.canvasX) && Number.isFinite(event.canvasY)) {
+      return { x: event.canvasX, y: event.canvasY };
+    }
+
+    const rect = this.gridCanvas.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return null;
+
+    const clientX = Number.isFinite(event.clientX)
+      ? event.clientX
+      : rect.left + (event.offsetX || 0);
+    const clientY = Number.isFinite(event.clientY)
+      ? event.clientY
+      : rect.top + (event.offsetY || 0);
+
+    return {
+      x: (clientX - rect.left) * (this.gridCanvas.width / rect.width),
+      y: (clientY - rect.top) * (this.gridCanvas.height / rect.height)
+    };
+  }
+
   handleGridClick(e) {
     // Prevent grid interactions when locked (coliseum formation submitted)
     if (this.gridLocked) return;
@@ -776,7 +873,9 @@ export class BattleFormationScene extends Scene {
       return;
     }
 
-    const tile = this.formationGrid?.screenToGrid(e.offsetX, e.offsetY);
+    const point = this.getGridCanvasPoint(e);
+    if (!point) return;
+    const tile = this.formationGrid?.screenToGrid(point.x, point.y);
     if (!tile) return;
 
     const key = `${tile.x},${tile.y}`;
@@ -794,7 +893,9 @@ export class BattleFormationScene extends Scene {
   }
 
   handleGridHover(e) {
-    const tile = this.formationGrid?.screenToGrid(e.offsetX, e.offsetY);
+    const point = this.getGridCanvasPoint(e);
+    if (!point) return;
+    const tile = this.formationGrid?.screenToGrid(point.x, point.y);
     if (!tile || (this.hoveredTile?.x === tile.x && this.hoveredTile?.y === tile.y)) return;
 
     this.hoveredTile = tile;
@@ -811,7 +912,9 @@ export class BattleFormationScene extends Scene {
     // Prevent grid interactions when locked (coliseum formation submitted)
     if (this.gridLocked) return;
 
-    const tile = this.formationGrid?.screenToGrid(e.offsetX, e.offsetY);
+    const point = this.getGridCanvasPoint(e);
+    if (!point) return;
+    const tile = this.formationGrid?.screenToGrid(point.x, point.y);
     if (!tile) return;
 
     const key = `${tile.x},${tile.y}`;
@@ -841,18 +944,44 @@ export class BattleFormationScene extends Scene {
     this.formationGrid?.setPressedTile(null);
   }
 
+  cancelGridTouchGesture() {
+    this.handleGridMouseUp();
+    this.gridTouchGesture = null;
+    this.justRemovedByLongPress = false;
+  }
+
   // Character placement logic
   placeCharacterOnTile(gridKey) {
     // Prevent placement when grid is locked
     if (this.gridLocked) return;
 
-    const placedIds = new Set(
-      Array.from(this.placedCharacters.values()).map(c => c.id)
-    );
+    const placedEntries = Array.from(this.placedCharacters.entries());
+    const placedIds = new Set(placedEntries.map(([, character]) => character.id));
     const unplaced = this.selectableCharacters.filter(c => !placedIds.has(c.id));
 
+    // A roster selection is an explicit placement choice. If that character
+    // is already on the board, clicking an empty tile moves them; otherwise it
+    // places the selected unplaced character instead of silently choosing the
+    // first member in sort order.
+    const preferredId = this.rosterPlacementCharacterId;
+    const selectedEntry = preferredId == null
+      ? null
+      : placedEntries.find(([, character]) => character.id === preferredId);
+
+    if (selectedEntry) {
+      const [previousKey, selected] = selectedEntry;
+      this.placedCharacters.delete(previousKey);
+      this.placementOrder = this.placementOrder.filter(key => key !== previousKey);
+      this.placedCharacters.set(gridKey, selected);
+      this.placementOrder.push(gridKey);
+      this.selectedCharacter = selected;
+      this.rosterPlacementCharacterId = null;
+      this.updateDetailCard();
+      return;
+    }
+
     if (unplaced.length > 0) {
-      const nextChar = unplaced[0];
+      const nextChar = unplaced.find(character => character.id === preferredId) || unplaced[0];
 
       if (this.placedCharacters.size >= 5) {
         const oldestKey = this.placementOrder.shift();
@@ -862,6 +991,7 @@ export class BattleFormationScene extends Scene {
       this.placedCharacters.set(gridKey, nextChar);
       this.placementOrder.push(gridKey);
       this.selectedCharacter = nextChar;
+      this.rosterPlacementCharacterId = null;
       this.updateDetailCard();
       return;
     }
@@ -1020,10 +1150,11 @@ export class BattleFormationScene extends Scene {
     // Attach click handlers
     roster.querySelectorAll('.bf-roster-char').forEach(el => {
       el.addEventListener('click', () => {
-        const charId = parseInt(el.dataset.charId);
-        const char = this.selectableCharacters.find(c => c.id === charId);
+        const charId = el.dataset.charId;
+        const char = this.selectableCharacters.find(c => String(c.id) === charId);
         if (char) {
           this.selectedCharacter = char;
+          this.rosterPlacementCharacterId = char.id;
           this.updateDetailCard();
           this.updateUnplacedRoster();
         }

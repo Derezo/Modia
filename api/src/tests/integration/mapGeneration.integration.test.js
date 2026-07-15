@@ -12,8 +12,12 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert';
 import { generateTerrain } from '../../../../shared/mapGeneration.js';
-import { hasValidPath } from '../../../../shared/pathfinding.js';
+import { hasValidPath, hasValidPath3D } from '../../../../shared/pathfinding.js';
 import { isImpassable, TERRAIN_WEIGHTS } from '../../../../shared/terrain.js';
+import {
+  DEFAULT_ARCHETYPE_WEIGHTS,
+  NODE_TYPE_ARCHETYPE_WEIGHTS
+} from '../../../../shared/mapgen/archetypes/ArchetypeSelector.js';
 
 // Default map dimensions matching the battle system
 const MAP_WIDTH = 32;
@@ -165,6 +169,38 @@ describe('Map Generation - Path Connectivity', () => {
       `Different seeds should produce different terrain (got ${differences} differences)`
     );
   });
+
+  test('should keep every biome traversable with authoritative elevation data', () => {
+    const nodeTypes = ['forest', 'cave', 'mountain', 'bridge', 'castle'];
+    const elevationSeeds = testSeeds.slice(0, 10);
+
+    for (const nodeType of nodeTypes) {
+      for (const seed of elevationSeeds) {
+        const { terrain, elevation } = generateTerrain(seed, nodeType, MAP_WIDTH, MAP_HEIGHT, {
+          elevation: true
+        });
+        let connected = false;
+
+        for (const startY of [8, 16, 24]) {
+          for (const endY of [8, 16, 24]) {
+            connected ||= hasValidPath3D(
+              2,
+              startY,
+              MAP_WIDTH - 3,
+              endY,
+              terrain,
+              elevation,
+              null,
+              MAP_WIDTH,
+              MAP_HEIGHT
+            );
+          }
+        }
+
+        assert.ok(connected, `${nodeType} seed ${seed} should remain traversable in 3D`);
+      }
+    }
+  });
 });
 
 // =============================================================================
@@ -286,17 +322,20 @@ describe('Map Generation - Spawn Areas', () => {
 // =============================================================================
 
 describe('Map Generation - Terrain Distribution', () => {
-  test('should have approximately 25% impassable terrain for mountain (not 40%)', () => {
+  test('should select mountain-compatible archetypes with playable terrain diversity', () => {
     const nodeType = 'mountain';
     const testSeeds = [12345, 54321, 99999, 42, 314159];
-
-    // Mountain terrain weights from terrain.js:
-    // { stone: 0.45, rock: 0.15, grass: 0.30, cliff: 0.10 }
-    // Impassable = rock (0.15) + cliff (0.10) = 0.25 (25%)
-    const expectedImpassableRatio = TERRAIN_WEIGHTS.mountain.rock + TERRAIN_WEIGHTS.mountain.cliff;
+    const selectedArchetypes = new Set();
 
     for (const seed of testSeeds) {
-      const { terrain } = generateTerrain(seed, nodeType, MAP_WIDTH, MAP_HEIGHT);
+      const { terrain, metadata } = generateTerrain(seed, nodeType, MAP_WIDTH, MAP_HEIGHT, {
+        includeMetadata: true
+      });
+      selectedArchetypes.add(metadata.archetype);
+      assert.ok(
+        metadata.archetype in NODE_TYPE_ARCHETYPE_WEIGHTS.mountain,
+        `Mountain selected unsupported archetype: ${metadata.archetype}`
+      );
 
       // Count impassable tiles (excluding spawn areas which are cleared)
       let impassableCount = 0;
@@ -313,17 +352,13 @@ describe('Map Generation - Terrain Distribution', () => {
 
       const actualRatio = impassableCount / totalNonSpawnTiles;
 
-      // Allow 15% variance from expected due to random distribution and corridor carving
-      const minExpected = expectedImpassableRatio * 0.3; // Much lower due to corridor carving
-      const maxExpected = expectedImpassableRatio * 1.5;
-
       assert.ok(
-        actualRatio >= minExpected && actualRatio <= maxExpected,
-        `Mountain impassable ratio should be near ${(expectedImpassableRatio * 100).toFixed(1)}%. ` +
-        `Got ${(actualRatio * 100).toFixed(1)}% for seed ${seed} ` +
-        `(expected range: ${(minExpected * 100).toFixed(1)}% - ${(maxExpected * 100).toFixed(1)}%)`
+        actualRatio < 0.6,
+        `Mountain seed ${seed} should retain a playable majority; got ${(actualRatio * 100).toFixed(1)}% impassable`
       );
     }
+
+    assert.ok(selectedArchetypes.size >= 2, 'Fixture seeds should exercise multiple mountain map styles');
   });
 
   test('should count rock + cliff tiles as impassable for mountain terrain', () => {
@@ -435,13 +470,12 @@ describe('Map Generation - Terrain Distribution', () => {
     console.log(`  Lava: ${lavaCount} (${(lavaCount / totalNonSpawnTiles * 100).toFixed(1)}%)`);
   });
 
-  test('should have castle terrain with mostly stone and grass', () => {
+  test('should generate a structured castle-compatible archetype', () => {
     const seed = 12345;
     const nodeType = 'castle';
-    const { terrain } = generateTerrain(seed, nodeType, MAP_WIDTH, MAP_HEIGHT);
-
-    // Castle weights: { stone: 0.7, grass: 0.3 }
-    // No impassable terrain by default
+    const { terrain, metadata } = generateTerrain(seed, nodeType, MAP_WIDTH, MAP_HEIGHT, {
+      includeMetadata: true
+    });
 
     let stoneCount = 0;
     let grassCount = 0;
@@ -458,17 +492,22 @@ describe('Map Generation - Terrain Distribution', () => {
       }
     }
 
-    // Castle should be predominantly stone and grass with minimal impassable
-    const stoneGrassRatio = (stoneCount + grassCount) / totalTiles;
     assert.ok(
-      stoneGrassRatio > 0.9,
-      `Castle should be >90% stone/grass. Got ${(stoneGrassRatio * 100).toFixed(1)}%`
+      metadata.archetype in NODE_TYPE_ARCHETYPE_WEIGHTS.castle,
+      `Castle selected unsupported archetype: ${metadata.archetype}`
     );
 
-    assert.strictEqual(
-      impassableCount,
-      0,
-      `Castle should have no impassable terrain. Got ${impassableCount} tiles`
+    // Castle mappings include crypts and ruins, so structural rock walls are
+    // intentional. The battlefield should still be predominantly built floor.
+    const stoneGrassRatio = (stoneCount + grassCount) / totalTiles;
+    assert.ok(
+      stoneGrassRatio > 0.6,
+      `Castle should be predominantly stone/grass. Got ${(stoneGrassRatio * 100).toFixed(1)}%`
+    );
+
+    assert.ok(
+      impassableCount / totalTiles < 0.4,
+      `Castle should retain a playable majority. Got ${impassableCount} impassable tiles`
     );
   });
 });
@@ -582,24 +621,28 @@ describe('Map Generation - Edge Cases', () => {
     assert.ok(result.terrain, 'Should generate terrain with negative seed');
   });
 
-  test('should handle unknown node type by using default weights', () => {
-    const result = generateTerrain(12345, 'unknown_biome', MAP_WIDTH, MAP_HEIGHT);
+  test('should handle unknown node type with the default archetype pool', () => {
+    const result = generateTerrain(12345, 'unknown_biome', MAP_WIDTH, MAP_HEIGHT, {
+      includeMetadata: true
+    });
     assert.ok(result.terrain, 'Should generate terrain for unknown node type');
+    assert.ok(
+      result.metadata.archetype in DEFAULT_ARCHETYPE_WEIGHTS,
+      `Unknown biome selected an archetype outside the default pool: ${result.metadata.archetype}`
+    );
 
-    // Should use default weights (grass: 0.7, stone: 0.2, forest: 0.1)
-    let grassCount = 0;
-    let totalTiles = MAP_WIDTH * MAP_HEIGHT;
+    let passableCount = 0;
+    const totalTiles = MAP_WIDTH * MAP_HEIGHT;
 
     for (let y = 0; y < MAP_HEIGHT; y++) {
       for (let x = 0; x < MAP_WIDTH; x++) {
-        if (result.terrain[y][x] === 'grass') grassCount++;
+        if (!isImpassable(result.terrain[y][x])) passableCount++;
       }
     }
 
-    // Default should have high grass ratio
     assert.ok(
-      grassCount / totalTiles > 0.5,
-      'Unknown node type should use default weights with high grass ratio'
+      passableCount / totalTiles > 0.4,
+      'Unknown biome fallback should remain a playable battlefield'
     );
   });
 

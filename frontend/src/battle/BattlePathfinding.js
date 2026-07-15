@@ -18,8 +18,13 @@ import {
   findPath3D,
   getAttackableTiles,
   getManhattanDistance
-} from '@shared/pathfinding.js';
-import { PREVENT_MOVEMENT } from '@shared/battleMath.js';
+} from '@modia/shared/pathfinding';
+import { PREVENT_MOVEMENT } from '@modia/shared/battleMath';
+import { normalizeElevationGrid } from '@modia/shared/terrain';
+
+export function prepareElevationForPathfinding(elevation, format) {
+  return normalizeElevationGrid(elevation, format);
+}
 
 export class BattlePathfinding {
   constructor(grid, units) {
@@ -104,13 +109,17 @@ export class BattlePathfinding {
 
     // Use 3D pathfinding when elevation data is available
     if (this.grid.elevation && this.grid.elevation.length > 0) {
+      const elevation = prepareElevationForPathfinding(
+        this.grid.elevation,
+        this.grid.elevationFormat
+      );
       return getReachableTiles3D(
         startX,
         startY,
         null, // startZ will be looked up from elevation grid
         effectiveRange,
         this.grid.terrain,
-        this.grid.elevation,
+        elevation,
         null, // connections parameter (unused)
         unitsArray,
         this.grid.width,
@@ -245,13 +254,17 @@ export class BattlePathfinding {
 
     // Use 3D pathfinding when elevation data is available
     if (this.grid.elevation && this.grid.elevation.length > 0) {
+      const elevation = prepareElevationForPathfinding(
+        this.grid.elevation,
+        this.grid.elevationFormat
+      );
       return findPath3D(
         startX,
         startY,
         endX,
         endY,
         this.grid.terrain,
-        this.grid.elevation,
+        elevation,
         null, // connections parameter (unused)
         unitsArray,
         this.grid.width,

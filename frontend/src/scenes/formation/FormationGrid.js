@@ -84,13 +84,52 @@ export class FormationGrid {
     const worldX = screenX - centerX;
     const worldY = screenY - startY;
 
-    const gridX = Math.floor((worldX / (this.tileWidth / 2) + worldY / (this.tileHeight / 2)) / 2);
-    const gridY = Math.floor((worldY / (this.tileHeight / 2) - worldX / (this.tileWidth / 2)) / 2);
+    // gridToScreen() places the origin at the *centre* of tile 0,0. Using
+    // floor here incorrectly assigns the top and left halves of that tile to
+    // negative cells. Invert the 2:1 projection, then select the nearest
+    // diamond with an exact hit test so edge pixels remain deterministic.
+    const projectedX = worldX / this.tileWidth + worldY / this.tileHeight;
+    const projectedY = worldY / this.tileHeight - worldX / this.tileWidth;
+    const originX = Math.round(projectedX);
+    const originY = Math.round(projectedY);
+    let best = null;
 
-    if (gridX >= 0 && gridX < this.gridWidth && gridY >= 0 && gridY < this.gridHeight) {
-      return { x: gridX, y: gridY };
+    for (let y = originY - 1; y <= originY + 1; y++) {
+      for (let x = originX - 1; x <= originX + 1; x++) {
+        if (x < 0 || x >= this.gridWidth || y < 0 || y >= this.gridHeight) continue;
+
+        const center = this.gridToScreen(x, y);
+        const diamondDistance =
+          Math.abs(screenX - center.x) / (this.tileWidth / 2) +
+          Math.abs(screenY - center.y) / (this.tileHeight / 2);
+
+        if (diamondDistance <= 1 + 1e-7 &&
+            (!best || diamondDistance < best.distance)) {
+          best = { x, y, distance: diamondDistance };
+        }
+      }
     }
-    return null;
+
+    return best ? { x: best.x, y: best.y } : null;
+  }
+
+  /**
+   * Return cells in a stable back-to-front order for the 2:1 projection.
+   * Explicit tie-breakers make the draw order independent of loop shape and
+   * JavaScript engine sort stability.
+   */
+  getCellsInRenderOrder() {
+    const cells = [];
+    for (let y = 0; y < this.gridHeight; y++) {
+      for (let x = 0; x < this.gridWidth; x++) {
+        cells.push({ x, y, depth: x + y });
+      }
+    }
+    return cells.sort((a, b) =>
+      a.depth - b.depth ||
+      a.y - b.y ||
+      a.x - b.x
+    );
   }
 
   // State management
@@ -130,25 +169,21 @@ export class FormationGrid {
     // Render platform edge (3D effect)
     this.renderPlatformEdge(ctx);
 
-    // Render tiles back to front (painter's algorithm)
-    for (let y = 0; y < this.gridHeight; y++) {
-      for (let x = 0; x < this.gridWidth; x++) {
-        this.renderTile(ctx, x, y);
+    const renderOrder = this.getCellsInRenderOrder();
+
+    // Terrain and characters share the painter order, matching the battle
+    // renderer. A foreground tile can therefore cover the feet of a unit in
+    // the row behind instead of every character floating above the platform.
+    for (const cell of renderOrder) {
+      this.renderTile(ctx, cell.x, cell.y);
+      const key = `${cell.x},${cell.y}`;
+      if (this.placedCharacters.has(key)) {
+        this.renderCharacter(ctx, cell.x, cell.y, this.placedCharacters.get(key));
       }
     }
 
     // Render front edge indicator (enemy direction)
     this.renderFrontEdgeIndicator(ctx);
-
-    // Render characters on top (also back to front)
-    for (let y = 0; y < this.gridHeight; y++) {
-      for (let x = 0; x < this.gridWidth; x++) {
-        const key = `${x},${y}`;
-        if (this.placedCharacters.has(key)) {
-          this.renderCharacter(ctx, x, y, this.placedCharacters.get(key));
-        }
-      }
-    }
 
     // Render particles if theme has them
     if (this.theme) {
@@ -291,11 +326,17 @@ export class FormationGrid {
     const terrainSprite = this.getTerrainSprite(this.nodeType);
 
     if (terrainSprite) {
-      // Draw terrain sprite
+      // Terrain art uses a square source canvas (64px legacy or 128px retina)
+      // with a 2:1 diamond centred inside it. Always render to a 64x64 logical
+      // box so retina sources retain detail without being squashed to 64x48.
+      const logicalSpriteSize = this.tileWidth;
+      ctx.imageSmoothingEnabled = true;
       ctx.drawImage(
         terrainSprite,
-        x - hw, y - hh,
-        this.tileWidth, this.tileHeight + 16 // Extra height for isometric depth
+        x - logicalSpriteSize / 2,
+        y - logicalSpriteSize / 2,
+        logicalSpriteSize,
+        logicalSpriteSize
       );
     } else {
       // Fallback: colored diamond
@@ -379,7 +420,10 @@ export class FormationGrid {
       forest: 'grass',
       cave: 'stone',
       mountain: 'stone',
-      bridge: 'stone'
+      bridge: 'stone',
+      castle: 'stone',
+      arena: 'stone',
+      ruins: 'stone'
     };
 
     const terrain = terrainTypes[nodeType] || 'grass';

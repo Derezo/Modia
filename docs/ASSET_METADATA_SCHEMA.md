@@ -17,6 +17,8 @@ This document describes the JSON metadata schema conventions used across Modia's
 
 Asset metadata is stored in JSON files under `ai-image-metadata/`. Each category has its own directory structure with manifest files linking individual asset definitions.
 
+Battle tiles are compiled deterministically. Their prompt text and seed can act as material and variation hints, but no AI backend or LoRA is selected. The versioned geometry and validation rules are documented in [ISOMETRIC_TILE_SYSTEM.md](ISOMETRIC_TILE_SYSTEM.md).
+
 ```
 ai-image-metadata/
   manifest.json              # Master manifest
@@ -117,24 +119,24 @@ After loading and enrichment:
 
 ## Common Fields
 
-All asset types share these base fields:
+Asset categories share these base concepts, but their required fields differ. In particular, tile requirements are category-specific and are validated against `tiles/manifest.json`.
 
-### Required Fields
+### Core identity and generation fields
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` or `key` | string | Unique identifier (tiles use `key`) |
-| `name` | string | Human-readable display name |
-| `prompt` | string | AI generation prompt |
-| `seed` | integer | Generation seed for reproducibility |
-| `generated` | boolean | Whether asset file exists |
+| `name` | string | Human-readable display name (AI categories) |
+| `prompt` | string | AI prompt, or deterministic material hint for tiles |
+| `seed` | integer | Reproducible AI or compiler variation seed |
+| `generated` | boolean | Whether the asset has been generated |
 
 ### Optional Fields
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `generatedAt` | ISO timestamp | null | When asset was generated |
-| `loraModel` | string | category default | LoRA model override |
+| `loraModel` | string | category default | LoRA model override for AI categories; ignored by the tile compiler |
 | `needsRegeneration` | boolean | false | Queued for regeneration |
 | `regenerationQueuedAt` | ISO timestamp | null | When queued |
 | `evaluation` | object | null | Quality review data |
@@ -165,7 +167,7 @@ All asset types share these base fields:
 
 ### Tiles
 
-Tiles use `key` instead of `id` and include terrain-specific fields.
+Tiles use `key` instead of `id` and follow the deterministic `iso64-retina-v3` contract. Their canonical identity is `(tileCategory, biome, key)`; admin requests additionally retain the global `tiles` category and source file.
 
 **File structure:** `tiles/{tileCategory}/{biome}.json`
 
@@ -196,11 +198,14 @@ Tiles use `key` instead of `id` and include terrain-specific fields.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `key` | string | Yes | Unique tile identifier (alias for `id`) |
-| `terrain` | string | Yes | Terrain type (grass, stone, water, lava, etc.) |
-| `variant` | integer | Yes | Variant number (0-3 typical) |
-| `outputPath` | string | No | Override output biome directory |
-| `bonus` | boolean | No | Flag for special/bonus tiles |
+| `key` | string | Yes | Safe identifier, unique within its category and biome |
+| `terrain` | string | Floors/walls | Material family (grass, stone, water, lava, etc.) |
+| `variant` | integer | No | Non-negative floor variation index |
+| `direction` | string | Slopes | `north`, `south`, `east`, or `west` |
+| `levels` | integer | No | Elevation span represented by a slope or stairs tile |
+| `type` | string | No | `stairs` for stair variants |
+| `prompt` | string | No | Material inference hint; never sent to an AI backend |
+| `seed` | integer | No | Additional deterministic variation input |
 
 **File-level fields:**
 
@@ -209,7 +214,7 @@ Tiles use `key` instead of `id` and include terrain-specific fields.
 | `biome` | string | Biome name |
 | `category` | string | Tile category (floors, walls, slopes) |
 | `palette` | object | Color palette with primary, secondary, accent |
-| `outputPath` | string | Default output directory |
+| `description` | string | Human-readable metadata group description |
 
 ### Portraits
 
@@ -517,13 +522,13 @@ async function loadTileAssets(biome, tileCategory) {
 
 ### Master Manifest
 
-`ai-image-metadata/manifest.json` provides global configuration:
+`ai-image-metadata/manifest.json` provides global configuration. Its `categoryDefaults.tiles` value is retained for API compatibility and is ignored by the tile compiler:
 
 ```json
 {
   "version": "1.0.0",
-  "description": "Master manifest for Modia AI-generated image assets",
-  "totalAssets": 612,
+  "description": "Master manifest for Modia generated visual assets, including deterministic battle terrain",
+  "totalAssets": 985,
   "artDirection": {
     "mood": "cozy_nostalgic",
     "technique": "ink_wash",
@@ -554,7 +559,7 @@ Each category has its own manifest linking to asset files:
   "version": "1.0.0",
   "category": "icons",
   "description": "UI icons",
-  "totalAssets": 83,
+  "totalAssets": 143,
   "categoryFiles": [
     "actions.json",
     "status.json",

@@ -24,6 +24,13 @@ import { RoomCarverAlgorithm } from './algorithms/RoomCarver.js';
 import { PathCarverAlgorithm } from './algorithms/PathCarver.js';
 import { ClusterPlacerAlgorithm } from './algorithms/ClusterPlacer.js';
 import { PRNGStreams, createPRNGStreams } from './PRNGStreams.js';
+import { getStyleProfile } from './StyleProfiles.js';
+import {
+  getObstacleAssetCategory,
+  getObstacleTerrain,
+  getObstacleVariants
+} from '../obstacles.js';
+import { elevationLevelToNormalized } from '../terrain.js';
 
 /**
  * Algorithm categories for execution priority
@@ -351,6 +358,78 @@ export class AlgorithmPipeline {
     }
 
     return obstacles;
+  }
+
+  /**
+   * Populate the visual obstacle layer from biome rules. Blocking props also
+   * update the semantic terrain grid, keeping all existing 2D/3D pathfinders
+   * authoritative without a second collision representation.
+   */
+  populateObstacleLayer(terrain, obstacles, obstacleRules, random, styleProfile = 'natural') {
+    if (!obstacleRules || Object.keys(obstacleRules).length === 0) return 0;
+
+    const height = terrain.length;
+    const width = terrain[0]?.length || 0;
+    if (width === 0 || height === 0) return 0;
+
+    const range = getStyleProfile(styleProfile)?.parameterRanges?.obstacleCount;
+    const densityMultiplier = range
+      ? range.min + random() * (range.max - range.min)
+      : 1;
+    const placementScale = 0.3 * densityMultiplier;
+    const maxObstacleRatio = Math.min(0.065, 0.04 * densityMultiplier);
+    const maxObstacleCount = Math.max(1, Math.round(width * height * maxObstacleRatio));
+    // Keep candidate props out of every coordinate used by the 32x32 PvE and
+    // guild formations (enemy units can spawn as far inward as column 25).
+    // Compact supported maps retain the historical five-column split.
+    const spawnWidth = width >= 24 ? 7 : Math.min(5, Math.floor(width / 2));
+    const candidates = [];
+
+    for (let y = 0; y < height; y++) {
+      for (let x = spawnWidth; x < width - spawnWidth; x++) {
+        const terrainType = terrain[y][x];
+
+        for (const [ruleType, rule] of Object.entries(obstacleRules)) {
+          if (!rule.onTerrain?.includes(terrainType)) continue;
+
+          const chance = Math.min(0.8, Math.max(0, (rule.chance ?? 0) * placementScale));
+          if (random() >= chance) continue;
+
+          const category = getObstacleAssetCategory(rule.variants?.[0], ruleType);
+          candidates.push({
+            x,
+            y,
+            category,
+            variants: getObstacleVariants(category, rule.variants),
+            passable: rule.passable === true
+          });
+          break;
+        }
+      }
+    }
+
+    // Shuffle before applying the cap so dense rules do not bias placement
+    // toward the top-left of the map.
+    for (let i = candidates.length - 1; i > 0; i--) {
+      const j = Math.floor(random() * (i + 1));
+      [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+    }
+
+    const selected = candidates.slice(0, maxObstacleCount);
+    for (const candidate of selected) {
+      const variant = candidate.variants[Math.floor(random() * candidate.variants.length)];
+      obstacles[candidate.y][candidate.x] = {
+        type: candidate.category,
+        variant,
+        passable: candidate.passable
+      };
+
+      if (!candidate.passable) {
+        terrain[candidate.y][candidate.x] = getObstacleTerrain(candidate.category);
+      }
+    }
+
+    return selected.length;
   }
 
   /**
@@ -700,7 +779,7 @@ export class AlgorithmPipeline {
       throw new Error('Archetype is required');
     }
 
-    const { nodeConfig = {}, layerContext = null, seed } = options;
+    const { nodeConfig = {}, layerContext = null, seed, styleProfile = 'natural' } = options;
 
     // Determine random source - support both legacy single random and PRNG streams
     let streams = null;
@@ -865,6 +944,48 @@ export class AlgorithmPipeline {
       }
     }
 
+    const obstacleRandom = streams ? streams.getStream('obstacles') : random;
+    const obstacleCount = this.populateObstacleLayer(
+      terrain,
+      obstacles,
+      nodeConfig.obstacleRules,
+      obstacleRandom,
+      styleProfile
+    );
+
+    if (elevation && archetype.elevationProfile?.type === 'multiLevel') {
+      const profile = archetype.elevationProfile;
+      const isHazard = terrainType => terrainType === 'water' || terrainType === 'lava';
+      elevation = terrain.map((row, y) => row.map((terrainType, x) => {
+        if (terrainType === 'water' || terrainType === 'lava') {
+          return profile.waterElevation ?? profile.minElevation ?? -1;
+        }
+        if (terrainType === 'stone' || terrainType === 'tree') {
+          // The outer bridge edge doubles as an implicit ramp/landing. Keeping
+          // each adjacent transition to one level makes the generated map
+          // traversable even before explicit connection metadata is present.
+          const touchesHazard = [
+            terrain[y - 1]?.[x],
+            terrain[y + 1]?.[x],
+            row[x - 1],
+            row[x + 1]
+          ].some(isHazard);
+          if (touchesHazard) return profile.landingElevation ?? 0;
+          return profile.bridgeElevation ?? profile.maxElevation ?? 1;
+        }
+        return profile.landingElevation ?? 0;
+      }));
+    }
+
+    // Archetype elevation generators work in semantic integer levels. Expose
+    // one normalized representation to renderers and shared pathfinding so the
+    // otherwise ambiguous integer values 0 and 1 are never misread.
+    if (elevation) {
+      elevation = elevation.map(row => row.map(elevationLevelToNormalized));
+      if (context.setElevation) context.setElevation(elevation);
+      else context.elevation = elevation;
+    }
+
     // Build result
     const result = {
       terrain,
@@ -877,6 +998,7 @@ export class AlgorithmPipeline {
         constraints: archetype.constraints,
         styleProfile: archetype.styleProfile,
         elevationProfile: archetype.elevationProfile || null,
+        obstacleCount,
         width,
         height,
         baseTerrain

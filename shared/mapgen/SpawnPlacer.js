@@ -21,6 +21,7 @@
  */
 
 import { isImpassable, getTerrainMovementCost } from '../terrain.js';
+import { isBlockingObstacle } from '../obstacles.js';
 
 /**
  * AI type spawn configurations
@@ -157,6 +158,18 @@ const QUALITY_WEIGHTS = {
   sightlines: 8       // Points for clear attack angles
 };
 
+const REFERENCE_MAP_MAX_X = 31;
+
+/** Scale the authored 32-wide tactical bands to any supported map width. */
+export function scaleSpawnXRange(xRange, width) {
+  const maxMapX = Math.max(0, width - 1);
+  const minEnemyX = Math.ceil(width / 2);
+  const scale = maxMapX / REFERENCE_MAP_MAX_X;
+  const min = Math.max(minEnemyX, Math.min(maxMapX, Math.round(xRange.min * scale)));
+  const max = Math.max(min, Math.min(maxMapX, Math.round(xRange.max * scale)));
+  return { min, max };
+}
+
 /**
  * SpawnPlacer - Generates tactical spawn positions for battle maps
  */
@@ -289,6 +302,7 @@ export class SpawnPlacer {
     while (spawns.length < count) {
       const fallback = this._getFallbackPosition(
         terrain,
+        obstacles,
         usedPositions,
         config,
         width,
@@ -312,7 +326,8 @@ export class SpawnPlacer {
    */
   _generateCandidatePositions(terrain, obstacles, config, width, height, random) {
     const candidates = [];
-    const { xRange, ySpread } = config;
+    const { ySpread } = config;
+    const xRange = scaleSpawnXRange(config.xRange, width);
 
     // Determine Y range based on spread type
     let yRanges;
@@ -378,7 +393,7 @@ export class SpawnPlacer {
     if (obstacles && obstacles[y]?.[x]) {
       const obstacle = obstacles[y][x];
       // Trees and rocks are blocking
-      if (obstacle.type === 'trees' || obstacle.type === 'rocks') {
+      if (isBlockingObstacle(obstacle)) {
         return false;
       }
     }
@@ -556,20 +571,22 @@ export class SpawnPlacer {
    * Get a fallback spawn position when candidates are exhausted
    * @private
    */
-  _getFallbackPosition(terrain, usedPositions, config, width, height, random) {
+  _getFallbackPosition(terrain, obstacles, usedPositions, config, width, height, random) {
     const maxAttempts = 100;
-    const { xRange } = config;
+    const xRange = scaleSpawnXRange(config.xRange, width);
+    const minY = Math.min(3, height - 1);
+    const maxY = Math.max(minY, height - 4);
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       const x = Math.floor(random() * (xRange.max - xRange.min + 1)) + xRange.min;
-      const y = Math.floor(random() * (height - 6)) + 3; // Buffer from edges
+      const y = Math.floor(random() * (maxY - minY + 1)) + minY;
 
       if (x >= width) continue;
 
       const key = `${x},${y}`;
       if (usedPositions.has(key)) continue;
 
-      if (!isImpassable(terrain[y]?.[x])) {
+      if (this._isValidSpawnPosition(x, y, terrain, obstacles)) {
         return { x, y };
       }
     }
