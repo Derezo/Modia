@@ -3,6 +3,7 @@
  */
 
 import { formatTime } from '../marketplaceUtils.js';
+import { ItemIcon } from '../../../components/ItemIcon.js';
 import { escapeHtml } from '../../../utils/escapeHtml.js';
 
 /**
@@ -31,11 +32,22 @@ export async function renderHistoryTab(mainContent, sidePanel, context) {
     ? '<div class="empty-message">No trades yet</div>'
     : myTrades.map(trade => `
               <div class="trade-row" style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  ${ItemIcon.html({
+    item: {
+      name: trade.itemName,
+      itemType: trade.itemType,
+      rarity: trade.rarity,
+      spriteId: trade.spriteId
+    },
+    size: 'sm'
+  })}
+                  <div>
                   <span class="my-order-side ${trade.side}" style="margin-right: 8px; padding: 2px 6px;">
                     ${trade.side.toUpperCase()}
                   </span>
                   <span style="color: #2d2418; font-family: Georgia, serif;">${escapeHtml(trade.itemName || '')}</span>
+                  </div>
                 </div>
                 <div style="text-align: right;">
                   <div style="color: #2d2418; font-family: Consolas, monospace; font-weight: bold;">${trade.totalGold.toLocaleString()}g (${trade.price.toLocaleString()}g x ${trade.quantity})</div>

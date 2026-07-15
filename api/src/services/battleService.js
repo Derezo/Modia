@@ -42,6 +42,13 @@ export {
   getAttackRange,
   getManhattanDistance,
   getSkillDefinition,
+  serializeBattleSkill,
+  resolveBattleSkill,
+  resolveBattleSkills,
+  NPC_PRIMARY_BIOMES,
+  createBattleVisualIdentity,
+  withBattleVisualIdentity,
+  withBattleStateVisualIdentities,
   // Unified tile/action availability
   getReachableTiles,
   getTargetsInRange,

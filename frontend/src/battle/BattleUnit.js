@@ -1,5 +1,9 @@
 import { AnimatedSprite } from '../core/AnimatedSprite.js';
 import { responsive } from '../core/Responsive.js';
+import {
+  getNpcVisualIdentity,
+  getPlayerCharacterIdentity
+} from '../../../shared/assetPaths.js';
 
 /**
  * BattleUnit - Represents a unit in tactical combat
@@ -15,11 +19,25 @@ export class BattleUnit {
     this.id = unitData.id;
     this.type = unitData.type; // 'player' or 'enemy'
     this.name = unitData.name;
-    this.class = unitData.class;
-    this.race = unitData.race || null; // For portrait lookup
-    this.gender = unitData.gender || 'other'; // For portrait lookup
-    this.enemyId = unitData.enemyId || null; // For enemy sprite lookup
-    this.biome = unitData.biome || 'forest'; // For enemy sprite lookup
+    this.visualIdentity = unitData.visualIdentity || null;
+
+    // Player art is keyed by the complete race/gender/class identity. Prefer
+    // the API's canonical nested DTO so a stale or absent legacy top-level
+    // field cannot collapse multiple characters onto human/class-only art.
+    const playerIdentity = this.type === 'player'
+      ? getPlayerCharacterIdentity(unitData)
+      : null;
+    this.class = playerIdentity?.className || unitData.class;
+    this.race = playerIdentity?.race || unitData.race || null;
+    this.gender = playerIdentity?.gender || unitData.gender || 'other';
+
+    // Keep the encounter biome for gameplay/debugging, but render NPC artwork
+    // from the canonical identity supplied by the API. Legacy aliases remain
+    // supported through the shared resolver for persisted battle states.
+    const npcIdentity = getNpcVisualIdentity(unitData);
+    this.enemyId = npcIdentity.visualId; // Canonical reusable art identifier
+    this.primaryBiome = npcIdentity.primaryBiome;
+    this.biome = unitData.biome || this.primaryBiome; // Encounter biome
 
     // Ownership tracking for PvP (backend sends ownerId and teamId)
     this.ownerId = unitData.ownerId || null;
@@ -69,7 +87,7 @@ export class BattleUnit {
     this.idleTimer = Math.random() * Math.PI * 2; // Random start phase
 
     // Sprite animation system
-    this.animationState = 'idle'; // idle, walk, attack, hit, death
+    this.animationState = 'idle'; // idle, walk, attack, cast, hit, death, dead, victory
     this.spriteCache = {}; // Cache of AnimatedSprite objects by animation state
     this.animatedSprite = null; // Current active sprite
     this.animationTimeout = null; // Timer for single-frame animation completion
@@ -119,7 +137,9 @@ export class BattleUnit {
   initializeSprites() {
     if (!this.assetLoader) return;
 
-    const animations = ['idle', 'walk', 'attack', 'hit', 'death', 'dead'];
+    const animations = this.type === 'player'
+      ? ['idle', 'walk', 'attack', 'cast', 'hit', 'death', 'dead', 'victory']
+      : ['idle', 'walk', 'attack', 'hit', 'death', 'dead'];
 
     for (const anim of animations) {
       const sprite = this.getSpriteForAnimation(anim);
@@ -131,8 +151,10 @@ export class BattleUnit {
       }
     }
 
-    // Set the current sprite to idle
-    this.setAnimationState('idle', true);
+    // Hydrated battle snapshots can already contain defeated units. Do not
+    // resurrect them visually while their sprites are initialized (or again
+    // after the asynchronous asset preload completes).
+    this.reconcileAnimationWithHealth({ forceTerminal: true, forceSelection: true });
 
     // Log status for debugging
     const cachedAnims = Object.keys(this.spriteCache);
@@ -148,10 +170,14 @@ export class BattleUnit {
    */
   getSpriteForAnimation(animation) {
     if (this.type === 'player') {
-      return this.assetLoader.getCharacterSprite(this.class?.toLowerCase(), animation, 'player');
+      return this.assetLoader.getCharacterSprite({
+        race: this.race,
+        gender: this.gender,
+        class: this.class?.toLowerCase()
+      }, animation, 'player');
     } else {
-      const enemyId = this.enemyId || this.class?.toLowerCase() || 'monster';
-      return this.assetLoader.getEnemySprite(enemyId, animation, this.biome);
+      if (!this.enemyId) return null;
+      return this.assetLoader.getEnemySprite(this.enemyId, animation, this.primaryBiome);
     }
   }
 
@@ -161,31 +187,37 @@ export class BattleUnit {
   createAnimatedSprite(sprite, animationType) {
     if (!sprite) return null;
 
-    // Detect sprite sheet format
-    const isVerticalSheet = sprite.height >= sprite.width * 7; // 8 directions stacked
+    // Generated character assets are 64x512 vertical animation strips:
+    // eight temporal frames stacked top-to-bottom. They are not direction rows.
+    const isVerticalSheet = sprite.height >= sprite.width * 7;
 
     // Animation configuration based on type
     const animConfigs = {
       idle: { frameCount: 1, frameRate: 8, loop: true },
       walk: { frameCount: 1, frameRate: 12, loop: true },
       attack: { frameCount: 1, frameRate: 12, loop: false },
+      cast: { frameCount: 1, frameRate: 10, loop: false },
       hit: { frameCount: 1, frameRate: 10, loop: false },
       death: { frameCount: 1, frameRate: 8, loop: false },
-      dead: { frameCount: 1, frameRate: 8, loop: false }
+      dead: { frameCount: 1, frameRate: 8, loop: false },
+      victory: { frameCount: 1, frameRate: 10, loop: false }
     };
 
     const config = animConfigs[animationType] || animConfigs.idle;
 
     if (isVerticalSheet) {
-      // Our generated sprites are vertical: 1 frame, 8 directions (e.g., 64x512)
-      const frameHeight = sprite.height / 8;
+      const frameHeight = sprite.width;
+      const frameCount = Math.max(1, Math.floor(sprite.height / frameHeight));
       const animSprite = new AnimatedSprite(sprite, {
         frameWidth: sprite.width,
         frameHeight: frameHeight,
-        frameCount: 1, // Single frame per direction
+        frameCount,
         frameRate: config.frameRate,
         loop: config.loop,
-        directions: 8
+        directions: 8,
+        layout: 'vertical-strip',
+        mirrorByDirection: true,
+        baseFacing: 'right'
       });
       animSprite.setDirection(this.direction);
       return animSprite;
@@ -236,6 +268,15 @@ export class BattleUnit {
       this.animatedSprite = this.spriteCache[state];
       this.animatedSprite.setDirection(this.direction);
       this.animatedSprite.reset();
+
+      // A dedicated dead strip is a pose library, not another action to loop.
+      // Death is also a valid dead-state fallback, so hold its final frame.
+      if (state === 'dead') {
+        this.animatedSprite.gotoFrame(this.animatedSprite.frameCount - 1);
+        this.animatedSprite.pause();
+        return;
+      }
+
       this.animatedSprite.play();
 
       // For non-looping animations, set up completion handling
@@ -269,6 +310,13 @@ export class BattleUnit {
           this.spriteCache[state] = animSprite;
           this.animatedSprite = animSprite;
           this.animatedSprite.setDirection(this.direction);
+
+          if (state === 'dead') {
+            this.animatedSprite.gotoFrame(this.animatedSprite.frameCount - 1);
+            this.animatedSprite.pause();
+            return;
+          }
+
           this.animatedSprite.play();
 
           if (!this.animatedSprite.loop) {
@@ -298,13 +346,47 @@ export class BattleUnit {
    */
   onAnimationComplete(completedState) {
     // After attack or hit, return to idle
-    if (completedState === 'attack' || completedState === 'hit') {
+    if (completedState === 'attack' || completedState === 'cast' || completedState === 'hit') {
       this.setAnimationState('idle');
     }
     // After death animation, switch to static dead sprite
     if (completedState === 'death') {
       this.setAnimationState('dead');
     }
+  }
+
+  /**
+   * Reconcile the rendered pose with authoritative HP from a battle snapshot.
+   * A death transition that is actively playing is allowed to finish; restored
+   * or drift-corrected defeated units immediately hold their terminal pose.
+   * Revived units return to idle instead of retaining a corpse sprite.
+   *
+   * @param {Object} [options]
+   * @param {boolean} [options.forceTerminal=false] - Skip a death transition
+   *   during initial hydration and hold the final defeated pose immediately.
+   * @param {boolean} [options.forceSelection=false] - Re-select the appropriate
+   *   sprite after the asset cache has been rebuilt.
+   * @returns {string} The resulting animation state
+   */
+  reconcileAnimationWithHealth({ forceTerminal = false, forceSelection = false } = {}) {
+    if (this.isAlive()) {
+      if (forceSelection || this.animationState === 'death' || this.animationState === 'dead') {
+        this.setAnimationState('idle', true);
+      }
+      return this.animationState;
+    }
+
+    const deathSprite = this.spriteCache.death;
+    const deathTransitionInFlight = !forceTerminal &&
+      this.animationState === 'death' &&
+      this.animatedSprite === deathSprite &&
+      deathSprite?.isPlaying?.();
+
+    if (!deathTransitionInFlight) {
+      this.setAnimationState('dead', true);
+    }
+
+    return this.animationState;
   }
 
   /**
@@ -572,12 +654,36 @@ export class BattleUnit {
     this.setAnimationState('attack');
 
     // If no sprite exists at all, use a timeout to return to idle
-    if (!this.animatedSprite && !this.spriteCache['attack']) {
+    if (!this.spriteCache.attack) {
       setTimeout(() => {
         if (this.animationState === 'attack') {
           this.setAnimationState('idle');
         }
       }, 500);
+    }
+  }
+
+  /**
+   * Play a spell/ability casting animation while facing its target.
+   * Falls back to the attack strip when no authored cast strip exists.
+   */
+  playCastAnimation(targetX, targetY) {
+    this.faceToward(targetX, targetY);
+
+    if (this.spriteCache.cast || this.getSpriteForAnimation('cast')) {
+      this.setAnimationState('cast');
+    } else if (this.spriteCache.attack || this.getSpriteForAnimation('attack')) {
+      this.setAnimationState('attack');
+    } else {
+      this.animationState = 'cast';
+    }
+
+    if (!this.spriteCache.cast && !this.spriteCache.attack) {
+      setTimeout(() => {
+        if (this.animationState === 'cast' || this.animationState === 'attack') {
+          this.setAnimationState('idle');
+        }
+      }, 650);
     }
   }
 
@@ -588,7 +694,7 @@ export class BattleUnit {
     this.setAnimationState('hit');
 
     // If no sprite exists at all, use a timeout to return to idle
-    if (!this.animatedSprite && !this.spriteCache['hit']) {
+    if (!this.spriteCache.hit) {
       setTimeout(() => {
         if (this.animationState === 'hit') {
           this.setAnimationState('idle');
@@ -602,6 +708,25 @@ export class BattleUnit {
    */
   playDeathAnimation() {
     this.setAnimationState('death');
+  }
+
+  /**
+   * Hold the authored victory animation on its final frame at battle end.
+   * Enemies and legacy player sets may not provide one; normalize those
+   * survivors to idle so a just-finished hit/cast pose cannot leak into the
+   * outro.
+   * @returns {boolean} Whether an authored victory strip was selected
+   */
+  playVictoryAnimation() {
+    const victorySprite = this.spriteCache.victory ||
+      (this.assetLoader ? this.getSpriteForAnimation('victory') : null);
+    if (victorySprite) {
+      this.setAnimationState('victory');
+      return true;
+    }
+
+    this.setAnimationState('idle', true);
+    return false;
   }
 
   /**

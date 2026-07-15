@@ -40,23 +40,30 @@ frontend/public/assets/
 │       ├── menu/
 │       ├── resources/
 │       └── stats/
+├── abilities/
+│   ├── icons/
+│   │   ├── player/{ability}.webp
+│   │   ├── monster/{ability}.webp
+│   │   └── zodiac/{ability}.webp
+│   └── status/{status}.webp            # Only statuses without a shared icon
 ├── overlays/
 │   ├── originals/
 │   ├── 32/rarity/rare.png
 │   ├── 64/rarity/rare.png
 │   └── 128/rarity/rare.png
-└── sprites/
-    ├── terrain/                        # Deterministic lossless WebP tiles
-    │   ├── forest/{key}.webp
-    │   ├── cave/{key}.webp
-    │   ├── mountain/{key}.webp
-    │   ├── bridge/{key}.webp
-    │   └── castle/{key}.webp
-    └── characters/                     # Animated character sprites (unchanged)
-        ├── enemies/{biome}/{enemy}/
-        │   └── {enemy}_{action}.png
-        └── player/{class}/
-            └── {class}_{action}.png
+├── sprites/
+│   └── terrain/                        # Deterministic lossless WebP tiles
+│       ├── forest/{key}.webp
+│       ├── cave/{key}.webp
+│       ├── mountain/{key}.webp
+│       ├── bridge/{key}.webp
+│       └── castle/{key}.webp
+└── characters/                         # Animated 8-frame vertical strips
+    ├── enemies/{biome}/{enemy}/
+    │   └── {enemy}_{action}.webp
+    └── player/{race}/{gender}/{class}/
+        ├── {race}_{gender}_{class}_reference.png
+        └── {race}_{gender}_{class}_{action}.webp
 ```
 
 ## Path Patterns by Category
@@ -123,6 +130,24 @@ Icons use directory-based size organization.
 /assets/icons/png/16/ui/close.png
 ```
 
+### Battle Abilities
+
+Active skills have source-scoped canonical icons and deterministic visual
+metadata. Runtime keeps the existing emoji visible until a canonical image is
+present, so partial generation never produces a blank control.
+
+- **Pattern:** `/assets/abilities/icons/{source}/{id}.webp`
+- **Sources:** `player`, `monster`, `zodiac`
+- **Registry:** `ai-image-metadata/abilities/abilities.json`
+- **Status policy:** Reuse `/assets/icons/originals/status/{id}.webp`; place only missing status art under `/assets/abilities/status/{id}.webp`.
+
+Examples:
+```
+/assets/abilities/icons/player/alchemical_warfare.webp
+/assets/abilities/icons/monster/venom_spray.webp
+/assets/abilities/icons/zodiac/dreamwave.webp
+```
+
 ### Terrain (Battle Tiles)
 
 Terrain tiles are deterministic lossless WebPs organized by biome. Floors, walls, slopes, and stairs share a flat namespace inside the biome. There is no generated `base/` set; runtime resolution falls back to `forest`.
@@ -155,13 +180,31 @@ Visual overlays for item rarity and augment effects with size directories.
 /assets/overlays/64/augments/fire.png
 ```
 
-### Character Sprites (Unchanged)
+### Character Sprites
 
-Animated character sprites remain in their original location.
+Player sprites use the same race/gender/class identity as their portrait card.
+Legacy class-only directories remain a temporary runtime fallback while the
+variant registry is generated. Enemy paths remain biome-scoped because runtime
+encounters resolve art from the active zone.
 
-- **Player Pattern:** `/assets/sprites/characters/player/{class}/{class}_{action}.png`
-- **Enemy Pattern:** `/assets/sprites/characters/enemies/{biome}/{enemy}/{enemy}_{action}.png`
-- **Actions:** `idle`, `walk`, `attack`, `hit`, `death`
+- **Player Pattern:** `/assets/characters/player/{race}/{gender}/{class}/{race}_{gender}_{class}_{action}.webp`
+- **Canonical Player Reference:** `/assets/characters/player/{race}/{gender}/{class}/{race}_{gender}_{class}_reference.png`
+- **Legacy Player Fallback:** `/assets/characters/player/{class}/{class}_{action}.webp`
+- **Enemy Pattern:** `/assets/characters/enemies/{biome}/{enemy}/{enemy}_{action}.webp`
+- **Player Actions:** `idle`, `walk`, `attack`, `hurt`, `death`, `dead`, plus class-specific `cast`/`victory`
+- **Enemy Actions:** `idle`, `attack`, `hit`, `death`, `dead`
+- **Sheet Contract:** `64x512`, eight `64x64` temporal frames stacked top-to-bottom. These rows are animation frames, not facing directions; runtime mirrors the strip for west-facing movement.
+- **Reference Contract:** `512x512` lossless RGBA PNG encoded by exact nearest-neighbor 8x scaling from a deterministic portrait-derived `64x64` full-body pixel source. References retain transparent corners and generous subject margins.
+
+Examples:
+```
+/assets/characters/player/orc/female/warrior/orc_female_warrior_walk.webp
+/assets/characters/player/elf/other/martial_artist/elf_other_martial_artist_attack.webp
+/assets/characters/player/dwarf/female/chemist/dwarf_female_chemist_reference.png
+/assets/characters/enemies/cave/giant_spider/giant_spider_hit.webp
+```
+
+Local-diffusion player reference candidates live under `ai-images-temp/characters/identity-candidates/`, outside `frontend/public`; they are never runtime paths. A candidate becomes canonical only through the targeted, manually audited promotion flow documented in [AI_IMAGE_GENERATION.md](AI_IMAGE_GENERATION.md#diffusion-candidates-and-targeted-promotion).
 
 ## Originals Preservation
 

@@ -18,6 +18,7 @@ import ParchmentInput from '../ui/parchment/ParchmentInput.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { GARRISON_CONFIG } from '@shared/constants.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
+import { installImageFallbackHandler } from '../utils/imageFallback.js';
 
 // Local alias for cleaner access
 const P = PARCHMENT_COLORS;
@@ -830,6 +831,8 @@ export class GarrisonScene extends Scene {
   }
 
   renderRecruitGrid() {
+    installImageFallbackHandler();
+
     const grid = this.uiElement?.querySelector('#garrison-grid');
     if (!grid) return;
 
@@ -891,7 +894,7 @@ export class GarrisonScene extends Scene {
         <div class="garrison-card-header">
           <div class="garrison-portrait">
             <img src="${portraitUrl}" alt="${escapeHtml(recruit.name)}"
-                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                 data-image-fallback data-fallback-display="flex">
             <div class="garrison-portrait-fallback" style="display: none; background: ${this.getClassColor(recruit.class)};">
               ${recruit.name.charAt(0)}
             </div>

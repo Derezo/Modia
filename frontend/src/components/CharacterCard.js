@@ -395,7 +395,7 @@ export class CharacterCard {
         <div class="character-card__class-icon" style="background: ${classColor};">
           ${portraitUrl
     ? `<img class="character-card__portrait-img" src="${portraitUrl}" alt="${escapeHtml(character.name)}"
-               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+               data-image-fallback data-fallback-display="flex">
              <span class="character-card__portrait-fallback" style="display: none;">${classIcon}</span>`
     : `<span class="character-card__portrait-fallback">${classIcon}</span>`}
         </div>

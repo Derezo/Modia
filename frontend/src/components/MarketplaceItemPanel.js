@@ -4,6 +4,7 @@
  */
 
 import { Icon } from './Icon.js';
+import { ItemIcon } from './ItemIcon.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
 
 // Augment icon mappings
@@ -172,6 +173,12 @@ export class MarketplaceItemPanel {
       .listing-header {
         padding: 10px 12px;
         border-bottom: 1px solid ${PARCHMENT.border.light};
+      }
+
+      .listing-item-heading {
+        display: flex;
+        align-items: center;
+        gap: 10px;
       }
 
       .listing-name {
@@ -407,6 +414,20 @@ export class MarketplaceItemPanel {
 
     content.innerHTML = this.listings.map(listing => this.renderListingCard(listing)).join('');
 
+    content.querySelectorAll('[data-listing-item-icon]').forEach((container) => {
+      const listing = this.listings[Number(container.dataset.listingItemIcon)];
+      if (!listing?.augments?.length) return;
+
+      ItemIcon.compositeHtml({
+        item: this.getListingIconItem(listing),
+        size: 'md'
+      }).then((html) => {
+        if (container.isConnected) container.innerHTML = html;
+      }).catch(() => {
+        // Keep the canonical base icon rendered in the listing card.
+      });
+    });
+
     // Attach buy button handlers
     content.querySelectorAll('.listing-buy-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -459,12 +480,19 @@ export class MarketplaceItemPanel {
     if (rarity) metaParts.push(this.capitalize(rarity));
     if (material) metaParts.push(this.capitalize(material));
     const metaLine = metaParts.join(' • ');
+    const listingIndex = this.listings.indexOf(listing);
+    const iconItem = this.getListingIconItem(listing);
 
     return `
       <div class="listing-card">
         <div class="listing-header">
-          <div class="listing-name ${rarity || 'common'}">${escapeHtml(generatedName)}</div>
-          <div class="listing-meta">${escapeHtml(metaLine)}</div>
+          <div class="listing-item-heading">
+            <span data-listing-item-icon="${listingIndex}">${ItemIcon.html({ item: iconItem, size: 'md' })}</span>
+            <div>
+              <div class="listing-name ${rarity || 'common'}">${escapeHtml(generatedName)}</div>
+              <div class="listing-meta">${escapeHtml(metaLine)}</div>
+            </div>
+          </div>
         </div>
         <div class="listing-body">
           ${(baseStatsHtml || bonusStatsHtml) ? `
@@ -488,6 +516,19 @@ export class MarketplaceItemPanel {
         </div>
       </div>
     `;
+  }
+
+  /**
+   * Adapt marketplace listing DTOs to ItemIcon's canonical field names.
+   * @param {Object} listing - Marketplace listing
+   * @returns {Object} ItemIcon-compatible item
+   */
+  getListingIconItem(listing) {
+    return {
+      ...listing,
+      name: listing.generatedName || listing.templateName,
+      type: listing.itemType || listing.item_type
+    };
   }
 
   async handleBuy(listingId) {

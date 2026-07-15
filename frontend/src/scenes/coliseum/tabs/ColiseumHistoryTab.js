@@ -3,10 +3,12 @@
  */
 
 import { PARCHMENT_COLORS } from '../../../ui/parchment/index.js';
+import { ItemIcon } from '../../../components/ItemIcon.js';
 import { getTier, getTierIcon } from '@shared/coliseum.js';
 import { escapeHtml } from '../../../utils/escapeHtml.js';
 
 const P = PARCHMENT_COLORS;
+const ITEM_RARITIES = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
 
 /**
  * Render a compact tier badge for match history
@@ -289,13 +291,32 @@ function renderCharacterItem(char) {
         <div class="coliseum-character-class">${escapeHtml(char.class)}</div>
         ${char.equipment && char.equipment.length > 0 ? `
           <div class="coliseum-equipment-list">
-            ${char.equipment.map(item => `
-              <div class="coliseum-equipment-item ${item.rarity || 'common'}">${escapeHtml(item.name)}</div>
-            `).join('')}
+            ${char.equipment.map(item => renderEquipmentItem(item)).join('')}
           </div>
         ` : ''}
       </div>
       <div class="coliseum-character-level">Lv.${char.level}</div>
+    </div>
+  `;
+}
+
+/**
+ * Render a historical equipment snapshot with canonical item art. Older
+ * snapshots lack sprite metadata and intentionally receive ItemIcon's visible
+ * missing-asset mark rather than an invented emoji or letter.
+ * @param {Object} item - Equipment snapshot
+ * @returns {string} HTML string
+ */
+function renderEquipmentItem(item) {
+  const rarity = typeof item.rarity === 'number'
+    ? (ITEM_RARITIES[item.rarity - 1] || 'common')
+    : (item.rarity || 'common');
+  const iconItem = { ...item, rarity };
+
+  return `
+    <div class="coliseum-equipment-item ${rarity}">
+      ${ItemIcon.html({ item: iconItem, size: 'sm' })}
+      <span>${escapeHtml(item.name)}</span>
     </div>
   `;
 }

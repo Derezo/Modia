@@ -1,0 +1,162 @@
+{
+  "version": "1.1.0",
+  "id": "portrait-card-pixel-v1",
+  "description": "Portrait-faithful character art translated into the readable 16-bit pixel language of Modia's legacy battle sprites.",
+  "identityAuthority": {
+    "player": "Each variant's canonical portrait is authoritative for race, face, hair, class palette, costume cues, and equipment. The approved dwarf-female and dwarf-other anchors override only contradictory gender presentation and body silhouette.",
+    "enemy": "The canonical NPC reference and primary visual identity are authoritative across every spawn zone.",
+    "fallback": "Legacy class and biome sprites are pose/style fallbacks only; they must not overwrite a portrait or NPC identity. Deterministic player compilers preserve every valid existing canonical asset unless a targeted --force is explicit."
+  },
+  "artDirection": {
+    "medium": "hand-authored 16-bit pixel art",
+    "silhouette": "compact, full-body, side-readable fantasy RPG sprite with separated equipment and visible feet",
+    "linework": "bold dark ink-like pixel outlines with intentional one-pixel edge clusters",
+    "color": "muted watercolor-and-parchment palette translated into pixel ramps; retain portrait accent colors",
+    "lighting": "warm top-left key light with restrained highlights and readable shadow groups",
+    "prohibited": [
+      "photorealism",
+      "3D rendering",
+      "anime redesign",
+      "chibi proportions",
+      "soft antialiasing",
+      "unrequested costume changes",
+      "duplicate equipment",
+      "background scenery",
+      "text or watermark"
+    ]
+  },
+  "canonicalReferenceContract": {
+    "compiler": "scripts/ai-images/compile-player-identity-fallbacks.js",
+    "library": "scripts/ai-images/lib/playerIdentityFallbackCompiler.js",
+    "registry": "ai-image-metadata/characters/player-variants.json",
+    "provenance": "ai-image-metadata/characters/player-identity-fallbacks.json",
+    "source": "The identity's canonical high-quality portrait supplies the head, upper-costume detail, class palette, and equipment cues; deterministic race, gender, and class profiles complete one full-body 64px subject.",
+    "sourceWidth": 64,
+    "sourceHeight": 64,
+    "canonicalWidth": 512,
+    "canonicalHeight": 512,
+    "format": "lossless RGBA PNG",
+    "resampling": "nearest-neighbor 8x",
+    "outputPattern": "/assets/characters/player/{race}/{gender}/{class}/{race}_{gender}_{class}_reference.png",
+    "safety": {
+      "scopeRequired": "Exactly one of --id, --sample, or --all is required.",
+      "bulkGate": "Bulk compilation is available only through an explicit --all.",
+      "existingAssetPolicy": "Preserve every existing canonical reference unless --force is explicit.",
+      "writePolicy": "Write canonical PNG and provenance atomically.",
+      "validation": "Require 512x512 lossless RGBA, transparent corners, generous margins, one dominant full-body subject, source/output hashes, deterministic bytes, and cross-identity uniqueness."
+    }
+  },
+  "identityOverrides": [
+    {
+      "cohort": "dwarf_female_*",
+      "anchor": "ai-image-metadata/characters/reference-anchors/dwarf_female_neutral.png",
+      "sha256": "270e0d901825504bad05d24167b4da55390a5bcc47a204140f8c07c0abec2dc4",
+      "reason": "The canonical dwarf-female portrait cohort is strongly male-coded and contradicts female identity metadata; the approved neutral anchor supplies the feminine face and full-body silhouette while each class portrait remains the palette and costume-cue source."
+    },
+    {
+      "cohort": "dwarf_other_*",
+      "anchor": "ai-image-metadata/characters/reference-anchors/dwarf_other_neutral.png",
+      "sha256": "3a93e0c22a2773be423ce1b5c78f818ff83f5763900b42249f0f07c2057a3e6f",
+      "reason": "The canonical dwarf-other portrait cohort is strongly male-coded and contradicts androgynous identity metadata; the approved neutral anchor supplies the androgynous face and full-body silhouette while each class portrait remains the palette and costume-cue source."
+    }
+  ],
+  "spriteContract": {
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "framesPerAnimation": 8,
+    "sheetWidth": 64,
+    "sheetHeight": 512,
+    "layout": "vertical_strip",
+    "baseFacing": "right",
+    "directionPolicy": "Mirror the right-facing temporal strip for west-facing runtime directions.",
+    "background": "transparent",
+    "minimumTransparentMargin": 4,
+    "sequenceScalePolicy": "uniform_across_frames",
+    "edgePolicy": "hard pixel edge with transparent matte; no colored fringe",
+    "resampling": "nearest-neighbor"
+  },
+  "canonicalAnimationContract": {
+    "compiler": "scripts/ai-images/compile-player-animations.js",
+    "library": "scripts/ai-images/lib/playerAnimationCompiler.js",
+    "inputPattern": "/assets/characters/player/{race}/{gender}/{class}/{race}_{gender}_{class}_reference.png",
+    "outputPattern": "/assets/characters/player/{race}/{gender}/{class}/{race}_{gender}_{class}_{animation}.webp",
+    "format": "lossless RGBA WebP",
+    "animations": [
+      "idle",
+      "walk",
+      "attack",
+      "hurt",
+      "death",
+      "dead",
+      "cast",
+      "victory"
+    ],
+    "motion": "Deterministic temporal pose transforms, stride segmentation, class-readable effects, and fixed per-identity effect palettes create eight genuinely temporal frames from the canonical reference.",
+    "validation": "Validate 64x512 geometry, eight 64x64 frames, lossless alpha, transparent margins, frame coverage, action-specific centroid motion, temporal uniqueness, cross-output hash uniqueness, and generatedAnimations metadata parity.",
+    "safety": "Exactly one of --id, --sample, or --all is required; existing valid strips are preserved unless --force; writes are staged and atomic; registry changes are guarded against concurrent overwrite."
+  },
+  "generationPolicy": {
+    "canonicalPlayerReferenceMode": "deterministic_portrait_derived_compiler",
+    "canonicalPlayerAnimationMode": "deterministic_temporal_strip_compiler",
+    "portraitConditioningRequired": true,
+    "diffusionMode": "candidate_only",
+    "seedPolicy": "fixed_across_frames",
+    "batchPolicy": "Run scoped samples and the semantic test matrix before either explicit --all compiler command. Never promote a diffusion batch by inspection shortcut."
+  },
+  "candidateGeneration": {
+    "generator": "scripts/ai-images/generate-player-identity-references.js",
+    "mode": "local SD1.5 ControlNet plus IP-Adapter",
+    "stagingDirectory": "ai-images-temp/characters/identity-candidates",
+    "rejectedDirectory": "ai-images-temp/rejected/identity-references",
+    "controlnetWeight": 0.7,
+    "ipadapterWeight": 0.7,
+    "portraitFallbackControlnetWeight": 0.82,
+    "portraitFallbackIpadapterWeight": 0.45,
+    "referenceLoraModel": "cps2-pixel-art",
+    "animationLoraModel": "cps2-pixel-art",
+    "technicalGate": "Automatic candidate checks cover RGBA dimensions, foreground coverage, background-like rows, transparency, and dominant connected subject.",
+    "semanticGate": "A human must audit portrait identity, race/gender/class fidelity, complete head-to-toe anatomy, costume and palette, single equipment instances, clean transparent matte, and absence of scenery before promotion.",
+    "promotionGate": "Promotion requires --promote and at least one explicit --id; there is no bulk promotion command.",
+    "canonicalPolicy": "A staged diffusion candidate is not canonical and must not update runtime metadata or replace deterministic/golden art before explicit targeted promotion."
+  },
+  "goldenReferences": [
+    {
+      "id": "human_male_warrior",
+      "status": "baseline",
+      "asset": "/assets/characters/player/human/male/warrior/human_male_warrior_reference.png",
+      "sha256": "3ad9972a646e70f21331c495dd9f0b4774531d1e124b602c427c278a199ac3c9",
+      "identitySource": "/assets/portraits/originals/human_male_warrior.png",
+      "legacyStyleSource": "/assets/characters/player/warrior/warrior_reference.png",
+      "generationMode": "openai-built-in-imagegen",
+      "preservationPolicy": "Accepted golden baseline. Bulk deterministic compilers and diffusion staging preserve it; replacement requires a targeted --force plus a new manual semantic audit and updated hashes.",
+      "backgroundRemoval": {
+        "method": "chroma_key_border_matte",
+        "keyColor": "#0af70c",
+        "softMatte": true,
+        "despill": true
+      },
+      "validatedAnimation": {
+        "animation": "idle",
+        "asset": "/assets/characters/player/human/male/warrior/human_male_warrior_idle.webp",
+        "status": "accepted_golden_gate",
+        "generatedAt": "2026-07-15T06:36:03.342Z",
+        "seed": 10001,
+        "seedPolicy": "fixed_across_frames",
+        "controlnetWeight": 0.7,
+        "ipadapterWeight": 0.7,
+        "sha256": "a8c76dfccee3de3840d6ad1899268caff0f1ee9ce28499d6b6edcb7029c1d6be",
+        "frameForegroundCoverage": [
+          0.3372,
+          0.3357,
+          0.3391,
+          0.3386,
+          0.3372,
+          0.3359,
+          0.333,
+          0.3306
+        ]
+      },
+      "prompt": "Create one full-body pixel-art human male warrior matching the identity portrait: blond hair, short blond beard, fair human features, white-and-gold plate armor, blue underlayer, red scarf, one shield, and one sword. Use the legacy warrior only for readable game-sprite silhouette and compact pixel proportions. Hand-authored 16-bit pixel art, crisp hard-edged pixels, bold dark ink-like outlines, restrained highlights, muted watercolor-and-parchment palette, centered full body facing right on a flat chroma-key background; no redesign, scenery, shadow, text, duplicate equipment, soft antialiasing, anime, chibi, 3D, or photorealism."
+    }
+  ]
+}

@@ -667,6 +667,174 @@
       "regenerationQueuedAt": null,
       "generationFailureCount": null,
       "lastError": null
+    },
+    {
+      "id": "bow_elven",
+      "name": "Fey Bow",
+      "prompt": "elegant fey longbow of pale wood and living green wind",
+      "seed": 24032,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/weapons/bow_composite.webp",
+        "composition": {
+          "primaryScale": 0.9,
+          "modulate": {
+            "hue": 122,
+            "saturation": 1.25,
+            "brightness": 1.04
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/weapons/bow_elven.webp",
+        "64": "/assets/items/64/weapons/bow_elven.webp",
+        "128": "/assets/items/128/weapons/bow_elven.webp",
+        "original": "/assets/items/originals/weapons/bow_elven.webp"
+      }
+    },
+    {
+      "id": "fist_nomad",
+      "name": "Nomad's Wraps",
+      "prompt": "sand-colored nomad hand wraps marked for a long journey",
+      "seed": 24033,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/weapons/fist_wraps.webp",
+        "composition": {
+          "primaryScale": 0.88,
+          "colorize": "#b68a58"
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/weapons/fist_nomad.webp",
+        "64": "/assets/items/64/weapons/fist_nomad.webp",
+        "128": "/assets/items/128/weapons/fist_nomad.webp",
+        "original": "/assets/items/originals/weapons/fist_nomad.webp"
+      }
+    },
+    {
+      "id": "mace_war",
+      "name": "Ironforge Hammer",
+      "prompt": "heavy dwarven ironforge war hammer with earthen rune",
+      "seed": 24034,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/weapons/mace_warhammer.webp",
+        "composition": {
+          "primaryScale": 0.9,
+          "modulate": {
+            "hue": 22,
+            "saturation": 0.82,
+            "brightness": 0.92
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/weapons/mace_war.webp",
+        "64": "/assets/items/64/weapons/mace_war.webp",
+        "128": "/assets/items/128/weapons/mace_war.webp",
+        "original": "/assets/items/originals/weapons/mace_war.webp"
+      }
+    },
+    {
+      "id": "shield_tower",
+      "name": "Stonekin Shield",
+      "prompt": "tower shield carved from living slate with an earth core",
+      "seed": 24035,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/armor/shield_tower.webp",
+        "composition": {
+          "primaryScale": 0.88,
+          "colorize": "#777d86",
+          "accent": {
+            "sourceAsset": "overlays/originals/augments/augment_earth.webp",
+            "scale": 0.3,
+            "gravity": "center",
+            "colorize": "#9b7651"
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/weapons/shield_tower.webp",
+        "64": "/assets/items/64/weapons/shield_tower.webp",
+        "128": "/assets/items/128/weapons/shield_tower.webp",
+        "original": "/assets/items/originals/weapons/shield_tower.webp"
+      }
+    },
+    {
+      "id": "staff_wanderer",
+      "name": "Wanderer's Staff",
+      "prompt": "weathered wanderer staff with a brass waypoint charm",
+      "seed": 24036,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/weapons/staff_battle.webp",
+        "composition": {
+          "primaryScale": 0.89,
+          "colorize": "#806342"
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/weapons/staff_wanderer.webp",
+        "64": "/assets/items/64/weapons/staff_wanderer.webp",
+        "128": "/assets/items/128/weapons/staff_wanderer.webp",
+        "original": "/assets/items/originals/weapons/staff_wanderer.webp"
+      }
+    },
+    {
+      "id": "sword_travelers",
+      "name": "Traveler's Blade",
+      "prompt": "balanced traveler's sword with a weathered bronze road charm",
+      "seed": 24037,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/weapons/sword_long.webp",
+        "composition": {
+          "primaryScale": 0.9,
+          "modulate": {
+            "hue": 32,
+            "saturation": 0.9,
+            "brightness": 0.92
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/weapons/sword_travelers.webp",
+        "64": "/assets/items/64/weapons/sword_travelers.webp",
+        "128": "/assets/items/128/weapons/sword_travelers.webp",
+        "original": "/assets/items/originals/weapons/sword_travelers.webp"
+      }
     }
   ]
 }

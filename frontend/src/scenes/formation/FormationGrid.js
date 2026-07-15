@@ -454,7 +454,7 @@ export class FormationGrid {
 
     if (sprite) {
       const spriteSize = 48;
-      // Sprite sheets are 64x512 (8 directions stacked vertically)
+      // Sprite sheets are 64x512 (8 temporal frames stacked vertically).
       const frameWidth = sprite.width;        // 64
       const frameHeight = sprite.height / 8;  // 64
 
@@ -463,8 +463,9 @@ export class FormationGrid {
         console.warn(`[FormationGrid] Unexpected sprite dimensions for ${char.class}: ${sprite.width}x${sprite.height}, expected 64x512`);
       }
 
-      // Use direction 6 (East) - facing the enemy side on the right
-      const sourceY = 6 * frameHeight;
+      // Formation is a static preview, so render the first idle frame. Facing
+      // for vertical strips is handled by mirroring at animated runtime.
+      const sourceY = 0;
 
       ctx.drawImage(
         sprite,
@@ -533,7 +534,7 @@ export class FormationGrid {
     if (!this.assetLoader) return null;
 
     // Try to get idle sprite
-    return this.assetLoader.getCharacterSprite?.(char.class, 'idle') || null;
+    return this.assetLoader.getCharacterSprite?.(char, 'idle') || null;
   }
 
   getClassColor(className) {

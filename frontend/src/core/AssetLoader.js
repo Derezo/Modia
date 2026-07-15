@@ -22,6 +22,12 @@
 
 import {
   getAssetPath,
+  getCharacterPath,
+  getNpcCharacterPathCandidates,
+  getNpcPortraitId,
+  getNpcVisualIdentity,
+  getPlayerCharacterPathCandidates,
+  resolvePlayerAnimationName,
   SIZE_PRESETS,
   DEFAULT_SIZES,
   getOptimalSize
@@ -40,6 +46,8 @@ import { OBSTACLE_ASSET_CATALOG, getObstacleAssetCategory } from '@modia/shared/
 import {
   CHARACTER_ANIMATIONS,
   ENEMY_ANIMATIONS,
+  getEnemySpriteAnimationCandidates,
+  getPlayerCharacterAnimations,
   resolveSpriteBiome
 } from './BattleAssetConfig.js';
 export class AssetLoader {
@@ -91,27 +99,6 @@ export class AssetLoader {
         guild_wizard: '🔮',
         guild_monk: '☯️',
         guild_chemist: '⚗️'
-      },
-      item: {
-        weapon: '⚔️',
-        sword: '⚔️',
-        axe: '🪓',
-        staff: '🪄',
-        dagger: '🗡️',
-        bow: '🏹',
-        shield: '🛡️',
-        helmet: '🪖',
-        armor: '🎽',
-        body: '🎽',
-        boots: '👢',
-        ring: '💍',
-        amulet: '📿',
-        accessory: '💍',
-        consumable: '🧪',
-        potion: '🧪',
-        scroll: '📜',
-        material: '📦',
-        key: '🔑'
       },
       // Rarity colors for fallback border/glow rendering
       rarity: {
@@ -325,32 +312,82 @@ export class AssetLoader {
    *
    * See docs/FRONTEND_TECHNICAL_PATTERNS.md for full sprite documentation.
    *
-   * @param {string} charClass - Character class (warrior, wizard, monk, chemist)
+   * @param {string|Object} character - Character class, or a character object
+   *   with race/gender/class for portrait-matched variant resolution
    * @param {string} animation - Animation type (idle, walk, attack, hit, death, victory)
    * @param {string} [type='player'] - 'player' or 'enemy'
    * @returns {Promise<HTMLImageElement|null>} Loaded sprite or null if failed
    */
-  async loadCharacterSprite(charClass, animation, type = 'player') {
-    const basePath = type === 'player'
-      ? `${this.basePath}/characters/player/${charClass}`
-      : `${this.basePath}/characters/enemies/${charClass}`;
-
-    const path = `${basePath}/${charClass}_${animation}.webp`;
-    try {
-      return await this.loadImage(path);
-    } catch {
-      return null;
+  async loadCharacterSprite(character, animation, type = 'player') {
+    if (type !== 'player') {
+      const source = typeof character === 'object' && character !== null
+        ? {
+          ...character,
+          enemyId: character.visualIdentity?.visualId
+            || character.visualId
+            || character.enemyId
+            || character.sprite_id
+            || character.spriteId
+            || character.id
+            || character.class
+        }
+        : { enemyId: character };
+      const identity = getNpcVisualIdentity(source);
+      return identity.visualId
+        ? this.loadEnemySprite(identity.visualId, animation, identity.primaryBiome)
+        : null;
     }
+
+    const paths = typeof character === 'object' && character !== null
+      ? getPlayerCharacterPathCandidates(character, { animation })
+      : [getCharacterPath(String(character || 'warrior').toLowerCase(), {
+        animation: resolvePlayerAnimationName(animation)
+      })];
+
+    for (const path of paths) {
+      try {
+        return await this.loadImage(path);
+      } catch {
+        // Continue to the class-archetype migration fallback.
+      }
+    }
+    return null;
   }
 
   /**
    * Get character sprite (sync)
    */
-  getCharacterSprite(charClass, animation, type = 'player') {
-    const basePath = type === 'player'
-      ? `${this.basePath}/characters/player/${charClass}`
-      : `${this.basePath}/characters/enemies/${charClass}`;
-    return this.cache.get(`${basePath}/${charClass}_${animation}.webp`) || null;
+  getCharacterSprite(character, animation, type = 'player') {
+    if (type !== 'player') {
+      const source = typeof character === 'object' && character !== null
+        ? {
+          ...character,
+          enemyId: character.visualIdentity?.visualId
+            || character.visualId
+            || character.enemyId
+            || character.sprite_id
+            || character.spriteId
+            || character.id
+            || character.class
+        }
+        : { enemyId: character };
+      const identity = getNpcVisualIdentity(source);
+      return identity.visualId
+        ? this.getEnemySprite(identity.visualId, animation, identity.primaryBiome)
+        : null;
+    }
+
+    const paths = typeof character === 'object' && character !== null
+      ? getPlayerCharacterPathCandidates(character, { animation })
+      : [getCharacterPath(String(character || 'warrior').toLowerCase(), {
+        animation: resolvePlayerAnimationName(animation)
+      })];
+
+    for (const path of paths) {
+      const sprite = this.cache.get(path);
+      if (sprite) return sprite;
+    }
+    return null;
   }
 
   // =====================
@@ -411,8 +448,7 @@ export class AssetLoader {
       return await this.loadImage(equippedPath);
     } catch {
       // Fallback to base class sprite
-      const charClass = character.class?.toLowerCase() || 'wizard';
-      return this.loadCharacterSprite(charClass, animation, 'player');
+      return this.loadCharacterSprite(character, animation, 'player');
     }
   }
 
@@ -474,23 +510,39 @@ export class AssetLoader {
    * Load enemy sprite
    * @param {string} enemyId - Enemy identifier (wolf, goblin_warrior, etc.)
    * @param {string} animation - Animation type
-   * @param {string} biome - Biome (forest, cave, mountain, bridge)
+   * @param {string} biome - Requested biome (forest, cave, mountain, bridge, palace)
    */
   async loadEnemySprite(enemyId, animation = 'idle', biome = 'forest') {
-    const path = `${this.basePath}/characters/enemies/${biome}/${enemyId}/${enemyId}_${animation}.webp`;
-    try {
-      return await this.loadImage(path);
-    } catch {
-      return null;
+    for (const path of this.getEnemySpritePathCandidates(enemyId, animation, biome)) {
+      try {
+        return await this.loadImage(path);
+      } catch {
+        // Continue through canonical, requested-biome, and animation fallbacks.
+      }
     }
+    return null;
   }
 
   /**
    * Get enemy sprite (sync)
    */
   getEnemySprite(enemyId, animation = 'idle', biome = 'forest') {
-    const path = `${this.basePath}/characters/enemies/${biome}/${enemyId}/${enemyId}_${animation}.webp`;
-    return this.cache.get(path) || null;
+    for (const path of this.getEnemySpritePathCandidates(enemyId, animation, biome)) {
+      const sprite = this.cache.get(path);
+      if (sprite) return sprite;
+    }
+    return null;
+  }
+
+  /**
+   * Build ordered, duplicate-free paths for an enemy sprite lookup.
+   */
+  getEnemySpritePathCandidates(enemyId, animation = 'idle', biome = 'forest') {
+    const animationCandidates = getEnemySpriteAnimationCandidates(animation);
+    return getNpcCharacterPathCandidates(enemyId, {
+      requestedBiome: biome,
+      animations: animationCandidates
+    }).map(path => `${this.basePath}${path.slice('/assets'.length)}`);
   }
 
   /**
@@ -584,7 +636,7 @@ export class AssetLoader {
    * Pass the database sprite_id (e.g., 'goblin_warrior'), NOT the full
    * portrait ID (e.g., 'enemy_goblin_warrior').
    *
-   * @param {string} enemyId - Enemy identifier from database sprite_id
+   * @param {string|Object} enemyId - Visual id or canonical NPC DTO
    * @param {number} [displaySize=64] - Target display size in pixels
    * @returns {string} Enemy portrait URL with optimal size
    *
@@ -599,8 +651,7 @@ export class AssetLoader {
    */
   getEnemyPortraitUrl(enemyId, displaySize = 64) {
     const optimalSize = getOptimalSize('portraits', displaySize);
-    // Enemy portraits use 'enemy_' prefix in unified portraits directory
-    return getAssetPath('portraits', `enemy_${enemyId}`, { size: optimalSize });
+    return getAssetPath('portraits', getNpcPortraitId(enemyId), { size: optimalSize });
   }
 
   /**
@@ -738,39 +789,42 @@ export class AssetLoader {
 
   /**
    * Load item icon
-   * @param {Object} item - Item object with type, templateId, material, rarity
+   * @param {Object} item - Item object with a canonical sprite ID and type
+   * @param {number} [displaySize=64] - Logical display size in pixels
    */
-  async loadItemIcon(item) {
-    // Try specific item first
-    const category = this.getItemCategory(item.type || item.item_type);
-    const templateId = item.templateId || item.template_id || item.type;
-    const material = item.material || 'default';
+  async loadItemIcon(item, displaySize = 64) {
+    const spriteId = item.spriteId || item.sprite_id;
+    if (!spriteId) return null;
 
-    // Try material-specific
-    const path = `${this.basePath}/items/${category}/${templateId}_${material}.webp`;
+    const subcategory = this.getItemCategory(item.itemType || item.item_type || item.type);
+    const path = getAssetPath('items', spriteId, {
+      subcategory,
+      size: getOptimalSize('items', displaySize)
+    });
+
     try {
       return await this.loadImage(path);
     } catch {
-      // Try base template
-      try {
-        return await this.loadImage(`${this.basePath}/items/${category}/${templateId}.webp`);
-      } catch {
-        return null;
-      }
+      return null;
     }
   }
 
   /**
    * Get item icon (sync)
+   * @param {Object} item - Item object with a canonical sprite ID and type
+   * @param {number} [displaySize=64] - Logical display size in pixels
    */
-  getItemIcon(item) {
-    const category = this.getItemCategory(item.type || item.item_type);
-    const templateId = item.templateId || item.template_id || item.type;
-    const material = item.material || 'default';
+  getItemIcon(item, displaySize = 64) {
+    const spriteId = item.spriteId || item.sprite_id;
+    if (!spriteId) return null;
 
-    return this.cache.get(`${this.basePath}/items/${category}/${templateId}_${material}.webp`)
-      || this.cache.get(`${this.basePath}/items/${category}/${templateId}.webp`)
-      || null;
+    const subcategory = this.getItemCategory(item.itemType || item.item_type || item.type);
+    const path = getAssetPath('items', spriteId, {
+      subcategory,
+      size: getOptimalSize('items', displaySize)
+    });
+
+    return this.cache.get(path) || null;
   }
 
   /**
@@ -809,24 +863,37 @@ export class AssetLoader {
       sword: 'weapons',
       axe: 'weapons',
       staff: 'weapons',
+      wand: 'weapons',
+      mace: 'weapons',
+      polearm: 'weapons',
+      fist: 'weapons',
       dagger: 'weapons',
       bow: 'weapons',
       armor: 'armor',
       helmet: 'armor',
+      helm: 'armor',
+      head: 'armor',
       body: 'armor',
+      legs: 'armor',
+      feet: 'armor',
+      robe: 'armor',
       boots: 'armor',
       shield: 'armor',
       accessory: 'accessories',
       ring: 'accessories',
       amulet: 'accessories',
       cloak: 'accessories',
+      belt: 'accessories',
+      gloves: 'accessories',
+      gauntlets: 'accessories',
       consumable: 'consumables',
       potion: 'consumables',
       scroll: 'consumables',
-      material: 'materials',
-      key_item: 'misc'
+      material: 'consumables',
+      food: 'consumables',
+      key_item: 'consumables'
     };
-    return categories[type] || 'misc';
+    return categories[String(type || '').toLowerCase()] || 'weapons';
   }
 
   // =====================
@@ -880,7 +947,7 @@ export class AssetLoader {
    * @returns {HTMLImageElement|null} Cached composite or null
    */
   getItemComposite(itemId, category, rarity = 'common', augment = null) {
-    return getItemCompositeImpl(this.cache, itemId, rarity, augment);
+    return getItemCompositeImpl(this.cache, itemId, category, rarity, augment);
   }
 
   /**
@@ -1101,6 +1168,9 @@ export class AssetLoader {
    * Get fallback emoji for a category
    */
   getFallbackEmoji(category, type) {
+    // Item renderers use ItemIcon's explicit missing-asset marker. Do not
+    // silently disguise missing canonical sprites with type emoji.
+    if (category === 'item' || category === 'items') return '✗';
     return this.fallbackEmoji[category]?.[type] || '❓';
   }
 
@@ -1222,14 +1292,15 @@ export class AssetLoader {
 
   /**
    * Preload character sprites
-   * @param {string} charClass - Character class to preload
+   * @param {string|Object} character - Character class or race/gender/class object
    * @param {Object} options - Preload options
    * @param {string[]} options.animations - Animation types to preload (default: idle, walk, attack, hit, death, dead)
    * @param {Function} options.onProgress - Optional callback (loaded, total) for progress tracking
    */
-  async preloadCharacter(charClass, options = {}) {
-    const { animations = AssetLoader.CHARACTER_ANIMATIONS, onProgress } = options;
-    const promises = animations.map(anim => this.loadCharacterSprite(charClass, anim));
+  async preloadCharacter(character, options = {}) {
+    const animations = options.animations || getPlayerCharacterAnimations(character);
+    const { onProgress } = options;
+    const promises = animations.map(anim => this.loadCharacterSprite(character, anim));
     let loaded = 0;
 
     // Progress tracking wrapper
@@ -1250,7 +1321,7 @@ export class AssetLoader {
   /**
    * Preload enemies for a biome
    * @param {string} biome - Biome type for enemy sprites
-   * @param {string[]} enemyIds - Array of enemy IDs to preload
+   * @param {Array<string|Object>} enemyIds - Visual IDs or canonical NPC DTOs
    * @param {Object} options - Preload options
    * @param {Function} options.onProgress - Optional callback (loaded, total) for progress tracking
    */
@@ -1260,9 +1331,14 @@ export class AssetLoader {
     const promises = [];
     let loaded = 0;
 
-    for (const enemyId of enemyIds) {
+    for (const enemy of enemyIds) {
+      const identity = getNpcVisualIdentity(
+        typeof enemy === 'object' ? enemy : { enemyId: enemy },
+        { fallbackBiome: typeof enemy === 'object' ? biome : 'forest' }
+      );
+      if (!identity.visualId) continue;
       for (const anim of animations) {
-        promises.push(this.loadEnemySprite(enemyId, anim, biome));
+        promises.push(this.loadEnemySprite(identity.visualId, anim, identity.primaryBiome));
       }
     }
 
@@ -1427,7 +1503,9 @@ export class AssetLoader {
     const tasks = [
       this.preloadTerrainSet(nodeType),
       ...playerClasses.map(cls => this.preloadCharacter(cls)),
-      this.preloadEnemies(nodeType, enemyIds)
+      // Enemy identity is independent of the encounter terrain. Registered NPCs
+      // resolve their canonical biome; legacy unknown IDs use one stable fallback.
+      this.preloadEnemies('forest', enemyIds)
     ];
 
     const results = await Promise.allSettled(tasks);

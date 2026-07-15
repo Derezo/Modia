@@ -11,11 +11,10 @@
  * capped at the restock_quantity maximum.
  */
 
-import { describe, it, before, after, beforeEach } from 'node:test';
+import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
 import {
   query,
-  pool,
   getClient
 } from '../testHelper.js';
 
@@ -30,59 +29,50 @@ import shopRefreshService from '../../services/shopRefreshService.js';
 describe('Shop Refresh Service', () => {
   let testNodeId = null;
   let testItemId = null;
+  let testInventoryId = null;
 
   before(async () => {
-    // Find a world node with a shop for testing
+    // Use a node with no existing shop inventory so destructive stock mutations
+    // in this suite can never touch a real player-facing shop.
     const nodeResult = await query(
-      `SELECT DISTINCT node_id FROM npc_shop_inventory LIMIT 1`
+      `SELECT wn.id
+       FROM world_nodes wn
+       WHERE NOT EXISTS (
+         SELECT 1 FROM npc_shop_inventory nsi WHERE nsi.node_id = wn.id
+       )
+       ORDER BY wn.id
+       LIMIT 1`
     );
 
     if (nodeResult.rows.length === 0) {
-      // Create a test shop entry if none exist
-      const worldNodeResult = await query(
-        `SELECT id FROM world_nodes LIMIT 1`
-      );
-
-      if (worldNodeResult.rows.length === 0) {
-        throw new Error('No world nodes found for testing');
-      }
-
-      testNodeId = worldNodeResult.rows[0].id;
-
-      // Find a suitable item
-      const itemResult = await query(
-        `SELECT id FROM item_templates WHERE item_type = 'material' LIMIT 1`
-      );
-
-      if (itemResult.rows.length === 0) {
-        throw new Error('No items found for testing');
-      }
-
-      testItemId = itemResult.rows[0].id;
-
-      // Create test shop inventory
-      await query(
-        `INSERT INTO npc_shop_inventory (node_id, shop_type, item_template_id, quantity, restock_quantity, last_restock)
-         VALUES ($1, 'farm', $2, 5, 20, NOW() - INTERVAL '7 hours')
-         ON CONFLICT (node_id, shop_type, item_template_id) DO NOTHING`,
-        [testNodeId, testItemId]
-      );
-    } else {
-      testNodeId = nodeResult.rows[0].node_id;
-
-      // Get an item from this shop
-      const itemResult = await query(
-        `SELECT item_template_id FROM npc_shop_inventory WHERE node_id = $1 LIMIT 1`,
-        [testNodeId]
-      );
-      testItemId = itemResult.rows[0].item_template_id;
+      throw new Error('No isolated world node available for shop refresh tests');
     }
+
+    const itemResult = await query(
+      `SELECT id FROM item_templates ORDER BY id LIMIT 1`
+    );
+
+    if (itemResult.rows.length === 0) {
+      throw new Error('No item templates found for shop refresh tests');
+    }
+
+    testNodeId = nodeResult.rows[0].id;
+    testItemId = itemResult.rows[0].id;
+
+    const inventoryResult = await query(
+      `INSERT INTO npc_shop_inventory
+         (node_id, shop_type, item_template_id, quantity, restock_quantity, last_restock)
+       VALUES ($1, 'farm', $2, 5, 20, NOW() - INTERVAL '7 hours')
+       RETURNING id`,
+      [testNodeId, testItemId]
+    );
+    testInventoryId = inventoryResult.rows[0].id;
   });
 
   after(async () => {
-    // Clean up any test data we created
-    // Note: We only clean up if we created the test data
-    // Existing shop inventory should remain
+    if (testInventoryId) {
+      await query('DELETE FROM npc_shop_inventory WHERE id = $1', [testInventoryId]);
+    }
   });
 
   describe('REFRESH_INTERVALS', () => {

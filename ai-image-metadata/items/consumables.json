@@ -217,6 +217,801 @@
       "generated": true,
       "generatedAt": "2026-01-27T17:48:11.356Z",
       "needsRegeneration": false
+    },
+    {
+      "id": "bomb_smoke",
+      "name": "Escape Smoke",
+      "prompt": "black glass escape-smoke flask marked with a hidden eye",
+      "seed": 24010,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/consumables/potion_stamina.webp",
+        "composition": {
+          "primaryScale": 0.82,
+          "colorize": "#4b5362",
+          "accent": {
+            "sourceAsset": "icons/originals/actions/stealth.webp",
+            "scale": 0.29,
+            "gravity": "center",
+            "modulate": {
+              "saturation": 0.75,
+              "brightness": 1.18
+            }
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/consumables/bomb_smoke.webp",
+        "64": "/assets/items/64/consumables/bomb_smoke.webp",
+        "128": "/assets/items/128/consumables/bomb_smoke.webp",
+        "original": "/assets/items/originals/consumables/bomb_smoke.webp"
+      }
+    },
+    {
+      "id": "lens_scout",
+      "name": "Scout's Lens",
+      "prompt": "brass scout lens with a clear enchanted targeting reticle",
+      "seed": 24011,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/accessories/amulet_crystal.webp",
+        "composition": {
+          "primaryScale": 0.84,
+          "colorize": "#65a7a2",
+          "accent": {
+            "sourceAsset": "icons/originals/augments/accuracy.webp",
+            "scale": 0.35,
+            "gravity": "center",
+            "modulate": {
+              "hue": 180,
+              "saturation": 1.05,
+              "brightness": 1.35
+            }
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/consumables/lens_scout.webp",
+        "64": "/assets/items/64/consumables/lens_scout.webp",
+        "128": "/assets/items/128/consumables/lens_scout.webp",
+        "original": "/assets/items/originals/consumables/lens_scout.webp"
+      }
+    },
+    {
+      "id": "map_treasure",
+      "name": "Treasure Map",
+      "prompt": "well-worn treasure map scroll with a golden route marker",
+      "seed": 24012,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/icons/originals/menu/map.webp",
+        "composition": {
+          "primaryScale": 0.92,
+          "modulate": {
+            "hue": 38,
+            "saturation": 1.25,
+            "brightness": 1.15
+          },
+          "accent": {
+            "sourceAsset": "icons/originals/resources/gold.webp",
+            "scale": 0.23,
+            "gravity": "southeast",
+            "modulate": {
+              "saturation": 1.2,
+              "brightness": 1.1
+            }
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/consumables/map_treasure.webp",
+        "64": "/assets/items/64/consumables/map_treasure.webp",
+        "128": "/assets/items/128/consumables/map_treasure.webp",
+        "original": "/assets/items/originals/consumables/map_treasure.webp"
+      }
+    },
+    {
+      "id": "material_ancient_wood",
+      "name": "Ancient Wood",
+      "prompt": "petrified ancient wood stave fragment with earthen growth rings",
+      "seed": 24013,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/weapons/staff_magic.webp",
+        "composition": {
+          "primaryScale": 0.82,
+          "rotate": 20,
+          "colorize": "#775233"
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/consumables/material_ancient_wood.webp",
+        "64": "/assets/items/64/consumables/material_ancient_wood.webp",
+        "128": "/assets/items/128/consumables/material_ancient_wood.webp",
+        "original": "/assets/items/originals/consumables/material_ancient_wood.webp"
+      }
+    },
+    {
+      "id": "material_demon_horn",
+      "name": "Demon Horn",
+      "prompt": "jagged demon horn trophy darkened by infernal heat",
+      "seed": 24014,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/accessories/amulet_bone.webp",
+        "composition": {
+          "primaryScale": 0.82,
+          "rotate": -16,
+          "colorize": "#7d3438",
+          "accent": {
+            "sourceAsset": "overlays/originals/augments/augment_fire.webp",
+            "scale": 0.24,
+            "gravity": "center",
+            "modulate": {
+              "hue": 345,
+              "saturation": 1.2,
+              "brightness": 0.95
+            }
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/consumables/material_demon_horn.webp",
+        "64": "/assets/items/64/consumables/material_demon_horn.webp",
+        "128": "/assets/items/128/consumables/material_demon_horn.webp",
+        "original": "/assets/items/originals/consumables/material_demon_horn.webp"
+      }
+    },
+    {
+      "id": "material_dragon_scale",
+      "name": "Dragon Scale",
+      "prompt": "single crimson dragon scale with a fire-tempered edge",
+      "seed": 24015,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/armor/shield_kite.webp",
+        "composition": {
+          "primaryScale": 0.79,
+          "rotate": -12,
+          "colorize": "#a43f36",
+          "accent": {
+            "sourceAsset": "overlays/originals/augments/augment_fire.webp",
+            "scale": 0.24,
+            "gravity": "center",
+            "modulate": {
+              "saturation": 1.15,
+              "brightness": 1.05
+            }
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/consumables/material_dragon_scale.webp",
+        "64": "/assets/items/64/consumables/material_dragon_scale.webp",
+        "128": "/assets/items/128/consumables/material_dragon_scale.webp",
+        "original": "/assets/items/originals/consumables/material_dragon_scale.webp"
+      }
+    },
+    {
+      "id": "material_ethereal_dust",
+      "name": "Ethereal Dust",
+      "prompt": "pale violet ethereal dust suspended in a crystal focus",
+      "seed": 24016,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/weapons/orb_crystal.webp",
+        "composition": {
+          "primaryScale": 0.82,
+          "modulate": {
+            "hue": 285,
+            "saturation": 0.72,
+            "brightness": 1.2
+          },
+          "accent": {
+            "sourceAsset": "overlays/originals/augments/augment_arcane.webp",
+            "scale": 0.3,
+            "gravity": "center",
+            "modulate": {
+              "hue": 275,
+              "saturation": 0.75,
+              "brightness": 1.25
+            }
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/consumables/material_ethereal_dust.webp",
+        "64": "/assets/items/64/consumables/material_ethereal_dust.webp",
+        "128": "/assets/items/128/consumables/material_ethereal_dust.webp",
+        "original": "/assets/items/originals/consumables/material_ethereal_dust.webp"
+      }
+    },
+    {
+      "id": "material_mermaid_scale",
+      "name": "Mermaid Scale",
+      "prompt": "iridescent aqua mermaid scale with a water-bright edge",
+      "seed": 24017,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/armor/shield_kite.webp",
+        "composition": {
+          "primaryScale": 0.78,
+          "rotate": 11,
+          "colorize": "#55a9aa",
+          "accent": {
+            "sourceAsset": "icons/originals/augments/splash.webp",
+            "scale": 0.25,
+            "gravity": "center",
+            "modulate": {
+              "hue": 190,
+              "saturation": 1.25,
+              "brightness": 1.18
+            }
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/consumables/material_mermaid_scale.webp",
+        "64": "/assets/items/64/consumables/material_mermaid_scale.webp",
+        "128": "/assets/items/128/consumables/material_mermaid_scale.webp",
+        "original": "/assets/items/originals/consumables/material_mermaid_scale.webp"
+      }
+    },
+    {
+      "id": "material_moon_ore",
+      "name": "Moon Ore",
+      "prompt": "cool blue moon ore crystal with a silver lunar sheen",
+      "seed": 24018,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/weapons/orb_crystal.webp",
+        "composition": {
+          "primaryScale": 0.81,
+          "modulate": {
+            "hue": 215,
+            "saturation": 0.8,
+            "brightness": 1.16
+          },
+          "accent": {
+            "sourceAsset": "icons/originals/zodiac/cancer.webp",
+            "scale": 0.26,
+            "gravity": "center",
+            "colorize": "#dbe7f4"
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/consumables/material_moon_ore.webp",
+        "64": "/assets/items/64/consumables/material_moon_ore.webp",
+        "128": "/assets/items/128/consumables/material_moon_ore.webp",
+        "original": "/assets/items/originals/consumables/material_moon_ore.webp"
+      }
+    },
+    {
+      "id": "material_phoenix_ash",
+      "name": "Phoenix Ash",
+      "prompt": "charcoal phoenix feather shedding ember-red ash",
+      "seed": 24019,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/consumables/phoenix_feather.webp",
+        "composition": {
+          "primaryScale": 0.84,
+          "modulate": {
+            "hue": 8,
+            "saturation": 0.85,
+            "brightness": 0.72
+          },
+          "accent": {
+            "sourceAsset": "overlays/originals/augments/augment_fire.webp",
+            "scale": 0.29,
+            "gravity": "southeast",
+            "modulate": {
+              "saturation": 0.82,
+              "brightness": 0.86
+            }
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/consumables/material_phoenix_ash.webp",
+        "64": "/assets/items/64/consumables/material_phoenix_ash.webp",
+        "128": "/assets/items/128/consumables/material_phoenix_ash.webp",
+        "original": "/assets/items/originals/consumables/material_phoenix_ash.webp"
+      }
+    },
+    {
+      "id": "material_starlight_essence",
+      "name": "Starlight Essence",
+      "prompt": "radiant starlight essence held within a celestial orb",
+      "seed": 24020,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/weapons/orb_crystal.webp",
+        "composition": {
+          "primaryScale": 0.82,
+          "modulate": {
+            "hue": 50,
+            "saturation": 0.7,
+            "brightness": 1.28
+          },
+          "accent": {
+            "sourceAsset": "overlays/originals/augments/augment_holy.webp",
+            "scale": 0.31,
+            "gravity": "center",
+            "modulate": {
+              "hue": 48,
+              "saturation": 0.8,
+              "brightness": 1.22
+            }
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/consumables/material_starlight_essence.webp",
+        "64": "/assets/items/64/consumables/material_starlight_essence.webp",
+        "128": "/assets/items/128/consumables/material_starlight_essence.webp",
+        "original": "/assets/items/originals/consumables/material_starlight_essence.webp"
+      }
+    },
+    {
+      "id": "material_titan_fragment",
+      "name": "Titan Fragment",
+      "prompt": "massive rune-carved titan relic fragment in weathered stone",
+      "seed": 24021,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/weapons/relic_ancient.webp",
+        "composition": {
+          "primaryScale": 0.82,
+          "colorize": "#77736c",
+          "accent": {
+            "sourceAsset": "overlays/originals/augments/augment_earth.webp",
+            "scale": 0.24,
+            "gravity": "center",
+            "colorize": "#9d784d"
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/consumables/material_titan_fragment.webp",
+        "64": "/assets/items/64/consumables/material_titan_fragment.webp",
+        "128": "/assets/items/128/consumables/material_titan_fragment.webp",
+        "original": "/assets/items/originals/consumables/material_titan_fragment.webp"
+      }
+    },
+    {
+      "id": "material_void_crystal",
+      "name": "Void Crystal",
+      "prompt": "black-violet void crystal orb threaded with shadow energy",
+      "seed": 24022,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/weapons/orb_crystal.webp",
+        "composition": {
+          "primaryScale": 0.82,
+          "modulate": {
+            "hue": 278,
+            "saturation": 1.45,
+            "brightness": 0.58
+          },
+          "accent": {
+            "sourceAsset": "overlays/originals/augments/augment_dark.webp",
+            "scale": 0.31,
+            "gravity": "center",
+            "modulate": {
+              "hue": 280,
+              "saturation": 1.35,
+              "brightness": 0.9
+            }
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/consumables/material_void_crystal.webp",
+        "64": "/assets/items/64/consumables/material_void_crystal.webp",
+        "128": "/assets/items/128/consumables/material_void_crystal.webp",
+        "original": "/assets/items/originals/consumables/material_void_crystal.webp"
+      }
+    },
+    {
+      "id": "mystery_box",
+      "name": "Mystery Box",
+      "prompt": "sealed traveling mystery chest of wood and blue iron",
+      "seed": 24023,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/nodes/originals/chest.webp",
+        "composition": {
+          "primaryScale": 0.88,
+          "modulate": {
+            "hue": 205,
+            "saturation": 0.9,
+            "brightness": 0.9
+          },
+          "accent": {
+            "sourceAsset": "items/originals/weapons/orb_crystal.webp",
+            "scale": 0.22,
+            "gravity": "center",
+            "modulate": {
+              "hue": 210,
+              "saturation": 1.15,
+              "brightness": 1.05
+            }
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/consumables/mystery_box.webp",
+        "64": "/assets/items/64/consumables/mystery_box.webp",
+        "128": "/assets/items/128/consumables/mystery_box.webp",
+        "original": "/assets/items/originals/consumables/mystery_box.webp"
+      }
+    },
+    {
+      "id": "mystery_box_premium",
+      "name": "Premium Mystery Box",
+      "prompt": "premium royal mystery chest in violet lacquer and gold",
+      "seed": 24024,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/nodes/originals/chest.webp",
+        "composition": {
+          "primaryScale": 0.88,
+          "modulate": {
+            "hue": 285,
+            "saturation": 1.3,
+            "brightness": 1.02
+          },
+          "accent": {
+            "sourceAsset": "items/originals/armor/helm_crown.webp",
+            "scale": 0.25,
+            "gravity": "center",
+            "colorize": "#e6bd4f"
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/consumables/mystery_box_premium.webp",
+        "64": "/assets/items/64/consumables/mystery_box_premium.webp",
+        "128": "/assets/items/128/consumables/mystery_box_premium.webp",
+        "original": "/assets/items/originals/consumables/mystery_box_premium.webp"
+      }
+    },
+    {
+      "id": "potion_agility",
+      "name": "Swiftfoot Philter",
+      "prompt": "emerald swiftfoot philter marked by a wind-swept agility sigil",
+      "seed": 24025,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/consumables/potion_speed.webp",
+        "composition": {
+          "primaryScale": 0.84,
+          "modulate": {
+            "hue": 135,
+            "saturation": 1.38,
+            "brightness": 1.02
+          },
+          "accent": {
+            "sourceAsset": "icons/originals/augments/agility.webp",
+            "scale": 0.3,
+            "gravity": "center",
+            "modulate": {
+              "hue": 135,
+              "saturation": 1.2,
+              "brightness": 1.18
+            }
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/consumables/potion_agility.webp",
+        "64": "/assets/items/64/consumables/potion_agility.webp",
+        "128": "/assets/items/128/consumables/potion_agility.webp",
+        "original": "/assets/items/originals/consumables/potion_agility.webp"
+      }
+    },
+    {
+      "id": "potion_blood",
+      "name": "Blood Vial",
+      "prompt": "crimson enchanted blood vial with a dark lifesteal seal",
+      "seed": 24026,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/consumables/potion_health.webp",
+        "composition": {
+          "primaryScale": 0.84,
+          "modulate": {
+            "hue": 350,
+            "saturation": 1.5,
+            "brightness": 0.76
+          },
+          "accent": {
+            "sourceAsset": "icons/originals/augments/lifesteal.webp",
+            "scale": 0.29,
+            "gravity": "center",
+            "modulate": {
+              "hue": 350,
+              "saturation": 1.3,
+              "brightness": 1.08
+            }
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/consumables/potion_blood.webp",
+        "64": "/assets/items/64/consumables/potion_blood.webp",
+        "128": "/assets/items/128/consumables/potion_blood.webp",
+        "original": "/assets/items/originals/consumables/potion_blood.webp"
+      }
+    },
+    {
+      "id": "potion_intelligence",
+      "name": "Sage's Elixir",
+      "prompt": "deep blue sage elixir bearing a silver mind sigil",
+      "seed": 24027,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/consumables/potion_mana.webp",
+        "composition": {
+          "primaryScale": 0.84,
+          "modulate": {
+            "hue": 225,
+            "saturation": 1.25,
+            "brightness": 0.96
+          },
+          "accent": {
+            "sourceAsset": "icons/originals/augments/intelligence.webp",
+            "scale": 0.3,
+            "gravity": "center",
+            "colorize": "#b7d3ed"
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/consumables/potion_intelligence.webp",
+        "64": "/assets/items/64/consumables/potion_intelligence.webp",
+        "128": "/assets/items/128/consumables/potion_intelligence.webp",
+        "original": "/assets/items/originals/consumables/potion_intelligence.webp"
+      }
+    },
+    {
+      "id": "potion_luck",
+      "name": "Fortune's Flask",
+      "prompt": "bright green fortune flask bearing a gold clover seal",
+      "seed": 24028,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/consumables/potion_speed.webp",
+        "composition": {
+          "primaryScale": 0.84,
+          "modulate": {
+            "hue": 105,
+            "saturation": 1.3,
+            "brightness": 1.08
+          },
+          "accent": {
+            "sourceAsset": "icons/originals/augments/luck.webp",
+            "scale": 0.31,
+            "gravity": "center",
+            "modulate": {
+              "saturation": 1.25,
+              "brightness": 1.08
+            }
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/consumables/potion_luck.webp",
+        "64": "/assets/items/64/consumables/potion_luck.webp",
+        "128": "/assets/items/128/consumables/potion_luck.webp",
+        "original": "/assets/items/originals/consumables/potion_luck.webp"
+      }
+    },
+    {
+      "id": "potion_vitality",
+      "name": "Ironhide Brew",
+      "prompt": "iron-red vitality brew bearing a strong heartbeat seal",
+      "seed": 24029,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/consumables/potion_stamina.webp",
+        "composition": {
+          "primaryScale": 0.84,
+          "modulate": {
+            "hue": 8,
+            "saturation": 1.32,
+            "brightness": 0.9
+          },
+          "accent": {
+            "sourceAsset": "icons/originals/augments/vitality.webp",
+            "scale": 0.3,
+            "gravity": "center",
+            "modulate": {
+              "hue": 5,
+              "saturation": 1.1,
+              "brightness": 1.08
+            }
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/consumables/potion_vitality.webp",
+        "64": "/assets/items/64/consumables/potion_vitality.webp",
+        "128": "/assets/items/128/consumables/potion_vitality.webp",
+        "original": "/assets/items/originals/consumables/potion_vitality.webp"
+      }
+    },
+    {
+      "id": "scroll_magic",
+      "name": "Waypoint Scroll",
+      "prompt": "violet waypoint scroll with a luminous travel compass",
+      "seed": 24030,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/consumables/scroll_teleport.webp",
+        "composition": {
+          "primaryScale": 0.88,
+          "modulate": {
+            "hue": 272,
+            "saturation": 1.2,
+            "brightness": 0.94
+          },
+          "accent": {
+            "sourceAsset": "icons/originals/actions/travel.webp",
+            "scale": 0.28,
+            "gravity": "center",
+            "modulate": {
+              "hue": 270,
+              "saturation": 1.2,
+              "brightness": 1.15
+            }
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/consumables/scroll_magic.webp",
+        "64": "/assets/items/64/consumables/scroll_magic.webp",
+        "128": "/assets/items/128/consumables/scroll_magic.webp",
+        "original": "/assets/items/originals/consumables/scroll_magic.webp"
+      }
+    },
+    {
+      "id": "token_merchant",
+      "name": "Caravan Pass",
+      "prompt": "merchant guild pass token stamped with a caravan seal",
+      "seed": 24031,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/accessories/ring_signet.webp",
+        "composition": {
+          "primaryScale": 0.78,
+          "colorize": "#d1a13f",
+          "accent": {
+            "sourceAsset": "icons/originals/menu/caravan.webp",
+            "scale": 0.34,
+            "gravity": "center",
+            "colorize": "#754b27"
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/consumables/token_merchant.webp",
+        "64": "/assets/items/64/consumables/token_merchant.webp",
+        "128": "/assets/items/128/consumables/token_merchant.webp",
+        "original": "/assets/items/originals/consumables/token_merchant.webp"
+      }
     }
   ]
 }

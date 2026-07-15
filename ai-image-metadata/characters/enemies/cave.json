@@ -4,8 +4,8 @@
   "biome": "cave",
   "description": "Cave biome enemy sprite sheets",
   "biomeTraits": "dark rocky underground subterranean crystalline damp",
-  "totalAssets": 6,
-  "totalAnimations": 30,
+  "totalAssets": 7,
+  "totalAnimations": 35,
   "enemies": [
     {
       "id": "cave_bat",
@@ -23,28 +23,28 @@
           "id": "cave_bat_idle",
           "frameCount": 8,
           "seed": 42001,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, swarm of cave bats with glowing red eyes and leathery wings, idle hovering animation, circling in tight formation with wings flapping rhythmically, dark cavern depths"
         },
         "attack": {
           "id": "cave_bat_attack",
           "frameCount": 8,
           "seed": 42002,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, swarm of cave bats with glowing red eyes and leathery wings, attack dive animation, swooping forward as mass with fangs bared and screeching, dark cavern depths"
         },
         "hit": {
           "id": "cave_bat_hit",
           "frameCount": 8,
           "seed": 42003,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, swarm of cave bats with glowing red eyes and leathery wings, hurt scatter animation, bats tumbling and scattering briefly then reforming, dark cavern depths"
         },
         "death": {
           "id": "cave_bat_death",
           "frameCount": 8,
           "seed": 42004,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, swarm of cave bats with glowing red eyes and leathery wings, death disperse animation, bats falling individually and dispersing into darkness, dark cavern depths"
         },
         "dead": {
@@ -58,10 +58,10 @@
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
       "generatedAnimations": {
-        "idle": false,
-        "attack": false,
-        "hit": false,
-        "death": false,
+        "idle": true,
+        "attack": true,
+        "hit": true,
+        "death": true,
         "dead": false
       },
       "generatedAt": null,
@@ -84,28 +84,28 @@
           "id": "cave_spider_idle",
           "frameCount": 8,
           "seed": 42011,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, pale cave spider with multiple eyes and venomous fangs and spindly legs, idle lurking animation, legs tapping with pale body pulsing waiting in shadow, underground cave"
         },
         "attack": {
           "id": "cave_spider_attack",
           "frameCount": 8,
           "seed": 42012,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, pale cave spider with multiple eyes and venomous fangs and spindly legs, attack lunge animation, shooting web then lunging with fangs dripping venom, underground cave"
         },
         "hit": {
           "id": "cave_spider_hit",
           "frameCount": 8,
           "seed": 42013,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, pale cave spider with multiple eyes and venomous fangs and spindly legs, hurt scramble animation, legs flailing while scrambling backward wounded, underground cave"
         },
         "death": {
           "id": "cave_spider_death",
           "frameCount": 8,
           "seed": 42014,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, pale cave spider with multiple eyes and venomous fangs and spindly legs, death curl animation, legs curling tight with body deflating to stillness, underground cave"
         },
         "dead": {
@@ -126,7 +126,7 @@
         "dead": false
       },
       "generatedAt": "2026-01-31T15:46:48.709Z",
-      "generated": true,
+      "generated": false,
       "loraModel": "retro-pixel"
     },
     {
@@ -145,28 +145,28 @@
           "id": "goblin_idle",
           "frameCount": 8,
           "seed": 42021,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, cave goblin with gray-green skin and large eyes holding rusty dagger, idle crouch animation, lurking in shadow with dagger ready and eyes gleaming, rocky cavern"
         },
         "attack": {
           "id": "goblin_attack",
           "frameCount": 8,
           "seed": 42022,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, cave goblin with gray-green skin and large eyes holding rusty dagger, attack stab animation, quick slashing motion lunging forward aggressively, rocky cavern"
         },
         "hit": {
           "id": "goblin_hit",
           "frameCount": 8,
           "seed": 42023,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, cave goblin with gray-green skin and large eyes holding rusty dagger, hurt stumble animation, dropping weapon and yelping while staggering, rocky cavern"
         },
         "death": {
           "id": "goblin_death",
           "frameCount": 8,
           "seed": 42024,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, cave goblin with gray-green skin and large eyes holding rusty dagger, death collapse animation, clutching wound and falling forward defeated, rocky cavern"
         },
         "dead": {
@@ -187,7 +187,7 @@
         "dead": false
       },
       "generatedAt": "2026-01-31T16:10:31.142Z",
-      "generated": true,
+      "generated": false,
       "loraModel": "retro-pixel"
     },
     {
@@ -206,28 +206,28 @@
           "id": "cave_troll_idle",
           "frameCount": 8,
           "seed": 42031,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, massive cave troll with stone-like gray skin and glowing eyes and tusks, idle breathing animation, hunched stance with club resting and breathing heavily, subterranean cavern"
         },
         "attack": {
           "id": "cave_troll_attack",
           "frameCount": 8,
           "seed": 42032,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, massive cave troll with stone-like gray skin and glowing eyes and tusks, attack slam animation, swinging massive club overhead with ground-shaking force, subterranean cavern"
         },
         "hit": {
           "id": "cave_troll_hit",
           "frameCount": 8,
           "seed": 42033,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, massive cave troll with stone-like gray skin and glowing eyes and tusks, hurt stagger animation, roaring in anger and stumbling back enraged, subterranean cavern"
         },
         "death": {
           "id": "cave_troll_death",
           "frameCount": 8,
           "seed": 42034,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, massive cave troll with stone-like gray skin and glowing eyes and tusks, death collapse animation, dropping club and crashing down with earth trembling, subterranean cavern"
         },
         "dead": {
@@ -248,7 +248,7 @@
         "dead": false
       },
       "generatedAt": "2026-01-31T16:34:10.308Z",
-      "generated": true,
+      "generated": false,
       "loraModel": "retro-pixel"
     },
     {
@@ -267,28 +267,28 @@
           "id": "crystal_golem_idle",
           "frameCount": 8,
           "seed": 42041,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, crystal golem with purple crystalline body and glowing core and faceted limbs, idle pulse animation, light refracting through body while humming with arcane energy, crystalline cave"
         },
         "attack": {
           "id": "crystal_golem_attack",
           "frameCount": 8,
           "seed": 42042,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, crystal golem with purple crystalline body and glowing core and faceted limbs, attack strike animation, fist extending with crystal shards shooting forward, crystalline cave"
         },
         "hit": {
           "id": "crystal_golem_hit",
           "frameCount": 8,
           "seed": 42043,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, crystal golem with purple crystalline body and glowing core and faceted limbs, hurt crack animation, crystals cracking with shards flying then reforming, crystalline cave"
         },
         "death": {
           "id": "crystal_golem_death",
           "frameCount": 8,
           "seed": 42044,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, crystal golem with purple crystalline body and glowing core and faceted limbs, death shatter animation, shattering apart with crystals scattering and core fading, crystalline cave"
         },
         "dead": {
@@ -309,14 +309,14 @@
         "dead": false
       },
       "generatedAt": "2026-01-31T16:58:04.841Z",
-      "generated": true,
+      "generated": false,
       "loraModel": "retro-pixel"
     },
     {
-      "id": "shadow_assassin",
-      "name": "Shadow Assassin",
+      "id": "skeleton_warrior",
+      "name": "Skeleton Warrior",
       "archetype": "undead",
-      "visualTraits": "formless darkness glowing red eyes wispy tendrils ethereal presence",
+      "visualTraits": "animated bones purple eye glow rusted sword tattered armor rattling",
       "sd15Config": {
         "controlnetWeight": null,
         "ipadapterWeight": null,
@@ -325,48 +325,109 @@
       },
       "animations": {
         "idle": {
-          "id": "shadow_assassin_idle",
+          "id": "skeleton_warrior_idle",
           "frameCount": 8,
-          "seed": 42051,
-          "generated": false,
-          "prompt": "pixel art sprite side view 64x64, shadow assassin made of formless darkness with glowing red eyes and wispy tendrils, idle shift animation, form wavering with eyes floating and tendrils waving, deep cave darkness"
+          "seed": 45001,
+          "generated": true,
+          "prompt": "pixel art sprite side view 64x64, skeleton warrior with purple glowing eyes and rusted sword and tattered armor, idle rattle animation, bones rattling with jaw clicking in eternal vigilance, dark castle corridor"
         },
         "attack": {
-          "id": "shadow_assassin_attack",
+          "id": "skeleton_warrior_attack",
           "frameCount": 8,
-          "seed": 42052,
-          "generated": false,
-          "prompt": "pixel art sprite side view 64x64, shadow assassin made of formless darkness with glowing red eyes and wispy tendrils, attack lunge animation, darkness extending forward with grasping ethereal claws, deep cave darkness"
+          "seed": 45002,
+          "generated": true,
+          "prompt": "pixel art sprite side view 64x64, skeleton warrior with purple glowing eyes and rusted sword and tattered armor, attack swing animation, sword swinging with bones creaking in relentless strike, dark castle corridor"
         },
         "hit": {
-          "id": "shadow_assassin_hit",
+          "id": "skeleton_warrior_hit",
           "frameCount": 8,
-          "seed": 42053,
-          "generated": false,
-          "prompt": "pixel art sprite side view 64x64, shadow assassin made of formless darkness with glowing red eyes and wispy tendrils, hurt disrupt animation, form disrupted by light piercing through then reforming, deep cave darkness"
+          "seed": 45003,
+          "generated": true,
+          "prompt": "pixel art sprite side view 64x64, skeleton warrior with purple glowing eyes and rusted sword and tattered armor, hurt scatter animation, bones scattering and reassembling with undying persistence, dark castle corridor"
         },
         "death": {
-          "id": "shadow_assassin_death",
+          "id": "skeleton_warrior_death",
           "frameCount": 8,
-          "seed": 42054,
-          "generated": false,
-          "prompt": "pixel art sprite side view 64x64, shadow assassin made of formless darkness with glowing red eyes and wispy tendrils, death dissipate animation, dissipating into wisps with eyes fading last, deep cave darkness"
+          "seed": 45004,
+          "generated": true,
+          "prompt": "pixel art sprite side view 64x64, skeleton warrior with purple glowing eyes and rusted sword and tattered armor, death collapse animation, collapsing into pile with eye glow fading to stillness, dark castle corridor"
         },
         "dead": {
-          "id": "shadow_assassin_dead",
+          "id": "skeleton_warrior_dead",
           "frameCount": 8,
-          "seed": 42064,
+          "seed": 45014,
           "generated": false,
-          "prompt": "pixel art sprite side view 64x64, formless darkness glowing red eyes wispy tendrils ethereal presence, dead static pose, lying defeated at final rest motionless, dark rocky"
+          "prompt": "pixel art sprite side view 64x64, animated bones purple eye glow rusted sword tattered armor rattling, dead static pose, lying defeated at final rest motionless, ornate regal"
         }
       },
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
       "generatedAnimations": {
-        "idle": false,
-        "attack": false,
-        "hit": false,
-        "death": false,
+        "idle": true,
+        "attack": true,
+        "hit": true,
+        "death": true,
+        "dead": false
+      },
+      "generatedAt": null,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "stone_golem",
+      "name": "Stone Golem",
+      "archetype": "elemental",
+      "visualTraits": "living stone body glowing orange cracks boulder fists runic markings",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
+      "animations": {
+        "idle": {
+          "id": "stone_golem_idle",
+          "frameCount": 8,
+          "seed": 43021,
+          "generated": true,
+          "prompt": "pixel art sprite side view 64x64, stone golem with living rock body and glowing orange cracks and boulder fists, idle rumble animation, slowly shifting with magma glowing in cracks and rumbling, rugged mountain terrain"
+        },
+        "attack": {
+          "id": "stone_golem_attack",
+          "frameCount": 8,
+          "seed": 43022,
+          "generated": true,
+          "prompt": "pixel art sprite side view 64x64, stone golem with living rock body and glowing orange cracks and boulder fists, attack slam animation, boulder fist swinging down with earth-trembling impact, rugged mountain terrain"
+        },
+        "hit": {
+          "id": "stone_golem_hit",
+          "frameCount": 8,
+          "seed": 43023,
+          "generated": true,
+          "prompt": "pixel art sprite side view 64x64, stone golem with living rock body and glowing orange cracks and boulder fists, hurt crack animation, chunks breaking off with magma spraying then reforming, rugged mountain terrain"
+        },
+        "death": {
+          "id": "stone_golem_death",
+          "frameCount": 8,
+          "seed": 43024,
+          "generated": true,
+          "prompt": "pixel art sprite side view 64x64, stone golem with living rock body and glowing orange cracks and boulder fists, death crumble animation, crumbling apart with inner light fading into pile of rocks, rugged mountain terrain"
+        },
+        "dead": {
+          "id": "stone_golem_dead",
+          "frameCount": 8,
+          "seed": 43034,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, living stone body glowing orange cracks boulder fists runic markings, dead static pose, lying defeated at final rest motionless, rocky alpine"
+        }
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {
+        "idle": true,
+        "attack": true,
+        "hit": true,
+        "death": true,
         "dead": false
       },
       "generatedAt": null,

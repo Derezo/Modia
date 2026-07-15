@@ -25,6 +25,7 @@ import { ParchmentModal } from '../../ui/parchment/ParchmentModal.js';
 import { Accordion } from '../../ui/parchment/Accordion.js';
 import { parchmentToast } from '../../ui/parchment/ParchmentToast.js';
 import { getClassColor, getClassIcon } from '../CharacterCard.js';
+import { ItemIcon } from '../ItemIcon.js';
 import {
   PARCHMENT_COLORS,
   PARCHMENT_SPACING,
@@ -272,6 +273,11 @@ export class CharacterModal {
         font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
       }
 
+      .character-modal-slot-icon {
+        flex: 0 0 auto;
+        line-height: 0;
+      }
+
       .character-modal-slot-empty {
         color: ${PARCHMENT_COLORS.text.muted};
         font-style: italic;
@@ -449,7 +455,7 @@ export class CharacterModal {
           <div class="character-modal-portrait" style="background: ${classColor};">
             ${portraitUrl
     ? `<img src="${portraitUrl}" alt="${escapeHtml(char.name)}"
-               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+               data-image-fallback data-fallback-display="flex">
              <span class="character-modal-portrait-fallback" style="display: none;">${classIcon}</span>`
     : `<span class="character-modal-portrait-fallback">${classIcon}</span>`}
           </div>
@@ -546,6 +552,11 @@ export class CharacterModal {
       </div>
     `;
 
+    // ItemIcon owns canonical paths and applies augment/rarity overlays when
+    // present. The plain icon above keeps the equipment list responsive while
+    // the optional canvas composite is prepared.
+    this.updateEquipmentIcons(contentEl);
+
     // Event listeners
     const quickEquipBtn = contentEl.querySelector('[data-action="quick-equip"]');
     if (quickEquipBtn) {
@@ -583,10 +594,39 @@ export class CharacterModal {
     return `
       <div class="character-modal-equipment-slot" data-slot="${slot.key}">
         <span class="character-modal-slot-name">${slot.name}</span>
+        <span class="character-modal-slot-icon" data-equipment-icon="${slot.key}">
+          ${ItemIcon.html({ item, size: 'sm' })}
+        </span>
         <span class="character-modal-slot-item rarity-${item.rarity || 'common'}">${escapeHtml(item.name)}</span>
         ${stats ? `<span class="character-modal-slot-stats">${stats}</span>` : ''}
       </div>
     `;
+  }
+
+  /**
+   * Replace augmented equipment icons with their shared ItemIcon composites.
+   * @param {HTMLElement} contentEl - Equipment accordion content
+   */
+  updateEquipmentIcons(contentEl) {
+    contentEl.querySelectorAll('[data-equipment-icon]').forEach((container) => {
+      const item = this.equipment[container.dataset.equipmentIcon];
+      const augments = item?.augments || [];
+      if (!item || augments.length === 0) return;
+
+      const augmentTypes = augments
+        .map(augment => typeof augment === 'string'
+          ? augment
+          : (augment.category || augment.type || augment.name))
+        .filter(Boolean);
+
+      ItemIcon.compositeHtml({ item, size: 'sm', augments: augmentTypes })
+        .then((html) => {
+          if (container.isConnected) container.innerHTML = html;
+        })
+        .catch(() => {
+          // Keep the already-rendered canonical base icon on failure.
+        });
+    });
   }
 
   /**

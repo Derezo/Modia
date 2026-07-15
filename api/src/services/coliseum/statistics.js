@@ -34,7 +34,8 @@ export async function captureTeamSnapshots(winnerId, loserId) {
     // Get equipment for each character
     const team = await Promise.all(chars.rows.map(async (char) => {
       const equip = await query(
-        `SELECT ci.equipped_slot, it.name, it.rarity, it.equipment_slot
+        `SELECT ci.equipped_slot, ci.modifications,
+                it.name, it.rarity, it.item_type, it.equipment_slot, it.sprite_id
          FROM character_items ci
          JOIN item_templates it ON ci.item_template_id = it.id
          WHERE ci.character_id = $1 AND ci.equipped_slot IS NOT NULL`,
@@ -43,7 +44,15 @@ export async function captureTeamSnapshots(winnerId, loserId) {
 
       return {
         ...char,
-        equipment: equip.rows
+        equipment: equip.rows.map((item) => {
+          const modifications = item.modifications || {};
+          return {
+            ...item,
+            name: modifications.generatedName || item.name,
+            rarity: modifications.rarity || item.rarity,
+            augments: modifications.augments || []
+          };
+        })
       };
     }));
 

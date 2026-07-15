@@ -21,6 +21,7 @@
 
 import { ParchmentModal } from '../../ui/parchment/ParchmentModal.js';
 import { ItemDataTable } from '../ItemDataTable/ItemDataTable.js';
+import { Icon } from '../Icon.js';
 import { parchmentToast } from '../../ui/parchment/ParchmentToast.js';
 import {
   PARCHMENT_COLORS,
@@ -152,7 +153,7 @@ export class ItemsModal {
       contentEl.innerHTML = `
         <div class="items-modal-content">
           <div class="items-modal-empty">
-            <div class="items-modal-empty-icon">📦</div>
+            <div class="items-modal-empty-icon">${Icon.html('menu', 'inventory', { size: 'lg' })}</div>
             <div class="items-modal-empty-text">Your party has no items</div>
           </div>
         </div>

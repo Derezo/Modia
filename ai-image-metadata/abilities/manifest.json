@@ -1,0 +1,271 @@
+{
+  "version": "1.0.0",
+  "category": "abilities",
+  "description": "Canonical visual metadata for active player, monster, and zodiac battle abilities",
+  "registryFile": "abilities.json",
+  "sourceFiles": {
+    "player": "api/src/config/skillTrees.js",
+    "monster": "api/src/config/monsterSkillTrees.js",
+    "zodiac": "shared/constants.js"
+  },
+  "inclusionPolicy": "Active abilities only; passive skill-tree nodes do not trigger battle visuals.",
+  "iconOutputPattern": "/assets/abilities/icons/{source}/{id}.webp",
+  "iconCompiler": {
+    "script": "scripts/ai-images/compile-ability-icons.js",
+    "version": "1.0.0",
+    "mode": "offline_deterministic_composition",
+    "renderer": "sharp",
+    "format": "lossless WebP",
+    "width": 128,
+    "height": 128,
+    "alpha": true,
+    "sourceFamilies": [
+      "actions",
+      "augments",
+      "status"
+    ]
+  },
+  "totalAbilities": 164,
+  "generatedAbilities": 164,
+  "missingAbilities": 0,
+  "needsRegeneration": 0,
+  "sourceSummary": {
+    "player": {
+      "totalDefinitions": 92,
+      "activeAbilities": 72,
+      "excludedNonActive": 20
+    },
+    "monster": {
+      "totalDefinitions": 80,
+      "activeAbilities": 80,
+      "excludedNonActive": 0
+    },
+    "zodiac": {
+      "totalDefinitions": 12,
+      "activeAbilities": 12,
+      "excludedNonActive": 0
+    }
+  },
+  "countsBySource": {
+    "monster": 80,
+    "player": 72,
+    "zodiac": 12
+  },
+  "countsByElement": {
+    "dark": 19,
+    "earth": 9,
+    "fire": 19,
+    "holy": 9,
+    "ice": 5,
+    "lightning": 7,
+    "neutral": 40,
+    "physical": 49,
+    "poison": 1,
+    "water": 3,
+    "wind": 3
+  },
+  "countsByVisualCategory": {
+    "buff": 9,
+    "dark": 12,
+    "debuff": 9,
+    "earth": 8,
+    "fire": 18,
+    "healing": 6,
+    "holy": 12,
+    "ice": 7,
+    "lightning": 13,
+    "physical": 37,
+    "poison": 11,
+    "selfAura": 10,
+    "shadow": 7,
+    "water": 3,
+    "wind": 2
+  },
+  "normalizedElements": [
+    "neutral",
+    "physical",
+    "fire",
+    "ice",
+    "lightning",
+    "earth",
+    "wind",
+    "water",
+    "holy",
+    "dark",
+    "poison"
+  ],
+  "visualCategories": [
+    "physical",
+    "fire",
+    "ice",
+    "lightning",
+    "earth",
+    "wind",
+    "water",
+    "holy",
+    "dark",
+    "shadow",
+    "poison",
+    "healing",
+    "buff",
+    "debuff",
+    "selfAura"
+  ],
+  "actorAnimations": {
+    "attack": "Universal attack strip; used for monsters, zodiac abilities, and martial/non-caster guilds.",
+    "cast": "Cast strip used only by player guilds whose canonical character metadata includes it."
+  },
+  "projectileArchetypes": {
+    "none": "No travelling visual; resolve at the actor or target.",
+    "physical_missile": "Reusable arrow, shard, thorn, or other physical missile flight.",
+    "thrown_object": "Reusable arcing flask, potion, bomb, rock, or carried-object throw.",
+    "elemental_orb": "Reusable elemental orb or shard driven by the normalized visual category.",
+    "energy_bolt": "Fast linear lightning or arcane energy discharge.",
+    "support_orb": "Soft travelling heal, buff, debuff, or control mote.",
+    "cone_wave": "Short expanding breath, spray, or wave emitted from the actor."
+  },
+  "impactArchetypes": {
+    "melee_strike": "Close-range weapon, claw, bite, or body-strike contact.",
+    "projectile_hit": "Compact impact used when a physical or thrown projectile lands.",
+    "elemental_burst": "Single-target elemental detonation using the visual-category palette.",
+    "area_burst": "Radial or multi-target burst centered on a tile or actor.",
+    "status_cloud": "Lingering cloud, spores, smoke, venom, or corrosive haze.",
+    "status_sigil": "Non-damaging control or debuff glyph at the target.",
+    "healing_bloom": "Healing light, restorative particles, or life-energy bloom.",
+    "aura_pulse": "Self/party buff, shield, cleanse, or stance pulse."
+  },
+  "statusOverlays": {
+    "berserk": {
+      "assetPath": "/assets/icons/originals/status/berserk.webp",
+      "fallbackAssetPath": "/assets/icons/originals/actions/buff.webp",
+      "generated": true,
+      "status": "generated"
+    },
+    "bleed": {
+      "assetPath": "/assets/abilities/status/bleed.webp",
+      "fallbackAssetPath": "/assets/icons/originals/actions/debuff.webp",
+      "generated": false,
+      "status": "missing"
+    },
+    "blind": {
+      "assetPath": "/assets/icons/originals/status/blind.webp",
+      "fallbackAssetPath": "/assets/icons/originals/actions/debuff.webp",
+      "generated": true,
+      "status": "generated"
+    },
+    "burn": {
+      "assetPath": "/assets/icons/originals/status/burn.webp",
+      "fallbackAssetPath": "/assets/icons/originals/actions/debuff.webp",
+      "generated": true,
+      "status": "generated"
+    },
+    "cleanse": {
+      "assetPath": "/assets/abilities/status/cleanse.webp",
+      "fallbackAssetPath": "/assets/icons/originals/actions/buff.webp",
+      "generated": false,
+      "status": "missing"
+    },
+    "confusion": {
+      "assetPath": "/assets/icons/originals/status/confusion.webp",
+      "fallbackAssetPath": "/assets/icons/originals/actions/debuff.webp",
+      "generated": true,
+      "status": "generated"
+    },
+    "defense_down": {
+      "assetPath": "/assets/icons/originals/status/defense_down.webp",
+      "fallbackAssetPath": "/assets/icons/originals/actions/debuff.webp",
+      "generated": true,
+      "status": "generated"
+    },
+    "defense_up": {
+      "assetPath": "/assets/icons/originals/status/defense_up.webp",
+      "fallbackAssetPath": "/assets/icons/originals/actions/buff.webp",
+      "generated": true,
+      "status": "generated"
+    },
+    "doom": {
+      "assetPath": "/assets/icons/originals/status/doom.webp",
+      "fallbackAssetPath": "/assets/icons/originals/actions/debuff.webp",
+      "generated": true,
+      "status": "generated"
+    },
+    "freeze": {
+      "assetPath": "/assets/icons/originals/status/freeze.webp",
+      "fallbackAssetPath": "/assets/icons/originals/actions/debuff.webp",
+      "generated": true,
+      "status": "generated"
+    },
+    "haste": {
+      "assetPath": "/assets/icons/originals/status/haste.webp",
+      "fallbackAssetPath": "/assets/icons/originals/actions/buff.webp",
+      "generated": true,
+      "status": "generated"
+    },
+    "invisible": {
+      "assetPath": "/assets/abilities/status/invisible.webp",
+      "fallbackAssetPath": "/assets/icons/originals/actions/buff.webp",
+      "generated": false,
+      "status": "missing"
+    },
+    "poison": {
+      "assetPath": "/assets/icons/originals/status/poison.webp",
+      "fallbackAssetPath": "/assets/icons/originals/actions/debuff.webp",
+      "generated": true,
+      "status": "generated"
+    },
+    "protect": {
+      "assetPath": "/assets/icons/originals/status/protect.webp",
+      "fallbackAssetPath": "/assets/icons/originals/actions/buff.webp",
+      "generated": true,
+      "status": "generated"
+    },
+    "regen": {
+      "assetPath": "/assets/icons/originals/status/regen.webp",
+      "fallbackAssetPath": "/assets/icons/originals/actions/buff.webp",
+      "generated": true,
+      "status": "generated"
+    },
+    "shell": {
+      "assetPath": "/assets/icons/originals/status/shell.webp",
+      "fallbackAssetPath": "/assets/icons/originals/actions/buff.webp",
+      "generated": true,
+      "status": "generated"
+    },
+    "sleep": {
+      "assetPath": "/assets/icons/originals/status/sleep.webp",
+      "fallbackAssetPath": "/assets/icons/originals/actions/debuff.webp",
+      "generated": true,
+      "status": "generated"
+    },
+    "slow": {
+      "assetPath": "/assets/icons/originals/status/slow.webp",
+      "fallbackAssetPath": "/assets/icons/originals/actions/debuff.webp",
+      "generated": true,
+      "status": "generated"
+    },
+    "strength_down": {
+      "assetPath": "/assets/icons/originals/status/strength_down.webp",
+      "fallbackAssetPath": "/assets/icons/originals/actions/debuff.webp",
+      "generated": true,
+      "status": "generated"
+    },
+    "strength_up": {
+      "assetPath": "/assets/icons/originals/status/strength_up.webp",
+      "fallbackAssetPath": "/assets/icons/originals/actions/buff.webp",
+      "generated": true,
+      "status": "generated"
+    },
+    "stun": {
+      "assetPath": "/assets/icons/originals/status/stun.webp",
+      "fallbackAssetPath": "/assets/icons/originals/actions/debuff.webp",
+      "generated": true,
+      "status": "generated"
+    },
+    "taunt": {
+      "assetPath": "/assets/abilities/status/taunt.webp",
+      "fallbackAssetPath": "/assets/icons/originals/actions/debuff.webp",
+      "generated": false,
+      "status": "missing"
+    }
+  }
+}

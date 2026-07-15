@@ -11,7 +11,11 @@ import {
   // Constants
   CHARACTER_ANIMATIONS,
   CHARACTER_TYPES,
+  ABILITY_ICON_SOURCES,
+  PLAYER_ANIMATION_ALIASES,
   ENEMY_BIOMES,
+  ENEMY_BIOME_ALIASES,
+  NPC_PRIMARY_BIOMES,
   OBSTACLE_CATEGORIES,
   ASSET_CATEGORIES,
   SIZE_PRESETS,
@@ -21,6 +25,18 @@ import {
   getCharacterAnimationPaths,
   getCharacterDirectory,
   getCharacterReferencePath,
+  getPlayerCharacterIdentity,
+  getPlayerCharacterPath,
+  getPlayerCharacterDirectory,
+  getPlayerCharacterReferencePath,
+  getPlayerCharacterPathCandidates,
+  resolvePlayerAnimationName,
+  resolveEnemyBiomeAlias,
+  getNpcVisualIdentity,
+  getNpcSpriteBiomeCandidates,
+  getNpcCharacterPathCandidates,
+  getNpcPortraitId,
+  getAbilityIconPath,
   // Obstacle function
   getObstaclePath,
   // Core path functions
@@ -61,9 +77,34 @@ describe('assetPaths constants', () => {
     });
   });
 
+  describe('ABILITY_ICON_SOURCES', () => {
+    it('keeps all ability registry source namespaces stable', () => {
+      assert.deepStrictEqual(ABILITY_ICON_SOURCES, ['player', 'monster', 'zodiac']);
+    });
+  });
+
+  describe('PLAYER_ANIMATION_ALIASES', () => {
+    it('maps the battle hit state to the authored hurt animation', () => {
+      assert.strictEqual(PLAYER_ANIMATION_ALIASES.hit, 'hurt');
+      assert.strictEqual(resolvePlayerAnimationName('hit'), 'hurt');
+      assert.strictEqual(resolvePlayerAnimationName('attack'), 'attack');
+    });
+  });
+
   describe('ENEMY_BIOMES', () => {
     it('should include all biome types', () => {
-      assert.deepStrictEqual(ENEMY_BIOMES, ['forest', 'cave', 'mountain', 'bridge', 'castle']);
+      assert.deepStrictEqual(ENEMY_BIOMES, ['forest', 'cave', 'mountain', 'bridge', 'castle', 'palace']);
+    });
+  });
+
+  describe('NPC visual identity registries', () => {
+    it('keeps primary homes and world-node aliases immutable', () => {
+      assert.equal(Object.isFrozen(NPC_PRIMARY_BIOMES), true);
+      assert.equal(Object.isFrozen(ENEMY_BIOME_ALIASES), true);
+      assert.strictEqual(NPC_PRIMARY_BIOMES.dark_knight, 'palace');
+      assert.strictEqual(NPC_PRIMARY_BIOMES.skeleton_warrior, 'cave');
+      assert.strictEqual(resolveEnemyBiomeAlias('guild'), 'castle');
+      assert.strictEqual(resolveEnemyBiomeAlias('unknown-zone'), 'forest');
     });
   });
 
@@ -145,6 +186,85 @@ describe('assetPaths constants', () => {
   });
 });
 
+describe('getAbilityIconPath', () => {
+  it('builds source-scoped canonical ability paths', () => {
+    assert.strictEqual(
+      getAbilityIconPath('Alchemical_Warfare', { source: 'player' }),
+      '/assets/abilities/icons/player/alchemical_warfare.webp'
+    );
+    assert.strictEqual(
+      getAbilityIconPath('dreamwave', { source: 'zodiac' }),
+      '/assets/abilities/icons/zodiac/dreamwave.webp'
+    );
+  });
+
+  it('rejects malformed ids and unknown sources', () => {
+    assert.strictEqual(getAbilityIconPath('../escape', { source: 'player' }), null);
+    assert.strictEqual(getAbilityIconPath('fireball', { source: 'other' }), null);
+  });
+});
+
+describe('canonical NPC asset identity', () => {
+  it('prefers the nested DTO identity over legacy aliases', () => {
+    assert.deepStrictEqual(getNpcVisualIdentity({
+      visualIdentity: {
+        kind: 'npc',
+        visualId: 'Guildmaster_Wizard',
+        primaryBiome: 'guild'
+      },
+      enemyId: 'wrong_legacy_id',
+      biome: 'mountain'
+    }), {
+      visualId: 'guildmaster_wizard',
+      primaryBiome: 'guild'
+    });
+  });
+
+  it('keeps a registered multi-zone NPC in its canonical art home', () => {
+    assert.deepStrictEqual(getNpcVisualIdentity({
+      enemyId: 'dark_knight',
+      primaryBiome: 'castle',
+      biome: 'cave'
+    }), {
+      visualId: 'dark_knight',
+      primaryBiome: 'palace'
+    });
+    assert.deepStrictEqual(getNpcSpriteBiomeCandidates('dark_knight', 'castle'), [
+      'palace', 'castle'
+    ]);
+  });
+
+  it('uses DTO primary biome and its alias for special NPCs outside the registry', () => {
+    const guildmaster = {
+      visualIdentity: {
+        visualId: 'guildmaster_wizard',
+        primaryBiome: 'guild'
+      },
+      biome: 'mountain'
+    };
+    assert.deepStrictEqual(getNpcSpriteBiomeCandidates(guildmaster, 'mountain'), [
+      'guild', 'castle', 'mountain'
+    ]);
+    assert.strictEqual(getNpcPortraitId(guildmaster), 'enemy_guildmaster_wizard');
+    assert.deepStrictEqual(getNpcCharacterPathCandidates(guildmaster, {
+      requestedBiome: 'mountain',
+      animations: ['dead', 'death']
+    }), [
+      '/assets/characters/enemies/guild/guildmaster_wizard/guildmaster_wizard_dead.webp',
+      '/assets/characters/enemies/guild/guildmaster_wizard/guildmaster_wizard_death.webp',
+      '/assets/characters/enemies/castle/guildmaster_wizard/guildmaster_wizard_dead.webp',
+      '/assets/characters/enemies/castle/guildmaster_wizard/guildmaster_wizard_death.webp',
+      '/assets/characters/enemies/mountain/guildmaster_wizard/guildmaster_wizard_dead.webp',
+      '/assets/characters/enemies/mountain/guildmaster_wizard/guildmaster_wizard_death.webp'
+    ]);
+  });
+
+  it('normalizes every supported legacy sprite-id spelling', () => {
+    assert.strictEqual(getNpcPortraitId({ sprite_id: 'Gray Wolf' }), 'enemy_gray_wolf');
+    assert.strictEqual(getNpcPortraitId({ spriteId: 'bridge-bandit' }), 'enemy_bridge_bandit');
+  });
+});
+
 // =============================================================================
 // Character Path Tests
 // =============================================================================
@@ -180,6 +300,18 @@ describe('getCharacterPath', () => {
     assert.strictEqual(path, '/assets/characters/player/warrior/warrior_idle.png');
   });
 
+  it('should opt into portrait-matched paths when race and gender are supplied', () => {
+    const path = getCharacterPath('martial_artist', {
+      race: 'Elf',
+      gender: 'Female',
+      animation: 'hit'
+    });
+    assert.strictEqual(
+      path,
+      '/assets/characters/player/elf/female/martial_artist/elf_female_martial_artist_hurt.webp'
+    );
+  });
+
   it('should throw error for enemy without biome', () => {
     assert.throws(() => {
       getCharacterPath('goblin', { type: 'enemy' });
@@ -191,6 +323,76 @@ describe('getCharacterPath', () => {
       const path = getCharacterPath('warrior', { animation });
       assert.ok(path.includes(`warrior_${animation}.webp`), `Should include ${animation}`);
     }
+  });
+});
+
+describe('portrait-matched player character paths', () => {
+  const character = { race: 'High Elf', gender: 'Other', class: 'Martial Artist' };
+
+  it('uses the same race-gender-class identity as portrait cards', () => {
+    assert.deepStrictEqual(getPlayerCharacterIdentity(character), {
+      id: 'high_elf_other_martial_artist',
+      race: 'high_elf',
+      gender: 'other',
+      className: 'martial_artist'
+    });
+  });
+
+  it('builds canonical variant paths and directories', () => {
+    assert.strictEqual(
+      getPlayerCharacterDirectory(character),
+      '/assets/characters/player/high_elf/other/martial_artist'
+    );
+    assert.strictEqual(
+      getPlayerCharacterPath(character, { animation: 'walk' }),
+      '/assets/characters/player/high_elf/other/martial_artist/high_elf_other_martial_artist_walk.webp'
+    );
+    assert.strictEqual(
+      getPlayerCharacterReferencePath(character),
+      '/assets/characters/player/high_elf/other/martial_artist/high_elf_other_martial_artist_reference.png'
+    );
+  });
+
+  it('keeps identity-aware runtime lookups on the canonical variant', () => {
+    assert.deepStrictEqual(getPlayerCharacterPathCandidates(character, { animation: 'hit' }), [
+      '/assets/characters/player/high_elf/other/martial_artist/high_elf_other_martial_artist_hurt.webp'
+    ]);
+  });
+
+  it('reads an authoritative nested battle identity before stale top-level aliases', () => {
+    assert.deepStrictEqual(getPlayerCharacterIdentity({
+      race: 'human',
+      gender: 'male',
+      class: 'warrior',
+      visualIdentity: {
+        kind: 'player',
+        race: 'Dwarf',
+        gender: 'Other',
+        class: 'Wizard'
+      }
+    }), {
+      id: 'dwarf_other_wizard',
+      race: 'dwarf',
+      gender: 'other',
+      className: 'wizard'
+    });
+  });
+
+  it('retains an explicit migration-only class fallback', () => {
+    assert.deepStrictEqual(getPlayerCharacterPathCandidates(character, {
+      animation: 'hit',
+      includeLegacyFallback: true
+    }), [
+      '/assets/characters/player/high_elf/other/martial_artist/high_elf_other_martial_artist_hurt.webp',
+      '/assets/characters/player/martial_artist/martial_artist_hurt.webp'
+    ]);
+  });
+
+  it('uses a completed death strip as the final-pose fallback for dead', () => {
+    assert.deepStrictEqual(getPlayerCharacterPathCandidates(character, { animation: 'dead' }), [
+      '/assets/characters/player/high_elf/other/martial_artist/high_elf_other_martial_artist_dead.webp',
+      '/assets/characters/player/high_elf/other/martial_artist/high_elf_other_martial_artist_death.webp'
+    ]);
   });
 });
 
@@ -244,6 +446,13 @@ describe('getCharacterDirectory', () => {
       getCharacterDirectory('goblin', { type: 'enemy' });
     }, /biome required/);
   });
+
+  it('should return a portrait-matched player directory when identity fields are supplied', () => {
+    assert.strictEqual(
+      getCharacterDirectory('wizard', { race: 'orc', gender: 'male' }),
+      '/assets/characters/player/orc/male/wizard'
+    );
+  });
 });
 
 describe('getCharacterReferencePath', () => {
@@ -255,6 +464,13 @@ describe('getCharacterReferencePath', () => {
   it('should return enemy reference path', () => {
     const path = getCharacterReferencePath('goblin', { type: 'enemy', biome: 'forest' });
     assert.strictEqual(path, '/assets/characters/enemies/forest/goblin/goblin_reference.png');
+  });
+
+  it('should return a portrait-matched player reference path', () => {
+    assert.strictEqual(
+      getCharacterReferencePath('wizard', { race: 'orc', gender: 'male' }),
+      '/assets/characters/player/orc/male/wizard/orc_male_wizard_reference.png'
+    );
   });
 });
 

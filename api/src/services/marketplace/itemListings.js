@@ -92,6 +92,7 @@ export async function getItemListings(client, itemTemplateId) {
       characterItemId: row.character_item_id,
       generatedName: mods.generatedName || row.template_name,
       templateName: row.template_name,
+      itemType: row.item_type,
       rarity: mods.rarity || 'common',
       material: mods.material || null,
       baseStats: mods.baseStats || row.template_stats || {},

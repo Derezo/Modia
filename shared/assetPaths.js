@@ -36,11 +36,70 @@ export const CHARACTER_ANIMATIONS = [
  */
 export const CHARACTER_TYPES = ['player', 'enemy'];
 
+/** Canonical battle ability registry sources. */
+export const ABILITY_ICON_SOURCES = Object.freeze(['player', 'monster', 'zodiac']);
+
+/**
+ * Runtime animation names do not always match the generation metadata names.
+ * Player damage reactions are authored as `hurt`, while battle state uses
+ * `hit`. Keep that translation beside the canonical path helpers so every
+ * consumer resolves the same file.
+ */
+export const PLAYER_ANIMATION_ALIASES = Object.freeze({
+  hit: 'hurt'
+});
+
 /**
  * Enemy biomes for path organization
  * @type {string[]}
  */
-export const ENEMY_BIOMES = ['forest', 'cave', 'mountain', 'bridge', 'castle'];
+export const ENEMY_BIOMES = ['forest', 'cave', 'mountain', 'bridge', 'castle', 'palace'];
+
+/**
+ * Runtime node types do not always have their own enemy-art directory. Keep
+ * those aliases beside the path builder so API DTOs and every renderer agree
+ * on the same fallback rather than maintaining zone-specific lookup tables.
+ */
+export const ENEMY_BIOME_ALIASES = Object.freeze({
+  forest: 'forest',
+  cave: 'cave',
+  mountain: 'mountain',
+  bridge: 'bridge',
+  castle: 'castle',
+  palace: 'palace',
+  arena: 'castle',
+  guild: 'castle',
+  village: 'forest',
+  city: 'forest'
+});
+
+/**
+ * Canonical art home for every active encounter NPC. A unit may encounter the
+ * party in another zone, but its visual identity must continue to resolve from
+ * this directory first. Explicit DTO primary biomes cover special NPCs (for
+ * example guildmasters) that are not part of the encounter-template registry.
+ */
+export const NPC_PRIMARY_BIOMES = Object.freeze({
+  goblin_warrior: 'forest',
+  gray_wolf: 'forest',
+  forest_slime: 'forest',
+  cave_bat: 'cave',
+  giant_spider: 'forest',
+  skeleton_warrior: 'cave',
+  stone_golem: 'cave',
+  mountain_troll: 'mountain',
+  troll_shaman: 'mountain',
+  harpy: 'mountain',
+  bridge_bandit: 'bridge',
+  bandit_captain: 'bridge',
+  bridge_troll: 'bridge',
+  dark_knight: 'palace',
+  shadow_assassin: 'palace',
+  palace_guard: 'palace'
+});
+
+// Backwards-compatible spelling used by the battle runtime.
+export const ENEMY_PRIMARY_BIOMES = NPC_PRIMARY_BIOMES;
 
 /**
  * Obstacle categories for path organization
@@ -90,6 +149,22 @@ export const ASSET_CATEGORIES = ['tiles', 'portraits', 'items', 'icons', 'nodes'
  * @type {string}
  */
 const ASSETS_BASE = '/assets';
+
+/**
+ * Get the canonical icon path for an active battle ability.
+ * Ability icons are source-scoped because player, monster, and zodiac
+ * definition sets may legitimately reuse an identifier.
+ *
+ * @returns {string|null} A safe public URL, or null for malformed components.
+ */
+export function getAbilityIconPath(id, options = {}) {
+  const normalizedId = String(id || '').trim().toLowerCase();
+  const source = String(options.source || 'player').trim().toLowerCase();
+  if (!/^[a-z0-9_]+$/.test(normalizedId) || !ABILITY_ICON_SOURCES.includes(source)) {
+    return null;
+  }
+  return `${ASSETS_BASE}/abilities/icons/${source}/${normalizedId}.webp`;
+}
 
 /**
  * Validates that a category is supported
@@ -245,7 +320,264 @@ export function getCharacterPath(id, options = {}) {
     if (!biome) throw new Error('biome required for enemy characters');
     return `${ASSETS_BASE}/characters/enemies/${biome}/${id}/${id}_${animation}.${extension}`;
   }
+
+  // Supplying race + gender opts into the portrait-matched player layout.
+  // Calls that only pass a class retain the legacy class-archetype path.
+  if (options.race && options.gender) {
+    return getPlayerCharacterPath({
+      race: options.race,
+      gender: options.gender,
+      class: options.class || id
+    }, { animation, extension });
+  }
+
   return `${ASSETS_BASE}/characters/player/${id}/${id}_${animation}.${extension}`;
+}
+
+/**
+ * Normalize a character identity token for use in metadata IDs and paths.
+ * @param {unknown} value
+ * @returns {string}
+ */
+function normalizeCharacterToken(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_')
+    .replace(/[^a-z0-9_]/g, '');
+}
+
+/**
+ * Map a world node/encounter biome to an available enemy-art directory.
+ * Unknown node types retain the historical forest fallback.
+ * @param {unknown} biome
+ * @returns {string}
+ */
+export function resolveEnemyBiomeAlias(biome = 'forest') {
+  const normalized = normalizeCharacterToken(biome) || 'forest';
+  return ENEMY_BIOME_ALIASES[normalized] || 'forest';
+}
+
+/**
+ * Read the canonical NPC art identity from either the current nested DTO or
+ * any supported legacy sprite-id alias. The registry wins for known encounter
+ * enemies; otherwise an explicit DTO primary biome wins over the encounter
+ * zone supplied as a migration fallback.
+ *
+ * @param {Object} unit
+ * @param {Object} options
+ * @param {string} [options.fallbackBiome='forest']
+ * @returns {{visualId: string|null, primaryBiome: string}}
+ */
+export function getNpcVisualIdentity(unit = {}, options = {}) {
+  const source = unit && typeof unit === 'object' ? unit : { enemyId: unit };
+  const nested = source.visualIdentity && typeof source.visualIdentity === 'object'
+    ? source.visualIdentity
+    : {};
+  const visualId = normalizeCharacterToken(
+    nested.visualId ?? source.visualId ?? source.enemyId ?? source.sprite_id ?? source.spriteId
+  ) || null;
+  const configuredPrimary = normalizeCharacterToken(
+    nested.primaryBiome ?? source.primaryBiome
+  );
+  const encounterFallback = normalizeCharacterToken(
+    source.biome ?? source.encounterBiome ?? options.fallbackBiome ?? 'forest'
+  ) || 'forest';
+
+  return {
+    visualId,
+    primaryBiome: (visualId && NPC_PRIMARY_BIOMES[visualId])
+      || configuredPrimary
+      || encounterFallback
+  };
+}
+
+/**
+ * Return canonical-first enemy-art directories without duplicates. Both the
+ * canonical and requested node types include their runtime aliases so special
+ * locations such as guild and arena can share the castle family safely.
+ *
+ * @param {Object|string} unitOrVisualId
+ * @param {string} [requestedBiome='forest']
+ * @returns {string[]}
+ */
+export function getNpcSpriteBiomeCandidates(unitOrVisualId, requestedBiome = 'forest') {
+  const source = unitOrVisualId && typeof unitOrVisualId === 'object'
+    ? unitOrVisualId
+    : { enemyId: unitOrVisualId, biome: requestedBiome };
+  const identity = getNpcVisualIdentity(source, { fallbackBiome: requestedBiome });
+  const normalizedRequested = normalizeCharacterToken(requestedBiome) || 'forest';
+
+  return [...new Set([
+    identity.primaryBiome,
+    resolveEnemyBiomeAlias(identity.primaryBiome),
+    normalizedRequested,
+    resolveEnemyBiomeAlias(normalizedRequested)
+  ].filter(Boolean))];
+}
+
+/**
+ * Build canonical-first sprite paths for an NPC identity. This is the runtime
+ * counterpart to getCharacterPath(): generation may deliberately author a
+ * biome variant, while consumers should always begin from canonical identity.
+ *
+ * @param {Object|string} unitOrVisualId
+ * @param {Object} options
+ * @param {string} [options.requestedBiome='forest']
+ * @param {string} [options.animation='idle']
+ * @param {string[]} [options.animations]
+ * @param {string} [options.extension='webp']
+ * @returns {string[]}
+ */
+export function getNpcCharacterPathCandidates(unitOrVisualId, options = {}) {
+  const requestedBiome = options.requestedBiome
+    ?? (unitOrVisualId && typeof unitOrVisualId === 'object'
+      ? unitOrVisualId.biome ?? unitOrVisualId.primaryBiome
+      : null)
+    ?? 'forest';
+  const source = unitOrVisualId && typeof unitOrVisualId === 'object'
+    ? unitOrVisualId
+    : { enemyId: unitOrVisualId, biome: requestedBiome };
+  const { visualId } = getNpcVisualIdentity(source, { fallbackBiome: requestedBiome });
+  if (!visualId) return [];
+
+  const animations = (Array.isArray(options.animations) && options.animations.length > 0
+    ? options.animations
+    : [options.animation || 'idle'])
+    .map(animation => normalizeCharacterToken(animation) || 'idle');
+  const extension = normalizeCharacterToken(options.extension || 'webp') || 'webp';
+  const paths = [];
+
+  for (const biome of getNpcSpriteBiomeCandidates(source, requestedBiome)) {
+    for (const animation of animations) {
+      paths.push(getCharacterPath(visualId, {
+        type: 'enemy',
+        biome,
+        animation,
+        extension
+      }));
+    }
+  }
+
+  return paths;
+}
+
+/**
+ * Build the portrait identifier used by all NPC cards, turn-order entries, and
+ * battle summaries from the same canonical visual id.
+ * @param {Object} unit
+ * @param {string} [fallback='unknown']
+ * @returns {string}
+ */
+export function getNpcPortraitId(unit = {}, fallback = 'unknown') {
+  const { visualId } = getNpcVisualIdentity(unit);
+  const fallbackId = normalizeCharacterToken(fallback) || 'unknown';
+  return `enemy_${visualId || fallbackId}`;
+}
+
+/**
+ * Build the canonical player visual identity shared with portrait cards.
+ * @param {Object} character - Object with race, gender, and class properties
+ * @returns {{id: string, race: string, gender: string, className: string}}
+ */
+export function getPlayerCharacterIdentity(character = {}) {
+  const source = character && typeof character === 'object'
+    ? character
+    : { class: character };
+  const nested = source.visualIdentity?.kind === 'player'
+    ? source.visualIdentity
+    : {};
+  const race = normalizeCharacterToken(nested.race || source.race || 'human');
+  const gender = normalizeCharacterToken(nested.gender || source.gender || 'other');
+  const className = normalizeCharacterToken(
+    nested.class || nested.className || source.class || source.characterClass || 'warrior'
+  );
+
+  return {
+    id: `${race}_${gender}_${className}`,
+    race,
+    gender,
+    className
+  };
+}
+
+/**
+ * Resolve a logical player animation name to its generated asset name.
+ * @param {string} animation
+ * @returns {string}
+ */
+export function resolvePlayerAnimationName(animation = 'idle') {
+  const normalized = normalizeCharacterToken(animation) || 'idle';
+  return PLAYER_ANIMATION_ALIASES[normalized] || normalized;
+}
+
+/**
+ * Get the portrait-matched player sprite path.
+ *
+ * Pattern:
+ * /assets/characters/player/{race}/{gender}/{class}/
+ *   {race}_{gender}_{class}_{animation}.webp
+ *
+ * @param {Object} character - Object with race, gender, and class properties
+ * @param {Object} options
+ * @param {string} [options.animation='idle']
+ * @param {string} [options.extension='webp']
+ * @returns {string}
+ */
+export function getPlayerCharacterPath(character, options = {}) {
+  const { animation = 'idle', extension = 'webp' } = options;
+  const identity = getPlayerCharacterIdentity(character);
+  const assetAnimation = resolvePlayerAnimationName(animation);
+  return `${ASSETS_BASE}/characters/player/${identity.race}/${identity.gender}/${identity.className}/${identity.id}_${assetAnimation}.${extension}`;
+}
+
+/**
+ * Get the canonical directory for one portrait-matched player variant.
+ * @param {Object} character
+ * @returns {string}
+ */
+export function getPlayerCharacterDirectory(character) {
+  const identity = getPlayerCharacterIdentity(character);
+  return `${ASSETS_BASE}/characters/player/${identity.race}/${identity.gender}/${identity.className}`;
+}
+
+/**
+ * Get the full-body generation reference for a player variant.
+ * @param {Object} character
+ * @returns {string}
+ */
+export function getPlayerCharacterReferencePath(character) {
+  const identity = getPlayerCharacterIdentity(character);
+  return `${getPlayerCharacterDirectory(character)}/${identity.id}_reference.png`;
+}
+
+/**
+ * Return player sprite candidates without crossing visual identities. An
+ * object represents a specific race/gender/class identity, so the default is
+ * deliberately strict now that canonical variant coverage is complete. A
+ * legacy class-only fallback can still be requested explicitly by migration
+ * tooling; runtime callers should pass a class string when they truly want the
+ * old archetype artwork.
+ * @param {Object} character
+ * @param {Object} options
+ * @returns {string[]}
+ */
+export function getPlayerCharacterPathCandidates(character, options = {}) {
+  const identity = getPlayerCharacterIdentity(character);
+  const animation = resolvePlayerAnimationName(options.animation || 'idle');
+  const extension = options.extension || 'webp';
+  const animationCandidates = animation === 'dead' ? ['dead', 'death'] : [animation];
+  const canonical = animationCandidates.map(candidate =>
+    getPlayerCharacterPath(character, { animation: candidate, extension })
+  );
+  if (!options.includeLegacyFallback) return canonical;
+
+  return [
+    ...canonical,
+    ...animationCandidates.map(candidate =>
+      getCharacterPath(identity.className, { animation: candidate, extension })
+    )
+  ];
 }
 
 /**
@@ -297,6 +629,13 @@ export function getCharacterDirectory(id, options = {}) {
     if (!biome) throw new Error('biome required for enemy characters');
     return `${ASSETS_BASE}/characters/enemies/${biome}/${id}`;
   }
+  if (options.race && options.gender) {
+    return getPlayerCharacterDirectory({
+      race: options.race,
+      gender: options.gender,
+      class: options.class || id
+    });
+  }
   return `${ASSETS_BASE}/characters/player/${id}`;
 }
 
@@ -314,6 +653,13 @@ export function getCharacterDirectory(id, options = {}) {
  * // => '/assets/characters/player/warrior/warrior_reference.png'
  */
 export function getCharacterReferencePath(id, options = {}) {
+  if (options.type !== 'enemy' && options.type !== 'enemies' && options.race && options.gender) {
+    return getPlayerCharacterReferencePath({
+      race: options.race,
+      gender: options.gender,
+      class: options.class || id
+    });
+  }
   const dir = getCharacterDirectory(id, options);
   return `${dir}/${id}_reference.png`;
 }

@@ -80,6 +80,11 @@ function loadCategoryAssets(category) {
       if (manifest.categoryFiles.players) {
         files.push(manifest.categoryFiles.players);
       }
+      // Portrait-matched race/gender/class variants are generated separately
+      // from the legacy class archetypes.
+      if (manifest.categoryFiles.playerVariants) {
+        files.push(manifest.categoryFiles.playerVariants);
+      }
       // Add enemy biome files - enemies is an object mapping biome -> file path
       if (manifest.categoryFiles.enemies && typeof manifest.categoryFiles.enemies === 'object') {
         files.push(...Object.values(manifest.categoryFiles.enemies));
@@ -102,7 +107,7 @@ function loadCategoryAssets(category) {
     }
 
     // Get assets from the appropriate field
-    const assetArray = data.tiles || data.portraits || data.enemies || data.players || data.items || data.icons || data.nodes || data.obstacles || data.overlays || [];
+    const assetArray = data.tiles || data.portraits || data.enemies || data.variants || data.players || data.items || data.icons || data.nodes || data.obstacles || data.overlays || [];
 
     // Extract subcategory from file's top-level category field (for icons, items, etc.)
     // e.g., resources.json has "category": "resources" at the top level
@@ -584,7 +589,7 @@ function updateAssetStatus(category, sourceFile, assetId, updates) {
   }
 
   // Find the asset array (different names in different files)
-  const assetArray = data.tiles || data.portraits || data.enemies || data.players || data.items || data.icons || data.nodes || data.obstacles || data.overlays;
+  const assetArray = data.tiles || data.portraits || data.enemies || data.variants || data.players || data.items || data.icons || data.nodes || data.obstacles || data.overlays;
 
   if (!assetArray) {
     const error = `No asset array found in ${category}/${sourceFile}`;
@@ -847,20 +852,59 @@ function loadCharacterMetadata(options = {}) {
   const loadPlayer = !options.type || options.type === 'player' || options.type === 'players';
   const loadEnemies = !options.type || options.type === 'enemies' || options.type === 'enemy';
 
-  // Load player characters from players.json
+  // Load player character templates and portrait-matched variants.
   if (loadPlayer) {
     const playerData = loadMetadata(getMetadataPath('characters/players.json'));
-    if (playerData && playerData.players) {
-      for (const char of playerData.players) {
-        // Apply class filter
-        if (options.class && char.class !== options.class) continue;
-        // Apply id filter
-        if (options.id && char.id !== options.id) continue;
+    const playerTemplates = playerData?.players || [];
+    const templateByClass = new Map(playerTemplates.map(template => [template.class, template]));
+    const requestedTemplate = options.id && playerTemplates.some(template => template.id === options.id);
+    const loadArchetypes = options.playerSet === 'archetypes' || requestedTemplate || !manifest.categoryFiles?.playerVariants;
 
-        char._type = 'player';
-        char._sourceFile = 'players.json';
-        char._classTraits = playerData.classTraits?.[char.class] || {};
-        char._stylePrefix = playerData.stylePrefix || '';
+    // The default player set is the complete 300-entry variant registry. Each
+    // entry inherits animation/motion metadata from its class archetype while
+    // retaining the exact portrait-card visual identity.
+    if (!loadArchetypes && manifest.categoryFiles?.playerVariants) {
+      const variantData = loadMetadata(getMetadataPath(`characters/${manifest.categoryFiles.playerVariants}`));
+      const portraitData = loadMetadata(getMetadataPath('portraits/combinations.json'));
+
+      for (const variant of variantData?.variants || []) {
+        if (options.class && variant.class !== options.class) continue;
+        if (options.id && variant.id !== options.id) continue;
+
+        const template = templateByClass.get(variant.class);
+        if (!template) continue;
+
+        const char = {
+          ...variant,
+          animations: variant.animations || template.animations,
+          animationPrompts: template.animationPrompts,
+          frameDescriptionOverrides: variant.frameDescriptionOverrides || template.frameDescriptionOverrides || null,
+          _type: 'player',
+          _variant: true,
+          _sourceFile: manifest.categoryFiles.playerVariants,
+          _classTraits: playerData.classTraits?.[variant.class] || {},
+          _raceTraits: portraitData?.raceTraits?.[variant.race] || '',
+          _genderTraits: portraitData?.genderTraits?.[variant.gender] || '',
+          _stylePrefix: playerData.stylePrefix || ''
+        };
+        result.characters.push(char);
+        result.byId[char.id] = char;
+      }
+    }
+
+    if (loadArchetypes) {
+      for (const template of playerTemplates) {
+        if (options.class && template.class !== options.class) continue;
+        if (options.id && template.id !== options.id) continue;
+
+        const char = {
+          ...template,
+          _type: 'player',
+          _variant: false,
+          _sourceFile: 'players.json',
+          _classTraits: playerData.classTraits?.[template.class] || {},
+          _stylePrefix: playerData.stylePrefix || ''
+        };
         result.characters.push(char);
         result.byId[char.id] = char;
       }

@@ -28,6 +28,8 @@
 
 const path = require('path');
 const fs = require('fs');
+const { pathToFileURL } = require('url');
+const sharp = require('sharp');
 const {
   loadMetadata,
   saveMetadata,
@@ -58,6 +60,11 @@ const {
 } = require('./lib');
 
 const {
+  VALID_LORA_MODELS,
+  VALID_SD15_LORA_MODELS
+} = require('./lib/parseArgs');
+
+const {
   getCharacterOutputPath,
   getCharacterReferencePath,
   getCharacterDirectoryPath,
@@ -69,17 +76,20 @@ const PROJECT_ROOT = getProjectRoot();
 const METADATA_DIR = getMetadataDir();
 const OUTPUT_BASE_DIR = path.join(PROJECT_ROOT, 'frontend/public/assets/characters');
 const TEMP_DIR = path.join(PROJECT_ROOT, 'ai-images-temp/characters');
+const PREPARED_REFERENCE_DIR = path.join(TEMP_DIR, 'references');
+const REJECTED_SPRITE_DIR = path.join(PROJECT_ROOT, 'ai-images-temp/rejected/characters');
 
 // Frame configuration
 const FRAME_COUNT = 8;
 const FRAME_SIZE = 64;
+const VALID_GENERATION_MODES = ['flux', 'sd15'];
 
 /**
  * Parse command line arguments
  */
-function parseArgs() {
+function parseArgs(argv = process.argv.slice(2)) {
   // Support --id as an alias for --key
-  const args = process.argv.slice(2);
+  const args = [...argv];
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--id' && i + 1 < args.length) {
       // Convert --id to --key for applyKeyFilter compatibility
@@ -87,7 +97,7 @@ function parseArgs() {
     }
   }
 
-  return parseBaseArgs(process.argv.slice(2), {
+  return parseBaseArgs(args, {
     extraFlags: {
       type: { flag: '--type', type: 'string', default: null },
       class: { flag: '--class', type: 'string', default: null },
@@ -95,15 +105,132 @@ function parseArgs() {
       id: { flag: '--id', type: 'string', default: null },
       animation: { flag: '--animation', type: 'string', default: null },
       // SD1.5 animation generation mode
-      mode: { flag: '--mode', type: 'string', default: 'flux' },
-      controlnetWeight: { flag: '--controlnet-weight', type: 'number', default: 0.7 },
-      ipadapterWeight: { flag: '--ipadapter-weight', type: 'number', default: 0.4 },
+      mode: { flag: '--mode', type: 'string', default: null },
+      controlnetWeight: { flag: '--controlnet-weight', type: 'number', default: null },
+      ipadapterWeight: { flag: '--ipadapter-weight', type: 'number', default: null },
       reference: { flag: '--reference', type: 'string', default: null },
       referenceOnly: { flag: '--reference-only', type: 'boolean', default: false },
       referencePose: { flag: '--reference-pose', type: 'string', default: 'idle' },
       autoReference: { flag: '--auto-reference', type: 'boolean', default: false }
     }
   });
+}
+
+/**
+ * Return the first value that is neither null nor undefined.
+ */
+function firstConfiguredValue(...values) {
+  return values.find(value => value !== null && value !== undefined);
+}
+
+/**
+ * Resolve the generation mode for one character.
+ *
+ * An explicit CLI mode always wins. Without one, portrait-matched player
+ * variants use the identity-preserving SD1.5 pipeline while legacy player
+ * archetypes and enemies keep their historical Flux behavior.
+ */
+function resolveGenerationMode(character, explicitMode = null) {
+  if (explicitMode !== null && explicitMode !== undefined) {
+    if (!VALID_GENERATION_MODES.includes(explicitMode)) {
+      throw new Error(
+        `Invalid generation mode '${explicitMode}'. Valid modes: ${VALID_GENERATION_MODES.join(', ')}`
+      );
+    }
+    return explicitMode;
+  }
+
+  return character?._type === 'player' && character?._variant === true
+    ? 'sd15'
+    : 'flux';
+}
+
+/**
+ * Fail before generation if a LoRA belongs to the wrong model family.
+ */
+function validateLoraForMode(loraModel, mode, usage, characterId = 'unknown') {
+  const validModels = mode === 'sd15' ? VALID_SD15_LORA_MODELS : VALID_LORA_MODELS;
+  const familyName = mode === 'sd15' ? 'SD1.5' : 'Flux';
+
+  if (!loraModel) {
+    throw new Error(
+      `No ${familyName} ${usage} LoRA configured for character '${characterId}'. ` +
+      `Valid ${familyName} LoRAs: ${validModels.join(', ')}`
+    );
+  }
+
+  if (!validModels.includes(loraModel)) {
+    throw new Error(
+      `${familyName} ${usage} LoRA '${loraModel}' for character '${characterId}' is incompatible ` +
+      `with ${familyName} generation. Valid ${familyName} LoRAs: ${validModels.join(', ')}`
+    );
+  }
+}
+
+function validateGuidanceWeight(weight, name, characterId) {
+  if (typeof weight !== 'number' || !Number.isFinite(weight) || weight < 0 || weight > 1) {
+    throw new Error(
+      `${name} for character '${characterId}' must be a number between 0 and 1; got ${weight}`
+    );
+  }
+}
+
+/**
+ * Resolve all mode-specific settings for one character. This helper is pure
+ * apart from the legacy Flux manifest lookup performed by getEffectiveLoraModel.
+ */
+function resolveCharacterGenerationConfig(character, options = {}, characterManifest = {}) {
+  const characterId = character?.id || character?.class || 'unknown';
+  const mode = resolveGenerationMode(character, options.mode);
+
+  if (mode === 'flux') {
+    const loraModel = options.lora || getEffectiveLoraModel(character, 'characters') || 'v1';
+    validateLoraForMode(loraModel, mode, 'animation', characterId);
+    return { mode, loraModel };
+  }
+
+  const variantConfig = character?.sd15Config || {};
+  // Canonical player art is deterministic. SD1.5 settings now live under the
+  // explicitly optional staged-candidate block; retain the legacy lookup so
+  // older manifests can still stage candidates without migration downtime.
+  const legacyManifestDefaults = characterManifest?.generationDefaults?.sd15 || {};
+  const stagedCandidateDefaults = characterManifest?.generationDefaults?.stagedCandidate?.diffusion?.sd15 || {};
+  const manifestDefaults = { ...legacyManifestDefaults, ...stagedCandidateDefaults };
+  const controlnetWeight = firstConfiguredValue(
+    options.controlnetWeight,
+    variantConfig.controlnetWeight,
+    manifestDefaults.controlnetWeight
+  );
+  const ipadapterWeight = firstConfiguredValue(
+    options.ipadapterWeight,
+    variantConfig.ipadapterWeight,
+    manifestDefaults.ipadapterWeight
+  );
+  const referenceLoraModel = firstConfiguredValue(
+    options.lora,
+    variantConfig.referenceLoraModel,
+    manifestDefaults.referenceLoraModel,
+    manifestDefaults.loraModel
+  );
+  const animationLoraModel = firstConfiguredValue(
+    options.lora,
+    variantConfig.animationLoraModel,
+    manifestDefaults.animationLoraModel,
+    manifestDefaults.loraModel
+  );
+
+  validateGuidanceWeight(controlnetWeight, 'ControlNet weight', characterId);
+  validateGuidanceWeight(ipadapterWeight, 'IP-Adapter weight', characterId);
+  validateLoraForMode(referenceLoraModel, mode, 'reference', characterId);
+  validateLoraForMode(animationLoraModel, mode, 'animation', characterId);
+
+  return {
+    mode,
+    controlnetWeight,
+    ipadapterWeight,
+    referenceLoraModel,
+    animationLoraModel
+  };
 }
 
 /**
@@ -139,22 +266,30 @@ Options:
   --quiet, -q         Suppress all output except errors
   --delay <ms>        Delay between requests in milliseconds (default: 2000)
   --lora <model>      LoRA model override:
-                        v1 - Flat 2D style (GRPZA trigger) [default for characters]
+                        Flux: v1 - Flat 2D style (GRPZA trigger)
                         v2 - Textured/isometric style (wbgmsst trigger)
                         modern-pixel - Modern pixel art
                         retro-pixel - Classic 8-bit pixel art
+                        SD1.5 models: pixel-art-xl, 16-bit-pixel,
+                        all-in-one-pixel, retro-game-art, cps2-pixel-art
+                        Must match the selected generation mode's model family
   --help, -h          Show this help message
 
 SD1.5 Animation Mode Options:
-  --mode <flux|sd15>          Generation mode (default: flux)
-                                flux - Frame-by-frame Flux generation (current default)
+  --mode <flux|sd15>          Explicit generation mode override
+                                If omitted: portrait-matched player variants use
+                                SD1.5; legacy player classes and enemies use Flux
+                                flux - Frame-by-frame Flux generation
                                 sd15 - SD1.5 with ControlNet pose + IP-Adapter
-  --controlnet-weight <0-1>   ControlNet pose guidance weight (default: 0.7)
+  --controlnet-weight <0-1>   ControlNet pose guidance override
+                                Otherwise resolved from character/manifest metadata
                                 Higher = stricter pose adherence
-  --ipadapter-weight <0-1>    IP-Adapter reference weight (default: 0.6)
+  --ipadapter-weight <0-1>    IP-Adapter reference weight override
+                                Otherwise resolved from character/manifest metadata
                                 Higher = more style consistency with reference
   --reference <path>          Path to reference image for style consistency
-                                If not provided, generates one automatically
+                                Otherwise uses the character metadata reference;
+                                use --auto-reference if that image is missing
   --reference-only            Generate only the reference image (skip animations)
                                 Useful for creating/reviewing reference images first
   --reference-pose <pose>     Pose template for reference generation (default: idle)
@@ -168,7 +303,7 @@ Environment variables:
   HUGGINGFACE_API_TOKEN  Required only for --huggingface mode
 
 Examples:
-  # Standard Flux generation (default)
+  # Automatic mode selection (variants: SD1.5; legacy/enemies: Flux)
   node scripts/ai-images/generate-characters.js --dry-run
   node scripts/ai-images/generate-characters.js --type player
   node scripts/ai-images/generate-characters.js --type enemies --biome forest
@@ -196,10 +331,15 @@ Examples:
  * Uses shared/assetPaths.js via the bridge module for canonical path construction
  */
 async function getOutputPath(character, animation) {
-  const id = character._type === 'player' ? character.class : character.id;
+  const id = character._type === 'player'
+    ? (character._variant ? character.id : character.class)
+    : character.id;
   return getCharacterOutputPath(id, {
     type: character._type,
     biome: character.biome,
+    race: character._variant ? character.race : undefined,
+    gender: character._variant ? character.gender : undefined,
+    class: character._variant ? character.class : undefined,
     animation,
     extension: 'png'  // Generation outputs PNG first (converted to WebP after)
   });
@@ -210,6 +350,9 @@ async function getOutputPath(character, animation) {
  */
 function getTempDir(character, animation) {
   if (character._type === 'player') {
+    if (character._variant) {
+      return path.join(TEMP_DIR, 'player', character.race, character.gender, character.class, animation);
+    }
     return path.join(TEMP_DIR, 'player', character.class, animation);
   } else {
     return path.join(TEMP_DIR, 'enemies', character.biome, character.id, animation);
@@ -234,7 +377,12 @@ function buildFramePrompt(character, animation, frameIndex, animationConfig) {
 
   if (character._type === 'player') {
     const classTraits = character._classTraits;
-    basePrompt = `${character._stylePrefix} ${classTraits.visualTraits} ${animation} animation ${frameDesc}`;
+    const visualTraits = character.visualTraits || [
+      character._raceTraits,
+      character._genderTraits,
+      classTraits.visualTraits
+    ].filter(Boolean).join(' ');
+    basePrompt = `${character._stylePrefix} ${visualTraits} ${animation} animation ${frameDesc}`;
 
     // Add attack style for attack animation
     if (animation === 'attack' && classTraits.attackStyle) {
@@ -345,12 +493,126 @@ function cleanupTempFrames(tempDir) {
  * Get reference image path for a character
  * Uses shared/assetPaths.js via the bridge module for canonical path construction
  */
-async function getReferenceImagePath(character) {
-  const id = character._type === 'player' ? character.class : character.id;
+async function getReferenceImagePath(character, options = {}) {
+  const { preferIdentitySource = true } = options;
+
+  if (preferIdentitySource && character._variant) {
+    const fullBodyReference = await getCharacterReferencePath(character.id, {
+      type: character._type,
+      race: character.race,
+      gender: character.gender,
+      class: character.class
+    });
+    if (fileExists(fullBodyReference)) {
+      return fullBodyReference;
+    }
+
+    const identitySource = character.sd15Config?.referenceImage || character.portraitReference;
+    if (identitySource) {
+      return path.join(PROJECT_ROOT, 'frontend/public', identitySource.replace(/^\//, ''));
+    }
+  }
+
+  const id = character._type === 'player'
+    ? (character._variant ? character.id : character.class)
+    : character.id;
   return getCharacterReferencePath(id, {
     type: character._type,
-    biome: character.biome
+    biome: character.biome,
+    race: character._variant ? character.race : undefined,
+    gender: character._variant ? character.gender : undefined,
+    class: character._variant ? character.class : undefined
   });
+}
+
+/**
+ * Prepare a transparent portrait/full-body reference for IP-Adapter.
+ *
+ * ComfyUI's image loader composites transparent pixels as black. That turns a
+ * clean alpha matte into dark circles and blocks which the model then repeats
+ * as scenery in generated frames. Flattening to a deterministic white stage
+ * preserves the subject while matching the generation prompt and matte
+ * remover.
+ */
+async function prepareAnimationReference(referenceImagePath, character, options = {}) {
+  if (!fileExists(referenceImagePath)) {
+    throw new Error(`Reference image not found: ${referenceImagePath}`);
+  }
+
+  const metadata = await sharp(referenceImagePath).metadata();
+  if (!metadata.hasAlpha) return referenceImagePath;
+
+  const outputDirectory = options.outputDirectory || PREPARED_REFERENCE_DIR;
+  const safeId = String(character?.id || 'character').replace(/[^a-z0-9_-]/gi, '_');
+  const preparedPath = path.join(outputDirectory, `${safeId}_ipadapter_v3.png`);
+  ensureDirectoryExists(outputDirectory);
+
+  const sourceMtime = fs.statSync(referenceImagePath).mtimeMs;
+  const preparedIsCurrent = fileExists(preparedPath)
+    && fs.statSync(preparedPath).mtimeMs >= sourceMtime;
+
+  if (!preparedIsCurrent) {
+    await sharp(referenceImagePath)
+      .flatten({ background: '#ffffff' })
+      .png()
+      .toFile(preparedPath);
+  }
+
+  return preparedPath;
+}
+
+/**
+ * Portrait cards are authoritative for identity but are not full-body pose
+ * references. Let OpenPose dominate their composition while retaining enough
+ * IP-Adapter influence for face, costume, and palette. Canonical full-body
+ * references keep the balanced profile proven by the golden warrior gate.
+ */
+function resolveAnimationGuidance(referenceImagePath, options = {}) {
+  const normalizedPath = String(referenceImagePath || '').split(path.sep).join('/');
+  const isPortraitIdentitySource = normalizedPath.includes('/portraits/originals/');
+  const controlnetWeight = Number(options.controlnetWeight);
+  const ipadapterWeight = Number(options.ipadapterWeight);
+
+  if (!isPortraitIdentitySource) {
+    return { controlnetWeight, ipadapterWeight, mode: 'full_body_reference' };
+  }
+
+  return {
+    controlnetWeight: Math.max(controlnetWeight, 0.82),
+    ipadapterWeight: Math.min(ipadapterWeight, 0.45),
+    mode: 'portrait_pose_dominant'
+  };
+}
+
+async function validateGeneratedSpriteSheet(filePath, animation) {
+  const validatorPath = path.join(PROJECT_ROOT, 'scripts/ai-images/validate-runtime-assets.mjs');
+  const { inspectRaster } = await import(pathToFileURL(validatorPath).href);
+  const format = path.extname(filePath).slice(1).toLowerCase() || null;
+  return inspectRaster(filePath, {
+    width: FRAME_SIZE,
+    height: FRAME_SIZE * FRAME_COUNT,
+    format,
+    requireAlpha: true,
+    frameWidth: FRAME_SIZE,
+    frameHeight: FRAME_SIZE,
+    frameCount: FRAME_COUNT,
+    animation,
+    maxFrameForegroundCoverage: 0.6
+  });
+}
+
+function quarantineGeneratedSprite(filePath, character, animation) {
+  const safeId = String(character?.id || 'character').replace(/[^a-z0-9_-]/gi, '_');
+  const destinationDirectory = path.join(REJECTED_SPRITE_DIR, safeId);
+  ensureDirectoryExists(destinationDirectory);
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const extension = path.extname(filePath) || '.webp';
+  const destination = path.join(
+    destinationDirectory,
+    `${safeId}_${animation}_${timestamp}${extension}`
+  );
+  fs.renameSync(filePath, destination);
+  return destination;
 }
 
 /**
@@ -360,6 +622,8 @@ async function getReferenceImagePath(character) {
 async function generateSD15Animation(character, animation, animationConfig, options) {
   const outputPath = await getOutputPath(character, animation);
   const referenceImagePath = options.reference || await getReferenceImagePath(character);
+  const referenceLoraModel = options.referenceLoraModel;
+  const animationLoraModel = options.animationLoraModel;
 
   // Check if reference image exists, generate if needed (when autoReference is enabled or reference is missing)
   const needsReferenceGeneration = !options.reference && !fileExists(referenceImagePath);
@@ -378,7 +642,7 @@ async function generateSD15Animation(character, animation, animationConfig, opti
     }
 
     const referencePrompt = buildSD15ReferencePrompt(character, {
-      loraModel: options.lora
+      loraModel: referenceLoraModel
     });
 
     const refResult = await generateReferenceImage({
@@ -388,7 +652,7 @@ async function generateSD15Animation(character, animation, animationConfig, opti
       prompt: referencePrompt,
       seed: character.seed,
       outputPath: referenceImagePath,
-      loraModel: options.lora,
+      loraModel: referenceLoraModel,
       controlnetWeight: options.controlnetWeight,
       ipadapterWeight: options.ipadapterWeight,
       referencePose: options.referencePose
@@ -410,8 +674,13 @@ async function generateSD15Animation(character, animation, animationConfig, opti
 
   // Build SD1.5 prompt for this animation
   const prompt = buildSD15CharacterPrompt(character, animation, {
-    loraModel: options.lora
+    loraModel: animationLoraModel
   });
+  const guidance = resolveAnimationGuidance(referenceImagePath, options);
+  const preparedReferenceImagePath = await prepareAnimationReference(
+    referenceImagePath,
+    character
+  );
 
   // Get frame descriptions - check for character-specific overrides first
   // Character overrides are stored in character.frameDescriptionOverrides[animation]
@@ -434,9 +703,13 @@ async function generateSD15Animation(character, animation, animationConfig, opti
 
   if (options.verbose) {
     log(`  SD1.5 Prompt: ${prompt}`, 'debug');
-    log(`  Reference: ${referenceImagePath}`, 'debug');
-    log(`  ControlNet weight: ${options.controlnetWeight}`, 'debug');
-    log(`  IP-Adapter weight: ${options.ipadapterWeight}`, 'debug');
+    log(`  Identity reference: ${referenceImagePath}`, 'debug');
+    log(`  IP-Adapter reference: ${preparedReferenceImagePath}`, 'debug');
+    log(`  Guidance mode: ${guidance.mode}`, 'debug');
+    log(`  ControlNet weight: ${guidance.controlnetWeight}`, 'debug');
+    log(`  IP-Adapter weight: ${guidance.ipadapterWeight}`, 'debug');
+    log(`  Reference LoRA: ${referenceLoraModel}`, 'debug');
+    log(`  Animation LoRA: ${animationLoraModel}`, 'debug');
     if (options.referencePose && options.referencePose !== 'idle') {
       log(`  Reference pose: ${options.referencePose}`, 'debug');
     }
@@ -452,12 +725,14 @@ async function generateSD15Animation(character, animation, animationConfig, opti
   const result = await generateAnimation({
     characterId: character.id,
     animation,
-    controlnetWeight: options.controlnetWeight,
-    ipadapterWeight: options.ipadapterWeight,
-    referenceImage: referenceImagePath,
-    loraModel: options.lora,
+    prompt,
+    controlnetWeight: guidance.controlnetWeight,
+    ipadapterWeight: guidance.ipadapterWeight,
+    referenceImage: preparedReferenceImagePath,
+    loraModel: animationLoraModel,
     seed: character.seed,
     outputPath,
+    originalsDirectory: path.join(TEMP_DIR, 'originals', character.id, animation),
     frameDescriptions: effectiveFrameDescriptions,  // Per-frame motion prompts (with overrides merged)
     autoReference: options.autoReference
   }, {
@@ -473,7 +748,9 @@ async function generateSD15Animation(character, animation, animationConfig, opti
  * Generate only the reference image for a character (--reference-only mode)
  */
 async function generateReferenceOnly(character, options) {
-  const referenceImagePath = await getReferenceImagePath(character);
+  // Never overwrite the portrait identity source. Reference-only mode creates
+  // a full-body sibling in the canonical player-variant directory.
+  const referenceImagePath = await getReferenceImagePath(character, { preferIdentitySource: false });
 
   // Check if already exists and not forcing
   if (fileExists(referenceImagePath) && !options.force) {
@@ -485,11 +762,14 @@ async function generateReferenceOnly(character, options) {
   ensureDirectoryExists(path.dirname(referenceImagePath));
 
   const referencePrompt = buildSD15ReferencePrompt(character, {
-    loraModel: options.lora
+    loraModel: options.referenceLoraModel
   });
 
   if (options.verbose) {
     log(`  Reference prompt: ${referencePrompt}`, 'debug');
+    log(`  Reference LoRA: ${options.referenceLoraModel}`, 'debug');
+    log(`  ControlNet weight: ${options.controlnetWeight}`, 'debug');
+    log(`  IP-Adapter weight: ${options.ipadapterWeight}`, 'debug');
   }
 
   const result = await generateReferenceImage({
@@ -499,7 +779,7 @@ async function generateReferenceOnly(character, options) {
     prompt: referencePrompt,
     seed: character.seed,
     outputPath: referenceImagePath,
-    loraModel: options.lora,
+    loraModel: options.referenceLoraModel,
     controlnetWeight: options.controlnetWeight,
     ipadapterWeight: options.ipadapterWeight,
     referencePose: options.referencePose
@@ -576,8 +856,12 @@ function markAnimationGenerated(character, animation) {
     return;
   }
 
-  // Find and update the character - check players, characters, or enemies array
-  const charArray = data.players || data.characters || data.enemies;
+  // Find and update the character across variant, archetype, and enemy files.
+  const charArray = data.variants || data.players || data.characters || data.enemies;
+  if (!charArray) {
+    log(`Warning: No character array found in ${sourceFile}`, 'warn');
+    return;
+  }
   const charIndex = charArray.findIndex(c => c.id === character.id);
 
   if (charIndex === -1) {
@@ -628,48 +912,29 @@ async function main() {
   log('Character Sprite Sheet Generation Script', 'info');
   log('========================================', 'info');
 
-  // Display mode
-  const isSD15Mode = options.mode === 'sd15';
-
-  // Validate LoRA is appropriate for the mode
-  const { VALID_LORA_MODELS, VALID_SD15_LORA_MODELS } = require('./lib/parseArgs');
-  if (options.lora) {
-    if (isSD15Mode && !VALID_SD15_LORA_MODELS.includes(options.lora)) {
-      log(`Warning: LoRA '${options.lora}' is not an SD1.5 model. Valid SD1.5 LoRAs: ${VALID_SD15_LORA_MODELS.join(', ')}`, 'warn');
-    }
-    if (!isSD15Mode && !VALID_LORA_MODELS.includes(options.lora)) {
-      log(`Warning: LoRA '${options.lora}' is not a Flux model. Valid Flux LoRAs: ${VALID_LORA_MODELS.join(', ')}`, 'warn');
-    }
-  }
-
-  if (isSD15Mode) {
-    log(`Mode: SD1.5 with ControlNet + IP-Adapter`, 'info');
-    log(`  ControlNet weight: ${options.controlnetWeight}`, 'info');
-    log(`  IP-Adapter weight: ${options.ipadapterWeight}`, 'info');
-    if (options.reference) {
-      log(`  Reference image: ${options.reference}`, 'info');
-    }
-    if (options.referencePose && options.referencePose !== 'idle') {
-      log(`  Reference pose: ${options.referencePose}`, 'info');
-    }
-    if (options.autoReference) {
-      log(`  Auto-reference: enabled`, 'info');
-    }
-  } else {
-    log(`Mode: Flux (frame-by-frame generation)`, 'info');
-  }
-
-  // Check ImageMagick availability (required for concatenation in Flux mode)
-  if (!options.dryRun && !isSD15Mode && !checkImageMagick()) {
-    log('ImageMagick not found. Required for sprite sheet concatenation.', 'error');
-    log('Install with: sudo apt-get install imagemagick', 'info');
+  try {
+    // Validate an explicit mode before doing any metadata or generation work.
+    if (options.mode) resolveGenerationMode(null, options.mode);
+  } catch (error) {
+    log(error.message, 'error');
     process.exit(1);
   }
+
+  log(
+    options.mode
+      ? `Mode override: ${options.mode === 'sd15' ? 'SD1.5 (ControlNet + IP-Adapter)' : 'Flux (frame-by-frame)'}`
+      : 'Mode: automatic (portrait-matched variants: SD1.5; legacy classes/enemies: Flux)',
+    'info'
+  );
 
   // Load metadata
   let metadata;
   try {
-    metadata = loadCharacterMetadata({ type: options.type });
+    metadata = loadCharacterMetadata({
+      type: options.type,
+      class: options.class,
+      id: options.id
+    });
     log(`Loaded ${metadata.characters.length} characters`, 'info');
   } catch (error) {
     log(`Failed to load metadata: ${error.message}`, 'error');
@@ -685,23 +950,53 @@ async function main() {
     process.exit(0);
   }
 
+  // Resolve and validate the full configuration before generating anything.
+  // This prevents a category-level Flux LoRA (such as v1) from silently being
+  // passed into an SD1.5 workflow.
+  let characterPlans;
+  try {
+    characterPlans = filteredCharacters.map(character => ({
+      character,
+      generationConfig: resolveCharacterGenerationConfig(character, options, metadata.manifest)
+    }));
+  } catch (error) {
+    log(`Invalid generation configuration: ${error.message}`, 'error');
+    process.exit(1);
+  }
+
+  const modeCounts = characterPlans.reduce((counts, plan) => {
+    counts[plan.generationConfig.mode]++;
+    return counts;
+  }, { flux: 0, sd15: 0 });
+  log(`Resolved modes: ${modeCounts.sd15} SD1.5, ${modeCounts.flux} Flux`, 'info');
+
   // Handle --reference-only mode for SD1.5
   if (options.referenceOnly) {
-    if (!isSD15Mode) {
-      log('--reference-only requires --mode sd15', 'error');
+    const nonSD15Plans = characterPlans.filter(plan => plan.generationConfig.mode !== 'sd15');
+    if (nonSD15Plans.length > 0) {
+      const sampleIds = nonSD15Plans.slice(0, 5).map(plan => plan.character.id).join(', ');
+      const suffix = nonSD15Plans.length > 5 ? ', ...' : '';
+      log(
+        `--reference-only requires SD1.5 mode, but ${nonSD15Plans.length} selected character(s) ` +
+        `resolved to Flux (${sampleIds}${suffix}). Pass --mode sd15 to override.`,
+        'error'
+      );
       process.exit(1);
     }
 
-    log(`\nGenerating reference images for ${filteredCharacters.length} characters...`, 'info');
+    log(`\nGenerating reference images for ${characterPlans.length} characters...`, 'info');
 
     const refResults = { success: [], failed: [], skipped: [] };
 
-    for (let i = 0; i < filteredCharacters.length; i++) {
-      const character = filteredCharacters[i];
-      log(`[${i + 1}/${filteredCharacters.length}] ${character.id}`, 'info');
+    for (let i = 0; i < characterPlans.length; i++) {
+      const { character, generationConfig } = characterPlans[i];
+      log(`[${i + 1}/${characterPlans.length}] ${character.id}`, 'info');
 
       try {
-        const result = await generateReferenceOnly(character, options);
+        const result = await generateReferenceOnly(character, {
+          ...options,
+          ...generationConfig
+        });
         if (result.skipped) {
           refResults.skipped.push(character.id);
         } else if (result.success) {
@@ -714,7 +1009,7 @@ async function main() {
         log(`Failed: ${error.message}`, 'error');
       }
 
-      if (i < filteredCharacters.length - 1 && options.delay > 0) {
+      if (i < characterPlans.length - 1 && options.delay > 0) {
         await delay(options.delay);
       }
     }
@@ -739,7 +1034,7 @@ async function main() {
   // Build list of animations to generate
   const animationsToGenerate = [];
 
-  for (const character of filteredCharacters) {
+  for (const { character, generationConfig } of characterPlans) {
     const animations = getAnimationsToGenerate(character, options, metadata.animations);
 
     for (const animation of animations) {
@@ -747,7 +1042,8 @@ async function main() {
         animationsToGenerate.push({
           character,
           animation,
-          animationConfig: metadata.animations[animation]
+          animationConfig: metadata.animations[animation],
+          generationConfig
         });
       }
     }
@@ -773,26 +1069,43 @@ async function main() {
     process.exit(0);
   }
 
+  // ImageMagick is required if any selected item uses the legacy Flux pipeline.
+  const hasFluxAnimations = animationsToGenerate.some(
+    item => item.generationConfig.mode === 'flux'
+  );
+  if (!options.dryRun && hasFluxAnimations && !checkImageMagick()) {
+    log('ImageMagick not found. Required for Flux sprite sheet concatenation.', 'error');
+    log('Install with: sudo apt-get install imagemagick', 'info');
+    process.exit(1);
+  }
+
   log(`\nAnimations to generate: ${animationsToGenerate.length}`, 'info');
   console.log('');
 
   // Display what will be generated
   for (const item of animationsToGenerate) {
-    const { character, animation, animationConfig } = item;
+    const { character, animation, animationConfig, generationConfig } = item;
     console.log(`  - ${character.id} / ${animation}`);
     console.log(`    Type: ${character._type}`);
-    console.log(`    Mode: ${isSD15Mode ? 'SD1.5 (ControlNet + IP-Adapter)' : 'Flux (frame-by-frame)'}`);
+    console.log(`    Mode: ${generationConfig.mode === 'sd15' ? 'SD1.5 (ControlNet + IP-Adapter)' : 'Flux (frame-by-frame)'}`);
     console.log(`    Frames: ${FRAME_COUNT} (${FRAME_SIZE}x${FRAME_SIZE} each)`);
     console.log(`    Output: ${await getOutputPath(character, animation)}`);
 
     if (options.verbose) {
-      if (isSD15Mode) {
-        const sd15Prompt = buildSD15CharacterPrompt(character, animation, { loraModel: options.lora });
+      if (generationConfig.mode === 'sd15') {
+        const sd15Prompt = buildSD15CharacterPrompt(character, animation, {
+          loraModel: generationConfig.animationLoraModel
+        });
         console.log(`    SD1.5 prompt: ${sd15Prompt}`);
         console.log(`    Reference: ${options.reference || await getReferenceImagePath(character)}`);
+        console.log(`    Reference LoRA: ${generationConfig.referenceLoraModel}`);
+        console.log(`    Animation LoRA: ${generationConfig.animationLoraModel}`);
+        console.log(`    ControlNet weight: ${generationConfig.controlnetWeight}`);
+        console.log(`    IP-Adapter weight: ${generationConfig.ipadapterWeight}`);
       } else {
         const samplePrompt = buildFramePrompt(character, animation, 0, animationConfig);
         console.log(`    Sample prompt (frame 0): ${samplePrompt}`);
+        console.log(`    Flux LoRA: ${generationConfig.loraModel}`);
       }
     }
     console.log('');
@@ -801,10 +1114,12 @@ async function main() {
   // Dry run - just display
   if (options.dryRun) {
     log(`\nDry run complete. Would generate ${animationsToGenerate.length} sprite sheets.`, 'success');
-    if (isSD15Mode) {
-      log(`Mode: SD1.5 with ControlNet (weight: ${options.controlnetWeight}) + IP-Adapter (weight: ${options.ipadapterWeight})`, 'info');
-    } else {
-      log(`Total frames: ${animationsToGenerate.length * FRAME_COUNT}`, 'info');
+    const fluxAnimationCount = animationsToGenerate.filter(
+      item => item.generationConfig.mode === 'flux'
+    ).length;
+    log(`Resolved modes: ${animationsToGenerate.length - fluxAnimationCount} SD1.5, ${fluxAnimationCount} Flux`, 'info');
+    if (fluxAnimationCount > 0) {
+      log(`Flux frames: ${fluxAnimationCount * FRAME_COUNT}`, 'info');
     }
     process.exit(0);
   }
@@ -844,7 +1159,7 @@ async function main() {
   console.log('');
 
   for (let i = 0; i < animationsToGenerate.length; i++) {
-    const { character, animation, animationConfig } = animationsToGenerate[i];
+    const { character, animation, animationConfig, generationConfig } = animationsToGenerate[i];
     const animationKey = `${character.id}/${animation}`;
 
     log(`[${i + 1}/${animationsToGenerate.length}] Generating: ${animationKey}`, 'info');
@@ -854,20 +1169,33 @@ async function main() {
       const outputPath = await getOutputPath(character, animation);
       ensureDirectoryExists(path.dirname(outputPath));
 
-      // Determine LoRA model
-      const effectiveLoraModel = options.lora || getEffectiveLoraModel(character, 'characters') || 'v1';
-
       // Mode-specific generation
-      if (isSD15Mode) {
+      if (generationConfig.mode === 'sd15') {
         // SD1.5 mode: Use ControlNet + IP-Adapter for consistent animations
         log(`  Using SD1.5 pipeline...`, 'info');
 
         const result = await generateSD15Animation(character, animation, animationConfig, {
           ...options,
-          lora: effectiveLoraModel
+          ...generationConfig
         });
 
         if (result.success) {
+          const validation = await validateGeneratedSpriteSheet(outputPath, animation);
+          if (!validation.valid) {
+            const rejectedPath = quarantineGeneratedSprite(outputPath, character, animation);
+            const reasons = validation.problems
+              .map(problem => `${problem.code}: ${problem.message}`)
+              .join('; ');
+            results.failed.push({
+              id: animationKey,
+              error: `Generated sheet failed runtime validation: ${reasons}`,
+              rejectedPath
+            });
+            log(`Rejected: ${animationKey} - ${reasons}`, 'error');
+            log(`Preserved rejected sheet: ${rejectedPath}`, 'info');
+            continue;
+          }
+
           // Convert PNG sprite sheet to WebP format
           const webpResult = await convertToWebp(outputPath, { verbose: options.verbose });
           const finalPath = webpResult.success ? webpResult.webpPath : outputPath;
@@ -876,7 +1204,7 @@ async function main() {
             log(`Warning: WebP conversion failed for ${outputPath}: ${webpResult.error}`, 'warn');
           }
 
-          results.success.push({ id: animationKey, character, animation });
+          results.success.push({ id: animationKey, character, animation, generationConfig });
           markAnimationGenerated(character, animation);
           log(`Generated: ${animationKey}`, 'success');
           log(`Saved: ${finalPath}`, 'info');
@@ -918,7 +1246,7 @@ async function main() {
             frameIndex,
             seed: character.seed, // Same seed for all frames ensures consistency
             outputPath: framePath,
-            loraModel: effectiveLoraModel
+            loraModel: generationConfig.loraModel
           }, {
             verbose: options.verbose,
             quiet: options.quiet,
@@ -961,7 +1289,7 @@ async function main() {
             log(`Warning: WebP conversion failed for ${outputPath}: ${webpResult.error}`, 'warn');
           }
 
-          results.success.push({ id: animationKey, character, animation });
+          results.success.push({ id: animationKey, character, animation, generationConfig });
           markAnimationGenerated(character, animation);
           log(`Generated: ${animationKey}`, 'success');
           log(`Saved: ${finalPath}`, 'info');
@@ -994,10 +1322,14 @@ async function main() {
   console.log('\n========================================');
   log('Generation Summary', 'info');
   console.log('========================================');
-  console.log(`  Mode: ${isSD15Mode ? 'SD1.5 (ControlNet + IP-Adapter)' : 'Flux (frame-by-frame)'}`);
+  const successfulFluxCount = results.success.filter(
+    result => result.generationConfig.mode === 'flux'
+  ).length;
+  const successfulSD15Count = results.success.length - successfulFluxCount;
+  console.log(`  Modes: ${successfulSD15Count} SD1.5, ${successfulFluxCount} Flux`);
   console.log(`  Sprite sheets: ${results.success.length}`);
-  if (!isSD15Mode) {
-    console.log(`  Total frames generated: ${results.success.length * FRAME_COUNT}`);
+  if (successfulFluxCount > 0) {
+    console.log(`  Flux frames generated: ${successfulFluxCount * FRAME_COUNT}`);
   }
   console.log(`  Failed:  ${results.failed.length}`);
   console.log('');
@@ -1012,8 +1344,22 @@ async function main() {
   process.exit(results.failed.length > 0 ? 1 : 0);
 }
 
-main().catch(error => {
-  log(`Unexpected error: ${error.message}`, 'error');
-  console.error(error);
-  process.exit(1);
-});
+module.exports = {
+  firstConfiguredValue,
+  resolveGenerationMode,
+  validateLoraForMode,
+  validateGuidanceWeight,
+  resolveCharacterGenerationConfig,
+  prepareAnimationReference,
+  resolveAnimationGuidance,
+  validateGeneratedSpriteSheet,
+  quarantineGeneratedSprite
+};
+
+if (require.main === module) {
+  main().catch(error => {
+    log(`Unexpected error: ${error.message}`, 'error');
+    console.error(error);
+    process.exit(1);
+  });
+}

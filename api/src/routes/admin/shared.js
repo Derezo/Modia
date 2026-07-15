@@ -154,14 +154,20 @@ export function constructCharacterPrompt(character) {
   const stylePrefix = character._stylePrefix || '';
 
   if (isPlayer) {
-    // Player characters: stylePrefix + class visual traits
+    // Player variants: portrait identity traits + class motion/art direction.
     const classTraits = character._classTraits || {};
-    const visualTraits = classTraits.visualTraits || '';
+    const visualTraits = character.visualTraits || [
+      character._raceTraits,
+      character._genderTraits,
+      classTraits.visualTraits
+    ].filter(Boolean).join(' ');
 
     return {
       basePrompt: [stylePrefix, visualTraits].filter(Boolean).join(' ').trim(),
       components: {
         stylePrefix: { value: stylePrefix },
+        race: { key: character.race, value: character._raceTraits || '' },
+        gender: { key: character.gender, value: character._genderTraits || '' },
         class: { key: character.class, visualTraits },
       },
     };

@@ -47,7 +47,12 @@ import { BossPhaseIndicator } from '../battle/BossPhaseIndicator.js';
 import { BattleWebSocketManager } from '../battle/BattleWebSocketManager.js';
 import { BattleInputHandler } from '../battle/BattleInputHandler.js';
 import { BattleAudioManager } from '../battle/BattleAudioManager.js';
-import { isSelfTargetingSkill, getVisualCategory } from '../battle/SkillEffectCategories.js';
+import {
+  isSelfTargetingSkill,
+  getVisualCategory,
+  getActionVisualDescriptor,
+  resolveActionSkill
+} from '../battle/SkillEffectCategories.js';
 import { buildHighlights } from '../battle/BattleHighlights.js';
 import { renderMinimap as renderMinimapOverlay } from '../battle/BattleMinimap.js';
 import { canvasToOverlayCoords as convertCanvasToOverlay } from '../battle/battleCoords.js';
@@ -55,6 +60,7 @@ import { getSkillIcon as lookupSkillIcon } from '../battle/skillIcons.js';
 import { buildBattleLogEntry, getActionName as lookupActionName } from '../battle/battleLog.js';
 import { calculateDamagePreview, calculateItemPreview } from '@shared/battleMath.js';
 import { CLASS_MOVEMENT } from '@shared/constants.js';
+import { getNpcVisualIdentity, getPlayerCharacterIdentity } from '@shared/assetPaths.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { BattleLoadingScreen } from '../ui/parchment/BattleLoadingScreen.js';
 import { responsive } from '../core/Responsive.js';
@@ -209,20 +215,32 @@ export class BattleScene extends Scene {
       id: u.id, name: u.name, type: u.type, enemyId: u.enemyId, biome: u.biome
     })));
 
-    const enemyIds = [...new Set(
+    const enemyVisuals = Array.from(new Map(
       data.state.units
-        .filter(u => u.type === 'enemy' && u.enemyId)
-        .map(u => u.enemyId)
-    )];
-    console.log(`[BattleScene] Enemy IDs to preload: [${enemyIds.join(', ')}]`);
+        .filter(u => u.type === 'enemy')
+        .map(u => getNpcVisualIdentity(u, { fallbackBiome: nodeType }))
+        .filter(identity => identity.visualId)
+        .map(identity => [identity.visualId, identity])
+    ).values());
+    console.log('[BattleScene] Enemy visuals to preload:', enemyVisuals);
 
-    // Also collect player character classes to preload
-    const playerClasses = [...new Set(
+    // Preload each distinct portrait-matched player visual identity. This is
+    // intentionally not deduplicated by class: race/gender variants can point
+    // at unique sprite strips while missing variants fall back to the class set.
+    const playerCharacters = Array.from(new Map(
       data.state.units
-        .filter(u => u.type === 'player' && u.class)
-        .map(u => u.class.toLowerCase())
-    )];
-    console.log(`[BattleScene] Player classes to preload: [${playerClasses.join(', ')}]`);
+        .filter(u => u.type === 'player')
+        .map(u => {
+          const identity = getPlayerCharacterIdentity(u);
+          const character = {
+            race: identity.race,
+            gender: identity.gender,
+            class: identity.className
+          };
+          return [identity.id, character];
+        })
+    ).values());
+    console.log(`[BattleScene] Player variants to preload: [${playerCharacters.map(c => getPlayerCharacterIdentity(c).id).join(', ')}]`);
 
     // Estimate total assets for accurate progress bar
     const { AssetLoader } = await import('../core/AssetLoader.js');
@@ -234,8 +252,8 @@ export class BattleScene extends Scene {
       ])
     ).values());
     const obstacleCount = obstacleAssets.length;
-    const enemyCount = enemyIds.length * AssetLoader.ENEMY_ANIMATIONS.length;
-    const playerCount = playerClasses.length * AssetLoader.CHARACTER_ANIMATIONS.length;
+    const enemyCount = enemyVisuals.length * AssetLoader.ENEMY_ANIMATIONS.length;
+    const playerCount = playerCharacters.length * AssetLoader.CHARACTER_ANIMATIONS.length;
     const totalAssets = terrainCount + obstacleCount + enemyCount + playerCount;
     let loadedTotal = 0;
 
@@ -254,16 +272,18 @@ export class BattleScene extends Scene {
           obstacles: obstacleAssets,
           onProgress: makeProgressCallback('Loading obstacles...')
         }),
-        this.game.assetLoader.preloadEnemies(nodeType, enemyIds, {
-          onProgress: makeProgressCallback('Loading enemies...')
-        }),
-        ...playerClasses.map(cls =>
-          this.game.assetLoader.preloadCharacter(cls, {
+        ...enemyVisuals.map(identity =>
+          this.game.assetLoader.preloadEnemies(identity.primaryBiome, [identity.visualId], {
+            onProgress: makeProgressCallback('Loading enemies...')
+          })
+        ),
+        ...playerCharacters.map(character =>
+          this.game.assetLoader.preloadCharacter(character, {
             onProgress: makeProgressCallback('Loading characters...')
           })
         )
       ]);
-      console.log(`[BattleScene] Preloaded terrain, obstacles, ${enemyIds.length} enemy types, and ${playerClasses.length} player classes for ${nodeType}`);
+      console.log(`[BattleScene] Preloaded terrain, obstacles, ${enemyVisuals.length} enemy types, and ${playerCharacters.length} player variants for ${nodeType}`);
 
       // Reinitialize unit sprites now that assets are loaded
       for (const unit of this.units.values()) {
@@ -886,6 +906,61 @@ export class BattleScene extends Scene {
     // Fallback: return empty array if no skills learned
     // (Character needs to learn skills via Formation → Skills tab)
     return [];
+  }
+
+  /**
+   * Play the actor pose and skill travel/impact effect from one normalized
+   * descriptor. Both the local HTTP path and observer WebSocket path call this
+   * method so the same action has the same presentation everywhere.
+   */
+  playActionPresentation({
+    actor,
+    actionType,
+    result = {},
+    target = null,
+    targetTile = null,
+    skillId = null
+  }) {
+    if (!actor || (actionType !== 'attack' && actionType !== 'skill')) return null;
+
+    const skill = resolveActionSkill(actor, result, skillId);
+    const descriptor = getActionVisualDescriptor(
+      actionType,
+      { ...result, actorId: actor.id },
+      skill
+    );
+    const resolvedTile = targetTile || (target ? { x: target.gridX, y: target.gridY } : null) ||
+      (descriptor.selfTarget ? { x: actor.gridX, y: actor.gridY } : null);
+    const faceX = resolvedTile?.x ?? actor.gridX;
+    const faceY = resolvedTile?.y ?? actor.gridY;
+
+    if (descriptor.actorAnimation === 'cast') {
+      actor.playCastAnimation?.(faceX, faceY);
+    } else {
+      actor.playAttackAnimation?.(faceX, faceY);
+    }
+
+    if (actionType === 'skill' && this.animations) {
+      const targetPosition = descriptor.selfTarget
+        ? { x: actor.screenX, y: actor.screenY - 32 }
+        : target
+          ? { x: target.screenX, y: target.screenY - 32 }
+          : resolvedTile
+            ? this.grid.gridToScreenWorld(resolvedTile.x, resolvedTile.y)
+            : { x: actor.screenX, y: actor.screenY - 32 };
+      const tileImpactOffset = !descriptor.selfTarget && !target ? 24 : 0;
+
+      this.animations.addSkillActionEffect(
+        actor.screenX,
+        actor.screenY - 38,
+        targetPosition.x,
+        targetPosition.y - tileImpactOffset,
+        descriptor,
+        skill
+      );
+    }
+
+    return { descriptor, skill };
   }
 
   /**
@@ -1553,38 +1628,45 @@ export class BattleScene extends Scene {
       }
     }
 
+    // Normalize the actor pose and skill effect once before applying result
+    // numbers. This replaces the separate attack-only branches below.
+    const submittedActionType = this.pendingAction?.type;
+    const presentationActor = this.units.get(this.getActiveUnit()?.id);
+    const primaryPresentationTarget = actionResult.targetId
+      ? this.units.get(actionResult.targetId)
+      : null;
+    const aoeCenter = actionResult.aoeTiles?.find(tile => tile.isCenter) || null;
+    const presentationTargetTile = this.pendingAction?.targetTile ||
+      (aoeCenter ? { x: aoeCenter.x, y: aoeCenter.y } : null);
+    const actionPresentation = this.playActionPresentation({
+      actor: presentationActor,
+      actionType: submittedActionType,
+      result: actionResult,
+      // AoE travel must resolve at the selected area center, not whichever
+      // affected unit happened to become the compatibility primary target.
+      target: actionResult.isAoE ? null : primaryPresentationTarget,
+      targetTile: presentationTargetTile,
+      skillId: this.pendingAction?.skillId || actionResult.skillUsed || actionResult.skillId
+    });
+    if (actionPresentation) {
+      await this.waitForAnimation(200);
+    }
+
     // Handle empty tile attack (no target)
     if (actionResult.attackedEmptyTile) {
-      const attacker = this.units.get(this.getActiveUnit()?.id);
-      if (attacker && this.pendingAction?.targetTile) {
-        // Play attack animation toward empty tile
-        attacker.playAttackAnimation?.(
-          this.pendingAction.targetTile.x,
-          this.pendingAction.targetTile.y
-        );
-        await this.waitForAnimation(300);
-      }
+      await this.waitForAnimation(100);
     }
 
     // Handle AoE skill damage (hits multiple units)
     if (actionResult.isAoE && actionResult.aoeTargets) {
-      const attacker = this.units.get(this.getActiveUnit()?.id);
       // Note: Skill sound already played in submitAction when skill was cast
-
-      // Play attacker animation toward target tile
-      if (attacker && this.pendingAction?.targetTile) {
-        attacker.playAttackAnimation(
-          this.pendingAction.targetTile.x,
-          this.pendingAction.targetTile.y
-        );
-        await this.waitForAnimation(200);
-      }
 
       // Flash all AoE tiles
       if (actionResult.aoeTiles) {
         for (const tile of actionResult.aoeTiles) {
           const tilePos = this.grid.gridToScreenWorld(tile.x, tile.y);
-          const color = tile.isCenter ? '#ff8800' : '#ffaa44';
+          const baseColor = actionPresentation?.descriptor.primaryColor || '#ff8800';
+          const color = tile.isCenter ? baseColor : `${baseColor}aa`;
           this.animations.addFlash(tilePos.x, tilePos.y, color);
         }
       }
@@ -1595,25 +1677,50 @@ export class BattleScene extends Scene {
         const target = this.units.get(targetInfo.targetId);
         if (!target) continue;
 
+        if (targetInfo.isAbsorb || targetInfo.healing > 0) {
+          const healing = Number(targetInfo.healing) || 0;
+          target.hp = Math.min(target.maxHp, target.hp + healing);
+          if (healing > 0) {
+            this.animations.addHealNumber(target.screenX, target.screenY - 40, healing);
+          }
+          // The shared area impact already played at the center. Use the same
+          // lightweight per-target burst as damage instead of replaying a full
+          // skill impact (flash, glow, and delayed burst) on every healed unit.
+          this.animations.addParticleBurst(
+            target.screenX,
+            target.screenY - 32,
+            actionPresentation?.descriptor.primaryColor || '#44ff88'
+          );
+          continue;
+        }
+
+        const damage = Number(targetInfo.damage) || 0;
+        if (damage <= 0) continue;
+
         // Play hit animation and impact sound
         target.playHitAnimation();
-        this.audioManager.playImpactSound({ damage: targetInfo.damage, isCritical: targetInfo.isCritical });
+        this.audioManager.playImpactSound({ ...actionResult, ...targetInfo, damage });
 
         // Show damage number
         this.animations.addDamageNumber(
           target.screenX,
           target.screenY - 40,
-          targetInfo.damage,
-          targetInfo.isCritical
+          damage,
+          targetInfo.isCritical,
+          targetInfo.element || actionResult.element,
+          targetInfo.elementalModifier
         );
 
-        // Particle effect (different color for allies hit by friendly fire)
-        const isAllyHit = targetInfo.targetType === 'player';
-        const particleColor = isAllyHit ? '#ff8844' : '#ff4444';
+        // Keep the damage burst aligned with the skill category while retaining
+        // the warm warning color for friendly fire.
+        const isAllyHit = presentationActor?.teamId === target.teamId;
+        const particleColor = isAllyHit
+          ? '#ff8844'
+          : (actionPresentation?.descriptor.primaryColor || '#ff4444');
         this.animations.addParticleBurst(target.screenX, target.screenY - 32, particleColor);
 
         // Update unit HP
-        target.hp = Math.max(0, target.hp - targetInfo.damage);
+        target.hp = Math.max(0, target.hp - damage);
 
         // Track deaths for animation later
         if (!target.isAlive()) {
@@ -1623,11 +1730,10 @@ export class BattleScene extends Scene {
         // Show status effect if applied and play sound
         if (targetInfo.effectApplied) {
           this.audioManager.playStatusEffectSound(targetInfo.effectApplied);
-          this.animations.addDamageNumber(
+          this.animations.addStatusEffect(
             target.screenX,
             target.screenY - 60,
-            targetInfo.effectApplied.toUpperCase(),
-            false
+            targetInfo.effectApplied.toUpperCase()
           );
         }
       }
@@ -1645,28 +1751,31 @@ export class BattleScene extends Scene {
 
     // Handle single-target player damage (non-AoE)
     if (!actionResult.isAoE && actionResult.damage > 0 && actionResult.targetId) {
-      const attacker = this.units.get(this.getActiveUnit()?.id);
       const target = this.units.get(actionResult.targetId);
       // Note: Skill sound already played in submitAction when skill was cast
 
       if (target) {
-        // Attacker faces target and plays attack animation
-        if (attacker) {
-          attacker.playAttackAnimation(target.gridX, target.gridY);
-          await this.waitForAnimation(200); // Wait for attack windup
-        }
-
         // Target plays hit animation
         target.playHitAnimation();
         // Use impact sound system
         this.audioManager.playImpactSound(actionResult);
-        this.animations.addDamageNumber(target.screenX, target.screenY - 40, actionResult.damage, actionResult.isCritical);
-        this.animations.addFlash(target.screenX, target.screenY - 32, '#ff4444');
-        this.animations.addParticleBurst(target.screenX, target.screenY - 32, '#ff4444');
+        this.animations.addDamageNumber(
+          target.screenX,
+          target.screenY - 40,
+          actionResult.damage,
+          actionResult.isCritical,
+          actionResult.element,
+          actionResult.elementalModifier
+        );
+        if (submittedActionType !== 'skill') {
+          this.animations.addFlash(target.screenX, target.screenY - 32, '#ff4444');
+          this.animations.addParticleBurst(target.screenX, target.screenY - 32, '#ff4444');
+        }
         target.hp = Math.max(0, target.hp - actionResult.damage);
 
         // Play status effect sound if effect was applied
-        if (actionResult.effectApplied || actionResult.statusApplied) {
+        if (submittedActionType !== 'skill' &&
+            (actionResult.effectApplied || actionResult.statusApplied)) {
           this.audioManager.playStatusEffectSound(actionResult.effectApplied || actionResult.statusApplied);
         }
 
@@ -1685,7 +1794,63 @@ export class BattleScene extends Scene {
       const target = this.units.get(actionResult.targetId);
       if (target) {
         this.audioManager.playImpactSound({ missed: true });
-        this.animations.addDamageNumber(target.screenX, target.screenY - 40, 'MISS', false);
+        this.animations.addMiss(target.screenX, target.screenY - 40);
+        await this.waitForAnimation(300);
+      }
+    }
+
+    // Healing, restoration, buffs, and cleanses are valid skill outcomes even
+    // when no damage branch ran. AoE statuses are already handled per target
+    // above, so this block is deliberately single-target only.
+    if (submittedActionType === 'skill' && !actionResult.isAoE) {
+      const resourceTarget = actionResult.targetId != null
+        ? this.units.get(actionResult.targetId)
+        : actionPresentation?.descriptor.selfTarget
+          ? presentationActor
+          : null;
+      let showedOutcomeFeedback = false;
+
+      const healing = Number(actionResult.healing) || 0;
+      if (resourceTarget && healing > 0) {
+        resourceTarget.hp = Math.min(resourceTarget.maxHp, resourceTarget.hp + healing);
+        this.animations.addHealNumber(resourceTarget.screenX, resourceTarget.screenY - 40, healing);
+        showedOutcomeFeedback = true;
+      }
+
+      const mpRestored = Number(actionResult.mpRestored) || 0;
+      if (resourceTarget && mpRestored > 0) {
+        resourceTarget.mp = Math.min(resourceTarget.maxMp, resourceTarget.mp + mpRestored);
+        this.animations.addMpRestoreNumber(resourceTarget.screenX, resourceTarget.screenY - 58, mpRestored);
+        showedOutcomeFeedback = true;
+      }
+
+      const statusResults = [...(actionResult.skillEffects || [])];
+      const topLevelStatus = actionResult.effectApplied || actionResult.statusApplied;
+      if (topLevelStatus) {
+        statusResults.push({ effect: topLevelStatus, targetId: actionResult.targetId });
+      }
+
+      const shownStatuses = new Set();
+      for (const effect of statusResults) {
+        const effectTarget = effect.targetId != null
+          ? this.units.get(effect.targetId)
+          : resourceTarget;
+        const rawLabel = effect.effect || effect.status || effect.type;
+        if (!effectTarget || !rawLabel) continue;
+
+        const label = effect.type === 'cleanse' && !effect.effect
+          ? 'CLEANSED'
+          : String(rawLabel).toUpperCase();
+        const statusKey = `${effectTarget.id}:${label}`;
+        if (shownStatuses.has(statusKey)) continue;
+        shownStatuses.add(statusKey);
+
+        this.animations.addStatusEffect(effectTarget.screenX, effectTarget.screenY - 74, label);
+        this.audioManager.playStatusEffectSound(effect.effect || effect.status || effect.type);
+        showedOutcomeFeedback = true;
+      }
+
+      if (showedOutcomeFeedback) {
         await this.waitForAnimation(300);
       }
     }
@@ -1960,6 +2125,10 @@ export class BattleScene extends Scene {
       if (unit) {
         unit.hp = unitData.hp ?? unit.hp;
         unit.mp = unitData.mp ?? unit.mp;
+        // State snapshots are authoritative for life/death. Preserve an active
+        // death transition, but repair stale idle/live poses after reconnects,
+        // polling drift, or missed presentation events.
+        unit.reconcileAnimationWithHealth();
         unit.ct = unitData.ct || 0; // Sync CT for turn order display
         unit.hasActed = unitData.hasActed;
         unit.statusEffects = unitData.statusEffects || [];
@@ -2103,6 +2272,22 @@ export class BattleScene extends Scene {
       return;
     }
     this.battleEnded = true;
+
+    // Hold surviving winners on their authored victory pose while the outro
+    // sequence enters. In PvP, determine the local team rather than celebrating
+    // every player-type unit.
+    const localUserId = this.game.localUserId;
+    const localTeamId = this.isPvP
+      ? (Array.from(this.units.values()).find(unit => unit.ownerId === localUserId)?.teamId ?? 1)
+      : 1;
+    for (const unit of this.units.values()) {
+      if (!unit.isAlive()) continue;
+      const isLocalSide = this.isPvP
+        ? unit.teamId === localTeamId
+        : unit.type === 'player';
+      const isWinner = status === 'victory' ? isLocalSide : !isLocalSide;
+      if (isWinner) unit.playVictoryAnimation?.();
+    }
 
     // Hide battle UI elements for outro
     if (this.ui) {
@@ -2647,10 +2832,13 @@ export class BattleScene extends Scene {
    */
   renderAnimationsWithCamera(ctx) {
     ctx.save();
-    const screenOffset = this.camera.worldToScreen(0, 0);
-    ctx.translate(screenOffset.x, screenOffset.y);
-    this.animations.render(ctx);
-    ctx.restore();
+    try {
+      const screenOffset = this.camera.worldToScreen(0, 0);
+      ctx.translate(screenOffset.x, screenOffset.y);
+      this.animations.render(ctx);
+    } finally {
+      ctx.restore();
+    }
   }
 
   /**

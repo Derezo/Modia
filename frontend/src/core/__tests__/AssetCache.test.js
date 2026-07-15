@@ -31,7 +31,7 @@ describe('AssetCache network freshness', () => {
 
       const result = await assetCache.fetchWithCache('/assets/tiles/forest/grass_0.webp');
 
-      assert.equal(assetCache.cacheName, 'modia-assets-v3');
+      assert.equal(assetCache.cacheName, 'modia-assets-v4');
       assert.equal(result, response);
       assert.deepEqual(fetchCalls, [[
         '/assets/tiles/forest/grass_0.webp',

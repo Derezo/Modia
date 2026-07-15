@@ -1113,6 +1113,9 @@ export function getColiseumStyles() {
     .coliseum-equipment-item {
       color: ${P.text.muted};
       margin-bottom: 2px;
+      display: flex;
+      align-items: center;
+      gap: ${PARCHMENT_SPACING.xs};
     }
 
     .coliseum-equipment-item.common { color: ${P.text.secondary}; }

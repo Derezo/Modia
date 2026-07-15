@@ -796,7 +796,8 @@ export async function getUserOrders(client, userId, status = null) {
       mo.created_at,
       it.name as item_name,
       it.item_type,
-      it.rarity
+      it.rarity,
+      it.sprite_id
     FROM market_orders mo
     JOIN item_templates it ON mo.item_template_id = it.id
     WHERE mo.user_id = $1
@@ -822,6 +823,7 @@ export async function getUserOrders(client, userId, status = null) {
     itemName: row.item_name,
     itemType: row.item_type,
     rarity: row.rarity,
+    spriteId: row.sprite_id,
     side: row.side,
     price: parseInt(row.price, 10),
     quantity: parseInt(row.quantity, 10),

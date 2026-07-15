@@ -4,70 +4,9 @@
   "biome": "castle",
   "description": "Castle biome enemy sprite sheets",
   "biomeTraits": "ornate regal dark gothic corrupted once-grand sinister",
-  "totalAssets": 7,
-  "totalAnimations": 35,
+  "totalAssets": 4,
+  "totalAnimations": 20,
   "enemies": [
-    {
-      "id": "skeleton_warrior",
-      "name": "Skeleton Warrior",
-      "archetype": "undead",
-      "visualTraits": "animated bones purple eye glow rusted sword tattered armor rattling",
-      "sd15Config": {
-        "controlnetWeight": null,
-        "ipadapterWeight": null,
-        "referenceImage": null,
-        "referenceGeneratedAt": null
-      },
-      "animations": {
-        "idle": {
-          "id": "skeleton_warrior_idle",
-          "frameCount": 8,
-          "seed": 45001,
-          "generated": false,
-          "prompt": "pixel art sprite side view 64x64, skeleton warrior with purple glowing eyes and rusted sword and tattered armor, idle rattle animation, bones rattling with jaw clicking in eternal vigilance, dark castle corridor"
-        },
-        "attack": {
-          "id": "skeleton_warrior_attack",
-          "frameCount": 8,
-          "seed": 45002,
-          "generated": false,
-          "prompt": "pixel art sprite side view 64x64, skeleton warrior with purple glowing eyes and rusted sword and tattered armor, attack swing animation, sword swinging with bones creaking in relentless strike, dark castle corridor"
-        },
-        "hit": {
-          "id": "skeleton_warrior_hit",
-          "frameCount": 8,
-          "seed": 45003,
-          "generated": false,
-          "prompt": "pixel art sprite side view 64x64, skeleton warrior with purple glowing eyes and rusted sword and tattered armor, hurt scatter animation, bones scattering and reassembling with undying persistence, dark castle corridor"
-        },
-        "death": {
-          "id": "skeleton_warrior_death",
-          "frameCount": 8,
-          "seed": 45004,
-          "generated": false,
-          "prompt": "pixel art sprite side view 64x64, skeleton warrior with purple glowing eyes and rusted sword and tattered armor, death collapse animation, collapsing into pile with eye glow fading to stillness, dark castle corridor"
-        },
-        "dead": {
-          "id": "skeleton_warrior_dead",
-          "frameCount": 8,
-          "seed": 45014,
-          "generated": false,
-          "prompt": "pixel art sprite side view 64x64, animated bones purple eye glow rusted sword tattered armor rattling, dead static pose, lying defeated at final rest motionless, ornate regal"
-        }
-      },
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAnimations": {
-        "idle": false,
-        "attack": false,
-        "hit": false,
-        "death": false,
-        "dead": false
-      },
-      "generatedAt": null,
-      "generated": false,
-      "loraModel": "retro-pixel"
-    },
     {
       "id": "ghost",
       "name": "Ghost",
@@ -118,58 +57,7 @@
       },
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
-      "loraModel": "retro-pixel"
-    },
-    {
-      "id": "dark_knight",
-      "name": "Dark Knight",
-      "archetype": "humanoid",
-      "visualTraits": "black plate armor glowing red visor corrupted greatsword dark aura",
-      "sd15Config": {
-        "controlnetWeight": null,
-        "ipadapterWeight": null,
-        "referenceImage": null,
-        "referenceGeneratedAt": null
-      },
-      "animations": {
-        "idle": {
-          "id": "dark_knight_idle",
-          "frameCount": 8,
-          "seed": 45021,
-          "generated": false,
-          "prompt": "pixel art sprite side view 64x64, dark knight with black plate armor and glowing red visor and corrupted greatsword, idle menace animation, imposing stance with greatsword planted and darkness seeping around, corrupted throne room"
-        },
-        "attack": {
-          "id": "dark_knight_attack",
-          "frameCount": 8,
-          "seed": 45022,
-          "generated": false,
-          "prompt": "pixel art sprite side view 64x64, dark knight with black plate armor and glowing red visor and corrupted greatsword, attack sweep animation, massive sword sweeping with dark energy trailing behind strike, corrupted throne room"
-        },
-        "hit": {
-          "id": "dark_knight_hit",
-          "frameCount": 8,
-          "seed": 45023,
-          "generated": false,
-          "prompt": "pixel art sprite side view 64x64, dark knight with black plate armor and glowing red visor and corrupted greatsword, hurt stagger animation, armor sparking and staggering while roaring defiance, corrupted throne room"
-        },
-        "death": {
-          "id": "dark_knight_death",
-          "frameCount": 8,
-          "seed": 45024,
-          "generated": false,
-          "prompt": "pixel art sprite side view 64x64, dark knight with black plate armor and glowing red visor and corrupted greatsword, death crumble animation, armor crumbling with darkness releasing leaving empty husk, corrupted throne room"
-        },
-        "dead": {
-          "id": "dark_knight_dead",
-          "frameCount": 8,
-          "seed": 45034,
-          "generated": false,
-          "prompt": "pixel art sprite side view 64x64, black plate armor glowing red visor corrupted greatsword dark aura, dead static pose, lying defeated at final rest motionless, ornate regal"
-        }
-      },
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
+      "loraModel": "retro-pixel",
       "generatedAnimations": {
         "idle": false,
         "attack": false,
@@ -177,70 +65,7 @@
         "death": false,
         "dead": false
       },
-      "generatedAt": null,
-      "generated": false,
-      "loraModel": "retro-pixel"
-    },
-    {
-      "id": "palace_guard",
-      "name": "Palace Guard",
-      "archetype": "humanoid",
-      "visualTraits": "ornate plate armor royal tabard halberd plumed helmet elite disciplined",
-      "sd15Config": {
-        "controlnetWeight": null,
-        "ipadapterWeight": null,
-        "referenceImage": null,
-        "referenceGeneratedAt": null
-      },
-      "animations": {
-        "idle": {
-          "id": "palace_guard_idle",
-          "frameCount": 8,
-          "seed": 45061,
-          "generated": false,
-          "prompt": "pixel art sprite side view 64x64, elite palace guard with ornate plate armor and royal tabard and halberd and plumed helmet, idle attention animation, standing at attention with halberd upright as vigilant elite soldier, grand castle entrance"
-        },
-        "attack": {
-          "id": "palace_guard_attack",
-          "frameCount": 8,
-          "seed": 45062,
-          "generated": false,
-          "prompt": "pixel art sprite side view 64x64, elite palace guard with ornate plate armor and royal tabard and halberd and plumed helmet, attack swing animation, halberd swing with precise trained deadly strike, grand castle entrance"
-        },
-        "hit": {
-          "id": "palace_guard_hit",
-          "frameCount": 8,
-          "seed": 45063,
-          "generated": false,
-          "prompt": "pixel art sprite side view 64x64, elite palace guard with ornate plate armor and royal tabard and halberd and plumed helmet, hurt endure animation, armor ringing and grunting while maintaining formation, grand castle entrance"
-        },
-        "death": {
-          "id": "palace_guard_death",
-          "frameCount": 8,
-          "seed": 45064,
-          "generated": false,
-          "prompt": "pixel art sprite side view 64x64, elite palace guard with ornate plate armor and royal tabard and halberd and plumed helmet, death honor animation, saluting then falling at post in honorable end, grand castle entrance"
-        },
-        "dead": {
-          "id": "palace_guard_dead",
-          "frameCount": 8,
-          "seed": 45074,
-          "generated": false,
-          "prompt": "pixel art sprite side view 64x64, ornate plate armor royal tabard halberd plumed helmet elite disciplined, dead static pose, lying defeated at final rest motionless, ornate regal"
-        }
-      },
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAnimations": {
-        "idle": false,
-        "attack": false,
-        "hit": false,
-        "death": false,
-        "dead": false
-      },
-      "generatedAt": null,
-      "generated": false,
-      "loraModel": "retro-pixel"
+      "generated": false
     },
     {
       "id": "vampire",
@@ -292,7 +117,15 @@
       },
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
-      "loraModel": "retro-pixel"
+      "loraModel": "retro-pixel",
+      "generatedAnimations": {
+        "idle": false,
+        "attack": false,
+        "hit": false,
+        "death": false,
+        "dead": false
+      },
+      "generated": false
     },
     {
       "id": "dark_mage",
@@ -344,7 +177,15 @@
       },
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
-      "loraModel": "retro-pixel"
+      "loraModel": "retro-pixel",
+      "generatedAnimations": {
+        "idle": false,
+        "attack": false,
+        "hit": false,
+        "death": false,
+        "dead": false
+      },
+      "generated": false
     },
     {
       "id": "demon",
@@ -396,7 +237,15 @@
       },
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
-      "loraModel": "retro-pixel"
+      "loraModel": "retro-pixel",
+      "generatedAnimations": {
+        "idle": false,
+        "attack": false,
+        "hit": false,
+        "death": false,
+        "dead": false
+      },
+      "generated": false
     }
   ]
 }

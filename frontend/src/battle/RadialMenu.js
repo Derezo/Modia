@@ -11,6 +11,8 @@
  *    (I)  (bottom)  (S)
  */
 import { escapeHtml } from '../utils/escapeHtml.js';
+import { renderAbilityIcon } from './AbilityIcon.js';
+import { renderBattleItemIcon } from './BattleItemIcon.js';
 
 export class RadialMenu {
   constructor(game) {
@@ -378,7 +380,9 @@ export class RadialMenu {
           transition: background 0.15s;
         `;
 
-        const icon = item.icon || (type === 'skill' ? '✨' : '📦');
+        const icon = type === 'skill'
+          ? renderAbilityIcon(item, { size: 'sm' })
+          : renderBattleItemIcon(item, { size: 'sm' });
         const costOrQty =
           type === 'skill'
             ? onCooldown

@@ -31,6 +31,7 @@ import { AppError, asyncHandler } from '../../middleware/errorHandler.js';
 import { VALID_SD15_LORA_MODELS } from '../../utils/assetConstants.js';
 import { assertValidAssetId, fileLocks } from '../../utils/assetLocking.js';
 import adminGenerationService from '../../services/adminGenerationService.js';
+import { resolveSd15CandidateDefaults } from './characterGenerationDefaults.js';
 import {
   PROJECT_ROOT,
   METADATA_DIR,
@@ -148,7 +149,7 @@ router.post('/:id/animations/:animation/generate', asyncHandler(async (req, res)
 
   // Fall back to character's sd15Config, then manifest defaults
   const sd15Config = character.sd15Config || {};
-  const manifestDefaults = charData.manifest?.generationDefaults?.sd15 || {};
+  const manifestDefaults = resolveSd15CandidateDefaults(charData.manifest);
 
   effectiveControlnetWeight = effectiveControlnetWeight ?? sd15Config.controlnetWeight ?? manifestDefaults.controlnetWeight ?? 0.5;
   effectiveIpadapterWeight = effectiveIpadapterWeight ?? sd15Config.ipadapterWeight ?? manifestDefaults.ipadapterWeight ?? 0.5;
@@ -467,12 +468,10 @@ router.get('/:id/weights/presets', asyncHandler(async (req, res) => {
   }
 
   const weightPresets = charData.manifest?.weightPresets || {};
-  const generationDefaults = charData.manifest?.generationDefaults || {};
-
   res.json({
     characterId: id,
     currentConfig: character.sd15Config || {},
-    generationDefaults: generationDefaults.sd15 || {},
+    generationDefaults: resolveSd15CandidateDefaults(charData.manifest),
     presets: Object.entries(weightPresets).map(([name, values]) => ({
       name,
       controlnetWeight: values.controlnet,

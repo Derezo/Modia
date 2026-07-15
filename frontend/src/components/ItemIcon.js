@@ -19,9 +19,10 @@
  *   ItemIcon.html({ item: inventoryItem, size: 'md' })
  */
 
-import { getAssetPath, getOptimalSize } from '@shared/assetPaths.js';
+import { getAssetPath, getOptimalSize } from '../../../shared/assetPaths.js';
 import { responsive } from '../core/Responsive.js';
 import { overlayCompositor } from '../utils/OverlayCompositor.js';
+import { installImageFallbackHandler } from '../utils/imageFallback.js';
 
 /**
  * Size mappings matching Icon component for consistency
@@ -59,7 +60,7 @@ function getSubcategory(itemType) {
   }
 
   // Consumable types
-  if (['consumable', 'potion', 'scroll', 'material', 'food'].includes(type)) {
+  if (['consumable', 'potion', 'scroll', 'material', 'food', 'key_item', 'misc'].includes(type)) {
     return 'consumables';
   }
 
@@ -109,9 +110,66 @@ const RARITY_CLASSES = {
  */
 const FALLBACK_DISPLAY = '✗';
 
-import { escapeHtml } from '../utils/escapeHtml.js';
+import { escapeHtmlAttribute } from '../utils/escapeHtml.js';
 
 export class ItemIcon {
+  /**
+   * Resolve the canonical image URL used by the item asset pipeline.
+   *
+   * This is intentionally side-effect free so canvas renderers can use the
+   * exact same source as the DOM component without injecting styles or
+   * duplicating item type/subcategory rules.
+   *
+   * @param {Object} options - Same item options accepted by {@link ItemIcon.html}
+   * @returns {string|null} Canonical item image URL, or null without a sprite ID
+   */
+  static getSrc(options = {}) {
+    const item = options.item || {};
+    const spriteId = options.spriteId || item.sprite_id || item.spriteId;
+
+    if (!spriteId) return null;
+
+    const itemType = options.itemType || item.item_type || item.itemType || item.type || 'weapon';
+    const size = options.size || 'md';
+    const subcategory = getSubcategory(itemType);
+    const pixelSize = getPixelSize(size);
+    const assetSize = getOptimalAssetSize(pixelSize);
+
+    return getAssetPath('items', spriteId, {
+      subcategory,
+      size: assetSize
+    });
+  }
+
+  /**
+   * Resolve a composited item image for canvas or DOM consumers while keeping
+   * category, size, rarity, and augment handling in one place.
+   * @param {Object} options - Same item options accepted by compositeHtml
+   * @returns {Promise<string|null>} Composited data URL, or null without a sprite ID
+   */
+  static async getCompositeSrc(options = {}) {
+    const item = options.item || {};
+    const spriteId = options.spriteId || item.sprite_id || item.spriteId;
+    if (!spriteId) return null;
+
+    const itemType = options.itemType || item.item_type || item.itemType || item.type || 'weapon';
+    const rarity = options.rarity || item.rarity || 'common';
+    const augments = (options.augments || item.augments || [])
+      .map(augment => typeof augment === 'string'
+        ? augment
+        : (augment?.category || augment?.type || augment?.name))
+      .filter(Boolean);
+    const size = options.size || 'md';
+
+    return overlayCompositor.composite({
+      spriteId,
+      subcategory: getSubcategory(itemType),
+      size: getPixelSize(size),
+      rarity,
+      augments
+    });
+  }
+
   /**
    * Generate HTML string for item icon
    *
@@ -126,6 +184,8 @@ export class ItemIcon {
    * @returns {string} HTML string
    */
   static html(options = {}) {
+    installImageFallbackHandler();
+
     // Inject styles once
     ItemIcon.injectStyles();
 
@@ -139,22 +199,11 @@ export class ItemIcon {
     const title = options.title || item.name || '';
 
     // Get subcategory and sizes
-    const subcategory = getSubcategory(itemType);
     const pixelSize = getPixelSize(size);
-    const assetSize = getOptimalAssetSize(pixelSize);
 
     // Build path
-    let imgPath = '';
-    let useFallback = false;
-
-    if (spriteId) {
-      imgPath = getAssetPath('items', spriteId, {
-        subcategory,
-        size: assetSize
-      });
-    } else {
-      useFallback = true;
-    }
+    const imgPath = ItemIcon.getSrc({ ...options, item, spriteId, itemType, size });
+    const useFallback = !imgPath;
 
     // Get rarity class
     const rarityClass = RARITY_CLASSES[rarity] || 'common';
@@ -164,23 +213,25 @@ export class ItemIcon {
     if (className) classes.push(className);
 
     // Build title attribute
-    const titleAttr = title ? `title="${escapeHtml(title)}"` : '';
+    const titleAttr = title ? `title="${escapeHtmlAttribute(title)}"` : '';
+    const classAttr = escapeHtmlAttribute(classes.join(' '));
 
     if (useFallback) {
       console.error('[ItemIcon] No spriteId provided for item:', item.name || 'unknown');
-      return `<span class="${classes.join(' ')} modia-item-icon--error" ${titleAttr}>
+      return `<span class="${classAttr} modia-item-icon--error" ${titleAttr}>
         <span class="modia-item-icon__fallback">${FALLBACK_DISPLAY}</span>
       </span>`;
     }
 
-    // Pre-compute fallback for onerror - use static values only
+    // Pre-compute fallback presentation using static values only.
     const fallbackSize = Math.round(pixelSize * 0.6);
 
-    return `<span class="${classes.join(' ')}" ${titleAttr}>
-      <img class="modia-item-icon__img" src="${imgPath}" alt=""
+    return `<span class="${classAttr}" ${titleAttr}>
+      <img class="modia-item-icon__img" src="${escapeHtmlAttribute(imgPath)}" alt=""
            style="width: ${pixelSize}px; height: ${pixelSize}px;"
            draggable="false"
-           onerror="console.error('[ItemIcon] Image load failed:', this.src); this.style.display='none'; this.nextElementSibling.style.display='flex'; this.parentElement.classList.add('modia-item-icon--error');">
+           data-image-fallback data-fallback-display="flex"
+           data-fallback-error-class="modia-item-icon--error">
       <span class="modia-item-icon__fallback" style="display:none;font-size:${fallbackSize}px;">${FALLBACK_DISPLAY}</span>
     </span>`;
   }
@@ -209,15 +260,12 @@ export class ItemIcon {
     // Extract from item object if provided
     const item = options.item || {};
     const spriteId = options.spriteId || item.sprite_id || item.spriteId;
-    const itemType = options.itemType || item.item_type || item.itemType || item.type || 'weapon';
     const rarity = options.rarity || item.rarity || 'common';
-    const augments = options.augments || item.augments || [];
     const size = options.size || 'md';
     const className = options.className || '';
     const title = options.title || item.name || '';
 
     // Get subcategory and sizes
-    const subcategory = getSubcategory(itemType);
     const pixelSize = getPixelSize(size);
 
     // Get rarity class
@@ -228,35 +276,30 @@ export class ItemIcon {
     if (className) classes.push(className);
 
     // Build title attribute
-    const titleAttr = title ? `title="${escapeHtml(title)}"` : '';
+    const titleAttr = title ? `title="${escapeHtmlAttribute(title)}"` : '';
+    const classAttr = escapeHtmlAttribute(classes.join(' '));
 
     // If no spriteId, return error fallback
     if (!spriteId) {
       console.error('[ItemIcon] No spriteId provided for compositeHtml, item:', item.name || 'unknown');
-      return `<span class="${classes.join(' ')} modia-item-icon--error" ${titleAttr}>
+      return `<span class="${classAttr} modia-item-icon--error" ${titleAttr}>
         <span class="modia-item-icon__fallback">${FALLBACK_DISPLAY}</span>
       </span>`;
     }
 
     // Composite the sprite with overlays
     try {
-      const dataUrl = await overlayCompositor.composite({
-        spriteId,
-        subcategory,
-        size: pixelSize,
-        rarity,
-        augments
-      });
+      const dataUrl = await ItemIcon.getCompositeSrc({ ...options, item, spriteId, rarity, size });
 
-      return `<span class="${classes.join(' ')}" ${titleAttr}>
-        <img class="modia-item-icon__img" src="${dataUrl}" alt=""
+      return `<span class="${classAttr}" ${titleAttr}>
+        <img class="modia-item-icon__img" src="${escapeHtmlAttribute(dataUrl)}" alt=""
              style="width: ${pixelSize}px; height: ${pixelSize}px;"
              draggable="false">
       </span>`;
     } catch (err) {
       // Show error state instead of masking with emoji
       console.error('[ItemIcon] Composite failed for:', spriteId, err);
-      return `<span class="${classes.join(' ')} modia-item-icon--error" ${titleAttr}>
+      return `<span class="${classAttr} modia-item-icon--error" ${titleAttr}>
         <span class="modia-item-icon__fallback">${FALLBACK_DISPLAY}</span>
       </span>`;
     }

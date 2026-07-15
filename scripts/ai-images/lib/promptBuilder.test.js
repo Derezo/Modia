@@ -11,6 +11,8 @@ const {
   buildSD15CharacterPrompt,
   buildSD15ReferencePrompt,
   getSD15NegativePrompt,
+  getCanonicalPlayerIdentityTraits,
+  normalizePlayerVisualTraits,
   SD15_LORA_TRIGGERS
 } = require('./promptBuilder.js');
 
@@ -18,32 +20,32 @@ describe('SD1.5 Prompt Builder', () => {
   describe('getSD15LoraTrigger', () => {
     it('should return correct trigger for pixel-art-xl', () => {
       const trigger = getSD15LoraTrigger('pixel-art-xl');
-      assert.strictEqual(trigger, 'pixel art style');
+      assert.strictEqual(trigger, 'pixelart');
     });
 
     it('should return correct trigger for 16-bit-pixel', () => {
       const trigger = getSD15LoraTrigger('16-bit-pixel');
-      assert.strictEqual(trigger, '16bit pixel art');
+      assert.strictEqual(trigger, '16bitscene');
     });
 
-    it('should return correct trigger for pixel-sprite', () => {
-      const trigger = getSD15LoraTrigger('pixel-sprite');
-      assert.strictEqual(trigger, 'pixel sprite');
+    it('should return correct trigger for cps2-pixel-art', () => {
+      const trigger = getSD15LoraTrigger('cps2-pixel-art');
+      assert.strictEqual(trigger, 'cpsii');
     });
 
-    it('should return correct trigger for retro-game', () => {
-      const trigger = getSD15LoraTrigger('retro-game');
-      assert.strictEqual(trigger, 'retro game style');
+    it('should return correct trigger for retro-game-art', () => {
+      const trigger = getSD15LoraTrigger('retro-game-art');
+      assert.strictEqual(trigger, 'r3tr0');
     });
 
-    it('should return empty string for null', () => {
+    it('should return the configured default trigger for null', () => {
       const trigger = getSD15LoraTrigger(null);
-      assert.strictEqual(trigger, '');
+      assert.strictEqual(trigger, 'pixelart');
     });
 
-    it('should return empty string for undefined', () => {
+    it('should return the configured default trigger for undefined', () => {
       const trigger = getSD15LoraTrigger(undefined);
-      assert.strictEqual(trigger, '');
+      assert.strictEqual(trigger, 'pixelart');
     });
 
     it('should return empty string for unknown LoRA', () => {
@@ -51,9 +53,9 @@ describe('SD1.5 Prompt Builder', () => {
       assert.strictEqual(trigger, '');
     });
 
-    it('should return empty string for empty string input', () => {
+    it('should return the configured default trigger for empty string input', () => {
       const trigger = getSD15LoraTrigger('');
-      assert.strictEqual(trigger, '');
+      assert.strictEqual(trigger, 'pixelart');
     });
   });
 
@@ -81,7 +83,7 @@ describe('SD1.5 Prompt Builder', () => {
       const prompt = buildSD15CharacterPrompt(baseCharacter, 'idle', {
         loraModel: 'pixel-art-xl'
       });
-      assert.ok(prompt.includes('pixel art style'), 'Should include LoRA trigger');
+      assert.ok(prompt.includes('pixelart'), 'Should include LoRA trigger');
     });
 
     it('should not include LoRA trigger when not provided', () => {
@@ -117,6 +119,33 @@ describe('SD1.5 Prompt Builder', () => {
       assert.ok(!prompt.includes('undefined'), 'Should not contain literal undefined');
     });
 
+    it('prioritizes the canonical player race, gender, and class tuple', () => {
+      const prompt = buildSD15CharacterPrompt({
+        id: 'dwarf_female_chemist',
+        race: 'dwarf',
+        gender: 'female',
+        class: 'chemist',
+        visualTraits: 'dwarf stout build thick beard braided hair alchemist vials'
+      }, 'idle', {});
+
+      assert.match(prompt, /adult woman with an unmistakably feminine face and silhouette/);
+      assert.match(prompt, /clearly dwarf/);
+      assert.match(prompt, /clearly recognizable chemist/);
+      assert.match(prompt, /glass potion vials, reagent pouch, stained practical apron/);
+      assert.match(prompt, /no beard/);
+      assert.doesNotMatch(prompt, /thick beard/i);
+    });
+
+    it('keeps enemy prompts free of invented player identity constraints', () => {
+      const prompt = buildSD15CharacterPrompt({
+        id: 'cave_slime',
+        visualTraits: 'translucent blue slime'
+      }, 'attack', {});
+
+      assert.doesNotMatch(prompt, /adult (?:man|woman)/);
+      assert.match(prompt, /translucent blue slime/);
+    });
+
     it('should include 64x64 size constraint', () => {
       const prompt = buildSD15CharacterPrompt(baseCharacter, 'idle', {});
       assert.ok(prompt.includes('64x64'), 'Should include 64x64 size');
@@ -127,13 +156,14 @@ describe('SD1.5 Prompt Builder', () => {
 
       assert.ok(prompt.includes('pixel art character sprite'), 'Should include core style');
       assert.ok(prompt.includes('side view'), 'Should include side view');
-      assert.ok(prompt.includes('transparent background'), 'Should include transparent background');
+      assert.ok(prompt.includes('flat uniform pure white background'), 'Should include generation matte');
+      assert.ok(prompt.includes('no floor no shadow no scenery no frame'), 'Should prohibit backdrop residue');
     });
 
     it('should include quality boosters', () => {
       const prompt = buildSD15CharacterPrompt(baseCharacter, 'idle', {});
 
-      assert.ok(prompt.includes('clean lines'), 'Should include clean lines');
+      assert.ok(prompt.includes('hard pixel edges'), 'Should include hard pixel edges');
       assert.ok(prompt.includes('game asset'), 'Should include game asset');
     });
 
@@ -169,6 +199,28 @@ describe('SD1.5 Prompt Builder', () => {
 
       assert.ok(prompt.includes('small green goblin'), 'Should include enemy visual traits');
       assert.ok(prompt.includes('idle animation'), 'Should include animation');
+    });
+  });
+
+  describe('canonical player identity helpers', () => {
+    it('renders underscored classes as readable identity traits', () => {
+      assert.match(getCanonicalPlayerIdentityTraits({
+        race: 'elf',
+        gender: 'other',
+        class: 'martial_artist'
+      }), /martial artist/);
+    });
+
+    it('removes legacy masculine facial-hair contradictions only for female players', () => {
+      const traits = 'dwarf stout build thick beard braided hair sturdy female feminine features';
+      assert.strictEqual(
+        normalizePlayerVisualTraits({ race: 'dwarf', gender: 'female' }, traits),
+        'dwarf stout build braided hair sturdy female feminine features'
+      );
+      assert.strictEqual(
+        normalizePlayerVisualTraits({ race: 'dwarf', gender: 'male' }, traits),
+        traits
+      );
     });
   });
 
@@ -211,7 +263,7 @@ describe('SD1.5 Prompt Builder', () => {
       const prompt = buildSD15ReferencePrompt(baseCharacter, {
         loraModel: 'pixel-art-xl'
       });
-      assert.ok(prompt.includes('pixel art style'), 'Should include LoRA trigger');
+      assert.ok(prompt.includes('pixelart'), 'Should include LoRA trigger');
     });
 
     it('should include neutral pose keywords', () => {
@@ -230,11 +282,11 @@ describe('SD1.5 Prompt Builder', () => {
       assert.ok(prompt.includes('consistent style'), 'Should include consistent style');
     });
 
-    it('should include transparent background', () => {
+    it('should include a removable white generation matte', () => {
       const prompt = buildSD15ReferencePrompt(baseCharacter, {});
       assert.ok(
-        prompt.includes('transparent background'),
-        'Should include transparent background'
+        prompt.includes('flat uniform pure white background'),
+        'Should include white generation matte'
       );
     });
 
@@ -313,15 +365,19 @@ describe('SD1.5 Prompt Builder', () => {
       assert.ok(typeof SD15_LORA_TRIGGERS === 'object', 'Should be an object');
     });
 
-    it('should have null key for default fallback', () => {
-      assert.ok('null' in SD15_LORA_TRIGGERS || null in SD15_LORA_TRIGGERS,
-        'Should have null key');
-      // The null key should map to empty string
-      assert.strictEqual(SD15_LORA_TRIGGERS[null], '', 'null should map to empty string');
+    it('uses pixel-art-xl as the implicit default rather than a null registry key', () => {
+      assert.ok(!('null' in SD15_LORA_TRIGGERS), 'Should not encode null as a model id');
+      assert.strictEqual(getSD15LoraTrigger(null), SD15_LORA_TRIGGERS['pixel-art-xl']);
     });
 
     it('should have known LoRA model keys', () => {
-      const expectedKeys = ['pixel-art-xl', '16-bit-pixel', 'pixel-sprite', 'retro-game'];
+      const expectedKeys = [
+        'pixel-art-xl',
+        '16-bit-pixel',
+        'all-in-one-pixel',
+        'retro-game-art',
+        'cps2-pixel-art'
+      ];
       for (const key of expectedKeys) {
         assert.ok(key in SD15_LORA_TRIGGERS, `Should have ${key} key`);
         assert.ok(

@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "description": "Master manifest for Modia generated visual assets, including deterministic battle terrain",
-  "totalAssets": 985,
+  "totalAssets": 1486,
   "artDirection": {
     "mood": "cozy_nostalgic",
     "technique": "ink_wash",
@@ -42,12 +42,13 @@
     },
     "items": {
       "description": "Equipment, consumable, and collectible item sprites",
-      "assetCount": 133,
+      "assetCount": 170,
       "files": [
         "items/weapons.json",
         "items/armor.json",
         "items/consumables.json",
-        "items/accessories.json"
+        "items/accessories.json",
+        "items/runtime-derivations.json"
       ]
     },
     "icons": {
@@ -60,6 +61,15 @@
         "icons/augments.json",
         "icons/resources.json",
         "icons/zodiac.json"
+      ]
+    },
+    "abilities": {
+      "description": "Canonical icons and reusable presentation metadata for active player, monster, and zodiac abilities",
+      "assetCount": 164,
+      "activeOnly": true,
+      "files": [
+        "abilities/manifest.json",
+        "abilities/abilities.json"
       ]
     },
     "nodes": {
@@ -86,9 +96,11 @@
       ]
     },
     "characters": {
-      "description": "Animated character sprite sheets (64x512 vertical strips, 8 frames)",
-      "assetCount": 54,
-      "spriteSheets": 34,
+      "description": "Portrait-matched player variants and canonical enemy animation strips (64x512, 8 temporal frames)",
+      "assetCount": 354,
+      "playerVariantCount": 300,
+      "enemyCount": 34,
+      "legacyPlayerArchetypes": 20,
       "format": {
         "type": "vertical_strip",
         "frameWidth": 64,
@@ -98,11 +110,16 @@
       },
       "files": [
         "characters/players.json",
+        "characters/player-variants.json",
+        "characters/visual-style-profile.json",
+        "characters/enemy-sprite-repairs.json",
+        "characters/enemy-animation-stabilizations.json",
         "characters/enemies/forest.json",
         "characters/enemies/cave.json",
         "characters/enemies/mountain.json",
         "characters/enemies/bridge.json",
-        "characters/enemies/castle.json"
+        "characters/enemies/castle.json",
+        "characters/enemies/palace.json"
       ]
     }
   },
@@ -221,6 +238,7 @@
     "portraits": "v1",
     "items": "v1",
     "icons": "v1",
+    "abilities": "v1",
     "nodes": "v1",
     "overlays": "v1",
     "obstacles": "v2",
@@ -242,6 +260,7 @@
       "portraits": { "enabled": true, "model": "isnet-anime" },
       "items": { "enabled": true, "model": "isnet-general-use" },
       "icons": { "enabled": true, "model": "u2net" },
+      "abilities": { "enabled": true, "model": "u2net" },
       "nodes": { "enabled": true, "model": "isnet-general-use" },
       "overlays": { "enabled": true, "model": "isnet-general-use" },
       "characters": { "enabled": true, "model": "isnet-anime" },

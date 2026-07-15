@@ -701,7 +701,7 @@ export default class BattleLogModal {
         src="${portraitSrc}"
         alt=""
         class="battle-log-entry-portrait battle-log-entry-portrait--${typeClass}"
-        onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex';"
+        data-image-fallback data-fallback-display="inline-flex"
       ><span class="battle-log-entry-portrait-fallback battle-log-entry-portrait-fallback--${typeClass}" style="display:none;">${getClassLetter(unit.class)}</span>`;
     }
 

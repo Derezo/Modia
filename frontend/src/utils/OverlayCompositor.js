@@ -16,7 +16,7 @@
  *   });
  */
 
-import { getAssetPath, getOptimalSize } from '@shared/assetPaths.js';
+import { getAssetPath, getOptimalSize } from '../../../shared/assetPaths.js';
 
 /**
  * Rarity overlay alpha values for compositing
@@ -126,7 +126,7 @@ class OverlayCompositor {
     const normalizedRarity = this.normalizeRarity(rarity);
 
     // Generate cache key for this specific combination
-    const augmentKey = augments.length > 0 ? augments.sort().join('_') : 'none';
+    const augmentKey = augments.length > 0 ? [...augments].sort().join('_') : 'none';
     const cacheKey = `composite_${spriteId}_${subcategory}_${size}_${normalizedRarity}_${augmentKey}`;
 
     // Return cached result if available

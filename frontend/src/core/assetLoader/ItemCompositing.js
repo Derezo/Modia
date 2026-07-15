@@ -11,6 +11,8 @@
  * @see AssetLoader.js - Main orchestrator that delegates to this module
  */
 
+import { getAssetPath, getOptimalSize } from '../../../../shared/assetPaths.js';
+
 /**
  * Rarity overlay alpha values for compositing
  * Higher rarity = more visible glow effect
@@ -29,6 +31,28 @@ export const RARITY_ALPHA = {
 export const COMPOSITE_SIZE = 128;
 
 /**
+ * Normalize legacy item categories to the four canonical asset folders.
+ * @param {string} category - Item type or subcategory
+ * @returns {'weapons'|'armor'|'accessories'|'consumables'}
+ */
+export function normalizeItemSubcategory(category) {
+  const value = String(category || '').toLowerCase();
+  if (['weapon', 'weapons', 'sword', 'axe', 'staff', 'wand', 'bow', 'dagger', 'mace', 'polearm', 'fist'].includes(value)) {
+    return 'weapons';
+  }
+  if (['armor', 'helmet', 'helm', 'body', 'boots', 'head', 'legs', 'feet', 'robe', 'shield'].includes(value)) {
+    return 'armor';
+  }
+  if (['accessory', 'accessories', 'ring', 'amulet', 'cloak', 'belt', 'gloves', 'gauntlets'].includes(value)) {
+    return 'accessories';
+  }
+  if (['consumable', 'consumables', 'potion', 'scroll', 'material', 'materials', 'food', 'key_item', 'misc'].includes(value)) {
+    return 'consumables';
+  }
+  return 'weapons';
+}
+
+/**
  * Load and composite an item sprite with rarity and augment overlays
  * @param {Object} context - AssetLoader context with cache and loadImage
  * @param {string} basePath - Base asset path
@@ -42,7 +66,8 @@ export async function loadItemComposite(context, basePath, itemId, category, rar
   const { cache, loadImage } = context;
 
   // Generate cache key for this specific combination
-  const cacheKey = `item_${itemId}_${rarity}_${augment || 'none'}`;
+  const subcategory = normalizeItemSubcategory(category);
+  const cacheKey = `item_${subcategory}_${itemId}_${rarity}_${augment || 'none'}`;
 
   // Return cached composite if available
   if (cache.has(cacheKey)) {
@@ -50,7 +75,10 @@ export async function loadItemComposite(context, basePath, itemId, category, rar
   }
 
   // Load base item sprite
-  const baseItemPath = `${basePath}/items/${category}/${itemId}.webp`;
+  const baseItemPath = getAssetPath('items', itemId, {
+    subcategory,
+    size: getOptimalSize('items', COMPOSITE_SIZE)
+  });
   let baseImage;
   try {
     baseImage = await loadImage(baseItemPath);
@@ -150,12 +178,14 @@ export function composeItemSprite(base, rarityOverlay, augmentOverlay, rarity) {
  * Returns null if the composite is not in cache
  * @param {Map} cache - Cache map
  * @param {string} itemId - Item template identifier
+ * @param {string} category - Item category or canonical subcategory
  * @param {string} [rarity='common'] - Item rarity
  * @param {string|null} [augment=null] - Augment type
  * @returns {HTMLImageElement|null} Cached composite or null
  */
-export function getItemComposite(cache, itemId, rarity = 'common', augment = null) {
-  const cacheKey = `item_${itemId}_${rarity}_${augment || 'none'}`;
+export function getItemComposite(cache, itemId, category, rarity = 'common', augment = null) {
+  const subcategory = normalizeItemSubcategory(category);
+  const cacheKey = `item_${subcategory}_${itemId}_${rarity}_${augment || 'none'}`;
   return cache.get(cacheKey) || null;
 }
 

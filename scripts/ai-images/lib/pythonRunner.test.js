@@ -144,6 +144,35 @@ describe('pythonRunner outputPath validation', () => {
         { message: /outputPath is required/i }
       );
     });
+
+    it('requires the complete identity prompt after output validation', async () => {
+      await assert.rejects(
+        () => generateAnimation({
+          characterId: 'human_male_warrior',
+          animation: 'idle',
+          outputPath: '/tmp/human_male_warrior_idle.webp'
+        }),
+        { message: /prompt is required/i }
+      );
+    });
+
+    it('passes the identity prompt to the repository-owned animation adapter', async () => {
+      const result = await generateAnimation({
+        characterId: 'human_male_warrior',
+        animation: 'idle',
+        prompt: 'blond bearded warrior, white and gold plate armor, red scarf',
+        referenceImage: '/tmp/human_male_warrior_reference.png',
+        outputPath: '/tmp/human_male_warrior_idle.webp',
+        originalsDirectory: '/tmp/human_male_warrior_idle_originals',
+        negativePrompt: 'duplicate character, colored background'
+      }, { dryRun: true, quiet: true });
+
+      assert.equal(result.success, true);
+      assert.match(result.command, /scripts\/ai-images\/python\/generate_character_animation\.py/);
+      assert.match(result.command, /--prompt blond bearded warrior/);
+      assert.match(result.command, /--originals-dir \/tmp\/human_male_warrior_idle_originals/);
+      assert.match(result.command, /--negative-prompt duplicate character, colored background/);
+    });
   });
 
   describe('generateReferenceImage()', () => {

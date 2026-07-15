@@ -28,6 +28,8 @@ import { PARCHMENT_COLORS } from '../ui/parchment/index.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { responsive } from '../core/Responsive.js';
 import { getBattleFormationStyles } from './battleFormation/battleFormationStyles.js';
+import { getNpcVisualIdentity, getPlayerCharacterIdentity } from '@shared/assetPaths.js';
+import { installImageFallbackHandler } from '../utils/imageFallback.js';
 
 // Local alias for cleaner access
 const P = PARCHMENT_COLORS;
@@ -362,7 +364,7 @@ export class BattleFormationScene extends Scene {
   }
 
   /**
-   * Preload character sprites for all party classes.
+   * Preload character sprites for all distinct party visual identities.
    * Ensures sprites are in cache before FormationGrid tries to render them.
    * Only loads 'idle' animation as that's what the formation grid displays.
    *
@@ -370,20 +372,19 @@ export class BattleFormationScene extends Scene {
    * @private
    */
   async preloadCharacterSprites() {
-    // Get unique classes from party
-    const classes = [...new Set(
+    const characters = [...new Map(
       this.selectableCharacters
-        .map(c => c.class?.toLowerCase())
-        .filter(Boolean)
-    )];
+        .filter(character => character.class)
+        .map(character => [getPlayerCharacterIdentity(character).id, character])
+    ).values()];
 
-    if (classes.length === 0) return;
+    if (characters.length === 0) return;
 
-    console.log(`[BattleFormationScene] Preloading sprites for: [${classes.join(', ')}]`);
+    const identities = characters.map(character => getPlayerCharacterIdentity(character).id);
+    console.log(`[BattleFormationScene] Preloading sprites for: [${identities.join(', ')}]`);
 
-    // Preload idle animation for each class
-    const promises = classes.map(cls =>
-      this.game.assetLoader.preloadCharacter(cls, { animations: ['idle'] })
+    const promises = characters.map(character =>
+      this.game.assetLoader.preloadCharacter(character, { animations: ['idle'] })
     );
 
     await Promise.allSettled(promises);
@@ -427,6 +428,8 @@ export class BattleFormationScene extends Scene {
   }
 
   createUI() {
+    installImageFallbackHandler();
+
     const container = document.createElement('div');
     container.id = 'battle-formation-scene';
     container.className = this.isMobile ? 'bf-formation-mobile' : 'bf-formation-desktop';
@@ -634,8 +637,9 @@ export class BattleFormationScene extends Scene {
     return this.enemies.map((enemy, index) => {
       const isBoss = enemy.isBoss || enemy.level > 10;
       const threatClass = isBoss ? 'bf-threat-boss' : '';
+      const npcIdentity = getNpcVisualIdentity(enemy, { fallbackBiome: this.nodeType });
       const portraitUrl = this.game.assetLoader.getEnemyPortraitUrl(
-        enemy.spriteId || enemy.sprite_id || 'unknown',
+        npcIdentity.visualId || 'unknown',
         40
       );
 
@@ -643,7 +647,7 @@ export class BattleFormationScene extends Scene {
         <div class="bf-enemy-card ${threatClass}" data-enemy-index="${index}">
           <div class="bf-enemy-portrait">
             <img class="bf-enemy-portrait-img" src="${portraitUrl}" alt="${escapeHtml(enemy.name || '')}"
-                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                 data-image-fallback data-fallback-display="flex">
             <div class="bf-enemy-icon" style="display: none;">${enemy.name.charAt(0)}</div>
             ${isBoss ? '<div class="bf-boss-indicator">&#9760;</div>' : ''}
           </div>
@@ -1113,6 +1117,8 @@ export class BattleFormationScene extends Scene {
   }
 
   updateUnplacedRoster() {
+    installImageFallbackHandler();
+
     const roster = this.uiElement?.querySelector('#bf-unplaced-roster');
     if (!roster) return;
 
@@ -1136,7 +1142,7 @@ export class BattleFormationScene extends Scene {
              data-char-id="${char.id}">
           <div class="bf-roster-portrait">
             <img src="${portraitUrl}" alt="${escapeHtml(char.name || '')}"
-                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                 data-image-fallback data-fallback-display="flex">
             <div class="bf-roster-fallback" style="display:none; background:${this.getClassColor(char.class)}">
               ${this.getClassIcon(char.class)}
             </div>

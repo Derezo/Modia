@@ -198,6 +198,107 @@
       "generated": true,
       "generatedAt": "2026-01-27T17:33:59.553Z",
       "needsRegeneration": false
+    },
+    {
+      "id": "amulet_dreamcatcher",
+      "name": "Elven Dream Catcher",
+      "prompt": "woven elven dream catcher pendant with moonlit crystal focus",
+      "seed": 24001,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/accessories/amulet_bone.webp",
+        "composition": {
+          "primaryScale": 0.86,
+          "modulate": {
+            "hue": 155,
+            "saturation": 1.18,
+            "brightness": 1.02
+          },
+          "accent": {
+            "sourceAsset": "items/originals/accessories/amulet_crystal.webp",
+            "scale": 0.27,
+            "gravity": "center",
+            "modulate": {
+              "hue": 170,
+              "saturation": 1.3,
+              "brightness": 1.08
+            }
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/accessories/amulet_dreamcatcher.webp",
+        "64": "/assets/items/64/accessories/amulet_dreamcatcher.webp",
+        "128": "/assets/items/128/accessories/amulet_dreamcatcher.webp",
+        "original": "/assets/items/originals/accessories/amulet_dreamcatcher.webp"
+      }
+    },
+    {
+      "id": "amulet_trophy",
+      "name": "Trophy Necklace",
+      "prompt": "weathered hunter trophy necklace with bronze war token",
+      "seed": 24002,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/accessories/amulet_bone.webp",
+        "composition": {
+          "primaryScale": 0.86,
+          "colorize": "#c48a43",
+          "accent": {
+            "sourceAsset": "items/originals/weapons/axe_battle.webp",
+            "scale": 0.22,
+            "gravity": "southeast",
+            "colorize": "#8f5a2a"
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/accessories/amulet_trophy.webp",
+        "64": "/assets/items/64/accessories/amulet_trophy.webp",
+        "128": "/assets/items/128/accessories/amulet_trophy.webp",
+        "original": "/assets/items/originals/accessories/amulet_trophy.webp"
+      }
+    },
+    {
+      "id": "emblem_palace",
+      "name": "Palace Emblem",
+      "prompt": "golden palace service emblem bearing a royal crown",
+      "seed": 24003,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/accessories/amulet_holy.webp",
+        "composition": {
+          "primaryScale": 0.84,
+          "colorize": "#d6a93b",
+          "accent": {
+            "sourceAsset": "items/originals/armor/helm_crown.webp",
+            "scale": 0.3,
+            "gravity": "center",
+            "colorize": "#f0c85b"
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/accessories/emblem_palace.webp",
+        "64": "/assets/items/64/accessories/emblem_palace.webp",
+        "128": "/assets/items/128/accessories/emblem_palace.webp",
+        "original": "/assets/items/originals/accessories/emblem_palace.webp"
+      }
     }
   ]
 }

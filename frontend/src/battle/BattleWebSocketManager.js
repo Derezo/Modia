@@ -1043,6 +1043,9 @@ export class BattleWebSocketManager {
           }
           localUnit.hp = serverUnit.hp ?? localUnit.hp;
           localUnit.mp = serverUnit.mp ?? localUnit.mp;
+          // Poller snapshots bypass BattleScene.syncUnitsWithState(), so enforce
+          // the same authoritative life/death presentation invariant here.
+          localUnit.reconcileAnimationWithHealth?.();
           // Update status effects if provided
           if (serverUnit.statusEffects) {
             localUnit.statusEffects = serverUnit.statusEffects;
@@ -1371,13 +1374,87 @@ export class BattleWebSocketManager {
 
     // Play attack/skill animation
     if (actionType === 'attack' || actionType === 'skill') {
+      const skillId = result.skillId || result.skillUsed || null;
+
       // Play skill sound if this is a skill action
-      if (actionType === 'skill' && result.skillId) {
-        this.scene.audioManager.playSkillSound({ id: result.skillId }, actor);
+      if (actionType === 'skill' && skillId) {
+        this.scene.audioManager.playSkillSound({ id: skillId }, actor);
       }
 
-      // Find target and play damage animation
-      if (target) {
+      const aoeCenter = result.aoeTiles?.find(tile => tile.isCenter) || null;
+      const resultTargetTile = aoeCenter || result.targetTile || null;
+      const presentation = this.scene.playActionPresentation({
+        actor,
+        actionType,
+        result,
+        target: result.isAoE ? null : target,
+        targetTile: resultTargetTile
+          ? { x: resultTargetTile.x, y: resultTargetTile.y }
+          : null,
+        skillId
+      });
+      if (presentation) {
+        await this.scene.waitForAnimation(180);
+      }
+
+      const deathAnimations = [];
+
+      // AoE results carry per-target damage/healing. Never apply the aggregate
+      // `result.damage` to the primary target: it is only a compatibility total.
+      if (result.isAoE && Array.isArray(result.aoeTargets)) {
+        for (const targetInfo of result.aoeTargets) {
+          const aoeTarget = this.units.get(targetInfo.targetId);
+          if (!aoeTarget) continue;
+
+          if (targetInfo.isAbsorb || targetInfo.healing > 0) {
+            const healing = Number(targetInfo.healing) || 0;
+            aoeTarget.hp = Math.min(aoeTarget.maxHp, aoeTarget.hp + healing);
+            if (healing > 0) {
+              this.animations.addHealNumber(aoeTarget.screenX, aoeTarget.screenY - 40, healing);
+            }
+            this.animations.addParticleBurst(
+              aoeTarget.screenX,
+              aoeTarget.screenY - 32,
+              presentation?.descriptor.primaryColor || '#44ff88'
+            );
+            continue;
+          }
+
+          const damage = Number(targetInfo.damage) || 0;
+          if (damage <= 0) continue;
+
+          aoeTarget.playHitAnimation();
+          this.scene.audioManager.playImpactSound({ ...result, ...targetInfo, damage });
+          this.animations.addDamageNumber(
+            aoeTarget.screenX,
+            aoeTarget.screenY - 40,
+            damage,
+            targetInfo.isCritical,
+            targetInfo.element || result.element,
+            targetInfo.elementalModifier
+          );
+          const isAllyHit = actor?.teamId === aoeTarget.teamId;
+          this.animations.addParticleBurst(
+            aoeTarget.screenX,
+            aoeTarget.screenY - 32,
+            isAllyHit
+              ? '#ff8844'
+              : (presentation?.descriptor.primaryColor || '#ff4444')
+          );
+          aoeTarget.hp = Math.max(0, aoeTarget.hp - damage);
+
+          if (targetInfo.effectApplied) {
+            this.scene.audioManager.playStatusEffectSound(targetInfo.effectApplied);
+            this.animations.addStatusEffect(
+              aoeTarget.screenX,
+              aoeTarget.screenY - 60,
+              String(targetInfo.effectApplied).toUpperCase()
+            );
+          }
+          if (!aoeTarget.isAlive()) deathAnimations.push(aoeTarget);
+        }
+      } else if (target) {
+        // Single-target damage/healing presentation.
         if (result.damage > 0) {
           debugLog('battle.logDamageCalculations', 'Damage dealt:', {
             attacker: actor?.name,
@@ -1392,18 +1469,83 @@ export class BattleWebSocketManager {
           target.playHitAnimation();
           // Play impact sound based on result
           this.scene.audioManager.playImpactSound(result);
-          this.animations.addDamageNumber(target.screenX, target.screenY - 40, result.damage, result.isCritical);
-          this.animations.addFlash(target.screenX, target.screenY - 32, '#ff4444');
+          this.animations.addDamageNumber(
+            target.screenX,
+            target.screenY - 40,
+            result.damage,
+            result.isCritical,
+            result.element,
+            result.elementalModifier
+          );
+          if (actionType !== 'skill') {
+            this.animations.addFlash(target.screenX, target.screenY - 32, '#ff4444');
+            this.animations.addParticleBurst(target.screenX, target.screenY - 32, '#ff4444');
+          }
           target.hp = Math.max(0, target.hp - result.damage);
+          if (!target.isAlive()) deathAnimations.push(target);
         } else if (result.missed) {
           // Play miss sound
           this.scene.audioManager.playImpactSound({ missed: true });
-          this.animations.addDamageNumber(target.screenX, target.screenY - 40, 'MISS', false);
+          this.animations.addMiss(target.screenX, target.screenY - 40);
         }
       }
 
+      // Mirror the local HTTP path for non-AoE healing/restoration and status
+      // feedback. AoE statuses are already presented beside each target above.
+      if (actionType === 'skill' && !result.isAoE) {
+        const resourceTarget = result.targetId != null
+          ? this.units.get(result.targetId)
+          : presentation?.descriptor.selfTarget
+            ? actor
+            : null;
+
+        const healing = Number(result.healing) || 0;
+        if (resourceTarget && healing > 0) {
+          resourceTarget.hp = Math.min(resourceTarget.maxHp, resourceTarget.hp + healing);
+          this.animations.addHealNumber(resourceTarget.screenX, resourceTarget.screenY - 40, healing);
+        }
+
+        const mpRestored = Number(result.mpRestored) || 0;
+        if (resourceTarget && mpRestored > 0) {
+          resourceTarget.mp = Math.min(resourceTarget.maxMp, resourceTarget.mp + mpRestored);
+          this.animations.addMpRestoreNumber(resourceTarget.screenX, resourceTarget.screenY - 58, mpRestored);
+        }
+
+        const statusResults = [...(result.skillEffects || [])];
+        const topLevelStatus = result.effectApplied || result.statusApplied;
+        if (topLevelStatus) {
+          statusResults.push({ effect: topLevelStatus, targetId: result.targetId });
+        }
+
+        const shownStatuses = new Set();
+        for (const effect of statusResults) {
+          const effectTarget = effect.targetId != null
+            ? this.units.get(effect.targetId)
+            : resourceTarget;
+          const rawLabel = effect.effect || effect.status || effect.type;
+          if (!effectTarget || !rawLabel) continue;
+
+          const label = effect.type === 'cleanse' && !effect.effect
+            ? 'CLEANSED'
+            : String(rawLabel).toUpperCase();
+          const statusKey = `${effectTarget.id}:${label}`;
+          if (shownStatuses.has(statusKey)) continue;
+          shownStatuses.add(statusKey);
+
+          this.animations.addStatusEffect(effectTarget.screenX, effectTarget.screenY - 74, label);
+          this.scene.audioManager.playStatusEffectSound(effect.effect || effect.status || effect.type);
+        }
+      }
+
+      if (deathAnimations.length > 0) {
+        // Let hit reactions and numbers register before replacing them with the
+        // terminal pose, matching the local HTTP presentation order.
+        await this.scene.waitForAnimation(300);
+        for (const defeated of deathAnimations) defeated.playDeathAnimation();
+      }
+
       // Play status effect sound if effect was applied
-      if (result.effectApplied || result.statusApplied) {
+      if (actionType !== 'skill' && (result.effectApplied || result.statusApplied)) {
         this.scene.audioManager.playStatusEffectSound(result.effectApplied || result.statusApplied);
       }
 

@@ -11,12 +11,27 @@
 import { query, withTransaction } from '../config/database.js';
 import { calculateStats, GUILD_ADVANCEMENT_TIERS, CLASS_MOVEMENT } from '../config/constants.js';
 import { SKILL_TREES } from '../config/skillTrees.js';
+import {
+  resolveBattleSkill,
+  resolveBattleSkills,
+  serializeBattleSkill
+} from './battle/skillDefinitionService.js';
+import { withBattleVisualIdentity } from './battle/visualIdentityService.js';
 // createPlayerBattleUnit could be used for future multi-character guildmaster battles
 // import { createPlayerBattleUnit } from './battleUnitFactory.js';
 import * as bossService from './bossService.js';
 import { generateTerrain } from '../../../shared/mapGeneration.js';
 
 const BASE_CLASSES = ['warrior', 'wizard', 'monk', 'chemist'];
+
+/**
+ * Hydrate persisted advancement-battle skills into the same canonical DTOs
+ * used by PvE and Coliseum battle creation. Kept public for deterministic
+ * validation without requiring database fixtures.
+ */
+export function resolveAdvancementSkills(characterClass, learnedSkills) {
+  return resolveBattleSkills(characterClass, learnedSkills);
+}
 
 /**
  * Generate a guildmaster battle for advancement
@@ -129,18 +144,16 @@ async function createSoloPlayerUnit(character) {
     [character.id]
   );
 
-  const skills = skillsResult.rows.map(s => ({
-    id: s.skill_id,
-    level: s.level
-  }));
+  const skills = resolveAdvancementSkills(char.class, skillsResult.rows);
 
-  return {
+  return withBattleVisualIdentity({
     id: `player_${character.id}`,
     characterId: character.id,
     type: 'player',
     name: char.name,
     class: char.class,
     race: char.race,
+    gender: char.gender || 'other',
     level: char.level,
     hp: char.hp_current || char.hp_max,
     maxHp: char.hp_max + (equipmentBonuses.hp || 0),
@@ -163,13 +176,16 @@ async function createSoloPlayerUnit(character) {
     actUsed: false,
     tileX: 0,
     tileY: 0
-  };
+  }, {
+    kind: 'player',
+    id: character.id
+  });
 }
 
 /**
  * Create guildmaster battle unit
  */
-function createGuildmasterUnit(template, challengerLevel) {
+export function createGuildmasterUnit(template, challengerLevel) {
   // Scale guildmaster to be slightly above challenger level
   const level = Math.max(template.base_level, challengerLevel + 5);
 
@@ -186,18 +202,14 @@ function createGuildmasterUnit(template, challengerLevel) {
   // Level scaling factor
   const scaleFactor = 1 + (level - template.base_level) * 0.05;
 
-  const skills = (template.skills || []).map(skill => ({
-    id: skill.id,
-    name: skill.name,
-    power: skill.power,
-    range: skill.range || 1,
-    mpCost: skill.mpCost || 0,
-    damageType: skill.damageType || 'physical',
-    effect: skill.effect,
-    effectChance: skill.effectChance
-  }));
+  const skills = (template.skills || [])
+    .map(skill => (
+      resolveBattleSkill(template.guild_class, skill)
+      || (typeof skill === 'object' ? serializeBattleSkill(skill) : null)
+    ))
+    .filter(Boolean);
 
-  return {
+  return withBattleVisualIdentity({
     id: `guildmaster_${template.guild_class}`,
     type: 'enemy',
     name: template.name,
@@ -230,9 +242,13 @@ function createGuildmasterUnit(template, challengerLevel) {
     currentPhase: 1,
     maxPhases: (template.phases || []).length || 1,
     phaseName: (template.phases?.[0]?.name) || 'Phase 1',
-    spriteId: template.sprite_id,
     aiType: template.ai_type || 'tactical'
-  };
+  }, {
+    kind: 'npc',
+    id: template.id ?? `guildmaster_${template.guild_class}`,
+    visualId: template.sprite_id,
+    primaryBiome: template.primary_biome || 'guild'
+  });
 }
 
 /**
@@ -284,7 +300,7 @@ function getDiscipleClasses(guildId, currentTier) {
 /**
  * Create a single disciple unit
  */
-function createDiscipleUnit(className, challengerLevel, index) {
+export function createDiscipleUnit(className, challengerLevel, index) {
   // Disciples are at or slightly below challenger level
   const level = Math.max(1, challengerLevel - 2 + index);
 
@@ -294,16 +310,25 @@ function createDiscipleUnit(className, challengerLevel, index) {
 
   // Get skills from skill tree
   const skillTree = SKILL_TREES[className];
-  const skills = skillTree?.skills?.slice(0, 3).map(s => ({
-    id: s.id,
-    name: s.name,
-    power: s.power || 80,
-    range: s.range || 1,
-    mpCost: s.mpCost || 5,
-    damageType: s.damageType || 'physical'
-  })) || [{ id: 'attack', name: 'Attack', power: 80, range: 1 }];
+  const activeDefinitions = (skillTree?.branches || [])
+    .flatMap(branch => branch.skills || [])
+    .filter(skill => (skill.type ?? 'active') === 'active')
+    .slice(0, 3);
+  const skills = activeDefinitions.length > 0
+    ? activeDefinitions.map(skill => serializeBattleSkill(skill)).filter(Boolean)
+    : [serializeBattleSkill({
+      id: 'attack',
+      name: 'Attack',
+      type: 'active',
+      power: 80,
+      range: 1,
+      damageType: 'physical',
+      visualCategory: 'physical'
+    })];
 
-  return {
+  const visualId = `disciple_${className}`;
+
+  return withBattleVisualIdentity({
     id: `disciple_${className}_${index}`,
     type: 'enemy',
     name: `${className.charAt(0).toUpperCase() + className.slice(1)} Disciple`,
@@ -332,7 +357,12 @@ function createDiscipleUnit(className, challengerLevel, index) {
     tileX: 0,
     tileY: 0,
     aiType: 'standard'
-  };
+  }, {
+    kind: 'npc',
+    id: visualId,
+    visualId,
+    primaryBiome: 'guild'
+  });
 }
 
 /**

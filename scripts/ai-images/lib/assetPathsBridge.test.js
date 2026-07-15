@@ -193,7 +193,7 @@ describe('assetPathsBridge', () => {
 
     it('portraits has expected size variants', async () => {
       const presets = await getSizePresets();
-      assert.deepStrictEqual(presets.portraits, [64, 128, 256]);
+      assert.deepStrictEqual(presets.portraits, [32, 48, 64, 128, 256]);
     });
 
     it('icons has expected size variants', async () => {
@@ -208,28 +208,28 @@ describe('assetPathsBridge', () => {
       assert.ok(path.isAbsolute(result));
       assert.ok(result.includes('frontend/public'));
       assert.ok(result.includes('portraits/originals'));
-      assert.ok(result.endsWith('human_male_warrior.webp'));
+      assert.ok(result.endsWith('human_male_warrior.png'));
     });
 
     it('returns absolute filesystem path for items with subcategory', async () => {
       const result = await getOriginalsFilePath('items', 'sword_iron', { subcategory: 'weapons' });
       assert.ok(path.isAbsolute(result));
       assert.ok(result.includes('items/originals/weapons'));
-      assert.ok(result.endsWith('sword_iron.webp'));
+      assert.ok(result.endsWith('sword_iron.png'));
     });
 
     it('returns absolute filesystem path for tiles with subcategory', async () => {
       const result = await getOriginalsFilePath('tiles', 'grass_0', { subcategory: 'forest' });
       assert.ok(path.isAbsolute(result));
       assert.ok(result.includes('sprites/terrain/originals/forest'));
-      assert.ok(result.endsWith('grass_0.webp'));
+      assert.ok(result.endsWith('grass_0.png'));
     });
 
     it('returns absolute filesystem path for nodes', async () => {
       const result = await getOriginalsFilePath('nodes', 'castle');
       assert.ok(path.isAbsolute(result));
       assert.ok(result.includes('nodes/originals'));
-      assert.ok(result.endsWith('castle.webp'));
+      assert.ok(result.endsWith('castle.png'));
     });
   });
 

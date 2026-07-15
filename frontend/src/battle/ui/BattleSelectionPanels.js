@@ -4,7 +4,9 @@
  * Extracted from BattleUI.js for maintainability.
  */
 
-import { escapeHtml } from '../../utils/escapeHtml.js';
+import { escapeHtml, escapeHtmlAttribute } from '../../utils/escapeHtml.js';
+import { renderBattleItemIcon } from '../BattleItemIcon.js';
+import { renderAbilityIcon } from '../AbilityIcon.js';
 
 /**
  * Get element icon for zodiac abilities.
@@ -23,21 +25,12 @@ export function getElementIcon(element) {
 }
 
 /**
- * Get icon for an item based on its name.
- * @param {string} itemName - The item name
- * @returns {string} Unicode emoji
+ * Render an item with its canonical sprite.
+ * @param {Object} item - Battle inventory item
+ * @returns {string} ItemIcon HTML
  */
-export function getItemIcon(itemName) {
-  const name = itemName.toLowerCase();
-  if (name.includes('potion')) return '\u{1F9EA}'; // Test tube
-  if (name.includes('ether')) return '\u{1F4A7}';  // Droplet
-  if (name.includes('elixir')) return '\u{2728}';  // Sparkles
-  if (name.includes('antidote')) return '\u{1F48A}'; // Pill
-  if (name.includes('remedy')) return '\u{1F49A}'; // Green heart
-  if (name.includes('phoenix')) return '\u{1F525}'; // Fire
-  if (name.includes('bomb')) return '\u{1F4A3}';   // Bomb
-  if (name.includes('eye')) return '\u{1F441}\u{FE0F}'; // Eye
-  return '\u{1F4E6}'; // Package
+export function getItemIcon(item) {
+  return renderBattleItemIcon(item, { size: 'sm' });
 }
 
 /**
@@ -54,15 +47,15 @@ export function renderSkillPanel(list, skills, currentMp, onSelectSkill) {
     const isDisabled = onCooldown || notEnoughMp;
     const titleText = onCooldown
       ? `On cooldown: ${skill.currentCooldown} turn(s) remaining`
-      : `${escapeHtml(skill.description || skill.name)} (${skill.mpCost} MP)`;
+      : `${skill.description || skill.name} (${skill.mpCost} MP)`;
 
     return `
       <button class="btn btn-secondary skill-btn ${onCooldown ? 'on-cooldown' : ''}"
-              data-skill-id="${skill.id}"
+              data-skill-id="${escapeHtmlAttribute(skill.id)}"
               ${isDisabled ? 'disabled' : ''}
-              title="${titleText}"
+              title="${escapeHtmlAttribute(titleText)}"
               style="${onCooldown ? 'opacity: 0.5; position: relative;' : ''}">
-        ${skill.icon || ''} ${escapeHtml(skill.name)}
+        ${renderAbilityIcon(skill, { size: 'sm' })} ${escapeHtml(skill.name)}
         <span style="font-size: 10px; color: ${onCooldown ? '#f88' : '#6af'}; margin-left: 4px;">
           ${onCooldown ? `${skill.currentCooldown}\u{23F1}` : `${skill.mpCost}MP`}
         </span>
@@ -96,11 +89,11 @@ export function renderItemPanel(list, noItemsElement, items, onSelectItem) {
   if (noItemsElement) noItemsElement.style.display = 'none';
   list.innerHTML = items.map(item => `
     <button class="btn btn-secondary item-btn"
-            data-item-id="${item.itemId}"
-            data-inventory-id="${item.inventoryId}"
-            title="${escapeHtml(item.description || item.name)}">
-      ${getItemIcon(item.name)} ${escapeHtml(item.name)}
-      <span style="font-size: 10px; color: #8f8; margin-left: 4px;">x${item.quantity}</span>
+            data-item-id="${escapeHtmlAttribute(item.itemId)}"
+            data-inventory-id="${escapeHtmlAttribute(item.inventoryId)}"
+            title="${escapeHtmlAttribute(item.description || item.name)}">
+      ${getItemIcon(item)} ${escapeHtml(item.name)}
+      <span style="font-size: 10px; color: #8f8; margin-left: 4px;">x${escapeHtml(String(item.quantity ?? 0))}</span>
     </button>
   `).join('');
 
@@ -131,13 +124,19 @@ export function renderZodiacPanel(list, noZodiacElement, abilities, onSelectZodi
   if (noZodiacElement) noZodiacElement.style.display = 'none';
   list.innerHTML = abilities.map(ability => {
     const elementIcon = getElementIcon(ability.element);
+    const abilityIcon = renderAbilityIcon({
+      ...ability,
+      id: ability.id || ability.key,
+      source: 'zodiac',
+      icon: elementIcon
+    }, { size: 'sm' });
     return `
       <button class="btn btn-secondary zodiac-btn"
-              data-ability-key="${ability.key}"
+              data-ability-key="${escapeHtmlAttribute(ability.key)}"
               data-needs-target="${ability.needsTarget || false}"
-              title="${escapeHtml(ability.description || ability.name)}"
+              title="${escapeHtmlAttribute(ability.description || ability.name)}"
               style="background: linear-gradient(135deg, #2a1f4e 0%, #1a1a2e 100%); border-color: #d4af37;">
-        ${elementIcon} ${escapeHtml(ability.name)}
+        ${abilityIcon} ${escapeHtml(ability.name)}
       </button>
     `;
   }).join('');

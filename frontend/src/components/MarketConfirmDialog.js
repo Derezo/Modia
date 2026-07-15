@@ -4,6 +4,7 @@
  */
 
 import { escapeHtml } from '../utils/escapeHtml.js';
+import { ItemIcon } from './ItemIcon.js';
 
 export class MarketConfirmDialog {
   constructor() {
@@ -41,7 +42,12 @@ export class MarketConfirmDialog {
       2: '#4a7548', // Uncommon
       3: '#4a6088', // Rare
       4: '#6b4488', // Epic
-      5: '#c9a227'  // Legendary
+      5: '#c9a227', // Legendary
+      common: '#7a7a7a',
+      uncommon: '#4a7548',
+      rare: '#4a6088',
+      epic: '#6b4488',
+      legendary: '#c9a227'
     };
     const rarityColor = rarityColors[item.rarity] || rarityColors[1];
 
@@ -56,6 +62,9 @@ export class MarketConfirmDialog {
         <h3 class="confirm-title">${title}</h3>
 
         <div class="confirm-item-preview" style="border-left-color: ${rarityColor};">
+          <div class="confirm-item-icon" data-confirm-item-icon>
+            ${ItemIcon.html({ item, size: 'md' })}
+          </div>
           <div>
             <div class="confirm-item-name">${escapeHtml(item.name)}</div>
             <div class="confirm-item-type">${escapeHtml(item.itemType || 'Item')}</div>
@@ -89,6 +98,17 @@ export class MarketConfirmDialog {
     `;
 
     document.body.appendChild(this.overlay);
+
+    if (item.augments?.length > 0) {
+      const iconContainer = this.overlay.querySelector('[data-confirm-item-icon]');
+      ItemIcon.compositeHtml({ item, size: 'md' })
+        .then((html) => {
+          if (iconContainer?.isConnected) iconContainer.innerHTML = html;
+        })
+        .catch(() => {
+          // Retain the canonical base icon if optional compositing fails.
+        });
+    }
 
     // Animate in
     requestAnimationFrame(() => {

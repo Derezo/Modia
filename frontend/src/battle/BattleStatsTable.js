@@ -17,6 +17,7 @@
  */
 
 import { escapeHtml } from './battleLogUtils.js';
+import { getAssetPath, getNpcPortraitId } from '../../../shared/assetPaths.js';
 
 /**
  * BattleStatsTable - Post-battle statistics display component
@@ -296,7 +297,7 @@ export class BattleStatsTable {
                 src="${escapeHtml(portraitPath)}"
                 alt="${escapeHtml(unit.name || 'Unit')}"
                 class="bst-portrait"
-                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                data-image-fallback data-fallback-display="flex"
               />
               <div class="bst-portrait-fallback" style="display:none; background-color: ${fallbackColor};">
                 ${escapeHtml(fallbackLetter)}
@@ -326,9 +327,10 @@ export class BattleStatsTable {
   getPortraitPath(unit) {
     const size = 48; // Use compact portrait size
     if (unit.type === 'enemy') {
-      // Enemy portrait path: /assets/portraits/{size}/enemy_{enemyType}.webp
-      const enemyType = unit.enemyId || unit.enemyType || unit.class || 'unknown';
-      return `/assets/portraits/${size}/enemy_${enemyType.toLowerCase()}.webp`;
+      return getAssetPath('portraits', getNpcPortraitId(
+        unit,
+        unit.enemyType || unit.class || 'unknown'
+      ), { size });
     } else {
       // Player portrait path: /assets/portraits/{size}/{race}_{gender}_{class}.webp
       const race = (unit.race || 'human').toLowerCase();

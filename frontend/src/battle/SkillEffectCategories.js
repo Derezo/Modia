@@ -264,6 +264,40 @@ export const ITEM_EFFECT_VISUAL_MAP = {
   }
 };
 
+const ELEMENT_CATEGORY_MAP = Object.freeze({
+  fire: 'fire',
+  flame: 'fire',
+  ice: 'ice',
+  frost: 'ice',
+  lightning: 'lightning',
+  electric: 'lightning',
+  thunder: 'lightning',
+  water: 'water',
+  earth: 'earth',
+  wind: 'wind',
+  air: 'wind',
+  holy: 'holy',
+  light: 'holy',
+  shadow: 'shadow',
+  dark: 'dark',
+  darkness: 'dark',
+  void: 'dark',
+  poison: 'poison',
+  nature: 'poison',
+  physical: 'physical'
+});
+
+function normalizeVisualToken(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function resolveCategoryKey(value) {
+  const normalized = normalizeVisualToken(value);
+  return Object.keys(SKILL_EFFECT_CATEGORIES).find(
+    category => category.toLowerCase() === normalized
+  ) || null;
+}
+
 /**
  * Get visual category for a skill based on its properties
  * Priority: explicit visualCategory > inferred from effect > inferred from damageType > default
@@ -271,13 +305,32 @@ export const ITEM_EFFECT_VISUAL_MAP = {
  * @returns {string} Category name (fire, ice, lightning, etc.)
  */
 export function getVisualCategory(skill) {
+  if (!skill) return 'physical';
+
   // 1. Explicit category takes precedence
-  if (skill.visualCategory && SKILL_EFFECT_CATEGORIES[skill.visualCategory]) {
-    return skill.visualCategory;
+  const explicitCategory = resolveCategoryKey(skill.visualCategory);
+  if (explicitCategory) {
+    return explicitCategory;
   }
 
-  // 2. Infer from status effect
-  if (skill.effect) {
+  // 2. Element is the most specific mechanical presentation signal.
+  const element = normalizeVisualToken(skill.element);
+  if (ELEMENT_CATEGORY_MAP[element]) {
+    return ELEMENT_CATEGORY_MAP[element];
+  }
+
+  // 3. Infer from status effect. Support both skill definitions and action
+  // result payloads; the latter expose applied effects through skillEffects.
+  const firstEffect = skill.skillEffects?.[0] ?? skill.effects?.[0] ?? null;
+  const effectValue = typeof skill.effect === 'string'
+    ? skill.effect
+    : skill.effect?.effect || skill.effect?.type ||
+      skill.effectApplied || skill.statusApplied ||
+      (typeof firstEffect === 'string' ? firstEffect : firstEffect?.effect || firstEffect?.status);
+  const effectType = typeof skill.effect === 'object'
+    ? skill.effect?.type
+    : (typeof firstEffect === 'object' ? firstEffect?.type : null);
+  if (effectValue) {
     const effectMap = {
       burn: 'fire',
       freeze: 'ice',
@@ -292,13 +345,26 @@ export function getVisualCategory(skill) {
       taunt: 'debuff',
       haste: 'buff'
     };
-    if (effectMap[skill.effect]) {
-      return effectMap[skill.effect];
+    const normalizedEffect = normalizeVisualToken(effectValue);
+    if (effectMap[normalizedEffect]) {
+      return effectMap[normalizedEffect];
     }
   }
 
-  // 3. Infer from skill properties
-  if (skill.healPercent || skill.targetAlly || skill.targetAllAllies) {
+  const effectTypeMap = {
+    buff: 'buff',
+    debuff: 'debuff',
+    cleanse: 'selfAura',
+    heal: 'healing',
+    healing: 'healing'
+  };
+  const normalizedEffectType = normalizeVisualToken(effectType);
+  if (effectTypeMap[normalizedEffectType]) {
+    return effectTypeMap[normalizedEffectType];
+  }
+
+  // 4. Infer from skill/result properties.
+  if (skill.healing || skill.healPercent || skill.targetAlly || skill.targetAllAllies) {
     return 'healing';
   }
 
@@ -306,13 +372,68 @@ export function getVisualCategory(skill) {
     return 'selfAura';
   }
 
-  // 4. Infer from damage type
-  if (skill.damageType === 'magical') {
+  // 5. Infer from damage type
+  if (normalizeVisualToken(skill.damageType) === 'magical') {
     return 'holy'; // Generic magical default
   }
 
-  // 5. Default to physical
+  // 6. Default to physical
   return 'physical';
+}
+
+/**
+ * Resolve the full skill definition associated with an action result.
+ * Player results historically use `skillUsed`; observer/AI results use
+ * `skillId`, so both are accepted during the normalized-event migration.
+ */
+export function resolveActionSkill(actor, result = {}, requestedSkillId = null) {
+  const skillId = requestedSkillId || result.skillId || result.skillUsed || null;
+  const skills = Array.isArray(actor?.skills) ? actor.skills : [];
+  const skill = skills.find(candidate =>
+    (candidate?.id || candidate?.skillId || candidate?.skill_id) === skillId
+  ) || null;
+  return skill ? { ...skill, id: skillId } : (skillId ? { id: skillId } : null);
+}
+
+/**
+ * Build the presentation descriptor shared by local HTTP and observer
+ * WebSocket action paths.
+ */
+export function getActionVisualDescriptor(actionType, result = {}, skill = null) {
+  const presentationSource = {
+    ...(skill || {}),
+    ...(result || {}),
+    visualCategory: result.visualCategory ?? skill?.visualCategory,
+    element: result.element ?? skill?.element,
+    damageType: result.damageType ?? skill?.damageType,
+    effect: result.effect ?? skill?.effect
+  };
+  const category = getVisualCategory(presentationSource);
+  const config = SKILL_EFFECT_CATEGORIES[category] || SKILL_EFFECT_CATEGORIES.physical;
+  // An AoE can legitimately include its caster as the primary/center target.
+  // That does not turn the area cast into a self aura.
+  const selfTarget = isSelfTargetingSkill(presentationSource) ||
+    (!result.isAoE && result.targetId != null && result.targetId === result.actorId);
+  const isSkill = actionType === 'skill';
+  const explicitlyPhysical = normalizeVisualToken(presentationSource.damageType) === 'physical' &&
+    category === 'physical';
+  const explicitProjectile = presentationSource.projectile ??
+    presentationSource.isProjectile ?? presentationSource.rangedProjectile;
+
+  return {
+    category,
+    actorAnimation: presentationSource.actorAnimation ||
+      (isSkill && !explicitlyPhysical ? 'cast' : 'attack'),
+    projectile: Boolean(
+      isSkill && !selfTarget &&
+      (explicitProjectile == null ? config.trailEnabled : explicitProjectile)
+    ),
+    selfTarget,
+    trailEnabled: Boolean(config.trailEnabled),
+    primaryColor: config.colors.primary,
+    glowColor: config.glowColor,
+    element: presentationSource.element || null
+  };
 }
 
 /**

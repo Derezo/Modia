@@ -19,7 +19,10 @@ export class AssetCache {
   constructor() {
     // v3 invalidates caches that may have been repopulated from the browser's
     // immutable HTTP cache after the canonical tile rebuild.
-    this.cacheName = 'modia-assets-v3';
+    // v4 invalidates same-URL player/NPC strips replaced during the animation
+    // and visual-identity repair. Without a version bump, Cache API entries
+    // survive a page refresh and can hide the corrected artwork indefinitely.
+    this.cacheName = 'modia-assets-v4';
     this.cache = null;
     this.available = 'caches' in window;
   }

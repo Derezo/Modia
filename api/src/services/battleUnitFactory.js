@@ -7,6 +7,10 @@
 
 import { CLASS_MOVEMENT } from '../config/constants.js';
 import traitService from './traitService.js';
+import {
+  createBattleVisualIdentity,
+  withBattleVisualIdentity
+} from './battle/visualIdentityService.js';
 
 /**
  * BattleUnit interface (documented for reference):
@@ -18,6 +22,12 @@ import traitService from './traitService.js';
  *   name: string,
  *   class: string,            // Guild/class (warrior, wizard, monster, dragon, etc.)
  *   level: number,
+ *   visualIdentity: {         // Canonical JSON-safe art identity
+ *     kind: 'player' | 'npc',
+ *     id: string | number,
+ *     race?: string, gender?: string, class?: string,
+ *     visualId?: string, primaryBiome?: string
+ *   },
  *
  *   // Core Stats
  *   hp, maxHp, mp, maxMp,
@@ -68,7 +78,7 @@ function createPlayerBattleUnit(character, formation = null, skills = [], option
   const zodiacAbilities = options.zodiacAbilities || [];
   const teamId = options.teamId ?? 1; // Default to team 1 for player units
 
-  const unit = {
+  const unit = withBattleVisualIdentity({
     // Identity
     id: character.id,
     type: 'player',
@@ -140,7 +150,10 @@ function createPlayerBattleUnit(character, formation = null, skills = [], option
     healingDone: 0,
     kills: 0,
     deaths: 0
-  };
+  }, {
+    kind: 'player',
+    id: character.id
+  });
 
   // Apply battle-start trait effects (HP/MP bonuses, movement/range bonuses)
   traitService.applyBattleStartTraits(unit);
@@ -209,7 +222,7 @@ function createEnemyBattleUnit(template, partyLevel, difficultyTier, index, posi
   // Get class from template (new field) or derive from archetype
   const enemyClass = template.enemy_class || template.guild || 'monster';
 
-  return {
+  return withBattleVisualIdentity({
     // Identity
     id: `enemy_${index}`,
     type: 'enemy',
@@ -270,7 +283,6 @@ function createEnemyBattleUnit(template, partyLevel, difficultyTier, index, posi
 
     // Metadata
     templateId: template.id,
-    enemyId: template.sprite_id,
     biome: biome,
 
     // Rewards (scaled by tier for harder content)
@@ -289,7 +301,13 @@ function createEnemyBattleUnit(template, partyLevel, difficultyTier, index, posi
     healingDone: 0,
     kills: 0,
     deaths: 0
-  };
+  }, {
+    kind: 'npc',
+    id: template.id,
+    visualId: template.sprite_id,
+    primaryBiome: options.primaryBiome ?? template.primary_biome,
+    spawnNodeTypes: template.spawn_node_types
+  });
 }
 
 /**
@@ -299,7 +317,7 @@ function createEnemyBattleUnit(template, partyLevel, difficultyTier, index, posi
  * @returns {Object} Normalized BattleUnit
  */
 function normalizeUnit(unit) {
-  return {
+  return withBattleVisualIdentity({
     ...unit,
     // Ensure required properties exist
     // teamId falls back to type-based assignment for backwards compatibility
@@ -316,7 +334,7 @@ function normalizeUnit(unit) {
     defense: unit.defense || 0,
     magicAttack: unit.magicAttack || 0,
     magicDefense: unit.magicDefense || 0
-  };
+  });
 }
 
 /**
@@ -402,6 +420,8 @@ function getAliveUnitsOfType(units, type) {
 export {
   createPlayerBattleUnit,
   createEnemyBattleUnit,
+  createBattleVisualIdentity,
+  withBattleVisualIdentity,
   normalizeUnit,
   isPlayerUnit,
   isEnemyUnit,
@@ -416,6 +436,8 @@ export {
 export default {
   createPlayerBattleUnit,
   createEnemyBattleUnit,
+  createBattleVisualIdentity,
+  withBattleVisualIdentity,
   normalizeUnit,
   isPlayerUnit,
   isEnemyUnit,

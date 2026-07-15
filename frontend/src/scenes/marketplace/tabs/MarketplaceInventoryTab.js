@@ -3,6 +3,7 @@
  */
 
 import { ItemDataTable } from '../../../components/ItemDataTable/index.js';
+import { ItemIcon } from '../../../components/ItemIcon.js';
 import { parchmentToast } from '../../../ui/parchment/ParchmentToast.js';
 import { formatListingStats, getRarityName } from '../marketplaceUtils.js';
 
@@ -119,6 +120,9 @@ function showSellItemPanel(item, sidePanel, context) {
       <div class="ui-panel-header">List for Sale</div>
       <div style="padding: 16px; font-family: Georgia, serif; flex: 1;">
         <div style="text-align: center; margin-bottom: 16px;">
+          <div data-sell-item-icon style="display: flex; justify-content: center; margin-bottom: 8px;">
+            ${ItemIcon.html({ item, size: 'lg' })}
+          </div>
           <div style="font-size: 18px; font-weight: bold; color: #2d2418;">${item.name}</div>
           <div style="font-size: 12px; color: #5a4a3a; text-transform: capitalize;">${item.type || 'Item'}</div>
           <div style="font-size: 12px; color: #7a6a5a; margin-top: 4px;">From: ${originalItem.characterName}</div>
@@ -169,6 +173,17 @@ function showSellItemPanel(item, sidePanel, context) {
       </div>
     </div>
   `;
+
+  if (item.augments?.length > 0) {
+    const iconContainer = sidePanel.querySelector('[data-sell-item-icon]');
+    ItemIcon.compositeHtml({ item, size: 'lg' })
+      .then((html) => {
+        if (iconContainer?.isConnected) iconContainer.innerHTML = html;
+      })
+      .catch(() => {
+        // Keep the canonical base icon when overlay compositing fails.
+      });
+  }
 
   // Attach create listing handler
   sidePanel.querySelector('#create-listing-btn')?.addEventListener('click', async () => {

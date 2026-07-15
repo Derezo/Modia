@@ -24,7 +24,8 @@ function createHarness(candidateTiles = [{ x: 2, y: 3, elevation: 0 }]) {
     panStarts: [],
     panUpdates: [],
     panEnds: 0,
-    tileClicks: []
+    tileClicks: [],
+    outroConfirms: 0
   };
   const tile = candidateTiles[0];
   const camera = {
@@ -177,6 +178,30 @@ describe('BattleInputHandler touch gestures', () => {
       mousePos: { mouseX: 50, mouseY: 75 }
     });
   });
+});
+
+describe('BattleInputHandler outro keyboard controls', () => {
+  for (const code of ['Enter', 'Space']) {
+    it(`confirms the modal battle outro with ${code}`, () => {
+      const { handler, scene, calls } = createHarness();
+      scene.outroSequence = {
+        handleConfirm() {
+          calls.outroConfirms++;
+          return true;
+        }
+      };
+      const event = {
+        code,
+        defaultPrevented: false,
+        preventDefault() { this.defaultPrevented = true; }
+      };
+
+      handler.handleKeydown(event);
+
+      assert.equal(calls.outroConfirms, 1);
+      assert.equal(event.defaultPrevented, true);
+    });
+  }
 });
 
 describe('BattleInputHandler mouse tile cycling', () => {

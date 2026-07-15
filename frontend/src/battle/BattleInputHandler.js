@@ -308,6 +308,14 @@ export class BattleInputHandler {
   handleKeydown(e) {
     const scene = this.scene;
 
+    // The victory/defeat screen is a modal interaction. Let keyboard players
+    // activate its primary action before ordinary battle shortcuts run.
+    if ((e.code === 'Enter' || e.code === 'Space') &&
+        scene.outroSequence?.handleConfirm?.()) {
+      e.preventDefault();
+      return;
+    }
+
     // Spacebar - return to follow mode
     if (e.code === 'Space') {
       e.preventDefault();

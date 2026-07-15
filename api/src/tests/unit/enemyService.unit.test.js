@@ -15,15 +15,42 @@ import assert from 'node:assert';
 // Import enemy service exports
 let importError = null;
 let TIER_MULTIPLIERS = null;
+let serializeEnemyPreview = null;
 
 try {
   const mod = await import('../../services/enemyService.js');
   TIER_MULTIPLIERS = mod.TIER_MULTIPLIERS;
+  serializeEnemyPreview = mod.serializeEnemyPreview;
 } catch (err) {
   importError = err;
 }
 
 const canImport = importError === null;
+
+describe('Enemy Service - canonical preview DTOs', { skip: !canImport }, () => {
+  it('keeps a multi-zone NPC portrait identity stable in another encounter biome', () => {
+    const preview = serializeEnemyPreview({
+      id: 17,
+      name: 'Dark Knight',
+      sprite_id: 'dark_knight',
+      ai_type: 'tactical',
+      spawn_node_types: ['palace', 'castle']
+    }, 'castle');
+
+    assert.deepStrictEqual(preview.visualIdentity, {
+      kind: 'npc',
+      id: 17,
+      visualId: 'dark_knight',
+      primaryBiome: 'palace'
+    });
+    assert.strictEqual(preview.visualId, 'dark_knight');
+    assert.strictEqual(preview.enemyId, 'dark_knight');
+    assert.strictEqual(preview.spriteId, 'dark_knight');
+    assert.strictEqual(preview.sprite_id, 'dark_knight');
+    assert.strictEqual(preview.primaryBiome, 'palace');
+    assert.strictEqual(preview.biome, 'castle');
+  });
+});
 
 describe('Enemy Service - TIER_MULTIPLIERS', { skip: !canImport }, () => {
   it('has multipliers for all 5 tiers', () => {

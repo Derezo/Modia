@@ -5,6 +5,7 @@
 import { query } from '../config/database.js';
 import { generateEnemySkills } from './npcSkillService.js';
 import { generateNpcItems } from './npcItemService.js';
+import { withBattleVisualIdentity } from './battle/visualIdentityService.js';
 
 // Difficulty tier multipliers for stat scaling
 const TIER_MULTIPLIERS = {
@@ -71,7 +72,7 @@ async function selectEnemiesForEncounter(nodeType, difficultyTier, count) {
   const result = await query(
     `SELECT id, name, sprite_id, base_hp, base_mp, base_strength, base_intelligence, base_agility,
             ai_type, abilities, drop_table, experience_reward, gold_reward_min, gold_reward_max,
-            archetype, guild, guild_level, enemy_class, movement, attack_range,
+            archetype, guild, guild_level, enemy_class, movement, attack_range, spawn_node_types,
             attack_bonus, defense_bonus, magic_attack_bonus, magic_defense_bonus
      FROM enemy_templates
      WHERE $1 = ANY(spawn_node_types) AND min_difficulty_tier <= $2
@@ -86,7 +87,7 @@ async function selectEnemiesForEncounter(nodeType, difficultyTier, count) {
     const fallbackResult = await query(
       `SELECT id, name, sprite_id, base_hp, base_mp, base_strength, base_intelligence, base_agility,
               ai_type, abilities, drop_table, experience_reward, gold_reward_min, gold_reward_max,
-              archetype, guild, guild_level, enemy_class, movement, attack_range,
+              archetype, guild, guild_level, enemy_class, movement, attack_range, spawn_node_types,
               attack_bonus, defense_bonus, magic_attack_bonus, magic_defense_bonus
        FROM enemy_templates
        WHERE min_difficulty_tier <= $1
@@ -133,12 +134,11 @@ async function createEnemyInstance(template, partyLevel, difficultyTier, index, 
   const movement = template.movement || 3;
   const attackRange = template.attack_range || 1;
 
-  return {
+  return withBattleVisualIdentity({
     id: `enemy_${index}`,
     type: 'enemy',
     templateId: template.id,
     name: template.name,
-    enemyId: template.sprite_id, // Used for sprite lookup in AssetLoader.getEnemySprite()
     biome, // Biome type for sprite path
     class: template.enemy_class || 'monster',
     level: enemyLevel,
@@ -179,7 +179,12 @@ async function createEnemyInstance(template, partyLevel, difficultyTier, index, 
     // Hidden state for ambush AI
     isHidden: template.ai_type === 'ambush',
     hasAmbushed: false
-  };
+  }, {
+    kind: 'npc',
+    id: template.id,
+    visualId: template.sprite_id,
+    spawnNodeTypes: template.spawn_node_types
+  });
 }
 
 /**
@@ -233,11 +238,10 @@ async function generateEncounter(nodeId, party, formationCharacterIds = null) {
   while (enemies.length < enemyCount) {
     const index = enemies.length;
     const pos = positions[index] || { x: 28, y: 13 + index };
-    enemies.push({
+    enemies.push(withBattleVisualIdentity({
       id: `enemy_${index}`,
       type: 'enemy',
       templateId: null,
-      enemyId: null, // Generic enemy, no specific sprite
       biome: nodeType,
       name: `Wild ${nodeType.charAt(0).toUpperCase() + nodeType.slice(1)} Creature`,
       class: 'monster',
@@ -276,10 +280,48 @@ async function generateEncounter(nodeId, party, formationCharacterIds = null) {
       goldRewardMax: 10 + partyLevel * 2,
       isHidden: false,
       hasAmbushed: false
-    });
+    }, {
+      kind: 'npc',
+      id: `generic_${nodeType}`,
+      visualId: null,
+      primaryBiome: nodeType
+    }));
   }
 
   return enemies;
+}
+
+/**
+ * Serialize encounter-preview rows with the same canonical visual DTO used by
+ * live battle units. Keeping this pure also makes formation-screen identity
+ * behavior independently testable from database access.
+ */
+function serializeEnemyPreview(enemy, encounterBiome = 'forest') {
+  const preview = withBattleVisualIdentity({
+    id: enemy.id,
+    type: 'enemy',
+    name: enemy.name,
+    sprite_id: enemy.sprite_id,
+    spawn_node_types: enemy.spawn_node_types,
+    biome: encounterBiome
+  }, {
+    kind: 'npc',
+    id: enemy.id,
+    visualId: enemy.sprite_id,
+    spawnNodeTypes: enemy.spawn_node_types
+  });
+
+  return {
+    name: enemy.name,
+    aiType: enemy.ai_type,
+    visualIdentity: preview.visualIdentity,
+    visualId: preview.visualId,
+    enemyId: preview.enemyId,
+    spriteId: preview.spriteId,
+    sprite_id: preview.sprite_id,
+    primaryBiome: preview.primaryBiome,
+    biome: preview.biome
+  };
 }
 
 /**
@@ -302,7 +344,7 @@ async function getEncounterPreview(nodeId) {
 
   // Get possible enemies for this area (distinct names, no counts or levels)
   const enemyResult = await query(
-    `SELECT DISTINCT name, sprite_id, ai_type
+    `SELECT DISTINCT id, name, sprite_id, ai_type, spawn_node_types
      FROM enemy_templates
      WHERE $1 = ANY(spawn_node_types) AND min_difficulty_tier <= $2
      ORDER BY name
@@ -314,11 +356,7 @@ async function getEncounterPreview(nodeId) {
     nodeName,
     nodeType,
     difficultyTier,
-    possibleEnemies: enemyResult.rows.map(e => ({
-      name: e.name,
-      spriteId: e.sprite_id,
-      aiType: e.ai_type
-    }))
+    possibleEnemies: enemyResult.rows.map(enemy => serializeEnemyPreview(enemy, nodeType))
   };
 }
 
@@ -326,6 +364,7 @@ export {
   selectEnemiesForEncounter,
   createEnemyInstance,
   generateEncounter,
+  serializeEnemyPreview,
   getEncounterPreview,
   TIER_MULTIPLIERS
 };

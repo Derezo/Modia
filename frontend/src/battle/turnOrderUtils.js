@@ -13,7 +13,12 @@
 
 import { PARCHMENT_COLORS } from '../ui/parchment/ParchmentTheme.js';
 import { iconLoader } from '../core/IconLoader.js';
-import { getAssetPath, getOptimalSize } from '@shared/assetPaths.js';
+import {
+  getAssetPath,
+  getNpcPortraitId,
+  getNpcVisualIdentity,
+  getOptimalSize
+} from '../../../shared/assetPaths.js';
 import { responsive } from '../core/Responsive.js';
 
 // ============================================================================
@@ -110,6 +115,11 @@ export function getClassLetter(className) {
   return CLASS_LETTERS[name] || name.charAt(0).toUpperCase() || '?';
 }
 
+function getUnitIconIdentity(unit) {
+  if (unit.type === 'player') return unit.class;
+  return getNpcVisualIdentity(unit).visualId || 'unknown';
+}
+
 /**
  * Load unit icon with caching and fallback support
  * @param {string} category - Icon category ('classes' or 'enemies')
@@ -155,7 +165,7 @@ export async function loadUnitIcon(category, className, size, cache) {
 export async function getUnitIconHtml(unit, cache, size = BAR_DIMENSIONS.iconSize) {
   const isPlayer = unit.type === 'player';
   const category = isPlayer ? 'classes' : 'enemies';
-  const iconData = await loadUnitIcon(category, unit.class, size, cache);
+  const iconData = await loadUnitIcon(category, getUnitIconIdentity(unit), size, cache);
 
   if (iconData.type === 'image') {
     return `<img src="${iconData.src}" alt="">`;
@@ -179,9 +189,7 @@ export function buildPortraitId(unit) {
     const className = normalizeIconName(unit.class || 'warrior');
     return `${race}_${gender}_${className}`;
   } else {
-    // Enemy portraits: enemy_{enemyId or sprite_id or class}
-    const enemyId = unit.enemyId || unit.sprite_id || normalizeIconName(unit.class || 'monster');
-    return `enemy_${enemyId}`;
+    return getNpcPortraitId(unit);
   }
 }
 
@@ -223,7 +231,7 @@ export async function loadUnitPortrait(unit, size, cache) {
     // Portrait not found, fallback to icon system
     const isPlayer = unit.type === 'player';
     const category = isPlayer ? 'classes' : 'enemies';
-    const iconResult = await loadUnitIcon(category, unit.class, size, cache);
+    const iconResult = await loadUnitIcon(category, getUnitIconIdentity(unit), size, cache);
 
     // Cache the fallback result under portrait key too
     if (cache) cache.set(cacheKey, iconResult);
@@ -250,7 +258,7 @@ export async function getUnitPortraitHtml(unit, cache, size = 64) {
     return `<div class="turn-order-item__icon-fallback">${portraitData.letter}</div>`;
   } catch (e) {
     // Fallback to letter if anything fails
-    const letter = getClassLetter(unit?.class);
+    const letter = getClassLetter(getUnitIconIdentity(unit || {}));
     return `<div class="turn-order-item__icon-fallback">${letter}</div>`;
   }
 }
@@ -268,7 +276,7 @@ export async function getUnitPortraitHtml(unit, cache, size = 64) {
 export async function renderUnitIcon(ctx, unit, x, y, size, cache) {
   const isPlayer = unit.type === 'player';
   const category = isPlayer ? 'classes' : 'enemies';
-  const iconData = await loadUnitIcon(category, unit.class, size, cache);
+  const iconData = await loadUnitIcon(category, getUnitIconIdentity(unit), size, cache);
 
   if (iconData.type === 'image') {
     // Load and draw image

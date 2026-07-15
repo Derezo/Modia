@@ -566,6 +566,8 @@ export class EquipmentSlotModal {
       </div>
     `;
 
+    this.updateCompositedIcons(contentEl, availableItems);
+
     this.bindEvents();
   }
 
@@ -604,7 +606,8 @@ export class EquipmentSlotModal {
 
         <!-- Item Info -->
         <div class="equipment-slot-card-item">
-          <div class="equipment-slot-card-icon rarity-${rarity}">
+          <div class="equipment-slot-card-icon rarity-${rarity}"
+               data-comparison-item-icon="${isCurrentlyEquipped ? 'current' : 'selected'}">
             ${ItemIcon.html({ item, size: 'md' })}
           </div>
           <div class="equipment-slot-card-title">
@@ -834,7 +837,7 @@ export class EquipmentSlotModal {
           data-index="${index}"
         >
           <div class="equipment-slot-available-radio"></div>
-          <div class="equipment-slot-available-icon">${iconHtml}</div>
+          <div class="equipment-slot-available-icon" data-available-item-icon="${index}">${iconHtml}</div>
           <div class="equipment-slot-available-info">
             <div class="equipment-slot-available-name">
               ${escapeHtml(item.name)}
@@ -844,6 +847,47 @@ export class EquipmentSlotModal {
         </div>
       `;
     }).join('');
+  }
+
+  /**
+   * Hydrate augmented items with the same composited ItemIcon used by item
+   * detail and inventory views. Base icons remain in place if compositing is
+   * unnecessary or fails.
+   * @param {HTMLElement} contentEl - Modal content root
+   * @param {Array<Object>} availableItems - Items rendered in the list
+   */
+  updateCompositedIcons(contentEl, availableItems) {
+    const replacements = [
+      [contentEl.querySelector('[data-comparison-item-icon="current"]'), this.currentItem, 'md'],
+      [contentEl.querySelector('[data-comparison-item-icon="selected"]'), this.selectedItem, 'md']
+    ];
+
+    contentEl.querySelectorAll('[data-available-item-icon]').forEach((container) => {
+      replacements.push([
+        container,
+        availableItems[Number(container.dataset.availableItemIcon)],
+        'sm'
+      ]);
+    });
+
+    replacements.forEach(([container, item, size]) => {
+      const augments = item?.augments || [];
+      if (!container || !item || augments.length === 0) return;
+
+      const augmentTypes = augments
+        .map(augment => typeof augment === 'string'
+          ? augment
+          : (augment.category || augment.type || augment.name))
+        .filter(Boolean);
+
+      ItemIcon.compositeHtml({ item, size, augments: augmentTypes })
+        .then((html) => {
+          if (container.isConnected) container.innerHTML = html;
+        })
+        .catch(() => {
+          // Keep the canonical non-composited icon rendered above.
+        });
+    });
   }
 
   /**

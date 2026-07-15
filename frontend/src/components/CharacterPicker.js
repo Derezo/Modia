@@ -293,7 +293,7 @@ export class CharacterPicker {
         <div class="character-picker__portrait" style="background: ${classColor};">
           ${portraitUrl
     ? `<img src="${portraitUrl}" alt="${escapeHtml(char.name)}"
-               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+               data-image-fallback data-fallback-display="flex">
              <span class="character-picker__portrait-fallback" style="display: none;">${classIcon}</span>`
     : `<span class="character-picker__portrait-fallback">${classIcon}</span>`}
         </div>

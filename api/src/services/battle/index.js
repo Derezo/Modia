@@ -84,8 +84,19 @@ export {
 
 // Skill definitions
 export {
-  getSkillDefinition
+  getSkillDefinition,
+  serializeBattleSkill,
+  resolveBattleSkill,
+  resolveBattleSkills
 } from './skillDefinitionService.js';
+
+// Canonical visual identity for battle units
+export {
+  NPC_PRIMARY_BIOMES,
+  createBattleVisualIdentity,
+  withBattleVisualIdentity,
+  withBattleStateVisualIdentities
+} from './visualIdentityService.js';
 
 // Action processing
 export {

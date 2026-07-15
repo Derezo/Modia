@@ -1,5 +1,5 @@
 /**
- * AnimatedSprite - Handles sprite sheet animation with 8-directional support
+ * AnimatedSprite - Handles directional grids and vertical animation strips
  *
  * Sprite sheet layout (8 directions, N frames per animation):
  * Row 0: Direction 0 (South)      - frames 0 to N-1
@@ -45,6 +45,9 @@ export class AnimatedSprite {
     this.frameRate = config.frameRate || 12;
     this.directions = config.directions || 8;
     this.loop = config.loop !== false;
+    this.layout = config.layout || 'directional-grid';
+    this.mirrorByDirection = config.mirrorByDirection === true;
+    this.baseFacing = config.baseFacing || 'right';
 
     // Animation state
     this.currentFrame = 0;
@@ -197,18 +200,9 @@ export class AnimatedSprite {
   draw(ctx, x, y, scale = 1) {
     if (!this.spriteSheet) return;
 
-    const srcX = this.currentFrame * this.frameWidth;
-    const srcY = this.currentDirection * this.frameHeight;
-
     const drawWidth = this.frameWidth * scale;
     const drawHeight = this.frameHeight * scale;
-
-    ctx.drawImage(
-      this.spriteSheet,
-      srcX, srcY, this.frameWidth, this.frameHeight,
-      x - drawWidth / 2, y - drawHeight,
-      drawWidth, drawHeight
-    );
+    this.drawFrame(ctx, x - drawWidth / 2, y - drawHeight, drawWidth, drawHeight);
   }
 
   /**
@@ -221,18 +215,9 @@ export class AnimatedSprite {
   drawCentered(ctx, x, y, scale = 1) {
     if (!this.spriteSheet) return;
 
-    const srcX = this.currentFrame * this.frameWidth;
-    const srcY = this.currentDirection * this.frameHeight;
-
     const drawWidth = this.frameWidth * scale;
     const drawHeight = this.frameHeight * scale;
-
-    ctx.drawImage(
-      this.spriteSheet,
-      srcX, srcY, this.frameWidth, this.frameHeight,
-      x - drawWidth / 2, y - drawHeight / 2,
-      drawWidth, drawHeight
-    );
+    this.drawFrame(ctx, x - drawWidth / 2, y - drawHeight / 2, drawWidth, drawHeight);
   }
 
   /**
@@ -247,18 +232,78 @@ export class AnimatedSprite {
   drawWithOffset(ctx, x, y, offsetX, offsetY, scale = 1) {
     if (!this.spriteSheet) return;
 
-    const srcX = this.currentFrame * this.frameWidth;
-    const srcY = this.currentDirection * this.frameHeight;
-
     const drawWidth = this.frameWidth * scale;
     const drawHeight = this.frameHeight * scale;
+    this.drawFrame(
+      ctx,
+      x + offsetX - drawWidth / 2,
+      y + offsetY - drawHeight,
+      drawWidth,
+      drawHeight
+    );
+  }
 
+  /**
+   * Resolve the current source rectangle for either supported sheet layout.
+   * Vertical strips store animation frames top-to-bottom and use mirroring for
+   * east/west facing. Directional grids store frames left-to-right and facing
+   * directions top-to-bottom.
+   */
+  getSourceRect() {
+    if (this.layout === 'vertical-strip') {
+      return {
+        x: 0,
+        y: this.currentFrame * this.frameHeight,
+        width: this.frameWidth,
+        height: this.frameHeight
+      };
+    }
+
+    return {
+      x: this.currentFrame * this.frameWidth,
+      y: this.currentDirection * this.frameHeight,
+      width: this.frameWidth,
+      height: this.frameHeight
+    };
+  }
+
+  /**
+   * Whether a non-directional strip should be mirrored for its current facing.
+   */
+  shouldMirror() {
+    if (!this.mirrorByDirection) return false;
+    const facesWest = [
+      AnimatedSprite.DIRECTIONS.SOUTHWEST,
+      AnimatedSprite.DIRECTIONS.WEST,
+      AnimatedSprite.DIRECTIONS.NORTHWEST
+    ].includes(this.currentDirection);
+    return this.baseFacing === 'right' ? facesWest : !facesWest;
+  }
+
+  /**
+   * Draw the current frame into a destination rectangle.
+   */
+  drawFrame(ctx, destX, destY, destWidth, destHeight) {
+    const src = this.getSourceRect();
+
+    if (!this.shouldMirror()) {
+      ctx.drawImage(
+        this.spriteSheet,
+        src.x, src.y, src.width, src.height,
+        destX, destY, destWidth, destHeight
+      );
+      return;
+    }
+
+    ctx.save();
+    ctx.translate(destX + destWidth, 0);
+    ctx.scale(-1, 1);
     ctx.drawImage(
       this.spriteSheet,
-      srcX, srcY, this.frameWidth, this.frameHeight,
-      x + offsetX - drawWidth / 2, y + offsetY - drawHeight,
-      drawWidth, drawHeight
+      src.x, src.y, src.width, src.height,
+      0, destY, destWidth, destHeight
     );
+    ctx.restore();
   }
 
   // =====================
@@ -396,8 +441,23 @@ export class AnimatedSprite {
     let frameHeight = 64;
 
     if (spriteSheet && spriteSheet.width > 0) {
+      const isVerticalStrip = spriteSheet.height >= spriteSheet.width * 2;
+      if (isVerticalStrip) {
+        frameWidth = spriteSheet.width;
+        frameHeight = spriteSheet.width;
+        config.frameCount = Math.max(1, Math.floor(spriteSheet.height / frameHeight));
+        return new AnimatedSprite(spriteSheet, {
+          frameWidth,
+          frameHeight,
+          ...config,
+          layout: 'vertical-strip',
+          directions: 8,
+          mirrorByDirection: true
+        });
+      }
+
       frameWidth = spriteSheet.width / config.frameCount;
-      frameHeight = spriteSheet.height / 8; // 8 directions
+      frameHeight = spriteSheet.height / 8;
     }
 
     return new AnimatedSprite(spriteSheet, {

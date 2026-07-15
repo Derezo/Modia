@@ -410,7 +410,7 @@ export class LFGTab {
 
     return `
       <div class="lfg-modal-overlay" data-action="close-modal">
-        <div class="lfg-modal" onclick="event.stopPropagation()">
+        <div class="lfg-modal">
           <div class="lfg-modal-header">
             <span class="lfg-modal-title">Create LFG Post</span>
             <button class="lfg-modal-close" data-action="close-modal">&times;</button>
@@ -480,6 +480,12 @@ export class LFGTab {
         this.render();
       }, { signal });
     });
+
+    // Keep clicks within the dialog from reaching the close-on-overlay
+    // listener without relying on a CSP-blocked inline `onclick` attribute.
+    this.container.querySelector('.lfg-modal')?.addEventListener('click', event => {
+      event.stopPropagation();
+    }, { signal });
 
     // Role selection
     this.container.querySelectorAll('.lfg-role-option').forEach(el => {

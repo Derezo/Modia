@@ -33,10 +33,6 @@ const __dirname = path.dirname(__filename);
 const PROJECT_ROOT = path.resolve(__dirname, '../../..');
 const SCRIPTS_DIR = path.join(PROJECT_ROOT, 'scripts/ai-images');
 const THEME_PATH = path.join(PROJECT_ROOT, 'ai-image-metadata/theme.json');
-const CHARACTERS_OUTPUT_DIR = path.join(PROJECT_ROOT, 'frontend/public/assets/characters');
-
-// Player class IDs - these are the only valid player character IDs
-const PLAYER_CLASSES = ['warrior', 'wizard', 'healer', 'chemist', 'monk', 'oracle', 'reaper', 'summoner'];
 
 // Room name for generation events
 const GENERATION_ROOM = 'admin:generation';
@@ -429,35 +425,9 @@ function buildScriptArgs(job, config) {
     args.push('--animation', job.filters.animation);
   }
 
-  // === OUTPUT PATH for character animations ===
-  // When generating a specific character animation, calculate the output path
-  // so the Python script saves the sprite strip to the correct location
-  if (job.category === 'characters') {
-    const animation = job.options?.animation || job.filters?.animation;
-    // Get the character ID from filters
-    const characterId = job.filters?.id || job.filters?.key ||
-      (Array.isArray(job.filters?.ids) && job.filters.ids.length === 1 ? job.filters.ids[0] : null) ||
-      (Array.isArray(job.filters?.keys) && job.filters.keys.length === 1 ? job.filters.keys[0] : null);
-
-    if (animation && characterId) {
-      // Determine if this is a player or enemy character
-      const isPlayer = PLAYER_CLASSES.includes(characterId);
-      let outputPath;
-
-      if (isPlayer) {
-        // Player: /assets/characters/player/{class}/{class}_{animation}.png
-        outputPath = path.join(CHARACTERS_OUTPUT_DIR, 'player', characterId, `${characterId}_${animation}.png`);
-      } else {
-        // Enemy: /assets/characters/enemies/{biome}/{id}/{id}_{animation}.png
-        // For enemies, we need the biome from filters
-        const biome = job.filters?.biome || 'forest';  // Default to forest if not specified
-        outputPath = path.join(CHARACTERS_OUTPUT_DIR, 'enemies', biome, characterId, `${characterId}_${animation}.png`);
-      }
-
-      args.push('--output-path', outputPath);
-      console.log('[buildScriptArgs] Character output path:', outputPath);
-    }
-  }
+  // Character output paths are resolved by generate-characters.js from the
+  // metadata identity. Keeping path ownership in one place prevents player
+  // variants from being misclassified as enemies by a stale hard-coded list.
 
   console.log('[buildScriptArgs] Final args:', args.join(' '));
   return args;

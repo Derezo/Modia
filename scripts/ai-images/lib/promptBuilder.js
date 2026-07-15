@@ -495,6 +495,74 @@ function getCharacterVisualTraits(character) {
   return '';
 }
 
+const PLAYER_CLASS_VISUAL_SIGNATURES = Object.freeze({
+  warrior: 'plate armor, one sword, one shield',
+  wizard: 'long arcane robe, one staff, visible magic glow',
+  monk: 'simple martial robe, wrapped hands, prayer beads',
+  chemist: 'several visible glass potion vials, reagent pouch, stained practical apron',
+  berserker: 'spiked armor, two axes, war paint',
+  paladin: 'gleaming plate armor, holy sword, cape',
+  guardian: 'very heavy armor, one tower shield, fortified stance',
+  warlord: 'ornate command armor, one battle banner, officer decorations',
+  sorcerer: 'dark robes, crackling arcane energy, glowing tattoos',
+  summoner: 'open grimoire, spectral wisps, summoning focus',
+  conjurer: 'crystal staff, elemental orbs, nature magic',
+  oracle: 'blindfold, ornate seer robes, floating runes',
+  ninja: 'dark cloth mask, kunai, stealth wraps',
+  martial_artist: 'traditional gi, headband, wrapped bare fists',
+  brawler: 'spiked knuckles, hand bandages, rugged sleeveless shirt',
+  ascetic: 'simple robes, prayer beads, serene aura',
+  alchemist: 'bubbling potion vials, goggles, leather apron, transmutation emblem',
+  medic: 'medical satchel, clean bandages, white field coat',
+  plague_doctor: 'beaked plague mask, dark long coat, one censer',
+  artificer: 'work goggles, mechanical gauntlet, tool belt, clockwork gears'
+});
+
+/**
+ * Keep player generation anchored to the canonical race/gender/class tuple.
+ * Portraits are useful identity references, but some legacy portrait prompts
+ * contain contradictory traits (notably a beard on every female dwarf). The
+ * canonical registry must win when those inputs disagree.
+ *
+ * @param {Object} character - Character metadata
+ * @returns {string} Explicit canonical identity constraints
+ */
+function getCanonicalPlayerIdentityTraits(character) {
+  if (!character?.race || !character?.gender || !character?.class) return '';
+
+  const className = String(character.class).replaceAll('_', ' ');
+  const race = String(character.race);
+  const genderTraits = {
+    male: '(adult man with an unmistakably masculine face and silhouette:1.25)',
+    female: '(adult woman with an unmistakably feminine face and silhouette, clean-shaven face, no beard, no mustache:1.35)',
+    other: '(androgynous non-binary adult with a deliberately gender-neutral face and silhouette:1.3)'
+  };
+  const gender = genderTraits[character.gender] || `adult ${character.gender}`;
+  const classSignature = PLAYER_CLASS_VISUAL_SIGNATURES[character.class];
+  const recognizableClass = classSignature
+    ? `(clearly recognizable ${className}, ${classSignature}:1.3)`
+    : `clearly recognizable ${className}`;
+  return `${gender}, clearly ${race}, ${recognizableClass}`;
+}
+
+/**
+ * Remove only direct contradictions to the canonical gender. Other details
+ * remain intact so palette, ancestry, costume, and class identity stay faithful
+ * to the portrait/registry source.
+ */
+function normalizePlayerVisualTraits(character, visualTraits) {
+  if (!visualTraits || !character?.race || !character?.gender) return visualTraits;
+  if (character.gender !== 'female') return visualTraits;
+
+  return visualTraits
+    .replace(/\b(?:thick|full|long|braided)\s+beard\b/gi, '')
+    .replace(/\bbeard(?:ed)?\b/gi, '')
+    .replace(/\bmustache\b/gi, '')
+    .replace(/\bmale\b|\bmasculine\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 /**
  * Build an SD1.5-compatible character prompt for animation generation
  * SD1.5 requires different prompt structure than Flux for optimal results
@@ -513,7 +581,8 @@ function getCharacterVisualTraits(character) {
  */
 function buildSD15CharacterPrompt(character, animation, options = {}) {
   const loraTrigger = getSD15LoraTrigger(options.loraModel);
-  const visualTraits = getCharacterVisualTraits(character);
+  const canonicalIdentity = getCanonicalPlayerIdentityTraits(character);
+  const visualTraits = normalizePlayerVisualTraits(character, getCharacterVisualTraits(character));
 
   const parts = [];
 
@@ -524,6 +593,11 @@ function buildSD15CharacterPrompt(character, animation, options = {}) {
 
   // Core style keywords for SD1.5
   parts.push('pixel art character sprite');
+
+  // Canonical identity precedes descriptive/source traits so it has priority.
+  if (canonicalIdentity) {
+    parts.push(canonicalIdentity);
+  }
 
   // Character visual traits
   if (visualTraits) {
@@ -538,13 +612,28 @@ function buildSD15CharacterPrompt(character, animation, options = {}) {
     parts.push(options.poseDescription);
   }
 
-  // View and size constraints
-  parts.push('side view');
-  parts.push('64x64');
-  parts.push('transparent background');
+  // Identity, view, and silhouette constraints. The diffusion canvas uses a
+  // white matte which is removed after generation; requesting transparency
+  // directly tends to produce black circles or decorative backdrops.
+  parts.push('preserve the exact reference identity costume equipment and palette');
+  parts.push('one full-body character only');
+  parts.push('complete head-to-toe body with both feet fully visible');
+  parts.push('generous white margin around the entire silhouette');
+  parts.push('exactly one of each equipped weapon shield staff bow or focus');
+  parts.push('never duplicate props or change hairstyle or headwear between frames');
+  parts.push('right-facing side view');
+  parts.push('centered with visible feet and separated equipment');
+  parts.push('generation master for a 64x64 game sprite');
+  parts.push('flat uniform pure white background');
+  parts.push('empty background');
+  parts.push('no floor no shadow no scenery no frame');
 
-  // Quality boosters for SD1.5
-  parts.push('clean lines');
+  // Cohesive Modia art direction.
+  parts.push('hand-authored 16-bit pixel clusters');
+  parts.push('hard pixel edges');
+  parts.push('bold dark ink-like outline');
+  parts.push('muted watercolor-and-parchment color ramps');
+  parts.push('clean readable silhouette');
   parts.push('game asset');
 
   return parts.filter(Boolean).join(', ');
@@ -585,7 +674,9 @@ function buildSD15ReferencePrompt(character, options = {}) {
   // Quality and style
   parts.push('clean pixel art');
   parts.push('consistent style');
-  parts.push('transparent background');
+  parts.push('flat uniform pure white background');
+  parts.push('empty background');
+  parts.push('no floor no shadow no scenery no frame');
   parts.push('128x128');
 
   return parts.filter(Boolean).join(', ');
@@ -600,7 +691,8 @@ function getSD15NegativePrompt() {
   return 'blurry, low quality, watermark, signature, text, logo, ' +
     'photorealistic, 3D render, anime style, chibi, ' +
     'bad anatomy, extra limbs, missing limbs, ' +
-    'multiple characters, crowded, busy background, ' +
+    'multiple characters, duplicate equipment, crowded, busy background, ' +
+    'background scenery, floor, cast shadow, circular backdrop, vignette, frame, ' +
     'jpeg artifacts, noise, grain';
 }
 
@@ -625,6 +717,9 @@ module.exports = {
   SD15_LORA_TRIGGERS,
   getSD15LoraTrigger,
   getCharacterVisualTraits,
+  PLAYER_CLASS_VISUAL_SIGNATURES,
+  getCanonicalPlayerIdentityTraits,
+  normalizePlayerVisualTraits,
   buildSD15CharacterPrompt,
   buildSD15ReferencePrompt,
   getSD15NegativePrompt,

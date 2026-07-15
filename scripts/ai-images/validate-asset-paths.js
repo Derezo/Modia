@@ -16,7 +16,11 @@
 
 const path = require('path');
 const fs = require('fs');
-const { program } = require('commander');
+const commander = require('commander');
+// Commander 2 exports the singleton directly; newer releases expose it as
+// `program`. Support both because this root script may resolve either workspace
+// dependency shape.
+const program = commander.program || commander;
 const { fileExists, getProjectRoot } = require('./lib/imageUtils');
 const { getAssetPathsModule, CATEGORY_BASE_DIRS } = require('./lib/assetPathsBridge');
 
@@ -100,7 +104,7 @@ const CATEGORY_METADATA = {
       'characters/players.json',
       'characters/enemies/forest.json', 'characters/enemies/cave.json',
       'characters/enemies/mountain.json', 'characters/enemies/bridge.json',
-      'characters/enemies/castle.json'
+      'characters/enemies/castle.json', 'characters/enemies/palace.json'
     ],
     getAssets: (data) => data.characters || data.players || data.enemies || [],
     getAssetId: (asset) => asset.id,
@@ -424,7 +428,7 @@ program
   .option('-v, --verbose', 'Show detailed missing/orphaned files')
   .option('--json', 'Output results as JSON')
   .option('--list-categories', 'List available categories')
-  .parse();
+  .parse(process.argv);
 
 const cliOptions = program.opts();
 

@@ -123,13 +123,25 @@ db_sanity_check:
 nginx:
   template: api-spa.conf.tpl
   server_name: <PRODUCTION_DOMAIN>
-  vars: { upstream: "127.0.0.1:<APP_PORT>", static_root: "frontend/dist" }
+  vars:
+    upstream: "127.0.0.1:<APP_PORT>"
+    static_root: "frontend/dist"
+    proxy_ws_path: "/ws"
+    security_headers: "true"
+    # Keep resource origins aligned with frontend/index.html. Production can
+    # restrict WebSockets to the public TLS endpoint instead of ws:/wss:.
+    csp: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' wss://<PRODUCTION_DOMAIN>; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
 hooks:
   post_deploy:
     - { id: db-migrate, cmd: npm run db:migrate, cwd: current }
 ```
 
 When you change this file, run `lsd config validate modia` before deploying.
+`security_headers: "true"` enables the `api-spa.conf.tpl` browser-security
+baseline; without it, nginx does not emit HSTS, clickjacking protection, or the
+other template-managed headers. The `csp` value is independent and must also be
+set explicitly. LSD checks the configured headers after a deploy and records a
+warning if the public response is missing any of them.
 
 ---
 

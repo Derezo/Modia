@@ -4,6 +4,7 @@
 
 import { ItemDataTable } from '../../../components/ItemDataTable/index.js';
 import { marketConfirmDialog } from '../../../components/MarketConfirmDialog.js';
+import { ItemIcon } from '../../../components/ItemIcon.js';
 import { parchmentToast } from '../../../ui/parchment/ParchmentToast.js';
 import { getRarityName, formatStatName, RARITY_COLORS } from '../marketplaceUtils.js';
 import { loadOrderBook, renderOrderBookAndTrade, initMarketDashboard } from './MarketplaceTradePanel.js';
@@ -212,7 +213,7 @@ function renderEquipmentDetailPanel(sidePanel, item, context) {
     <div class="ui-panel">
       <div class="ui-panel-header">${escapeHtml(item.name || '')} - Available Listings</div>
       <div class="equipment-listings-container" style="max-height: 400px; overflow-y: auto; padding: 8px;">
-        ${listings.length > 0 ? listings.map(listing => renderEquipmentListingCard(listing)).join('') : `
+        ${listings.length > 0 ? listings.map((listing, index) => renderEquipmentListingCard(listing, item, index)).join('') : `
           <div class="empty-message" style="padding: 20px; text-align: center; color: #7a6a5a; font-style: italic;">
             No listings available for this item.<br><br>
             Be the first to list one!
@@ -221,6 +222,20 @@ function renderEquipmentDetailPanel(sidePanel, item, context) {
       </div>
     </div>
   `;
+
+  sidePanel.querySelectorAll('[data-equipment-listing-icon]').forEach((container) => {
+    const listing = listings[Number(container.dataset.equipmentListingIcon)];
+    if (!listing?.augments?.length) return;
+
+    ItemIcon.compositeHtml({
+      item: getEquipmentListingIconItem(listing, item),
+      size: 'md'
+    }).then((html) => {
+      if (container.isConnected) container.innerHTML = html;
+    }).catch(() => {
+      // Preserve the canonical base icon on optional overlay failure.
+    });
+  });
 
   // Re-init dashboard if needed
   if (!sidePanel.querySelector('#market-dashboard-container canvas')) {
@@ -242,9 +257,11 @@ function renderEquipmentDetailPanel(sidePanel, item, context) {
 /**
  * Render a single equipment listing card
  * @param {Object} listing - Listing data
+ * @param {Object} templateItem - Selected item template
+ * @param {number} index - Listing index
  * @returns {string} HTML string
  */
-function renderEquipmentListingCard(listing) {
+function renderEquipmentListingCard(listing, templateItem, index) {
   const {
     listingId,
     generatedName,
@@ -273,6 +290,7 @@ function renderEquipmentListingCard(listing) {
   }).join('');
 
   const rarityColor = RARITY_COLORS[rarity] || RARITY_COLORS.common;
+  const iconItem = getEquipmentListingIconItem(listing, templateItem);
 
   return `
     <div class="equipment-listing-card" style="
@@ -282,10 +300,13 @@ function renderEquipmentListingCard(listing) {
       margin-bottom: 8px;
       padding: 10px;
     ">
-      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
-        <div>
-          <div style="font-weight: bold; color: ${rarityColor};">${escapeHtml(generatedName || '')}</div>
-          <div style="font-size: 12px; color: #5a4a3a;">${[rarity, material].filter(Boolean).map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' • ')}</div>
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 6px;">
+        <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+          <span data-equipment-listing-icon="${index}">${ItemIcon.html({ item: iconItem, size: 'md' })}</span>
+          <div>
+            <div style="font-weight: bold; color: ${rarityColor};">${escapeHtml(generatedName || '')}</div>
+            <div style="font-size: 12px; color: #5a4a3a;">${[rarity, material].filter(Boolean).map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' • ')}</div>
+          </div>
         </div>
         <div style="text-align: right;">
           <div style="font-weight: bold; color: #2d2418;">${askPrice.toLocaleString()}g</div>
@@ -312,6 +333,22 @@ function renderEquipmentListingCard(listing) {
 }
 
 /**
+ * Merge listing-instance fields with its selected template for ItemIcon.
+ * @param {Object} listing - Marketplace listing instance
+ * @param {Object} templateItem - Selected item template
+ * @returns {Object} ItemIcon-compatible item
+ */
+function getEquipmentListingIconItem(listing, templateItem) {
+  return {
+    ...templateItem,
+    ...listing,
+    name: listing.generatedName || templateItem?.name,
+    itemType: listing.itemType || templateItem?.itemType,
+    spriteId: listing.spriteId || templateItem?.spriteId
+  };
+}
+
+/**
  * Handle buying an individual item listing
  * @param {Object} listing - Listing to buy
  * @param {Object} context - Shared context
@@ -330,7 +367,10 @@ async function handleBuyListing(listing, context) {
     action: 'buy',
     item: {
       name: listing.generatedName,
-      rarity: listing.rarity
+      rarity: listing.rarity,
+      itemType: listing.itemType || context.selectedItem?.itemType,
+      spriteId: listing.spriteId || context.selectedItem?.spriteId,
+      augments: listing.augments || []
     },
     quantity: 1,
     price: listing.askPrice,

@@ -37,7 +37,12 @@ async function runPythonScript(scriptName, args = [], options = {}) {
   const useLocal = huggingface ? false : local;
 
   const generatorRoot = getImageGeneratorRoot();
-  const scriptPath = path.join(generatorRoot, scriptName);
+  const companionRoot = path.basename(generatorRoot) === 'modia-generators'
+    ? path.dirname(generatorRoot)
+    : generatorRoot;
+  const scriptPath = path.isAbsolute(scriptName)
+    ? scriptName
+    : path.join(generatorRoot, scriptName);
   const modiaRoot = getProjectRoot();
 
   // Build extended PATH to ensure conda/python are discoverable
@@ -52,6 +57,7 @@ async function runPythonScript(scriptName, args = [], options = {}) {
   const env = {
     ...process.env,
     MODIA_ROOT: modiaRoot,
+    IMAGE_GENERATOR_ROOT: companionRoot,
     PYTHONUNBUFFERED: '1',  // Ensure Python output is not buffered
     PATH: extendedPath
   };
@@ -749,6 +755,7 @@ async function generateCharacterFrame(frameConfig, options = {}) {
  * @param {Object} animationConfig - Animation configuration
  * @param {string} animationConfig.characterId - Character identifier (e.g., 'warrior', 'goblin_scout')
  * @param {string} animationConfig.animation - Animation name (idle, walk, attack, etc.)
+ * @param {string} animationConfig.prompt - Complete identity and art-direction prompt
  * @param {number} animationConfig.controlnetWeight - ControlNet pose weight (0.0-1.0, default 0.7)
  * @param {number} animationConfig.ipadapterWeight - IP-Adapter reference weight (0.0-1.0, default 0.4)
  * @param {string} animationConfig.referenceImage - Path to reference image for style consistency
@@ -767,12 +774,17 @@ async function generateAnimation(animationConfig, options = {}) {
   const {
     characterId,
     animation,
+    prompt,
     controlnetWeight = 0.7,
     ipadapterWeight = 0.4,  // Reduced from 0.6 to allow more motion variation
     referenceImage,
     loraModel,
     seed = 42,
+    seedPolicy = 'fixed',
     outputPath,
+    originalsDirectory = null,
+    identityReferenceOnly = false,
+    negativePrompt = null,
     frameDescriptions = null,  // Per-frame prompt variations for animation motion
     autoReference = false  // Auto-generate reference image if missing
   } = animationConfig;
@@ -782,18 +794,35 @@ async function generateAnimation(animationConfig, options = {}) {
   if (!outputPath) {
     throw new Error('outputPath is required for animation generation');
   }
+  if (!prompt || typeof prompt !== 'string') {
+    throw new Error('prompt is required for animation generation');
+  }
 
   const args = [
     '--character', characterId,
     '--animation', animation,
+    '--prompt', prompt,
     '--controlnet-weight', String(controlnetWeight),
     '--ipadapter-weight', String(ipadapterWeight),
     '--seed', String(seed),
+    '--seed-policy', seedPolicy,
     '--output-path', outputPath  // Always required
   ];
 
   if (referenceImage) {
     args.push('--reference', referenceImage);
+  }
+
+  if (originalsDirectory) {
+    args.push('--originals-dir', originalsDirectory);
+  }
+
+  if (identityReferenceOnly) {
+    args.push('--identity-reference-only');
+  }
+
+  if (negativePrompt) {
+    args.push('--negative-prompt', negativePrompt);
   }
 
   if (loraModel) {
@@ -814,7 +843,14 @@ async function generateAnimation(animationConfig, options = {}) {
     args.push('--dry-run');
   }
 
-  return runPythonScript('generate_animation.py', args, { ...options, verbose, quiet });
+  const modiaAnimationScript = path.join(
+    getProjectRoot(),
+    'scripts',
+    'ai-images',
+    'python',
+    'generate_character_animation.py'
+  );
+  return runPythonScript(modiaAnimationScript, args, { ...options, verbose, quiet });
 }
 
 /**

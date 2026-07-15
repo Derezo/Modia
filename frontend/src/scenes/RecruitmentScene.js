@@ -836,7 +836,7 @@ export class RecruitmentScene extends Scene {
         <div class="recruit-card-header">
           <div class="recruit-portrait">
             <img src="${portraitUrl}" alt="${escapeHtml(recruit.name || '')}"
-                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                 data-image-fallback data-fallback-display="flex">
             <div class="recruit-portrait-fallback" style="display: none; background: ${this.getClassColor(recruit.class)};">
               ${escapeHtml((recruit.name || '').charAt(0))}
             </div>

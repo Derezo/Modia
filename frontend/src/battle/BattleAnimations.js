@@ -2,7 +2,7 @@
  * BattleAnimations - Visual effects for tactical combat
  */
 import { SKILL_EFFECT_CATEGORIES, getRandomCategoryColor, ITEM_EFFECT_VISUAL_MAP } from './SkillEffectCategories.js';
-import { ELEMENT_COLORS } from '@shared/battleMath.js';
+import { ELEMENT_COLORS } from '@modia/shared/battleMath';
 import { responsive } from '../core/Responsive.js';
 
 /**
@@ -18,6 +18,49 @@ export const ANIMATION_TIMING = {
   MOVEMENT_PER_TILE_MS: 150,   // Consistent timing per tile moved
   MOVEMENT_MIN_MS: 400,        // Minimum movement wait
 };
+
+/**
+ * Return a canvas-compatible color with an explicit alpha channel.
+ *
+ * Canvas accepts several CSS color syntaxes, so preserve channel values for
+ * rgb()/rgba() (including percentage channels) and expand short/long hex
+ * forms. Named colors and other valid CSS color functions are returned
+ * unchanged because CanvasGradient can validate those itself.
+ */
+export function withColorAlpha(color, alpha) {
+  const numericAlpha = Number(alpha);
+  const safeAlpha = Number.isFinite(numericAlpha)
+    ? Math.min(1, Math.max(0, numericAlpha))
+    : 1;
+  const alphaText = String(Number(safeAlpha.toFixed(3)));
+  const value = typeof color === 'string' ? color.trim() : '';
+
+  const hexMatch = value.match(/^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
+  if (hexMatch) {
+    const hex = hexMatch[1];
+    const rgbHex = hex.length <= 4
+      ? hex.slice(0, 3).split('').map(channel => channel + channel).join('')
+      : hex.slice(0, 6);
+    const red = Number.parseInt(rgbHex.slice(0, 2), 16);
+    const green = Number.parseInt(rgbHex.slice(2, 4), 16);
+    const blue = Number.parseInt(rgbHex.slice(4, 6), 16);
+    return `rgba(${red}, ${green}, ${blue}, ${alphaText})`;
+  }
+
+  const functionalMatch = value.match(/^rgba?\((.*)\)$/i);
+  if (functionalMatch) {
+    const body = functionalMatch[1].trim();
+    const channels = body.includes(',')
+      ? body.split(',').slice(0, 3).map(channel => channel.trim())
+      : body.split('/')[0].trim().split(/\s+/);
+
+    if (channels.length === 3 && channels.every(Boolean)) {
+      return `rgba(${channels[0]}, ${channels[1]}, ${channels[2]}, ${alphaText})`;
+    }
+  }
+
+  return value || `rgba(255, 255, 255, ${alphaText})`;
+}
 
 export class BattleAnimations {
   constructor() {
@@ -47,6 +90,45 @@ export class BattleAnimations {
 
     // Add glow effect
     this.addGlow(x, y, config.glowColor, 40);
+  }
+
+  /**
+   * Add a complete skill presentation. Elemental/ranged categories travel from
+   * caster to target; auras resolve around the caster; direct skills impact in
+   * place. The projectile carries its category into the eventual impact.
+   */
+  addSkillActionEffect(startX, startY, endX, endY, descriptor, skill = null) {
+    const category = descriptor?.category || 'physical';
+    const config = SKILL_EFFECT_CATEGORIES[category] || SKILL_EFFECT_CATEGORIES.physical;
+
+    if (descriptor?.selfTarget) {
+      this.addSelfAuraEffect(endX, endY, category);
+      return;
+    }
+
+    if (!descriptor?.projectile) {
+      this.addSkillEffect(endX, endY, category, skill);
+      return;
+    }
+
+    this.animations.push({
+      type: 'skill_projectile',
+      startX,
+      startY,
+      endX,
+      endY,
+      x: startX,
+      y: startY,
+      color: descriptor.primaryColor || config.colors.primary,
+      glowColor: descriptor.glowColor || config.glowColor,
+      category,
+      skill,
+      trailEnabled: descriptor.trailEnabled !== false,
+      timer: 0,
+      duration: 0.32,
+      size: 6,
+      impactTriggered: false
+    });
   }
 
   /**
@@ -491,6 +573,13 @@ export class BattleAnimations {
           anim.y = (1 - t) * (1 - t) * anim.startY + 2 * (1 - t) * t * midY + t * t * anim.endY;
           break;
         }
+        case 'skill_projectile': {
+          const t = Math.min(anim.timer / anim.duration, 1);
+          const eased = 1 - Math.pow(1 - t, 3);
+          anim.x = anim.startX + (anim.endX - anim.startX) * eased;
+          anim.y = anim.startY + (anim.endY - anim.startY) * eased - Math.sin(t * Math.PI) * 18;
+          break;
+        }
         case 'particle':
           anim.x += anim.velocityX * dt;
           anim.y += anim.velocityY * dt;
@@ -515,6 +604,10 @@ export class BattleAnimations {
 
       // Remove finished animations
       if (anim.timer >= anim.duration) {
+        if (anim.type === 'skill_projectile' && !anim.impactTriggered) {
+          anim.impactTriggered = true;
+          this.addSkillEffect(anim.endX, anim.endY, anim.category, anim.skill);
+        }
         this.animations.splice(i, 1);
       }
     }
@@ -529,53 +622,63 @@ export class BattleAnimations {
       const alpha = 1 - progress;
 
       ctx.save();
-      ctx.globalAlpha = alpha;
+      try {
+        ctx.globalAlpha = alpha;
 
-      switch (anim.type) {
-        case 'damage':
-          this.renderDamageNumber(ctx, anim);
-          break;
-        case 'absorb':
-          this.renderAbsorbNumber(ctx, anim);
-          break;
-        case 'heal':
-          this.renderHealNumber(ctx, anim);
-          break;
-        case 'mp_restore':
-          this.renderMpRestoreNumber(ctx, anim);
-          break;
-        case 'item_arc':
-          this.renderItemArc(ctx, anim, progress);
-          break;
-        case 'miss':
-          this.renderMiss(ctx, anim);
-          break;
-        case 'status':
-          this.renderStatusText(ctx, anim);
-          break;
-        case 'flash':
-          this.renderFlash(ctx, anim, progress);
-          break;
-        case 'particle':
-        case 'rising':
-        case 'falling':
-          this.renderParticle(ctx, anim);
-          break;
-        case 'orbit':
-          this.renderOrbitParticle(ctx, anim, progress);
-          break;
-        case 'swirl':
-          this.renderSwirlParticle(ctx, anim, progress);
-          break;
-        case 'glow':
-          this.renderGlow(ctx, anim, progress);
-          break;
-        case 'slash':
-          this.renderSlash(ctx, anim, progress);
-          break;
+        switch (anim.type) {
+          case 'damage':
+            this.renderDamageNumber(ctx, anim);
+            break;
+          case 'absorb':
+            this.renderAbsorbNumber(ctx, anim);
+            break;
+          case 'heal':
+            this.renderHealNumber(ctx, anim);
+            break;
+          case 'mp_restore':
+            this.renderMpRestoreNumber(ctx, anim);
+            break;
+          case 'item_arc':
+            this.renderItemArc(ctx, anim, progress);
+            break;
+          case 'skill_projectile':
+            this.renderSkillProjectile(ctx, anim, progress);
+            break;
+          case 'miss':
+            this.renderMiss(ctx, anim);
+            break;
+          case 'status':
+            this.renderStatusText(ctx, anim);
+            break;
+          case 'flash':
+            this.renderFlash(ctx, anim, progress);
+            break;
+          case 'particle':
+          case 'rising':
+          case 'falling':
+            this.renderParticle(ctx, anim);
+            break;
+          case 'orbit':
+            this.renderOrbitParticle(ctx, anim, progress);
+            break;
+          case 'swirl':
+            this.renderSwirlParticle(ctx, anim, progress);
+            break;
+          case 'glow':
+            this.renderGlow(ctx, anim, progress);
+            break;
+          case 'slash':
+            this.renderSlash(ctx, anim, progress);
+            break;
+        }
+      } catch (error) {
+        // A malformed optional visual must never stop the main requestAnimationFrame
+        // loop. Mark it complete so update() removes it on the next frame.
+        anim.timer = anim.duration;
+        console.error(`[BattleAnimations] Failed to render ${anim.type} animation:`, error);
+      } finally {
+        ctx.restore();
       }
-
-      ctx.restore();
     }
   }
 
@@ -701,6 +804,34 @@ export class BattleAnimations {
     ctx.fill();
   }
 
+  /** Render a category-colored spell orb with a short motion trail. */
+  renderSkillProjectile(ctx, anim, progress) {
+    if (anim.trailEnabled) {
+      ctx.lineCap = 'round';
+      ctx.lineWidth = anim.size * 1.5;
+      ctx.strokeStyle = anim.color;
+      ctx.globalAlpha *= 0.35;
+      ctx.beginPath();
+      const trailT = Math.max(0, progress - 0.16);
+      const easedTrail = 1 - Math.pow(1 - trailT, 3);
+      const trailX = anim.startX + (anim.endX - anim.startX) * easedTrail;
+      const trailY = anim.startY + (anim.endY - anim.startY) * easedTrail - Math.sin(trailT * Math.PI) * 18;
+      ctx.moveTo(trailX, trailY);
+      ctx.lineTo(anim.x, anim.y);
+      ctx.stroke();
+      ctx.globalAlpha /= 0.35;
+    }
+
+    const glow = ctx.createRadialGradient(anim.x, anim.y, 0, anim.x, anim.y, anim.size * 3);
+    glow.addColorStop(0, '#ffffff');
+    glow.addColorStop(0.3, anim.color);
+    glow.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(anim.x, anim.y, anim.size * 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   /**
    * Render miss text
    */
@@ -812,7 +943,7 @@ export class BattleAnimations {
     const radius = anim.radius * (1 + progress * 0.5);
     const gradient = ctx.createRadialGradient(anim.x, anim.y, 0, anim.x, anim.y, radius);
     gradient.addColorStop(0, anim.color);
-    gradient.addColorStop(0.5, anim.color.replace(')', ', 0.3)').replace('rgba', 'rgba').replace('rgb', 'rgba'));
+    gradient.addColorStop(0.5, withColorAlpha(anim.color, 0.3));
     gradient.addColorStop(1, 'transparent');
 
     ctx.beginPath();

@@ -12,6 +12,7 @@ import {
   calculateInitialCT
 } from '../../../../shared/battleMath.js';
 import { resetTurnState } from './statusEffectManager.js';
+import { createBattleVisualIdentity } from './visualIdentityService.js';
 
 /**
  * Calculate initiative for turn order
@@ -144,13 +145,18 @@ export function predictTurnOrder(state, count = 10) {
     });
 
     const actor = ready[0];
+    const visualIdentity = createBattleVisualIdentity(actor);
     predictions.push({
       id: actor.id,
       name: actor.name,
       type: actor.type,
       class: actor.class,
+      visualIdentity,
       // Portrait/icon path fields
-      enemyId: actor.enemyId,  // Enemy sprite ID (e.g., 'goblin_warrior')
+      visualId: visualIdentity.kind === 'npc' ? visualIdentity.visualId : undefined,
+      enemyId: visualIdentity.kind === 'npc' ? visualIdentity.visualId : actor.enemyId,
+      spriteId: visualIdentity.kind === 'npc' ? visualIdentity.visualId : actor.spriteId,
+      primaryBiome: visualIdentity.kind === 'npc' ? visualIdentity.primaryBiome : undefined,
       race: actor.race,        // Player race
       gender: actor.gender     // Player gender
     });

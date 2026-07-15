@@ -3,6 +3,7 @@
  */
 
 import { parchmentToast } from '../../../ui/parchment/ParchmentToast.js';
+import { ItemIcon } from '../../../components/ItemIcon.js';
 import { escapeHtml } from '../../../utils/escapeHtml.js';
 
 /**
@@ -73,7 +74,18 @@ function renderMyOrder(order) {
   return `
     <div class="my-order">
       <div class="my-order-header">
-        <span class="my-order-item">${escapeHtml(order.itemName || '')}</span>
+        <span class="my-order-item" style="display: inline-flex; align-items: center; gap: 8px;">
+          ${ItemIcon.html({
+    item: {
+      name: order.itemName,
+      itemType: order.itemType,
+      rarity: order.rarity,
+      spriteId: order.spriteId
+    },
+    size: 'sm'
+  })}
+          <span>${escapeHtml(order.itemName || '')}</span>
+        </span>
         <span class="my-order-side ${order.side}">${order.side.toUpperCase()}</span>
       </div>
       <div class="my-order-info">

@@ -23,6 +23,8 @@ import {
   getParchmentButtonCSS
 } from '../ui/parchment/ParchmentTheme.js';
 import { responsive } from '../core/Responsive.js';
+import { ItemIcon } from './ItemIcon.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
 
 /**
  * Helper function for hand-drawn wobble effect
@@ -108,6 +110,12 @@ export class MarketDashboard {
       .market-dashboard-header {
         border-bottom: 1px solid ${PARCHMENT_COLORS.border};
         padding-bottom: ${PARCHMENT_SPACING.sm};
+      }
+
+      .market-dashboard-item-heading {
+        display: flex;
+        align-items: center;
+        gap: ${PARCHMENT_SPACING.sm};
       }
 
       .market-dashboard-header h3 {
@@ -273,10 +281,15 @@ export class MarketDashboard {
 
     this.element.innerHTML = `
       <div class="market-dashboard-header">
-        <h3>${item.name || item.generatedName || 'Unknown Item'}</h3>
-        <div class="item-meta">
-          ${this.formatRarity(item.rarity)} • ${item.itemType || item.type || 'Item'}
-          ${item.material ? ` • ${item.material}` : ''}
+        <div class="market-dashboard-item-heading">
+          <span data-market-item-icon>${ItemIcon.html({ item, size: 'md' })}</span>
+          <div>
+            <h3>${escapeHtml(item.name || item.generatedName || 'Unknown Item')}</h3>
+            <div class="item-meta">
+              ${escapeHtml(this.formatRarity(item.rarity))} • ${escapeHtml(item.itemType || item.type || 'Item')}
+              ${item.material ? ` • ${escapeHtml(item.material)}` : ''}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -335,6 +348,17 @@ export class MarketDashboard {
         </button>
       </div>
     `;
+
+    if (item.augments?.length > 0) {
+      const iconContainer = this.element.querySelector('[data-market-item-icon]');
+      ItemIcon.compositeHtml({ item, size: 'md' })
+        .then((html) => {
+          if (iconContainer?.isConnected) iconContainer.innerHTML = html;
+        })
+        .catch(() => {
+          // Keep the canonical base icon on optional overlay failure.
+        });
+    }
 
     // Setup canvas and render chart
     this.canvas = this.element.querySelector('#price-chart-canvas');
@@ -711,6 +735,9 @@ export class MarketDashboard {
    */
   formatRarity(rarity) {
     const rarities = ['', 'Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'];
+    if (typeof rarity === 'string' && rarity) {
+      return rarity.charAt(0).toUpperCase() + rarity.slice(1).toLowerCase();
+    }
     return rarities[rarity] || 'Common';
   }
 

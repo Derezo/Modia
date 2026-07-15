@@ -376,6 +376,29 @@ describe('predictTurnOrder', () => {
     assert.ok(predictions[0].type, 'Should have type');
   });
 
+  test('should preserve canonical NPC identity in prediction DTOs across zones', () => {
+    const unit = createMockEnemyUnit({
+      id: 'e1',
+      enemyId: 'dark_knight',
+      biome: 'castle',
+      agility: 20,
+      ct: 100,
+      hp: 50
+    });
+
+    const [prediction] = predictTurnOrder({ units: [unit] }, 1);
+
+    assert.deepStrictEqual(prediction.visualIdentity, {
+      kind: 'npc',
+      id: 'e1',
+      visualId: 'dark_knight',
+      primaryBiome: 'palace'
+    });
+    assert.strictEqual(prediction.enemyId, 'dark_knight');
+    assert.strictEqual(prediction.spriteId, 'dark_knight');
+    assert.strictEqual(prediction.primaryBiome, 'palace');
+  });
+
   test('should not modify actual unit CT values', () => {
     const units = [
       createMockPlayerUnit({ id: 'p1', agility: 10, ct: 90, hp: 100 }),

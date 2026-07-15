@@ -4,8 +4,8 @@
   "biome": "mountain",
   "description": "Mountain biome enemy sprite sheets",
   "biomeTraits": "rocky alpine windswept rugged high altitude harsh",
-  "totalAssets": 8,
-  "totalAnimations": 40,
+  "totalAssets": 7,
+  "totalAnimations": 35,
   "enemies": [
     {
       "id": "mountain_goat",
@@ -23,28 +23,28 @@
           "id": "mountain_goat_idle",
           "frameCount": 8,
           "seed": 43001,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, mountain goat with thick white fur and curved horns and fierce eyes, idle alert animation, standing on rocks chewing and watching warily, rocky alpine peak"
         },
         "attack": {
           "id": "mountain_goat_attack",
           "frameCount": 8,
           "seed": 43002,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, mountain goat with thick white fur and curved horns and fierce eyes, attack charge animation, charging forward with horns lowered in ramming strike, rocky alpine peak"
         },
         "hit": {
           "id": "mountain_goat_hit",
           "frameCount": 8,
           "seed": 43003,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, mountain goat with thick white fur and curved horns and fierce eyes, hurt stagger animation, knocked sideways bleating and scrambling to recover, rocky alpine peak"
         },
         "death": {
           "id": "mountain_goat_death",
           "frameCount": 8,
           "seed": 43004,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, mountain goat with thick white fur and curved horns and fierce eyes, death collapse animation, legs giving way and tumbling to lie still, rocky alpine peak"
         },
         "dead": {
@@ -65,7 +65,7 @@
         "dead": false
       },
       "generatedAt": "2026-01-31T17:45:34.949Z",
-      "generated": true,
+      "generated": false,
       "loraModel": "retro-pixel"
     },
     {
@@ -84,28 +84,28 @@
           "id": "harpy_idle",
           "frameCount": 8,
           "seed": 43011,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, harpy with feathered body and woman face and sharp talons and bird wings, idle hover animation, hovering with wings spread and talons ready screeching, windswept mountain cliff"
         },
         "attack": {
           "id": "harpy_attack",
           "frameCount": 8,
           "seed": 43012,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, harpy with feathered body and woman face and sharp talons and bird wings, attack dive animation, diving down with talons extended and wind screaming, windswept mountain cliff"
         },
         "hit": {
           "id": "harpy_hit",
           "frameCount": 8,
           "seed": 43013,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, harpy with feathered body and woman face and sharp talons and bird wings, hurt tumble animation, knocked off balance with feathers flying while shrieking, windswept mountain cliff"
         },
         "death": {
           "id": "harpy_death",
           "frameCount": 8,
           "seed": 43014,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, harpy with feathered body and woman face and sharp talons and bird wings, death fall animation, wings folding as falling from sky and crashing down, windswept mountain cliff"
         },
         "dead": {
@@ -126,67 +126,6 @@
         "dead": false
       },
       "generatedAt": "2026-01-31T18:09:18.572Z",
-      "generated": true,
-      "loraModel": "retro-pixel"
-    },
-    {
-      "id": "stone_golem",
-      "name": "Stone Golem",
-      "archetype": "elemental",
-      "visualTraits": "living stone body glowing orange cracks boulder fists runic markings",
-      "sd15Config": {
-        "controlnetWeight": null,
-        "ipadapterWeight": null,
-        "referenceImage": null,
-        "referenceGeneratedAt": null
-      },
-      "animations": {
-        "idle": {
-          "id": "stone_golem_idle",
-          "frameCount": 8,
-          "seed": 43021,
-          "generated": false,
-          "prompt": "pixel art sprite side view 64x64, stone golem with living rock body and glowing orange cracks and boulder fists, idle rumble animation, slowly shifting with magma glowing in cracks and rumbling, rugged mountain terrain"
-        },
-        "attack": {
-          "id": "stone_golem_attack",
-          "frameCount": 8,
-          "seed": 43022,
-          "generated": false,
-          "prompt": "pixel art sprite side view 64x64, stone golem with living rock body and glowing orange cracks and boulder fists, attack slam animation, boulder fist swinging down with earth-trembling impact, rugged mountain terrain"
-        },
-        "hit": {
-          "id": "stone_golem_hit",
-          "frameCount": 8,
-          "seed": 43023,
-          "generated": false,
-          "prompt": "pixel art sprite side view 64x64, stone golem with living rock body and glowing orange cracks and boulder fists, hurt crack animation, chunks breaking off with magma spraying then reforming, rugged mountain terrain"
-        },
-        "death": {
-          "id": "stone_golem_death",
-          "frameCount": 8,
-          "seed": 43024,
-          "generated": false,
-          "prompt": "pixel art sprite side view 64x64, stone golem with living rock body and glowing orange cracks and boulder fists, death crumble animation, crumbling apart with inner light fading into pile of rocks, rugged mountain terrain"
-        },
-        "dead": {
-          "id": "stone_golem_dead",
-          "frameCount": 8,
-          "seed": 43034,
-          "generated": false,
-          "prompt": "pixel art sprite side view 64x64, living stone body glowing orange cracks boulder fists runic markings, dead static pose, lying defeated at final rest motionless, rocky alpine"
-        }
-      },
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAnimations": {
-        "idle": false,
-        "attack": false,
-        "hit": false,
-        "death": false,
-        "dead": false
-      },
-      "generatedAt": null,
       "generated": false,
       "loraModel": "retro-pixel"
     },
@@ -206,28 +145,28 @@
           "id": "mountain_troll_idle",
           "frameCount": 8,
           "seed": 43061,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, mountain troll with rocky skin and mossy patches and tusks holding stone club, idle rest animation, hunched on rocks with club resting and snorting, high altitude crag"
         },
         "attack": {
           "id": "mountain_troll_attack",
           "frameCount": 8,
           "seed": 43062,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, mountain troll with rocky skin and mossy patches and tusks holding stone club, attack smash animation, swinging massive stone club with ground-cracking force, high altitude crag"
         },
         "hit": {
           "id": "mountain_troll_hit",
           "frameCount": 8,
           "seed": 43063,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, mountain troll with rocky skin and mossy patches and tusks holding stone club, hurt rage animation, staggering and roaring in rage with rocks crumbling off body, high altitude crag"
         },
         "death": {
           "id": "mountain_troll_death",
           "frameCount": 8,
           "seed": 43064,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, mountain troll with rocky skin and mossy patches and tusks holding stone club, death crash animation, crashing down heavily with club rolling away to stillness, high altitude crag"
         },
         "dead": {
@@ -241,10 +180,10 @@
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
       "generatedAnimations": {
-        "idle": false,
-        "attack": false,
-        "hit": false,
-        "death": false,
+        "idle": true,
+        "attack": true,
+        "hit": true,
+        "death": true,
         "dead": false
       },
       "generatedAt": null,
@@ -267,28 +206,28 @@
           "id": "troll_shaman_idle",
           "frameCount": 8,
           "seed": 43071,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, troll shaman with rocky skin and bone necklace and crystal staff and tribal markings, idle channel animation, staff pulsing with energy while chanting with mystical aura, mountain shrine"
         },
         "attack": {
           "id": "troll_shaman_attack",
           "frameCount": 8,
           "seed": 43072,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, troll shaman with rocky skin and bone necklace and crystal staff and tribal markings, attack cast animation, staff raised with lightning crackling and spell releasing, mountain shrine"
         },
         "hit": {
           "id": "troll_shaman_hit",
           "frameCount": 8,
           "seed": 43073,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, troll shaman with rocky skin and bone necklace and crystal staff and tribal markings, hurt disrupt animation, spell disrupted staggering from magical feedback, mountain shrine"
         },
         "death": {
           "id": "troll_shaman_death",
           "frameCount": 8,
           "seed": 43074,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, troll shaman with rocky skin and bone necklace and crystal staff and tribal markings, death collapse animation, staff shattering with magical energy dispersing as body falls, mountain shrine"
         },
         "dead": {
@@ -302,10 +241,10 @@
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
       "generatedAnimations": {
-        "idle": false,
-        "attack": false,
-        "hit": false,
-        "death": false,
+        "idle": true,
+        "attack": true,
+        "hit": true,
+        "death": true,
         "dead": false
       },
       "generatedAt": null,
@@ -328,28 +267,28 @@
           "id": "wyvern_idle",
           "frameCount": 8,
           "seed": 43031,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, wyvern with dragon-like wings and talons and spiked venomous tail, idle ready animation, wings folded with tail swaying and jaws snapping alertly, mountain aerie"
         },
         "attack": {
           "id": "wyvern_attack",
           "frameCount": 8,
           "seed": 43032,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, wyvern with dragon-like wings and talons and spiked venomous tail, attack lunge animation, lunging forward with wings flaring and tail striking, mountain aerie"
         },
         "hit": {
           "id": "wyvern_hit",
           "frameCount": 8,
           "seed": 43033,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, wyvern with dragon-like wings and talons and spiked venomous tail, hurt screech animation, screeching with wing injured and stumbling backward, mountain aerie"
         },
         "death": {
           "id": "wyvern_death",
           "frameCount": 8,
           "seed": 43034,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, wyvern with dragon-like wings and talons and spiked venomous tail, death crash animation, wings crumpling and collapsing heavily with final breath, mountain aerie"
         },
         "dead": {
@@ -370,7 +309,7 @@
         "dead": false
       },
       "generatedAt": "2026-01-31T18:56:57.599Z",
-      "generated": true,
+      "generated": false,
       "loraModel": "retro-pixel"
     },
     {
@@ -389,28 +328,28 @@
           "id": "frost_giant_idle",
           "frameCount": 8,
           "seed": 43041,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, frost giant with blue skin and massive build and frost-covered beard and ice armor, idle ready animation, breath misting with ice crackling and frozen weapon ready, frozen mountain peak"
         },
         "attack": {
           "id": "frost_giant_attack",
           "frameCount": 8,
           "seed": 43042,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, frost giant with blue skin and massive build and frost-covered beard and ice armor, attack swing animation, massive ice axe swinging with freezing wind trailing, frozen mountain peak"
         },
         "hit": {
           "id": "frost_giant_hit",
           "frameCount": 8,
           "seed": 43043,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, frost giant with blue skin and massive build and frost-covered beard and ice armor, hurt stagger animation, staggering with ice armor cracking while roaring, frozen mountain peak"
         },
         "death": {
           "id": "frost_giant_death",
           "frameCount": 8,
           "seed": 43044,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, frost giant with blue skin and massive build and frost-covered beard and ice armor, death fall animation, falling like avalanche with ice shattering frozen still, frozen mountain peak"
         },
         "dead": {
@@ -431,7 +370,7 @@
         "dead": false
       },
       "generatedAt": "2026-01-31T19:20:48.758Z",
-      "generated": true,
+      "generated": false,
       "loraModel": "retro-pixel"
     },
     {
@@ -450,28 +389,28 @@
           "id": "yeti_idle",
           "frameCount": 8,
           "seed": 43051,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, yeti with white fur and massive claws and fanged maw and glowing blue eyes, idle intimidate animation, standing tall beating chest with snow falling from fur, snowy mountain pass"
         },
         "attack": {
           "id": "yeti_attack",
           "frameCount": 8,
           "seed": 43052,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, yeti with white fur and massive claws and fanged maw and glowing blue eyes, attack swipe animation, swiping with massive claws roaring with brutal force, snowy mountain pass"
         },
         "hit": {
           "id": "yeti_hit",
           "frameCount": 8,
           "seed": 43053,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, yeti with white fur and massive claws and fanged maw and glowing blue eyes, hurt howl animation, howling in pain clutching wound and becoming enraged, snowy mountain pass"
         },
         "death": {
           "id": "yeti_death",
           "frameCount": 8,
           "seed": 43054,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, yeti with white fur and massive claws and fanged maw and glowing blue eyes, death collapse animation, falling forward with final roar as snow settles over body, snowy mountain pass"
         },
         "dead": {
@@ -492,7 +431,7 @@
         "dead": false
       },
       "generatedAt": "2026-01-31T19:44:43.069Z",
-      "generated": true,
+      "generated": false,
       "loraModel": "retro-pixel"
     }
   ]

@@ -1,6 +1,7 @@
-import { getAssetPath, getOptimalSize } from '@shared/assetPaths.js';
+import { getAssetPath, getNpcPortraitId, getOptimalSize } from '@shared/assetPaths.js';
 import { getParchmentTooltip } from '../ui/parchment/index.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
+import { installImageFallbackHandler } from '../utils/imageFallback.js';
 
 /**
  * ParchmentCard - Unified character/enemy card with classic RPG parchment styling
@@ -28,6 +29,8 @@ export class ParchmentCard {
    * @param {boolean} options.showTraits - Whether to show trait badges (default: false)
    */
   constructor(options = {}) {
+    installImageFallbackHandler();
+
     this.mode = options.mode || 'compact';
     this.type = options.type || 'player';
     this.showStats = options.showStats !== false;
@@ -603,8 +606,6 @@ export class ParchmentCard {
     const race = c.race || '';
     const charClass = c.class || c.type || 'unknown';
     const gender = c.gender || 'other';
-    // Enemy sprite identifier (sprite_id from database, stored as enemyId on units)
-    const enemySpriteId = c.enemyId || c.sprite_id || '';
 
     // Build subtitle based on type
     let subtitle = '';
@@ -625,12 +626,12 @@ export class ParchmentCard {
       console.warn('[ParchmentCard] Player unit missing race/gender:', c.name, { race: c.race, gender: c.gender });
     }
 
-    // Determine portrait source from unit data, not card visual type
-    // Units with race+gender are characters (player or NPC); units with only enemyId are enemies
-    const isCharacterUnit = race && gender && race !== 'unknown';
-    const portraitUrl = isCharacterUnit
-      ? getAssetPath('portraits', `${race}_${gender}_${charClass}`, { size: optimalSize })
-      : getAssetPath('portraits', `enemy_${enemySpriteId || charClass}`, { size: optimalSize });
+    // Canonical NPC identity is authoritative even for humanoid NPCs that also
+    // carry race/gender fields (for example guild disciples).
+    const isNpcUnit = c.visualIdentity?.kind === 'npc' || c.type === 'enemy' || this.type === 'enemy';
+    const portraitUrl = isNpcUnit
+      ? getAssetPath('portraits', getNpcPortraitId(c, charClass), { size: optimalSize })
+      : getAssetPath('portraits', `${race}_${gender}_${charClass}`, { size: optimalSize });
 
     // Class colors for fallback
     const classColors = {
@@ -659,7 +660,7 @@ export class ParchmentCard {
               class="pc-portrait"
               src="${portraitUrl}"
               alt="${escapeHtml(name)}"
-              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+              data-image-fallback data-fallback-display="flex"
             >
             <div class="pc-portrait-fallback" style="display: none; background: ${fallbackColor};">
               ${fallbackLetter}

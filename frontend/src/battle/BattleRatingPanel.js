@@ -9,7 +9,7 @@
  * @see BattleStatsTable.js - Similar DOM-based component pattern
  */
 
-import { getTier, getTierIcon } from '@shared/coliseum.js';
+import { getTier, getTierIcon } from '../../../shared/coliseum.js';
 
 /**
  * BattleRatingPanel - PvP rating display component

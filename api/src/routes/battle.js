@@ -240,21 +240,12 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
     }
     // Get character class to find skill definition
     const char = party.find(c => c.id === row.character_id);
-    const skillDef = char ? battleService.getSkillDefinition(char.class, row.skill_id) : null;
+    const skill = char
+      ? battleService.resolveBattleSkill(char.class, row)
+      : null;
 
-    if (skillDef) {
-      characterSkills[row.character_id].push({
-        id: row.skill_id,
-        name: skillDef.name,
-        level: row.level,
-        mpCost: skillDef.mpCost || 0,
-        range: skillDef.range || 1,
-        power: skillDef.power || 100,
-        type: skillDef.type || 'active',
-        effect: skillDef.effect || null,
-        aoeRadius: skillDef.aoeRadius || 0,
-        description: skillDef.description || ''
-      });
+    if (skill) {
+      characterSkills[row.character_id].push(skill);
     }
   }
 
@@ -275,6 +266,13 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
     if (existingBattle.rows.length > 0) {
       // Return existing battle for rejoin
       const battle = existingBattle.rows[0];
+
+      // A restored BattleScene starts its client-side action counter at zero.
+      // Treat this response as a new action-sequence session, just like the
+      // explicit /rejoin endpoint, so the first action is not rejected as a
+      // duplicate of an action submitted before the scene was restored.
+      resetActionSequence(battle.id, req.user.userId);
+
       return res.json({
         battleId: battle.id,
         battleType: battle.battle_type,
@@ -283,7 +281,7 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
         mapHeight: battle.map_height,
         nodeType: battle.node_type,
         nodeName: battle.node_name,
-        state: battle.battle_state,
+        state: battleService.withBattleStateVisualIdentities(battle.battle_state),
         rejoined: true
       });
     }
@@ -545,8 +543,14 @@ router.get('/current', authenticate, readLimiter, asyncHandler(async (req, res) 
   }
 
   const battle = result.rows[0];
-  const state = battle.battle_state;
+  const state = battleService.withBattleStateVisualIdentities(battle.battle_state);
   const battleId = battle.id;
+
+  // /current is the full-page refresh/login recovery path. The frontend
+  // creates a fresh BattleWebSocketManager for the returned battle and its
+  // action counter starts at zero, so the matching server counter must start a
+  // new session as well. Socket-only reconnects use /:battleId/rejoin below.
+  resetActionSequence(battleId, req.user.userId);
 
   // Detect PvP battles and get opponent username
   const isPvP = battle.battle_type === 'pvp' || battle.battle_type === 'pvp_coliseum';
@@ -679,7 +683,7 @@ router.get('/:battleId/rejoin', authenticate, rejoinLimiter, asyncHandler(async 
   const disconnectedPlayers = battleReconnection.getDisconnectedPlayers(parseInt(battleId));
 
   // Get available actions for active player unit
-  const battleState = battle.battle_state;
+  const battleState = battleService.withBattleStateVisualIdentities(battle.battle_state);
   const activePlayerUnit = battleState.units?.find(u => u.id === battleState.activeUnitId && u.type === 'player');
   const availableActions = activePlayerUnit
     ? battleService.getAvailableActions(activePlayerUnit, battleState)
@@ -723,7 +727,7 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
   }
 
   const battle = battleResult.rows[0];
-  const state = battle.battle_state;
+  const state = battleService.withBattleStateVisualIdentities(battle.battle_state);
 
   // Migration: ensure all units have CT field (for existing battles)
   for (const unit of state.units) {
@@ -1036,7 +1040,7 @@ router.post('/:battleId/zodiac-ability', authenticate, actionLimiter, asyncHandl
   }
 
   const battle = battleResult.rows[0];
-  const state = battle.battle_state;
+  const state = battleService.withBattleStateVisualIdentities(battle.battle_state);
 
   // Find the source unit
   const sourceUnit = state.units.find(u =>

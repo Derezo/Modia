@@ -8,7 +8,9 @@
  * - Visual states: available, used, disabled
  * - Keyboard shortcuts: M, A, S, I, W
  */
-import { escapeHtml } from '../utils/escapeHtml.js';
+import { escapeHtml, escapeHtmlAttribute } from '../utils/escapeHtml.js';
+import { renderBattleItemIcon } from './BattleItemIcon.js';
+import { renderAbilityIcon } from './AbilityIcon.js';
 
 export class BattleActionBar {
   constructor(game) {
@@ -388,6 +390,12 @@ export class BattleActionBar {
         text-align: center;
       }
 
+      .dropdown-item-icon.item-icon {
+        display: inline-flex;
+        flex: 0 0 36px;
+        width: 36px;
+      }
+
       .dropdown-item-info {
         flex: 1;
         min-width: 0;
@@ -608,7 +616,7 @@ export class BattleActionBar {
       const icon = this.getSkillIcon(skill);
 
       return `
-        <div class="dropdown-item ${canUse ? '' : 'disabled'}" data-skill-id="${skill.id}">
+        <div class="dropdown-item ${canUse ? '' : 'disabled'}" data-skill-id="${escapeHtmlAttribute(skill.id)}">
           <span class="dropdown-item-icon">${icon}</span>
           <div class="dropdown-item-info">
             <div class="dropdown-item-name">${escapeHtml(skill.name)}</div>
@@ -644,13 +652,13 @@ export class BattleActionBar {
       const icon = this.getItemIcon(item);
 
       return `
-        <div class="dropdown-item" data-item-id="${item.itemId}" data-inventory-id="${item.inventoryId}">
-          <span class="dropdown-item-icon">${icon}</span>
+        <div class="dropdown-item" data-item-id="${escapeHtmlAttribute(item.itemId)}" data-inventory-id="${escapeHtmlAttribute(item.inventoryId)}">
+          <span class="dropdown-item-icon item-icon">${icon}</span>
           <div class="dropdown-item-info">
             <div class="dropdown-item-name">${escapeHtml(item.name)}</div>
             <div class="dropdown-item-desc">${escapeHtml(item.description || '')}</div>
           </div>
-          <span class="dropdown-item-cost">x${item.quantity || 1}</span>
+          <span class="dropdown-item-cost">x${escapeHtml(String(item.quantity ?? 1))}</span>
         </div>
       `;
     }).join('');
@@ -670,37 +678,14 @@ export class BattleActionBar {
    * Get icon for skill
    */
   getSkillIcon(skill) {
-    const typeIcons = {
-      fire: '🔥',
-      ice: '❄️',
-      lightning: '⚡',
-      earth: '🪨',
-      wind: '💨',
-      water: '💧',
-      holy: '✨',
-      dark: '🌑',
-      physical: '⚔️',
-      heal: '💚',
-      buff: '⬆️',
-      debuff: '⬇️'
-    };
-    return typeIcons[skill.element] || typeIcons[skill.type] || '✦';
+    return renderAbilityIcon(skill, { size: 'sm' });
   }
 
   /**
    * Get icon for item
    */
   getItemIcon(item) {
-    const typeIcons = {
-      potion: '🧪',
-      ether: '💎',
-      antidote: '🍃',
-      phoenix: '🔥',
-      elixir: '⭐',
-      bomb: '💣',
-      food: '🍖'
-    };
-    return typeIcons[item.type] || '⚗️';
+    return renderBattleItemIcon(item, { size: 'sm' });
   }
 
   /**

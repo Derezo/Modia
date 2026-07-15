@@ -17,7 +17,7 @@
  *   await iconLoader.preloadCategory('menu', ['formation', 'inventory', 'settings']);
  */
 
-import { getAssetPath, SIZE_PRESETS } from '@shared/assetPaths.js';
+import { getAssetPath, SIZE_PRESETS } from '../../../shared/assetPaths.js';
 
 /** Available PNG sizes from the generation script */
 const AVAILABLE_SIZES = SIZE_PRESETS.icons;

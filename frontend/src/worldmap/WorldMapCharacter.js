@@ -15,6 +15,7 @@ export class WorldMapCharacter {
     this.character = null;
     this.characterClass = null;
     this.characterSprite = null;
+    this.characterSprites = { idle: null, walk: null };
 
     // Position (world coordinates)
     this.x = 0;
@@ -59,22 +60,26 @@ export class WorldMapCharacter {
     if (!character) {
       this.character = null;
       this.characterSprite = null;
+      this.characterSprites = { idle: null, walk: null };
       return;
     }
 
     this.character = character;
     this.characterClass = character.class;
 
-    // Load character sprite
+    // Load the portrait-matched idle and walk strips. Class-only assets remain
+    // an AssetLoader migration fallback until every variant is generated.
     try {
-      this.characterSprite = await this.assetLoader.loadCharacterSprite(
-        this.characterClass,
-        'idle',
-        'player'
-      );
+      const [idle, walk] = await Promise.all([
+        this.assetLoader.loadCharacterSprite(character, 'idle', 'player'),
+        this.assetLoader.loadCharacterSprite(character, 'walk', 'player')
+      ]);
+      this.characterSprites = { idle, walk: walk || idle };
+      this.characterSprite = idle || walk;
     } catch (error) {
       console.warn('Failed to load character sprite:', error);
       this.characterSprite = null;
+      this.characterSprites = { idle: null, walk: null };
     }
   }
 
@@ -396,7 +401,9 @@ export class WorldMapCharacter {
    * Render the character sprite
    */
   renderSprite(ctx, screenX, screenY) {
-    const sprite = this.characterSprite;
+    const sprite = this.isWalking
+      ? (this.characterSprites.walk || this.characterSprite)
+      : (this.characterSprites.idle || this.characterSprite);
 
     // Sprite sheets are vertical strips (64x512 = 8 frames stacked vertically)
     const frameWidth = sprite.width; // Full width (64px)

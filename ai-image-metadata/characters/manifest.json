@@ -1,15 +1,68 @@
 {
-  "version": "1.1.0",
-  "description": "Character sprite sheet metadata - animated 64x512 vertical strips (8 frames per animation)",
+  "version": "2.1.0",
+  "description": "Portrait-matched player and canonical enemy sprite metadata - animated 64x512 vertical strips (8 temporal frames per animation)",
   "generationDefaults": {
-    "mode": "flux",
-    "sd15": {
-      "controlnetWeight": 0.7,
-      "ipadapterWeight": 0.7,
-      "loraModel": "pixel-art-xl",
-      "availableLoraModels": ["pixel-art-xl", "16-bit-pixel", "all-in-one-pixel", "retro-game-art", "cps2-pixel-art"]
+    "mode": "deterministic_compilers",
+    "canonicalPlayer": {
+      "identity": {
+        "mode": "deterministic_portrait_derived",
+        "compiler": "scripts/ai-images/compile-player-identity-fallbacks.js",
+        "provenance": "player-identity-fallbacks.json",
+        "sourceSize": 64,
+        "outputSize": 512,
+        "encoding": "lossless_rgba_png_nearest_neighbor_8x"
+      },
+      "animation": {
+        "mode": "deterministic_temporal_strip",
+        "compiler": "scripts/ai-images/compile-player-animations.js",
+        "frameSize": 64,
+        "frameCount": 8,
+        "encoding": "lossless_rgba_webp_vertical_strip"
+      },
+      "scopeGate": "exactly_one_of_id_sample_all",
+      "existingAssetPolicy": "preserve_unless_targeted_force"
+    },
+    "stagedCandidate": {
+      "optional": true,
+      "canonical": false,
+      "generator": "scripts/ai-images/generate-player-identity-references.js",
+      "stagingDirectory": "ai-images-temp/characters/identity-candidates",
+      "promotionPolicy": "manual_semantic_audit_then_promote_with_explicit_id",
+      "diffusion": {
+        "mode": "sd15",
+        "sd15": {
+          "modelFamily": "sd15",
+          "seedPolicy": "fixed_across_frames",
+          "controlnetWeight": 0.7,
+          "ipadapterWeight": 0.7,
+          "portraitFallbackControlnetWeight": 0.82,
+          "portraitFallbackIpadapterWeight": 0.45,
+          "referenceLoraModel": "cps2-pixel-art",
+          "animationLoraModel": "cps2-pixel-art",
+          "loraModel": "cps2-pixel-art",
+          "availableLoraModels": ["pixel-art-xl", "16-bit-pixel", "all-in-one-pixel", "retro-game-art", "cps2-pixel-art"]
+        }
+      }
+    },
+    "legacyAndEnemies": {
+      "mode": "sd15",
+      "diffusion": {
+        "modelFamily": "sd15",
+        "seedPolicy": "fixed_across_frames",
+        "controlnetWeight": 0.7,
+        "ipadapterWeight": 0.7,
+        "portraitFallbackControlnetWeight": 0.82,
+        "portraitFallbackIpadapterWeight": 0.45,
+        "referenceLoraModel": "cps2-pixel-art",
+        "animationLoraModel": "cps2-pixel-art",
+        "loraModel": "cps2-pixel-art",
+        "availableLoraModels": ["pixel-art-xl", "16-bit-pixel", "all-in-one-pixel", "retro-game-art", "cps2-pixel-art"]
+      }
     }
   },
+  "visualStyleProfile": "visual-style-profile.json",
+  "enemySpriteRepairManifest": "enemy-sprite-repairs.json",
+  "enemyAnimationStabilizationManifest": "enemy-animation-stabilizations.json",
   "weightPresets": {
     "balanced": {
       "controlnet": 0.7,
@@ -65,7 +118,9 @@
     "framesPerAnimation": 8,
     "sheetWidth": 64,
     "sheetHeight": 512,
-    "layout": "vertical_strip"
+    "layout": "vertical_strip",
+    "minimumTransparentMargin": 4,
+    "sequenceScalePolicy": "uniform_across_frames"
   },
   "animations": {
     "idle": {
@@ -181,27 +236,33 @@
       ]
     }
   },
-  "categories": ["players", "enemies"],
+  "categories": ["playerVariants", "playerArchetypes", "enemies"],
   "categoryFiles": {
     "players": "players.json",
+    "playerVariants": "player-variants.json",
     "enemies": {
       "forest": "enemies/forest.json",
       "cave": "enemies/cave.json",
       "mountain": "enemies/mountain.json",
       "bridge": "enemies/bridge.json",
-      "castle": "enemies/castle.json"
+      "castle": "enemies/castle.json",
+      "palace": "enemies/palace.json"
     }
   },
   "enemyCounts": {
     "forest": 6,
-    "cave": 6,
-    "mountain": 8,
+    "cave": 7,
+    "mountain": 7,
     "bridge": 7,
-    "castle": 7
+    "castle": 4,
+    "palace": 3
   },
   "totalEnemies": 34,
+  "totalPlayerVariants": 300,
+  "legacyPlayerArchetypes": 20,
   "outputPaths": {
-    "players": "/assets/characters/player/{class}/{class}_{animation}.webp",
+    "playerVariants": "/assets/characters/player/{race}/{gender}/{class}/{id}_{animation}.webp",
+    "playerArchetypes": "/assets/characters/player/{class}/{class}_{animation}.webp",
     "enemies": "/assets/characters/enemies/{biome}/{id}/{id}_{animation}.webp"
   },
   "tempDirectory": "ai-images-temp/characters"

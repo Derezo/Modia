@@ -46,6 +46,7 @@ import { broadcastQueueUpdate } from './queueBroadcaster.js';
 import { captureTeamSnapshots, calculateMatchStats, calculateEnhancedMatchStats, getPlayerRank } from './statistics.js';
 import { setCompleteMatchFn, cancelTurnTimer, startTurnTimer } from './turnTimer.js';
 import { generateTerrain } from '../../../../shared/mapGeneration.js';
+import { withBattleVisualIdentity } from '../battle/visualIdentityService.js';
 
 // Register completeMatch with turnTimer to break circular dependency
 setCompleteMatchFn(completeMatch);
@@ -613,21 +614,12 @@ async function getPlayerBattleParty(userId) {
       characterSkills[row.character_id] = [];
     }
     const char = characters.find(c => c.id === row.character_id);
-    const skillDef = char ? battleService.getSkillDefinition(char.class, row.skill_id) : null;
+    const skill = char
+      ? battleService.resolveBattleSkill(char.class, row)
+      : null;
 
-    if (skillDef) {
-      characterSkills[row.character_id].push({
-        id: row.skill_id,
-        name: skillDef.name,
-        level: row.level,
-        mpCost: skillDef.mpCost || 0,
-        range: skillDef.range || 1,
-        power: skillDef.power || 100,
-        type: skillDef.type || 'active',
-        effect: skillDef.effect || null,
-        aoeRadius: skillDef.aoeRadius || 0,
-        description: skillDef.description || ''
-      });
+    if (skill) {
+      characterSkills[row.character_id].push(skill);
     }
   }
 
@@ -724,7 +716,7 @@ async function startMatchWithFormations(matchId) {
         tileY = 27 - formationPos.tileY;
       }
 
-      initialState.units.push({
+      initialState.units.push(withBattleVisualIdentity({
         id: char.id,
         type: 'player',
         teamId: 1, // Player 1's units are on team 1
@@ -753,7 +745,10 @@ async function startMatchWithFormations(matchId) {
         hasActed: false,
         statusEffects: [],
         skills: char.skills || []
-      });
+      }, {
+        kind: 'player',
+        id: char.id
+      }));
     });
 
     // Add player 2's units (top side of map) - Team 2
@@ -770,7 +765,7 @@ async function startMatchWithFormations(matchId) {
         tileY = 4 + formationPos.tileY;
       }
 
-      initialState.units.push({
+      initialState.units.push(withBattleVisualIdentity({
         id: char.id,
         type: 'player',
         teamId: 2, // Player 2's units are on team 2
@@ -799,7 +794,10 @@ async function startMatchWithFormations(matchId) {
         hasActed: false,
         statusEffects: [],
         skills: char.skills || []
-      });
+      }, {
+        kind: 'player',
+        id: char.id
+      }));
     });
 
     // Initialize CT values for all units

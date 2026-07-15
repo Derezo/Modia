@@ -23,28 +23,28 @@
           "id": "bridge_bandit_idle",
           "frameCount": 8,
           "seed": 44001,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, hooded bandit with leather armor and mask and daggers, idle crouch animation, crouched stance with daggers ready and eyes scanning for targets, weathered stone bridge"
         },
         "attack": {
           "id": "bridge_bandit_attack",
           "frameCount": 8,
           "seed": 44002,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, hooded bandit with leather armor and mask and daggers, attack stab animation, lunging forward with quick dagger stab dirty fighting style, weathered stone bridge"
         },
         "hit": {
           "id": "bridge_bandit_hit",
           "frameCount": 8,
           "seed": 44003,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, hooded bandit with leather armor and mask and daggers, hurt stumble animation, stumbling backward with hood falling and cursing in pain, weathered stone bridge"
         },
         "death": {
           "id": "bridge_bandit_death",
           "frameCount": 8,
           "seed": 44004,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, hooded bandit with leather armor and mask and daggers, death collapse animation, clutching wound and falling forward dropping stolen loot, weathered stone bridge"
         },
         "dead": {
@@ -58,10 +58,10 @@
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
       "generatedAnimations": {
-        "idle": false,
-        "attack": false,
-        "hit": false,
-        "death": false,
+        "idle": true,
+        "attack": true,
+        "hit": true,
+        "death": true,
         "dead": false
       },
       "generatedAt": null,
@@ -84,28 +84,28 @@
           "id": "bandit_captain_idle",
           "frameCount": 8,
           "seed": 44061,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, bandit captain with scarred face and heavy armor and dual swords and cape, idle command animation, arms crossed surveying territory with menacing presence, bridge crossing outpost"
         },
         "attack": {
           "id": "bandit_captain_attack",
           "frameCount": 8,
           "seed": 44062,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, bandit captain with scarred face and heavy armor and dual swords and cape, attack slash animation, dual sword slash with powerful expert technique swing, bridge crossing outpost"
         },
         "hit": {
           "id": "bandit_captain_hit",
           "frameCount": 8,
           "seed": 44063,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, bandit captain with scarred face and heavy armor and dual swords and cape, hurt endure animation, armor sparking grunting while maintaining defiant stance, bridge crossing outpost"
         },
         "death": {
           "id": "bandit_captain_death",
           "frameCount": 8,
           "seed": 44064,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, bandit captain with scarred face and heavy armor and dual swords and cape, death fall animation, swords falling as kneeling then collapsing defeated leader, bridge crossing outpost"
         },
         "dead": {
@@ -119,10 +119,10 @@
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
       "generatedAnimations": {
-        "idle": false,
-        "attack": false,
-        "hit": false,
-        "death": false,
+        "idle": true,
+        "attack": true,
+        "hit": true,
+        "death": true,
         "dead": false
       },
       "generatedAt": null,
@@ -145,28 +145,28 @@
           "id": "toll_collector_idle",
           "frameCount": 8,
           "seed": 44011,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, burly toll collector with heavy armor and mace and coin pouch, idle demand animation, standing firm with mace over shoulder demanding payment, bridge toll gate"
         },
         "attack": {
           "id": "toll_collector_attack",
           "frameCount": 8,
           "seed": 44012,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, burly toll collector with heavy armor and mace and coin pouch, attack smash animation, swinging heavy mace in brutal overhead crushing blow, bridge toll gate"
         },
         "hit": {
           "id": "toll_collector_hit",
           "frameCount": 8,
           "seed": 44013,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, burly toll collector with heavy armor and mace and coin pouch, hurt grunt animation, armor denting and grunting with angry expression, bridge toll gate"
         },
         "death": {
           "id": "toll_collector_death",
           "frameCount": 8,
           "seed": 44014,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, burly toll collector with heavy armor and mace and coin pouch, death collapse animation, coins spilling as mace clatters and body collapses, bridge toll gate"
         },
         "dead": {
@@ -187,7 +187,7 @@
         "dead": false
       },
       "generatedAt": "2026-01-31T20:33:06.442Z",
-      "generated": true,
+      "generated": false,
       "loraModel": "retro-pixel"
     },
     {
@@ -206,28 +206,28 @@
           "id": "bridge_troll_idle",
           "frameCount": 8,
           "seed": 44021,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, bridge troll with blue-gray skin and barnacles and massive tusks and webbed fingers, idle lurk animation, lurking under bridge with water dripping and hungry expression, stone bridge over river"
         },
         "attack": {
           "id": "bridge_troll_attack",
           "frameCount": 8,
           "seed": 44022,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, bridge troll with blue-gray skin and barnacles and massive tusks and webbed fingers, attack grab animation, emerging from below grabbing and smashing with massive force, stone bridge over river"
         },
         "hit": {
           "id": "bridge_troll_hit",
           "frameCount": 8,
           "seed": 44023,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, bridge troll with blue-gray skin and barnacles and massive tusks and webbed fingers, hurt roar animation, roaring and splashing with slippery retreat backward, stone bridge over river"
         },
         "death": {
           "id": "bridge_troll_death",
           "frameCount": 8,
           "seed": 44024,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, bridge troll with blue-gray skin and barnacles and massive tusks and webbed fingers, death sink animation, falling into water sinking with bubbles rising, stone bridge over river"
         },
         "dead": {
@@ -248,7 +248,7 @@
         "dead": false
       },
       "generatedAt": "2026-01-31T21:01:03.476Z",
-      "generated": true,
+      "generated": false,
       "loraModel": "retro-pixel"
     },
     {
@@ -301,7 +301,15 @@
       },
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
-      "loraModel": "retro-pixel"
+      "loraModel": "retro-pixel",
+      "generatedAnimations": {
+        "idle": false,
+        "attack": false,
+        "hit": false,
+        "death": false,
+        "dead": false
+      },
+      "generated": false
     },
     {
       "id": "highwayman",
@@ -353,7 +361,15 @@
       },
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
-      "loraModel": "retro-pixel"
+      "loraModel": "retro-pixel",
+      "generatedAnimations": {
+        "idle": false,
+        "attack": false,
+        "hit": false,
+        "death": false,
+        "dead": false
+      },
+      "generated": false
     },
     {
       "id": "guard",
@@ -405,7 +421,15 @@
       },
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
-      "loraModel": "retro-pixel"
+      "loraModel": "retro-pixel",
+      "generatedAnimations": {
+        "idle": false,
+        "attack": false,
+        "hit": false,
+        "death": false,
+        "dead": false
+      },
+      "generated": false
     }
   ]
 }

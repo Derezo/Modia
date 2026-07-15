@@ -306,6 +306,193 @@
       "seed": 21056,
       "generated": true,
       "generatedAt": "2026-01-26T15:30:09.870Z"
+    },
+    {
+      "id": "armor_caravan",
+      "name": "Caravan Guard Armor",
+      "prompt": "rugged caravan guard brigandine in leather and brass",
+      "seed": 24004,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/armor/armor_brigandine.webp",
+        "composition": {
+          "primaryScale": 0.9,
+          "colorize": "#8f673f"
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/armor/armor_caravan.webp",
+        "64": "/assets/items/64/armor/armor_caravan.webp",
+        "128": "/assets/items/128/armor/armor_caravan.webp",
+        "original": "/assets/items/originals/armor/armor_caravan.webp"
+      }
+    },
+    {
+      "id": "armor_nightstalker",
+      "name": "Nightstalker Cloak",
+      "prompt": "deep violet nightstalker cloak with shadow-wrapped hem",
+      "seed": 24005,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/accessories/cloak_shadow.webp",
+        "composition": {
+          "primaryScale": 0.91,
+          "modulate": {
+            "hue": 270,
+            "saturation": 1.3,
+            "brightness": 0.82
+          },
+          "accent": {
+            "sourceAsset": "icons/originals/actions/stealth.webp",
+            "scale": 0.23,
+            "gravity": "southeast",
+            "modulate": {
+              "hue": 275,
+              "saturation": 1.2,
+              "brightness": 1.1
+            }
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/armor/armor_nightstalker.webp",
+        "64": "/assets/items/64/armor/armor_nightstalker.webp",
+        "128": "/assets/items/128/armor/armor_nightstalker.webp",
+        "original": "/assets/items/originals/armor/armor_nightstalker.webp"
+      }
+    },
+    {
+      "id": "boots_pathfinder",
+      "name": "Pathfinder Boots",
+      "prompt": "weathered green-brown pathfinder boots marked for long roads",
+      "seed": 24006,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/armor/boots_leather.webp",
+        "composition": {
+          "primaryScale": 0.87,
+          "colorize": "#69764b"
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/armor/boots_pathfinder.webp",
+        "64": "/assets/items/64/armor/boots_pathfinder.webp",
+        "128": "/assets/items/128/armor/boots_pathfinder.webp",
+        "original": "/assets/items/originals/armor/boots_pathfinder.webp"
+      }
+    },
+    {
+      "id": "gloves_deepforge",
+      "name": "Deepforge Gauntlets",
+      "prompt": "dwarven deepforge gauntlets of dark steel and copper",
+      "seed": 24007,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/accessories/gauntlets_steel.webp",
+        "composition": {
+          "primaryScale": 0.9,
+          "modulate": {
+            "hue": 28,
+            "saturation": 1.15,
+            "brightness": 0.88
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/armor/gloves_deepforge.webp",
+        "64": "/assets/items/64/armor/gloves_deepforge.webp",
+        "128": "/assets/items/128/armor/gloves_deepforge.webp",
+        "original": "/assets/items/originals/armor/gloves_deepforge.webp"
+      }
+    },
+    {
+      "id": "helm_cowl",
+      "name": "Merchant's Cowl",
+      "prompt": "practical merchant cowl in warm travel-worn cloth",
+      "seed": 24008,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/armor/helm_hood.webp",
+        "composition": {
+          "primaryScale": 0.88,
+          "colorize": "#8f704e",
+          "accent": {
+            "sourceAsset": "icons/originals/resources/gold.webp",
+            "scale": 0.23,
+            "gravity": "southeast",
+            "modulate": {
+              "saturation": 1.15,
+              "brightness": 1.08
+            }
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/armor/helm_cowl.webp",
+        "64": "/assets/items/64/armor/helm_cowl.webp",
+        "128": "/assets/items/128/armor/helm_cowl.webp",
+        "original": "/assets/items/originals/armor/helm_cowl.webp"
+      }
+    },
+    {
+      "id": "helm_crown_guard",
+      "name": "Crown Guard's Helm",
+      "prompt": "polished crown guard great helm with royal gold crest",
+      "seed": 24009,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/armor/helm_great.webp",
+        "composition": {
+          "primaryScale": 0.88,
+          "modulate": {
+            "hue": 18,
+            "saturation": 0.9,
+            "brightness": 1.05
+          },
+          "accent": {
+            "sourceAsset": "items/originals/armor/helm_crown.webp",
+            "scale": 0.3,
+            "gravity": "north",
+            "colorize": "#d7ae45"
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/armor/helm_crown_guard.webp",
+        "64": "/assets/items/64/armor/helm_crown_guard.webp",
+        "128": "/assets/items/128/armor/helm_crown_guard.webp",
+        "original": "/assets/items/originals/armor/helm_crown_guard.webp"
+      }
     }
   ]
 }
