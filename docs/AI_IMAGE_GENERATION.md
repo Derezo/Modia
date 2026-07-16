@@ -141,12 +141,14 @@ The compiler stages and validates outputs before atomic writes, preserves valid 
 
 ### Authored pose-atlas override: elf wizard pilot
 
+For the complete one-identity operator workflow—including draft creation, source layout, matte removal, frame mapping, pinning, clean rebuilds, and troubleshooting—see [AUTHORED_PLAYER_ANIMATIONS.md](AUTHORED_PLAYER_ANIMATIONS.md). The per-spec `status` value is only the existing build switch: `draft-*` specs are ignored, while `approved`, `approved-*`, and `approved_*` specs participate in authored compilation.
+
 `elf_other_wizard` is the first approved metadata-driven authored-animation pilot. Its reference and seven generated action atlases are genuinely redrawn pixel-art poses: legs alternate through a walk cycle, arms and staff articulate through attack and cast, the body buckles and reaches a fully fallen death pose, and victory includes a hop, staff twirl, side step, and held triumphant finish. `dead` is not generated separately; it repeats the accepted terminal death frame exactly.
 
 The workflow separates two different meanings of reproducible:
 
 - **Candidate generation is nondeterministic.** Re-running built-in image generation with the same prompt is not expected to reproduce identical pixels. The identity metadata, exact prompts, identity/style inputs, chroma originals, reviewed transparent RGBA sources, and their hashes are retained so the creative decision is auditable.
-- **Compilation is byte-deterministic.** Given the accepted tracked RGBA sources, the compiler deterministically extracts the ordered poses, applies one uniform scale per action, preserves source-cell-relative root travel for hops, lunges, recoil, and collapse, and can bottom-ground contact actions such as death without discarding horizontal travel. It then assembles the 64×512 lossless WebP strips and verifies all pinned hashes.
+- **Compilation is byte-deterministic within the locked Node/Sharp/libvips toolchain.** Given the accepted tracked RGBA sources, the compiler deterministically extracts the ordered poses, applies one uniform scale per action, preserves source-cell-relative root travel for hops, lunges, recoil, and collapse, and can bottom-ground contact actions such as death without discarding horizontal travel. It then assembles the 64×512 lossless WebP strips and verifies all pinned hashes.
 
 The reusable contract and the pilot data are stored at:
 
@@ -190,9 +192,9 @@ The translation-normalized pose-signature gate catches exact rigid copies that w
 
 Approved authored IDs are protected overrides in both registry-wide fallback compilers. Clean asset builds compile them from their pinned sources, and even an explicit fallback `--all --force` cannot replace them with procedural art.
 
-The pilot retains both accepted alpha sources and original chroma candidates for a complete audit trail. Before scaling this to the full identity matrix, configure Git LFS or an equivalent versioned artifact store; duplicating these large source atlases directly in ordinary Git does not scale.
+The pilot retains both accepted alpha sources and original chroma candidates for a source-art audit trail. Before scaling this to the full identity matrix, configure Git LFS or an equivalent versioned artifact store; duplicating these large source atlases directly in ordinary Git does not scale.
 
-Runtime and terminal animation rules are part of the template: subtle idle poses advance once every two seconds; death is bottom-grounded and holds the same fully fallen pose in its final two runtime frames; every `dead` frame is pixel-identical to that terminal pose; and victory ends on a held triumphant pose rather than returning to neutral. The battle renderer compensates for the strip contract's four-pixel transparent safety inset so grounded poses meet the shared tile/shadow plane.
+The template declares the runtime and terminal animation contract: subtle idle poses advance once every two seconds; death is bottom-grounded and holds the same fully fallen pose in its final two runtime frames; every `dead` frame is pixel-identical to that terminal pose; and victory ends on a held triumphant pose rather than returning to neutral. Idle timing and ground inset are mirrored in frontend constants rather than loaded from the template at runtime; the runbook identifies both locations that must stay synchronized. The battle renderer compensates for the strip contract's four-pixel transparent safety inset so grounded poses meet the shared tile/shadow plane.
 
 ### Diffusion candidates and targeted promotion
 

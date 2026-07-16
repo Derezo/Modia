@@ -261,6 +261,22 @@ Portraits include character trait references for prompt construction.
 | `class` | string | Yes | Base or advanced class name |
 | `_type` | string | Runtime | Set to `"enemy"` for enemy portraits |
 
+### Authored Player Animations
+
+An authored animation spec freezes the source paths, rendered prompts, extraction settings, frame mapping, and reproducibility pins for one player identity.
+
+**Files:** `characters/player-authored-animations/<id>.json`, with tracked PNGs under `characters/player-animation-sources/<id>/`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | string | Yes | Exact player-variant ID; the filename must be `<id>.json` |
+| `status` | string | Yes | Simple build switch: `draft-*` is ignored; `approved`, `approved-*`, or `approved_*` enables the authored override |
+| `template`, `profileSource` | string | Yes | Project-relative drafting-contract sources, retained and hash-pinned |
+| `reference`, `animations` | object | Yes | Accepted source paths, prompts, atlas settings, and frame mappings |
+| `pins` | object | Enabled specs | Source, prompt, pose, frame, and encoded/decoded output hashes written by the compiler |
+
+See [AUTHORED_PLAYER_ANIMATIONS.md](AUTHORED_PLAYER_ANIMATIONS.md) for the complete draft, source-art, compile, and rebuild commands.
+
 ### Items
 
 Items include category information for path construction.

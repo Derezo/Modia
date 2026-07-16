@@ -48,6 +48,10 @@ import { BattleWebSocketManager } from '../battle/BattleWebSocketManager.js';
 import { BattleInputHandler } from '../battle/BattleInputHandler.js';
 import { BattleAudioManager } from '../battle/BattleAudioManager.js';
 import {
+  transitionFromBattleIfCurrent,
+  waitForPostBattleSessionRefresh
+} from '../battle/BattleSessionState.js';
+import {
   isSelfTargetingSkill,
   getVisualCategory,
   getActionVisualDescriptor,
@@ -133,6 +137,8 @@ export class BattleScene extends Scene {
     // Battle end state
     this.battleEnded = false;
     this.outroSequence = null;
+    this.battleExitInProgress = false;
+    this.postBattleRefreshWait = null;
 
     // Boss phase indicator
     this.bossPhaseIndicator = null;
@@ -173,6 +179,8 @@ export class BattleScene extends Scene {
     // Reset battle end state for new battle (scene instances are reused)
     this.battleEnded = false;
     this.outroSequence = null;
+    this.battleExitInProgress = false;
+    this.postBattleRefreshWait = null;
 
     // PvP turn timer state
     this.pvpTurnTimer = null;
@@ -2269,6 +2277,11 @@ export class BattleScene extends Scene {
     }
     this.battleEnded = true;
 
+    // Rewards have been committed before the terminal event is delivered.
+    // Start the bounded refresh under the outro so Continue normally has no
+    // additional network wait, while preserving a fail-open scene exit.
+    this.postBattleRefreshWait = waitForPostBattleSessionRefresh(this.game);
+
     // Hold surviving winners on their authored victory pose while the outro
     // sequence enters. In PvP, determine the local team rather than celebrating
     // every player-type unit.
@@ -2342,7 +2355,10 @@ export class BattleScene extends Scene {
   /**
    * End battle and return to appropriate scene
    */
-  endBattle() {
+  async endBattle() {
+    if (this.battleExitInProgress) return;
+    this.battleExitInProgress = true;
+
     // Clear PvP timer if running
     if (this.pvpTurnTimer) {
       clearInterval(this.pvpTurnTimer);
@@ -2354,9 +2370,23 @@ export class BattleScene extends Scene {
       this.audioManager.resumeAfterBattle();
     }, 3000);
 
+    // Rewards are persisted before battle:end is delivered, but the frontend's
+    // account and character snapshots still predate the battle. Refresh them
+    // before the destination scene reads gold or experience.
     // Return to coliseum for PvP battles, world map otherwise
     const returnScene = this.isPvP ? 'coliseum' : 'worldMap';
-    this.game.scenes.switchTo(returnScene);
+    try {
+      const refreshResult = await (this.postBattleRefreshWait ||
+        waitForPostBattleSessionRefresh(this.game));
+      if (refreshResult.timedOut) {
+        console.warn('[Battle] Post-battle state refresh timed out; leaving battle');
+      }
+    } catch (error) {
+      // Timer/scheduling failures must not trap the player in a completed battle.
+      console.warn('[Battle] Unable to wait for post-battle state refresh:', error.message);
+    } finally {
+      transitionFromBattleIfCurrent(this.game, this, returnScene);
+    }
   }
 
   /**

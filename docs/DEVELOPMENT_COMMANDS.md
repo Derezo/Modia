@@ -155,6 +155,17 @@ npm run ai:generate:icons -- --category actions
 npm run ai:generate:portraits -- --dry-run
 ```
 
+#### Authored Player Animations
+
+See [AUTHORED_PLAYER_ANIMATIONS.md](AUTHORED_PLAYER_ANIMATIONS.md) for the complete source-art and rebuild workflow. The spec `status` field is a build switch, not a separate workflow system: `draft-*` disables the override and `approved`, `approved-*`, or `approved_*` enables it.
+
+```bash
+npm run ai:draft:authored-player-animation -- --id human_female_wizard
+npm run ai:compile:authored-player-animations -- --id elf_other_wizard
+npm run ai:check:authored-player-animations
+npm run ai:test:authored-player-animations
+```
+
 ### SD1.5 Animation Generation (ControlNet + IP-Adapter)
 
 Uses Stable Diffusion 1.5 with pose control and style reference for character animations.

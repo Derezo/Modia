@@ -15,6 +15,11 @@ import {
 } from '../ui/parchment/index.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
+import { createRecruitPurchaseConfirmation } from './recruitment/RecruitPurchaseConfirmation.js';
+import {
+  RecruitmentPurchaseLifecycle,
+  synchronizeRecruitPurchaseState
+} from './recruitment/RecruitmentPurchaseState.js';
 
 // Local alias for cleaner access
 const P = PARCHMENT_COLORS;
@@ -47,9 +52,12 @@ export class RecruitmentScene extends Scene {
 
     // Components
     this.recruitCard = null;
+    this.purchaseConfirmModal = null;
+    this.purchaseLifecycle = new RecruitmentPurchaseLifecycle();
   }
 
   async enter(data = {}) {
+    this.purchaseLifecycle.activateEntry();
     this.nodeId = data.nodeId;
     this.guildClass = data.guildClass;
     this.playerGold = this.game.state.get('user')?.gold || 0;
@@ -76,6 +84,7 @@ export class RecruitmentScene extends Scene {
   }
 
   exit() {
+    this.purchaseLifecycle.invalidateEntry();
     if (this.countdownInterval) {
       clearInterval(this.countdownInterval);
       this.countdownInterval = null;
@@ -87,6 +96,10 @@ export class RecruitmentScene extends Scene {
     if (this.recruitCard) {
       this.recruitCard.destroy();
       this.recruitCard = null;
+    }
+    if (this.purchaseConfirmModal) {
+      this.purchaseConfirmModal.destroy();
+      this.purchaseConfirmModal = null;
     }
     if (this.uiElement) {
       this.uiElement.remove();
@@ -980,7 +993,7 @@ export class RecruitmentScene extends Scene {
     }
   }
 
-  async handlePurchase() {
+  handlePurchase() {
     if (!this.selectedRecruit) return;
 
     const recruit = this.selectedRecruit;
@@ -989,17 +1002,50 @@ export class RecruitmentScene extends Scene {
       return;
     }
 
-    // Confirm purchase
-    const confirmed = confirm(`Recruit ${recruit.name} for ${recruit.price}g?`);
-    if (!confirmed) return;
+    if (this.purchaseLifecycle.inProgress || this.purchaseConfirmModal) return;
+
+    const modal = this.createPurchaseConfirmation(recruit);
+    this.purchaseConfirmModal = modal;
+    modal.open();
+  }
+
+  createPurchaseConfirmation(recruit) {
+    return createRecruitPurchaseConfirmation({
+      recruit,
+      onConfirm: modal => this.confirmPurchase(recruit, modal),
+      onClose: (modal) => {
+        if (this.purchaseConfirmModal === modal) {
+          this.purchaseConfirmModal = null;
+        }
+      }
+    });
+  }
+
+  async confirmPurchase(recruit, modal = this.purchaseConfirmModal) {
+    if (!recruit) return;
+
+    if (this.playerGold < recruit.price) {
+      parchmentToast.error('Insufficient Gold', 'Not enough gold');
+      modal?.close();
+      return;
+    }
+
+    const purchaseToken = this.purchaseLifecycle.beginPurchase();
+    if (!purchaseToken) return;
+
+    modal?.updateAction(0, { disabled: true });
+    modal?.updateAction(1, { disabled: true, label: 'Recruiting...' });
 
     try {
       const result = await this.game.api.purchaseRecruit(this.nodeId, recruit.id);
+      if (!this.purchaseLifecycle.isCurrent(purchaseToken)) return;
 
-      // Update local gold
+      // Keep all session caches in sync with the authoritative purchase result.
       this.playerGold = result.remainingGold;
-      this.game.state.set('user', { ...this.game.state.get('user'), gold: result.remainingGold });
+      synchronizeRecruitPurchaseState(this.game.state, result);
       this.updateGoldDisplay();
+
+      modal?.close();
 
       // Show success
       parchmentToast.success('Recruited!', result.message || `Successfully recruited ${recruit.name}!`);
@@ -1010,7 +1056,14 @@ export class RecruitmentScene extends Scene {
       this.updateUI();
 
     } catch (err) {
+      if (!this.purchaseLifecycle.isCurrent(purchaseToken)) return;
+      if (modal?.isVisible()) {
+        modal.updateAction(0, { disabled: false });
+        modal.updateAction(1, { disabled: false, label: `Recruit (${recruit.price}g)` });
+      }
       parchmentToast.error('Recruit Failed', err.message || 'Failed to purchase recruit');
+    } finally {
+      this.purchaseLifecycle.finishPurchase(purchaseToken);
     }
   }
 

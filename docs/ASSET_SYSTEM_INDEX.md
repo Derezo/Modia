@@ -41,6 +41,9 @@ design tokens       -> CSS variables                    -> UI components
 | `npm run ai:generate:items` | Generate item sprites only |
 | `npm run ai:generate:icons` | Generate UI icons only |
 | `npm run ai:generate:nodes` | Generate world map nodes only |
+| `npm run ai:draft:authored-player-animation -- --id <id>` | Create one metadata-only authored player-animation draft |
+| `npm run ai:compile:authored-player-animations -- --id <id>` | Compile one enabled authored player-animation identity |
+| `npm run ai:check:authored-player-animations` | Verify all enabled authored player-animation specs and outputs |
 | `npm run audio:status` | Check audio file status |
 | `npm run audio:generate` | Generate all audio (music + SFX) |
 | `npm run audio:generate:music` | Generate music tracks only |
@@ -150,6 +153,7 @@ Terrain tiles do not use either backend. See [ISOMETRIC_TILE_SYSTEM.md](ISOMETRI
 |----------|-------------|------------|
 | [ISOMETRIC_TILE_SYSTEM.md](ISOMETRIC_TILE_SYSTEM.md) | Deterministic battle-terrain contract | Geometry, compiler, validation, admin queue |
 | [AI_IMAGE_GENERATION.md](AI_IMAGE_GENERATION.md) | AI image generation pipeline | HuggingFace Flux, prompts, art direction |
+| [AUTHORED_PLAYER_ANIMATIONS.md](AUTHORED_PLAYER_ANIMATIONS.md) | Authored player-animation operator runbook | Drafts, source atlases, compilation, pins, clean rebuilds |
 | [AUDIO_STYLE_GUIDE.md](AUDIO_STYLE_GUIDE.md) | Audio generation guidelines | SFX prompts, music, regional profiles |
 | [ASSET_PATH_STANDARD.md](ASSET_PATH_STANDARD.md) | Directory structure and naming | Path patterns, size conventions |
 | [ASSET_PATH_CONFIGURATION.md](ASSET_PATH_CONFIGURATION.md) | Path system architecture | Single source of truth, consumer integration |
@@ -369,6 +373,16 @@ Bust shots for player characters and enemies.
 - **Player:** All race/gender/class combinations
 - **Enemy:** Named enemies with `enemy_` prefix
 
+#### Authored Player Animations
+
+Higher-quality player references and eight-frame action strips are compiled from tracked, hash-pinned RGBA sources for one race/gender/class identity at a time.
+
+- **Metadata:** `ai-image-metadata/characters/player-authored-animations/<id>.json`
+- **Sources:** `ai-image-metadata/characters/player-animation-sources/<id>/`
+- **Output:** `frontend/public/assets/characters/player/{race}/{gender}/{class}/`
+- **Build switch:** `draft-*` is ignored; `approved`, `approved-*`, or `approved_*` enables the authored override
+- **Runbook:** [AUTHORED_PLAYER_ANIMATIONS.md](AUTHORED_PLAYER_ANIMATIONS.md)
+
 #### Item Sprites
 
 Equipment and consumable icons.
@@ -495,6 +509,7 @@ audio-metadata/
 
 - [ASSET_PATH_CONFIGURATION.md](ASSET_PATH_CONFIGURATION.md) - Path system architecture, single source of truth
 - [ASSET_METADATA_SCHEMA.md](ASSET_METADATA_SCHEMA.md) - JSON metadata conventions, underscore prefix
+- [AUTHORED_PLAYER_ANIMATIONS.md](AUTHORED_PLAYER_ANIMATIONS.md) - Reproducible authored player-animation workflow
 
 ### Architecture
 

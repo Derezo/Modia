@@ -113,6 +113,7 @@ Detailed documentation is available in the `docs/` directory:
 - [Technical Architecture](docs/TECHNICAL_ARCHITECTURE.md) - System design
 - [API Specification](docs/API_SPECIFICATION.md) - REST and WebSocket endpoints
 - [Game Design](docs/GAME_DESIGN.md) - Mechanics and formulas
+- [Authored Player Animations](docs/AUTHORED_PLAYER_ANIMATIONS.md) - Reproducible character source-art and sprite-strip workflow
 - [Development Roadmap](docs/DEVELOPMENT_ROADMAP.md) - Progress tracking
 - [Deployment](docs/DEPLOYMENT.md) - Production deploy workflow (lsd CLI)
 
