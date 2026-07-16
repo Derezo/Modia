@@ -189,7 +189,10 @@ export class BattleStatePoller {
 
       // Store new ETag
       const newETag = response.headers.get('ETag');
-      if (newETag) {
+      // Critical polling deliberately fetches a fresh snapshot without cache
+      // validators. Keep the last fully-applied ETag so the deferred normal
+      // poll cannot receive a 304 for state it has not actually synchronized.
+      if (newETag && !this.criticalOnly) {
         this.lastETag = newETag;
       }
 
@@ -234,6 +237,16 @@ export class BattleStatePoller {
       return null;
     }
 
+    // Terminal outcome is the most important mismatch. A battle-ending update
+    // commonly changes the active unit and turn count at the same time.
+    if (serverState.status !== this.localState.status) {
+      return {
+        type: 'status_changed',
+        serverValue: serverState.status,
+        localValue: this.localState.status
+      };
+    }
+
     // Check active unit changed (turn changed on server)
     if (serverState.activeUnitId !== this.localState.activeUnitId) {
       return {
@@ -249,15 +262,6 @@ export class BattleStatePoller {
         type: 'turn_count_changed',
         serverValue: serverState.turnCount,
         localValue: this.localState.turnCount
-      };
-    }
-
-    // Check battle status changed (battle ended)
-    if (serverState.status !== this.localState.status) {
-      return {
-        type: 'status_changed',
-        serverValue: serverState.status,
-        localValue: this.localState.status
       };
     }
 

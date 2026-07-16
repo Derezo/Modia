@@ -24,6 +24,49 @@ import { applyBattleMapPatch, mergeBattleStatePatch } from './mergeBattleState.j
 
 const QUEUE_TIMEOUT_MS = 5000; // 5 second timeout for queue events
 
+/**
+ * Return the duration of the actor's currently selected sprite animation.
+ *
+ * BattleUnit keeps the previous sprite visible when an authored action strip is
+ * unavailable. In that case animationState changes, but animatedSprite does not,
+ * so only trust a populated sprite cache when it agrees with the active sprite.
+ *
+ * @param {Object|null} actor
+ * @returns {number|null} Animation duration in milliseconds, or null when the
+ *   active animation does not expose usable timing metadata.
+ */
+export function getActorAnimationDurationMs(actor) {
+  const sprite = actor?.animatedSprite;
+  if (!sprite) return null;
+
+  const state = actor?.animationState;
+  if (state && actor?.spriteCache && actor.spriteCache[state] !== sprite) {
+    return null;
+  }
+
+  const frameCount = Number(sprite.frameCount);
+  const frameRate = Number(sprite.frameRate);
+  if (!Number.isFinite(frameCount) || frameCount <= 0 ||
+      !Number.isFinite(frameRate) || frameRate <= 0) {
+    return null;
+  }
+
+  return Math.ceil((frameCount / frameRate) * 1000);
+}
+
+/**
+ * Keep the established presentation delay as a floor while allowing authored
+ * sprite timing to extend it.
+ */
+export function getActionWaitDuration(actorAnimationDuration, fallbackDuration) {
+  const safeFallback = Number.isFinite(fallbackDuration) && fallbackDuration >= 0
+    ? fallbackDuration
+    : ANIMATION_TIMING.ACTION_WAIT_SHORT;
+  return Number.isFinite(actorAnimationDuration) && actorAnimationDuration > 0
+    ? Math.max(safeFallback, actorAnimationDuration)
+    : safeFallback;
+}
+
 export class BattleWebSocketManager {
   /**
    * @param {BattleScene} scene - Reference to the battle scene
@@ -35,6 +78,7 @@ export class BattleWebSocketManager {
     // Turn event queue state
     this.turnEventQueue = [];
     this.isProcessingQueue = false;
+    this.battleEndPending = false;
 
     // Timeout and polling state
     this.timeoutCount = 0;
@@ -88,6 +132,21 @@ export class BattleWebSocketManager {
       return;
     }
     this.isSetup = true;
+
+    // Start defensive synchronization before depending on WebSocket delivery.
+    // BattleScene installs this manager after async asset loading, so a terminal
+    // event can already have been emitted by the time listeners are attached.
+    // Seed the comparison baseline and poll immediately to recover that race.
+    this.statePoller = new BattleStatePoller(
+      this.battleId,
+      (serverState) => this.handleStateDrift(serverState),
+      this.game,
+      (driftType, serverValue, serverState) => this.handleCriticalDrift(driftType, serverValue, serverState)
+    );
+    this.updatePollerState();
+    this.statePoller.start();
+    this.queueAuthoritativeBattleEnd(this.battleState?.status, this.battleState?.rewards);
+    void this.statePoller.poll();
 
     const socket = this.game.socket;
     if (!socket) return;
@@ -251,15 +310,6 @@ export class BattleWebSocketManager {
     });
     this.wsUnsubscribers.push(reconnectUnsub);
 
-    // Initialize state poller for defensive synchronization
-    // Includes critical drift callback for detecting important changes during animations
-    this.statePoller = new BattleStatePoller(
-      this.battleId,
-      (serverState) => this.handleStateDrift(serverState),
-      this.game,
-      (driftType, serverValue, serverState) => this.handleCriticalDrift(driftType, serverValue, serverState)
-    );
-    this.statePoller.start();
   }
 
   /**
@@ -273,6 +323,7 @@ export class BattleWebSocketManager {
     this.statePoller?.stop();
     this.statePoller = null;
     this.timeoutCount = 0;
+    this.battleEndPending = false;
 
     // Clean up reliability manager for this battle
     const websocket = this.game?.websocket;
@@ -398,6 +449,7 @@ export class BattleWebSocketManager {
     // (Server will send fresh state after rejoin)
     this.turnEventQueue = [];
     this.isProcessingQueue = false;
+    this.battleEndPending = false;
 
     // Reset pending input enable flag
     this.pendingInputEnable = false;
@@ -534,6 +586,7 @@ export class BattleWebSocketManager {
     // Explicit battle:request_sync responses arrive on this same event and
     // include full map layers; apply them as well as the unit snapshot.
     applyBattleMapPatch(this.scene.grid, payload.state);
+    this.queueAuthoritativeBattleEnd(payload.state?.status, payload.state?.rewards);
 
     // Restore activeUnitId if we should preserve it (queue handles transitions)
     if (preserveActiveUnit && currentActiveId != null) {
@@ -588,12 +641,27 @@ export class BattleWebSocketManager {
       isProcessing: this.isProcessingQueue,
       battleEnded: this.scene.battleEnded
     });
-    // Queue battle end so it waits for death animations to complete
-    this.queueTurnEvent({
-      type: 'battle_end',
-      status: payload.status,
-      rewards: payload.rewards
-    });
+    this.queueAuthoritativeBattleEnd(payload.status, payload.rewards);
+  }
+
+  /**
+   * Queue one authoritative terminal outcome after any in-flight action/death
+   * presentation. WebSocket delivery, HTTP responses, full syncs, and the
+   * defensive poller all converge here so a missed battle:end cannot strand
+   * the client in a server-completed battle.
+   *
+   * @param {string} status - Supported terminal outcome: victory or defeat
+   * @param {Object|null} rewards - Optional victory rewards
+   * @returns {boolean} Whether a new terminal event was queued
+   */
+  queueAuthoritativeBattleEnd(status, rewards = null) {
+    if (!['victory', 'defeat'].includes(status)) return false;
+    if (this.scene.battleEnded || this.battleEndPending) return false;
+
+    this.battleEndPending = true;
+    if (this.battleState) this.battleState.status = status;
+    this.queueTurnEvent({ type: 'battle_end', status, rewards });
+    return true;
   }
 
   /**
@@ -725,6 +793,8 @@ export class BattleWebSocketManager {
 
     // Resync all units
     this.scene.syncUnitsWithState(state.units);
+
+    this.queueAuthoritativeBattleEnd(state.status, state.rewards);
 
     // Update UI
     this.scene.updateUI();
@@ -947,10 +1017,7 @@ export class BattleWebSocketManager {
   requestFullStateSync() {
     const socket = this.game?.socket;
     if (socket) {
-      socket.send({
-        type: 'battle:request_sync',
-        battleId: this.battleId
-      });
+      socket.send('battle:request_sync', { battleId: this.battleId });
     }
   }
 
@@ -963,6 +1030,7 @@ export class BattleWebSocketManager {
 
     // Apply the server state to the battle
     this.applyServerState(serverState);
+    this.queueAuthoritativeBattleEnd(serverState.status, serverState.rewards);
 
     // Reset timeout counter since we've synced
     this.timeoutCount = 0;
@@ -984,15 +1052,21 @@ export class BattleWebSocketManager {
   handleCriticalDrift(driftType, serverValue, serverState) {
     console.warn(`[Battle WS] Critical drift during animation: ${driftType}`, serverValue);
 
+    // A terminal snapshot takes priority even when the first reported mismatch
+    // is a turn or turn-count change from the same server update.
+    const terminalQueued = this.queueAuthoritativeBattleEnd(
+      serverState?.status,
+      serverState?.rewards
+    );
+
     // Notify scene of critical drift - it can decide whether to interrupt animations
     if (this.scene.onCriticalDrift) {
       this.scene.onCriticalDrift(driftType, serverValue, serverState);
     }
 
     // For battle end, we may want to fast-forward animations
-    if (driftType === 'status_changed' && serverValue !== 'active') {
-      console.log('[Battle WS] Battle ended on server - consider fast-forwarding animations');
-      // The scene can use this to skip remaining animations and show results
+    if (terminalQueued) {
+      console.log('[Battle WS] Battle ended on server - queueing authoritative outcome');
     }
 
     // For turn changes, log but don't interrupt - the queue should handle turn transitions
@@ -1060,6 +1134,9 @@ export class BattleWebSocketManager {
     }
     if (serverState.turnCount !== undefined) {
       this.scene.battleLogTurnCounter = serverState.turnCount;
+    }
+    if (serverState.status !== undefined && this.battleState) {
+      this.battleState.status = serverState.status;
     }
 
     // Emit event for scene to handle full refresh if needed
@@ -1393,6 +1470,11 @@ export class BattleWebSocketManager {
           : null,
         skillId
       });
+      // Capture the selected action sprite before target reactions can replace
+      // it (for example, when a self-targeting action also damages the actor).
+      const actorAnimationDuration = presentation
+        ? getActorAnimationDurationMs(actor)
+        : null;
       if (presentation) {
         await this.scene.waitForAnimation(180);
       }
@@ -1553,9 +1635,13 @@ export class BattleWebSocketManager {
       const nextEvent = this.turnEventQueue[0];
       const willPanToDifferentUnit = nextEvent?.type === 'turn_start' &&
                                       nextEvent.unitId !== actorId;
-      const waitDuration = willPanToDifferentUnit
+      const fallbackWaitDuration = willPanToDifferentUnit
         ? ANIMATION_TIMING.ACTION_WAIT_FULL
         : ANIMATION_TIMING.ACTION_WAIT_SHORT;
+      const waitDuration = getActionWaitDuration(
+        actorAnimationDuration,
+        fallbackWaitDuration
+      );
       await this.scene.waitForAnimation(waitDuration);
 
       // Add settling delay before turn transition for smooth visual feedback

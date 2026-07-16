@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Master manifest for Modia generated visual assets, including deterministic battle terrain",
   "totalAssets": 1486,
   "artDirection": {
@@ -96,9 +96,10 @@
       ]
     },
     "characters": {
-      "description": "Portrait-matched player variants and canonical enemy animation strips (64x512, 8 temporal frames)",
+      "description": "Portrait-matched player variants, hash-pinned authored player-animation overrides, and canonical enemy strips (64x512, 8 temporal frames)",
       "assetCount": 354,
       "playerVariantCount": 300,
+      "authoredPlayerAnimationPilots": 1,
       "enemyCount": 34,
       "legacyPlayerArchetypes": 20,
       "format": {
@@ -109,9 +110,14 @@
         "sheetDimensions": "64x512"
       },
       "files": [
+        "characters/manifest.json",
         "characters/players.json",
         "characters/player-variants.json",
+        "characters/player-identity-fallbacks.json",
         "characters/visual-style-profile.json",
+        "characters/player-authored-animation-template.json",
+        "characters/player-animation-profiles/wizard_v1.json",
+        "characters/player-authored-animations/elf_other_wizard.json",
         "characters/enemy-sprite-repairs.json",
         "characters/enemy-animation-stabilizations.json",
         "characters/enemies/forest.json",

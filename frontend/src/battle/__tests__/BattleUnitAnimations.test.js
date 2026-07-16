@@ -17,7 +17,7 @@ globalThis.document = {
   head: { appendChild() {} }
 };
 
-const { BattleUnit } = await import('../BattleUnit.js');
+const { BattleUnit, VERTICAL_STRIP_GROUND_INSET } = await import('../BattleUnit.js');
 
 function animationHarness(spriteCache = {}) {
   const unit = Object.create(BattleUnit.prototype);
@@ -64,6 +64,62 @@ describe('BattleUnit authored action fallbacks', () => {
 
     assert.equal(unit.playVictoryAnimation(), true);
     assert.deepEqual(stateChanges, [{ state: 'victory', force: false }]);
+  });
+});
+
+describe('BattleUnit strip presentation', () => {
+  it('uses the shared two-second cadence for vertical-strip idle poses', () => {
+    const unit = Object.create(BattleUnit.prototype);
+    unit.direction = 0;
+
+    const idle = unit.createAnimatedSprite({ width: 64, height: 512 }, 'idle');
+    const walk = unit.createAnimatedSprite({ width: 64, height: 512 }, 'walk');
+
+    assert.equal(idle.frameRate, 0.5);
+    assert.equal(idle.frameCount, 8);
+    assert.equal(walk.frameRate, 12);
+  });
+
+  it('grounds canonical vertical strips without shifting legacy layouts', () => {
+    function renderBottom(layout) {
+      const unit = Object.create(BattleUnit.prototype);
+      const drawCalls = [];
+      Object.assign(unit, {
+        screenX: 30,
+        screenY: 80,
+        teamId: 1,
+        isSelected: false,
+        isTargeted: false,
+        isMoving: false,
+        isCharging: false,
+        isThinking: false,
+        statusEffects: [],
+        traits: [],
+        animatedSprite: {
+          spriteSheet: {},
+          layout,
+          draw(_ctx, x, y) { drawCalls.push({ x, y }); }
+        },
+        isAlive() { return true; },
+        renderHPBar() {}
+      });
+      const ctx = {
+        beginPath() {},
+        ellipse() {},
+        fill() {},
+        restore() {},
+        save() {},
+        setLineDash() {},
+        stroke() {}
+      };
+
+      unit.render(ctx, null, 1);
+      return drawCalls[0];
+    }
+
+    assert.equal(VERTICAL_STRIP_GROUND_INSET, 4);
+    assert.deepEqual(renderBottom('vertical-strip'), { x: 30, y: 84 });
+    assert.deepEqual(renderBottom('directional-grid'), { x: 30, y: 80 });
   });
 });
 

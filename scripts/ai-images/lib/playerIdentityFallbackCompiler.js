@@ -5,6 +5,12 @@ const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp');
 
+const {
+  compileAuthoredReferenceOverride,
+  createAuthoredReferenceProvenanceEntry,
+  discoverApprovedAuthoredSpecs
+} = require('./authoredPlayerOverrides');
+
 const COMPILER_VERSION = '1.1.0';
 const SOURCE_SIZE = 64;
 const OUTPUT_SIZE = 512;
@@ -1092,6 +1098,9 @@ async function compileIdentities(options = {}) {
   const registry = JSON.parse(await fs.promises.readFile(registryPath, 'utf8'));
   const variants = selectVariants(registry, options, projectRoot);
   const provenance = await readProvenance(provenancePath);
+  const authoredSpecs = discoverApprovedAuthoredSpecs(projectRoot, {
+    specDirectory: options.authoredSpecDirectory
+  });
   const result = {
     ok: true,
     check: Boolean(options.check),
@@ -1106,9 +1115,20 @@ async function compileIdentities(options = {}) {
   for (const variant of variants) {
     const outputPath = canonicalOutputPath(projectRoot, variant);
     const outputRelative = relativePath(projectRoot, outputPath);
+    const authoredEntry = authoredSpecs.get(variant.id);
     if (options.check) {
       try {
         const inspected = await inspectOutput(outputPath);
+        if (authoredEntry) {
+          const approved = await compileAuthoredReferenceOverride({
+            projectRoot,
+            variant,
+            entry: authoredEntry
+          });
+          if (inspected.hash !== sha256(approved.buffer)) {
+            result.issues.push(`${variant.id}: canonical reference differs from approved authored override`);
+          }
+        }
         const entry = provenance.variants[variant.id];
         for (const issue of inspected.issues) result.issues.push(`${variant.id}: ${issue}`);
         if (entry && entry.outputSha256 !== inspected.hash) result.issues.push(`${variant.id}: output hash differs from fallback provenance`);
@@ -1137,10 +1157,31 @@ async function compileIdentities(options = {}) {
     }
 
     try {
-      const rendered = await renderIdentity64(projectRoot, variant);
-      const output = await encodeOutput(rendered.raw);
+      let output;
+      let provenanceValue;
+      if (authoredEntry) {
+        const compiled = await compileAuthoredReferenceOverride({
+          projectRoot,
+          variant,
+          entry: authoredEntry
+        });
+        output = compiled.buffer;
+        provenanceValue = await createAuthoredReferenceProvenanceEntry({
+          projectRoot,
+          variant,
+          entry: authoredEntry,
+          compiled,
+          outputPath,
+          fallbackCompilerVersion: COMPILER_VERSION,
+          semanticSignature: CLASS_SIGNATURES[variant.class]
+        });
+      } else {
+        const rendered = await renderIdentity64(projectRoot, variant);
+        output = await encodeOutput(rendered.raw);
+        provenanceValue = provenanceEntry(projectRoot, variant, rendered, outputPath, output);
+      }
       await atomicWrite(outputPath, output);
-      provenance.variants[variant.id] = provenanceEntry(projectRoot, variant, rendered, outputPath, output);
+      provenance.variants[variant.id] = provenanceValue;
       result.generated.push(outputRelative);
     } catch (error) {
       result.issues.push(`${variant.id}: ${error.message}`);

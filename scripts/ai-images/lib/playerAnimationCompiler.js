@@ -646,6 +646,12 @@ function selectTargets(registry, projectRoot, options) {
 }
 
 async function compileTargets(options = {}) {
+  // Loaded lazily to avoid a module cycle: authored compilation reuses the
+  // strip contract helpers exported by this module.
+  const {
+    compileAuthoredAnimationOverride,
+    discoverApprovedAuthoredSpecs
+  } = require('./authoredPlayerOverrides');
   const projectRoot = path.resolve(options.projectRoot || path.resolve(__dirname, '../../..'));
   const registryPath = path.resolve(options.registryPath || path.join(
     projectRoot,
@@ -654,6 +660,9 @@ async function compileTargets(options = {}) {
   const originalRegistryText = await fs.promises.readFile(registryPath, 'utf8');
   const registry = JSON.parse(originalRegistryText);
   const targets = selectTargets(registry, projectRoot, options);
+  const authoredSpecs = discoverApprovedAuthoredSpecs(projectRoot, {
+    specDirectory: options.authoredSpecDirectory
+  });
   const result = {
     ok: true,
     check: options.check === true,
@@ -675,7 +684,8 @@ async function compileTargets(options = {}) {
 
   for (const target of targets) {
     const label = `${target.variant.id}/${target.animation}`;
-    if (!fs.existsSync(target.referencePath)) {
+    const authoredEntry = authoredSpecs.get(target.variant.id);
+    if (!authoredEntry && !fs.existsSync(target.referencePath)) {
       result.issues.push(`${label}: missing canonical reference ${path.relative(projectRoot, target.referencePath)}`);
       continue;
     }
@@ -689,6 +699,19 @@ async function compileTargets(options = {}) {
         result.issues.push(`${label}: existing strip is preserved but invalid (${validation.issues.join('; ')}); use --force to replace it`);
         continue;
       }
+      if (options.check && authoredEntry) {
+        const approved = await compileAuthoredAnimationOverride({
+          projectRoot,
+          variant: target.variant,
+          animation: target.animation,
+          entry: authoredEntry
+        });
+        const existingHash = sha256(await fs.promises.readFile(target.outputPath));
+        if (existingHash !== sha256(approved.buffer)) {
+          result.issues.push(`${label}: canonical strip differs from approved authored override`);
+          continue;
+        }
+      }
       if (approvedGolden) result.approvedGolden.push(label);
       if (options.check) result.verified.push(label);
       else result.skipped.push(label);
@@ -701,11 +724,18 @@ async function compileTargets(options = {}) {
       continue;
     }
 
-    const buffer = await compileAnimationBuffer({
-      referencePath: target.referencePath,
-      id: target.variant.id,
-      animation: target.animation
-    });
+    const buffer = authoredEntry
+      ? (await compileAuthoredAnimationOverride({
+          projectRoot,
+          variant: target.variant,
+          animation: target.animation,
+          entry: authoredEntry
+        })).buffer
+      : await compileAnimationBuffer({
+          referencePath: target.referencePath,
+          id: target.variant.id,
+          animation: target.animation
+        });
     const validation = await validateStripContract(buffer, { animation: target.animation, requireMotion: true });
     if (!validation.ok) {
       result.issues.push(`${label}: compiled strip failed validation (${validation.issues.join('; ')})`);

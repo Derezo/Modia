@@ -1,8 +1,8 @@
 {
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Portrait-matched player and canonical enemy sprite metadata - animated 64x512 vertical strips (8 temporal frames per animation)",
   "generationDefaults": {
-    "mode": "deterministic_compilers",
+    "mode": "deterministic_compilers_with_reviewed_authored_sources",
     "canonicalPlayer": {
       "identity": {
         "mode": "deterministic_portrait_derived",
@@ -18,6 +18,20 @@
         "frameSize": 64,
         "frameCount": 8,
         "encoding": "lossless_rgba_webp_vertical_strip"
+      },
+      "authoredOverride": {
+        "mode": "deterministic_compilation_of_manually_approved_generated_sources",
+        "candidateGeneration": "nondeterministic_openai_built_in_imagegen",
+        "compiler": "scripts/ai-images/compile-authored-player-animations.js",
+        "draftScaffold": "scripts/ai-images/draft-authored-player-animation.js",
+        "template": "player-authored-animation-template.json",
+        "profileDirectory": "player-animation-profiles",
+        "specDirectory": "player-authored-animations",
+        "sourceDirectory": "player-animation-sources",
+        "pilotIds": ["elf_other_wizard"],
+        "scopeGate": "explicit_id_compile_or_explicit_all_approved_read_only_check",
+        "generationReproducibility": "metadata_prompts_inputs_accepted_sources_and_hashes_retained_but_candidate_pixels_not_seed_reproducible",
+        "compilationReproducibility": "byte_deterministic_from_hash_pinned_accepted_rgba_sources"
       },
       "scopeGate": "exactly_one_of_id_sample_all",
       "existingAssetPolicy": "preserve_unless_targeted_force"
@@ -61,6 +75,11 @@
     }
   },
   "visualStyleProfile": "visual-style-profile.json",
+  "authoredAnimationTemplate": "player-authored-animation-template.json",
+  "authoredAnimationProfileDirectory": "player-animation-profiles",
+  "authoredAnimationSpecDirectory": "player-authored-animations",
+  "authoredAnimationSourceDirectory": "player-animation-sources",
+  "authoredAnimationPilotIds": ["elf_other_wizard"],
   "enemySpriteRepairManifest": "enemy-sprite-repairs.json",
   "enemyAnimationStabilizationManifest": "enemy-animation-stabilizations.json",
   "weightPresets": {
@@ -189,8 +208,8 @@
         "mid fall diagonal",
         "hitting ground",
         "bouncing slightly",
-        "settling on ground",
-        "final rest position"
+        "final rest position",
+        "same final rest position held"
       ]
     },
     "cast": {
@@ -218,7 +237,7 @@
         "celebration gesture",
         "turning to crowd",
         "final pose hold",
-        "returning to neutral"
+        "same triumphant final pose held"
       ]
     },
     "dead": {

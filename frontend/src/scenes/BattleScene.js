@@ -1984,11 +1984,7 @@ export class BattleScene extends Scene {
         isProcessing: this.isProcessingQueue,
         battleEnded: this.battleEnded
       });
-      this.queueTurnEvent({
-        type: 'battle_end',
-        status: battleStatus,
-        rewards: actionResult.rewards
-      });
+      this.wsManager?.queueAuthoritativeBattleEnd(battleStatus, actionResult.rewards);
     } else if (turnContinues) {
       // Two-action system: turn not complete, update available actions
       this.canMove = availableActions?.canMove ?? false;

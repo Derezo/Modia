@@ -14,6 +14,7 @@ import { validateFormationPayload } from '../services/battle/formationValidation
 import * as traitService from '../services/traitService.js';
 import * as bossService from '../services/bossService.js';
 import * as battleTurnManager from '../services/battleTurnManager.js';
+import { getParticipantBattleStatus } from '../services/battleOutcomeService.js';
 import * as zodiacAbilityService from '../services/zodiacAbilityService.js';
 import { completeMatch as completeColiseumMatch, cancelTurnTimer } from '../services/coliseumService.js';
 import {
@@ -100,7 +101,7 @@ async function handleBattleEnd(battleId, status, state, userId, battleEndResult 
     console.log(`[Battle] PvP battle end - battleId=${battleId}, winningTeamId=${battleEndResult?.winningTeamId}, player1=${state.player1Id}, player2=${state.player2Id}`);
   }
 
-  battleWebsocket.broadcastBattleEnd(battleId, status, rewards, pvpInfo);
+  await battleWebsocket.broadcastBattleEnd(battleId, status, rewards, pvpInfo);
 
   // Record Coliseum match results and update ratings/leaderboards
   if (isPvP && battleEndResult?.winningTeamId) {
@@ -938,7 +939,8 @@ router.get('/:id/state', authenticate, stateLimiter, asyncHandler(async (req, re
 
   // Get battle and verify participation
   const result = await query(
-    `SELECT b.id, b.battle_state, b.status, b.player1_id, b.player2_id
+    `SELECT b.id, b.battle_state, b.status, b.battle_type,
+            b.player1_id, b.player2_id, b.winner_id, b.rewards
      FROM battles b
      WHERE b.id = $1`,
     [battleId]
@@ -966,13 +968,27 @@ router.get('/:id/state', authenticate, stateLimiter, asyncHandler(async (req, re
     }
   }
 
+  const storedStatus = battle.status || 'active';
+  const isHeadToHead = battle.battle_type === 'pvp' ||
+    battle.battle_type === 'pvp_coliseum' ||
+    battleState.battleType === 'pvp';
+  const participantStatus = getParticipantBattleStatus({
+    status: storedStatus,
+    userId: req.user.userId,
+    player1Id: battle.player1_id,
+    player2Id: battle.player2_id,
+    winnerId: battle.winner_id,
+    isHeadToHead
+  });
+
   // Build lightweight state for polling
   // Note: Battle units use tileX/tileY for position (not x/y)
   // CRITICAL: Ensure positions are always valid numbers to prevent client NaN issues
   const state = {
     activeUnitId: battleState.activeUnitId || null,
     turnCount: battleState.turn || 0,
-    status: battle.status || 'active',
+    status: participantStatus,
+    rewards: participantStatus === 'victory' ? (battle.rewards || null) : null,
     units: (battleState.units || []).map(u => ({
       id: u.id,
       x: u.tileX ?? 0,

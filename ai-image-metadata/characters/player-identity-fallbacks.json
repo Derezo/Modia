@@ -5246,44 +5246,37 @@
       "race": "elf",
       "gender": "other",
       "class": "wizard",
-      "method": "portrait-head-procedural-fullbody",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "crystal-staff-and-arcane-robe",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/elf_other_wizard.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/inputs/identity.png",
       "sourcePortraitSha256": "641aebe56afbeb9eaf91add92d43c42585a4553b3b27c126b82e3674fae361ad",
       "genderAnchor": null,
       "genderAnchorSha256": null,
       "genderAnchorReason": null,
-      "sourcePixelSha256": "231ab3dff3b73834c1c2f794af496fff9592d876838a9c07b6264bdd8ee893da",
+      "sourcePixelSha256": "ec33b2e7df8aa95e9bc4f6717b097c87cdcae86c6fc17aab578b781a728e3517",
       "output": "frontend/public/assets/characters/player/elf/other/wizard/elf_other_wizard_reference.png",
-      "outputSha256": "5bf42da25866a612ce0cb9bb5f954db939577967ce0b55edc07848dd1e04859e",
+      "outputSha256": "48f8d35c0c8ff0a9bc739de5fb5457ebb3e571bbb0ef7953b161f88ce5390d2d",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 18,
-        "minY": 5,
-        "maxX": 51,
-        "maxY": 59,
-        "width": 34,
-        "height": 55,
-        "alphaPixels": 1210
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 129,
+        "minY": 35,
+        "maxX": 393,
+        "maxY": 475,
+        "width": 265,
+        "height": 441,
+        "alphaPixels": 65227,
+        "centroidX": 252.9129194965275,
+        "centroidY": 260.8136201266347
       },
-      "palette": {
-        "primary": [
-          96,
-          128,
-          128
-        ],
-        "secondary": [
-          160,
-          160,
-          160
-        ],
-        "accent": [
-          64,
-          32,
-          0
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "2c4c8bbb87efa3b841eacc28a323ce3dedff27bd1d0fea09c378175242cfa7ed",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/chroma/reference.png",
+      "authoredChromaSourceSha256": "570f97e8ab5e2c52d872794eb7a969059df873eeb3954fe4c46bef4af4258387",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/inputs/style.png",
+      "authoredStyleSourceSha256": "4e84fd9acbd3f81f41927b89adb621e57c097bc5159694d8203f998afb35478f",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/elf_other_wizard.json",
+      "authoredAnimationSpecSha256": "f3ba7fa89cf308cb9d78bd8222d26ad679c387ae80da831322dbf71a70ac24a5"
     },
     "human_female_alchemist": {
       "compilerVersion": "1.1.0",

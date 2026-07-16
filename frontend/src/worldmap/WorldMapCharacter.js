@@ -5,6 +5,7 @@
  */
 
 import { generatePathControlPoints, generateSplinePoints } from './PathRenderer.js';
+import { advanceIdleFrame } from '../core/CharacterAnimationTiming.js';
 import { responsive } from '../core/Responsive.js';
 
 export class WorldMapCharacter {
@@ -29,6 +30,8 @@ export class WorldMapCharacter {
     this.idlePhase = 0;
     this.idleSpeed = 0.003; // Idle bobbing speed
     this.idleBobAmount = 2; // Pixels to bob up/down
+    this.idleFrame = 0;
+    this.idleFrameTime = 0;
 
     // Walking animation
     this.isWalking = false;
@@ -190,10 +193,16 @@ export class WorldMapCharacter {
    * @param {number} deltaTime - Time since last frame in ms
    */
   update(deltaTime) {
-    // Update idle animation
+    // Keep gentle positional bobbing independent from the deliberately slow
+    // authored idle pose transitions.
     this.idlePhase += this.idleSpeed * deltaTime;
     if (this.idlePhase > Math.PI * 2) {
       this.idlePhase -= Math.PI * 2;
+    }
+    if (!this.isWalking) {
+      const nextIdle = advanceIdleFrame(this.idleFrame, this.idleFrameTime, deltaTime);
+      this.idleFrame = nextIdle.frame;
+      this.idleFrameTime = nextIdle.elapsedMs;
     }
 
     // Update walking animation
@@ -415,8 +424,7 @@ export class WorldMapCharacter {
     if (this.isWalking) {
       frameIndex = this.walkFrame % frameCount;
     } else {
-      // Idle animation - gentle breathing cycle (use first 4 frames for idle)
-      frameIndex = Math.floor((this.idlePhase / (Math.PI * 2)) * 4) % 4;
+      frameIndex = this.idleFrame % frameCount;
     }
 
     const sourceX = 0;

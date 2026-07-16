@@ -1,9 +1,15 @@
 import { AnimatedSprite } from '../core/AnimatedSprite.js';
+import { IDLE_FRAME_RATE } from '../core/CharacterAnimationTiming.js';
 import { responsive } from '../core/Responsive.js';
 import {
   getNpcVisualIdentity,
   getPlayerCharacterIdentity
 } from '../../../shared/assetPaths.js';
+
+// Compiled strips reserve four transparent pixels below every grounded pose.
+// Advance the frame by that inset so visible feet meet the tile/shadow ground
+// plane instead of floating above it.
+export const VERTICAL_STRIP_GROUND_INSET = 4;
 
 /**
  * BattleUnit - Represents a unit in tactical combat
@@ -193,7 +199,7 @@ export class BattleUnit {
 
     // Animation configuration based on type
     const animConfigs = {
-      idle: { frameCount: 1, frameRate: 8, loop: true },
+      idle: { frameCount: 1, frameRate: IDLE_FRAME_RATE, loop: true },
       walk: { frameCount: 1, frameRate: 12, loop: true },
       attack: { frameCount: 1, frameRate: 12, loop: false },
       cast: { frameCount: 1, frameRate: 10, loop: false },
@@ -903,8 +909,13 @@ export class BattleUnit {
 
     // Try to render animated sprite
     if (this.animatedSprite && this.animatedSprite.spriteSheet) {
-      // AnimatedSprite.draw() centers on x and draws upward from y
-      this.animatedSprite.draw(ctx, drawX, drawY);
+      // AnimatedSprite draws upward from the frame bottom. Account for the
+      // canonical transparent safety inset so visible pixels meet the shared
+      // tile/shadow ground plane.
+      const groundInset = this.animatedSprite.layout === 'vertical-strip'
+        ? VERTICAL_STRIP_GROUND_INSET
+        : 0;
+      this.animatedSprite.draw(ctx, drawX, drawY + groundInset);
     } else {
       // Fallback: Draw colored circle with letter
       const renderY = drawY - 32 + (this.isMoving ? 0 : this.idleOffset);

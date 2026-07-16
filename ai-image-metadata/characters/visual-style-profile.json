@@ -1,11 +1,11 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "id": "portrait-card-pixel-v1",
   "description": "Portrait-faithful character art translated into the readable 16-bit pixel language of Modia's legacy battle sprites.",
   "identityAuthority": {
     "player": "Each variant's canonical portrait is authoritative for race, face, hair, class palette, costume cues, and equipment. The approved dwarf-female and dwarf-other anchors override only contradictory gender presentation and body silhouette.",
     "enemy": "The canonical NPC reference and primary visual identity are authoritative across every spawn zone.",
-    "fallback": "Legacy class and biome sprites are pose/style fallbacks only; they must not overwrite a portrait or NPC identity. Deterministic player compilers preserve every valid existing canonical asset unless a targeted --force is explicit."
+    "fallback": "Legacy class and biome sprites are pose/style fallbacks only; they must not overwrite a portrait or NPC identity. Registry-wide deterministic fallbacks preserve every valid canonical asset unless a targeted --force is explicit; approved authored overrides instead compile only from their reviewed, hash-pinned RGBA sources."
   },
   "artDirection": {
     "medium": "hand-authored 16-bit pixel art",
@@ -26,6 +26,7 @@
     ]
   },
   "canonicalReferenceContract": {
+    "role": "registry_wide_fallback",
     "compiler": "scripts/ai-images/compile-player-identity-fallbacks.js",
     "library": "scripts/ai-images/lib/playerIdentityFallbackCompiler.js",
     "registry": "ai-image-metadata/characters/player-variants.json",
@@ -76,6 +77,7 @@
     "resampling": "nearest-neighbor"
   },
   "canonicalAnimationContract": {
+    "role": "registry_wide_fallback",
     "compiler": "scripts/ai-images/compile-player-animations.js",
     "library": "scripts/ai-images/lib/playerAnimationCompiler.js",
     "inputPattern": "/assets/characters/player/{race}/{gender}/{class}/{race}_{gender}_{class}_reference.png",
@@ -91,17 +93,48 @@
       "cast",
       "victory"
     ],
-    "motion": "Deterministic temporal pose transforms, stride segmentation, class-readable effects, and fixed per-identity effect palettes create eight genuinely temporal frames from the canonical reference.",
+    "motion": "Deterministic temporal pose transforms, stride segmentation, class-readable effects, and fixed per-identity effect palettes provide the registry-wide baseline when no approved authored pose atlas exists.",
     "validation": "Validate 64x512 geometry, eight 64x64 frames, lossless alpha, transparent margins, frame coverage, action-specific centroid motion, temporal uniqueness, cross-output hash uniqueness, and generatedAnimations metadata parity.",
     "safety": "Exactly one of --id, --sample, or --all is required; existing valid strips are preserved unless --force; writes are staged and atomic; registry changes are guarded against concurrent overwrite."
   },
+  "authoredPlayerAnimationContract": {
+    "status": "approved_pilot",
+    "pilotIds": ["elf_other_wizard"],
+    "compiler": "scripts/ai-images/compile-authored-player-animations.js",
+    "library": "scripts/ai-images/lib/authoredPlayerAnimationCompiler.js",
+    "template": "ai-image-metadata/characters/player-authored-animation-template.json",
+    "profileDirectory": "ai-image-metadata/characters/player-animation-profiles",
+    "draftScaffold": "scripts/ai-images/draft-authored-player-animation.js",
+    "specDirectory": "ai-image-metadata/characters/player-authored-animations",
+    "sourceDirectory": "ai-image-metadata/characters/player-animation-sources",
+    "candidateGeneration": {
+      "mode": "openai-built-in-imagegen",
+      "reproducibility": "nondeterministic_candidate_pixels",
+      "retainedEvidence": "Exact identity metadata, prompts, identity/style inputs, chroma originals, reviewed RGBA sources, and SHA-256 pins are tracked."
+    },
+    "compilation": {
+      "mode": "byte_deterministic_from_accepted_rgba_sources",
+      "sourceAtlasLayout": "4x2 ordered pose atlas",
+      "output": "One 512x512 lossless RGBA reference plus eight-frame 64x512 lossless RGBA WebP temporal strips.",
+      "verification": "--check recompiles in memory and verifies metadata fingerprints, template/profile and generation-input hashes, accepted/chroma source hashes, normalized pose signatures, per-frame hashes, and encoded/decoded output hashes."
+    },
+    "motion": "Every atlas frame redraws limbs, hands, equipment, hair, and cloth for its action, while source-cell anchoring preserves root travel. Translation-normalized pose signatures catch exact copies that were only moved, uniformly resized, or recolored; human review rejects rotated, skewed, minimally altered, or anatomically weak motion.",
+    "terminalRules": {
+      "death": "The last two frames hold the same accepted fully fallen pose.",
+      "dead": "All eight frames are pixel-identical derivations of the terminal death pose.",
+      "victory": "The final frame holds a triumphant pose instead of returning to neutral."
+    },
+    "safety": "Compilation requires one explicit --id; read-only verification may explicitly select --all-approved. New or changed generated sources require manual semantic review before --update-pins; replacing canonical bytes additionally requires --force. Approved IDs are protected overrides in registry-wide fallback builds, including --all --force."
+  },
   "generationPolicy": {
-    "canonicalPlayerReferenceMode": "deterministic_portrait_derived_compiler",
-    "canonicalPlayerAnimationMode": "deterministic_temporal_strip_compiler",
+    "canonicalPlayerReferenceMode": "deterministic_registry_fallback_with_hash_pinned_authored_overrides",
+    "canonicalPlayerAnimationMode": "deterministic_registry_fallback_with_hash_pinned_authored_pose_atlas_overrides",
     "portraitConditioningRequired": true,
     "diffusionMode": "candidate_only",
+    "authoredCandidateMode": "nondeterministic_manual_review",
+    "authoredCompilationMode": "byte_deterministic_hash_pinned",
     "seedPolicy": "fixed_across_frames",
-    "batchPolicy": "Run scoped samples and the semantic test matrix before either explicit --all compiler command. Never promote a diffusion batch by inspection shortcut."
+    "batchPolicy": "Run scoped samples and the semantic test matrix before either explicit --all fallback compiler command. Authored replacements are reviewed, pinned, and compiled one explicit identity at a time; never promote a generated batch by inspection shortcut."
   },
   "candidateGeneration": {
     "generator": "scripts/ai-images/generate-player-identity-references.js",
@@ -157,6 +190,25 @@
         ]
       },
       "prompt": "Create one full-body pixel-art human male warrior matching the identity portrait: blond hair, short blond beard, fair human features, white-and-gold plate armor, blue underlayer, red scarf, one shield, and one sword. Use the legacy warrior only for readable game-sprite silhouette and compact pixel proportions. Hand-authored 16-bit pixel art, crisp hard-edged pixels, bold dark ink-like outlines, restrained highlights, muted watercolor-and-parchment palette, centered full body facing right on a flat chroma-key background; no redesign, scenery, shadow, text, duplicate equipment, soft antialiasing, anime, chibi, 3D, or photorealism."
+    },
+    {
+      "id": "elf_other_wizard",
+      "status": "approved_authored_animation_pilot",
+      "asset": "/assets/characters/player/elf/other/wizard/elf_other_wizard_reference.png",
+      "sha256": "48f8d35c0c8ff0a9bc739de5fb5457ebb3e571bbb0ef7953b161f88ce5390d2d",
+      "acceptedSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "identitySource": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/inputs/identity.png",
+      "styleSource": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/inputs/style.png",
+      "generationMode": "openai-built-in-imagegen-reviewed-authored-pose-atlases",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/elf_other_wizard.json",
+      "acceptedSourceDirectory": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard",
+      "compiler": "scripts/ai-images/compile-authored-player-animations.js",
+      "preservationPolicy": "Accepted pilot reference and all animation strips are deterministically recompiled from tracked, hash-pinned RGBA sources. Registry-wide fallback compilation delegates to this authored override, even with --all --force. Replacement requires an explicit ID, manual semantic review, --update-pins, and --force.",
+      "validatedAnimationSet": {
+        "animations": ["idle", "walk", "attack", "hurt", "death", "dead", "cast", "victory"],
+        "provenance": "Template/profile, identity/style input, accepted/chroma source, prompt, normalized-pose, frame, and encoded/decoded output hashes are pinned in the authored animation spec.",
+        "verificationCommand": "npm run ai:check:authored-player-animations"
+      }
     }
   ]
 }

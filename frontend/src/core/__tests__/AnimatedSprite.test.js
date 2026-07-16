@@ -2,6 +2,11 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { AnimatedSprite } from '../AnimatedSprite.js';
+import {
+  IDLE_FRAME_DURATION_MS,
+  IDLE_FRAME_RATE,
+  advanceIdleFrame
+} from '../CharacterAnimationTiming.js';
 
 describe('AnimatedSprite vertical animation strips', () => {
   it('detects 64x512 generated strips as eight temporal frames', () => {
@@ -39,6 +44,25 @@ describe('AnimatedSprite vertical animation strips', () => {
 
     sprite.setDirection(AnimatedSprite.DIRECTIONS.SOUTHWEST);
     assert.equal(sprite.shouldMirror(), true);
+  });
+
+  it('holds subtle idle poses for two seconds while action timing stays fast', () => {
+    const idle = AnimatedSprite.createForAnimation({ width: 64, height: 512 }, 'idle');
+    const walk = AnimatedSprite.createForAnimation({ width: 64, height: 512 }, 'walk');
+
+    assert.equal(IDLE_FRAME_DURATION_MS, 2000);
+    assert.equal(idle.frameRate, IDLE_FRAME_RATE);
+    idle.update(1.999);
+    assert.equal(idle.currentFrame, 0);
+    idle.update(0.001);
+    assert.equal(idle.currentFrame, 1);
+    assert.equal(walk.frameRate, 12);
+  });
+
+  it('advances and wraps all eight world-map idle poses with stable remainder timing', () => {
+    assert.deepEqual(advanceIdleFrame(0, 0, 13999), { frame: 6, elapsedMs: 1999 });
+    assert.deepEqual(advanceIdleFrame(6, 1999, 1), { frame: 7, elapsedMs: 0 });
+    assert.deepEqual(advanceIdleFrame(7, 0, 2000), { frame: 0, elapsedMs: 0 });
   });
 
   it('advances all eight frames and completes non-looping actions', () => {

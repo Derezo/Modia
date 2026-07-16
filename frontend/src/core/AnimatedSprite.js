@@ -1,3 +1,5 @@
+import { IDLE_FRAME_RATE } from './CharacterAnimationTiming.js';
+
 /**
  * AnimatedSprite - Handles directional grids and vertical animation strips
  *
@@ -425,7 +427,7 @@ export class AnimatedSprite {
    */
   static createForAnimation(spriteSheet, animationType) {
     const configs = {
-      idle: { frameCount: 4, frameRate: 8, loop: true },
+      idle: { frameCount: 4, frameRate: IDLE_FRAME_RATE, loop: true },
       walk: { frameCount: 8, frameRate: 12, loop: true },
       attack: { frameCount: 6, frameRate: 12, loop: false },
       hit: { frameCount: 4, frameRate: 10, loop: false },

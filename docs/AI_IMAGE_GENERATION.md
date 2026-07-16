@@ -4,18 +4,19 @@ This document describes Modia's hybrid image-asset pipeline. Portraits and selec
 
 > **Terrain boundary:** Battle floor, wall, and slope tiles moved to the deterministic `iso64-retina-v3` material compiler. They do not use ComfyUI, HuggingFace, LoRA, or AI post-processing; metadata prompt text is only a deterministic material hint. See [ISOMETRIC_TILE_SYSTEM.md](ISOMETRIC_TILE_SYSTEM.md). The old AI tile workflow is historical; `ai:generate:tiles` remains only as a compatibility alias to the deterministic compiler.
 
-> **Player-character boundary:** Canonical race/gender/class references and temporal battle strips are deterministic outputs. Local diffusion may stage a full-body reference candidate, but it cannot publish that candidate without an explicit target ID, manual semantic review, and targeted promotion. See [Canonical Player Character Pipeline](#canonical-player-character-pipeline).
+> **Player-character boundary:** Canonical race/gender/class references and temporal battle strips are deterministic compiler outputs. The registry-wide fallback path is wholly procedural. The higher-quality authored path starts with nondeterministic generated reference and pose-atlas candidates, but only manually approved, tracked, hash-pinned RGBA sources can enter deterministic compilation for one explicit identity. See [Canonical Player Character Pipeline](#canonical-player-character-pipeline).
 
 ## Overview
 
 The AI image generation pipeline integrates with the external `image-generator` project to create:
 - **Character portraits** - Bust shots for all race/gender/class combinations
 - **Player reference candidates** - Optional local-diffusion candidates staged outside runtime paths for manual review
+- **Authored player-animation candidates** - Built-in image-generation reference and 4×2 pose atlases retained with exact prompts, inputs, accepted RGBA sources, and hashes
 - **Item sprites** - Equipment and consumable icons
 - **UI icons** - Action, status, menu, and augment icons
 - **World map nodes** - Landmark icons for the overworld
 
-The repository-owned deterministic compilers then create canonical full-body player references and eight-frame animation strips. These canonical steps do not require a diffusion backend.
+Repository-owned deterministic compilers create the canonical full-body player references and eight-frame animation strips. Compilation does not require a diffusion backend; authored source-candidate creation is a separate, deliberately nondeterministic review step.
 
 ## Quick Start
 
@@ -45,6 +46,10 @@ npm run ai:check:player-identities
 # Compile and validate deterministic eight-frame player animation strips
 npm run ai:compile:player-animations
 npm run ai:check:player-animations
+
+# Compile and verify the approved authored elf wizard pilot
+npm run ai:compile:authored-player-animations -- --id elf_other_wizard
+npm run ai:check:authored-player-animations
 ```
 
 ## Art Direction
@@ -60,12 +65,13 @@ The visual style is **Cozy & Nostalgic** with **Ink & Wash Technique**:
 
 ## Canonical Player Character Pipeline
 
-Canonical player art uses the identity tuple `{race}_{gender}_{class}` from `ai-image-metadata/characters/player-variants.json`. The accepted production flow is deterministic:
+Canonical player art uses the identity tuple `{race}_{gender}_{class}` from `ai-image-metadata/characters/player-variants.json`. Runtime compilation is deterministic, with two source paths:
 
 1. Treat `/assets/portraits/originals/{id}.png` as the identity and class-cue source.
-2. Compile a 64×64 full-body pixel source, then upscale it exactly 8× with nearest-neighbor resampling to a lossless 512×512 RGBA canonical reference.
-3. Compile each canonical reference into an eight-frame, 64×512 lossless WebP temporal strip.
-4. Run the player identity, animation, and runtime validators. Existing valid canonical art is preserved unless a targeted `--force` is explicit.
+2. For identities without an approved authored spec, compile the procedural 64×64 fallback full body and its temporal strips.
+3. For an approved authored override, compile the reviewed, tracked reference and 4×2 pose atlases whose source, prompt, pose, frame, and output hashes are pinned in that identity's spec.
+4. Emit the same runtime contract in either path: a 512×512 lossless RGBA PNG reference and eight-frame, 64×512 lossless WebP strips.
+5. Run the player identity, animation, and runtime validators. Existing valid canonical art is preserved unless a targeted `--force` is explicit.
 
 The canonical reference path is:
 
@@ -117,7 +123,7 @@ These are narrow identity overrides, not substitute class designs. The exact rea
 
 ### Deterministic temporal-strip compiler
 
-`scripts/ai-images/compile-player-animations.js` converts the canonical full-body reference into genuine temporal motion for `idle`, `walk`, `attack`, `hurt`, `death`, `dead`, and class-declared `cast`/`victory` actions. It uses deterministic pose transforms, lower-body stride segmentation, action effects, and per-identity effect palettes; the eight rows are animation frames, not facing directions.
+`scripts/ai-images/compile-player-animations.js` is the registry-wide fallback for `idle`, `walk`, `attack`, `hurt`, `death`, `dead`, and class-declared `cast`/`victory` actions. It uses deterministic pose transforms, lower-body stride segmentation, action effects, and per-identity effect palettes; the eight rows are animation frames, not facing directions. An approved authored pose-atlas spec supersedes this baseline for its one identity.
 
 ```bash
 # One identity/action sample
@@ -132,6 +138,61 @@ npm run ai:test:player-animations
 ```
 
 The compiler stages and validates outputs before atomic writes, preserves valid strips unless `--force`, and refuses to overwrite concurrently changed player-variant metadata.
+
+### Authored pose-atlas override: elf wizard pilot
+
+`elf_other_wizard` is the first approved metadata-driven authored-animation pilot. Its reference and seven generated action atlases are genuinely redrawn pixel-art poses: legs alternate through a walk cycle, arms and staff articulate through attack and cast, the body buckles and reaches a fully fallen death pose, and victory includes a hop, staff twirl, side step, and held triumphant finish. `dead` is not generated separately; it repeats the accepted terminal death frame exactly.
+
+The workflow separates two different meanings of reproducible:
+
+- **Candidate generation is nondeterministic.** Re-running built-in image generation with the same prompt is not expected to reproduce identical pixels. The identity metadata, exact prompts, identity/style inputs, chroma originals, reviewed transparent RGBA sources, and their hashes are retained so the creative decision is auditable.
+- **Compilation is byte-deterministic.** Given the accepted tracked RGBA sources, the compiler deterministically extracts the ordered poses, applies one uniform scale per action, preserves source-cell-relative root travel for hops, lunges, recoil, and collapse, and can bottom-ground contact actions such as death without discarding horizontal travel. It then assembles the 64×512 lossless WebP strips and verifies all pinned hashes.
+
+The reusable contract and the pilot data are stored at:
+
+```text
+ai-image-metadata/characters/player-authored-animation-template.json
+ai-image-metadata/characters/player-animation-profiles/wizard_v1.json
+ai-image-metadata/characters/player-authored-animations/elf_other_wizard.json
+ai-image-metadata/characters/player-animation-sources/elf_other_wizard/
+```
+
+Use these exact commands for the accepted pilot:
+
+```bash
+# Compile tracked, already approved sources. Identical existing outputs are preserved.
+npm run ai:compile:authored-player-animations -- --id elf_other_wizard
+
+# Read-only: recompile in memory and compare metadata, source, prompt, pose,
+# per-frame, and encoded/decoded output pins with the canonical files.
+npm run ai:check:authored-player-animations
+
+# Exercise atlas extraction, articulated-pose gates, terminal frames, and determinism.
+npm run ai:test:authored-player-animations
+```
+
+`--update-pins` is an acceptance operation, not a routine build flag. Use it only after a human has reviewed intentionally replaced source art; use `--force` in the same targeted command when canonical output already exists:
+
+```bash
+npm run ai:compile:authored-player-animations -- --id elf_other_wizard --update-pins --force
+```
+
+For another wizard identity, render a deterministic draft directly from `player-variants.json` and the reusable class profile:
+
+```bash
+npm run ai:draft:authored-player-animation -- --id human_female_wizard
+npm run ai:draft:authored-player-animation -- --id human_female_wizard --check
+```
+
+The scaffold is intentionally single-identity and metadata-only: it renders the identity-specific prompts, action choreography, paths, and provenance without generating or copying pixels. Stage the declared identity/style inputs, generate one full-body reference and one 4-column × 2-row atlas for each declared non-`dead` action, remove the chroma matte, review every frame, then change the status to approved and pin/compile only that explicit ID. Add a class profile before drafting a non-wizard class.
+
+The translation-normalized pose-signature gate catches exact rigid copies that were only moved, uniformly resized, or recolored. It does not prove good anatomy or reject every rotated, skewed, or minimally altered copy. Human approval must verify identity fidelity, meaningful limb articulation, anatomy, costume continuity, equipment count, action readability, gutters, and matte edges.
+
+Approved authored IDs are protected overrides in both registry-wide fallback compilers. Clean asset builds compile them from their pinned sources, and even an explicit fallback `--all --force` cannot replace them with procedural art.
+
+The pilot retains both accepted alpha sources and original chroma candidates for a complete audit trail. Before scaling this to the full identity matrix, configure Git LFS or an equivalent versioned artifact store; duplicating these large source atlases directly in ordinary Git does not scale.
+
+Runtime and terminal animation rules are part of the template: subtle idle poses advance once every two seconds; death is bottom-grounded and holds the same fully fallen pose in its final two runtime frames; every `dead` frame is pixel-identical to that terminal pose; and victory ends on a held triumphant pose rather than returning to neutral. The battle renderer compensates for the strip contract's four-pixel transparent safety inset so grounded poses meet the shared tile/shadow plane.
 
 ### Diffusion candidates and targeted promotion
 
@@ -156,11 +217,11 @@ npm run ai:generate:identity-references -- --id elf_female_wizard --promote --fo
 - exactly one of each weapon, staff, shield, vial, or other class prop;
 - no duplicate face, extra anatomy, scenery, floor, circular backdrop, shadow, matte fringe, text, or watermark.
 
-Failed technical candidates are moved to `ai-images-temp/rejected/identity-references/`. Diffusion animation experiments are likewise non-canonical; the supported production animation bulk path is the deterministic temporal-strip compiler.
+Failed technical candidates are moved to `ai-images-temp/rejected/identity-references/`. Unreviewed diffusion or built-in image-generation animation experiments are non-canonical. The supported production bulk fallback remains the deterministic temporal-strip compiler; authored replacements progress one explicit, reviewed, hash-pinned identity at a time.
 
 ### Preserved golden baseline
 
-`human_male_warrior_reference.png` remains the accepted OpenAI built-in image-generation baseline (SHA-256 `3ad9972a646e70f21331c495dd9f0b4774531d1e124b602c427c278a199ac3c9`). Its accepted `idle` strip remains the golden motion gate (SHA-256 `a8c76dfccee3de3840d6ad1899268caff0f1ee9ce28499d6b6edcb7029c1d6be`). Bulk deterministic compilers skip both while valid; a replacement requires targeted `--force`, a new manual semantic audit, and updated hashes in the visual style profile.
+`human_male_warrior_reference.png` remains the accepted OpenAI built-in image-generation baseline (SHA-256 `3ad9972a646e70f21331c495dd9f0b4774531d1e124b602c427c278a199ac3c9`). Its accepted `idle` strip remains the original golden motion gate (SHA-256 `a8c76dfccee3de3840d6ad1899268caff0f1ee9ce28499d6b6edcb7029c1d6be`). `elf_other_wizard_reference.png` is the approved full authored-animation pilot (SHA-256 `48f8d35c0c8ff0a9bc739de5fb5457ebb3e571bbb0ef7953b161f88ce5390d2d`); its complete source and output pins live in its authored spec. Bulk fallback compilers preserve accepted art while valid. Replacement requires targeted `--force`, a new manual semantic audit, and updated pins.
 
 ### Regional Color Palettes
 
@@ -191,6 +252,13 @@ Modia/
 │   ├── characters/              # Canonical identity/animation contracts
 │   │   ├── player-variants.json
 │   │   ├── player-identity-fallbacks.json
+│   │   ├── player-authored-animation-template.json
+│   │   ├── player-animation-profiles/
+│   │   │   └── wizard_v1.json
+│   │   ├── player-authored-animations/
+│   │   │   └── elf_other_wizard.json
+│   │   ├── player-animation-sources/
+│   │   │   └── elf_other_wizard/ # Reviewed alpha sources plus chroma originals
 │   │   ├── visual-style-profile.json
 │   │   └── reference-anchors/
 │   ├── items/                   # Item sprite metadata
@@ -216,9 +284,14 @@ Modia/
 │   │   ├── metadataUtils.js
 │   │   ├── playerIdentityFallbackCompiler.js
 │   │   ├── playerAnimationCompiler.js
+│   │   ├── authoredPlayerAnimationCompiler.js
+│   │   ├── authoredPlayerAnimationDraft.js
+│   │   ├── authoredPlayerOverrides.js
 │   │   └── promptBuilder.js
 │   ├── compile-player-identity-fallbacks.js
 │   ├── compile-player-animations.js
+│   ├── compile-authored-player-animations.js
+│   ├── draft-authored-player-animation.js
 │   ├── generate-player-identity-references.js
 │   ├── generate-all.js
 │   ├── generate-portraits.js
@@ -241,12 +314,13 @@ Modia/
 
 ## Generative Source Inference Modes
 
-Generative source tools support the following backends. The canonical player-reference and animation compilers use none of them.
+Generative source tools support the following backends. Canonical compilers themselves use none of them; the authored player path uses built-in image generation only to propose source candidates before review and hash pinning.
 
 | Mode | Description | Latency | Requirements |
 |------|-------------|---------|--------------|
 | **Local ComfyUI** (default) | GGUF-quantized Flux via ComfyUI | ~5-8s/image | NVIDIA GPU 8GB+ VRAM |
 | **Local SD1.5 candidate** | ControlNet and IP-Adapter full-body candidate staging via ComfyUI | ~5-8s/image | NVIDIA GPU 8GB+ VRAM and local SD1.5 models |
+| **Built-in image generation** | Nondeterministic reference and 4×2 authored pose-atlas candidates | Variable | Codex image-generation capability plus manual semantic review |
 | **HuggingFace Space** (`--huggingface`) | Cloud API via gradio_client | ~30s/image | API token |
 
 > **Note:** Local ComfyUI is now the default. Use `--huggingface` flag for cloud API mode.
@@ -433,6 +507,11 @@ holding objects, hands in frame, full body, weapon in hand, action pose, white f
 | `npm run ai:compile:player-animations` | Deterministically compile the full declared animation matrix (`--all` is embedded) |
 | `npm run ai:check:player-animations` | Read-only full-matrix strip and metadata check |
 | `npm run ai:test:player-animations` | Test temporal motion, encoding, preservation, and atomic writes |
+| `npm run ai:compile:authored-player-animations -- --id <id>` | Deterministically compile one approved authored reference and pose-atlas set |
+| `npm run ai:draft:authored-player-animation -- --id <id>` | Render one metadata-driven authored spec from the identity registry and class profile |
+| `npm run ai:check:authored-player-animations` | Recompile every approved authored identity in memory and verify every provenance/output pin |
+| `npm run ai:test:authored-player-animations` | Test authored atlas extraction, pose gates, override protection, terminal rules, and deterministic bytes |
+| `npm run ai:test:authored-player-animation-drafts` | Test deterministic metadata/profile draft rendering and safety gates |
 | `npm run ai:generate:items` | Generate item sprites |
 | `npm run ai:generate:icons` | Generate UI icons |
 | `npm run ai:generate:nodes` | Generate world map nodes |
@@ -445,10 +524,12 @@ holding objects, hands in frame, full body, weapon in hand, action pose, white f
 |------|-------------|
 | `--dry-run` | Preview without generating |
 | `--key <id>` | Generate specific asset by ID |
-| `--id <identity>` | Select an explicit player identity for reference, animation, or promotion work |
+| `--id <identity>` | Select an explicit player identity for reference, fallback animation, authored animation, or promotion work |
 | `--sample` | Select one bounded compiler sample; never implies the full registry |
-| `--all` | Explicit bulk safety gate required by both deterministic player compilers |
+| `--all` | Explicit bulk safety gate required by both registry-wide fallback player compilers; unsupported by authored compilation |
+| `--all-approved` | Explicit read-only scope for checking every approved authored identity; requires `--check` |
 | `--check` | Validate the selected canonical scope without writing |
+| `--update-pins` | Accept reviewed authored sources by refreshing their metadata/source/prompt/pose/frame/output pins; never use as a routine check |
 | `--promote` | Promote only explicitly named, manually approved diffusion reference candidates |
 | `--force` | Regenerate even if file exists |
 | `--biome <name>` | Filter tiles by biome (forest, cave, mountain, bridge, castle) |
@@ -463,7 +544,7 @@ holding objects, hands in frame, full body, weapon in hand, action pose, white f
 
 > **Note:** The `--local` flag is deprecated. Local ComfyUI is now the default.
 
-For player compilers, `--force` never broadens scope: the command still requires `--id`, `--sample`, or `--all`. For diffusion promotion, `--promote` requires an explicit `--id`; replacing an existing canonical also requires `--force`.
+For registry-wide player compilers, `--force` never broadens scope: the command still requires `--id`, `--sample`, or `--all`. Authored writes always require exactly one explicit `--id`; read-only checks may instead select `--all-approved`, and `--update-pins` remains mutually exclusive with `--check`. For diffusion promotion, `--promote` requires an explicit `--id`; replacing an existing canonical also requires `--force`.
 
 ### Deterministic terrain exception
 
@@ -476,7 +557,7 @@ For portrait, item, icon, node, and overlay categories, the generative pipeline 
 - **Python (image-generator)**: Generates 1024x1024, applies semantic processing (rembg background removal, content cropping, square padding), saves processed original
 - **Node.js (Modia scripts)**: Reads processed original, generates ALL size variants via ImageMagick Lanczos downscaling
 
-Tiles and canonical player characters are outside this architecture. Tiles compile directly from material metadata. Player references compile a deterministic 64×64 portrait-derived full body and encode an exact nearest-neighbor 512×512 canonical PNG; player animations compile eight deterministic 64×64 temporal frames into a 64×512 lossless WebP.
+Tiles and canonical player characters are outside this architecture. Tiles compile directly from material metadata. Registry-wide player fallbacks compile a deterministic 64×64 portrait-derived body and its temporal strips. Approved authored overrides instead compile a tracked transparent reference plus reviewed 4×2 action atlases; both player paths emit the same 512×512 reference and eight-frame 64×512 lossless WebP runtime contract.
 
 ### Resolution Standards
 
@@ -487,8 +568,10 @@ Tiles and canonical player characters are outside this architecture. Tiles compi
 | **Icons** | 1024x1024 | 16, 24, 32, 48, 64, 128 |
 | **Nodes** | 1024x1024 | 48, 64, 96, 128, 256 |
 | **Overlays** | 1024x1024 | 32, 48, 64, 128 |
-| **Canonical Player Reference** | Deterministic 64x64 pixel source | 512x512 lossless RGBA PNG (nearest-neighbor 8x) |
-| **Player Animation** | Canonical full-body reference | 64x512 lossless RGBA WebP (8 temporal frames) |
+| **Canonical Player Reference (fallback)** | Deterministic 64x64 portrait-derived pixel source | 512x512 lossless RGBA PNG (nearest-neighbor 8x) |
+| **Canonical Player Reference (authored)** | Reviewed, tracked, hash-pinned transparent RGBA source | 512x512 lossless RGBA PNG (nearest-neighbor deterministic resize) |
+| **Player Animation (fallback)** | Canonical full-body reference and deterministic transforms | 64x512 lossless RGBA WebP (8 temporal frames) |
+| **Player Animation (authored)** | Reviewed, tracked 4x2 articulated-pose atlas per action | 64x512 lossless RGBA WebP (8 temporal frames) |
 
 ### Size Variant Generation
 
@@ -501,7 +584,7 @@ Size variants are generated by Node.js scripts using ImageMagick Lanczos downsca
 5. Node.js generates all size variants via `generateCanonicalSizeVariants()`
 6. Variants saved to `{category}/{size}/{id}.png`
 
-All legacy size variants in this subsection are clean downscales from their 1024x1024 source. The canonical player-reference compiler is the deliberate exception: it authors at the runtime pixel grid (64×64) and performs an exact nearest-neighbor 8× encode so the 512×512 PNG preserves the authored pixel topology without invented detail.
+All legacy size variants in this subsection are clean downscales from their 1024x1024 source. Player references are deliberate exceptions: the fallback compiler authors at the 64×64 runtime pixel grid and performs an exact nearest-neighbor 8× encode, while the authored compiler nearest-neighbor resizes the accepted hash-pinned RGBA reference directly to 512×512.
 
 Output directory structure:
 ```
