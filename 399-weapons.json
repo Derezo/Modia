@@ -1,0 +1,840 @@
+{
+  "version": "2.0.0",
+  "category": "weapons",
+  "description": "Weapon item sprites - expanded for layered composition system",
+  "size": "128x128",
+  "items": [
+    {
+      "id": "sword_short",
+      "name": "Short Sword",
+      "prompt": "short sword simple blade leather grip compact",
+      "seed": 20001,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:16:47.202Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
+      "loraModel": "v2"
+    },
+    {
+      "id": "sword_long",
+      "name": "Longsword",
+      "prompt": "longsword straight double-edged blade ornate with leather-wrapped grip",
+      "seed": 20002,
+      "generated": true,
+      "generatedAt": "2026-01-28T14:38:23.235Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "sword_great",
+      "name": "Greatsword",
+      "prompt": "greatsword massive two-handed blade wide crossguard heavy pommel",
+      "seed": 20003,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:18:17.640Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
+      "loraModel": "v2"
+    },
+    {
+      "id": "sword_rapier",
+      "name": "Rapier",
+      "prompt": "rapier thin elegant blade ornate swept hilt fencing weapon",
+      "seed": 20004,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:19:04.065Z"
+    },
+    {
+      "id": "sword_katana",
+      "name": "Katana",
+      "prompt": "katana curved single-edge blade wrapped handle tsuba guard",
+      "seed": 20005,
+      "generated": true,
+      "generatedAt": "2026-02-03T09:27:25.875Z",
+      "needsRegeneration": false,
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "loraModel": "retro-pixel",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
+    },
+    {
+      "id": "sword_scimitar",
+      "name": "Scimitar",
+      "prompt": "scimitar curved blade desert style ornate pommel",
+      "seed": 20006,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:20:37.120Z"
+    },
+    {
+      "id": "sword_claymore",
+      "name": "Claymore",
+      "prompt": "claymore scottish greatsword cross hilt quillons two-handed",
+      "seed": 20007,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:21:22.508Z"
+    },
+    {
+      "id": "sword_falchion",
+      "name": "Falchion",
+      "prompt": "falchion single-edge cleaver-like blade broad tip",
+      "seed": 20015,
+      "generated": true,
+      "generatedAt": "2026-02-03T09:28:18.025Z",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
+    },
+    {
+      "id": "axe_hatchet",
+      "name": "Hatchet",
+      "prompt": "hatchet small hand axe compact wooden handle",
+      "seed": 20011,
+      "generated": true,
+      "generatedAt": "2026-01-28T20:20:55.684Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "axe_hand",
+      "name": "Hand Axe",
+      "prompt": "hand axe single-head throwing axe leather grip",
+      "seed": 20012,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:23:38.509Z"
+    },
+    {
+      "id": "axe_battle",
+      "name": "Battle Axe",
+      "prompt": "battle axe crescent blade long handle reinforced",
+      "seed": 20013,
+      "generated": true,
+      "generatedAt": "2026-02-03T09:29:13.911Z",
+      "needsRegeneration": false,
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "loraModel": "retro-pixel",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
+    },
+    {
+      "id": "axe_great",
+      "name": "Great Axe",
+      "prompt": "great axe massive double-crescent blade two-handed brutal",
+      "seed": 20014,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:25:09.280Z"
+    },
+    {
+      "id": "axe_double",
+      "name": "Double Axe",
+      "prompt": "large heavy axe with double edged blades and ornate handle",
+      "seed": 20015,
+      "generated": true,
+      "generatedAt": "2026-01-28T20:40:20.525Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "axe_war",
+      "name": "War Axe",
+      "prompt": "war axe heavy single-blade spike back reinforced",
+      "seed": 20016,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:26:40.230Z"
+    },
+    {
+      "id": "mace_club",
+      "name": "Club",
+      "prompt": "wooden club simple cudgel thick head bound leather",
+      "seed": 20021,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:27:25.606Z"
+    },
+    {
+      "id": "mace_basic",
+      "name": "Mace",
+      "prompt": "mace flanged head short handle crushing weapon",
+      "seed": 20022,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:28:10.974Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "mace_morningstar",
+      "name": "Morningstar",
+      "prompt": "morningstar spiked ball chain attached, dark and ominous",
+      "seed": 20023,
+      "generated": true,
+      "generatedAt": "2026-01-28T20:15:16.453Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
+      "loraModel": null
+    },
+    {
+      "id": "mace_flail",
+      "name": "Flail",
+      "prompt": "flail spiked ball chain swing handle reinforced",
+      "seed": 20024,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:29:42.697Z"
+    },
+    {
+      "id": "mace_warhammer",
+      "name": "Warhammer",
+      "prompt": "warhammer heavy hammer head spike back crushing",
+      "seed": 20025,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:30:27.947Z"
+    },
+    {
+      "id": "mace_maul",
+      "name": "Maul",
+      "prompt": "maul massive two-handed hammer",
+      "seed": 20026,
+      "generated": true,
+      "generatedAt": "2026-01-28T20:40:20.526Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "polearm_spear",
+      "name": "Spear",
+      "prompt": "spear long shaft iron tip simple throwing thrusting",
+      "seed": 20031,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:31:59.736Z"
+    },
+    {
+      "id": "polearm_pike",
+      "name": "Pike",
+      "prompt": "pike very long shaft narrow blade formation weapon",
+      "seed": 20032,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:32:45.233Z"
+    },
+    {
+      "id": "polearm_halberd",
+      "name": "Halberd",
+      "prompt": "halberd axe blade spike hook combination polearm",
+      "seed": 20033,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:33:30.718Z"
+    },
+    {
+      "id": "polearm_glaive",
+      "name": "Glaive",
+      "prompt": "glaive single-edge curved blade long pole elegant",
+      "seed": 20034,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:34:16.283Z"
+    },
+    {
+      "id": "polearm_lance",
+      "name": "Lance",
+      "prompt": "lance jousting weapon long conical tip mounted combat",
+      "seed": 20035,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:35:02.461Z"
+    },
+    {
+      "id": "polearm_trident",
+      "name": "Trident",
+      "prompt": "trident three-pronged spear fishing weapon ornate",
+      "seed": 20036,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:35:48.020Z"
+    },
+    {
+      "id": "staff_quarter",
+      "name": "Quarterstaff",
+      "prompt": "quarterstaff wooden pole simple monk weapon balanced",
+      "seed": 20041,
+      "generated": true,
+      "generatedAt": "2026-01-28T20:20:55.684Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "staff_magic",
+      "name": "Magic Staff",
+      "prompt": "magic staff gnarled wood crystal tip glowing runes",
+      "seed": 20042,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:37:19.943Z"
+    },
+    {
+      "id": "staff_battle",
+      "name": "Battle Staff",
+      "prompt": "battle staff reinforced metal spiked ends combat focused",
+      "seed": 20043,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:09:17.887Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
+      "loraModel": "v2"
+    },
+    {
+      "id": "staff_arcane",
+      "name": "Arcane Staff",
+      "prompt": "arcane staff floating orb intricate carvings mystical",
+      "seed": 20044,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:38:51.771Z"
+    },
+    {
+      "id": "staff_grand",
+      "name": "Grand Staff",
+      "prompt": "grand staff tall ornate crystal head elaborate design",
+      "seed": 20045,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:39:38.221Z"
+    },
+    {
+      "id": "staff_elder",
+      "name": "Elder Staff",
+      "prompt": "elder staff, ancient, gnarled with crystal top, powerful",
+      "seed": 20046,
+      "generated": true,
+      "generatedAt": "2026-01-28T20:40:20.526Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "wand_basic",
+      "name": "Wand",
+      "prompt": "wand thin wooden magical focus simple crystal tip",
+      "seed": 20051,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:41:08.983Z"
+    },
+    {
+      "id": "wand_scepter",
+      "name": "Scepter",
+      "prompt": "scepter ornate royal magical wand jeweled head",
+      "seed": 20052,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:41:54.408Z"
+    },
+    {
+      "id": "wand_focus",
+      "name": "Arcane Focus",
+      "prompt": "arcane focus crystal cylinder channeling device runes",
+      "seed": 20053,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:42:41.094Z"
+    },
+    {
+      "id": "orb_crystal",
+      "name": "Crystal Orb",
+      "prompt": "crystal orb floating sphere magical swirling energy",
+      "seed": 20054,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:43:27.569Z"
+    },
+    {
+      "id": "tome_magic",
+      "name": "Magic Tome",
+      "prompt": "magic tome floating book glowing pages ancient",
+      "seed": 20055,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:44:12.936Z"
+    },
+    {
+      "id": "relic_ancient",
+      "name": "Ancient Relic",
+      "prompt": "ancient relic mysterious artifact floating symbols power",
+      "seed": 20056,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:44:59.505Z"
+    },
+    {
+      "id": "fist_wraps",
+      "name": "Hand Wraps",
+      "prompt": "hand wraps cloth binding martial arts simple",
+      "seed": 20061,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:45:45.088Z"
+    },
+    {
+      "id": "fist_knuckles",
+      "name": "Brass Knuckles",
+      "prompt": "brass knuckles metal fist weapon spiked compact",
+      "seed": 20062,
+      "generated": true,
+      "generatedAt": "2026-01-28T20:30:50.336Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "fist_claws",
+      "name": "Combat Claws",
+      "prompt": "combat claws triple blade gauntlet slashing weapon",
+      "seed": 20063,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:47:18.070Z"
+    },
+    {
+      "id": "fist_cestus",
+      "name": "Cestus",
+      "prompt": "cestus armored fighting glove studded leather",
+      "seed": 20064,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:48:04.770Z"
+    },
+    {
+      "id": "fist_katar",
+      "name": "Katar",
+      "prompt": "katar push dagger h-shaped handle thrusting blade",
+      "seed": 20065,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:48:50.240Z"
+    },
+    {
+      "id": "fist_tekko",
+      "name": "Tekko",
+      "prompt": "tekko knuckle duster traditional curved metal",
+      "seed": 20066,
+      "generated": true,
+      "generatedAt": "2026-01-28T20:20:55.684Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "fist_tiger",
+      "name": "Tiger Claws",
+      "prompt": "tiger claws curved blades finger rings slashing",
+      "seed": 20067,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:50:22.178Z"
+    },
+    {
+      "id": "dagger_knife",
+      "name": "Knife",
+      "prompt": "knife simple blade utility weapon compact",
+      "seed": 20071,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:51:07.415Z"
+    },
+    {
+      "id": "dagger_basic",
+      "name": "Dagger",
+      "prompt": "dagger double-edge short blade assassin weapon",
+      "seed": 20072,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:51:51.689Z"
+    },
+    {
+      "id": "dagger_stiletto",
+      "name": "Stiletto",
+      "prompt": "stiletto thin needle-like blade piercing elegant",
+      "seed": 20073,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:52:36.153Z"
+    },
+    {
+      "id": "dagger_kris",
+      "name": "Kris",
+      "prompt": "kris wavy blade asymmetric ornate cultural",
+      "seed": 20074,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:53:20.758Z"
+    },
+    {
+      "id": "dagger_dirk",
+      "name": "Dirk",
+      "prompt": "dirk long dagger thrusting blade simple guard",
+      "seed": 20075,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:54:06.035Z"
+    },
+    {
+      "id": "dagger_parrying",
+      "name": "Parrying Dagger",
+      "prompt": "parrying dagger defensive blade wide guard trapping",
+      "seed": 20076,
+      "generated": true,
+      "generatedAt": "2026-01-28T20:30:50.336Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "dagger_throwing",
+      "name": "Throwing Knives",
+      "prompt": "throwing knives set balanced blades sharp tips",
+      "seed": 20077,
+      "generated": true,
+      "generatedAt": "2026-01-28T20:12:03.538Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "ranged_crossbow_hand",
+      "name": "Hand Crossbow",
+      "prompt": "hand crossbow compact one-handed mechanical",
+      "seed": 20081,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:56:19.853Z"
+    },
+    {
+      "id": "ranged_crossbow_light",
+      "name": "Light Crossbow",
+      "prompt": "light crossbow two-handed wooden ",
+      "seed": 20082,
+      "generated": true,
+      "generatedAt": "2026-01-28T20:12:44.521Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "ranged_crossbow_heavy",
+      "name": "Heavy Crossbow",
+      "prompt": "heavy crossbow powerful reinforced stock winch",
+      "seed": 20083,
+      "generated": true,
+      "generatedAt": "2026-01-28T20:22:02.897Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
+      "loraModel": null
+    },
+    {
+      "id": "ranged_crossbow_repeater",
+      "name": "Repeating Crossbow",
+      "prompt": "repeating crossbow magazine fed rapid fire mechanical",
+      "seed": 20084,
+      "generated": true,
+      "generatedAt": "2026-01-28T20:20:55.684Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "ranged_arbalest",
+      "name": "Arbalest",
+      "prompt": "arbalest siege crossbow massive steel prod devastating",
+      "seed": 20085,
+      "generated": true,
+      "generatedAt": "2026-01-28T20:13:46.583Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "bow_short",
+      "name": "Short Bow",
+      "prompt": "short bow compact recurve wooden simple hunting",
+      "seed": 20091,
+      "generated": true,
+      "generatedAt": "2026-01-28T20:30:50.337Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "bow_long",
+      "name": "Longbow",
+      "prompt": "longbow tall elegant carved wood precision arrows",
+      "seed": 20092,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:00:46.453Z"
+    },
+    {
+      "id": "bow_composite",
+      "name": "Composite Bow",
+      "prompt": "composite bow layered horn wood sinew powerful compact",
+      "seed": 20093,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:01:30.732Z"
+    },
+    {
+      "id": "bow_great",
+      "name": "Great Bow",
+      "prompt": "great bow massive war bow steel-tipped deadly range",
+      "seed": 20094,
+      "generated": true,
+      "generatedAt": "2026-02-03T09:30:49.339Z",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
+    },
+    {
+      "id": "bow_elven",
+      "name": "Fey Bow",
+      "prompt": "elegant fey longbow of pale wood and living green wind",
+      "seed": 24032,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/weapons/bow_composite.webp",
+        "composition": {
+          "primaryScale": 0.9,
+          "modulate": {
+            "hue": 122,
+            "saturation": 1.25,
+            "brightness": 1.04
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/weapons/bow_elven.webp",
+        "64": "/assets/items/64/weapons/bow_elven.webp",
+        "128": "/assets/items/128/weapons/bow_elven.webp",
+        "original": "/assets/items/originals/weapons/bow_elven.webp"
+      }
+    },
+    {
+      "id": "fist_nomad",
+      "name": "Nomad's Wraps",
+      "prompt": "sand-colored nomad hand wraps marked for a long journey",
+      "seed": 24033,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/weapons/fist_wraps.webp",
+        "composition": {
+          "primaryScale": 0.88,
+          "colorize": "#b68a58"
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/weapons/fist_nomad.webp",
+        "64": "/assets/items/64/weapons/fist_nomad.webp",
+        "128": "/assets/items/128/weapons/fist_nomad.webp",
+        "original": "/assets/items/originals/weapons/fist_nomad.webp"
+      }
+    },
+    {
+      "id": "mace_war",
+      "name": "Ironforge Hammer",
+      "prompt": "heavy dwarven ironforge war hammer with earthen rune",
+      "seed": 24034,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/weapons/mace_warhammer.webp",
+        "composition": {
+          "primaryScale": 0.9,
+          "modulate": {
+            "hue": 22,
+            "saturation": 0.82,
+            "brightness": 0.92
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/weapons/mace_war.webp",
+        "64": "/assets/items/64/weapons/mace_war.webp",
+        "128": "/assets/items/128/weapons/mace_war.webp",
+        "original": "/assets/items/originals/weapons/mace_war.webp"
+      }
+    },
+    {
+      "id": "shield_tower",
+      "name": "Stonekin Shield",
+      "prompt": "tower shield carved from living slate with an earth core",
+      "seed": 24035,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/armor/shield_tower.webp",
+        "composition": {
+          "primaryScale": 0.88,
+          "colorize": "#777d86",
+          "accent": {
+            "sourceAsset": "overlays/originals/augments/augment_earth.webp",
+            "scale": 0.3,
+            "gravity": "center",
+            "colorize": "#9b7651"
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/weapons/shield_tower.webp",
+        "64": "/assets/items/64/weapons/shield_tower.webp",
+        "128": "/assets/items/128/weapons/shield_tower.webp",
+        "original": "/assets/items/originals/weapons/shield_tower.webp"
+      }
+    },
+    {
+      "id": "staff_wanderer",
+      "name": "Wanderer's Staff",
+      "prompt": "weathered wanderer staff with a brass waypoint charm",
+      "seed": 24036,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/weapons/staff_battle.webp",
+        "composition": {
+          "primaryScale": 0.89,
+          "colorize": "#806342"
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/weapons/staff_wanderer.webp",
+        "64": "/assets/items/64/weapons/staff_wanderer.webp",
+        "128": "/assets/items/128/weapons/staff_wanderer.webp",
+        "original": "/assets/items/originals/weapons/staff_wanderer.webp"
+      }
+    },
+    {
+      "id": "sword_travelers",
+      "name": "Traveler's Blade",
+      "prompt": "balanced traveler's sword with a weathered bronze road charm",
+      "seed": 24037,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/weapons/sword_long.webp",
+        "composition": {
+          "primaryScale": 0.9,
+          "modulate": {
+            "hue": 32,
+            "saturation": 0.9,
+            "brightness": 0.92
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/weapons/sword_travelers.webp",
+        "64": "/assets/items/64/weapons/sword_travelers.webp",
+        "128": "/assets/items/128/weapons/sword_travelers.webp",
+        "original": "/assets/items/originals/weapons/sword_travelers.webp"
+      }
+    }
+  ]
+}

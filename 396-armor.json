@@ -1,0 +1,498 @@
+{
+  "version": "2.0.0",
+  "category": "armor",
+  "description": "Armor and equipment item sprites - expanded for layered composition system",
+  "size": "128x128",
+  "items": [
+    {
+      "id": "armor_plate",
+      "name": "Plate Armor",
+      "prompt": "plate armor breastplate polished steel knight heavy",
+      "seed": 21001,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:02:59.339Z"
+    },
+    {
+      "id": "armor_chain",
+      "name": "Chain Mail",
+      "prompt": "chain mail armor interlocking rings flexible silver",
+      "seed": 21002,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:03:43.681Z"
+    },
+    {
+      "id": "armor_scale",
+      "name": "Scale Mail",
+      "prompt": "scale mail overlapping metal scales dragon-like",
+      "seed": 21003,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:04:29.218Z"
+    },
+    {
+      "id": "armor_half_plate",
+      "name": "Half Plate",
+      "prompt": "half plate partial coverage mobile steel plates",
+      "seed": 21004,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:05:13.608Z"
+    },
+    {
+      "id": "armor_full_plate",
+      "name": "Full Plate",
+      "prompt": "full plate complete coverage tournament heavy ornate",
+      "seed": 21005,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:05:58.001Z"
+    },
+    {
+      "id": "armor_leather",
+      "name": "Leather Armor",
+      "prompt": "leather armor vest stitched brown rugged",
+      "seed": 21011,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:06:46.615Z"
+    },
+    {
+      "id": "armor_studded",
+      "name": "Studded Leather",
+      "prompt": "studded leather armor metal rivets reinforced",
+      "seed": 21012,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:07:37.695Z"
+    },
+    {
+      "id": "armor_brigandine",
+      "name": "Brigandine",
+      "prompt": "brigandine coat metal plates fabric covered",
+      "seed": 21013,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:08:29.411Z"
+    },
+    {
+      "id": "armor_hide",
+      "name": "Hide Armor",
+      "prompt": "hide armor thick animal skin fur trim tribal",
+      "seed": 21014,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:10:01.366Z"
+    },
+    {
+      "id": "armor_chain_shirt",
+      "name": "Chain Shirt",
+      "prompt": "chain shirt lightweight mail undershirt flexible",
+      "seed": 21015,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:10:50.669Z"
+    },
+    {
+      "id": "robe_cloth",
+      "name": "Cloth Robe",
+      "prompt": "cloth robe simple humble brown",
+      "seed": 21021,
+      "generated": true,
+      "generatedAt": "2026-01-28T20:36:44.006Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "robe_padded",
+      "name": "Padded Robe",
+      "prompt": "padded robe quilted fabric layered soft armor",
+      "seed": 21022,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:12:29.402Z"
+    },
+    {
+      "id": "robe_mage",
+      "name": "Mage Robe",
+      "prompt": "mage robe flowing fabric mystical symbols elegant",
+      "seed": 21023,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:13:18.399Z"
+    },
+    {
+      "id": "robe_battle",
+      "name": "Battle Robe",
+      "prompt": "battle robe reinforced fabric combat-ready practical",
+      "seed": 21024,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:14:08.649Z"
+    },
+    {
+      "id": "robe_vestments",
+      "name": "Holy Vestments",
+      "prompt": "holy vestments priest robe sacred symbols divine",
+      "seed": 21025,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:14:59.424Z"
+    },
+    {
+      "id": "shield_buckler",
+      "name": "Buckler",
+      "prompt": "buckler small round shield fist grip compact",
+      "seed": 21031,
+      "generated": true,
+      "generatedAt": "2026-01-28T20:34:10.313Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "shield_round",
+      "name": "Round Shield",
+      "prompt": "round shield wooden iron boss viking style",
+      "seed": 21032,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:16:39.421Z"
+    },
+    {
+      "id": "shield_kite",
+      "name": "Kite Shield",
+      "prompt": "kite shield pointed bottom heraldic knight mounted",
+      "seed": 21033,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:17:29.702Z"
+    },
+    {
+      "id": "shield_tower",
+      "name": "Tower Shield",
+      "prompt": "tower shield massive rectangular full body coverage",
+      "seed": 21034,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:18:19.733Z"
+    },
+    {
+      "id": "shield_pavise",
+      "name": "Pavise",
+      "prompt": "pavise large standing shield crossbowman cover",
+      "seed": 21035,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:19:10.843Z"
+    },
+    {
+      "id": "helm_leather",
+      "name": "Leather Cap",
+      "prompt": "leather cap simple head protection soft flexible",
+      "seed": 21041,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:20:01.818Z"
+    },
+    {
+      "id": "helm_chain_coif",
+      "name": "Chain Coif",
+      "prompt": "chain coif mail hood head neck protection",
+      "seed": 21042,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:20:52.864Z"
+    },
+    {
+      "id": "helm_iron",
+      "name": "Iron Helm",
+      "prompt": "iron helmet simple nasal guard basic protection",
+      "seed": 21043,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:21:42.849Z"
+    },
+    {
+      "id": "helm_great",
+      "name": "Great Helm",
+      "prompt": "great helm bucket helmet full face tournament",
+      "seed": 21044,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:22:33.084Z"
+    },
+    {
+      "id": "helm_crown",
+      "name": "Battle Crown",
+      "prompt": "battle crown royal circlet protective ornate regal",
+      "seed": 21045,
+      "generated": true,
+      "generatedAt": "2026-01-28T20:34:10.313Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "helm_wizard_hat",
+      "name": "Wizard Hat",
+      "prompt": "wizard hat pointed brim stars moons magical",
+      "seed": 21046,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:24:13.495Z"
+    },
+    {
+      "id": "helm_hood",
+      "name": "Combat Hood",
+      "prompt": "combat hood cloth head cover assassin stealth",
+      "seed": 21047,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:25:03.717Z"
+    },
+    {
+      "id": "boots_sandals",
+      "name": "Sandals",
+      "prompt": "sandals simple straps monk traveler comfortable",
+      "seed": 21051,
+      "generated": true,
+      "generatedAt": "2026-02-03T09:32:23.947Z",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
+    },
+    {
+      "id": "boots_leather",
+      "name": "Leather Boots",
+      "prompt": "leather boots traveling worn sturdy comfortable",
+      "seed": 21052,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:26:45.835Z"
+    },
+    {
+      "id": "boots_iron_greaves",
+      "name": "Iron Greaves",
+      "prompt": "iron greaves leg armor plated heavy protective",
+      "seed": 21053,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:27:37.189Z"
+    },
+    {
+      "id": "boots_speed",
+      "name": "Swift Boots",
+      "prompt": "swift boots lightweight winged design agile",
+      "seed": 21054,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:28:27.433Z"
+    },
+    {
+      "id": "boots_mage",
+      "name": "Mage Slippers",
+      "prompt": "mage slippers cloth enchanted runic symbols",
+      "seed": 21055,
+      "generated": true,
+      "generatedAt": "2026-02-03T09:33:59.229Z",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
+    },
+    {
+      "id": "boots_war",
+      "name": "War Boots",
+      "prompt": "war boots heavy plated armored combat spiked",
+      "seed": 21056,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:30:09.870Z"
+    },
+    {
+      "id": "armor_caravan",
+      "name": "Caravan Guard Armor",
+      "prompt": "rugged caravan guard brigandine in leather and brass",
+      "seed": 24004,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/armor/armor_brigandine.webp",
+        "composition": {
+          "primaryScale": 0.9,
+          "colorize": "#8f673f"
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/armor/armor_caravan.webp",
+        "64": "/assets/items/64/armor/armor_caravan.webp",
+        "128": "/assets/items/128/armor/armor_caravan.webp",
+        "original": "/assets/items/originals/armor/armor_caravan.webp"
+      }
+    },
+    {
+      "id": "armor_nightstalker",
+      "name": "Nightstalker Cloak",
+      "prompt": "deep violet nightstalker cloak with shadow-wrapped hem",
+      "seed": 24005,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/accessories/cloak_shadow.webp",
+        "composition": {
+          "primaryScale": 0.91,
+          "modulate": {
+            "hue": 270,
+            "saturation": 1.3,
+            "brightness": 0.82
+          },
+          "accent": {
+            "sourceAsset": "icons/originals/actions/stealth.webp",
+            "scale": 0.23,
+            "gravity": "southeast",
+            "modulate": {
+              "hue": 275,
+              "saturation": 1.2,
+              "brightness": 1.1
+            }
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/armor/armor_nightstalker.webp",
+        "64": "/assets/items/64/armor/armor_nightstalker.webp",
+        "128": "/assets/items/128/armor/armor_nightstalker.webp",
+        "original": "/assets/items/originals/armor/armor_nightstalker.webp"
+      }
+    },
+    {
+      "id": "boots_pathfinder",
+      "name": "Pathfinder Boots",
+      "prompt": "weathered green-brown pathfinder boots marked for long roads",
+      "seed": 24006,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/armor/boots_leather.webp",
+        "composition": {
+          "primaryScale": 0.87,
+          "colorize": "#69764b"
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/armor/boots_pathfinder.webp",
+        "64": "/assets/items/64/armor/boots_pathfinder.webp",
+        "128": "/assets/items/128/armor/boots_pathfinder.webp",
+        "original": "/assets/items/originals/armor/boots_pathfinder.webp"
+      }
+    },
+    {
+      "id": "gloves_deepforge",
+      "name": "Deepforge Gauntlets",
+      "prompt": "dwarven deepforge gauntlets of dark steel and copper",
+      "seed": 24007,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/accessories/gauntlets_steel.webp",
+        "composition": {
+          "primaryScale": 0.9,
+          "modulate": {
+            "hue": 28,
+            "saturation": 1.15,
+            "brightness": 0.88
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/armor/gloves_deepforge.webp",
+        "64": "/assets/items/64/armor/gloves_deepforge.webp",
+        "128": "/assets/items/128/armor/gloves_deepforge.webp",
+        "original": "/assets/items/originals/armor/gloves_deepforge.webp"
+      }
+    },
+    {
+      "id": "helm_cowl",
+      "name": "Merchant's Cowl",
+      "prompt": "practical merchant cowl in warm travel-worn cloth",
+      "seed": 24008,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/armor/helm_hood.webp",
+        "composition": {
+          "primaryScale": 0.88,
+          "colorize": "#8f704e",
+          "accent": {
+            "sourceAsset": "icons/originals/resources/gold.webp",
+            "scale": 0.23,
+            "gravity": "southeast",
+            "modulate": {
+              "saturation": 1.15,
+              "brightness": 1.08
+            }
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/armor/helm_cowl.webp",
+        "64": "/assets/items/64/armor/helm_cowl.webp",
+        "128": "/assets/items/128/armor/helm_cowl.webp",
+        "original": "/assets/items/originals/armor/helm_cowl.webp"
+      }
+    },
+    {
+      "id": "helm_crown_guard",
+      "name": "Crown Guard's Helm",
+      "prompt": "polished crown guard great helm with royal gold crest",
+      "seed": 24009,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/armor/helm_great.webp",
+        "composition": {
+          "primaryScale": 0.88,
+          "modulate": {
+            "hue": 18,
+            "saturation": 0.9,
+            "brightness": 1.05
+          },
+          "accent": {
+            "sourceAsset": "items/originals/armor/helm_crown.webp",
+            "scale": 0.3,
+            "gravity": "north",
+            "colorize": "#d7ae45"
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/armor/helm_crown_guard.webp",
+        "64": "/assets/items/64/armor/helm_crown_guard.webp",
+        "128": "/assets/items/128/armor/helm_crown_guard.webp",
+        "original": "/assets/items/originals/armor/helm_crown_guard.webp"
+      }
+    }
+  ]
+}

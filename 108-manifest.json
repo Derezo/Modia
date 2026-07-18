@@ -1,0 +1,90 @@
+{
+  "name": "Battle Map Tiles",
+  "negativePrompt": "square footprint, circular footprint, rounded corners, perspective camera, raised border, freestanding object, decoration outside footprint, white background, opaque corners, drop shadow",
+  "version": "3.0.0",
+  "description": "Canonical deterministic retina tile system with one shared 2:1 geometry contract for tactical battle maps",
+  "assetCount": 281,
+  "categoryCounts": {
+    "floors": 188,
+    "walls": 53,
+    "slopes": 40
+  },
+  "categories": ["floors", "walls", "slopes"],
+  "biomes": ["forest", "cave", "mountain", "bridge", "castle"],
+  "stylePrefix": "isometric floor material, exact 2:1 diamond footprint, flat horizontal surface, restrained hand-painted texture, edge-safe palette, transparent canvas, no outer outline",
+  "wallStylePrefix": "seamless vertical material strip, restrained hand-painted texture, tileable horizontally and vertically, transparent-capable canvas, no outer outline",
+  "slopeStylePrefix": "isometric directional ramp, exact 2:1 diamond footprint, readable contour bands, restrained hand-painted texture, transparent canvas, no outer outline",
+  "outputPath": "frontend/public/assets/sprites/terrain",
+  "geometry": {
+    "profile": "iso64-retina-v3",
+    "projection": "2:1-diamond",
+    "anchor": "center",
+    "format": "webp",
+    "encoding": "lossless",
+    "alpha": {
+      "diamond": "straight-antialiased",
+      "wall": "opaque"
+    },
+    "edgePolicy": "shared-terrain-boundary",
+    "sourceScale": 2,
+    "logical": {
+      "width": 64,
+      "height": 64,
+      "footprintWidth": 64,
+      "footprintHeight": 32
+    },
+    "sources": {
+      "floor": {
+        "width": 128,
+        "height": 128,
+        "footprintWidth": 128,
+        "footprintHeight": 64
+      },
+      "wall": {
+        "width": 128,
+        "height": 32
+      },
+      "slope": {
+        "width": 128,
+        "height": 128,
+        "footprintWidth": 128,
+        "footprintHeight": 64
+      }
+    }
+  },
+  "dimensions": {
+    "floor": { "width": 128, "height": 128 },
+    "wall": { "width": 128, "height": 32 },
+    "slope": { "width": 128, "height": 128 }
+  },
+  "biomeColors": {
+    "forest": { "primary": "#6B8E4A", "secondary": "#8B7355", "accent": "#4A6B2A" },
+    "cave": { "primary": "#696969", "secondary": "#4682B4", "accent": "#2F4F4F" },
+    "mountain": { "primary": "#8B8682", "secondary": "#A0A0A0", "accent": "#708090" },
+    "bridge": { "primary": "#8B7355", "secondary": "#A0522D", "accent": "#D2B48C" },
+    "castle": { "primary": "#708090", "secondary": "#696969", "accent": "#2F4F4F" }
+  },
+  "categoryFiles": {
+    "floors": {
+      "forest": "floors/forest.json",
+      "cave": "floors/cave.json",
+      "mountain": "floors/mountain.json",
+      "bridge": "floors/bridge.json",
+      "castle": "floors/castle.json"
+    },
+    "walls": {
+      "forest": "walls/forest.json",
+      "cave": "walls/cave.json",
+      "mountain": "walls/mountain.json",
+      "bridge": "walls/bridge.json",
+      "castle": "walls/castle.json"
+    },
+    "slopes": {
+      "forest": "slopes/forest.json",
+      "cave": "slopes/cave.json",
+      "mountain": "slopes/mountain.json",
+      "bridge": "slopes/bridge.json",
+      "castle": "slopes/castle.json"
+    }
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "version": "2.0.0",
+  "category": "items",
+  "description": "Item sprites for layered composition system - base sprites combined with overlays at runtime",
+  "totalAssets": 170,
+  "outputDir": "/assets/items/",
+  "size": "128x128",
+  "format": "webp",
+  "loraModel": "V2",
+  "trigger": "wbgmsst",
+  "categories": [
+    "weapons",
+    "armor",
+    "accessories",
+    "consumables"
+  ],
+  "categoryFiles": {
+    "weapons": "weapons.json",
+    "armor": "armor.json",
+    "accessories": "accessories.json",
+    "consumables": "consumables.json"
+  },
+  "layeredComposition": {
+    "enabled": true,
+    "description": "Base sprites have no rarity glow - overlays are composited at runtime",
+    "baseAssets": {
+      "weapons": 67,
+      "armor": 39,
+      "accessories": 23,
+      "consumables": 41
+    },
+    "overlayDirectory": "../overlays/",
+    "rarityOverlays": [
+      "uncommon",
+      "rare",
+      "epic",
+      "legendary"
+    ],
+    "augmentOverlays": [
+      "fire",
+      "ice",
+      "lightning",
+      "poison",
+      "holy",
+      "dark",
+      "critical",
+      "lifesteal",
+      "speed",
+      "pierce",
+      "stun",
+      "chain",
+      "earth",
+      "wind"
+    ]
+  },
+  "runtimeDerivations": "runtime-derivations.json"
+}

@@ -1,0 +1,165 @@
+{
+  "version": "1.0.0",
+  "category": "accessories",
+  "description": "Accessory item sprites - rings, amulets, cloaks for layered composition",
+  "size": "128x128",
+  "items": [
+    {
+      "id": "ring_iron",
+      "name": "Iron Ring",
+      "prompt": "ornate iron ring plain dull metal",
+      "seed": 23001,
+      "generated": true,
+      "generatedAt": "2026-01-28T20:24:29.955Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "ring_gem",
+      "name": "Gemstone Ring",
+      "prompt": "gemstone ring jeweled setting sparkling faceted",
+      "seed": 23004,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:33:33.151Z"
+    },
+    {
+      "id": "amulet_bone",
+      "name": "Bone Amulet",
+      "prompt": "bone amulet carved pendant tribal primitive",
+      "seed": 23011,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:35:14.314Z"
+    },
+    {
+      "id": "amulet_silver",
+      "name": "Silver Amulet",
+      "prompt": "silver amulet chain pendant ornate mystical",
+      "seed": 23012,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:36:05.472Z"
+    },
+    {
+      "id": "amulet_crystal",
+      "name": "Crystal Amulet",
+      "prompt": "crystal amulet glowing gem pendant magical",
+      "seed": 23013,
+      "generated": true,
+      "generatedAt": "2026-01-26T15:36:55.509Z"
+    },
+    {
+      "id": "belt_pouch",
+      "name": "Utility Belt",
+      "prompt": "utility belt multiple pouches adventurer gear",
+      "seed": 23033,
+      "generated": true,
+      "generatedAt": "2026-01-27T17:32:29.137Z",
+      "needsRegeneration": false
+    },
+    {
+      "id": "amulet_dreamcatcher",
+      "name": "Elven Dream Catcher",
+      "prompt": "woven elven dream catcher pendant with moonlit crystal focus",
+      "seed": 24001,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/accessories/amulet_bone.webp",
+        "composition": {
+          "primaryScale": 0.86,
+          "modulate": {
+            "hue": 155,
+            "saturation": 1.18,
+            "brightness": 1.02
+          },
+          "accent": {
+            "sourceAsset": "items/originals/accessories/amulet_crystal.webp",
+            "scale": 0.27,
+            "gravity": "center",
+            "modulate": {
+              "hue": 170,
+              "saturation": 1.3,
+              "brightness": 1.08
+            }
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/accessories/amulet_dreamcatcher.webp",
+        "64": "/assets/items/64/accessories/amulet_dreamcatcher.webp",
+        "128": "/assets/items/128/accessories/amulet_dreamcatcher.webp",
+        "original": "/assets/items/originals/accessories/amulet_dreamcatcher.webp"
+      }
+    },
+    {
+      "id": "amulet_trophy",
+      "name": "Trophy Necklace",
+      "prompt": "weathered hunter trophy necklace with bronze war token",
+      "seed": 24002,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/accessories/amulet_bone.webp",
+        "composition": {
+          "primaryScale": 0.86,
+          "colorize": "#c48a43",
+          "accent": {
+            "sourceAsset": "items/originals/weapons/axe_battle.webp",
+            "scale": 0.22,
+            "gravity": "southeast",
+            "colorize": "#8f5a2a"
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/accessories/amulet_trophy.webp",
+        "64": "/assets/items/64/accessories/amulet_trophy.webp",
+        "128": "/assets/items/128/accessories/amulet_trophy.webp",
+        "original": "/assets/items/originals/accessories/amulet_trophy.webp"
+      }
+    },
+    {
+      "id": "emblem_palace",
+      "name": "Palace Emblem",
+      "prompt": "golden palace service emblem bearing a royal crown",
+      "seed": 24003,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/accessories/amulet_holy.webp",
+        "composition": {
+          "primaryScale": 0.84,
+          "colorize": "#d6a93b",
+          "accent": {
+            "sourceAsset": "items/originals/armor/helm_crown.webp",
+            "scale": 0.3,
+            "gravity": "center",
+            "colorize": "#f0c85b"
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/accessories/emblem_palace.webp",
+        "64": "/assets/items/64/accessories/emblem_palace.webp",
+        "128": "/assets/items/128/accessories/emblem_palace.webp",
+        "original": "/assets/items/originals/accessories/emblem_palace.webp"
+      }
+    }
+  ]
+}

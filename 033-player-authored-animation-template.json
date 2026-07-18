@@ -1,0 +1,90 @@
+{
+  "version": "1.1.0",
+  "id": "authored-pose-atlas-v1",
+  "description": "Metadata-driven template for imagegen-quality player references and genuinely articulated animation pose atlases.",
+  "compiler": {
+    "version": "1.2.0",
+    "entrypoint": "scripts/ai-images/compile-authored-player-animations.js"
+  },
+  "reproducibility": {
+    "generation": "The exact identity metadata, prompt, identity image, style image, chroma source, accepted RGBA source, and hashes are retained. Built-in image generation is intentionally treated as nondeterministic candidate creation.",
+    "compilation": "Accepted RGBA sources compile byte-deterministically into the existing 64x512 runtime strips. --check recomputes every accepted source, original chroma source, identity/style input, prompt, pose, frame, and output pin.",
+    "promotion": "One explicit identity is generated, reviewed, hash-pinned, and compiled at a time. There is no implicit bulk promotion path."
+  },
+  "generator": {
+    "mode": "openai-built-in-imagegen",
+    "useCase": "identity-preserve",
+    "sourceAtlasLayout": {
+      "columns": 4,
+      "rows": 2,
+      "frameOrder": "top row left-to-right, then bottom row left-to-right",
+      "background": "flat #00ff00 chroma key",
+      "minimumComponentPixels": 12,
+      "minimumSubjectPixels": 64,
+      "minimumDominantRatio": 0.35
+    },
+    "backgroundRemoval": {
+      "helper": "$CODEX_HOME/skills/.system/imagegen/scripts/remove_chroma_key.py",
+      "autoKey": "border",
+      "softMatte": true,
+      "transparentThreshold": 12,
+      "opaqueThreshold": 220,
+      "despill": true
+    }
+  },
+  "promptContract": {
+    "identityAuthority": "The identity portrait controls face, race, gender presentation, hair, eyes, palette, costume cues, and equipment design.",
+    "styleAuthority": "The approved full-body reference controls pixel density, outline language, compact tactical silhouette, lighting, and material rendering only.",
+    "poseRequirement": "Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation.",
+    "layoutRequirement": "Exactly eight isolated complete character poses at consistent scale, one per invisible grid cell, with no overlap and generous chroma-key gutters.",
+    "invariants": [
+      "one character identity in every frame",
+      "one and only one copy of each declared equipment item",
+      "complete head-to-toe anatomy",
+      "consistent costume, palette, proportions, and pixel density",
+      "no labels, text, watermark, scenery, floor, cast shadow, or grid borders"
+    ]
+  },
+  "runtimeContract": {
+    "reference": {
+      "width": 512,
+      "height": 512,
+      "format": "lossless RGBA PNG",
+      "resampling": "nearest-neighbor"
+    },
+    "animation": {
+      "frameWidth": 64,
+      "frameHeight": 64,
+      "frameCount": 8,
+      "sheetWidth": 64,
+      "sheetHeight": 512,
+      "layout": "vertical-strip",
+      "format": "lossless RGBA WebP",
+      "minimumTransparentMargin": 4,
+      "sequenceScalePolicy": "one uniform scale per animation",
+      "sequenceAnchorPolicy": "Preserve source-cell-relative root travel by default. Profiles may bottom-ground the vertical axis for contact actions such as death while retaining authored horizontal travel.",
+      "idleFrameDurationMs": 2000,
+      "baseFacing": "right",
+      "directionPolicy": "mirror for west-facing runtime directions"
+    }
+  },
+  "qualityGates": {
+    "translationNormalizedPoseSignatures": true,
+    "minimumUniquePoses": {
+      "idle": 4,
+      "walk": 6,
+      "attack": 6,
+      "hurt": 6,
+      "death": 7,
+      "cast": 7,
+      "victory": 7,
+      "dead": 1
+    },
+    "terminalRules": {
+      "death": "Every frame is bottom-grounded; the last two runtime frames are the same accepted fallen pose.",
+      "dead": "All eight runtime frames are derived from and pixel-identical to the terminal death pose.",
+      "victory": "The final frame is a held triumphant pose, never a return to neutral."
+    },
+    "semanticApproval": "A human review is still required for face, race/gender/class fidelity, anatomy, costume continuity, equipment count, action readability, and clean matte edges."
+  }
+}

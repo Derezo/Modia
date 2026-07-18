@@ -1,0 +1,625 @@
+{
+  "version": "1.0.0",
+  "description": "Deterministic source-and-composition recipes for runtime item identities not covered by the original generated base set.",
+  "pipelineVersion": 1,
+  "generatedAt": "2026-07-15T00:00:00.000Z",
+  "sizes": [32, 64, 128],
+  "items": [
+    {
+      "id": "amulet_dreamcatcher",
+      "name": "Elven Dream Catcher",
+      "category": "accessories",
+      "prompt": "woven elven dream catcher pendant with moonlit crystal focus",
+      "seed": 24001,
+      "sourceAsset": "items/originals/accessories/amulet_bone.webp",
+      "composition": {
+        "primaryScale": 0.86,
+        "modulate": { "hue": 155, "saturation": 1.18, "brightness": 1.02 },
+        "accent": {
+          "sourceAsset": "items/originals/accessories/amulet_crystal.webp",
+          "scale": 0.27,
+          "gravity": "center",
+          "modulate": { "hue": 170, "saturation": 1.3, "brightness": 1.08 }
+        }
+      }
+    },
+    {
+      "id": "amulet_trophy",
+      "name": "Trophy Necklace",
+      "category": "accessories",
+      "prompt": "weathered hunter trophy necklace with bronze war token",
+      "seed": 24002,
+      "sourceAsset": "items/originals/accessories/amulet_bone.webp",
+      "composition": {
+        "primaryScale": 0.86,
+        "colorize": "#c48a43",
+        "accent": {
+          "sourceAsset": "items/originals/weapons/axe_battle.webp",
+          "scale": 0.22,
+          "gravity": "southeast",
+          "colorize": "#8f5a2a"
+        }
+      }
+    },
+    {
+      "id": "emblem_palace",
+      "name": "Palace Emblem",
+      "category": "accessories",
+      "prompt": "golden palace service emblem bearing a royal crown",
+      "seed": 24003,
+      "sourceAsset": "items/originals/accessories/amulet_holy.webp",
+      "composition": {
+        "primaryScale": 0.84,
+        "colorize": "#d6a93b",
+        "accent": {
+          "sourceAsset": "items/originals/armor/helm_crown.webp",
+          "scale": 0.3,
+          "gravity": "center",
+          "colorize": "#f0c85b"
+        }
+      }
+    },
+    {
+      "id": "armor_caravan",
+      "name": "Caravan Guard Armor",
+      "category": "armor",
+      "prompt": "rugged caravan guard brigandine in leather and brass",
+      "seed": 24004,
+      "sourceAsset": "items/originals/armor/armor_brigandine.webp",
+      "composition": {
+        "primaryScale": 0.9,
+        "colorize": "#8f673f"
+      }
+    },
+    {
+      "id": "armor_nightstalker",
+      "name": "Nightstalker Cloak",
+      "category": "armor",
+      "prompt": "deep violet nightstalker cloak with shadow-wrapped hem",
+      "seed": 24005,
+      "sourceAsset": "items/originals/accessories/cloak_shadow.webp",
+      "composition": {
+        "primaryScale": 0.91,
+        "modulate": { "hue": 270, "saturation": 1.3, "brightness": 0.82 },
+        "accent": {
+          "sourceAsset": "icons/originals/actions/stealth.webp",
+          "scale": 0.23,
+          "gravity": "southeast",
+          "modulate": { "hue": 275, "saturation": 1.2, "brightness": 1.1 }
+        }
+      }
+    },
+    {
+      "id": "boots_pathfinder",
+      "name": "Pathfinder Boots",
+      "category": "armor",
+      "prompt": "weathered green-brown pathfinder boots marked for long roads",
+      "seed": 24006,
+      "sourceAsset": "items/originals/armor/boots_leather.webp",
+      "composition": {
+        "primaryScale": 0.87,
+        "colorize": "#69764b"
+      }
+    },
+    {
+      "id": "gloves_deepforge",
+      "name": "Deepforge Gauntlets",
+      "category": "armor",
+      "prompt": "dwarven deepforge gauntlets of dark steel and copper",
+      "seed": 24007,
+      "sourceAsset": "items/originals/accessories/gauntlets_steel.webp",
+      "composition": {
+        "primaryScale": 0.9,
+        "modulate": { "hue": 28, "saturation": 1.15, "brightness": 0.88 }
+      }
+    },
+    {
+      "id": "helm_cowl",
+      "name": "Merchant's Cowl",
+      "category": "armor",
+      "prompt": "practical merchant cowl in warm travel-worn cloth",
+      "seed": 24008,
+      "sourceAsset": "items/originals/armor/helm_hood.webp",
+      "composition": {
+        "primaryScale": 0.88,
+        "colorize": "#8f704e",
+        "accent": {
+          "sourceAsset": "icons/originals/resources/gold.webp",
+          "scale": 0.23,
+          "gravity": "southeast",
+          "modulate": { "saturation": 1.15, "brightness": 1.08 }
+        }
+      }
+    },
+    {
+      "id": "helm_crown_guard",
+      "name": "Crown Guard's Helm",
+      "category": "armor",
+      "prompt": "polished crown guard great helm with royal gold crest",
+      "seed": 24009,
+      "sourceAsset": "items/originals/armor/helm_great.webp",
+      "composition": {
+        "primaryScale": 0.88,
+        "modulate": { "hue": 18, "saturation": 0.9, "brightness": 1.05 },
+        "accent": {
+          "sourceAsset": "items/originals/armor/helm_crown.webp",
+          "scale": 0.3,
+          "gravity": "north",
+          "colorize": "#d7ae45"
+        }
+      }
+    },
+    {
+      "id": "bomb_smoke",
+      "name": "Escape Smoke",
+      "category": "consumables",
+      "prompt": "black glass escape-smoke flask marked with a hidden eye",
+      "seed": 24010,
+      "sourceAsset": "items/originals/consumables/potion_stamina.webp",
+      "composition": {
+        "primaryScale": 0.82,
+        "colorize": "#4b5362",
+        "accent": {
+          "sourceAsset": "icons/originals/actions/stealth.webp",
+          "scale": 0.29,
+          "gravity": "center",
+          "modulate": { "saturation": 0.75, "brightness": 1.18 }
+        }
+      }
+    },
+    {
+      "id": "lens_scout",
+      "name": "Scout's Lens",
+      "category": "consumables",
+      "prompt": "brass scout lens with a clear enchanted targeting reticle",
+      "seed": 24011,
+      "sourceAsset": "items/originals/accessories/amulet_crystal.webp",
+      "composition": {
+        "primaryScale": 0.84,
+        "colorize": "#65a7a2",
+        "accent": {
+          "sourceAsset": "icons/originals/augments/accuracy.webp",
+          "scale": 0.35,
+          "gravity": "center",
+          "modulate": { "hue": 180, "saturation": 1.05, "brightness": 1.35 }
+        }
+      }
+    },
+    {
+      "id": "map_treasure",
+      "name": "Treasure Map",
+      "category": "consumables",
+      "prompt": "well-worn treasure map scroll with a golden route marker",
+      "seed": 24012,
+      "sourceAsset": "icons/originals/menu/map.webp",
+      "composition": {
+        "primaryScale": 0.92,
+        "modulate": { "hue": 38, "saturation": 1.25, "brightness": 1.15 },
+        "accent": {
+          "sourceAsset": "icons/originals/resources/gold.webp",
+          "scale": 0.23,
+          "gravity": "southeast",
+          "modulate": { "saturation": 1.2, "brightness": 1.1 }
+        }
+      }
+    },
+    {
+      "id": "material_ancient_wood",
+      "name": "Ancient Wood",
+      "category": "consumables",
+      "prompt": "petrified ancient wood stave fragment with earthen growth rings",
+      "seed": 24013,
+      "sourceAsset": "items/originals/weapons/staff_magic.webp",
+      "composition": {
+        "primaryScale": 0.82,
+        "rotate": 20,
+        "colorize": "#775233"
+      }
+    },
+    {
+      "id": "material_demon_horn",
+      "name": "Demon Horn",
+      "category": "consumables",
+      "prompt": "jagged demon horn trophy darkened by infernal heat",
+      "seed": 24014,
+      "sourceAsset": "items/originals/accessories/amulet_bone.webp",
+      "composition": {
+        "primaryScale": 0.82,
+        "rotate": -16,
+        "colorize": "#7d3438",
+        "accent": {
+          "sourceAsset": "overlays/originals/augments/augment_fire.webp",
+          "scale": 0.24,
+          "gravity": "center",
+          "modulate": { "hue": 345, "saturation": 1.2, "brightness": 0.95 }
+        }
+      }
+    },
+    {
+      "id": "material_dragon_scale",
+      "name": "Dragon Scale",
+      "category": "consumables",
+      "prompt": "single crimson dragon scale with a fire-tempered edge",
+      "seed": 24015,
+      "sourceAsset": "items/originals/armor/shield_kite.webp",
+      "composition": {
+        "primaryScale": 0.79,
+        "rotate": -12,
+        "colorize": "#a43f36",
+        "accent": {
+          "sourceAsset": "overlays/originals/augments/augment_fire.webp",
+          "scale": 0.24,
+          "gravity": "center",
+          "modulate": { "saturation": 1.15, "brightness": 1.05 }
+        }
+      }
+    },
+    {
+      "id": "material_ethereal_dust",
+      "name": "Ethereal Dust",
+      "category": "consumables",
+      "prompt": "pale violet ethereal dust suspended in a crystal focus",
+      "seed": 24016,
+      "sourceAsset": "items/originals/weapons/orb_crystal.webp",
+      "composition": {
+        "primaryScale": 0.82,
+        "modulate": { "hue": 285, "saturation": 0.72, "brightness": 1.2 },
+        "accent": {
+          "sourceAsset": "overlays/originals/augments/augment_arcane.webp",
+          "scale": 0.3,
+          "gravity": "center",
+          "modulate": { "hue": 275, "saturation": 0.75, "brightness": 1.25 }
+        }
+      }
+    },
+    {
+      "id": "material_mermaid_scale",
+      "name": "Mermaid Scale",
+      "category": "consumables",
+      "prompt": "iridescent aqua mermaid scale with a water-bright edge",
+      "seed": 24017,
+      "sourceAsset": "items/originals/armor/shield_kite.webp",
+      "composition": {
+        "primaryScale": 0.78,
+        "rotate": 11,
+        "colorize": "#55a9aa",
+        "accent": {
+          "sourceAsset": "icons/originals/augments/splash.webp",
+          "scale": 0.25,
+          "gravity": "center",
+          "modulate": { "hue": 190, "saturation": 1.25, "brightness": 1.18 }
+        }
+      }
+    },
+    {
+      "id": "material_moon_ore",
+      "name": "Moon Ore",
+      "category": "consumables",
+      "prompt": "cool blue moon ore crystal with a silver lunar sheen",
+      "seed": 24018,
+      "sourceAsset": "items/originals/weapons/orb_crystal.webp",
+      "composition": {
+        "primaryScale": 0.81,
+        "modulate": { "hue": 215, "saturation": 0.8, "brightness": 1.16 },
+        "accent": {
+          "sourceAsset": "icons/originals/zodiac/cancer.webp",
+          "scale": 0.26,
+          "gravity": "center",
+          "colorize": "#dbe7f4"
+        }
+      }
+    },
+    {
+      "id": "material_phoenix_ash",
+      "name": "Phoenix Ash",
+      "category": "consumables",
+      "prompt": "charcoal phoenix feather shedding ember-red ash",
+      "seed": 24019,
+      "sourceAsset": "items/originals/consumables/phoenix_feather.webp",
+      "composition": {
+        "primaryScale": 0.84,
+        "modulate": { "hue": 8, "saturation": 0.85, "brightness": 0.72 },
+        "accent": {
+          "sourceAsset": "overlays/originals/augments/augment_fire.webp",
+          "scale": 0.29,
+          "gravity": "southeast",
+          "modulate": { "saturation": 0.82, "brightness": 0.86 }
+        }
+      }
+    },
+    {
+      "id": "material_starlight_essence",
+      "name": "Starlight Essence",
+      "category": "consumables",
+      "prompt": "radiant starlight essence held within a celestial orb",
+      "seed": 24020,
+      "sourceAsset": "items/originals/weapons/orb_crystal.webp",
+      "composition": {
+        "primaryScale": 0.82,
+        "modulate": { "hue": 50, "saturation": 0.7, "brightness": 1.28 },
+        "accent": {
+          "sourceAsset": "overlays/originals/augments/augment_holy.webp",
+          "scale": 0.31,
+          "gravity": "center",
+          "modulate": { "hue": 48, "saturation": 0.8, "brightness": 1.22 }
+        }
+      }
+    },
+    {
+      "id": "material_titan_fragment",
+      "name": "Titan Fragment",
+      "category": "consumables",
+      "prompt": "massive rune-carved titan relic fragment in weathered stone",
+      "seed": 24021,
+      "sourceAsset": "items/originals/weapons/relic_ancient.webp",
+      "composition": {
+        "primaryScale": 0.82,
+        "colorize": "#77736c",
+        "accent": {
+          "sourceAsset": "overlays/originals/augments/augment_earth.webp",
+          "scale": 0.24,
+          "gravity": "center",
+          "colorize": "#9d784d"
+        }
+      }
+    },
+    {
+      "id": "material_void_crystal",
+      "name": "Void Crystal",
+      "category": "consumables",
+      "prompt": "black-violet void crystal orb threaded with shadow energy",
+      "seed": 24022,
+      "sourceAsset": "items/originals/weapons/orb_crystal.webp",
+      "composition": {
+        "primaryScale": 0.82,
+        "modulate": { "hue": 278, "saturation": 1.45, "brightness": 0.58 },
+        "accent": {
+          "sourceAsset": "overlays/originals/augments/augment_dark.webp",
+          "scale": 0.31,
+          "gravity": "center",
+          "modulate": { "hue": 280, "saturation": 1.35, "brightness": 0.9 }
+        }
+      }
+    },
+    {
+      "id": "mystery_box",
+      "name": "Mystery Box",
+      "category": "consumables",
+      "prompt": "sealed traveling mystery chest of wood and blue iron",
+      "seed": 24023,
+      "sourceAsset": "nodes/originals/chest.webp",
+      "composition": {
+        "primaryScale": 0.88,
+        "modulate": { "hue": 205, "saturation": 0.9, "brightness": 0.9 },
+        "accent": {
+          "sourceAsset": "items/originals/weapons/orb_crystal.webp",
+          "scale": 0.22,
+          "gravity": "center",
+          "modulate": { "hue": 210, "saturation": 1.15, "brightness": 1.05 }
+        }
+      }
+    },
+    {
+      "id": "mystery_box_premium",
+      "name": "Premium Mystery Box",
+      "category": "consumables",
+      "prompt": "premium royal mystery chest in violet lacquer and gold",
+      "seed": 24024,
+      "sourceAsset": "nodes/originals/chest.webp",
+      "composition": {
+        "primaryScale": 0.88,
+        "modulate": { "hue": 285, "saturation": 1.3, "brightness": 1.02 },
+        "accent": {
+          "sourceAsset": "items/originals/armor/helm_crown.webp",
+          "scale": 0.25,
+          "gravity": "center",
+          "colorize": "#e6bd4f"
+        }
+      }
+    },
+    {
+      "id": "potion_agility",
+      "name": "Swiftfoot Philter",
+      "category": "consumables",
+      "prompt": "emerald swiftfoot philter marked by a wind-swept agility sigil",
+      "seed": 24025,
+      "sourceAsset": "items/originals/consumables/potion_speed.webp",
+      "composition": {
+        "primaryScale": 0.84,
+        "modulate": { "hue": 135, "saturation": 1.38, "brightness": 1.02 },
+        "accent": {
+          "sourceAsset": "icons/originals/augments/agility.webp",
+          "scale": 0.3,
+          "gravity": "center",
+          "modulate": { "hue": 135, "saturation": 1.2, "brightness": 1.18 }
+        }
+      }
+    },
+    {
+      "id": "potion_blood",
+      "name": "Blood Vial",
+      "category": "consumables",
+      "prompt": "crimson enchanted blood vial with a dark lifesteal seal",
+      "seed": 24026,
+      "sourceAsset": "items/originals/consumables/potion_health.webp",
+      "composition": {
+        "primaryScale": 0.84,
+        "modulate": { "hue": 350, "saturation": 1.5, "brightness": 0.76 },
+        "accent": {
+          "sourceAsset": "icons/originals/augments/lifesteal.webp",
+          "scale": 0.29,
+          "gravity": "center",
+          "modulate": { "hue": 350, "saturation": 1.3, "brightness": 1.08 }
+        }
+      }
+    },
+    {
+      "id": "potion_intelligence",
+      "name": "Sage's Elixir",
+      "category": "consumables",
+      "prompt": "deep blue sage elixir bearing a silver mind sigil",
+      "seed": 24027,
+      "sourceAsset": "items/originals/consumables/potion_mana.webp",
+      "composition": {
+        "primaryScale": 0.84,
+        "modulate": { "hue": 225, "saturation": 1.25, "brightness": 0.96 },
+        "accent": {
+          "sourceAsset": "icons/originals/augments/intelligence.webp",
+          "scale": 0.3,
+          "gravity": "center",
+          "colorize": "#b7d3ed"
+        }
+      }
+    },
+    {
+      "id": "potion_luck",
+      "name": "Fortune's Flask",
+      "category": "consumables",
+      "prompt": "bright green fortune flask bearing a gold clover seal",
+      "seed": 24028,
+      "sourceAsset": "items/originals/consumables/potion_speed.webp",
+      "composition": {
+        "primaryScale": 0.84,
+        "modulate": { "hue": 105, "saturation": 1.3, "brightness": 1.08 },
+        "accent": {
+          "sourceAsset": "icons/originals/augments/luck.webp",
+          "scale": 0.31,
+          "gravity": "center",
+          "modulate": { "saturation": 1.25, "brightness": 1.08 }
+        }
+      }
+    },
+    {
+      "id": "potion_vitality",
+      "name": "Ironhide Brew",
+      "category": "consumables",
+      "prompt": "iron-red vitality brew bearing a strong heartbeat seal",
+      "seed": 24029,
+      "sourceAsset": "items/originals/consumables/potion_stamina.webp",
+      "composition": {
+        "primaryScale": 0.84,
+        "modulate": { "hue": 8, "saturation": 1.32, "brightness": 0.9 },
+        "accent": {
+          "sourceAsset": "icons/originals/augments/vitality.webp",
+          "scale": 0.3,
+          "gravity": "center",
+          "modulate": { "hue": 5, "saturation": 1.1, "brightness": 1.08 }
+        }
+      }
+    },
+    {
+      "id": "scroll_magic",
+      "name": "Waypoint Scroll",
+      "category": "consumables",
+      "prompt": "violet waypoint scroll with a luminous travel compass",
+      "seed": 24030,
+      "sourceAsset": "items/originals/consumables/scroll_teleport.webp",
+      "composition": {
+        "primaryScale": 0.88,
+        "modulate": { "hue": 272, "saturation": 1.2, "brightness": 0.94 },
+        "accent": {
+          "sourceAsset": "icons/originals/actions/travel.webp",
+          "scale": 0.28,
+          "gravity": "center",
+          "modulate": { "hue": 270, "saturation": 1.2, "brightness": 1.15 }
+        }
+      }
+    },
+    {
+      "id": "token_merchant",
+      "name": "Caravan Pass",
+      "category": "consumables",
+      "prompt": "merchant guild pass token stamped with a caravan seal",
+      "seed": 24031,
+      "sourceAsset": "items/originals/accessories/ring_signet.webp",
+      "composition": {
+        "primaryScale": 0.78,
+        "colorize": "#d1a13f",
+        "accent": {
+          "sourceAsset": "icons/originals/menu/caravan.webp",
+          "scale": 0.34,
+          "gravity": "center",
+          "colorize": "#754b27"
+        }
+      }
+    },
+    {
+      "id": "bow_elven",
+      "name": "Fey Bow",
+      "category": "weapons",
+      "prompt": "elegant fey longbow of pale wood and living green wind",
+      "seed": 24032,
+      "sourceAsset": "items/originals/weapons/bow_composite.webp",
+      "composition": {
+        "primaryScale": 0.9,
+        "modulate": { "hue": 122, "saturation": 1.25, "brightness": 1.04 }
+      }
+    },
+    {
+      "id": "fist_nomad",
+      "name": "Nomad's Wraps",
+      "category": "weapons",
+      "prompt": "sand-colored nomad hand wraps marked for a long journey",
+      "seed": 24033,
+      "sourceAsset": "items/originals/weapons/fist_wraps.webp",
+      "composition": {
+        "primaryScale": 0.88,
+        "colorize": "#b68a58"
+      }
+    },
+    {
+      "id": "mace_war",
+      "name": "Ironforge Hammer",
+      "category": "weapons",
+      "prompt": "heavy dwarven ironforge war hammer with earthen rune",
+      "seed": 24034,
+      "sourceAsset": "items/originals/weapons/mace_warhammer.webp",
+      "composition": {
+        "primaryScale": 0.9,
+        "modulate": { "hue": 22, "saturation": 0.82, "brightness": 0.92 }
+      }
+    },
+    {
+      "id": "shield_tower",
+      "name": "Stonekin Shield",
+      "category": "weapons",
+      "prompt": "tower shield carved from living slate with an earth core",
+      "seed": 24035,
+      "sourceAsset": "items/originals/armor/shield_tower.webp",
+      "composition": {
+        "primaryScale": 0.88,
+        "colorize": "#777d86",
+        "accent": {
+          "sourceAsset": "overlays/originals/augments/augment_earth.webp",
+          "scale": 0.3,
+          "gravity": "center",
+          "colorize": "#9b7651"
+        }
+      }
+    },
+    {
+      "id": "staff_wanderer",
+      "name": "Wanderer's Staff",
+      "category": "weapons",
+      "prompt": "weathered wanderer staff with a brass waypoint charm",
+      "seed": 24036,
+      "sourceAsset": "items/originals/weapons/staff_battle.webp",
+      "composition": {
+        "primaryScale": 0.89,
+        "colorize": "#806342"
+      }
+    },
+    {
+      "id": "sword_travelers",
+      "name": "Traveler's Blade",
+      "category": "weapons",
+      "prompt": "balanced traveler's sword with a weathered bronze road charm",
+      "seed": 24037,
+      "sourceAsset": "items/originals/weapons/sword_long.webp",
+      "composition": {
+        "primaryScale": 0.9,
+        "modulate": { "hue": 32, "saturation": 0.9, "brightness": 0.92 }
+      }
+    }
+  ]
+}

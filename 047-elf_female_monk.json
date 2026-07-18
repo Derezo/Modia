@@ -1,0 +1,584 @@
+{
+  "version": "1.0.0",
+  "template": "ai-image-metadata/characters/player-authored-animation-template.json",
+  "compilerVersion": "1.2.0",
+  "id": "elf_female_monk",
+  "profile": "monk_v1",
+  "profileSource": "ai-image-metadata/characters/player-animation-profiles/monk_v1.json",
+  "status": "approved",
+  "approvedAt": "2026-07-17T05:52:51.072Z",
+  "metadataFingerprint": "4a415a4ae38cfd302f34787792994932be5b2c8757580ddf5c7c916c50970388",
+  "draftProvenance": {
+    "registry": "ai-image-metadata/characters/player-variants.json",
+    "templateSha256": "7943e69db577b3a4429b47df634f931d3f4cb8e8ce9a91a06578255fbe935bbe",
+    "profileSha256": "4c9abe2bf2e20f2fb97a1dda1ad4d8fd2d8f7187b25bcccfd0eff1bfa3c96395"
+  },
+  "identity": {
+    "race": "elf",
+    "gender": "female",
+    "class": "monk",
+    "presentation": "female elf monk",
+    "visualTraits": "elf pointed ears angular features fair complexion luminous eyes female feminine features martial artist wrapped hands disciplined agile focused",
+    "baseFacing": "three-quarters right",
+    "sourceMetadata": {
+      "isAdvanced": false,
+      "inheritsFrom": "monk",
+      "seed": 10109
+    }
+  },
+  "inputs": {
+    "identity": {
+      "origin": "frontend/public/assets/portraits/originals/elf_female_monk.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/elf_female_monk/inputs/identity.png",
+      "authority": "face, ancestry, gender presentation, hair, eyes, complexion, costume, palette, proportions, and equipment"
+    },
+    "style": {
+      "origin": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/elf_female_monk/inputs/style.png",
+      "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+    }
+  },
+  "reference": {
+    "source": "ai-image-metadata/characters/player-animation-sources/elf_female_monk/reference.png",
+    "chromaSource": "ai-image-metadata/characters/player-animation-sources/elf_female_monk/chroma/reference.png",
+    "identitySource": "ai-image-metadata/characters/player-animation-sources/elf_female_monk/inputs/identity.png",
+    "styleSource": "ai-image-metadata/characters/player-animation-sources/elf_female_monk/inputs/style.png",
+    "prompt": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative Elf Monk (female presentation) identity portrait; Image 2 is the approved full-body pixel-art style and proportion reference only. Player identity metadata: elf pointed ears angular features fair complexion luminous eyes female feminine features martial artist wrapped hands disciplined agile focused. Create one complete head-to-toe Elf Monk (female presentation) that faithfully preserves Image 1's face, ancestry traits, gender presentation, hair, eyes, complexion, martial clothing, wraps, palette, proportions, and equipment. Do not import identity details from Image 2. Keep the authoritative portrait's hand wraps, clothing, belt, jewelry, and any other equipment design and count consistent in every pose. Keep both hands readable, preserve the original handed details, and never invent, duplicate, swap, or transform a staff, blade, shield, or talisman. Translate the portrait into the compact full-body quality and agile readable silhouette demonstrated by Image 2. Use a flat #00ff00 chroma key background with no floor or scenery. Use a square 1:1 canvas with generous padding on every side. Polished hand-authored 16-bit pixel art with crisp intentional pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment color ramps. One centered full-body monk in a balanced open-hand guard facing three-quarters right. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+  },
+  "animations": {
+    "idle": {
+      "source": "ai-image-metadata/characters/player-animation-sources/elf_female_monk/idle.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/elf_female_monk/chroma/idle.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 4,
+      "frameDescriptions": [
+        "balanced open-hand guard with knees softly bent",
+        "slow inhale as spine lengthens and lead hand rises",
+        "weight settles onto the forward foot with hips aligned",
+        "controlled exhale into a lower defensive guard",
+        "centered guard midpoint with both hands active",
+        "slow inhale as rear hand chambers and cloth responds",
+        "weight settles onto the rear foot with a distinct knee bend",
+        "calm open-hand guard flowing back to frame one"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body monk centered guard idle-cycle poses of the authoritative Elf Monk (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right and then bottom row left-to-right. Player identity metadata: elf pointed ears angular features fair complexion luminous eyes female feminine features martial artist wrapped hands disciplined agile focused. Required sequence: balanced open-hand guard with knees softly bent; slow inhale as spine lengthens and lead hand rises; weight settles onto the forward foot with hips aligned; controlled exhale into a lower defensive guard; centered guard midpoint with both hands active; slow inhale as rear hand chambers and cloth responds; weight settles onto the rear foot with a distinct knee bend; calm open-hand guard flowing back to frame one. Motion direction: A calm diaphragmatic breathing loop with live open-hand guard, softly flexing knees, and alternating centered weight shifts; the first and last poses connect smoothly.. Overall monk motion is balanced, fluid, controlled, precise, and explosively athletic, with visible guard discipline, hip rotation, and grounded martial-arts footwork. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact portrait identity, clothing, wraps, palette, proportions, and equipment throughout. Keep the authoritative portrait's hand wraps, clothing, belt, jewelry, and any other equipment design and count consistent in every pose. Keep both hands readable, preserve the original handed details, and never invent, duplicate, swap, or transform a staff, blade, shield, or talisman. Monk motion is embodied martial skill rather than spell-casting. Do not add magical projectiles, elemental trails, runes, halos, or aura; if the identity portrait explicitly establishes a subtle ki accent, keep it compact, fixed to that palette, and secondary to anatomy and impact mechanics. Action-specific effects: No active magic or attack trail; only subtle breathing, cloth, wrap, and hair response. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "walk": {
+      "source": "ai-image-metadata/characters/player-animation-sources/elf_female_monk/walk.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/elf_female_monk/chroma/walk.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "left foot light forward contact with hands guarding",
+        "left leg elastic compression and lowered center",
+        "passing pose with right knee advancing and opposite hand forward",
+        "right foot reaching ahead from a balanced single-leg stance",
+        "right foot light forward contact with hands still guarding",
+        "right leg elastic compression and lowered center",
+        "passing pose with left knee advancing and opposite hand forward",
+        "left foot reaching ahead into the quiet walking loop"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body monk light-footed walk-cycle poses of the authoritative Elf Monk (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right and then bottom row left-to-right. Player identity metadata: elf pointed ears angular features fair complexion luminous eyes female feminine features martial artist wrapped hands disciplined agile focused. Required sequence: left foot light forward contact with hands guarding; left leg elastic compression and lowered center; passing pose with right knee advancing and opposite hand forward; right foot reaching ahead from a balanced single-leg stance; right foot light forward contact with hands still guarding; right leg elastic compression and lowered center; passing pose with left knee advancing and opposite hand forward; left foot reaching ahead into the quiet walking loop. Motion direction: A light but grounded alternating-contact walk with elastic knee compression, clear passing poses, opposite guarded arm motion, and quiet controlled landings.. Overall monk motion is balanced, fluid, controlled, precise, and explosively athletic, with visible guard discipline, hip rotation, and grounded martial-arts footwork. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact portrait identity, clothing, wraps, palette, proportions, and equipment throughout. Keep the authoritative portrait's hand wraps, clothing, belt, jewelry, and any other equipment design and count consistent in every pose. Keep both hands readable, preserve the original handed details, and never invent, duplicate, swap, or transform a staff, blade, shield, or talisman. Monk motion is embodied martial skill rather than spell-casting. Do not add magical projectiles, elemental trails, runes, halos, or aura; if the identity portrait explicitly establishes a subtle ki accent, keep it compact, fixed to that palette, and secondary to anatomy and impact mechanics. Action-specific effects: No active magic or speed streak; wraps, loose cloth, belt ends, and hair follow the stepping body naturally. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "attack": {
+      "source": "ai-image-metadata/characters/player-animation-sources/elf_female_monk/attack.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/elf_female_monk/chroma/attack.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "balanced fighting guard",
+        "rear hand chambers as the lead foot tests forward",
+        "stepping lead-palm strike with rear hand protecting the jaw",
+        "hip-driven rear cross with shoulders fully rotating",
+        "knee chambers high as the body pivots for a turning kick",
+        "full turning-kick extension with arms counterbalancing",
+        "soft bent-knee landing that redirects momentum",
+        "controlled recovery into balanced fighting guard"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body monk bare-hand combination attack poses of the authoritative Elf Monk (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right and then bottom row left-to-right. Player identity metadata: elf pointed ears angular features fair complexion luminous eyes female feminine features martial artist wrapped hands disciplined agile focused. Required sequence: balanced fighting guard; rear hand chambers as the lead foot tests forward; stepping lead-palm strike with rear hand protecting the jaw; hip-driven rear cross with shoulders fully rotating; knee chambers high as the body pivots for a turning kick; full turning-kick extension with arms counterbalancing; soft bent-knee landing that redirects momentum; controlled recovery into balanced fighting guard. Motion direction: A coherent martial combination moves from guarded anticipation through a stepping palm strike, hip-driven cross, chambered turning kick, full kick extension, balanced landing, and controlled recovery.. Overall monk motion is balanced, fluid, controlled, precise, and explosively athletic, with visible guard discipline, hip rotation, and grounded martial-arts footwork. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact portrait identity, clothing, wraps, palette, proportions, and equipment throughout. Keep the authoritative portrait's hand wraps, clothing, belt, jewelry, and any other equipment design and count consistent in every pose. Keep both hands readable, preserve the original handed details, and never invent, duplicate, swap, or transform a staff, blade, shield, or talisman. Monk motion is embodied martial skill rather than spell-casting. Do not add magical projectiles, elemental trails, runes, halos, or aura; if the identity portrait explicitly establishes a subtle ki accent, keep it compact, fixed to that palette, and secondary to anatomy and impact mechanics. Action-specific effects: Only compact physical contact ticks may mark the palm and kick impacts; no weapon, projectile, magical blast, or effect that hides the striking limbs. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "hurt": {
+      "source": "ai-image-metadata/characters/player-animation-sources/elf_female_monk/hurt.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/elf_female_monk/chroma/hurt.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "balanced guard before impact",
+        "sharp flinch with forearms folding toward the struck side",
+        "maximum recoil with torso arched and knees deeply bent",
+        "turning stumble that redirects the impact sideways",
+        "low three-point balance catch with one hand near the ground",
+        "controlled rise with the lead forearm guarding",
+        "feet and hips realign beneath a rebuilding guard",
+        "recovered balanced fighting guard"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body monk impact-redirection-and-recovery poses of the authoritative Elf Monk (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right and then bottom row left-to-right. Player identity metadata: elf pointed ears angular features fair complexion luminous eyes female feminine features martial artist wrapped hands disciplined agile focused. Required sequence: balanced guard before impact; sharp flinch with forearms folding toward the struck side; maximum recoil with torso arched and knees deeply bent; turning stumble that redirects the impact sideways; low three-point balance catch with one hand near the ground; controlled rise with the lead forearm guarding; feet and hips realign beneath a rebuilding guard; recovered balanced fighting guard. Motion direction: A sharp body impact breaks the guard into a deep recoil, the monk turns with the force, catches balance in a low stance, redirects momentum through planted hands and feet, then rebuilds the guard.. Overall monk motion is balanced, fluid, controlled, precise, and explosively athletic, with visible guard discipline, hip rotation, and grounded martial-arts footwork. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact portrait identity, clothing, wraps, palette, proportions, and equipment throughout. Keep the authoritative portrait's hand wraps, clothing, belt, jewelry, and any other equipment design and count consistent in every pose. Keep both hands readable, preserve the original handed details, and never invent, duplicate, swap, or transform a staff, blade, shield, or talisman. Monk motion is embodied martial skill rather than spell-casting. Do not add magical projectiles, elemental trails, runes, halos, or aura; if the identity portrait explicitly establishes a subtle ki accent, keep it compact, fixed to that palette, and secondary to anatomy and impact mechanics. Action-specific effects: Use only a compact physical impact accent; no gore, blood, full-body tint, magical ward, or detached equipment. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "death": {
+      "source": "ai-image-metadata/characters/player-animation-sources/elf_female_monk/death.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/elf_female_monk/chroma/death.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "verticalAnchor": "bottom",
+      "outputFrameMap": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        7,
+        7
+      ],
+      "frameDescriptions": [
+        "fatal impact opens the balanced guard",
+        "arms slacken as weight retreats and balance fails",
+        "knees buckle into a low collapsing stance",
+        "one knee grounds while the torso folds diagonally",
+        "body rolls sideways into full ground contact",
+        "low fallen body settles with limbs clearly articulated",
+        "final fully fallen monk pose at peaceful rest",
+        "same final fallen pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body monk defeat sequence poses of the authoritative Elf Monk (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right and then bottom row left-to-right. Player identity metadata: elf pointed ears angular features fair complexion luminous eyes female feminine features martial artist wrapped hands disciplined agile focused. Required sequence: fatal impact opens the balanced guard; arms slacken as weight retreats and balance fails; knees buckle into a low collapsing stance; one knee grounds while the torso folds diagonally; body rolls sideways into full ground contact; low fallen body settles with limbs clearly articulated; final fully fallen monk pose at peaceful rest; same final fallen pose held. Motion direction: A decisive impact empties the guard, balance recedes through buckling legs into a low kneel, the torso folds and rolls sideways into ground contact, then settles into an unmistakable fully fallen rest pose.. Overall monk motion is balanced, fluid, controlled, precise, and explosively athletic, with visible guard discipline, hip rotation, and grounded martial-arts footwork. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact portrait identity, clothing, wraps, palette, proportions, and equipment throughout. Keep the authoritative portrait's hand wraps, clothing, belt, jewelry, and any other equipment design and count consistent in every pose. Keep both hands readable, preserve the original handed details, and never invent, duplicate, swap, or transform a staff, blade, shield, or talisman. Monk motion is embodied martial skill rather than spell-casting. Do not add magical projectiles, elemental trails, runes, halos, or aura; if the identity portrait explicitly establishes a subtle ki accent, keep it compact, fixed to that palette, and secondary to anatomy and impact mechanics. Action-specific effects: No gore, blood, dismemberment, spell effect, or rigid rotation of the upright sprite. Preserve articulated limbs, wraps, clothing, and all identity equipment through the grounded collapse. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "dead": {
+      "deriveFrom": {
+        "animation": "death",
+        "frame": 7
+      },
+      "frameDescriptions": [
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held"
+      ],
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity."
+    },
+    "victory": {
+      "source": "ai-image-metadata/characters/player-animation-sources/elf_female_monk/victory.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/elf_female_monk/chroma/victory.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "quiet realization of victory from fighting guard",
+        "respectful forward bow with hands gathered",
+        "rising cross-body palm kata",
+        "balanced pivot with one knee chambered high",
+        "controlled high celebratory kick",
+        "light landing into an open arms-wide stance",
+        "both wrapped hands raised with proud centered posture",
+        "final poised triumphant monk pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body monk victory kata poses of the authoritative Elf Monk (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right and then bottom row left-to-right. Player identity metadata: elf pointed ears angular features fair complexion luminous eyes female feminine features martial artist wrapped hands disciplined agile focused. Required sequence: quiet realization of victory from fighting guard; respectful forward bow with hands gathered; rising cross-body palm kata; balanced pivot with one knee chambered high; controlled high celebratory kick; light landing into an open arms-wide stance; both wrapped hands raised with proud centered posture; final poised triumphant monk pose held. Motion direction: The monk recognizes victory, centers with a respectful bow, flows through a crisp palm kata, pivots into a high controlled kick, lands lightly, raises both hands in earned celebration, and holds a poised triumphant finish.. Overall monk motion is balanced, fluid, controlled, precise, and explosively athletic, with visible guard discipline, hip rotation, and grounded martial-arts footwork. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact portrait identity, clothing, wraps, palette, proportions, and equipment throughout. Keep the authoritative portrait's hand wraps, clothing, belt, jewelry, and any other equipment design and count consistent in every pose. Keep both hands readable, preserve the original handed details, and never invent, duplicate, swap, or transform a staff, blade, shield, or talisman. Monk motion is embodied martial skill rather than spell-casting. Do not add magical projectiles, elemental trails, runes, halos, or aura; if the identity portrait explicitly establishes a subtle ki accent, keep it compact, fixed to that palette, and secondary to anatomy and impact mechanics. Action-specific effects: No spell effect, projectile, or weapon; body lines, open hands, wraps, and balanced footwork carry the celebration. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    }
+  },
+  "pins": {
+    "templateSha256": "93943004e340d113943e06dea61fd7dfad67c20750dd4fc30d76d3be1fb7c144",
+    "profileSha256": "6550aa17a4d7ebdad701416b5963267eb25882969390480e792db13badbf92e5",
+    "reference": {
+      "sourceSha256": "33a594fab9d8865c2ee64dde6388de9e933678f0b75acc63267714e154fda908",
+      "sourceDimensions": "1254x1254",
+      "chromaSourceSha256": "3764d45a957cf3b55c6e964709c50609dbffe3be71ccd98956ae25ede30ac15d",
+      "chromaSourceDimensions": "1254x1254",
+      "identitySourceSha256": "bdf69cc463bf7a3b37f5568158d905fd7366081f7b6b4f41b8044a85987f2d01",
+      "identitySourceDimensions": "1024x1024",
+      "styleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "styleSourceDimensions": "1254x1254",
+      "promptSha256": "88e042641e59a34c2713dddc65140d76b2d337ce557688c0d1dd919451331062",
+      "encodedSha256": "d3a23233f4368208fa3bb05a24f568b38ff5546fbcef0ccf74bfc58eb749b7f2",
+      "decodedSha256": "2cee112526a1fbd196415c9234d7e5a6199ee1ecafce775ea5271dfd3a3f11b9"
+    },
+    "animations": {
+      "idle": {
+        "sourceSha256": "0341994cd891998f19b11f15b23ca40e2a07c6aad8a9a88ab4238e9fbaa69cc9",
+        "sourceDimensions": "1672x941",
+        "chromaSourceSha256": "3bab0db21a17e28e127c88c0977c5a8944c9d31a167c054f37624e31200fa10c",
+        "chromaSourceDimensions": "1672x941",
+        "promptSha256": "c77c45be1028c90257773d13e9ab2ae20e273c75c51c7bce16293c0adfe1f6e7",
+        "encodedSha256": "57de82f99e56642c013cd1c578fc0193a54fd40321cbd617e52a3cfad377130b",
+        "decodedSha256": "61174d6724b6f00f61b5c99b5687db8b13bf49893bfe3929e2204cdf2ebd4e85",
+        "frameSha256": [
+          "d3903aaa81ec6f4e1c846e8626dbe4936e41ca86974fe4c25c2e560f0cb14a8d",
+          "78150321c85a584b451d755e62f6fdfa1781642eb38b03e65a84cce02144310a",
+          "14638c5793ba2474bd8fc522f8c628b2ee7e00e15348d8a26a9fdfc90e943005",
+          "2cf5828236baa1c11f84d6da1b1200199432d9866f4de2da301cf47ca7b6fafa",
+          "2f4d75709c639066f09680373ef9dd22167e2ff84b898666bcbfd9f763967e9e",
+          "269b81ac8ac74e6f8201b9426c8897d3a5b195631cd679a7909c7cb957e5afb8",
+          "9078ce260eef5543354d687c1ec17c27a5e69f4d7439fe72b1ce4a0cd6ac27e9",
+          "f5925ced532d37115d8d95b73c6214f00d478bb2c2775f0db90dea038b2cd646"
+        ],
+        "poseSha256": [
+          "75e02d0838e8080773adf29d2c9cc74c47c23eede3f0e9198365884778b4bf94",
+          "199a153630246780f19c2a24ff654a238286415a12dd557c25bb464623ca7062",
+          "35b98bfb8dde2a9bac2a298af13fd00e9e240aa517ee52cb5ffa5cf05f267451",
+          "330332803502abd373b2b09ec4842928d8173835cdcc0e0fb2f13e4f6b997e4b",
+          "f2cf6b09ff9bbcdec87aa0fc39f49a01d11233d7a14236b57588b72b6a29f291",
+          "3a0f33d3855d356201dbfcd15b1c729f28191b80a6501a0c0c21082c639c1c4b",
+          "e69acc9bb25535be5201b4fd6ce511474c0f5b3bd3c608d195277c1717361a1b",
+          "6ecb81dc6c3b51e75bba6d1d05e54779c9971c4a00517d2ee7fd56ae0869b18c"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "walk": {
+        "sourceSha256": "eb6ee495001cbb8ea28d7d1de35d68fb9aa24f5872c0db4dcde390a0a1d0d5a5",
+        "sourceDimensions": "1672x941",
+        "chromaSourceSha256": "398fdb24fc870b3c6178453d84f2da70124837a461757653732240d5fd4aace2",
+        "chromaSourceDimensions": "1672x941",
+        "promptSha256": "6af85bbe669753a478506dfa49ba9dc0dbdb16d8a006f778d18445f47209e4f2",
+        "encodedSha256": "5ba9510c7224962f951ef0381eace6a1d3c1be68bead779b4fe67de593c7ee47",
+        "decodedSha256": "a96fd97a73968269ed238c7a64d31c723922e498e9ebdbdcd9963f58839f8011",
+        "frameSha256": [
+          "fc2c66adeb5d974ed51be1cb9118839afd212f8b7289561ba293eee9835f7c72",
+          "8def65a5d75c7bc35eaf59e3fcd3ef20f032ba1793ca30de0174d065d710ba47",
+          "c69d7d1b7a03e43254a8c22d387f3cad05d4e902a36927a38c508b8e6b7c05dd",
+          "fc019904e0641fd4fd0f9628692131c11ee6e08c98cc01bc6d573fb460fd294d",
+          "21ff1e9086d9d330bc386cd009d472dcdc749eeb4e01bd3a1ca081b64352aae0",
+          "1e16eefe1c981b7ae82d7af79ed97fe85f91a7f40da52a33878093c302c1f19d",
+          "81cc809e35af87a8ecae162b35a92c667e2024af911c73b9fbac92c0a69baea1",
+          "f150ccd427078b2e3d48aed1bb2ac8f10d8192901e6254e2a8b9a35a3fcfe431"
+        ],
+        "poseSha256": [
+          "d78960e51f341f2324a2120f4337deb0330937bf6eb547c631aae33c25bdab48",
+          "2b50a709b1d88804f4c2e19960436c8bdf073fc94487455427f199b98d5c2a11",
+          "b4f7b1d4147c902ed6b8102c2ecd566e15e8343d37ed3556bb31665cf0ad0d16",
+          "030b04b5fcb006ed2657ab7bbea9e1f5286d3e7ef38b7008e34f12fb0590ddeb",
+          "7806271b438b160f393e322911ce8bf4276beb675aa8f2c3b7362cbc8d30bb68",
+          "8efe67ed90150510f1e20e4f6dd3f32743f3014e033c34fc7341d4663d18f01a",
+          "cad9435971daa2a3e88d29fa1672f5fe9a024647c692b0abade7c98ca3d94edc",
+          "b697832a2ff7a647676aa9035a0f250ab9be5ae715010eb86cb4e45a6973b2da"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "attack": {
+        "sourceSha256": "5b95dfd841c90736778ea15e04c039c5f52d579149fe5f86226538819734b8c3",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "94f10036d4e69e79c176af43d5f52ff0342697c406ba148df33479fcfc0350fb",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "27ce31a74763765d056adbae395694204238096e273f1fec3f5f88cc7d8fdcfc",
+        "encodedSha256": "674fc119f1879e9a2d161f9123ef087c9c3171ea26c397b377043374755517ce",
+        "decodedSha256": "c8c7552791564c3bb402a5f0f1dc10ce6d91362371ff40dc3ca99a9d3e603b11",
+        "frameSha256": [
+          "a6e0da718ff367cdc0310771028e288bdf4baa9578d36e0a5a8724c1c63e4800",
+          "a146a020fa79b744f5443dc1bf85740eacd4d162b264f84c4304fd68e98c20c6",
+          "ecfe27db0cb2d5bb933c74666dc6cc8c06fc046686c78ff7fa4e77d6e3fb1fbe",
+          "61b9c2906c8a91d33631109b46012196c25bce0a89bf378b5f8317fe75583589",
+          "03ea49efc7b99e54ae6a535441740d98e50e26602e24ac8fabaa392123e854b3",
+          "218f946add672f70d5b16f902fe98e7e2cf59681ce7eea7744d938d5b2e6adee",
+          "065b6e9e49c6cb97de5b9656e977e2a0779306f3d70eab9e9e08916b3cfd3af7",
+          "9cfcd94ca2b980f4f69a84f63ea168b53f8c4526cc99d8ac3e7da552d1854218"
+        ],
+        "poseSha256": [
+          "fd9e07152109a1ab1b149b9d547037f1de6b3b29b681c036f9ff98c9be3d623c",
+          "1ac1132989771386b96437f97e0a48363f67a5f65cfb1bb0dffbe5128fcc84e2",
+          "6d4629f992ad97b9e116b6280ab96f03e2da0f0104b1e86f4faa1e29d7caf751",
+          "58e9d37916d2108eec46fb211e57b19e2e5a8ef526ff5a8fd8ad762f9e919412",
+          "9011abbf457b28d51095ba67dad643c78f7cd1b50eb36f29e1a3f49af89c5a0e",
+          "b96c180ec809faa3b6e1ad7351b7f9dbc7f22fda008023620996200e253eaa3e",
+          "f274d7aa8ed8f6e8018575a2788b1daeb7de0642baabb0aab88fe051f143949e",
+          "d8d0769bdc1869f03c749756f18c37b802dceadea8b068eda63f04381e244a20"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          0.992733,
+          0.995319,
+          1,
+          0.999321,
+          1,
+          1
+        ]
+      },
+      "hurt": {
+        "sourceSha256": "568fd6e5ad77ee739046f18637c366fcd26347942703a5b466b32067e5da2fd2",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "6f42b1edd1a1d9c1a82d1130be898854dc233392c1b6af995339e552d0910504",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "91efd0bac61ba301f0e6b2be8cbac858bd0f131ef0d82dde6b8ecd0f596125e8",
+        "encodedSha256": "dbdc1ef098f528fe104b68f4a00decfeca53b2d0fe90bfcd75905c7597677c68",
+        "decodedSha256": "20a60277b693014a5a561a7a27c7d5540b7e193f768ad698d9989c1af847730a",
+        "frameSha256": [
+          "0aa464f89c2a2d25ef1ca34bc111e071e56f7df07667218703838dd65b7f7cfe",
+          "f16bcbca59f2ceafd428b637cdd7ba68ae802d0991896060ab89e7a6e30eee34",
+          "3803b7141bb9424b7dd611e5af933d57de799a5f3b86708fee4eed26fba1351e",
+          "c5faf52445e9d33801b6707f3d709dbe9e6748fdd83ad4b877bb476ac3710c51",
+          "427215f873cc0729150a9a922b1062aaff90d8a9ec4d7e50ba75a30412fabbe2",
+          "eefb00c643fd3e84c210d8232640bef656ee6f9a46eb8268d5097d36c09ca10f",
+          "744286af3ed6fe914046206a2835613c627b1d01ca1ab60efc0e0db500e5673d",
+          "bf39243cccc4fbffb3d3b2d06cc7dcdc1f4898af9502bcb9c4f115f50ff3ca02"
+        ],
+        "poseSha256": [
+          "0175ab748bde48ee572a206ec7f56780ba3b9982ca00646aad6d51f2ae783784",
+          "f66a0de681612413a8b7604ca7b35b31d60537ce4bf76d3edc343828ebde4e38",
+          "a9b33c39e53479b82b17a5b984a0002aabc35997fd0df753a297f2f8bc4d0839",
+          "a7521cd3a2bfe1e0a43d879a03f9f5bfcf768c650faffe3ee3338d71afd195dc",
+          "1b268c4656b92091a54ea61b903b00f3677267572b5486d29ad815ff7217b720",
+          "71c6b5cbcb1f74b873bdcbf82883074d143aa5445fbbdba46f073bcbc1a1efe9",
+          "e48f781ed97bcd70aaa313cad204e62d0fdd25cc507f6d19b41733580dedc73f",
+          "ff3036c6949eae6037a4447e048c0d42683399f8dd2de786b8ce5fb13a8bc226"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          0.995202,
+          1,
+          0.997028,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "death": {
+        "sourceSha256": "0dc8ad5d2531e2a1a5a7474851f9c218a513176e5d0c40b74547973ce48ff5f3",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "31c7105309ce6abe0f18e95583299c9b992064e27ff9aec1508f0081cd29efdc",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "d5ceb0846e4a2ea97a8cdf9228032c18519951311db13ade64803af3df6ab1af",
+        "encodedSha256": "ec08cfa91a78abe2bbd1882f2c97ac8dc8405f31d3aa070135b18da57a9e7e46",
+        "decodedSha256": "eb1a9294ca043199960dc19249cae2f50d2d3df7bd4b5c3ecfe4aca0a4227c56",
+        "frameSha256": [
+          "7373a7e20edc3012f7606ee31523f03d624d9fccc3bed499a8c9c4a0a14754ea",
+          "dd57c728ed73169cd0bee25c7efb694dc344050da98d26cf2030ee7f0b3adb19",
+          "3d6fa1d2f1abbcf4282bf9175b711c0dc69ad32174b524174a8e2e85f7b74d02",
+          "7bb706836f975edb89613156b98650af276a67c439ea29a4881b86c25b742aee",
+          "faf825ae3479007f3092f343c06376888c5058a9882036fad6a5bbc65c127176",
+          "f5842e357590536afda793deed4ac30c41427a94073e15b8ebc45fe304b921ad",
+          "ae901597cc50e2c2105cf368d5dca7b954d8943b56725c4da71d3e5753e95cfe",
+          "ae901597cc50e2c2105cf368d5dca7b954d8943b56725c4da71d3e5753e95cfe"
+        ],
+        "poseSha256": [
+          "f9ac377b9bf24d02543113a035f7e86ce895926a51b5c5679bad64ab55aee586",
+          "5b0289e6421bed2c678bc4873138aed06ad9d550a2b0535bbd5a92150baaeb2d",
+          "91bf523381dddc6d85d6ad50b63fa7949ac1410cd0789d3da6bef1cd5ed64a0c",
+          "3c31f0bc6810ee3a331a2d0d692570257105dc11da4f17e3dc1ba2362021b43d",
+          "4f34ffe4f34ee41d8fafce59aa8126d0386e55853d6ce0866fad125cdb9d6c80",
+          "2b1300ef0ae94b226fecfbac45f2bac1d0e027fdb3a60e2e403ffb55f043f53d",
+          "eeb458263c62818b7f8d45661879f891740a08404b524e2ef703eed62b265e19",
+          "eeb458263c62818b7f8d45661879f891740a08404b524e2ef703eed62b265e19"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "victory": {
+        "sourceSha256": "993ed87b4147cd1a3f4a937ca0280eb8cb7047f8b84a70e86e917820a018589a",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "5c2b684a7b77990c963338e6fe342bc49ddd27a0a05e91855d802d3024c821cc",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "428903dca1303c583337e14d9c94bda4452d40fd16d2dfe5bb5d2c067b3f9c4f",
+        "encodedSha256": "47b1d86fc1722f52f607534b71efe68b7652d05e987cc373c218eabee04b3f39",
+        "decodedSha256": "7e6a8d12331df02c381708bb68ccf3f4060eaacbe079e33a6be1a50a74224f02",
+        "frameSha256": [
+          "ebc4d070605e4c7ef63f4f6a71e336b8ce3af079b5549431a722b7cb6d2bcb67",
+          "315f7ccb5f1b7f70f4f0150858fc029458b4ce55510d143c81629108cd28f413",
+          "29527e4063cd55d9ff77a21c514c11adba030924d14e7a8fef44c6ba6d6fb2d3",
+          "e873a6cdffe6da72431aa4f7b17f346e424c0fbe8f997b7dc0b64f737e2abca3",
+          "e845ce6c87fa0357a02e8a8678127cfe8384d830ff186c892e829d554fc3a3cf",
+          "928d874c5b586d6af0c57bb5944fe6903b0456eadd6c72481809ee17ac2b28bf",
+          "2efe6d97ac80d9d5f6063334ce1a1dc16622910495766b01fe4c220c886de5d2",
+          "a4ec1ed00e43d23b69c5bb36996a6b77d3413df5bf0287f735a2d6edc27d6339"
+        ],
+        "poseSha256": [
+          "0b0a033dcc4842092ce0d9d378450a61bd6c58039df4b1f7cd22b3f2520e05b5",
+          "934e8a5e41c3c722083c75ed801bb8ece562563155a9b342a1e46fe379210f10",
+          "f46cdaae12e1c7f99221e769cbf036a074b0dc7598891f65931eb1aa17970620",
+          "4e0dd7b17377dca6ac98115725a5877d6817d2fd155668842209248d5fce6ed8",
+          "262de3c4c8899f225983c3f67659dffde9a9c34187ed229c44a46877d6408795",
+          "ba6bbbf02afa1094cbe6861cd7796a6523bff1ead3d7021511507cc995918ec9",
+          "063d560c1846d9a290183b574e6712f6a136f4da31710d81717bfdce5de4972d",
+          "d7c75307987e504e0328bbd7d7ef14270d35b316742bc413f0c1abcca990f301"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "dead": {
+        "sourceSha256": "0dc8ad5d2531e2a1a5a7474851f9c218a513176e5d0c40b74547973ce48ff5f3",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "31c7105309ce6abe0f18e95583299c9b992064e27ff9aec1508f0081cd29efdc",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "f631a7fd605211260b28b5a5bba3503e06dc1064497d1e5769d62e40e178e2b1",
+        "encodedSha256": "bda1691e3286981f47a3afb7244d7464eed2d1d394509d015d5010ef0c33c96e",
+        "decodedSha256": "5b0ab79b38848ee22d91f028100c5787153e2fc318324c1b7da27977ee378901",
+        "frameSha256": [
+          "ae901597cc50e2c2105cf368d5dca7b954d8943b56725c4da71d3e5753e95cfe",
+          "ae901597cc50e2c2105cf368d5dca7b954d8943b56725c4da71d3e5753e95cfe",
+          "ae901597cc50e2c2105cf368d5dca7b954d8943b56725c4da71d3e5753e95cfe",
+          "ae901597cc50e2c2105cf368d5dca7b954d8943b56725c4da71d3e5753e95cfe",
+          "ae901597cc50e2c2105cf368d5dca7b954d8943b56725c4da71d3e5753e95cfe",
+          "ae901597cc50e2c2105cf368d5dca7b954d8943b56725c4da71d3e5753e95cfe",
+          "ae901597cc50e2c2105cf368d5dca7b954d8943b56725c4da71d3e5753e95cfe",
+          "ae901597cc50e2c2105cf368d5dca7b954d8943b56725c4da71d3e5753e95cfe"
+        ],
+        "poseSha256": [
+          "eeb458263c62818b7f8d45661879f891740a08404b524e2ef703eed62b265e19",
+          "eeb458263c62818b7f8d45661879f891740a08404b524e2ef703eed62b265e19",
+          "eeb458263c62818b7f8d45661879f891740a08404b524e2ef703eed62b265e19",
+          "eeb458263c62818b7f8d45661879f891740a08404b524e2ef703eed62b265e19",
+          "eeb458263c62818b7f8d45661879f891740a08404b524e2ef703eed62b265e19",
+          "eeb458263c62818b7f8d45661879f891740a08404b524e2ef703eed62b265e19",
+          "eeb458263c62818b7f8d45661879f891740a08404b524e2ef703eed62b265e19",
+          "eeb458263c62818b7f8d45661879f891740a08404b524e2ef703eed62b265e19"
+        ],
+        "sourceFrameIndexes": [
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  }
+}

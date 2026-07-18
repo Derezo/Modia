@@ -1,0 +1,226 @@
+{
+  "version": "1.0.0",
+  "template": "ai-image-metadata/characters/player-authored-animation-template.json",
+  "compilerVersion": "1.2.0",
+  "id": "human_female_warrior",
+  "profile": "warrior_v1",
+  "profileSource": "ai-image-metadata/characters/player-animation-profiles/warrior_v1.json",
+  "status": "draft-awaiting-generation",
+  "approvedAt": null,
+  "metadataFingerprint": "1d5ec6eb7ff2432699ee686d5f446125d3214fc0bf0d3c18410f9e84a4c11d23",
+  "draftProvenance": {
+    "registry": "ai-image-metadata/characters/player-variants.json",
+    "templateSha256": "7943e69db577b3a4429b47df634f931d3f4cb8e8ce9a91a06578255fbe935bbe",
+    "profileSha256": "83b4a6db0b309ad1c5d1c7e395d3bb5aabe8409a903d1e43fed83849dcc9bc5e"
+  },
+  "identity": {
+    "race": "human",
+    "gender": "female",
+    "class": "warrior",
+    "presentation": "female human warrior",
+    "visualTraits": "human features balanced proportions warm skin tone female feminine features armored fighter sword shield sturdy muscular battle-ready",
+    "baseFacing": "three-quarters right",
+    "sourceMetadata": {
+      "isAdvanced": false,
+      "inheritsFrom": "warrior",
+      "seed": 10005
+    }
+  },
+  "inputs": {
+    "identity": {
+      "origin": "frontend/public/assets/portraits/originals/human_female_warrior.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/human_female_warrior/inputs/identity.png",
+      "authority": "face, ancestry, gender presentation, hair, eyes, complexion, costume, palette, proportions, and equipment"
+    },
+    "style": {
+      "origin": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/human_female_warrior/inputs/style.png",
+      "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+    }
+  },
+  "reference": {
+    "source": "ai-image-metadata/characters/player-animation-sources/human_female_warrior/reference.png",
+    "chromaSource": "ai-image-metadata/characters/player-animation-sources/human_female_warrior/chroma/reference.png",
+    "identitySource": "ai-image-metadata/characters/player-animation-sources/human_female_warrior/inputs/identity.png",
+    "styleSource": "ai-image-metadata/characters/player-animation-sources/human_female_warrior/inputs/style.png",
+    "prompt": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative Human Warrior (female presentation) identity portrait; Image 2 is the approved full-body pixel-art style and proportion reference only. Player identity metadata: human features balanced proportions warm skin tone female feminine features armored fighter sword shield sturdy muscular battle-ready. Create one complete head-to-toe Human Warrior (female presentation) that faithfully preserves Image 1's face, ancestry traits, gender presentation, hair, eyes, complexion, armor, costume, palette, proportions, and martial equipment. Do not import identity details from Image 2. Keep the authoritative portrait's armor, weapon, shield, and accessory designs and count consistent in every pose. When the portrait contains a sword and shield, show exactly one of each, keep them in the correct hands, and never duplicate, swap, sheathe, or transform them. Translate the portrait into the compact full-body quality and readable armored silhouette demonstrated by Image 2. Use a flat #00ff00 chroma key background with no floor or scenery. Use a square 1:1 canvas with generous padding on every side. Polished hand-authored 16-bit pixel art with crisp intentional pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment color ramps. One centered full-body warrior in a guarded neutral ready stance facing three-quarters right. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+  },
+  "animations": {
+    "idle": {
+      "source": "ai-image-metadata/characters/player-animation-sources/human_female_warrior/idle.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/human_female_warrior/chroma/idle.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 4,
+      "frameDescriptions": [
+        "guarded ready stance with shield forward and sword poised",
+        "measured inhale with chest raised and shield hand firm",
+        "weight shift onto the forward leg with knees flexed",
+        "alert weapon lift while the shield continues covering the torso",
+        "centered guarded midpoint",
+        "measured exhale with shoulders lowering and armor settling",
+        "weight shift onto the rear leg with a distinct shield angle",
+        "guarded stance flowing smoothly back to frame one"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body warrior guarded idle-cycle poses of the authoritative Human Warrior (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right and then bottom row left-to-right. Player identity metadata: human features balanced proportions warm skin tone female feminine features armored fighter sword shield sturdy muscular battle-ready. Required sequence: guarded ready stance with shield forward and sword poised; measured inhale with chest raised and shield hand firm; weight shift onto the forward leg with knees flexed; alert weapon lift while the shield continues covering the torso; centered guarded midpoint; measured exhale with shoulders lowering and armor settling; weight shift onto the rear leg with a distinct shield angle; guarded stance flowing smoothly back to frame one. Motion direction: A vigilant breathing loop with shield coverage, a ready weapon, and alternating armored weight shifts; the first and last poses connect smoothly.. Overall warrior motion is grounded, weighted, disciplined, vigilant, and powerful, with committed footwork and readable weapon-and-shield body mechanics. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact portrait identity, armor, costume, palette, proportions, and equipment throughout. Keep the authoritative portrait's armor, weapon, shield, and accessory designs and count consistent in every pose. When the portrait contains a sword and shield, show exactly one of each, keep them in the correct hands, and never duplicate, swap, sheathe, or transform them. Warrior motion is physical rather than spell-casting. Do not add magical projectiles, runes, halos, or aura; if the identity portrait explicitly establishes a small enchanted accent, preserve its exact palette and keep it secondary to the martial action. Action-specific effects: No attack trail or active magic; only subtle cloth, hair, and armor-settling motion. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "walk": {
+      "source": "ai-image-metadata/characters/player-animation-sources/human_female_warrior/walk.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/human_female_warrior/chroma/walk.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "left foot forward contact with shield leading",
+        "left leg compressed under armored weight",
+        "passing pose with right knee advancing and sword balancing behind",
+        "right foot reaching forward while shield protects the chest",
+        "right foot forward contact with a firm heel plant",
+        "right leg compressed under armored weight",
+        "passing pose with left knee advancing and sword counter-moving",
+        "left foot reaching forward into the marching loop"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body warrior armored walk-cycle poses of the authoritative Human Warrior (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right and then bottom row left-to-right. Player identity metadata: human features balanced proportions warm skin tone female feminine features armored fighter sword shield sturdy muscular battle-ready. Required sequence: left foot forward contact with shield leading; left leg compressed under armored weight; passing pose with right knee advancing and sword balancing behind; right foot reaching forward while shield protects the chest; right foot forward contact with a firm heel plant; right leg compressed under armored weight; passing pose with left knee advancing and sword counter-moving; left foot reaching forward into the marching loop. Motion direction: A steadfast shield-led march with alternating contacts, real knee compression, passing poses, controlled weapon counter-motion, and weighted armor follow-through.. Overall warrior motion is grounded, weighted, disciplined, vigilant, and powerful, with committed footwork and readable weapon-and-shield body mechanics. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact portrait identity, armor, costume, palette, proportions, and equipment throughout. Keep the authoritative portrait's armor, weapon, shield, and accessory designs and count consistent in every pose. When the portrait contains a sword and shield, show exactly one of each, keep them in the correct hands, and never duplicate, swap, sheathe, or transform them. Warrior motion is physical rather than spell-casting. Do not add magical projectiles, runes, halos, or aura; if the identity portrait explicitly establishes a small enchanted accent, preserve its exact palette and keep it secondary to the martial action. Action-specific effects: No attack effect or active magic; armor, straps, hair, and cloth respond naturally to each planted step. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "attack": {
+      "source": "ai-image-metadata/characters/player-animation-sources/human_female_warrior/attack.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/human_female_warrior/chroma/attack.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "guarded ready stance with shield forward",
+        "shield presses outward as the sword arm draws back",
+        "deep sword windup with hips and shoulders coiled over the rear leg",
+        "committed forward step beginning a diagonal slash",
+        "full sword strike at contact with shield still guarding",
+        "powerful follow-through with torso rotation and rear foot driving",
+        "weapon recoil while the shield closes the opening",
+        "recovered guarded ready stance"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body warrior sword-and-shield attack poses of the authoritative Human Warrior (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right and then bottom row left-to-right. Player identity metadata: human features balanced proportions warm skin tone female feminine features armored fighter sword shield sturdy muscular battle-ready. Required sequence: guarded ready stance with shield forward; shield presses outward as the sword arm draws back; deep sword windup with hips and shoulders coiled over the rear leg; committed forward step beginning a diagonal slash; full sword strike at contact with shield still guarding; powerful follow-through with torso rotation and rear foot driving; weapon recoil while the shield closes the opening; recovered guarded ready stance. Motion direction: A planted martial strike with shield-led anticipation, deep sword windup, committed stepping slash, decisive contact, full-body follow-through, recoil, and guarded recovery.. Overall warrior motion is grounded, weighted, disciplined, vigilant, and powerful, with committed footwork and readable weapon-and-shield body mechanics. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact portrait identity, armor, costume, palette, proportions, and equipment throughout. Keep the authoritative portrait's armor, weapon, shield, and accessory designs and count consistent in every pose. When the portrait contains a sword and shield, show exactly one of each, keep them in the correct hands, and never duplicate, swap, sheathe, or transform them. Warrior motion is physical rather than spell-casting. Do not add magical projectiles, runes, halos, or aura; if the identity portrait explicitly establishes a small enchanted accent, preserve its exact palette and keep it secondary to the martial action. Action-specific effects: A short physical blade-swish accent may appear only near contact; no projectile or magical blast, and the accent must not obscure the sword arm, shield, or footing. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "hurt": {
+      "source": "ai-image-metadata/characters/player-animation-sources/human_female_warrior/hurt.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/human_female_warrior/chroma/hurt.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "guarded ready stance before impact",
+        "sharp impact flinch with shield knocked inward",
+        "maximum stagger with torso twisted and sword arm thrown wide",
+        "forced backward step with deeply bent knees",
+        "low shield brace that arrests the recoil",
+        "defiant push upright behind the shield",
+        "feet reset while sword and shield rebuild the guard",
+        "recovered guarded ready stance"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body warrior impact-and-recovery poses of the authoritative Human Warrior (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right and then bottom row left-to-right. Player identity metadata: human features balanced proportions warm skin tone female feminine features armored fighter sword shield sturdy muscular battle-ready. Required sequence: guarded ready stance before impact; sharp impact flinch with shield knocked inward; maximum stagger with torso twisted and sword arm thrown wide; forced backward step with deeply bent knees; low shield brace that arrests the recoil; defiant push upright behind the shield; feet reset while sword and shield rebuild the guard; recovered guarded ready stance. Motion direction: A heavy articulated hit breaks the guard into a maximum stagger, forced backward step, shield brace, defiant rise, and disciplined recovery without losing either item.. Overall warrior motion is grounded, weighted, disciplined, vigilant, and powerful, with committed footwork and readable weapon-and-shield body mechanics. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact portrait identity, armor, costume, palette, proportions, and equipment throughout. Keep the authoritative portrait's armor, weapon, shield, and accessory designs and count consistent in every pose. When the portrait contains a sword and shield, show exactly one of each, keep them in the correct hands, and never duplicate, swap, sheathe, or transform them. Warrior motion is physical rather than spell-casting. Do not add magical projectiles, runes, halos, or aura; if the identity portrait explicitly establishes a small enchanted accent, preserve its exact palette and keep it secondary to the martial action. Action-specific effects: Use only a compact physical impact accent at the struck edge of the guard; no gore, blood, full-body tint, or magical ward. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "death": {
+      "source": "ai-image-metadata/characters/player-animation-sources/human_female_warrior/death.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/human_female_warrior/chroma/death.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "verticalAnchor": "bottom",
+      "outputFrameMap": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        7,
+        7
+      ],
+      "frameDescriptions": [
+        "fatal impact breaks the guarded stance",
+        "shield drops and sword arm slackens as balance fails",
+        "both knees buckle under the armor",
+        "one knee grounds while the torso tips sideways",
+        "armored body and equipment descend into full ground contact",
+        "low fallen body settles with limbs clearly articulated",
+        "final fully fallen warrior pose with equipment at rest",
+        "same final fallen pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body warrior defeat sequence poses of the authoritative Human Warrior (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right and then bottom row left-to-right. Player identity metadata: human features balanced proportions warm skin tone female feminine features armored fighter sword shield sturdy muscular battle-ready. Required sequence: fatal impact breaks the guarded stance; shield drops and sword arm slackens as balance fails; both knees buckle under the armor; one knee grounds while the torso tips sideways; armored body and equipment descend into full ground contact; low fallen body settles with limbs clearly articulated; final fully fallen warrior pose with equipment at rest; same final fallen pose held. Motion direction: A final impact breaks the guard, the planted stance fails, knees buckle, armor drops into a sideward collapse, the body reaches the ground, and motion settles into an unmistakable fully fallen rest pose.. Overall warrior motion is grounded, weighted, disciplined, vigilant, and powerful, with committed footwork and readable weapon-and-shield body mechanics. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact portrait identity, armor, costume, palette, proportions, and equipment throughout. Keep the authoritative portrait's armor, weapon, shield, and accessory designs and count consistent in every pose. When the portrait contains a sword and shield, show exactly one of each, keep them in the correct hands, and never duplicate, swap, sheathe, or transform them. Warrior motion is physical rather than spell-casting. Do not add magical projectiles, runes, halos, or aura; if the identity portrait explicitly establishes a small enchanted accent, preserve its exact palette and keep it secondary to the martial action. Action-specific effects: No gore, blood, dismemberment, or magic. Weapon and shield remain single, recognizable items through the grounded fall, and the body must never be a rigidly rotated upright sprite. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "dead": {
+      "deriveFrom": {
+        "animation": "death",
+        "frame": 7
+      },
+      "frameDescriptions": [
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held"
+      ],
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity."
+    },
+    "victory": {
+      "source": "ai-image-metadata/characters/player-animation-sources/human_female_warrior/victory.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/human_female_warrior/chroma/victory.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "guarded realization of victory",
+        "torso rises as sword and shield lift",
+        "forceful celebratory forward stamp",
+        "sword raised high while shield remains controlled",
+        "shield presented proudly from a wide planted stance",
+        "formal sword salute with head held high",
+        "broad heroic flourish with weapon and shield clearly separated",
+        "final triumphant warrior pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body warrior victory salute poses of the authoritative Human Warrior (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right and then bottom row left-to-right. Player identity metadata: human features balanced proportions warm skin tone female feminine features armored fighter sword shield sturdy muscular battle-ready. Required sequence: guarded realization of victory; torso rises as sword and shield lift; forceful celebratory forward stamp; sword raised high while shield remains controlled; shield presented proudly from a wide planted stance; formal sword salute with head held high; broad heroic flourish with weapon and shield clearly separated; final triumphant warrior pose held. Motion direction: The warrior confirms the win, rises from guard, stamps forward, raises the sword, presents the shield, delivers a proud weapon salute, opens into a broad heroic stance, and holds the triumphant finish.. Overall warrior motion is grounded, weighted, disciplined, vigilant, and powerful, with committed footwork and readable weapon-and-shield body mechanics. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact portrait identity, armor, costume, palette, proportions, and equipment throughout. Keep the authoritative portrait's armor, weapon, shield, and accessory designs and count consistent in every pose. When the portrait contains a sword and shield, show exactly one of each, keep them in the correct hands, and never duplicate, swap, sheathe, or transform them. Warrior motion is physical rather than spell-casting. Do not add magical projectiles, runes, halos, or aura; if the identity portrait explicitly establishes a small enchanted accent, preserve its exact palette and keep it secondary to the martial action. Action-specific effects: No spell effect or projectile; a restrained metal glint may accent the raised weapon without hiding its silhouette. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    }
+  },
+  "pins": {
+    "reference": null,
+    "animations": {}
+  }
+}

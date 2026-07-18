@@ -1,0 +1,288 @@
+{
+  "version": "2.2.0",
+  "description": "Portrait-matched player and canonical enemy sprite metadata - animated 64x512 vertical strips (8 temporal frames per animation)",
+  "generationDefaults": {
+    "mode": "deterministic_compilers_with_reviewed_authored_sources",
+    "canonicalPlayer": {
+      "identity": {
+        "mode": "deterministic_portrait_derived",
+        "compiler": "scripts/ai-images/compile-player-identity-fallbacks.js",
+        "provenance": "player-identity-fallbacks.json",
+        "sourceSize": 64,
+        "outputSize": 512,
+        "encoding": "lossless_rgba_png_nearest_neighbor_8x"
+      },
+      "animation": {
+        "mode": "deterministic_temporal_strip",
+        "compiler": "scripts/ai-images/compile-player-animations.js",
+        "frameSize": 64,
+        "frameCount": 8,
+        "encoding": "lossless_rgba_webp_vertical_strip"
+      },
+      "authoredOverride": {
+        "mode": "deterministic_compilation_of_manually_approved_generated_sources",
+        "candidateGeneration": "nondeterministic_openai_built_in_imagegen",
+        "compiler": "scripts/ai-images/compile-authored-player-animations.js",
+        "draftScaffold": "scripts/ai-images/draft-authored-player-animation.js",
+        "template": "player-authored-animation-template.json",
+        "profileDirectory": "player-animation-profiles",
+        "specDirectory": "player-authored-animations",
+        "sourceDirectory": "player-animation-sources",
+        "pilotIds": ["elf_other_wizard"],
+        "scopeGate": "explicit_id_compile_or_explicit_all_approved_read_only_check",
+        "generationReproducibility": "metadata_prompts_inputs_accepted_sources_and_hashes_retained_but_candidate_pixels_not_seed_reproducible",
+        "compilationReproducibility": "byte_deterministic_from_hash_pinned_accepted_rgba_sources"
+      },
+      "scopeGate": "exactly_one_of_id_sample_all",
+      "existingAssetPolicy": "preserve_unless_targeted_force"
+    },
+    "stagedCandidate": {
+      "optional": true,
+      "canonical": false,
+      "generator": "scripts/ai-images/generate-player-identity-references.js",
+      "stagingDirectory": "ai-images-temp/characters/identity-candidates",
+      "promotionPolicy": "manual_semantic_audit_then_promote_with_explicit_id",
+      "diffusion": {
+        "mode": "sd15",
+        "sd15": {
+          "modelFamily": "sd15",
+          "seedPolicy": "fixed_across_frames",
+          "controlnetWeight": 0.7,
+          "ipadapterWeight": 0.7,
+          "portraitFallbackControlnetWeight": 0.82,
+          "portraitFallbackIpadapterWeight": 0.45,
+          "referenceLoraModel": "cps2-pixel-art",
+          "animationLoraModel": "cps2-pixel-art",
+          "loraModel": "cps2-pixel-art",
+          "availableLoraModels": ["pixel-art-xl", "16-bit-pixel", "all-in-one-pixel", "retro-game-art", "cps2-pixel-art"]
+        }
+      }
+    },
+    "legacyAndEnemies": {
+      "mode": "sd15",
+      "diffusion": {
+        "modelFamily": "sd15",
+        "seedPolicy": "fixed_across_frames",
+        "controlnetWeight": 0.7,
+        "ipadapterWeight": 0.7,
+        "portraitFallbackControlnetWeight": 0.82,
+        "portraitFallbackIpadapterWeight": 0.45,
+        "referenceLoraModel": "cps2-pixel-art",
+        "animationLoraModel": "cps2-pixel-art",
+        "loraModel": "cps2-pixel-art",
+        "availableLoraModels": ["pixel-art-xl", "16-bit-pixel", "all-in-one-pixel", "retro-game-art", "cps2-pixel-art"]
+      }
+    }
+  },
+  "visualStyleProfile": "visual-style-profile.json",
+  "authoredAnimationTemplate": "player-authored-animation-template.json",
+  "authoredAnimationProfileDirectory": "player-animation-profiles",
+  "authoredAnimationSpecDirectory": "player-authored-animations",
+  "authoredAnimationSourceDirectory": "player-animation-sources",
+  "authoredAnimationPilotIds": ["elf_other_wizard"],
+  "enemySpriteRepairManifest": "enemy-sprite-repairs.json",
+  "enemyAnimationStabilizationManifest": "enemy-animation-stabilizations.json",
+  "weightPresets": {
+    "balanced": {
+      "controlnet": 0.7,
+      "ipadapter": 0.7,
+      "description": "Equal priority for pose accuracy and style consistency"
+    },
+    "maxConsistency": {
+      "controlnet": 0.6,
+      "ipadapter": 0.8,
+      "description": "Maximum character consistency across frames"
+    },
+    "precisePoses": {
+      "controlnet": 0.8,
+      "ipadapter": 0.5,
+      "description": "Accurate pose reproduction with more style variation"
+    },
+    "creative": {
+      "controlnet": 0.4,
+      "ipadapter": 0.4,
+      "description": "More generation variation and artistic freedom"
+    }
+  },
+  "qualityPresets": {
+    "fast": {
+      "steps": 15,
+      "cfgScale": 7.0,
+      "sampler": "euler",
+      "scheduler": "normal",
+      "description": "Quick testing - reduced steps"
+    },
+    "balanced": {
+      "steps": 20,
+      "cfgScale": 7.0,
+      "sampler": "euler",
+      "scheduler": "normal",
+      "description": "Good balance of speed and quality"
+    },
+    "quality": {
+      "steps": 32,
+      "cfgScale": 8.0,
+      "sampler": "euler_ancestral",
+      "scheduler": "karras",
+      "description": "Best quality - more steps"
+    }
+  },
+  "poseTemplates": {
+    "basePath": "poses/humanoid",
+    "animations": ["idle", "walk", "attack", "hurt", "death", "cast", "victory", "dead"]
+  },
+  "spriteConvention": {
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "framesPerAnimation": 8,
+    "sheetWidth": 64,
+    "sheetHeight": 512,
+    "layout": "vertical_strip",
+    "minimumTransparentMargin": 4,
+    "sequenceScalePolicy": "uniform_across_frames"
+  },
+  "animations": {
+    "idle": {
+      "description": "Standing idle animation loop",
+      "frameCount": 8,
+      "frameDescriptions": [
+        "standing neutral pose",
+        "slight breathing motion inhale",
+        "subtle weight shift left",
+        "breathing exhale",
+        "standing neutral pose",
+        "slight breathing motion inhale",
+        "subtle weight shift right",
+        "breathing exhale"
+      ]
+    },
+    "walk": {
+      "description": "Walking movement cycle",
+      "frameCount": 8,
+      "frameDescriptions": [
+        "walk cycle start left foot forward",
+        "left foot plant mid stride",
+        "passing position feet together",
+        "right foot reaching forward",
+        "right foot forward full stride",
+        "right foot plant mid stride",
+        "passing position feet together",
+        "left foot reaching forward"
+      ]
+    },
+    "attack": {
+      "description": "Basic attack animation",
+      "frameCount": 8,
+      "frameDescriptions": [
+        "attack windup stance",
+        "pulling back weapon or fist",
+        "maximum pullback ready to strike",
+        "beginning forward swing",
+        "mid swing motion blur",
+        "attack impact extended",
+        "follow through momentum",
+        "returning to neutral"
+      ]
+    },
+    "hurt": {
+      "description": "Taking damage reaction",
+      "frameCount": 8,
+      "frameDescriptions": [
+        "initial impact flinch",
+        "recoiling backward",
+        "maximum stagger pose",
+        "beginning recovery",
+        "stumbling forward",
+        "regaining balance",
+        "almost recovered",
+        "back to ready stance"
+      ]
+    },
+    "death": {
+      "description": "Death/defeat animation",
+      "frameCount": 8,
+      "frameDescriptions": [
+        "fatal hit reaction",
+        "losing balance",
+        "beginning to fall",
+        "mid fall diagonal",
+        "hitting ground",
+        "bouncing slightly",
+        "final rest position",
+        "same final rest position held"
+      ]
+    },
+    "cast": {
+      "description": "Spell casting animation (for magic users)",
+      "frameCount": 8,
+      "frameDescriptions": [
+        "preparing to cast stance",
+        "gathering magical energy",
+        "hands glowing with power",
+        "maximum energy buildup",
+        "beginning to release",
+        "spell release burst",
+        "magical discharge",
+        "returning to neutral"
+      ]
+    },
+    "victory": {
+      "description": "Victory/celebration animation",
+      "frameCount": 8,
+      "frameDescriptions": [
+        "initial victory pose",
+        "raising arms up",
+        "arms fully raised",
+        "pumping fist",
+        "celebration gesture",
+        "turning to crowd",
+        "final pose hold",
+        "same triumphant final pose held"
+      ]
+    },
+    "dead": {
+      "description": "Static dead/defeated pose (shown after death animation completes)",
+      "frameCount": 8,
+      "frameDescriptions": [
+        "lying defeated on ground final rest",
+        "lying defeated on ground final rest",
+        "lying defeated on ground final rest",
+        "lying defeated on ground final rest",
+        "lying defeated on ground final rest",
+        "lying defeated on ground final rest",
+        "lying defeated on ground final rest",
+        "lying defeated on ground final rest"
+      ]
+    }
+  },
+  "categories": ["playerVariants", "playerArchetypes", "enemies"],
+  "categoryFiles": {
+    "players": "players.json",
+    "playerVariants": "player-variants.json",
+    "enemies": {
+      "forest": "enemies/forest.json",
+      "cave": "enemies/cave.json",
+      "mountain": "enemies/mountain.json",
+      "bridge": "enemies/bridge.json",
+      "castle": "enemies/castle.json",
+      "palace": "enemies/palace.json"
+    }
+  },
+  "enemyCounts": {
+    "forest": 6,
+    "cave": 7,
+    "mountain": 7,
+    "bridge": 7,
+    "castle": 4,
+    "palace": 3
+  },
+  "totalEnemies": 34,
+  "totalPlayerVariants": 300,
+  "legacyPlayerArchetypes": 20,
+  "outputPaths": {
+    "playerVariants": "/assets/characters/player/{race}/{gender}/{class}/{id}_{animation}.webp",
+    "playerArchetypes": "/assets/characters/player/{class}/{class}_{animation}.webp",
+    "enemies": "/assets/characters/enemies/{biome}/{id}/{id}_{animation}.webp"
+  },
+  "tempDirectory": "ai-images-temp/characters"
+}

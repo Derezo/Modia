@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="parchment" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f1d99b"/>
+      <stop offset="1" stop-color="#b9843d"/>
+    </linearGradient>
+  </defs>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="#241b2f" stroke="#d0a85c" stroke-width="4"/>
+  <path d="M15 47V17h8l9 16 9-16h8v30h-8V30l-9 15-9-15v17z" fill="url(#parchment)"/>
+</svg>

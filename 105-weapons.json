@@ -1,0 +1,330 @@
+{
+  "version": "2.0.0",
+  "category": "weapons",
+  "description": "Weapon item sprites - expanded for layered composition system",
+  "size": "128x128",
+  "items": [
+    {
+      "id": "sword_short",
+      "name": "Short Sword",
+      "prompt": "short sword simple blade leather grip compact",
+      "seed": 20001,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:16:47.202Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
+      "loraModel": "v2"
+    },
+    {
+      "id": "sword_long",
+      "name": "Longsword",
+      "prompt": "longsword straight double-edged blade ornate with leather-wrapped grip",
+      "seed": 20002,
+      "generated": true,
+      "generatedAt": "2026-01-28T14:38:23.235Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "sword_great",
+      "name": "Greatsword",
+      "prompt": "greatsword massive two-handed blade wide crossguard heavy pommel",
+      "seed": 20003,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:18:17.640Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
+      "loraModel": "v2"
+    },
+    {
+      "id": "axe_hatchet",
+      "name": "Hatchet",
+      "prompt": "hatchet small hand axe compact wooden handle",
+      "seed": 20011,
+      "generated": true,
+      "generatedAt": "2026-01-28T20:20:55.684Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "axe_battle",
+      "name": "Battle Axe",
+      "prompt": "battle axe crescent blade long handle reinforced",
+      "seed": 20013,
+      "generated": true,
+      "generatedAt": "2026-02-03T09:29:13.911Z",
+      "needsRegeneration": false,
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "loraModel": "retro-pixel",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
+    },
+    {
+      "id": "staff_quarter",
+      "name": "Quarterstaff",
+      "prompt": "quarterstaff wooden pole simple monk weapon balanced",
+      "seed": 20041,
+      "generated": true,
+      "generatedAt": "2026-01-28T20:20:55.684Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "staff_magic",
+      "name": "Magic Staff",
+      "prompt": "magic staff gnarled wood crystal tip glowing runes",
+      "seed": 20042,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:37:19.943Z"
+    },
+    {
+      "id": "staff_arcane",
+      "name": "Arcane Staff",
+      "prompt": "arcane staff floating orb intricate carvings mystical",
+      "seed": 20044,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:38:51.771Z"
+    },
+    {
+      "id": "wand_basic",
+      "name": "Wand",
+      "prompt": "wand thin wooden magical focus simple crystal tip",
+      "seed": 20051,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:41:08.983Z"
+    },
+    {
+      "id": "fist_wraps",
+      "name": "Hand Wraps",
+      "prompt": "hand wraps cloth binding martial arts simple",
+      "seed": 20061,
+      "generated": true,
+      "generatedAt": "2026-01-26T14:45:45.088Z"
+    },
+    {
+      "id": "fist_knuckles",
+      "name": "Brass Knuckles",
+      "prompt": "brass knuckles metal fist weapon spiked compact",
+      "seed": 20062,
+      "generated": true,
+      "generatedAt": "2026-01-28T20:30:50.336Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "dagger_throwing",
+      "name": "Throwing Knives",
+      "prompt": "throwing knives set balanced blades sharp tips",
+      "seed": 20077,
+      "generated": true,
+      "generatedAt": "2026-01-28T20:12:03.538Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "bow_elven",
+      "name": "Fey Bow",
+      "prompt": "elegant fey longbow of pale wood and living green wind",
+      "seed": 24032,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/weapons/bow_composite.webp",
+        "composition": {
+          "primaryScale": 0.9,
+          "modulate": {
+            "hue": 122,
+            "saturation": 1.25,
+            "brightness": 1.04
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/weapons/bow_elven.webp",
+        "64": "/assets/items/64/weapons/bow_elven.webp",
+        "128": "/assets/items/128/weapons/bow_elven.webp",
+        "original": "/assets/items/originals/weapons/bow_elven.webp"
+      }
+    },
+    {
+      "id": "fist_nomad",
+      "name": "Nomad's Wraps",
+      "prompt": "sand-colored nomad hand wraps marked for a long journey",
+      "seed": 24033,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/weapons/fist_wraps.webp",
+        "composition": {
+          "primaryScale": 0.88,
+          "colorize": "#b68a58"
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/weapons/fist_nomad.webp",
+        "64": "/assets/items/64/weapons/fist_nomad.webp",
+        "128": "/assets/items/128/weapons/fist_nomad.webp",
+        "original": "/assets/items/originals/weapons/fist_nomad.webp"
+      }
+    },
+    {
+      "id": "mace_war",
+      "name": "Ironforge Hammer",
+      "prompt": "heavy dwarven ironforge war hammer with earthen rune",
+      "seed": 24034,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/weapons/mace_warhammer.webp",
+        "composition": {
+          "primaryScale": 0.9,
+          "modulate": {
+            "hue": 22,
+            "saturation": 0.82,
+            "brightness": 0.92
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/weapons/mace_war.webp",
+        "64": "/assets/items/64/weapons/mace_war.webp",
+        "128": "/assets/items/128/weapons/mace_war.webp",
+        "original": "/assets/items/originals/weapons/mace_war.webp"
+      }
+    },
+    {
+      "id": "shield_tower",
+      "name": "Stonekin Shield",
+      "prompt": "tower shield carved from living slate with an earth core",
+      "seed": 24035,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/armor/shield_tower.webp",
+        "composition": {
+          "primaryScale": 0.88,
+          "colorize": "#777d86",
+          "accent": {
+            "sourceAsset": "overlays/originals/augments/augment_earth.webp",
+            "scale": 0.3,
+            "gravity": "center",
+            "colorize": "#9b7651"
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/weapons/shield_tower.webp",
+        "64": "/assets/items/64/weapons/shield_tower.webp",
+        "128": "/assets/items/128/weapons/shield_tower.webp",
+        "original": "/assets/items/originals/weapons/shield_tower.webp"
+      }
+    },
+    {
+      "id": "staff_wanderer",
+      "name": "Wanderer's Staff",
+      "prompt": "weathered wanderer staff with a brass waypoint charm",
+      "seed": 24036,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/weapons/staff_battle.webp",
+        "composition": {
+          "primaryScale": 0.89,
+          "colorize": "#806342"
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/weapons/staff_wanderer.webp",
+        "64": "/assets/items/64/weapons/staff_wanderer.webp",
+        "128": "/assets/items/128/weapons/staff_wanderer.webp",
+        "original": "/assets/items/originals/weapons/staff_wanderer.webp"
+      }
+    },
+    {
+      "id": "sword_travelers",
+      "name": "Traveler's Blade",
+      "prompt": "balanced traveler's sword with a weathered bronze road charm",
+      "seed": 24037,
+      "generated": true,
+      "generatedAt": "2026-07-15T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "deterministic-sharp-derivation",
+      "derivation": {
+        "registry": "runtime-derivations.json",
+        "pipelineVersion": 1,
+        "sourceAsset": "/assets/items/originals/weapons/sword_long.webp",
+        "composition": {
+          "primaryScale": 0.9,
+          "modulate": {
+            "hue": 32,
+            "saturation": 0.9,
+            "brightness": 0.92
+          }
+        }
+      },
+      "assetPaths": {
+        "32": "/assets/items/32/weapons/sword_travelers.webp",
+        "64": "/assets/items/64/weapons/sword_travelers.webp",
+        "128": "/assets/items/128/weapons/sword_travelers.webp",
+        "original": "/assets/items/originals/weapons/sword_travelers.webp"
+      }
+    }
+  ]
+}

@@ -1,0 +1,632 @@
+{
+  "version": "1.0.0",
+  "template": "ai-image-metadata/characters/player-authored-animation-template.json",
+  "compilerVersion": "1.2.0",
+  "id": "elf_other_wizard",
+  "profile": "wizard_v1",
+  "profileSource": "ai-image-metadata/characters/player-animation-profiles/wizard_v1.json",
+  "status": "approved-pilot",
+  "approvedAt": "2026-07-15T21:00:00.000Z",
+  "metadataFingerprint": "1e804eb202e0da8e0f9744bbc299d521f62be657734232c972a5654a3b40a950",
+  "identity": {
+    "race": "elf",
+    "gender": "other",
+    "class": "wizard",
+    "presentation": "androgynous non-binary elf",
+    "face": "pale fair angular elven face, very long pointed ears, amber-gold eyes",
+    "hair": "tousled layered silver-white hair",
+    "costume": "gray-blue layered wizard robes, pale scarf and mantle, brown leather harness, belts and pouches, patterned ivory trim",
+    "equipment": [
+      "exactly one long dark-wood staff with an ornate bronze geometric head"
+    ],
+    "palette": [
+      "silver-white",
+      "muted gray-blue",
+      "ivory",
+      "warm brown leather",
+      "antique bronze",
+      "amber-gold eyes",
+      "blue-violet magic"
+    ],
+    "baseFacing": "three-quarters right"
+  },
+  "reference": {
+    "source": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+    "chromaSource": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/chroma/reference.png",
+    "identitySource": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/inputs/identity.png",
+    "styleSource": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/inputs/style.png",
+    "prompt": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative Elf Wizard identity portrait; Image 2 is the approved full-body pixel-art style and proportion reference only. Create one complete head-to-toe Elf Wizard matching Image 1. Preserve the same androgynous elven identity, pale fair complexion, very long pointed ears, tousled silver-white hair, amber-gold eyes, gray-blue layered wizard robes and scarf, brown leather harness and belt details, and exactly one ornate dark-wood staff with bronze geometric head. Translate the portrait faithfully into the compact full-body quality and readable silhouette demonstrated by Image 2. Use a perfectly flat solid #00ff00 chroma-key background with no floor or scenery. Polished hand-authored 16-bit pixel art with crisp intentional pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment color ramps. One centered full-body character in a neutral ready stance facing three-quarters right with generous padding. No cropped anatomy, duplicate equipment, background detail, shadow, text, watermark, photorealism, 3D, smooth vector art, anime redesign, chibi proportions, blur, or soft antialiasing."
+  },
+  "animations": {
+    "idle": {
+      "source": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/idle.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/chroma/idle.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 4,
+      "frameDescriptions": [
+        "neutral ready stance",
+        "inhale with shoulders and chest subtly raised",
+        "weight shift onto left leg with robe folds and free hand responding",
+        "gentle exhale with shoulders lowered",
+        "neutral midpoint",
+        "inhale with staff hand and scarf subtly moving",
+        "weight shift onto right leg with different robe folds and hair movement",
+        "gentle exhale flowing smoothly back to frame one"
+      ],
+      "prompt": "Draw exactly eight genuinely redrawn full-body idle-cycle poses of the authoritative Elf Wizard in a 4-column by 2-row atlas, ordered top row then bottom row. Redraw small anatomical, free-hand, staff-hand, robe, scarf, and hair changes for breathing and alternating weight shifts. Preserve the exact face, hair, eyes, ears, costume, proportions, and one ornate staff. Use a perfectly flat #00ff00 background with generous gutters. This must not be a rigid copy merely translated or scaled."
+    },
+    "walk": {
+      "source": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/walk.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/chroma/walk.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "left foot forward contact",
+        "left leg compression down pose",
+        "passing pose with left foot moving behind",
+        "right foot reaching forward",
+        "right foot forward contact",
+        "right leg compression down pose",
+        "passing pose with right foot moving behind",
+        "left foot reaching forward into the loop"
+      ],
+      "prompt": "Draw exactly eight genuinely redrawn full-body walk-cycle poses of the authoritative Elf Wizard in a 4-column by 2-row atlas, ordered top row then bottom row. Redraw legs, knees, boots, free arm, staff arm, shoulders, robe folds, scarf, hair, and staff angle for a coherent alternating-contact walk loop. Preserve exact identity, costume, palette, proportions, and one ornate staff. Use a perfectly flat #00ff00 background with generous gutters. Do not translate, rotate, skew, or stretch one rigid drawing."
+    },
+    "attack": {
+      "source": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/attack.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/chroma/attack.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "ready stance",
+        "rear foot planted and staff pulled back",
+        "deep windup with shoulders and free arm engaged",
+        "forward step beginning a forceful staff sweep",
+        "full impact with staff and casting arm extended",
+        "follow-through with robe and hair momentum",
+        "recoil and staff recovery",
+        "strong ready stance"
+      ],
+      "prompt": "Draw exactly eight genuinely redrawn full-body staff-attack poses of the authoritative Elf Wizard in a 4-column by 2-row atlas. Show a clear windup, step, forceful staff sweep or thrust, compact blue-violet impact, follow-through, recoil, and recovery. Redraw arms, elbows, hands, shoulders, torso twist, legs, robe, scarf, hair, and staff angle. Preserve exact identity and exactly one staff on a flat #00ff00 background. Do not create rigid positional animation."
+    },
+    "hurt": {
+      "source": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/hurt.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/chroma/hurt.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "ready before impact",
+        "sharp flinch and defensive free arm",
+        "maximum stagger with knees bent and staff arm thrown back",
+        "stumbling backward while gripping the staff",
+        "bracing with the staff",
+        "pushing upright while guarding",
+        "regaining balance",
+        "recovered ready stance"
+      ],
+      "prompt": "Draw exactly eight genuinely redrawn full-body hurt-and-recovery poses of the authoritative Elf Wizard in a 4-column by 2-row atlas. Show articulated impact flinch, maximum stagger, stumbling recoil, staff brace, guarded recovery, and return to balance. Redraw arms, shoulders, spine, knees, boots, robe, scarf, hair, and staff angle. Preserve exact identity and one staff on a flat #00ff00 background. No gore, blood, full-body tint, or rigid positional animation."
+    },
+    "death": {
+      "source": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/death.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/chroma/death.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "verticalAnchor": "bottom",
+      "minimumUniquePoses": 7,
+      "outputFrameMap": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        7,
+        7
+      ],
+      "frameDescriptions": [
+        "fatal impact and loss of balance",
+        "knees buckle and staff slips",
+        "one knee hits ground",
+        "sideways collapse",
+        "body reaches ground",
+        "low prone settling pose",
+        "final fully fallen pose",
+        "same final pose held"
+      ],
+      "prompt": "Draw exactly eight genuinely redrawn full-body defeat poses of the authoritative Elf Wizard in a 4-column by 2-row atlas. Show fatal impact, buckling knees, kneeling, sideways collapse, ground contact, settling, and an unmistakable final lying-on-side rest pose with eyes closed and one staff beside the hand. Redraw anatomy, head, arms, hands, legs, robe, scarf, hair, and staff relationship. Preserve identity and use a flat #00ff00 background. No gore, dismemberment, or rigid rotation of the upright sprite."
+    },
+    "cast": {
+      "source": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/cast.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/chroma/cast.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "focused ready stance",
+        "staff planted and free hand raised",
+        "staff sweeps upward while gathering an orb",
+        "wide stance channeling with both arms",
+        "maximum energy buildup",
+        "forceful forward release",
+        "magical discharge fading through follow-through",
+        "composed final casting pose"
+      ],
+      "prompt": "Draw exactly eight genuinely redrawn full-body spell-casting poses of the authoritative Elf Wizard in a 4-column by 2-row atlas. Show staff planting, free-hand rise, blue-violet orb gathering, two-arm channeling, maximum buildup, forceful release, follow-through, and a composed final pose. Redraw arms, elbows, hands, shoulders, torso, legs, robe, scarf, hair, and staff angle. Preserve exact identity and one staff on a flat #00ff00 background. Effects must not hide anatomy."
+    },
+    "dead": {
+      "deriveFrom": {
+        "animation": "death",
+        "frame": 7
+      },
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity."
+    },
+    "victory": {
+      "source": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/victory.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/chroma/victory.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "realization of victory",
+        "free fist and staff raised",
+        "joyful upward hop",
+        "energetic staff twirl",
+        "playful side dance step",
+        "celebratory turn and open hand",
+        "proud arms-wide flourish",
+        "final triumphant held pose"
+      ],
+      "prompt": "Draw exactly eight genuinely redrawn full-body victory and dancing poses of the authoritative Elf Wizard in a 4-column by 2-row atlas. Show realization, raised fist and staff, joyful hop, staff twirl, side dance step, celebratory turn, arms-wide flourish, and a final triumphant held pose with staff and fist raised. Redraw arms, hands, torso, knees, feet, robe, scarf, hair, and staff angle. Preserve exact identity and one staff on a flat #00ff00 background. Do not bounce one rigid drawing or return the final frame to neutral."
+    }
+  },
+  "pins": {
+    "templateSha256": "93943004e340d113943e06dea61fd7dfad67c20750dd4fc30d76d3be1fb7c144",
+    "profileSha256": "54d9edb4d353a7b37e562a019883347057d42afbf19eab06bb76eea62a4ae14d",
+    "reference": {
+      "sourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "sourceDimensions": "1254x1254",
+      "chromaSourceSha256": "570f97e8ab5e2c52d872794eb7a969059df873eeb3954fe4c46bef4af4258387",
+      "chromaSourceDimensions": "1254x1254",
+      "identitySourceSha256": "641aebe56afbeb9eaf91add92d43c42585a4553b3b27c126b82e3674fae361ad",
+      "identitySourceDimensions": "1024x1024",
+      "styleSourceSha256": "4e84fd9acbd3f81f41927b89adb621e57c097bc5159694d8203f998afb35478f",
+      "styleSourceDimensions": "512x512",
+      "promptSha256": "2c4c8bbb87efa3b841eacc28a323ce3dedff27bd1d0fea09c378175242cfa7ed",
+      "encodedSha256": "48f8d35c0c8ff0a9bc739de5fb5457ebb3e571bbb0ef7953b161f88ce5390d2d",
+      "decodedSha256": "8b24cc41ff24554a6b10fa310ab57eea815a83c8d87ec1326d7f0d4452050e52"
+    },
+    "animations": {
+      "idle": {
+        "sourceSha256": "ef10a00fb3584c6d4a3a31cefb04edf7d164912ad9ad29c29941b8790a895888",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "b5d23cf4f4f5b1a82d5f69d4fb71e51310e6433c0ad0222c6b445af91616e6c6",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "033ed1237232549a2c3a5a184ca4a6cb3ee5c22bb477055a7baaeb0460475771",
+        "encodedSha256": "12a9a0e1d3ee6b6cc9086c4056b4904bc43138733890b998e2202a06b016c30d",
+        "decodedSha256": "69767fdd587874255971c59a38d59571b037a10869f4d110f75f6921cd4b1674",
+        "frameSha256": [
+          "5ceadc813a31dcbe35c33db89a3dc145ed962baf6036a2bd833e79551a8028af",
+          "b6ffb59de7689eb36764d1b8ed8d130bd67ad856b1c7ec43913885e84ea36b9c",
+          "7ba9a6cad9335d88925f7c8ed6aabcc712a7955ed6e37b54d1f61cdfdc3b6235",
+          "4ca69052d41d7e42042d0d6769aa6dc1a2257fbbb35bba01dbab4f5898a73cea",
+          "10f5c1935692d7afbce9786ad95e4140052f3f180ef31b7d9a1e79180a176a73",
+          "dff0e119840e2e986273d824ec1ea488dcec56227136c93a6e9659c5c90f19aa",
+          "daae6322e5a3a07aab0203a7e3d045a01a210b68589d2cdf8f6bfe7274f557c6",
+          "f4753b8a229714cc3343bf45fb713f4bb88e032d3e6e8f60e668df964d4f5bde"
+        ],
+        "poseSha256": [
+          "e282743e748adf5c7224496844893ba2ee8b1c9331a6048d7208a6116d99fcf3",
+          "0a92561467642eecf53f39b8765dac04631faf685c3c66eb2862ac3aad46c2bd",
+          "9f9611f0f3a33f87d53d3718f6f1c150c4eb6d5c06cb458e1d3153c4559c3d9f",
+          "104775f413136df8d53dbb8ae137bc30db3faa62249f8fa2671eb79864db3b91",
+          "88fbbc2041aece89863b9f2c517e9c25034f7462500cf3e585576f6deeb9e66e",
+          "2b895f9a98fe47f8499987234e68fa9cac21ba30bbece744110005e235bd7f8f",
+          "1a116dc190cbb7329791c5a9df3183b8dbcc880a42102671f6fd692831bf003c",
+          "c8506c81ed58cc9ef82edc0fd061633438d809a64e4375616f2b097d6f4ad1a7"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "walk": {
+        "sourceSha256": "542b49223ad18f65e28ec5744d3329915bf5cd5502b47ce4d22ed20b9e1600e4",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "2650b146c669e61f49be90edecf67acbb92df74a9a7a599f1abd8aad842afc52",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "83bdc55cfc89afff7618d2005fc96db8c7f014014b85f20bb77a5f2656c354cb",
+        "encodedSha256": "6a85546030d0881d4176f37e828c934c1ca48fa6d1fc39a3bfdaacff37fdf493",
+        "decodedSha256": "db941c948ae8beb9153bdd2ba0b2fe5682b9b27183e5414c9cd1607f2c4a7f00",
+        "frameSha256": [
+          "9b5bb1fc6611d24e2257989090edfe0cd9b7de957ed0dacfb165acec8f1aad5c",
+          "00db5a79ddb12968490a2e56c2716975b86cb9914bb5b7a0a08f93e8f952b610",
+          "cb3a936d5a3a8a4c0aac9d8364f2fd775f2546ddaa09272d96f537592c0a63f4",
+          "b62632213035c82dc8d89b809da0371b40c0344a55e1185d5de37af23203fe8d",
+          "f4da6023938da0482dc0a8732edbf43553c6ea075cd262baefa68388298db91f",
+          "bd4e4868ad0d9ee295356230e55973675e711599243141a24ced0e4205c22b08",
+          "6758cea307bd68a494f9df0a8a5e46648a65c0b5377af75594c83207297afbad",
+          "cb36ffa7ed25fc45947623763b2ecf7c4e5fe3e364d7b636b6b5ad2a0852f3e2"
+        ],
+        "poseSha256": [
+          "d2f2d05cf171c8dfb47d41a75a492bf6a5192d060550b08a4d3bbed957a55cf7",
+          "01774eb6d251bb52a3345aff9fcf14f88fe55c011c07d9ba41e39a422177e246",
+          "cb9a9d02c6f892e8b9b967e7eba43d49519e14d18d16c8cd4644e764b9b64ade",
+          "26617b3245c44ce0c6568b056f51bcb7174e99216de6a372e0b8376eb1da29fb",
+          "ca50b839ead67b1777c8c622b2da3a80f465557afb1ded98d0f8e9b66124cff7",
+          "538362ef05dc0be79327d989f80f15f6a3240339c5e60e2192760f707ce1ca81",
+          "8c4c40a9f94f0d5f257b014de9b0f5078f201b4edde6ca9cd54e4716a66cb6dc",
+          "41ad7cb72adb351126cf4178d7c2fd05838dfe09b9b6ce6bf73272f610f39bf9"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "attack": {
+        "sourceSha256": "b585b6005405a1ab209f20953c19a25ee2cc5264399054406674bc6afb0ab20a",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "a177ae50021e73e8d9546fd9e5fa86d8d034395ec813c035d341a6f0f757a6c7",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "68268c7917aa633f7c45aeb0aefc4c307774c07f2c3cfbcdac74d0f4c52c0284",
+        "encodedSha256": "be638f829f98a7485045b482ac5e4ec08be0c4ec848b118d64121da486be97ed",
+        "decodedSha256": "1eb0340b298017c16f29b8e85c9c53a767ff9e2e2129cb4d96473dc97aa1dce8",
+        "frameSha256": [
+          "7141f163cbfffc8409c40f4fceec819f02afe1f21285fc9cfef7ea55362e8141",
+          "71b662ca1d5ea20d1654af8ccb995a4954f86d3fcbe9f71129c971833455fd91",
+          "3e030f46eee0fef60f314f9a42b2fab266973ccb00f153072da3c64199b4b048",
+          "8cc92ac58a81d255292046a9906b199cda92f415b015eadf0b41561324a02599",
+          "0d056f5e3b44e26f8d3b379191063e86397c21394d9eb59dc8b47b8f7c8665cf",
+          "783d1f29d9169d8be0981e957e6e48edcd4303920b7340efd20d8702fa302d86",
+          "cf8bae3b859b8095ef4383ad1af63de4da0859e5394214c43057e25006215d43",
+          "5e943db14f5c7308514ebb1aa1c75acf18cdc207cbf8f72a2b385f52e7bcbca9"
+        ],
+        "poseSha256": [
+          "7a7bbc74ac5dada42f2443326175cae8721c443a2f91a24b447ea20fa6174403",
+          "5a0649f09e7007773f6c92bac353d88fd190b06b7190d78dda218980407ba595",
+          "1e1fc0c903f48b5b196510f857e6c7eb511ccee82713ab351a402563b3831454",
+          "c12462620d2bc5371fb462dc6201245d72a1897c0933526a2effc4527c551518",
+          "13937d2334d046797b51028c444d0f1d5ae79997997564ee7ab75b0d80bfcc56",
+          "0e7def1dfd4f5d8ad1e6dd2dcdd9fd228df454a5bf7611426bdce4ad6a062633",
+          "773c9afbcc90bb9ae7b45adb43daa45de0c1b2cb145f7fccf850c8fc48947821",
+          "ec14597a531b347b1099bbaa1c3e40dcc46c0941590569220cb5277a9cedaba1"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          0.998292,
+          0.998994,
+          1,
+          1
+        ]
+      },
+      "hurt": {
+        "sourceSha256": "cafea592a1989bb6fa8a576fb4bee20dcb902e738a7e4f353ff88c46a8791d8f",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "23a124d6a18b395fbe511efbf3a34122c39453b94031b8ed14d9e63862103234",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "c1cad9acb88543dec2cb14a7d298378425d40cacf201f27daa29e13fe6653bac",
+        "encodedSha256": "2f4e20e4f3eede9297c50d50c45aa9035e71a1afd75d965fce6566252f9e0d60",
+        "decodedSha256": "7332931d810b010edb0cb7d04a3d202aa77a113b65283c3b1273b1de02b6e0db",
+        "frameSha256": [
+          "fe75c3fee2acaf2556168153f8416537abc8f7d63a37816e580c148936ad22d0",
+          "ec8a6ee52c95184bb250f3c2ce9ce439b08da7bc0fd49dc08d8d67f5faabdfed",
+          "4523ef5e038c74e18dc2886857826d2b19694514b0ac99f56640b6425a9d6a3f",
+          "9c45f777a7ff5e6b485669bad29e92dd66a138f5aeef8863734f6494a46d9acb",
+          "13944be1b645a9d1e3d834bd8b1a7e83cfaabdb58060eb2318fb3475371f6471",
+          "11d282e16520c0ddc2d9670a8adb2008101ba4df9cac3bae09ddef47cdb41008",
+          "d74f1208a5b7d1543f103f5a0153ce356e5acb44b017792bd5a083457c750cb4",
+          "248fd4c9df96965db3d4b79839d5b217e6c54894fd9c3c0d5907c143e2fb78e1"
+        ],
+        "poseSha256": [
+          "c7a85a52db39b4e0ac64173bc1b6cbfb6800581e788fdb7bf973fc3b408b0a1e",
+          "210254bb170f013f98b5a8bc858133faeba80a67d7bc973251fa8f334521646b",
+          "7886592ebeea6aca9d975994e7d7a3216cc87fb4aa743509f373d8d814605d3d",
+          "e5f94bc02ce98c3ea4befcd86cc9988cfcf57a7c25ca639d80138dfa3ae3ee0d",
+          "c3a0fffbb800248909f906e63ed18521548816837792d5079bf28b4714f19f51",
+          "24b7b493acef4dab4ae0eb32c6490809ddbf4de467f08684eb41ec246db64945",
+          "39a374c7c12cee85e56a607d889090c6a5054318d199467736afca85a7f760f8",
+          "a7ee8ee3d0e39c457a68cb9b90591c55ad2d3b5fcf63f73a3f841a2a48f2c299"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "death": {
+        "sourceSha256": "3973000668dbfc0b236d701a5b540295b62a5fd4d186e38c28827c92532055ab",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "2d10de7c7a578258d92e401bc7f91b554eb72f465019d248e47f4ac5baf16ba6",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "65568ef9247fb889103777c9952c5d7afd5fc8c6b2c72284ce141ec0970ed2f9",
+        "encodedSha256": "1e58e3332a6403e06c7c7e4176a2cc1afa618f3ba76aec8ea909784cb5dd85b0",
+        "decodedSha256": "6467c0421bfcc4986c14d9b45de34cfca58b2899aa8e49fd87da0702638b0bf5",
+        "frameSha256": [
+          "61fab8224b9fbcded262d1796da991167cbd5cedac226adc66d49c8ee80aaa67",
+          "66e6b139dc21bebfc78b3d492979884eefa3792945266e84fbf51576c8cb4fab",
+          "fa298b2a923b55ce1379b1f042cdd2be66387b3e9c7f2e5eff79345c9b5164e3",
+          "d5e5adb151cdd2915d211e439d39bc66a8e91bad92fb3b40f0feba1871dc81f8",
+          "5c24154a7d4d52bc958b9d72894f880be8837a57545c84e947694e47b3b3ab43",
+          "4509cda697b8290b269a8ef4f5e28c79d76abaf42dbc3908ad7ffa126c3cb06b",
+          "8ab93767774436bd9a3c73c59305d79b21cd95a71dd963517daa6e70197fb7b4",
+          "8ab93767774436bd9a3c73c59305d79b21cd95a71dd963517daa6e70197fb7b4"
+        ],
+        "poseSha256": [
+          "78f3160393ffdb0077546ac2c98a5f26068fc8d5a8a9ec9aa316bc00c8263aa8",
+          "037bfb5d3e6a7ee192c8a361ca6f76ed899ed6b443f1269d081dabf8d5009451",
+          "577f9c496c56f0498b0161063d3ef3c2c3739313dbbeaac3021149504f4c5049",
+          "2b9fd44f0d04217f24cb7e8446aedbd933e446238f58b3282a772f201ac8ddc7",
+          "c8c4ba84b4d48891bdb72b444e8d80b13b12dcb752a2e1f10756c80e416680a4",
+          "024cf96a08656f17b2a9fba235235246b3b4cffd3e5cd8ba52dc21d8a23faa29",
+          "6da2c6b010fa723de85e02a35daa1ef85bd1161928ab8d0b6ec84b80acf83808",
+          "6da2c6b010fa723de85e02a35daa1ef85bd1161928ab8d0b6ec84b80acf83808"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.996531,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "cast": {
+        "sourceSha256": "928e7b0d23fa85b82642fb0ce60599ab131b62330c96169b0c3489a1fd8a2a33",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "32644ae762e55bde65d9e62b9481182f876be22862074e2c35a93184a9694087",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "5742af23294ebe7f18b5da10a4136035430392343f208f006ad016a75718345c",
+        "encodedSha256": "060f0dc4f011e37e01e8958a64a97e8bd42797c8d7922a3fe1e883362b22c3f8",
+        "decodedSha256": "1437aa0df37ec3b5608fdae436123c01373cc7a7c5411d1abdd48c604e0335bc",
+        "frameSha256": [
+          "1057cde921defd2447671874a0d9857e2e392abfaf0aed84617fce69118ec600",
+          "2365636cef026b40d39b1b6dc46f72176e12ecea69e7db7a08437b47c431dd1b",
+          "e9232111279a137bb9806640f44460991829053c2aa365a7b627ea14cdddd758",
+          "9eba2a41bf2405167fa987b464bcbd14eb6fb245137659f2a6184061ef26afaa",
+          "d7a865bce017b00a8a5b826c19555ed9affee2c3dcd43eed55bb89b7517c245a",
+          "22ad015e0614fb6428f84ccc8d75ae2d4471709b5ebb1caa7e395c86cb1eda72",
+          "261eb14dd1f4b93fbc4d3f96f39d10304868b19dbe41d5fce32d29d46412991d",
+          "e39fc37b2cd273197f6935e7aa6b6843742c3cbd0cdc6da463b5dd1bf5b8348e"
+        ],
+        "poseSha256": [
+          "d65929edd50f4ae4210f5fc18e7446e9d692730eaa4fb6e1a15197fdebb04ae4",
+          "c3fcde52faebf320399c971529bddd92d9c79de4e530aa2b6fe8084909748bef",
+          "f3bc79e23312d67f33bc3746744019fc3582361303e0426918c0b0c901a81380",
+          "53fac16ec1a40d1bdef02e1f5a70d555790f0129327059f6b861c9848cc385d2",
+          "24491fc45434da23efe714effa8f32174680c2d85c170a2489c3b0f8ad84a7e4",
+          "a0aacb588fa522a4b4a54ac0ecc8d961f063b015901a59d8b568827fc5d02179",
+          "89f2a9dc2038f477e09fce7b5d22cb3ebb41147d2f2fb9644d545e7079dc4427",
+          "4c5cdd39bc6f0760ee5e13a0813add5c1c966f727f1fa6a5c89590f3f5e97b99"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.998546,
+          1,
+          0.996217,
+          0.997243,
+          0.997939,
+          0.991061,
+          0.97006,
+          0.984622
+        ]
+      },
+      "victory": {
+        "sourceSha256": "10880ce3cf3cb3eea03b04f966ae92b3ff17958546da2879ab1c41194db53d50",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "ebfaf39251cb05ea1a240c65eb4e42c7df071d42adadece3b5a78efad39c435c",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "f4f344d9479b5f39afdcb4eccedbbd16497333dc9c37b8f7d218ba92dead3891",
+        "encodedSha256": "152469a34430cc1c5ec4482c0e59bb80d37f14faf0de86dcb5aeb291240511a3",
+        "decodedSha256": "2219525a98b612ff95472bb0ef546dd9f994e6a33e720bdcbea9a73ce6467ab3",
+        "frameSha256": [
+          "42753d09af325ceeba294c6799508d215fe83cb7dd84ebd99d9f2d8525956eae",
+          "7158fc085ca8b6d8175b0e4c8116b4ac19c7b65949326e54b69ffef4acb79cde",
+          "893394db10de7a1a136967e021911b6814bf0cae68f8613a515572005bd57d6e",
+          "cc0ed78097b7407b773d7fbc00863999c18d952a6e61d37d9c6b05ef9a68b6df",
+          "72675d570c6664303a92cf793662187eb6891d4872595c83af5df05e78bd5e9e",
+          "7ea905b9b16c25d7215482c8fe91878e5a2e04c4de5c49ff4d1d8d9306363f76",
+          "e0f4c7ff4eb525ad05603d356733d9a3c4e0302268588f2d0c72e0bbd29c7e76",
+          "174d0b1c09ac1279e0949ec294679d45f7dfb5b2012e574664e2126560779522"
+        ],
+        "poseSha256": [
+          "5ffc62afdd81c17c4aafe75aa80896245a2afb35c095328ef85e2bce5413bbf5",
+          "1de4e5b47038f6a93b98925b7ee4b42e4b276528842e3345730214e2cdbbd139",
+          "1f16d50d35012c52ac6899099bb0ea69f620c7b46b12afc8e863c7ce84cb547d",
+          "0c8d6eaa016a76796cb7da38c88d86dcbbf2f467f9d971eb5566fbfad4dcfbbe",
+          "38302989275325791ffc2cf1d2b7b3e7cef5a29ecd3a73ed2947c42e806095a6",
+          "cc18df2f8aace154bb75956a8f7745a70a58a7e1d7ee11353820493252ac9b4e",
+          "205fab1f46b0a5be4aa0a2426a8fffbe0748c06f3fecb0edde320946129434ad",
+          "06b30b2c23c735672d4ad19aef0a9edf84601bb09e858444b0d8a4f5f036efd9"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          0.994335,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "dead": {
+        "sourceSha256": "3973000668dbfc0b236d701a5b540295b62a5fd4d186e38c28827c92532055ab",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "2d10de7c7a578258d92e401bc7f91b554eb72f465019d248e47f4ac5baf16ba6",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "f631a7fd605211260b28b5a5bba3503e06dc1064497d1e5769d62e40e178e2b1",
+        "encodedSha256": "2e8a92eceff71a588764dd43be2603c55dbe884399f20bd48966d1fd6e8abe59",
+        "decodedSha256": "e078a8254c599c236f279910aa2cd4c48ee78a28468ac9cf38120aa0efa7295b",
+        "frameSha256": [
+          "8ab93767774436bd9a3c73c59305d79b21cd95a71dd963517daa6e70197fb7b4",
+          "8ab93767774436bd9a3c73c59305d79b21cd95a71dd963517daa6e70197fb7b4",
+          "8ab93767774436bd9a3c73c59305d79b21cd95a71dd963517daa6e70197fb7b4",
+          "8ab93767774436bd9a3c73c59305d79b21cd95a71dd963517daa6e70197fb7b4",
+          "8ab93767774436bd9a3c73c59305d79b21cd95a71dd963517daa6e70197fb7b4",
+          "8ab93767774436bd9a3c73c59305d79b21cd95a71dd963517daa6e70197fb7b4",
+          "8ab93767774436bd9a3c73c59305d79b21cd95a71dd963517daa6e70197fb7b4",
+          "8ab93767774436bd9a3c73c59305d79b21cd95a71dd963517daa6e70197fb7b4"
+        ],
+        "poseSha256": [
+          "6da2c6b010fa723de85e02a35daa1ef85bd1161928ab8d0b6ec84b80acf83808",
+          "6da2c6b010fa723de85e02a35daa1ef85bd1161928ab8d0b6ec84b80acf83808",
+          "6da2c6b010fa723de85e02a35daa1ef85bd1161928ab8d0b6ec84b80acf83808",
+          "6da2c6b010fa723de85e02a35daa1ef85bd1161928ab8d0b6ec84b80acf83808",
+          "6da2c6b010fa723de85e02a35daa1ef85bd1161928ab8d0b6ec84b80acf83808",
+          "6da2c6b010fa723de85e02a35daa1ef85bd1161928ab8d0b6ec84b80acf83808",
+          "6da2c6b010fa723de85e02a35daa1ef85bd1161928ab8d0b6ec84b80acf83808",
+          "6da2c6b010fa723de85e02a35daa1ef85bd1161928ab8d0b6ec84b80acf83808"
+        ],
+        "sourceFrameIndexes": [
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  }
+}

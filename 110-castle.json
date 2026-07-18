@@ -1,0 +1,108 @@
+{
+  "biome": "castle",
+  "category": "walls",
+  "description": "Castle biome wall textures - seamless vertical strips for elevation stacking",
+  "palette": {
+    "primary": "#708090",
+    "secondary": "#696969",
+    "accent": "#2F4F4F"
+  },
+  "tiles": [
+    {
+      "key": "wall_castle_default",
+      "terrain": "default",
+      "prompt": "seamless vertical hewn castle stone wall texture with fitted blocks and mortar lines, tileable horizontal pattern, side view cross-section, slate grey tones",
+      "seed": 51001,
+      "generated": true,
+      "generatedAt": "2026-01-31T10:08:32.369Z"
+    },
+    {
+      "key": "wall_castle_brick",
+      "terrain": "brick",
+      "prompt": "seamless vertical castle brick wall texture with weathered red and grey masonry pattern, tileable horizontal pattern, side view cross-section, red and grey tones",
+      "seed": 51011,
+      "generated": true,
+      "generatedAt": "2026-01-31T10:09:20.180Z"
+    },
+    {
+      "key": "wall_castle_dungeon",
+      "terrain": "dungeon",
+      "prompt": "seamless vertical damp dungeon wall texture with moss growth and rusted iron rings, tileable horizontal pattern, side view cross-section, dark grey and green tones",
+      "seed": 51021,
+      "generated": true,
+      "generatedAt": "2026-01-31T10:10:08.030Z"
+    },
+    {
+      "key": "wall_castle_grass",
+      "terrain": "grass",
+      "prompt": "seamless vertical castle courtyard wall texture with grass growing through cracks, tileable horizontal pattern, side view cross-section, grey green tones",
+      "seed": 51031,
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
+    },
+    {
+      "key": "wall_castle_stone",
+      "terrain": "stone",
+      "prompt": "seamless vertical castle stone masonry wall texture with mortar joints, tileable horizontal pattern, side view cross-section, grey tones",
+      "seed": 51041,
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
+    },
+    {
+      "key": "wall_castle_rock",
+      "terrain": "rock",
+      "prompt": "seamless vertical rough castle foundation wall texture with uncut stones, tileable horizontal pattern, side view cross-section, dark grey tones",
+      "seed": 51051,
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
+    },
+    {
+      "key": "wall_castle_forest",
+      "terrain": "forest",
+      "prompt": "seamless vertical castle wall with ivy overgrowth texture, tileable horizontal pattern, side view cross-section, grey green tones",
+      "seed": 51061,
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
+    },
+    {
+      "key": "wall_castle_water",
+      "terrain": "water",
+      "prompt": "seamless vertical castle moat wall texture with water stains and moss, tileable horizontal pattern, side view cross-section, grey blue tones",
+      "seed": 51071,
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
+    },
+    {
+      "key": "wall_castle_lava",
+      "terrain": "lava",
+      "prompt": "seamless vertical volcanic fortress wall texture with heat damage and lava seepage, tileable horizontal pattern, side view cross-section, black red tones",
+      "seed": 51081,
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
+    },
+    {
+      "key": "wall_castle_cliff",
+      "terrain": "cliff",
+      "prompt": "seamless vertical castle built into cliff face texture with natural and cut stone, tileable horizontal pattern, side view cross-section, grey tones",
+      "seed": 51091,
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
+    },
+    {
+      "key": "wall_castle_tree",
+      "terrain": "tree",
+      "prompt": "seamless vertical castle wooden rampart wall texture with timber and iron fittings, tileable horizontal pattern, side view cross-section, brown grey tones",
+      "seed": 51101,
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
+    }
+  ]
+}

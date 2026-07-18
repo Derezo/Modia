@@ -1,0 +1,584 @@
+{
+  "version": "1.0.0",
+  "template": "ai-image-metadata/characters/player-authored-animation-template.json",
+  "compilerVersion": "1.2.0",
+  "id": "elf_female_warrior",
+  "profile": "warrior_v1",
+  "profileSource": "ai-image-metadata/characters/player-animation-profiles/warrior_v1.json",
+  "status": "approved",
+  "approvedAt": "2026-07-17T06:49:54.044Z",
+  "metadataFingerprint": "01f47fac2b5efe69a863ff0fccffee838a8ca884d000ef12e3039ceb2cdb9cb1",
+  "draftProvenance": {
+    "registry": "ai-image-metadata/characters/player-variants.json",
+    "templateSha256": "7943e69db577b3a4429b47df634f931d3f4cb8e8ce9a91a06578255fbe935bbe",
+    "profileSha256": "83b4a6db0b309ad1c5d1c7e395d3bb5aabe8409a903d1e43fed83849dcc9bc5e"
+  },
+  "identity": {
+    "race": "elf",
+    "gender": "female",
+    "class": "warrior",
+    "presentation": "female elf warrior",
+    "visualTraits": "elf pointed ears angular features fair complexion luminous eyes female feminine features armored fighter sword shield sturdy muscular battle-ready",
+    "baseFacing": "three-quarters right",
+    "sourceMetadata": {
+      "isAdvanced": false,
+      "inheritsFrom": "warrior",
+      "seed": 10105
+    }
+  },
+  "inputs": {
+    "identity": {
+      "origin": "frontend/public/assets/portraits/originals/elf_female_warrior.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/elf_female_warrior/inputs/identity.png",
+      "authority": "face, ancestry, gender presentation, hair, eyes, complexion, costume, palette, proportions, and equipment"
+    },
+    "style": {
+      "origin": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/elf_female_warrior/inputs/style.png",
+      "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+    }
+  },
+  "reference": {
+    "source": "ai-image-metadata/characters/player-animation-sources/elf_female_warrior/reference.png",
+    "chromaSource": "ai-image-metadata/characters/player-animation-sources/elf_female_warrior/chroma/reference.png",
+    "identitySource": "ai-image-metadata/characters/player-animation-sources/elf_female_warrior/inputs/identity.png",
+    "styleSource": "ai-image-metadata/characters/player-animation-sources/elf_female_warrior/inputs/style.png",
+    "prompt": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative Elf Warrior (female presentation) identity portrait; Image 2 is the approved full-body pixel-art style and proportion reference only. Player identity metadata: elf pointed ears angular features fair complexion luminous eyes female feminine features armored fighter sword shield sturdy muscular battle-ready. Create one complete head-to-toe Elf Warrior (female presentation) that faithfully preserves Image 1's face, ancestry traits, gender presentation, hair, eyes, complexion, armor, costume, palette, proportions, and martial equipment. Do not import identity details from Image 2. Keep the authoritative portrait's armor, weapon, shield, and accessory designs and count consistent in every pose. When the portrait contains a sword and shield, show exactly one of each, keep them in the correct hands, and never duplicate, swap, sheathe, or transform them. Translate the portrait into the compact full-body quality and readable armored silhouette demonstrated by Image 2. Use a flat #00ff00 chroma key background with no floor or scenery. Use a square 1:1 canvas with generous padding on every side. Polished hand-authored 16-bit pixel art with crisp intentional pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment color ramps. One centered full-body warrior in a guarded neutral ready stance facing three-quarters right. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+  },
+  "animations": {
+    "idle": {
+      "source": "ai-image-metadata/characters/player-animation-sources/elf_female_warrior/idle.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/elf_female_warrior/chroma/idle.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 4,
+      "frameDescriptions": [
+        "guarded ready stance with shield forward and sword poised",
+        "measured inhale with chest raised and shield hand firm",
+        "weight shift onto the forward leg with knees flexed",
+        "alert weapon lift while the shield continues covering the torso",
+        "centered guarded midpoint",
+        "measured exhale with shoulders lowering and armor settling",
+        "weight shift onto the rear leg with a distinct shield angle",
+        "guarded stance flowing smoothly back to frame one"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body warrior guarded idle-cycle poses of the authoritative Elf Warrior (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right and then bottom row left-to-right. Player identity metadata: elf pointed ears angular features fair complexion luminous eyes female feminine features armored fighter sword shield sturdy muscular battle-ready. Required sequence: guarded ready stance with shield forward and sword poised; measured inhale with chest raised and shield hand firm; weight shift onto the forward leg with knees flexed; alert weapon lift while the shield continues covering the torso; centered guarded midpoint; measured exhale with shoulders lowering and armor settling; weight shift onto the rear leg with a distinct shield angle; guarded stance flowing smoothly back to frame one. Motion direction: A vigilant breathing loop with shield coverage, a ready weapon, and alternating armored weight shifts; the first and last poses connect smoothly.. Overall warrior motion is grounded, weighted, disciplined, vigilant, and powerful, with committed footwork and readable weapon-and-shield body mechanics. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact portrait identity, armor, costume, palette, proportions, and equipment throughout. Keep the authoritative portrait's armor, weapon, shield, and accessory designs and count consistent in every pose. When the portrait contains a sword and shield, show exactly one of each, keep them in the correct hands, and never duplicate, swap, sheathe, or transform them. Warrior motion is physical rather than spell-casting. Do not add magical projectiles, runes, halos, or aura; if the identity portrait explicitly establishes a small enchanted accent, preserve its exact palette and keep it secondary to the martial action. Action-specific effects: No attack trail or active magic; only subtle cloth, hair, and armor-settling motion. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "walk": {
+      "source": "ai-image-metadata/characters/player-animation-sources/elf_female_warrior/walk.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/elf_female_warrior/chroma/walk.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "left foot forward contact with shield leading",
+        "left leg compressed under armored weight",
+        "passing pose with right knee advancing and sword balancing behind",
+        "right foot reaching forward while shield protects the chest",
+        "right foot forward contact with a firm heel plant",
+        "right leg compressed under armored weight",
+        "passing pose with left knee advancing and sword counter-moving",
+        "left foot reaching forward into the marching loop"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body warrior armored walk-cycle poses of the authoritative Elf Warrior (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right and then bottom row left-to-right. Player identity metadata: elf pointed ears angular features fair complexion luminous eyes female feminine features armored fighter sword shield sturdy muscular battle-ready. Required sequence: left foot forward contact with shield leading; left leg compressed under armored weight; passing pose with right knee advancing and sword balancing behind; right foot reaching forward while shield protects the chest; right foot forward contact with a firm heel plant; right leg compressed under armored weight; passing pose with left knee advancing and sword counter-moving; left foot reaching forward into the marching loop. Motion direction: A steadfast shield-led march with alternating contacts, real knee compression, passing poses, controlled weapon counter-motion, and weighted armor follow-through.. Overall warrior motion is grounded, weighted, disciplined, vigilant, and powerful, with committed footwork and readable weapon-and-shield body mechanics. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact portrait identity, armor, costume, palette, proportions, and equipment throughout. Keep the authoritative portrait's armor, weapon, shield, and accessory designs and count consistent in every pose. When the portrait contains a sword and shield, show exactly one of each, keep them in the correct hands, and never duplicate, swap, sheathe, or transform them. Warrior motion is physical rather than spell-casting. Do not add magical projectiles, runes, halos, or aura; if the identity portrait explicitly establishes a small enchanted accent, preserve its exact palette and keep it secondary to the martial action. Action-specific effects: No attack effect or active magic; armor, straps, hair, and cloth respond naturally to each planted step. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "attack": {
+      "source": "ai-image-metadata/characters/player-animation-sources/elf_female_warrior/attack.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/elf_female_warrior/chroma/attack.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "guarded ready stance with shield forward",
+        "shield presses outward as the sword arm draws back",
+        "deep sword windup with hips and shoulders coiled over the rear leg",
+        "committed forward step beginning a diagonal slash",
+        "full sword strike at contact with shield still guarding",
+        "powerful follow-through with torso rotation and rear foot driving",
+        "weapon recoil while the shield closes the opening",
+        "recovered guarded ready stance"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body warrior sword-and-shield attack poses of the authoritative Elf Warrior (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right and then bottom row left-to-right. Player identity metadata: elf pointed ears angular features fair complexion luminous eyes female feminine features armored fighter sword shield sturdy muscular battle-ready. Required sequence: guarded ready stance with shield forward; shield presses outward as the sword arm draws back; deep sword windup with hips and shoulders coiled over the rear leg; committed forward step beginning a diagonal slash; full sword strike at contact with shield still guarding; powerful follow-through with torso rotation and rear foot driving; weapon recoil while the shield closes the opening; recovered guarded ready stance. Motion direction: A planted martial strike with shield-led anticipation, deep sword windup, committed stepping slash, decisive contact, full-body follow-through, recoil, and guarded recovery.. Overall warrior motion is grounded, weighted, disciplined, vigilant, and powerful, with committed footwork and readable weapon-and-shield body mechanics. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact portrait identity, armor, costume, palette, proportions, and equipment throughout. Keep the authoritative portrait's armor, weapon, shield, and accessory designs and count consistent in every pose. When the portrait contains a sword and shield, show exactly one of each, keep them in the correct hands, and never duplicate, swap, sheathe, or transform them. Warrior motion is physical rather than spell-casting. Do not add magical projectiles, runes, halos, or aura; if the identity portrait explicitly establishes a small enchanted accent, preserve its exact palette and keep it secondary to the martial action. Action-specific effects: A short physical blade-swish accent may appear only near contact; no projectile or magical blast, and the accent must not obscure the sword arm, shield, or footing. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "hurt": {
+      "source": "ai-image-metadata/characters/player-animation-sources/elf_female_warrior/hurt.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/elf_female_warrior/chroma/hurt.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "guarded ready stance before impact",
+        "sharp impact flinch with shield knocked inward",
+        "maximum stagger with torso twisted and sword arm thrown wide",
+        "forced backward step with deeply bent knees",
+        "low shield brace that arrests the recoil",
+        "defiant push upright behind the shield",
+        "feet reset while sword and shield rebuild the guard",
+        "recovered guarded ready stance"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body warrior impact-and-recovery poses of the authoritative Elf Warrior (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right and then bottom row left-to-right. Player identity metadata: elf pointed ears angular features fair complexion luminous eyes female feminine features armored fighter sword shield sturdy muscular battle-ready. Required sequence: guarded ready stance before impact; sharp impact flinch with shield knocked inward; maximum stagger with torso twisted and sword arm thrown wide; forced backward step with deeply bent knees; low shield brace that arrests the recoil; defiant push upright behind the shield; feet reset while sword and shield rebuild the guard; recovered guarded ready stance. Motion direction: A heavy articulated hit breaks the guard into a maximum stagger, forced backward step, shield brace, defiant rise, and disciplined recovery without losing either item.. Overall warrior motion is grounded, weighted, disciplined, vigilant, and powerful, with committed footwork and readable weapon-and-shield body mechanics. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact portrait identity, armor, costume, palette, proportions, and equipment throughout. Keep the authoritative portrait's armor, weapon, shield, and accessory designs and count consistent in every pose. When the portrait contains a sword and shield, show exactly one of each, keep them in the correct hands, and never duplicate, swap, sheathe, or transform them. Warrior motion is physical rather than spell-casting. Do not add magical projectiles, runes, halos, or aura; if the identity portrait explicitly establishes a small enchanted accent, preserve its exact palette and keep it secondary to the martial action. Action-specific effects: Use only a compact physical impact accent at the struck edge of the guard; no gore, blood, full-body tint, or magical ward. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "death": {
+      "source": "ai-image-metadata/characters/player-animation-sources/elf_female_warrior/death.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/elf_female_warrior/chroma/death.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "verticalAnchor": "bottom",
+      "outputFrameMap": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        7,
+        7
+      ],
+      "frameDescriptions": [
+        "fatal impact breaks the guarded stance",
+        "shield drops and sword arm slackens as balance fails",
+        "both knees buckle under the armor",
+        "one knee grounds while the torso tips sideways",
+        "armored body and equipment descend into full ground contact",
+        "low fallen body settles with limbs clearly articulated",
+        "final fully fallen warrior pose with equipment at rest",
+        "same final fallen pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body warrior defeat sequence poses of the authoritative Elf Warrior (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right and then bottom row left-to-right. Player identity metadata: elf pointed ears angular features fair complexion luminous eyes female feminine features armored fighter sword shield sturdy muscular battle-ready. Required sequence: fatal impact breaks the guarded stance; shield drops and sword arm slackens as balance fails; both knees buckle under the armor; one knee grounds while the torso tips sideways; armored body and equipment descend into full ground contact; low fallen body settles with limbs clearly articulated; final fully fallen warrior pose with equipment at rest; same final fallen pose held. Motion direction: A final impact breaks the guard, the planted stance fails, knees buckle, armor drops into a sideward collapse, the body reaches the ground, and motion settles into an unmistakable fully fallen rest pose.. Overall warrior motion is grounded, weighted, disciplined, vigilant, and powerful, with committed footwork and readable weapon-and-shield body mechanics. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact portrait identity, armor, costume, palette, proportions, and equipment throughout. Keep the authoritative portrait's armor, weapon, shield, and accessory designs and count consistent in every pose. When the portrait contains a sword and shield, show exactly one of each, keep them in the correct hands, and never duplicate, swap, sheathe, or transform them. Warrior motion is physical rather than spell-casting. Do not add magical projectiles, runes, halos, or aura; if the identity portrait explicitly establishes a small enchanted accent, preserve its exact palette and keep it secondary to the martial action. Action-specific effects: No gore, blood, dismemberment, or magic. Weapon and shield remain single, recognizable items through the grounded fall, and the body must never be a rigidly rotated upright sprite. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "dead": {
+      "deriveFrom": {
+        "animation": "death",
+        "frame": 7
+      },
+      "frameDescriptions": [
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held"
+      ],
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity."
+    },
+    "victory": {
+      "source": "ai-image-metadata/characters/player-animation-sources/elf_female_warrior/victory.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/elf_female_warrior/chroma/victory.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "guarded realization of victory",
+        "torso rises as sword and shield lift",
+        "forceful celebratory forward stamp",
+        "sword raised high while shield remains controlled",
+        "shield presented proudly from a wide planted stance",
+        "formal sword salute with head held high",
+        "broad heroic flourish with weapon and shield clearly separated",
+        "final triumphant warrior pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body warrior victory salute poses of the authoritative Elf Warrior (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right and then bottom row left-to-right. Player identity metadata: elf pointed ears angular features fair complexion luminous eyes female feminine features armored fighter sword shield sturdy muscular battle-ready. Required sequence: guarded realization of victory; torso rises as sword and shield lift; forceful celebratory forward stamp; sword raised high while shield remains controlled; shield presented proudly from a wide planted stance; formal sword salute with head held high; broad heroic flourish with weapon and shield clearly separated; final triumphant warrior pose held. Motion direction: The warrior confirms the win, rises from guard, stamps forward, raises the sword, presents the shield, delivers a proud weapon salute, opens into a broad heroic stance, and holds the triumphant finish.. Overall warrior motion is grounded, weighted, disciplined, vigilant, and powerful, with committed footwork and readable weapon-and-shield body mechanics. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact portrait identity, armor, costume, palette, proportions, and equipment throughout. Keep the authoritative portrait's armor, weapon, shield, and accessory designs and count consistent in every pose. When the portrait contains a sword and shield, show exactly one of each, keep them in the correct hands, and never duplicate, swap, sheathe, or transform them. Warrior motion is physical rather than spell-casting. Do not add magical projectiles, runes, halos, or aura; if the identity portrait explicitly establishes a small enchanted accent, preserve its exact palette and keep it secondary to the martial action. Action-specific effects: No spell effect or projectile; a restrained metal glint may accent the raised weapon without hiding its silhouette. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    }
+  },
+  "pins": {
+    "templateSha256": "93943004e340d113943e06dea61fd7dfad67c20750dd4fc30d76d3be1fb7c144",
+    "profileSha256": "f1c1f6e048f81d195b8fa26629a19b2c56f978b3f4dec9ea2a0a8c9872e66524",
+    "reference": {
+      "sourceSha256": "0d564fbde0cdeb449d5e2174c95f60b34b94eff5dc5977606c5b944599a7e7b1",
+      "sourceDimensions": "1254x1254",
+      "chromaSourceSha256": "933ff3503d2899c5ee7659c5064b65b84c027197151b8c14ff28924acb0bc13f",
+      "chromaSourceDimensions": "1254x1254",
+      "identitySourceSha256": "c98242b7898615b43a9cc23b1107f35cce8b36b466528c2742ce3ffbec2214cb",
+      "identitySourceDimensions": "1024x1024",
+      "styleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "styleSourceDimensions": "1254x1254",
+      "promptSha256": "c7446cda3dbc9cd510111abccad6bcc09dddcd5c61af29f53cdf2c1daf7a7884",
+      "encodedSha256": "3523250f36b05d281d8138ec5def5c38d440e6f242377fc80ae99332f5f40a53",
+      "decodedSha256": "9a2df7baf3c2494cbb1d2ca3dd7496340c6caca44c258b6d38348e84f83c359a"
+    },
+    "animations": {
+      "idle": {
+        "sourceSha256": "e63febbb59f78560c0ee4b6b8796be3f3d635522af417b9a426dc6c2715a387d",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "4d564f226cc02c691e74fc7e5cbcc010001fec3c6d1139388fce0ae80e6e5911",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "6fbc4010a609cd0525b422a418c9c21ad5282ec1dc1649afae439c936bc4e1e1",
+        "encodedSha256": "399f94099b235e0a9117f3e95396a4b1bd868e31da3469cae10939beeb81bad4",
+        "decodedSha256": "8b6ecdb4d3e6e3c0affc90f241772af067f2cce8aea8c3761612831c4d964065",
+        "frameSha256": [
+          "187626f25a379d6a8012e8f7e11cfe965a416848c8b328fa8bc31396f6895558",
+          "73d5255bfd6c9c76efb4422d6e144f4acc1076939148bf9c593bc86771c995a4",
+          "590a00b44bfb324a1c7d1841c8944824a3f952a1276595e386f008e213396e3e",
+          "c2f7883adaa709baf891b70aa2a2435a88c786bdadc9bc13461698ec25aa8d87",
+          "bdc22439911af2507f91494d2cd29c0531afb19f6d045cd750598eb5245f73a7",
+          "452f026aabea002bb19e9f1b14ea4b5fbe3f9e8884dc91b90353d03c83292c14",
+          "41bbab2331cf22efc9e2d69835769857183b679ffdd6bdd45b1ff156b715477c",
+          "10ba88b3a2070b64cfef7c4604a7cbecc7a5aeba5e695119f3514bf0035e2447"
+        ],
+        "poseSha256": [
+          "c9388ff47e88419fcc5666ecf3ab5d5cb28dd9d4c00bcc73a8024fe881bd3705",
+          "5071485383a07565dd620223e28c93568c24571da86b824e8701b6e972a8e3df",
+          "99d844d3e5ff324b79eb20a80513899be9a8e416a043b7cb4719c4d845c3fe1b",
+          "ec3becacb34a777bc600944ad375e5389793c39e7adaa45484763f407941f2a8",
+          "a0d574bb97e65f0cf8fb0bdd24831f003344f2441dd9e06bbb6b73d3b1214c51",
+          "4e72d64884ebe505c3e9bc6bae8c6fbdb836c3af80040703e1ca6e07167726eb",
+          "061d81f2202a87c10b763f0978f6d77cf950f5b7430d5a42e9476df066df7bdd",
+          "2e73ff10170455a29c5b6f69998ae9d9622078d8271368873bbaeb8a1e5347bf"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "walk": {
+        "sourceSha256": "ff127b80fb735907ff2ce4a80d26a11567d7b595fbd4ef7f33b26ff6ad2f76ff",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "2a0e2f52868e6fc42476d3ec252025deb9461ca8e7fe69d68e9055c1e2fb92ca",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "2fdd5bcf475adc66149e56aa6ff29b51a9be386d32239ff794d0ce5bea985b1a",
+        "encodedSha256": "26919c610556431c519d9df1f9ebe3d5fc1e090b2707075b7df11213a186b3d2",
+        "decodedSha256": "a66222f89e37562c6a40bbcf6f3d4ead19b34f8d230927e33c2a718bdc97503c",
+        "frameSha256": [
+          "80e16ea6f390d1b101ff336d38113588e961d7d4c3576ac1038246783e7630cf",
+          "3b6e5c4c635728b42cb75264c46d40e0a457dc553a39f4b733ae36ea4407b654",
+          "44b90cf4ba0696fada8ea5ac82f09e3cd4e4403dbaee0c9217577dd839627884",
+          "ad85972e25badec92413cfe231bd4ff28c50201d95261a896a54a10ba0422fa8",
+          "79690ecbfe1b0dd3fbefca66e697bfcbb70aae5e9c0190a88066ba5e12cbf940",
+          "7bef582158a86f60cdfeb137544b312ed4dc6840cb3fbf71c9268bf29a4e00da",
+          "70bd019a638cbcfa4be69925bc955c283ddcec62e94615ed369c951991076f60",
+          "aa7313f60274048e1e9182b29a3ad9a57638a1c44b22c18e1a347a89a40a804e"
+        ],
+        "poseSha256": [
+          "d93e6d45d3dfe089d168388a5f8954e53999eaf08decc74b0f089639c71775b3",
+          "cbf5310f62706364770a4e54acdb5eb7e58dc473c6f2dc5b2eacfb236c8ad642",
+          "f1571c7821f7493f041861c53705faabc9baa1e77bc286faf94552096a0b7000",
+          "59d0c7ae1376fffa03cee4f02fdccf5ad6b6a92fcf730e1fe98b9e8182a4ea7d",
+          "5a5c4bb220aa245d4f12124cb4d8f79c642a980370d81a5b9d29e6e3d9abafb8",
+          "e88dccad5b543811f5af4267e19153b63cb74a869e050af90d1a4befdb0d5683",
+          "3a2853113332a1e9236e1a4cdab767039b932e7028a6eb64fd114f9919e90ce3",
+          "13967f03dfb6c6b5a1d562d5c5b6c9259dba5d5b8714e8e687cd60a25868cf6b"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "attack": {
+        "sourceSha256": "0e6789358b33dc1e532cc15ae4559007bbc09bf273c5ac444058de70a2364294",
+        "sourceDimensions": "1717x916",
+        "chromaSourceSha256": "1a147616e53f3fa04782fc373cda51d36978c02f5f5b2d449938a88c408a89b7",
+        "chromaSourceDimensions": "1717x916",
+        "promptSha256": "6408c4416d1436ff6acd149fc2fad273aa1a5ea82382a7d1e59fcdbf49c9ba2e",
+        "encodedSha256": "ae348358a920bb3342a69ac4ab2bd58a098d5d76fdbbe01e7065a0150da564c5",
+        "decodedSha256": "fcb48d8b3aa857ff2462efc7e4e10e3e59664790cfec9d64f5f20d9ae3d91f16",
+        "frameSha256": [
+          "f4be9a09102e059d494a3bfffba772f94f0e1383b6fd1600f4fa82002afbf2e4",
+          "5c78b4b00355187e76a1b3c43cc8fc5175f74b411a1f529ab6e987acf22f2cc1",
+          "02b6f1bd3956781c7c6db74be267056af7e74b7e88ee1754c27c5d9d2503f353",
+          "0f16ff88465cfdebb879cf3ba79dbbcbaf82b4681f594e010b30b1dda3e64b48",
+          "702151322c7f1ebf57569894c559e2a9577400fa6627141aefb514d7223e6b88",
+          "055393b9801fe609d26072edc50be6369b378c8a4f5d1ed10ef609cbc4811fbc",
+          "54f872f13fcfcab2428c30b584237086aadba2eca1ce0137e1813a6086e4d243",
+          "197a46304a686ad2c635bf7ed011dddf9b57ce78607c0866fc944f397a221047"
+        ],
+        "poseSha256": [
+          "bd3c15b2e353736e6563c833deeaf18eba0a22aaab090072adfef8766bd58eb8",
+          "e5722aae66d658dc82cbd5ad191efe24453810de8a554fc76f76cbe6e955bf3d",
+          "4b9b25fb56136f4cfb1e813db7f663aef6830d8faae072e1e3780a966c14afe3",
+          "484728660354ce515d7539668d8448b132867a599ecb82c48a40372a9d5e9757",
+          "c133437521f01833f2c15d0c3ea24b2a73e395c0cf944b4489324c5c9cb9b3e2",
+          "897dc9287eafd9d6e0964ad9c0114c3788f45d729f1d68f51ce11d55236ab5b0",
+          "9aa4037416da5a02bdc87917c323508d5d43f61c3bfcd079fbcd4df6f1e9bf63",
+          "4ec5b29fa04e617e0913ab2df440c99e5bab4e8ddf6a8fa307d424a4e3f2e92c"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "hurt": {
+        "sourceSha256": "9c679367118180b205ca7212c2bc41a1cb78c6db1642527c6075214db9b18ee3",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "fb10f1d800c5787a026254547cd7176afb4df60952f28e8605f405410a0aeea8",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "0bf795411593465055369f308cc96751d68f5584bfc69cb8ce7cd28d3cb3148f",
+        "encodedSha256": "59ef51cf608e5b11acab98a66f0f46944374db0da1ac85138baa5a9f708c2fb1",
+        "decodedSha256": "d09572e960aa170732dd52611b468d34ed1d104cadd00cf69f0ef3f52fb4f58f",
+        "frameSha256": [
+          "78d4ba20ff4e9d6a9d028adfd86dbc38187fc1ce30bc785edc70e2e37c000752",
+          "32ce3130402c6865ac8098b7bc699c8cb85cfe2b293871c1c91cadaa3570cdfe",
+          "3c21d3d31580d8f91d331edbfeb04bb6b4079fbae613ceb5a9479643db9d6fae",
+          "818a5866464bc168195f8ff8e692e8e2dff97ea63df8a6f75b92796ffe1a79a5",
+          "9e247290b5bfc869d1cf3802bdb8a52ba0b7d765b6f18b2a19d8f69560a1a371",
+          "f8df2defd856631683901bf5e7ef42a257ff63885f3f605aec1792c11831998c",
+          "e3777246e032319827ef8de9229d1857fa5eb81b4d7edaa58827c79790bf5c1a",
+          "ad6bf6b1ab0c206f362614cc9ee2cbe60a9454b3e6c7daffd6d9f09e3401b987"
+        ],
+        "poseSha256": [
+          "f3d29476b11768d8d1949844eb8347964162e326a8b57b37094273520a427179",
+          "36bad959ce1332bfb5c8e71a124645e5da880b824b075812fe3506251a9d37f3",
+          "51bbfe1474e5857e566919ea4eb19d40731c14bf766498908d3bb9cee70380ac",
+          "1504da79e940f898ded176813aea1f41868f68af4288889a849e9664173011b2",
+          "e8e63435a96cee63881049ea8da7a9a63af860109a7127ee8ef77bcdb6cf6162",
+          "90a3ae127ac5e7fb9721ddd87d447d2d9fb495a687aeb14b463247cc55b99668",
+          "d9bd5ada6dc6bd45e503b98ba6a008d6653ada10aaa1647980980a582b57b8d4",
+          "b9ab5fed8124ea10122e6fdb6f58ee0ef08922e5a6f095a329fa44e40342155a"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          0.999715,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "death": {
+        "sourceSha256": "e189cffb5781438078b5cff8bbf18ab03463303d146bd826b6dcf923455d522f",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "b35b07458b8f3d30731196321320b5a5f2ff2fb41038a47ccd36f5d3114333d0",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "614f594ddece5c57f2f04b661b40065f290995a4eb749f4aca0db41df4515bdb",
+        "encodedSha256": "23115b085dc5dd5d45397d208da234765d9016c6bf0e0206f1c1388d117729cd",
+        "decodedSha256": "c037a4e196f904b7c108b30ca966fdb7b9f99ac8b0bd7408fa5a33e60f960ac4",
+        "frameSha256": [
+          "c9bbaf1183e7c8799f39c43bf859161a95281b6695f1f4ba4b4b731957b9dbdd",
+          "8656bbbb67f9dee6b5b0c96ffb3bee6c3b1efa73216e984fbccd384b212b104b",
+          "e17e5827c4ea4a6b2e388782eaa7b8d4ce6de984bbf14e05aefcd8576f315b48",
+          "e55c3984753f1e58f05deffa427a61b4ea8ae43ccedaa035255ca3e03a8ca9dc",
+          "4ec67e6b3b3e4a404abde86bb5502220742e1904afbf10fd3f3254b6d223988c",
+          "798241daf39b3244b1f09d07cfa2f6d4ba5a83c4f53aa5b3ba1bd68e845cb799",
+          "ba2510ef3c4e68c054c561b08ef8c7e82e122ab46c10c54e8ca4e3cf7b16130d",
+          "ba2510ef3c4e68c054c561b08ef8c7e82e122ab46c10c54e8ca4e3cf7b16130d"
+        ],
+        "poseSha256": [
+          "0aff7d3c7758aa03b52c9dafb5ab1be70fd4c4a54d387c5b8a25c37c0ae45ee8",
+          "a790f6d4e08949db9acb6f3af79b977ddce6515f79670e2a3fb4e184119453b0",
+          "f3f4850a2b61ca4f6cbc518f4a76b944caf9c888ff0252e67e60984916a2fadd",
+          "cceee357665c9d41cc3b0211089af28ba63da03334875450578e7e8e6da9f1ba",
+          "c0d9c73701c8235e0c038d9e9b527c1a2417907ec63934fc9b7925bfa40f4576",
+          "60a58e8035ca2082a03a48a6273033d183c6b76a9a66dc72bdb3592ad0651a68",
+          "289183e1dab2dc4d95569f3191929ebad9f0f0a1351fc453436b290223ceaac6",
+          "289183e1dab2dc4d95569f3191929ebad9f0f0a1351fc453436b290223ceaac6"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          0.996137,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "victory": {
+        "sourceSha256": "8a4ee5c55c224015928033481d661e8fb5a25c8d7957ce0cd9ccb5ca3422ee80",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "b7c4415b31b7967c1ef19211a9ee24b4b6a74c5b387f9d33e4649671dc4794fc",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "026d6527b2a5b9b4a7694f2f93af4f6c3ddb191ee2b9576c37004f89dc64e1be",
+        "encodedSha256": "05ef161bc1a77e159155dce7c86d36912bbe919cd078b012fbd44d498c1143d8",
+        "decodedSha256": "537b3ca23e1414b7443daa37a00e2e84b65276565760adf1bd62a0ab660fd614",
+        "frameSha256": [
+          "718ccc9e5ce985b5b83f8f1e83bc3a0e175a978c14ee56b848d0d885256cbe7f",
+          "0f236c61e73e9f6aec20205384ce68fc5c585890dfca39da257c4d49bbf9d6c5",
+          "4da69f44af4e5b8632cd2d014e82c172d9368ac66fe32ac99a1a38747e732eb6",
+          "c24fa40a8cefa1e37e5e9377ff74edf509d90033e2c0a76d24cf22c1969219d3",
+          "965f2c215df218f6525d0bb23e4c1a64bf31792393fe309057c90c4e9881488c",
+          "7e13f44d5e2c24794d519dc6b0f4a21d5819a5e818a40a4dd954c6e3f8cc6051",
+          "156aaeb6333cee3f982549c000b07489452896dd388ed4d1bae63c037359ad37",
+          "c6f099779ef4c435b6d905aa604427c7a35b73d38e9df8c1a7107c88892179ca"
+        ],
+        "poseSha256": [
+          "649540a1fd636d2da15741200c172e4f5cb7aa7750077b6254acd5fdcb2ae162",
+          "28ef733c1a746c441674f8d41594fee897a76abb26297e8cde18e36a4f63a7bf",
+          "2df521c7b307826aea531fd33c1b63e842137828ed1b1dee61fc7f3e208a2156",
+          "43f671298d0147fd6d64ed61ac5e81c7483ec84eb16534f235be1a0a71078669",
+          "a357ba2937b6c33f9a2eea2e2b58731bddf07eef6d1fbdcfbbf49c55eb10bb3e",
+          "5ed6c719f60a232c4a523a27cd293dd8b65b88832d09505ff3d78a869d8d7fd4",
+          "5463a5868c4594c8dedceffdd002b283a0d1dbca3478384ce0e71fa8ea022a26",
+          "b760aed5a7ff24a619f75ee103d736537400706a9d194c54c43de28572fbedc2"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          0.998195,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "dead": {
+        "sourceSha256": "e189cffb5781438078b5cff8bbf18ab03463303d146bd826b6dcf923455d522f",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "b35b07458b8f3d30731196321320b5a5f2ff2fb41038a47ccd36f5d3114333d0",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "f631a7fd605211260b28b5a5bba3503e06dc1064497d1e5769d62e40e178e2b1",
+        "encodedSha256": "37405c8d3264d1db40a9aef76a21133ec0de4e8d91ca214005f3ebf06c06f912",
+        "decodedSha256": "e0bff25b894704eaf9fa60fe9b9890762e505d10afa789b2c23dafbf7732498a",
+        "frameSha256": [
+          "ba2510ef3c4e68c054c561b08ef8c7e82e122ab46c10c54e8ca4e3cf7b16130d",
+          "ba2510ef3c4e68c054c561b08ef8c7e82e122ab46c10c54e8ca4e3cf7b16130d",
+          "ba2510ef3c4e68c054c561b08ef8c7e82e122ab46c10c54e8ca4e3cf7b16130d",
+          "ba2510ef3c4e68c054c561b08ef8c7e82e122ab46c10c54e8ca4e3cf7b16130d",
+          "ba2510ef3c4e68c054c561b08ef8c7e82e122ab46c10c54e8ca4e3cf7b16130d",
+          "ba2510ef3c4e68c054c561b08ef8c7e82e122ab46c10c54e8ca4e3cf7b16130d",
+          "ba2510ef3c4e68c054c561b08ef8c7e82e122ab46c10c54e8ca4e3cf7b16130d",
+          "ba2510ef3c4e68c054c561b08ef8c7e82e122ab46c10c54e8ca4e3cf7b16130d"
+        ],
+        "poseSha256": [
+          "289183e1dab2dc4d95569f3191929ebad9f0f0a1351fc453436b290223ceaac6",
+          "289183e1dab2dc4d95569f3191929ebad9f0f0a1351fc453436b290223ceaac6",
+          "289183e1dab2dc4d95569f3191929ebad9f0f0a1351fc453436b290223ceaac6",
+          "289183e1dab2dc4d95569f3191929ebad9f0f0a1351fc453436b290223ceaac6",
+          "289183e1dab2dc4d95569f3191929ebad9f0f0a1351fc453436b290223ceaac6",
+          "289183e1dab2dc4d95569f3191929ebad9f0f0a1351fc453436b290223ceaac6",
+          "289183e1dab2dc4d95569f3191929ebad9f0f0a1351fc453436b290223ceaac6",
+          "289183e1dab2dc4d95569f3191929ebad9f0f0a1351fc453436b290223ceaac6"
+        ],
+        "sourceFrameIndexes": [
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  }
+}

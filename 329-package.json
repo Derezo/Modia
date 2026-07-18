@@ -1,0 +1,22 @@
+{
+  "name": "@modia/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared constants and utilities for Modia",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test *.test.js mapgen/*.test.js"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./constants": "./constants.js",
+    "./nameData": "./nameData.js",
+    "./terrain": "./terrain.js",
+    "./mapGeneration": "./mapGeneration.js",
+    "./pathfinding": "./pathfinding.js",
+    "./battleMath": "./battleMath.js",
+    "./obstacles": "./obstacles.js",
+    "./mapgen/SpawnPlacer": "./mapgen/SpawnPlacer.js"
+  }
+}
