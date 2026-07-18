@@ -1,6 +1,0 @@
-# Keep Modia sessions below the context size where substantial latency was observed.
-model_auto_compact_token_limit = 100000
-model_auto_compact_token_limit_scope = "total"
-
-# Use moderate reasoning effort for routine project work.
-model_reasoning_effort = "medium"
