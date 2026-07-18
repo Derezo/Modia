@@ -134,6 +134,23 @@ function absolute(relativePath) {
   return path.resolve(PROJECT_ROOT, relativePath);
 }
 
+function referenceInputImages(spec) {
+  const identitySource = spec.inputs?.identity?.staged || spec.reference?.identitySource;
+  const styleSource = spec.inputs?.style?.staged || spec.reference?.styleSource;
+  const missing = [];
+  if (!identitySource) missing.push('identity');
+  if (!styleSource) missing.push('style');
+  if (missing.length) {
+    throw new Error(
+      `${spec.id} reference metadata is missing ${missing.join(' and ')} input source`
+    );
+  }
+  return [
+    { path: absolute(identitySource), role: 'identity authority (Image 1)' },
+    { path: absolute(styleSource), role: 'rendering-style authority (Image 2)' }
+  ];
+}
+
 function candidateState(job, force) {
   const chromaExists = fs.existsSync(job.chromaPath);
   const rgbaExists = fs.existsSync(job.rgbaPath);
@@ -158,10 +175,7 @@ function buildJobs(spec, options) {
       specField: 'reference',
       chromaPath: absolute(spec.reference.chromaSource),
       rgbaPath: absolute(spec.reference.source),
-      images: [
-        { path: absolute(spec.inputs.identity.staged), role: 'identity authority (Image 1)' },
-        { path: absolute(spec.inputs.style.staged), role: 'rendering-style authority (Image 2)' }
-      ]
+      images: referenceInputImages(spec)
     }];
   }
 
@@ -262,6 +276,29 @@ function buildCodexArgs(job, options, lastMessagePath) {
   return args;
 }
 
+function fileSnapshot(filePath) {
+  try {
+    const stat = fs.statSync(filePath);
+    return `${stat.dev}:${stat.ino}:${stat.size}:${stat.mtimeMs}`;
+  } catch (error) {
+    if (error.code === 'ENOENT') return null;
+    throw error;
+  }
+}
+
+function snapshotRequiredOutputs(job, state) {
+  const required = [];
+  if (state.generate) required.push(job.chromaPath);
+  if (state.removeMatte) required.push(job.rgbaPath);
+  return new Map(required.map(filePath => [filePath, fileSnapshot(filePath)]));
+}
+
+function requiredOutputsWereUpdated(snapshots) {
+  return [...snapshots].every(
+    ([filePath, previous]) => fs.existsSync(filePath) && fileSnapshot(filePath) !== previous
+  );
+}
+
 function runWorker({ job, specPath, state, options, runDirectory }) {
   return new Promise((resolve, reject) => {
     const stem = job.name.replace(/[^a-z0-9_-]/gi, '_');
@@ -273,6 +310,7 @@ function runWorker({ job, specPath, state, options, runDirectory }) {
 
     fs.mkdirSync(path.dirname(job.chromaPath), { recursive: true });
     fs.mkdirSync(path.dirname(job.rgbaPath), { recursive: true });
+    const outputSnapshots = snapshotRequiredOutputs(job, state);
 
     const child = spawn('codex', buildCodexArgs(job, options, lastMessagePath), {
       cwd: PROJECT_ROOT,
@@ -285,11 +323,20 @@ function runWorker({ job, specPath, state, options, runDirectory }) {
     child.stdin.end(`${prompt}\n`);
 
     child.once('error', reject);
-    child.once('close', code => {
+    child.once('close', (code, signal) => {
       jsonl.end();
       stderr.end();
       if (code !== 0) {
-        reject(new Error(`${job.name} Codex worker exited with code ${code}; see ${jsonlPath}`));
+        const exit = signal ? `was terminated by ${signal}` : `exited with code ${code}`;
+        if (requiredOutputsWereUpdated(outputSnapshots)) {
+          console.warn(
+            `[recover] ${job.name}: Codex worker ${exit} after updating its outputs; ` +
+            'validating the completed files'
+          );
+          resolve({ job, jsonlPath, lastMessagePath, recoveredExit: { code, signal } });
+          return;
+        }
+        reject(new Error(`${job.name} Codex worker ${exit}; see ${jsonlPath}`));
         return;
       }
       resolve({ job, jsonlPath, lastMessagePath });
@@ -524,5 +571,7 @@ module.exports = {
   candidateState,
   normalizeReferenceResult,
   parseArgs,
-  runPool
+  requiredOutputsWereUpdated,
+  runPool,
+  snapshotRequiredOutputs
 };

@@ -9,10 +9,13 @@ const sharp = require('sharp');
 
 const {
   buildCodexArgs,
+  buildJobs,
   buildWorkerPrompt,
   normalizeReferenceResult,
   parseArgs,
-  runPool
+  requiredOutputsWereUpdated,
+  runPool,
+  snapshotRequiredOutputs
 } = require('./generate-authored-player-candidates');
 
 test('parseArgs uses a conservative reference-first default', () => {
@@ -79,6 +82,50 @@ test('Codex arguments use ephemeral headless execution and attached images', () 
     ['/repo/identity.png', '/repo/style.png']
   );
   assert.ok(args.includes('example-model'));
+});
+
+test('reference jobs support authored specs without generated inputs metadata', () => {
+  const jobs = buildJobs(
+    {
+      id: 'elf_other_wizard',
+      reference: {
+        identitySource: 'sources/elf_other_wizard/identity.png',
+        styleSource: 'sources/elf_other_wizard/style.png',
+        chromaSource: 'sources/elf_other_wizard/chroma/reference.png',
+        source: 'sources/elf_other_wizard/reference.png'
+      }
+    },
+    { phase: 'reference' }
+  );
+
+  assert.deepEqual(
+    jobs[0].images.map(image => [
+      path.relative(path.resolve(__dirname, '../..'), image.path),
+      image.role
+    ]),
+    [
+      ['sources/elf_other_wizard/identity.png', 'identity authority (Image 1)'],
+      ['sources/elf_other_wizard/style.png', 'rendering-style authority (Image 2)']
+    ]
+  );
+});
+
+test('a failed worker is recoverable only when every required output changed', async t => {
+  const directory = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'modia-worker-output-'));
+  t.after(() => fs.promises.rm(directory, { recursive: true, force: true }));
+  const job = {
+    chromaPath: path.join(directory, 'chroma.png'),
+    rgbaPath: path.join(directory, 'accepted.png')
+  };
+  const snapshots = snapshotRequiredOutputs(
+    job,
+    { generate: true, removeMatte: true }
+  );
+
+  await fs.promises.writeFile(job.chromaPath, 'chroma');
+  assert.equal(requiredOutputsWereUpdated(snapshots), false);
+  await fs.promises.writeFile(job.rgbaPath, 'rgba');
+  assert.equal(requiredOutputsWereUpdated(snapshots), true);
 });
 
 test('runPool respects the requested concurrency', async () => {

@@ -80,6 +80,11 @@ scripts/ai-images/player-sprite-generation-record.json
 *.tmp
 .claude/
 
+# AI image metadata is committed; generated binary results stay local.
+ai-image-metadata/**
+!ai-image-metadata/**/
+!ai-image-metadata/**/*.json
+
 # Playwright test artifacts
 playwright-report/
 test-results/
