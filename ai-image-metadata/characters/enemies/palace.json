@@ -4,8 +4,8 @@
   "biome": "palace",
   "description": "Palace biome enemy sprite sheets",
   "biomeTraits": "opulent royal palace halls polished stone gold trim deep crimson banners",
-  "totalAssets": 3,
-  "totalAnimations": 15,
+  "totalAssets": 2,
+  "totalAnimations": 10,
   "enemies": [
     {
       "id": "dark_knight",
@@ -53,67 +53,6 @@
           "seed": 45034,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, black plate armor glowing red visor corrupted greatsword dark aura, dead static pose, lying defeated at final rest motionless, ornate regal"
-        }
-      },
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAnimations": {
-        "idle": true,
-        "attack": true,
-        "hit": true,
-        "death": true,
-        "dead": false
-      },
-      "generatedAt": null,
-      "generated": false,
-      "loraModel": "retro-pixel"
-    },
-    {
-      "id": "palace_guard",
-      "name": "Palace Guard",
-      "archetype": "humanoid",
-      "visualTraits": "ornate plate armor royal tabard halberd plumed helmet elite disciplined",
-      "sd15Config": {
-        "controlnetWeight": null,
-        "ipadapterWeight": null,
-        "referenceImage": null,
-        "referenceGeneratedAt": null
-      },
-      "animations": {
-        "idle": {
-          "id": "palace_guard_idle",
-          "frameCount": 8,
-          "seed": 45061,
-          "generated": true,
-          "prompt": "pixel art sprite side view 64x64, elite palace guard with ornate plate armor and royal tabard and halberd and plumed helmet, idle attention animation, standing at attention with halberd upright as vigilant elite soldier, grand castle entrance"
-        },
-        "attack": {
-          "id": "palace_guard_attack",
-          "frameCount": 8,
-          "seed": 45062,
-          "generated": true,
-          "prompt": "pixel art sprite side view 64x64, elite palace guard with ornate plate armor and royal tabard and halberd and plumed helmet, attack swing animation, halberd swing with precise trained deadly strike, grand castle entrance"
-        },
-        "hit": {
-          "id": "palace_guard_hit",
-          "frameCount": 8,
-          "seed": 45063,
-          "generated": true,
-          "prompt": "pixel art sprite side view 64x64, elite palace guard with ornate plate armor and royal tabard and halberd and plumed helmet, hurt endure animation, armor ringing and grunting while maintaining formation, grand castle entrance"
-        },
-        "death": {
-          "id": "palace_guard_death",
-          "frameCount": 8,
-          "seed": 45064,
-          "generated": true,
-          "prompt": "pixel art sprite side view 64x64, elite palace guard with ornate plate armor and royal tabard and halberd and plumed helmet, death honor animation, saluting then falling at post in honorable end, grand castle entrance"
-        },
-        "dead": {
-          "id": "palace_guard_dead",
-          "frameCount": 8,
-          "seed": 45074,
-          "generated": false,
-          "prompt": "pixel art sprite side view 64x64, ornate plate armor royal tabard halberd plumed helmet elite disciplined, dead static pose, lying defeated at final rest motionless, ornate regal"
         }
       },
       "needsRegeneration": false,

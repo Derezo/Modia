@@ -74,6 +74,8 @@ frontend/public/assets/
 ai-images-temp/
 ai-audio-temp/
 ai-image-backups/
+tmp/codex-imagegen/
+scripts/ai-images/player-sprite-generation-record.json
 *-temp/
 *.tmp
 .claude/

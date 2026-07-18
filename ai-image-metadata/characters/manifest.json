@@ -28,7 +28,9 @@
         "profileDirectory": "player-animation-profiles",
         "specDirectory": "player-authored-animations",
         "sourceDirectory": "player-animation-sources",
-        "pilotIds": ["elf_other_wizard"],
+        "pilotIds": [
+          "elf_other_wizard"
+        ],
         "scopeGate": "explicit_id_compile_or_explicit_all_approved_read_only_check",
         "generationReproducibility": "metadata_prompts_inputs_accepted_sources_and_hashes_retained_but_candidate_pixels_not_seed_reproducible",
         "compilationReproducibility": "byte_deterministic_from_hash_pinned_accepted_rgba_sources"
@@ -54,7 +56,13 @@
           "referenceLoraModel": "cps2-pixel-art",
           "animationLoraModel": "cps2-pixel-art",
           "loraModel": "cps2-pixel-art",
-          "availableLoraModels": ["pixel-art-xl", "16-bit-pixel", "all-in-one-pixel", "retro-game-art", "cps2-pixel-art"]
+          "availableLoraModels": [
+            "pixel-art-xl",
+            "16-bit-pixel",
+            "all-in-one-pixel",
+            "retro-game-art",
+            "cps2-pixel-art"
+          ]
         }
       }
     },
@@ -70,7 +78,13 @@
         "referenceLoraModel": "cps2-pixel-art",
         "animationLoraModel": "cps2-pixel-art",
         "loraModel": "cps2-pixel-art",
-        "availableLoraModels": ["pixel-art-xl", "16-bit-pixel", "all-in-one-pixel", "retro-game-art", "cps2-pixel-art"]
+        "availableLoraModels": [
+          "pixel-art-xl",
+          "16-bit-pixel",
+          "all-in-one-pixel",
+          "retro-game-art",
+          "cps2-pixel-art"
+        ]
       }
     }
   },
@@ -79,7 +93,9 @@
   "authoredAnimationProfileDirectory": "player-animation-profiles",
   "authoredAnimationSpecDirectory": "player-authored-animations",
   "authoredAnimationSourceDirectory": "player-animation-sources",
-  "authoredAnimationPilotIds": ["elf_other_wizard"],
+  "authoredAnimationPilotIds": [
+    "elf_other_wizard"
+  ],
   "enemySpriteRepairManifest": "enemy-sprite-repairs.json",
   "enemyAnimationStabilizationManifest": "enemy-animation-stabilizations.json",
   "weightPresets": {
@@ -107,21 +123,21 @@
   "qualityPresets": {
     "fast": {
       "steps": 15,
-      "cfgScale": 7.0,
+      "cfgScale": 7,
       "sampler": "euler",
       "scheduler": "normal",
       "description": "Quick testing - reduced steps"
     },
     "balanced": {
       "steps": 20,
-      "cfgScale": 7.0,
+      "cfgScale": 7,
       "sampler": "euler",
       "scheduler": "normal",
       "description": "Good balance of speed and quality"
     },
     "quality": {
       "steps": 32,
-      "cfgScale": 8.0,
+      "cfgScale": 8,
       "sampler": "euler_ancestral",
       "scheduler": "karras",
       "description": "Best quality - more steps"
@@ -129,7 +145,16 @@
   },
   "poseTemplates": {
     "basePath": "poses/humanoid",
-    "animations": ["idle", "walk", "attack", "hurt", "death", "cast", "victory", "dead"]
+    "animations": [
+      "idle",
+      "walk",
+      "attack",
+      "hurt",
+      "death",
+      "cast",
+      "victory",
+      "dead"
+    ]
   },
   "spriteConvention": {
     "frameWidth": 64,
@@ -255,7 +280,11 @@
       ]
     }
   },
-  "categories": ["playerVariants", "playerArchetypes", "enemies"],
+  "categories": [
+    "playerVariants",
+    "playerArchetypes",
+    "enemies"
+  ],
   "categoryFiles": {
     "players": "players.json",
     "playerVariants": "player-variants.json",
@@ -269,14 +298,14 @@
     }
   },
   "enemyCounts": {
-    "forest": 6,
-    "cave": 7,
-    "mountain": 7,
-    "bridge": 7,
-    "castle": 4,
-    "palace": 3
+    "forest": 4,
+    "cave": 3,
+    "mountain": 3,
+    "bridge": 2,
+    "castle": 0,
+    "palace": 2
   },
-  "totalEnemies": 34,
+  "totalEnemies": 14,
   "totalPlayerVariants": 300,
   "legacyPlayerArchetypes": 20,
   "outputPaths": {

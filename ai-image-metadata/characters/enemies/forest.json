@@ -4,8 +4,8 @@
   "biome": "forest",
   "description": "Forest biome enemy sprite sheets",
   "biomeTraits": "leafy green natural woodland undergrowth dappled light",
-  "totalAssets": 6,
-  "totalAnimations": 30,
+  "totalAssets": 4,
+  "totalAnimations": 20,
   "enemies": [
     {
       "id": "forest_slime",
@@ -254,128 +254,6 @@
         "dead": false
       },
       "generatedAt": null,
-      "generated": false,
-      "loraModel": "retro-pixel"
-    },
-    {
-      "id": "treant",
-      "name": "Treant",
-      "archetype": "elemental",
-      "visualTraits": "bark skin branch arms glowing eyes leaves for hair massive trunk body",
-      "sd15Config": {
-        "controlnetWeight": null,
-        "ipadapterWeight": null,
-        "referenceImage": null,
-        "referenceGeneratedAt": null
-      },
-      "animations": {
-        "idle": {
-          "id": "treant_idle",
-          "frameCount": 8,
-          "seed": 41041,
-          "generated": true,
-          "prompt": "pixel art sprite side view 64x64, massive treant with bark skin and glowing eyes and leafy crown, idle breathing animation, swaying gently with leaves rustling and roots shifting, ancient forest"
-        },
-        "attack": {
-          "id": "treant_attack",
-          "frameCount": 8,
-          "seed": 41042,
-          "generated": true,
-          "prompt": "pixel art sprite side view 64x64, massive treant with bark skin and glowing eyes and leafy crown, attack sweep animation, branch arm swinging in crushing horizontal blow, ancient forest"
-        },
-        "hit": {
-          "id": "treant_hit",
-          "frameCount": 8,
-          "seed": 41043,
-          "generated": true,
-          "prompt": "pixel art sprite side view 64x64, massive treant with bark skin and glowing eyes and leafy crown, hurt stagger animation, bark cracking with leaves falling and wooden groan, ancient forest"
-        },
-        "death": {
-          "id": "treant_death",
-          "frameCount": 8,
-          "seed": 41044,
-          "generated": true,
-          "prompt": "pixel art sprite side view 64x64, massive treant with bark skin and glowing eyes and leafy crown, death collapse animation, toppling over with branches snapping and returning to earth, ancient forest"
-        },
-        "dead": {
-          "id": "treant_dead",
-          "frameCount": 8,
-          "seed": 41054,
-          "generated": false,
-          "prompt": "pixel art sprite side view 64x64, bark skin branch arms glowing eyes leaves for hair massive trunk body, dead static pose, lying defeated at final rest motionless, leafy green"
-        }
-      },
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAnimations": {
-        "idle": true,
-        "attack": true,
-        "hit": true,
-        "death": true,
-        "dead": false
-      },
-      "generatedAt": "2026-01-31T14:35:38.433Z",
-      "generated": false,
-      "loraModel": "retro-pixel"
-    },
-    {
-      "id": "dryad",
-      "name": "Dryad",
-      "archetype": "elemental",
-      "visualTraits": "green skin flower hair vine clothing ethereal beauty nature magic glow",
-      "sd15Config": {
-        "controlnetWeight": null,
-        "ipadapterWeight": null,
-        "referenceImage": null,
-        "referenceGeneratedAt": null
-      },
-      "animations": {
-        "idle": {
-          "id": "dryad_idle",
-          "frameCount": 8,
-          "seed": 41051,
-          "generated": true,
-          "prompt": "pixel art sprite side view 64x64, ethereal dryad with green skin and flower hair and vine dress, idle floating animation, hovering gracefully with flowers blooming around serene form, enchanted forest glade"
-        },
-        "attack": {
-          "id": "dryad_attack",
-          "frameCount": 8,
-          "seed": 41052,
-          "generated": true,
-          "prompt": "pixel art sprite side view 64x64, ethereal dryad with green skin and flower hair and vine dress, attack cast animation, vines shooting forward with thorns extended channeling nature magic, enchanted forest glade"
-        },
-        "hit": {
-          "id": "dryad_hit",
-          "frameCount": 8,
-          "seed": 41053,
-          "generated": true,
-          "prompt": "pixel art sprite side view 64x64, ethereal dryad with green skin and flower hair and vine dress, hurt recoil animation, petals scattering with pained expression while recoiling, enchanted forest glade"
-        },
-        "death": {
-          "id": "dryad_death",
-          "frameCount": 8,
-          "seed": 41054,
-          "generated": true,
-          "prompt": "pixel art sprite side view 64x64, ethereal dryad with green skin and flower hair and vine dress, death fade animation, dissolving into leaves and flower petals drifting away, enchanted forest glade"
-        },
-        "dead": {
-          "id": "dryad_dead",
-          "frameCount": 8,
-          "seed": 41064,
-          "generated": false,
-          "prompt": "pixel art sprite side view 64x64, green skin flower hair vine clothing ethereal beauty nature magic glow, dead static pose, lying defeated at final rest motionless, leafy green"
-        }
-      },
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAnimations": {
-        "idle": true,
-        "attack": true,
-        "hit": true,
-        "death": true,
-        "dead": false
-      },
-      "generatedAt": "2026-01-31T14:59:27.785Z",
       "generated": false,
       "loraModel": "retro-pixel"
     }
