@@ -1,0 +1,657 @@
+{
+  "version": "1.0.0",
+  "template": "ai-image-metadata/characters/player-authored-animation-template.json",
+  "compilerVersion": "1.2.0",
+  "id": "elf_female_wizard",
+  "profile": "wizard_v1",
+  "profileSource": "ai-image-metadata/characters/player-animation-profiles/wizard_v1.json",
+  "status": "approved",
+  "approvedAt": "2026-07-16T22:10:00.000Z",
+  "metadataFingerprint": "e6839f28db1614ae56b38f95ba2a4274637a0e4552654d1e98252ea63392b95b",
+  "draftProvenance": {
+    "registry": "ai-image-metadata/characters/player-variants.json",
+    "templateSha256": "7943e69db577b3a4429b47df634f931d3f4cb8e8ce9a91a06578255fbe935bbe",
+    "profileSha256": "a4edf1af6abea3c8c6e21f87c16e976f99f5d8b76ffac0df5fa8acdfbb400dff"
+  },
+  "identity": {
+    "race": "elf",
+    "gender": "female",
+    "class": "wizard",
+    "presentation": "female elf wizard",
+    "visualTraits": "elf pointed ears angular features fair complexion luminous eyes female feminine features robed mage staff arcane glowing mystical",
+    "baseFacing": "three-quarters right",
+    "sourceMetadata": {
+      "isAdvanced": false,
+      "inheritsFrom": "wizard",
+      "seed": 10106
+    }
+  },
+  "inputs": {
+    "identity": {
+      "origin": "frontend/public/assets/portraits/originals/elf_female_wizard.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/elf_female_wizard/inputs/identity.png",
+      "authority": "face, ancestry, gender presentation, hair, eyes, complexion, costume, palette, proportions, and equipment"
+    },
+    "style": {
+      "origin": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/elf_female_wizard/inputs/style.png",
+      "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+    }
+  },
+  "reference": {
+    "source": "ai-image-metadata/characters/player-animation-sources/elf_female_wizard/reference.png",
+    "chromaSource": "ai-image-metadata/characters/player-animation-sources/elf_female_wizard/chroma/reference.png",
+    "identitySource": "ai-image-metadata/characters/player-animation-sources/elf_female_wizard/inputs/identity.png",
+    "styleSource": "ai-image-metadata/characters/player-animation-sources/elf_female_wizard/inputs/style.png",
+    "prompt": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative Elf Wizard (female presentation) identity portrait; Image 2 is the approved full-body pixel-art style and proportion reference only. Player identity metadata: elf pointed ears angular features fair complexion luminous eyes female feminine features robed mage staff arcane glowing mystical. Create one complete head-to-toe Elf Wizard (female presentation) that faithfully preserves Image 1's face, ancestry traits, gender presentation, hair, eyes, complexion, costume, palette, proportions, and equipment. Do not import identity details from Image 2. Keep the authoritative portrait's wizard equipment design and count consistent in every pose. Show exactly one primary staff or focus when the portrait contains one; never duplicate it. Translate the portrait into the compact full-body quality and readable silhouette demonstrated by Image 2. Use a flat #00ff00 chroma key background with no floor or scenery. Polished hand-authored 16-bit pixel art with crisp intentional pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment color ramps. One centered full-body character in a neutral ready stance facing three-quarters right with generous padding. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+  },
+  "animations": {
+    "idle": {
+      "source": "ai-image-metadata/characters/player-animation-sources/elf_female_wizard/idle.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/elf_female_wizard/chroma/idle.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 4,
+      "frameDescriptions": [
+        "neutral ready stance",
+        "inhale with shoulders and chest subtly raised",
+        "weight shift onto the forward leg with robe folds and free hand responding",
+        "gentle exhale with shoulders lowered",
+        "neutral midpoint",
+        "inhale with staff hand, hair, and loose cloth subtly moving",
+        "weight shift onto the rear leg with distinct robe folds",
+        "gentle exhale flowing smoothly back to frame one"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body wizard idle-cycle poses of the authoritative Elf Wizard (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right and then bottom row left-to-right. Player identity metadata: elf pointed ears angular features fair complexion luminous eyes female feminine features robed mage staff arcane glowing mystical. Required sequence: neutral ready stance; inhale with shoulders and chest subtly raised; weight shift onto the forward leg with robe folds and free hand responding; gentle exhale with shoulders lowered; neutral midpoint; inhale with staff hand, hair, and loose cloth subtly moving; weight shift onto the rear leg with distinct robe folds; gentle exhale flowing smoothly back to frame one. Motion direction: A quiet breathing loop with alternating weight shifts; the first and last poses connect smoothly.. Overall wizard motion is flowing, measured, graceful, scholarly, and deliberate, with readable anticipation and follow-through. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact portrait identity, costume, palette, proportions, and equipment throughout. Keep the authoritative portrait's wizard equipment design and count consistent in every pose. Show exactly one primary staff or focus when the portrait contains one; never duplicate it. Use the identity portrait's established magical palette. Effects stay compact and secondary so that hands, arms, equipment, and body mechanics remain readable. Action-specific effects: Only a faint, identity-consistent magical pulse is permitted; no large spell effect. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "walk": {
+      "source": "ai-image-metadata/characters/player-animation-sources/elf_female_wizard/walk.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/elf_female_wizard/chroma/walk.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "left foot forward contact",
+        "left leg compression down pose",
+        "passing pose with left foot moving behind",
+        "right foot reaching forward",
+        "right foot forward contact",
+        "right leg compression down pose",
+        "passing pose with right foot moving behind",
+        "left foot reaching forward into the loop"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body wizard walk-cycle poses of the authoritative Elf Wizard (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right and then bottom row left-to-right. Player identity metadata: elf pointed ears angular features fair complexion luminous eyes female feminine features robed mage staff arcane glowing mystical. Required sequence: left foot forward contact; left leg compression down pose; passing pose with left foot moving behind; right foot reaching forward; right foot forward contact; right leg compression down pose; passing pose with right foot moving behind; left foot reaching forward into the loop. Motion direction: A coherent alternating-contact walk loop with real leg compression, passing poses, opposite arm motion, and secondary cloth movement.. Overall wizard motion is flowing, measured, graceful, scholarly, and deliberate, with readable anticipation and follow-through. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact portrait identity, costume, palette, proportions, and equipment throughout. Keep the authoritative portrait's wizard equipment design and count consistent in every pose. Show exactly one primary staff or focus when the portrait contains one; never duplicate it. Use the identity portrait's established magical palette. Effects stay compact and secondary so that hands, arms, equipment, and body mechanics remain readable. Action-specific effects: No active spell effect; any ambient focus glow remains small and consistent. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "attack": {
+      "source": "ai-image-metadata/characters/player-animation-sources/elf_female_wizard/attack.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/elf_female_wizard/chroma/attack.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "ready stance",
+        "rear foot planted and staff or focus pulled back",
+        "deep windup with shoulders and free arm engaged",
+        "forward step beginning a forceful sweep or thrust",
+        "full impact with staff and casting arm extended",
+        "follow-through with robe and hair momentum",
+        "recoil and equipment recovery",
+        "strong recovered ready stance"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body wizard staff attack poses of the authoritative Elf Wizard (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right and then bottom row left-to-right. Player identity metadata: elf pointed ears angular features fair complexion luminous eyes female feminine features robed mage staff arcane glowing mystical. Required sequence: ready stance; rear foot planted and staff or focus pulled back; deep windup with shoulders and free arm engaged; forward step beginning a forceful sweep or thrust; full impact with staff and casting arm extended; follow-through with robe and hair momentum; recoil and equipment recovery; strong recovered ready stance. Motion direction: Clear anticipation, planted step, forceful staff sweep or thrust, impact, follow-through, recoil, and recovery.. Overall wizard motion is flowing, measured, graceful, scholarly, and deliberate, with readable anticipation and follow-through. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact portrait identity, costume, palette, proportions, and equipment throughout. Keep the authoritative portrait's wizard equipment design and count consistent in every pose. Show exactly one primary staff or focus when the portrait contains one; never duplicate it. Use the identity portrait's established magical palette. Effects stay compact and secondary so that hands, arms, equipment, and body mechanics remain readable. Action-specific effects: A compact identity-colored magical impact may appear at contact but must not conceal the attacking limbs or staff. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "hurt": {
+      "source": "ai-image-metadata/characters/player-animation-sources/elf_female_wizard/hurt.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/elf_female_wizard/chroma/hurt.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "ready before impact",
+        "sharp flinch with defensive free arm",
+        "maximum stagger with knees bent and equipment arm thrown back",
+        "stumbling backward while retaining the wizard focus",
+        "bracing with the staff or grounded stance",
+        "pushing upright while guarding",
+        "regaining balance",
+        "recovered ready stance"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body wizard hurt-and-recovery poses of the authoritative Elf Wizard (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right and then bottom row left-to-right. Player identity metadata: elf pointed ears angular features fair complexion luminous eyes female feminine features robed mage staff arcane glowing mystical. Required sequence: ready before impact; sharp flinch with defensive free arm; maximum stagger with knees bent and equipment arm thrown back; stumbling backward while retaining the wizard focus; bracing with the staff or grounded stance; pushing upright while guarding; regaining balance; recovered ready stance. Motion direction: Articulated impact flinch, maximum stagger, stumbling recoil, equipment brace, guarded recovery, and return to balance.. Overall wizard motion is flowing, measured, graceful, scholarly, and deliberate, with readable anticipation and follow-through. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact portrait identity, costume, palette, proportions, and equipment throughout. Keep the authoritative portrait's wizard equipment design and count consistent in every pose. Show exactly one primary staff or focus when the portrait contains one; never duplicate it. Use the identity portrait's established magical palette. Effects stay compact and secondary so that hands, arms, equipment, and body mechanics remain readable. Action-specific effects: A small disrupted ward or scattered magical sparks may appear; no gore, blood, or full-body tint. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "death": {
+      "source": "ai-image-metadata/characters/player-animation-sources/elf_female_wizard/death.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/elf_female_wizard/chroma/death.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "verticalAnchor": "bottom",
+      "outputFrameMap": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        7,
+        7
+      ],
+      "frameDescriptions": [
+        "fatal impact and loss of balance",
+        "knees buckle and held equipment slips",
+        "one knee reaches the ground",
+        "sideways collapse",
+        "body reaches the ground",
+        "low fallen settling pose",
+        "final fully fallen pose",
+        "same final fallen pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body wizard defeat sequence poses of the authoritative Elf Wizard (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right and then bottom row left-to-right. Player identity metadata: elf pointed ears angular features fair complexion luminous eyes female feminine features robed mage staff arcane glowing mystical. Required sequence: fatal impact and loss of balance; knees buckle and held equipment slips; one knee reaches the ground; sideways collapse; body reaches the ground; low fallen settling pose; final fully fallen pose; same final fallen pose held. Motion direction: Loss of balance, buckling knees, kneeling, sideways collapse, ground contact, settling, and an unmistakable final fully fallen rest pose.. Overall wizard motion is flowing, measured, graceful, scholarly, and deliberate, with readable anticipation and follow-through. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact portrait identity, costume, palette, proportions, and equipment throughout. Keep the authoritative portrait's wizard equipment design and count consistent in every pose. Show exactly one primary staff or focus when the portrait contains one; never duplicate it. Use the identity portrait's established magical palette. Effects stay compact and secondary so that hands, arms, equipment, and body mechanics remain readable. Action-specific effects: Any magic fades as the character falls. No gore or dismemberment, and never rigidly rotate the upright sprite. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "cast": {
+      "source": "ai-image-metadata/characters/player-animation-sources/elf_female_wizard/cast.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/elf_female_wizard/chroma/cast.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "focused ready stance",
+        "staff or focus planted and free hand raised",
+        "focus sweeps upward while gathering magical energy",
+        "wide stance channeling with both arms",
+        "maximum controlled energy buildup",
+        "forceful forward release",
+        "magical discharge fading through follow-through",
+        "composed final casting pose"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body wizard spell-casting sequence poses of the authoritative Elf Wizard (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right and then bottom row left-to-right. Player identity metadata: elf pointed ears angular features fair complexion luminous eyes female feminine features robed mage staff arcane glowing mystical. Required sequence: focused ready stance; staff or focus planted and free hand raised; focus sweeps upward while gathering magical energy; wide stance channeling with both arms; maximum controlled energy buildup; forceful forward release; magical discharge fading through follow-through; composed final casting pose. Motion direction: Focus planting, free-hand rise, energy gathering, two-arm channeling, maximum buildup, forceful release, follow-through, and composed finish.. Overall wizard motion is flowing, measured, graceful, scholarly, and deliberate, with readable anticipation and follow-through. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact portrait identity, costume, palette, proportions, and equipment throughout. Keep the authoritative portrait's wizard equipment design and count consistent in every pose. Show exactly one primary staff or focus when the portrait contains one; never duplicate it. Use the identity portrait's established magical palette. Effects stay compact and secondary so that hands, arms, equipment, and body mechanics remain readable. Action-specific effects: Build and release a compact spell in the identity's magical palette; effects must not hide anatomy or equipment mechanics. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "dead": {
+      "deriveFrom": {
+        "animation": "death",
+        "frame": 7
+      },
+      "frameDescriptions": [
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held"
+      ],
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity."
+    },
+    "victory": {
+      "source": "ai-image-metadata/characters/player-animation-sources/elf_female_wizard/victory.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/elf_female_wizard/chroma/victory.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "realization of victory",
+        "free fist and staff or focus raised",
+        "joyful upward hop",
+        "energetic equipment flourish",
+        "playful side dance step",
+        "celebratory turn with open free hand",
+        "proud arms-wide flourish",
+        "final triumphant held pose"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body wizard victory dance poses of the authoritative Elf Wizard (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right and then bottom row left-to-right. Player identity metadata: elf pointed ears angular features fair complexion luminous eyes female feminine features robed mage staff arcane glowing mystical. Required sequence: realization of victory; free fist and staff or focus raised; joyful upward hop; energetic equipment flourish; playful side dance step; celebratory turn with open free hand; proud arms-wide flourish; final triumphant held pose. Motion direction: Realization, raised free hand and focus, joyful hop, equipment flourish, side dance step, celebratory turn, broad flourish, and a held triumphant finish.. Overall wizard motion is flowing, measured, graceful, scholarly, and deliberate, with readable anticipation and follow-through. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact portrait identity, costume, palette, proportions, and equipment throughout. Keep the authoritative portrait's wizard equipment design and count consistent in every pose. Show exactly one primary staff or focus when the portrait contains one; never duplicate it. Use the identity portrait's established magical palette. Effects stay compact and secondary so that hands, arms, equipment, and body mechanics remain readable. Action-specific effects: Small celebratory magical accents are permitted but must remain secondary to the dancing body and arm motion. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    }
+  },
+  "pins": {
+    "templateSha256": "93943004e340d113943e06dea61fd7dfad67c20750dd4fc30d76d3be1fb7c144",
+    "profileSha256": "54d9edb4d353a7b37e562a019883347057d42afbf19eab06bb76eea62a4ae14d",
+    "reference": {
+      "sourceSha256": "aa1ba0399549cc1a8ece902fe0823ed874b9d395d4a56d14a21841553b4c4248",
+      "sourceDimensions": "1254x1254",
+      "chromaSourceSha256": "c86166fd03b5751461c6a71570563f103ea4028d47be92bb0c90592fdf474c55",
+      "chromaSourceDimensions": "1254x1254",
+      "identitySourceSha256": "3ff3ed4ab38b4f411055b5b926643b1af515da834cd7004fddadf710aeb97923",
+      "identitySourceDimensions": "1024x1024",
+      "styleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "styleSourceDimensions": "1254x1254",
+      "promptSha256": "a9791d673b994fb67252c61eb13c5c110d549af6698858eae9a83122581249f3",
+      "encodedSha256": "45452d2c6712ec4bfe8e536f7fbb414a517b739b2cb3e7742bc9cc8881d802dc",
+      "decodedSha256": "55a31a0d0259b3894075783315d44ace1a6fbd428a4e7735576b37f6c192885a"
+    },
+    "animations": {
+      "idle": {
+        "sourceSha256": "05a3ac5b1d337b725fea554a7dc15cdf4be5146b748084a799854f561a759e54",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "dd09a2aa81e85603c2af5ccce45a285134f3148aa9fb77a22c54af25bf6c5ee7",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "f9880be3fb697c003736f0d52d3af96339350dc4d4de1a7d927a567727810b89",
+        "encodedSha256": "3ce705b627c519dac83f95c90d0f7a6512ad00d1856ae5677bf3177880d8cc47",
+        "decodedSha256": "f08d1bc20a34551049ab22011c4d0f10f0ee904b034d5760734929f8bb072a74",
+        "frameSha256": [
+          "050b338219343aabfe62b16fdff67ac8281a9cbe9dea58ffad82b98ec30921a3",
+          "f7830fc9d55c8005860160ffbcbfb5eef4684bb279b4e56d14ee8ece6f9c2188",
+          "4fb424e9335f435920a15d3ed64a8b1c0a89de450c013660ae4d8983908e0586",
+          "c9a88d44f7aa9d57dbbea4110dffb99c622cdf49fe2eab6e66bd3a3e40d959b0",
+          "b0c8eeadca2ec810af0aabb5bbe7504931e738c95e4e23371244d9df043a22b3",
+          "c3eeee0566fa0e43872ddd8b02afd7aea7e7945d149486bff98b0a09988ca27f",
+          "ac1a3916af0ff3300ed1588af33c1a316da6da2b90ab3351d48b3a64127268dc",
+          "5d477e1ade9eae111815736f50018262d7652db329ca78d29cd2e64584065191"
+        ],
+        "poseSha256": [
+          "24e25a5870122a2198a7df79a20b2b1a07cfe9902b2a7f14b91f7a5ce915f6b8",
+          "83db86e2af9b2fb0b4c6f99532cf9bebabd9304cf232273deba1b48b7b0a47f7",
+          "8feaf0bb082ab74ecb405f6aecb6d07ccf1cb440a48f0e7693067243749dbd29",
+          "02d9855cfa31d905fa5246b39d763430a4af8c2699376e3131ce6fe43e36da71",
+          "bf07ef672312eec19c9e2471466c377f7aee5b069efed49e7d8121dbaa09bb56",
+          "41e1000cdb24909539d7a89c60edeae30b2aa44105aa62b8add74e6ead1ff409",
+          "447a029854cab8cd3d1d27d62f82bc56aa66e726a2c64e20d4be62ac07c87a9d",
+          "c27c509b1697127d41ac6d5a77873c92bae800f4c18c5f6111a19b1f0050c69d"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "walk": {
+        "sourceSha256": "2d8008a91dd760a4192990cf469d181eb5a5a930fc93cf0b8ecd7256b7214ecb",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "1a94ec537632acfae9cb6492ce7c8214501a4f2995f108949de76ce392dfb269",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "0f33d5afee07191b06e711c291dc03395f9e3f477b7c3a2a9079b48ed0c23e30",
+        "encodedSha256": "4a406d70fbf15ac50c7440905305050a140caf204b27542d93f4d8a3898cbd40",
+        "decodedSha256": "4afb21e36d19204354459801e460fc1371dbcec1003372edf01b2b8968eaf914",
+        "frameSha256": [
+          "988374b12052193fed218fd6a4e62fcbf6c6980a736a7db89e0ba0382582ee6f",
+          "3c0010496ec162f9149e62c550af195375d5a54cee2014827f4d0fa3b73e8ba2",
+          "d9eb981c3302e87ac91a9314debce988aefd2ffbfe9a64f2266357a799c3d6ae",
+          "e06808ad48addd1c3f6d75e2d4b0ff0b62c7a9538e072d12d4d6b3193135d953",
+          "bb3243882f3f6e84fa885e846e3d7a1d1ea225e3e7c8055db24279301993fa68",
+          "809565344e13323a5c1ea178d79bfc78a5a208bd631a41712ed47f98cf979ee8",
+          "5ea4b0da2813c2de7012513e2f7fe9db11426ce2388ec64bb9e1ac908bdc78a4",
+          "df6afea0f7e1b01dd7a572dfe4f7ca09fb6da739ce6e698a296107bc45c92808"
+        ],
+        "poseSha256": [
+          "51a5560c02e725e82190a65ae7b98a2af59d255e8cc1875a4ff260987df32f23",
+          "f80d5bee47d6cab34c1ebc0ba243ad74c442a262c003f5c8d37d4cc21bdd3348",
+          "063f10b9d0cd1cb92873788b295826e5d671cbe1f69c4a56eabcbe4d1b59ac34",
+          "04dfa0a270f63e996e11c3132c82de96b9023bbe66ee637179b5de2ef9af2816",
+          "c4749456ac9f8610b07cd095429122c815068b90131471d0602a3d925c2c2404",
+          "2a227fcc74b86170ade31ff7dc7b2bde7049afe299fa984860b3848e96f913d6",
+          "d24bdc4f96151a762433b062558c11c4e4f67fbd10a20a17c4cccbbc821f925c",
+          "597e6b513f9ed6c17d067090351b223ac3a280011f859ff1fc7f6d35518588af"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "attack": {
+        "sourceSha256": "26156f9c6ed2ce913a66ae6e7b1fc508ecf297a85c598a971c3dc3891ec615f8",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "cf95c722a0636f8cd6ae924ea2f51aef283a9284259c8b99fefe3e63899215ce",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "dc238b7ff0b07d81d8e98bf1a55470f450bf234d3703e17dd161ebbc54b525ab",
+        "encodedSha256": "dc302f1a6a1059dd5409716ae789eba94c3c4a9c450e856e5058f0a8410a1556",
+        "decodedSha256": "c0b3ec185dd73d80b0d4cffa95aa42d3a78164ff05ce4fc1420e72afbe5a6d74",
+        "frameSha256": [
+          "ffd162c15a97328504501704dc8f2751987984906fcae280a4c9c3e0025a630e",
+          "3221f229c468f6627cae0f772cf8b50070f8c2d45363b5db156ac953f6dcb8af",
+          "e61af66a4d96bf36c404f64690f084b513bcdcb89d6d621b2cebda7c33971fd4",
+          "97b6186899dcdb0fe5452ab5e893b84e8172019821d01ddd2cc413025514a3fc",
+          "acf8d33223ea76bf749e126f225f846075bdc01c1ae9f1e6e4e34f217b347b81",
+          "e9309a5ab22800c61a81f21338ea5242833feaa9381d69d3251f1d56740d5b47",
+          "56445894972c53f63f8b61c38643a03471be8e8db5d1d95da4898cf4c4a8adf7",
+          "4d6a894ff863364d3eefe956ca7b0c134f39a5be9a34225fa980632e309975c2"
+        ],
+        "poseSha256": [
+          "cab059ad0be0e393aa66e26621248d93f4f9736cb89ea813b6d79485447234bf",
+          "6bf58766d92fc1aaa183022a297610c49802618bbfe27ed2387c2e883b1c8484",
+          "aa7c1e12579e817e7818d8a5d4fadcadf3ad5a99f5ce53b4d445147dcdf7d22f",
+          "09205e918ee310e077b6976657ed5bb48b687da9a087a13708cbd426f5348cd1",
+          "194aea6ac012531b52ac5af4a12fa2c580d7cc2147fb91599ef0357161299c7d",
+          "33b59e2de49f6bfafebd6b055522a77881b4cc2b3ec6f6ca0994ff29b32ea2e0",
+          "b44ee947b650d4e7b856a2a1d6f4717dc563482b03881b910210fdf1c25c147a",
+          "60546307895dd6d74db7f74edeb7f528f310b91dbce610fd8b0ce4b743db3509"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          0.996971,
+          0.99568,
+          0.999535,
+          1,
+          1
+        ]
+      },
+      "hurt": {
+        "sourceSha256": "e8595231d5eb0c8bf2e3945538899f6af9b9c78092d6f1b896af4730aca4f16e",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "4ec5c35b5df87699ca75f127c9db702f8eebdf6f9aadd2f5881e05287fcc5d48",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "b013559d64024b367bfc9ca239c3681f1ba882facd908a11b24a0e44077d9182",
+        "encodedSha256": "980b5ead08d572dfa7f8d893f26308b3a625a25a8825200bb4fd39ad9fcb430e",
+        "decodedSha256": "e87eafc6c5ddeb2df6b8c9ca435244fd7c8266a47deb7fbd7f0cd0f4635cbdf1",
+        "frameSha256": [
+          "e842a7b1129f80a9c8906414a4d8164a3fe66f1dc73b64288e6fa26a70c74af2",
+          "dcab3e3f19a57ff901c1ad9deb66d9b87200bbe536fa280592a5ffcc035977c6",
+          "b4d06f3682292470a7f8bacf3f953548e002a8e97c376ffbbfa137aedefeab98",
+          "ff9327e5c8cb36438a9ef376b31cd8c6cf720bfd6ee271956f17c56f64bbab71",
+          "28e07b0f85e7857880855a04c49d0f989b772dcd2f10cb0643d6242e610a9e14",
+          "dfcc4ee06524600bb4a2e1d63388208ddd351afe6ecbd605bcd76dab20b35587",
+          "58be686c59ec6d1012c1887d5aba1768d8836e5c9adc3cbec98ea46d2b55122c",
+          "f97000ef348079c31b20b20e8cf98ce8021d2fa5f13af5da62a3fc46d6aa01e2"
+        ],
+        "poseSha256": [
+          "4d3879ddf8d04f03d14ef9f8156b897de92369b441f5b714384397f9df1f7439",
+          "3f26bfa74e94ebd8663ad6cebd0a86c2a616e5ddd043018b0b4db9c2db39555c",
+          "b922f851644f97fe6b3d27516c1c7fcaaf3b98ab2f8cf3237422010197c4b52e",
+          "c4e05bd3e9163f2eb5c90b2b4d59fdea1ff503f61fcf53f2d499cc1ff9f5e71c",
+          "4684891fa9f65934b89eeb33a228d5ecd0d981b5d29275616d84daa4ff127e70",
+          "91b8ddd1de6acf08b8ca29ea14188e006733e35d2c4e57e92ba352f82b894f4d",
+          "f7b9d7e7817338678f2076d7d1b588eca0065dea9396d269251b4b6b26faafa8",
+          "cd81bd6e6776d0a7cb40ba1ed9361f515c7c32a30ef22403ff42e985ed3e3c10"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.997409,
+          0.976567,
+          0.967955,
+          0.992622,
+          0.992416,
+          0.988507,
+          0.995296,
+          0.995305
+        ]
+      },
+      "death": {
+        "sourceSha256": "ec0ca3fc969109c1ea4178f958a69c8c5b0ac311811219169ea381d967b6f5d3",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "aa29db229f6c875cdd213475d5c6804bd2c41a7e5e490d61ece63291b9057b59",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "0dd9376482ccac13fc90de4959eb17ef91e371ea8416a7b8983e6d386c39ce39",
+        "encodedSha256": "f677aed37f1ef516fa39e2842f13547af5badc56c96f822ca3849e28c4d0bec1",
+        "decodedSha256": "ade955070c0900345e89a10dd747096d765ec2df689bc8066c40dfcaeb61c6d8",
+        "frameSha256": [
+          "0435d8f751d1d8a4ca769dd91f7babcfc6767940e830de380bb71ede39781c12",
+          "482cbe0fda939d607f56dc598ab3f38eb0a187bf5f2f5b3d0eae741911450ed7",
+          "81244aaa21b5bcc1c7531ef3d6c8f2e1388398ff56861e49ecc50becfe1cb911",
+          "a14adc2bce272898bdcf2d718556861db63788e0cbaf72509f1e0eab8798cc17",
+          "eed1adb5044ecf9fd257947c776f0020883aa782e17507c653f6a4d3ca701bc7",
+          "06fe48012800c770ad7940a4049662e7261b4143a919608b6a6944ca78aacf6c",
+          "7e8a19c2127cbc83a2bfc9cf374b54426351f6f93a24a60a826b786ba445652e",
+          "7e8a19c2127cbc83a2bfc9cf374b54426351f6f93a24a60a826b786ba445652e"
+        ],
+        "poseSha256": [
+          "3f290ec05c747e04a0863d1ec219c38ae514fd45b631a11da60af8d48718fb1b",
+          "84c9a42f6a10a757caa9c6865c83ec417a7299356ecd570b7356fbf41a939627",
+          "430295fcd1f64d9990f49f4973aaf443fae7ea7b37f6c995aaf8fc8d3186a963",
+          "6fced95b8a6c99b0b0929a290420de003f3df4ed4ab80bc57044cd0ec83f97e8",
+          "12e08add66471c514ce2a6d6b7162e5afe41db470897a10730f0630212d86bdc",
+          "35883a23030028e815cae53b30a9f1c5168e86e7d05dbea0e8260e34f14d8cd3",
+          "e0e9526c78f9a554dc418e42df8f558be095ee68f3462bb624ecf2d64bdf8edb",
+          "e0e9526c78f9a554dc418e42df8f558be095ee68f3462bb624ecf2d64bdf8edb"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.984383,
+          0.986699,
+          0.999593,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "cast": {
+        "sourceSha256": "d863cf10ef0332e47c612b230991d7bfb623f2ad2f99b90945114bb6d51033ad",
+        "sourceDimensions": "1717x916",
+        "chromaSourceSha256": "524c8dd7e3778c8837292b97bebe4f28368ffcf439e2603bd178f47da83adf78",
+        "chromaSourceDimensions": "1717x916",
+        "promptSha256": "274b5e8059decd86a682020ef1d66ea15e8e97c90a73a62fc62ab1293ea61708",
+        "encodedSha256": "c702a540756cfa9caa5caf2284441749e4271365b95168bde9fecdd11b458f8c",
+        "decodedSha256": "482750ac5f277b94b5acd168affd1c122f94ce2d7c3c3ae8b7c53f5f07aa4c84",
+        "frameSha256": [
+          "24b7c58e5211938f36204fefd57a00a377989d8d076ab45ac977f867a532679f",
+          "6734ff48293406115136ba17d0ecb33ce308774287fd4e818564cc31ae32a2ee",
+          "1e8268aece79de892f417780c9de33e0c6829658f66339ff9d9b444101a93288",
+          "381cc8da0581dd73781787eac38464966fde52e9cfe9f6411f36df82b1113693",
+          "140c2b9aa9203b143ce8b8d096996ea709b53cc76decd57d2eca3218c703a4c7",
+          "56085e465432515214e59000323d49dfc4652e22370f8aab958915772ccc86a6",
+          "53668083dd2595c7c5ee57664051a49b5d3803cc5bdb5780a54bc529ed22df90",
+          "578e6b0a143330948cff31f86933aa4cfd7269abff17e190f7ab52b0460ae443"
+        ],
+        "poseSha256": [
+          "a5e073163df023ab83471836af921b00af727a7564b1490dd2f045ce13f31bbe",
+          "15d1829caa5abf0262e7c3b8cd3e36f6420f2fb489c72992e8bca2bd35ab6536",
+          "24f4f308daeafdbc2571532e2a6f4ddfac854c79d5bcd0553d351083268a6b17",
+          "5428afdd19bed47ae706c457fa3db5f199074429f22583cdcbdda7c4322c641e",
+          "74164b29a303b6df96955ac3f05f94a7aca2fbeb3f3e12a3fc545c4638f0482c",
+          "d42ae648c8cd0a132a592c2585c3f48ea18694aaacdff9a7ef6c1d716c6465f5",
+          "20d08dd128b76dfe389be1b15c0ed08e45ce289f1d118cf8e9734a694b1b46d7",
+          "654ae56e105487ac445b343b79529cc890f9851220c959c1a8588894348c7d79"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          0.997811,
+          0.987501,
+          0.988532,
+          0.986077,
+          0.980683,
+          0.993857
+        ]
+      },
+      "victory": {
+        "sourceSha256": "9ff0263254b5cdba6e54a3f9bbe2263a2a51f945ddaf382f96db1a9aae90084f",
+        "sourceDimensions": "1672x941",
+        "chromaSourceSha256": "0dca3004e368e0131c623f0e94875a17dc095373db663fec0fef64d5295d23fc",
+        "chromaSourceDimensions": "1672x941",
+        "promptSha256": "bc88b15a538b8def9792e268131471fd32dc1d7fcb5cdbff15d56590c33e11a5",
+        "encodedSha256": "971cc691b0925135831e978aef4bf5e317755640e278a0e54935f32b580de053",
+        "decodedSha256": "89d2040d107d6965a7f9524ae05d2e3f9d3721d1dd9373e2fc1aa522a44d822f",
+        "frameSha256": [
+          "164f8570a47e6c6878d03f14ad59273e504099c4602fb5dd3ee24837814a33f2",
+          "af1f7e210348ed5549a07826f03109bba3788080289dea69029982b586b17aa3",
+          "104ed16651559daa39c7da7b3f1ed565fe036806dcf9459c639f88bafc0ec168",
+          "04c4bebebf1b078746569236a574c688366eb3d4d872bbb0ed096acc332f8ff5",
+          "93505d3d38d29d2301e5c2600fd3c2189c9fe77e28a2f5626c5be9425d400e71",
+          "dd6f6f9db20dfe3ece1db138f4cf3d52e02e002160b832c566b5e257e4ac7c3d",
+          "2b110d3d1b504cf34ed294421e2f61561f1e8c818dbcb92ab42ae818d16d0298",
+          "e815c55ba5e41e86a20675673378f2e587f4ef1c85bcea78ba65320a483782fc"
+        ],
+        "poseSha256": [
+          "bacc953f08afad724b22ddd8acb1b99affca855dbf901b1aa20ab1d2daa0cd2b",
+          "52f7a9cb8533624b9d3cbd8c26e84f955529276fa6823c464a4a9523e5a4cdc9",
+          "6435de805bed2369a68fb9ae45804ab4ffca4b5af64a66757a4a3cf314e18b69",
+          "93078909bc5ac220c90a1c68c67dc98087f81a5b2d38c0b98b6e23de8ab8c2d5",
+          "c13a4cf86478e2dbf21c56b9484f4e2bdc7e456113751d36608faca2adf8ed70",
+          "43f94e7b2d9a7ae26f5ddd4bbf52bf780f38c97e39bb2e86079bcc45b1770fea",
+          "65a1f9b2890fcf533f64f6a4cea331bd3110d366b004b0dbdb5135f1c4b356f0",
+          "c87cd99aafa1dc3ac7a496672a38c1ca7f512acb401d02abdc4f9936a7ad8c65"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          0.995125,
+          0.991765,
+          0.989977,
+          0.991846,
+          0.996616,
+          0.986892,
+          0.996672
+        ]
+      },
+      "dead": {
+        "sourceSha256": "ec0ca3fc969109c1ea4178f958a69c8c5b0ac311811219169ea381d967b6f5d3",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "aa29db229f6c875cdd213475d5c6804bd2c41a7e5e490d61ece63291b9057b59",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "f631a7fd605211260b28b5a5bba3503e06dc1064497d1e5769d62e40e178e2b1",
+        "encodedSha256": "d1c79cb2bb1853c7bfdbaea6b3a6a28424b408c8180e9edabee3d6d2ed3f891e",
+        "decodedSha256": "8ad00519101dfa50642310b9aa923e5956fa8aa9c02a3d3c28bc3ecab2d113c0",
+        "frameSha256": [
+          "7e8a19c2127cbc83a2bfc9cf374b54426351f6f93a24a60a826b786ba445652e",
+          "7e8a19c2127cbc83a2bfc9cf374b54426351f6f93a24a60a826b786ba445652e",
+          "7e8a19c2127cbc83a2bfc9cf374b54426351f6f93a24a60a826b786ba445652e",
+          "7e8a19c2127cbc83a2bfc9cf374b54426351f6f93a24a60a826b786ba445652e",
+          "7e8a19c2127cbc83a2bfc9cf374b54426351f6f93a24a60a826b786ba445652e",
+          "7e8a19c2127cbc83a2bfc9cf374b54426351f6f93a24a60a826b786ba445652e",
+          "7e8a19c2127cbc83a2bfc9cf374b54426351f6f93a24a60a826b786ba445652e",
+          "7e8a19c2127cbc83a2bfc9cf374b54426351f6f93a24a60a826b786ba445652e"
+        ],
+        "poseSha256": [
+          "e0e9526c78f9a554dc418e42df8f558be095ee68f3462bb624ecf2d64bdf8edb",
+          "e0e9526c78f9a554dc418e42df8f558be095ee68f3462bb624ecf2d64bdf8edb",
+          "e0e9526c78f9a554dc418e42df8f558be095ee68f3462bb624ecf2d64bdf8edb",
+          "e0e9526c78f9a554dc418e42df8f558be095ee68f3462bb624ecf2d64bdf8edb",
+          "e0e9526c78f9a554dc418e42df8f558be095ee68f3462bb624ecf2d64bdf8edb",
+          "e0e9526c78f9a554dc418e42df8f558be095ee68f3462bb624ecf2d64bdf8edb",
+          "e0e9526c78f9a554dc418e42df8f558be095ee68f3462bb624ecf2d64bdf8edb",
+          "e0e9526c78f9a554dc418e42df8f558be095ee68f3462bb624ecf2d64bdf8edb"
+        ],
+        "sourceFrameIndexes": [
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  }
+}

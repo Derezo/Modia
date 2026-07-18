@@ -23,7 +23,37 @@ const {
 const PROJECT_ROOT = path.resolve(__dirname, '../..');
 const TEMPLATE_RELATIVE = 'ai-image-metadata/characters/player-authored-animation-template.json';
 const PROFILE_RELATIVE = 'ai-image-metadata/characters/player-animation-profiles/wizard_v1.json';
+const PROFILE_DIRECTORY_RELATIVE = 'ai-image-metadata/characters/player-animation-profiles';
 const REGISTRY_RELATIVE = 'ai-image-metadata/characters/player-variants.json';
+const STYLE_SOURCE_RELATIVE =
+  'ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png';
+
+const BASE_CLASS_CASES = [
+  {
+    className: 'warrior',
+    id: 'human_female_warrior',
+    action: 'attack',
+    choreography: 'full sword strike at contact with shield still guarding'
+  },
+  {
+    className: 'wizard',
+    id: 'human_female_wizard',
+    action: 'cast',
+    choreography: 'maximum controlled energy buildup'
+  },
+  {
+    className: 'monk',
+    id: 'human_female_monk',
+    action: 'attack',
+    choreography: 'full turning-kick extension with arms counterbalancing'
+  },
+  {
+    className: 'chemist',
+    id: 'human_female_chemist',
+    action: 'attack',
+    choreography: 'committed forward step releasing the single vial into a short arc'
+  }
+];
 
 async function temporaryDirectory(t, prefix) {
   const directory = await fs.promises.mkdtemp(path.join(os.tmpdir(), prefix));
@@ -100,47 +130,99 @@ test('CLI requires exactly one explicit identity and parses guarded draft option
   );
 });
 
-test('tracked wizard profile deterministically renders identity metadata, prompts, frames, and paths', async () => {
+test('all base-class profiles render deterministic identity-isolated drafts with required choreography', async () => {
   const registry = JSON.parse(await fs.promises.readFile(path.join(PROJECT_ROOT, REGISTRY_RELATIVE)));
   const template = JSON.parse(await fs.promises.readFile(path.join(PROJECT_ROOT, TEMPLATE_RELATIVE)));
-  const profile = JSON.parse(await fs.promises.readFile(path.join(PROJECT_ROOT, PROFILE_RELATIVE)));
-  const variant = registry.variants.find(entry => entry.id === 'human_female_wizard');
-  const first = await renderAuthoredDraft({ id: variant.id, projectRoot: PROJECT_ROOT });
-  const second = await renderAuthoredDraft({ id: variant.id, projectRoot: PROJECT_ROOT });
+  const representativeVariants = BASE_CLASS_CASES.map(entry => (
+    registry.variants.find(variant => variant.id === entry.id)
+  ));
+  const styleIdentity = registry.variants.find(variant => variant.id === 'elf_other_wizard');
+  const wizardProfile = JSON.parse(await fs.promises.readFile(path.join(PROJECT_ROOT, PROFILE_RELATIVE)));
 
-  assert.equal(first.contents, second.contents);
-  assert.equal(first.spec.compilerVersion, COMPILER_VERSION);
-  assert.equal(first.spec.metadataFingerprint, metadataFingerprint(variant));
-  assert.deepEqual(first.spec.draftProvenance, {
-    registry: REGISTRY_RELATIVE,
-    templateSha256: sha256(stableJson(template)),
-    profileSha256: sha256(stableJson(profile))
-  });
-  assert.equal(first.spec.status, 'draft-awaiting-generation');
-  assert.equal(first.spec.identity.race, variant.race);
-  assert.equal(first.spec.identity.gender, variant.gender);
-  assert.equal(first.spec.identity.class, variant.class);
-  assert.equal(first.spec.identity.visualTraits, variant.visualTraits);
-  assert.equal(first.spec.inputs.identity.origin, 'frontend/public/assets/portraits/originals/human_female_wizard.png');
-  assert.equal(
-    first.spec.reference.identitySource,
-    'ai-image-metadata/characters/player-animation-sources/human_female_wizard/inputs/identity.png'
-  );
-  assert.match(first.spec.reference.prompt, /Human Wizard \(female presentation\)/);
-  assert.ok(first.spec.reference.prompt.includes(variant.visualTraits));
-  assert.doesNotMatch(first.spec.reference.prompt, /silver-white|amber-gold|pale fair angular elven/i);
-  assert.deepEqual(Object.keys(first.spec.animations), variant.animations);
-  assert.equal(first.spec.animations.walk.frameDescriptions.length, 8);
-  assert.equal(first.spec.animations.walk.anchor, 'source-cell');
-  assert.match(first.spec.animations.walk.prompt, /left foot forward contact/);
-  assert.match(first.spec.animations.walk.prompt, new RegExp(variant.visualTraits));
-  assert.deepEqual(first.spec.animations.death.outputFrameMap, [0, 1, 2, 3, 4, 5, 7, 7]);
-  assert.equal(first.spec.animations.death.anchor, 'source-cell');
-  assert.equal(first.spec.animations.death.verticalAnchor, 'bottom');
-  assert.equal(first.spec.animations.victory.frameDescriptions.at(-1), 'final triumphant held pose');
-  assert.equal(first.spec.animations.dead.deriveFrom.animation, 'death');
-  assert.equal(first.spec.pins.reference, null);
-  assert.deepEqual(first.spec.pins.animations, {});
+  assert.ok(representativeVariants.every(Boolean), 'representative base-class identities must exist');
+  assert.ok(styleIdentity, 'style-reference identity must exist in the registry');
+
+  for (const [index, classCase] of BASE_CLASS_CASES.entries()) {
+    const variant = representativeVariants[index];
+    const profileRelative = `${PROFILE_DIRECTORY_RELATIVE}/${classCase.className}_v1.json`;
+    const profile = JSON.parse(await fs.promises.readFile(path.join(PROJECT_ROOT, profileRelative)));
+    const first = await renderAuthoredDraft({ id: variant.id, projectRoot: PROJECT_ROOT });
+    const second = await renderAuthoredDraft({ id: variant.id, projectRoot: PROJECT_ROOT });
+
+    assert.equal(first.contents, second.contents, `${classCase.className} draft must be deterministic`);
+    assert.equal(first.spec.profile, `${classCase.className}_v1`);
+    assert.equal(first.spec.profileSource, profileRelative);
+    assert.equal(first.spec.compilerVersion, COMPILER_VERSION);
+    assert.equal(first.spec.metadataFingerprint, metadataFingerprint(variant));
+    assert.deepEqual(first.spec.draftProvenance, {
+      registry: REGISTRY_RELATIVE,
+      templateSha256: sha256(stableJson(template)),
+      profileSha256: sha256(stableJson(profile))
+    });
+    assert.equal(first.spec.status, 'draft-awaiting-generation');
+    assert.equal(first.spec.identity.race, variant.race);
+    assert.equal(first.spec.identity.gender, variant.gender);
+    assert.equal(first.spec.identity.class, variant.class);
+    assert.equal(first.spec.identity.visualTraits, variant.visualTraits);
+    assert.deepEqual(profile.style, wizardProfile.style, `${classCase.className} style authority`);
+    assert.equal(
+      first.spec.inputs.identity.origin,
+      `frontend/public/assets/portraits/originals/${variant.id}.png`
+    );
+    assert.equal(first.spec.inputs.style.origin, STYLE_SOURCE_RELATIVE);
+    assert.equal(first.spec.inputs.style.authority, wizardProfile.style.authority);
+    assert.equal(
+      first.spec.reference.identitySource,
+      `ai-image-metadata/characters/player-animation-sources/${variant.id}/inputs/identity.png`
+    );
+    assert.ok(first.spec.reference.prompt.includes(variant.visualTraits));
+    assert.match(first.spec.reference.prompt, /Do not import identity details from Image 2/);
+    if (classCase.className !== 'wizard') {
+      assert.match(first.spec.reference.prompt, /square 1:1 canvas with generous padding on every side/);
+    }
+
+    for (const otherVariant of [...representativeVariants, styleIdentity]) {
+      if (otherVariant.id === variant.id) continue;
+      assert.ok(
+        !first.spec.reference.prompt.includes(otherVariant.visualTraits),
+        `${classCase.className} reference prompt leaked ${otherVariant.id} identity traits`
+      );
+    }
+
+    assert.deepEqual(Object.keys(first.spec.animations), variant.animations);
+    for (const animation of variant.animations) {
+      const rendered = first.spec.animations[animation];
+      assert.equal(rendered.frameDescriptions.length, 8, `${classCase.className} ${animation} frame count`);
+      if (animation === 'dead') continue;
+
+      assert.equal(rendered.anchor, 'source-cell', `${classCase.className} ${animation} anchor`);
+      assert.equal(
+        rendered.minimumUniquePoses,
+        template.qualityGates.minimumUniquePoses[animation],
+        `${classCase.className} ${animation} minimum pose gate`
+      );
+      assert.ok(rendered.prompt.includes(variant.visualTraits));
+      for (const otherVariant of [...representativeVariants, styleIdentity]) {
+        if (otherVariant.id === variant.id) continue;
+        assert.ok(
+          !rendered.prompt.includes(otherVariant.visualTraits),
+          `${classCase.className} ${animation} prompt leaked ${otherVariant.id} identity traits`
+        );
+      }
+    }
+
+    assert.ok(
+      first.spec.animations[classCase.action].frameDescriptions.includes(classCase.choreography),
+      `${classCase.className} profile must retain its class-specific ${classCase.action} choreography`
+    );
+    assert.deepEqual(first.spec.animations.death.outputFrameMap, [0, 1, 2, 3, 4, 5, 7, 7]);
+    assert.equal(first.spec.animations.death.verticalAnchor, 'bottom');
+    assert.match(first.spec.animations.victory.frameDescriptions.at(-1), /triumphant.*held|triumphant held pose/);
+    assert.equal(first.spec.animations.dead.deriveFrom.animation, 'death');
+    assert.equal(first.spec.animations.dead.deriveFrom.frame, 7);
+    assert.equal(first.spec.pins.reference, null);
+    assert.deepEqual(first.spec.pins.animations, {});
+  }
 });
 
 test('different identities reuse wizard motion without inheriting another character description', async t => {

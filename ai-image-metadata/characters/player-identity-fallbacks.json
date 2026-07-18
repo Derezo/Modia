@@ -846,44 +846,37 @@
       "race": "dwarf",
       "gender": "female",
       "class": "wizard",
-      "method": "dwarf_female-fullbody-anchor",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "crystal-staff-and-arcane-robe",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/dwarf_female_wizard.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/dwarf_female_wizard/inputs/identity.png",
       "sourcePortraitSha256": "ee666257002a3baaa4825504ba3964e12b71ff9f6ebb8e3740c3e276aef8e4f4",
-      "genderAnchor": "ai-image-metadata/characters/reference-anchors/dwarf_female_neutral.png",
-      "genderAnchorSha256": "270e0d901825504bad05d24167b4da55390a5bcc47a204140f8c07c0abec2dc4",
-      "genderAnchorReason": "The canonical dwarf-female portrait cohort is strongly male-coded and contradicts female identity metadata; the approved neutral anchor supplies the feminine face and full-body silhouette while each class portrait remains the palette and costume-cue source.",
-      "sourcePixelSha256": "75ad3ff4714ce99256c9fb7966de566eb057ade9188b640c0e7adcd5344d89a4",
+      "genderAnchor": null,
+      "genderAnchorSha256": null,
+      "genderAnchorReason": null,
+      "sourcePixelSha256": "6cffa1f8df4dfdeddc599fd847c992e212b44cf15816a101f55a518e2f744329",
       "output": "frontend/public/assets/characters/player/dwarf/female/wizard/dwarf_female_wizard_reference.png",
-      "outputSha256": "6cf636db86ad5097db138663ccb98e6d49cbe993ccf2e6a7bb256144bfbdb90e",
+      "outputSha256": "9e1d4b2468a98d5efa0555ec82790c2d8a159d86d198762789ca70980058e41b",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 19,
-        "minY": 10,
-        "maxX": 54,
-        "maxY": 59,
-        "width": 36,
-        "height": 50,
-        "alphaPixels": 1095
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 117,
+        "minY": 33,
+        "maxX": 417,
+        "maxY": 481,
+        "width": 301,
+        "height": 449,
+        "alphaPixels": 76068,
+        "centroidX": 250.2782773308093,
+        "centroidY": 263.64940579481515
       },
-      "palette": {
-        "primary": [
-          64,
-          96,
-          96
-        ],
-        "secondary": [
-          32,
-          32,
-          32
-        ],
-        "accent": [
-          64,
-          128,
-          160
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "859921941c37b4bd33dd14ac031d54c432dc8a2229f96718b0bf3f8d4f9b4755",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_female_wizard/chroma/reference.png",
+      "authoredChromaSourceSha256": "d137a6703681f54b2526fab699004565e42fb8d7ebea4f6957f35de57077a44e",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/dwarf_female_wizard/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/dwarf_female_wizard.json",
+      "authoredAnimationSpecSha256": "c027b2da7e895666fc24756afbfc01e6c7e24d423b46f24ca635e14f0e835544"
     },
     "dwarf_male_alchemist": {
       "compilerVersion": "1.1.0",
@@ -1726,44 +1719,37 @@
       "race": "dwarf",
       "gender": "male",
       "class": "wizard",
-      "method": "portrait-head-procedural-fullbody",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "crystal-staff-and-arcane-robe",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/dwarf_male_wizard.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/dwarf_male_wizard/inputs/identity.png",
       "sourcePortraitSha256": "b3e6ed1324a5d9f49567095da1678a06c97e0d0c4ad872913d909a97ba816441",
       "genderAnchor": null,
       "genderAnchorSha256": null,
       "genderAnchorReason": null,
-      "sourcePixelSha256": "057f062707ac6b7177258ab009401067be355079b09a63365ed67f39f8949286",
+      "sourcePixelSha256": "c4f8a50a8d3e453ac43a790c49ffb29b7c8657bedb4a774fa563f75deb38817f",
       "output": "frontend/public/assets/characters/player/dwarf/male/wizard/dwarf_male_wizard_reference.png",
-      "outputSha256": "a07099fcc4268a7292204d8bf0fe4a1d5604652d4daf72a1edf1e8420c72823b",
+      "outputSha256": "ed917c520410739f993da57fb811603af99b1d27fea45dac44da190add9875aa",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 18,
-        "minY": 10,
-        "maxX": 55,
-        "maxY": 59,
-        "width": 38,
-        "height": 50,
-        "alphaPixels": 1211
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 110,
+        "minY": 30,
+        "maxX": 407,
+        "maxY": 482,
+        "width": 298,
+        "height": 453,
+        "alphaPixels": 79378,
+        "centroidX": 241.42676812214972,
+        "centroidY": 263.81845095618434
       },
-      "palette": {
-        "primary": [
-          64,
-          64,
-          32
-        ],
-        "secondary": [
-          160,
-          160,
-          128
-        ],
-        "accent": [
-          64,
-          32,
-          0
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "78eca452055f710f658be4e7b0e8ec0319cb15a4a0b39ee04b7fe27bbde1eada",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_male_wizard/chroma/reference.png",
+      "authoredChromaSourceSha256": "1933b493ef493abbe62c7273517abdf4c0263d11bba772c3f1c3dceb6c275699",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/dwarf_male_wizard/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/dwarf_male_wizard.json",
+      "authoredAnimationSpecSha256": "c70aa70b307b60e19346eb467b30c23d11b2c1c6360b45840629e2b8abd468e3"
     },
     "dwarf_other_alchemist": {
       "compilerVersion": "1.1.0",
@@ -2606,44 +2592,37 @@
       "race": "dwarf",
       "gender": "other",
       "class": "wizard",
-      "method": "dwarf_other-fullbody-anchor",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "crystal-staff-and-arcane-robe",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/dwarf_other_wizard.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/dwarf_other_wizard/inputs/identity.png",
       "sourcePortraitSha256": "208fd1e56569eded76b2f88083c3d45065426cf3ef5a421d2f915a93c2b5efac",
-      "genderAnchor": "ai-image-metadata/characters/reference-anchors/dwarf_other_neutral.png",
-      "genderAnchorSha256": "3a93e0c22a2773be423ce1b5c78f818ff83f5763900b42249f0f07c2057a3e6f",
-      "genderAnchorReason": "The canonical dwarf-other portrait cohort is strongly male-coded and contradicts androgynous identity metadata; the approved neutral anchor supplies the androgynous face and full-body silhouette while each class portrait remains the palette and costume-cue source.",
-      "sourcePixelSha256": "575a227ff3212b8f1baab9442f421508f40d6c05ce79809d4e2c00185b562552",
+      "genderAnchor": null,
+      "genderAnchorSha256": null,
+      "genderAnchorReason": null,
+      "sourcePixelSha256": "d9a7225733185e3a1ccaf23c09aebd7ed551288f4b75f0ae294bf852ec48d65a",
       "output": "frontend/public/assets/characters/player/dwarf/other/wizard/dwarf_other_wizard_reference.png",
-      "outputSha256": "1273206ffb1e2ae92530c7813d0f88be0df0248d8e59c8291c730bac407b7645",
+      "outputSha256": "43215d1c1cfa1b651745b939b0349091a93fe1e3ae8b43c228d20ef300b4a44e",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 18,
-        "minY": 10,
-        "maxX": 54,
-        "maxY": 59,
-        "width": 37,
-        "height": 50,
-        "alphaPixels": 1121
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 110,
+        "minY": 34,
+        "maxX": 415,
+        "maxY": 475,
+        "width": 306,
+        "height": 442,
+        "alphaPixels": 74633,
+        "centroidX": 245.5958892179063,
+        "centroidY": 262.18507898650734
       },
-      "palette": {
-        "primary": [
-          64,
-          64,
-          32
-        ],
-        "secondary": [
-          96,
-          96,
-          96
-        ],
-        "accent": [
-          160,
-          32,
-          0
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "0b68b79dc7cd37fe7179f92dab13f5e8aeedc3f76aaf14c21395007e224c6bda",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_other_wizard/chroma/reference.png",
+      "authoredChromaSourceSha256": "f059acefa9c4b1f70e80acd82fb55fb6165de3c7e718ffb579ac95414e0d9ad7",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/dwarf_other_wizard/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/dwarf_other_wizard.json",
+      "authoredAnimationSpecSha256": "fd7dfa44c5c8f5ef9ef47f8173c8d9b17fdad500a833e958dc1d16460065490c"
     },
     "elf_female_alchemist": {
       "compilerVersion": "1.1.0",
@@ -3486,44 +3465,37 @@
       "race": "elf",
       "gender": "female",
       "class": "wizard",
-      "method": "portrait-head-procedural-fullbody",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "crystal-staff-and-arcane-robe",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/elf_female_wizard.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/elf_female_wizard/inputs/identity.png",
       "sourcePortraitSha256": "3ff3ed4ab38b4f411055b5b926643b1af515da834cd7004fddadf710aeb97923",
       "genderAnchor": null,
       "genderAnchorSha256": null,
       "genderAnchorReason": null,
-      "sourcePixelSha256": "8660dc89c7245a63df70828de4006993a9200f8d08a26082216b2f6e7d573987",
+      "sourcePixelSha256": "e15d43c9c53dd22799af9f4965b0ee5439d95e664d9751cd0e9d24cbe4073ef1",
       "output": "frontend/public/assets/characters/player/elf/female/wizard/elf_female_wizard_reference.png",
-      "outputSha256": "1a15250417beef58c76a596571fadfddc16ab242fd8c7a62b3f4420c692b3254",
+      "outputSha256": "45452d2c6712ec4bfe8e536f7fbb414a517b739b2cb3e7742bc9cc8881d802dc",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 18,
-        "minY": 6,
-        "maxX": 51,
-        "maxY": 59,
-        "width": 34,
-        "height": 54,
-        "alphaPixels": 1174
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 130,
+        "minY": 39,
+        "maxX": 371,
+        "maxY": 486,
+        "width": 242,
+        "height": 448,
+        "alphaPixels": 61988,
+        "centroidX": 251.29847712460477,
+        "centroidY": 273.96313802671483
       },
-      "palette": {
-        "primary": [
-          160,
-          160,
-          192
-        ],
-        "secondary": [
-          224,
-          224,
-          224
-        ],
-        "accent": [
-          64,
-          32,
-          0
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "a9791d673b994fb67252c61eb13c5c110d549af6698858eae9a83122581249f3",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/elf_female_wizard/chroma/reference.png",
+      "authoredChromaSourceSha256": "c86166fd03b5751461c6a71570563f103ea4028d47be92bb0c90592fdf474c55",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/elf_female_wizard/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/elf_female_wizard.json",
+      "authoredAnimationSpecSha256": "3b62db0f34badd8a24f9c52b316b3ea282328163aa9dd3f570c7f0a4b62387da"
     },
     "elf_male_alchemist": {
       "compilerVersion": "1.1.0",
@@ -4366,44 +4338,37 @@
       "race": "elf",
       "gender": "male",
       "class": "wizard",
-      "method": "portrait-head-procedural-fullbody",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "crystal-staff-and-arcane-robe",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/elf_male_wizard.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/elf_male_wizard/inputs/identity.png",
       "sourcePortraitSha256": "005c4f762321e206b0681e6e3a6377d03339911cfa4972f7f34c74bdafe72e93",
       "genderAnchor": null,
       "genderAnchorSha256": null,
       "genderAnchorReason": null,
-      "sourcePixelSha256": "69d7a6b91a513ed97aeb373af5208eecdb56992873e23c19e5b4356a1c956470",
+      "sourcePixelSha256": "cfed8240e4284ee22a64d3b442c1984f3736a0d3ab2eae9dc1864492a5a8c612",
       "output": "frontend/public/assets/characters/player/elf/male/wizard/elf_male_wizard_reference.png",
-      "outputSha256": "e6c8be2b871adc2bd6d7d8643c35d546ad568bcfdd973e917845bd55a9c38c7c",
+      "outputSha256": "eabb856713eb5cb6b2476bfec513c70e03ac5a795a49e2f60859b192c064eec5",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 18,
-        "minY": 6,
-        "maxX": 52,
-        "maxY": 59,
-        "width": 35,
-        "height": 54,
-        "alphaPixels": 1150
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 141,
+        "minY": 24,
+        "maxX": 373,
+        "maxY": 493,
+        "width": 233,
+        "height": 470,
+        "alphaPixels": 65135,
+        "centroidX": 252.78125431795502,
+        "centroidY": 268.66072004298763
       },
-      "palette": {
-        "primary": [
-          192,
-          192,
-          224
-        ],
-        "secondary": [
-          160,
-          160,
-          160
-        ],
-        "accent": [
-          64,
-          32,
-          0
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "caf2746b9c383741661f3146d4515fee10687263954d9750791d0880fe6e7513",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/elf_male_wizard/chroma/reference.png",
+      "authoredChromaSourceSha256": "0403d9a2107a0347394ef64913733bb5dc86923e15b892155c1c97cbe3c2c41d",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/elf_male_wizard/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/elf_male_wizard.json",
+      "authoredAnimationSpecSha256": "b0cd62fb3f249553e80507bfeb51bdea486d03fc76c420f88eb4bd20ff6f7d3a"
     },
     "elf_other_alchemist": {
       "compilerVersion": "1.1.0",
@@ -4630,44 +4595,37 @@
       "race": "elf",
       "gender": "other",
       "class": "chemist",
-      "method": "portrait-head-procedural-fullbody",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "potion-flask-vials-and-satchel",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/elf_other_chemist.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/elf_other_chemist/inputs/identity.png",
       "sourcePortraitSha256": "26992d2dccea7340e2829d5ce10c1dfba47db532af256f81bc42b3d0bd779d6c",
       "genderAnchor": null,
       "genderAnchorSha256": null,
       "genderAnchorReason": null,
-      "sourcePixelSha256": "be5dc9d0eaad91cdaf45146aac2f4766588fe62c3036e364831a2958e5df4283",
+      "sourcePixelSha256": "e689c15bffa2864a6219ab68f8be927a755052945d9f4364d3cf5cfd20c1b434",
       "output": "frontend/public/assets/characters/player/elf/other/chemist/elf_other_chemist_reference.png",
-      "outputSha256": "87ce119d2a536280ef0a20ba5710991e6e930db67038bc887ee04d0ae56ba224",
+      "outputSha256": "6260890b51560199c1c62380b12982b0ae2370b0330551133c21dbac9781792d",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 16,
-        "minY": 6,
-        "maxX": 47,
-        "maxY": 58,
-        "width": 32,
-        "height": 53,
-        "alphaPixels": 909
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 122,
+        "minY": 34,
+        "maxX": 437,
+        "maxY": 478,
+        "width": 316,
+        "height": 445,
+        "alphaPixels": 59239,
+        "centroidX": 251.1518762977093,
+        "centroidY": 250.9458464862675
       },
-      "palette": {
-        "primary": [
-          192,
-          192,
-          160
-        ],
-        "secondary": [
-          128,
-          128,
-          128
-        ],
-        "accent": [
-          64,
-          32,
-          0
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "aa69b6bb3e9d9e70cbdbb12e0682a8752159a01ba86d991c69a3dcbe7a991ed5",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/elf_other_chemist/chroma/reference.png",
+      "authoredChromaSourceSha256": "29a2618b00d14eed8366cb9bad47c3536307ba9f29795be63dd51fd72abaad52",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/elf_other_chemist/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/elf_other_chemist.json",
+      "authoredAnimationSpecSha256": "a20d15526b6dafd88c5466bc3559dbc761b79e6fddd94de9c4883172bb888ace"
     },
     "elf_other_conjurer": {
       "compilerVersion": "1.1.0",
@@ -6119,44 +6077,37 @@
       "race": "human",
       "gender": "female",
       "class": "wizard",
-      "method": "portrait-head-procedural-fullbody",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "crystal-staff-and-arcane-robe",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/human_female_wizard.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/human_female_wizard/inputs/identity.png",
       "sourcePortraitSha256": "1160dd6b14e9738bfcacf1d9ab6d2e2de578801ede3d95bab2a8e3e8bd3065eb",
       "genderAnchor": null,
       "genderAnchorSha256": null,
       "genderAnchorReason": null,
-      "sourcePixelSha256": "15078011ea62bc595ac8c5250715a6df65f0ec416915900a5c4ed21c0d199f89",
+      "sourcePixelSha256": "95165f1b9dba4191627a5bc800532e5acf3252906666e9b5299568c33201938f",
       "output": "frontend/public/assets/characters/player/human/female/wizard/human_female_wizard_reference.png",
-      "outputSha256": "89b9a8ca051d6ad8724c19a5df2e6cc7dca4af0bd2ffd135352083ffab90701e",
+      "outputSha256": "4c108c81a36c595b8f7150f374688e836a763bce650e8daedb69fe6018c67ed8",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 19,
-        "minY": 7,
-        "maxX": 52,
-        "maxY": 59,
-        "width": 34,
-        "height": 53,
-        "alphaPixels": 1190
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 148,
+        "minY": 43,
+        "maxX": 378,
+        "maxY": 468,
+        "width": 231,
+        "height": 426,
+        "alphaPixels": 54096,
+        "centroidX": 253.316012274475,
+        "centroidY": 257.7611098787341
       },
-      "palette": {
-        "primary": [
-          64,
-          96,
-          128
-        ],
-        "secondary": [
-          32,
-          32,
-          64
-        ],
-        "accent": [
-          64,
-          96,
-          160
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "21b2904d705065a7071c6084999a8c8ff56772fcb872c4f64504b7e9d1b78a2a",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/human_female_wizard/chroma/reference.png",
+      "authoredChromaSourceSha256": "ed0280419a7e56ef0b75fa8c0de6f35966ab5be25999c7b467f5958d33b5c0f2",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/human_female_wizard/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/human_female_wizard.json",
+      "authoredAnimationSpecSha256": "69dd72c791101de06a681ea60379a524687a12809677ec311a93af5509298dd4"
     },
     "human_male_alchemist": {
       "compilerVersion": "1.1.0",
@@ -6955,44 +6906,37 @@
       "race": "human",
       "gender": "male",
       "class": "wizard",
-      "method": "portrait-head-procedural-fullbody",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "crystal-staff-and-arcane-robe",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/human_male_wizard.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/human_male_wizard/inputs/identity.png",
       "sourcePortraitSha256": "a925e0cbaca41fb9dfe4372ba053d070eb178129e4734b47aa03939bbe87c3d4",
       "genderAnchor": null,
       "genderAnchorSha256": null,
       "genderAnchorReason": null,
-      "sourcePixelSha256": "0f8f34c35f4624a7bbd904667c27a468238620e26cf09154eb8173a4c6852a0d",
+      "sourcePixelSha256": "fba82ad4808c270df66ed7b8a7e14d665b937abfa9be28e9165d49ee3db263aa",
       "output": "frontend/public/assets/characters/player/human/male/wizard/human_male_wizard_reference.png",
-      "outputSha256": "237f6cc2c1c3e33c3065a7c5387fd9d625a215082dd99fc3988dc8672ac0cb39",
+      "outputSha256": "575054874af1b3ad55c032f1152b7df58543afa33a4c648a301e86e760104dd5",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 20,
-        "minY": 8,
-        "maxX": 53,
-        "maxY": 59,
-        "width": 34,
-        "height": 52,
-        "alphaPixels": 1135
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 130,
+        "minY": 27,
+        "maxX": 383,
+        "maxY": 482,
+        "width": 254,
+        "height": 456,
+        "alphaPixels": 65339,
+        "centroidX": 252.50998637873246,
+        "centroidY": 261.4240805644408
       },
-      "palette": {
-        "primary": [
-          64,
-          64,
-          32
-        ],
-        "secondary": [
-          128,
-          128,
-          128
-        ],
-        "accent": [
-          128,
-          64,
-          0
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "15c543107117939f09d0e5f209ffb4f967e9542e71c8d21f09da26dcfc4dccaa",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/human_male_wizard/chroma/reference.png",
+      "authoredChromaSourceSha256": "0c8977c9f84bd8c711c93c01970e276c351062d9b46ddf6aa9b7cd6ada6ab039",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/human_male_wizard/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/human_male_wizard.json",
+      "authoredAnimationSpecSha256": "a88129e97fc3e228a6421e742defca7e749f2b12ca8d2ed4188448ee43ca78af"
     },
     "human_other_alchemist": {
       "compilerVersion": "1.1.0",
@@ -7835,44 +7779,37 @@
       "race": "human",
       "gender": "other",
       "class": "wizard",
-      "method": "portrait-head-procedural-fullbody",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "crystal-staff-and-arcane-robe",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/human_other_wizard.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/human_other_wizard/inputs/identity.png",
       "sourcePortraitSha256": "e2b29be8c29bdff28d349227fa62bbb219861fffcc11e8fe93182fcb49a95bdf",
       "genderAnchor": null,
       "genderAnchorSha256": null,
       "genderAnchorReason": null,
-      "sourcePixelSha256": "1f527faec82019b4f84be2dfc42e323afabb8a3c9973d8cba3c5c9d9050d76f9",
+      "sourcePixelSha256": "a1ae5df37f2a668908990d04df34929058c15b946dd707581348a7f52b4be2e5",
       "output": "frontend/public/assets/characters/player/human/other/wizard/human_other_wizard_reference.png",
-      "outputSha256": "18113b4b69ba5266e4fb1d5d176063758dd2fd655fe5ffc1224b4a093b5902af",
+      "outputSha256": "be0207e0d44ea0197b8bfbb14fd4697761cf16dc947d3e5bf6d262662e1d070b",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 20,
-        "minY": 8,
-        "maxX": 52,
-        "maxY": 59,
-        "width": 33,
-        "height": 52,
-        "alphaPixels": 1109
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 128,
+        "minY": 14,
+        "maxX": 385,
+        "maxY": 485,
+        "width": 258,
+        "height": 472,
+        "alphaPixels": 65114,
+        "centroidX": 257.03294222440644,
+        "centroidY": 270.75610467794945
       },
-      "palette": {
-        "primary": [
-          64,
-          64,
-          96
-        ],
-        "secondary": [
-          224,
-          224,
-          224
-        ],
-        "accent": [
-          64,
-          32,
-          0
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "ac10baa7d2c7fe3ca10ec62fc8ca8fb93153a69e1ef364f1b971ebf4b3a2ddcb",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/human_other_wizard/chroma/reference.png",
+      "authoredChromaSourceSha256": "9ed43982e4fc67aff7cbec938cbf686dba4d9986282e0b8b859c64b6a8c2f496",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/human_other_wizard/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/human_other_wizard.json",
+      "authoredAnimationSpecSha256": "2c24abece4a355cdd7fdeb43926359dd62da70b154e75c670938852333cbf24e"
     },
     "orc_female_alchemist": {
       "compilerVersion": "1.1.0",

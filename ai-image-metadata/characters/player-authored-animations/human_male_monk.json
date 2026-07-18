@@ -1,0 +1,226 @@
+{
+  "version": "1.0.0",
+  "template": "ai-image-metadata/characters/player-authored-animation-template.json",
+  "compilerVersion": "1.2.0",
+  "id": "human_male_monk",
+  "profile": "monk_v1",
+  "profileSource": "ai-image-metadata/characters/player-animation-profiles/monk_v1.json",
+  "status": "draft-awaiting-generation",
+  "approvedAt": null,
+  "metadataFingerprint": "e42400624196d134015c4f36358de6d8ae1bf47853468c7ec8363e677d94d6af",
+  "draftProvenance": {
+    "registry": "ai-image-metadata/characters/player-variants.json",
+    "templateSha256": "7943e69db577b3a4429b47df634f931d3f4cb8e8ce9a91a06578255fbe935bbe",
+    "profileSha256": "4c9abe2bf2e20f2fb97a1dda1ad4d8fd2d8f7187b25bcccfd0eff1bfa3c96395"
+  },
+  "identity": {
+    "race": "human",
+    "gender": "male",
+    "class": "monk",
+    "presentation": "male human monk",
+    "visualTraits": "human features balanced proportions warm skin tone male masculine features martial artist wrapped hands disciplined agile focused",
+    "baseFacing": "three-quarters right",
+    "sourceMetadata": {
+      "isAdvanced": false,
+      "inheritsFrom": "monk",
+      "seed": 10003
+    }
+  },
+  "inputs": {
+    "identity": {
+      "origin": "frontend/public/assets/portraits/originals/human_male_monk.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/human_male_monk/inputs/identity.png",
+      "authority": "face, ancestry, gender presentation, hair, eyes, complexion, costume, palette, proportions, and equipment"
+    },
+    "style": {
+      "origin": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/human_male_monk/inputs/style.png",
+      "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+    }
+  },
+  "reference": {
+    "source": "ai-image-metadata/characters/player-animation-sources/human_male_monk/reference.png",
+    "chromaSource": "ai-image-metadata/characters/player-animation-sources/human_male_monk/chroma/reference.png",
+    "identitySource": "ai-image-metadata/characters/player-animation-sources/human_male_monk/inputs/identity.png",
+    "styleSource": "ai-image-metadata/characters/player-animation-sources/human_male_monk/inputs/style.png",
+    "prompt": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative Human Monk (male presentation) identity portrait; Image 2 is the approved full-body pixel-art style and proportion reference only. Player identity metadata: human features balanced proportions warm skin tone male masculine features martial artist wrapped hands disciplined agile focused. Create one complete head-to-toe Human Monk (male presentation) that faithfully preserves Image 1's face, ancestry traits, gender presentation, hair, eyes, complexion, martial clothing, wraps, palette, proportions, and equipment. Do not import identity details from Image 2. Keep the authoritative portrait's hand wraps, clothing, belt, jewelry, and any other equipment design and count consistent in every pose. Keep both hands readable, preserve the original handed details, and never invent, duplicate, swap, or transform a staff, blade, shield, or talisman. Translate the portrait into the compact full-body quality and agile readable silhouette demonstrated by Image 2. Use a flat #00ff00 chroma key background with no floor or scenery. Use a square 1:1 canvas with generous padding on every side. Polished hand-authored 16-bit pixel art with crisp intentional pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment color ramps. One centered full-body monk in a balanced open-hand guard facing three-quarters right. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+  },
+  "animations": {
+    "idle": {
+      "source": "ai-image-metadata/characters/player-animation-sources/human_male_monk/idle.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/human_male_monk/chroma/idle.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 4,
+      "frameDescriptions": [
+        "balanced open-hand guard with knees softly bent",
+        "slow inhale as spine lengthens and lead hand rises",
+        "weight settles onto the forward foot with hips aligned",
+        "controlled exhale into a lower defensive guard",
+        "centered guard midpoint with both hands active",
+        "slow inhale as rear hand chambers and cloth responds",
+        "weight settles onto the rear foot with a distinct knee bend",
+        "calm open-hand guard flowing back to frame one"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body monk centered guard idle-cycle poses of the authoritative Human Monk (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right and then bottom row left-to-right. Player identity metadata: human features balanced proportions warm skin tone male masculine features martial artist wrapped hands disciplined agile focused. Required sequence: balanced open-hand guard with knees softly bent; slow inhale as spine lengthens and lead hand rises; weight settles onto the forward foot with hips aligned; controlled exhale into a lower defensive guard; centered guard midpoint with both hands active; slow inhale as rear hand chambers and cloth responds; weight settles onto the rear foot with a distinct knee bend; calm open-hand guard flowing back to frame one. Motion direction: A calm diaphragmatic breathing loop with live open-hand guard, softly flexing knees, and alternating centered weight shifts; the first and last poses connect smoothly.. Overall monk motion is balanced, fluid, controlled, precise, and explosively athletic, with visible guard discipline, hip rotation, and grounded martial-arts footwork. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact portrait identity, clothing, wraps, palette, proportions, and equipment throughout. Keep the authoritative portrait's hand wraps, clothing, belt, jewelry, and any other equipment design and count consistent in every pose. Keep both hands readable, preserve the original handed details, and never invent, duplicate, swap, or transform a staff, blade, shield, or talisman. Monk motion is embodied martial skill rather than spell-casting. Do not add magical projectiles, elemental trails, runes, halos, or aura; if the identity portrait explicitly establishes a subtle ki accent, keep it compact, fixed to that palette, and secondary to anatomy and impact mechanics. Action-specific effects: No active magic or attack trail; only subtle breathing, cloth, wrap, and hair response. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "walk": {
+      "source": "ai-image-metadata/characters/player-animation-sources/human_male_monk/walk.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/human_male_monk/chroma/walk.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "left foot light forward contact with hands guarding",
+        "left leg elastic compression and lowered center",
+        "passing pose with right knee advancing and opposite hand forward",
+        "right foot reaching ahead from a balanced single-leg stance",
+        "right foot light forward contact with hands still guarding",
+        "right leg elastic compression and lowered center",
+        "passing pose with left knee advancing and opposite hand forward",
+        "left foot reaching ahead into the quiet walking loop"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body monk light-footed walk-cycle poses of the authoritative Human Monk (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right and then bottom row left-to-right. Player identity metadata: human features balanced proportions warm skin tone male masculine features martial artist wrapped hands disciplined agile focused. Required sequence: left foot light forward contact with hands guarding; left leg elastic compression and lowered center; passing pose with right knee advancing and opposite hand forward; right foot reaching ahead from a balanced single-leg stance; right foot light forward contact with hands still guarding; right leg elastic compression and lowered center; passing pose with left knee advancing and opposite hand forward; left foot reaching ahead into the quiet walking loop. Motion direction: A light but grounded alternating-contact walk with elastic knee compression, clear passing poses, opposite guarded arm motion, and quiet controlled landings.. Overall monk motion is balanced, fluid, controlled, precise, and explosively athletic, with visible guard discipline, hip rotation, and grounded martial-arts footwork. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact portrait identity, clothing, wraps, palette, proportions, and equipment throughout. Keep the authoritative portrait's hand wraps, clothing, belt, jewelry, and any other equipment design and count consistent in every pose. Keep both hands readable, preserve the original handed details, and never invent, duplicate, swap, or transform a staff, blade, shield, or talisman. Monk motion is embodied martial skill rather than spell-casting. Do not add magical projectiles, elemental trails, runes, halos, or aura; if the identity portrait explicitly establishes a subtle ki accent, keep it compact, fixed to that palette, and secondary to anatomy and impact mechanics. Action-specific effects: No active magic or speed streak; wraps, loose cloth, belt ends, and hair follow the stepping body naturally. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "attack": {
+      "source": "ai-image-metadata/characters/player-animation-sources/human_male_monk/attack.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/human_male_monk/chroma/attack.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "balanced fighting guard",
+        "rear hand chambers as the lead foot tests forward",
+        "stepping lead-palm strike with rear hand protecting the jaw",
+        "hip-driven rear cross with shoulders fully rotating",
+        "knee chambers high as the body pivots for a turning kick",
+        "full turning-kick extension with arms counterbalancing",
+        "soft bent-knee landing that redirects momentum",
+        "controlled recovery into balanced fighting guard"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body monk bare-hand combination attack poses of the authoritative Human Monk (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right and then bottom row left-to-right. Player identity metadata: human features balanced proportions warm skin tone male masculine features martial artist wrapped hands disciplined agile focused. Required sequence: balanced fighting guard; rear hand chambers as the lead foot tests forward; stepping lead-palm strike with rear hand protecting the jaw; hip-driven rear cross with shoulders fully rotating; knee chambers high as the body pivots for a turning kick; full turning-kick extension with arms counterbalancing; soft bent-knee landing that redirects momentum; controlled recovery into balanced fighting guard. Motion direction: A coherent martial combination moves from guarded anticipation through a stepping palm strike, hip-driven cross, chambered turning kick, full kick extension, balanced landing, and controlled recovery.. Overall monk motion is balanced, fluid, controlled, precise, and explosively athletic, with visible guard discipline, hip rotation, and grounded martial-arts footwork. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact portrait identity, clothing, wraps, palette, proportions, and equipment throughout. Keep the authoritative portrait's hand wraps, clothing, belt, jewelry, and any other equipment design and count consistent in every pose. Keep both hands readable, preserve the original handed details, and never invent, duplicate, swap, or transform a staff, blade, shield, or talisman. Monk motion is embodied martial skill rather than spell-casting. Do not add magical projectiles, elemental trails, runes, halos, or aura; if the identity portrait explicitly establishes a subtle ki accent, keep it compact, fixed to that palette, and secondary to anatomy and impact mechanics. Action-specific effects: Only compact physical contact ticks may mark the palm and kick impacts; no weapon, projectile, magical blast, or effect that hides the striking limbs. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "hurt": {
+      "source": "ai-image-metadata/characters/player-animation-sources/human_male_monk/hurt.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/human_male_monk/chroma/hurt.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "balanced guard before impact",
+        "sharp flinch with forearms folding toward the struck side",
+        "maximum recoil with torso arched and knees deeply bent",
+        "turning stumble that redirects the impact sideways",
+        "low three-point balance catch with one hand near the ground",
+        "controlled rise with the lead forearm guarding",
+        "feet and hips realign beneath a rebuilding guard",
+        "recovered balanced fighting guard"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body monk impact-redirection-and-recovery poses of the authoritative Human Monk (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right and then bottom row left-to-right. Player identity metadata: human features balanced proportions warm skin tone male masculine features martial artist wrapped hands disciplined agile focused. Required sequence: balanced guard before impact; sharp flinch with forearms folding toward the struck side; maximum recoil with torso arched and knees deeply bent; turning stumble that redirects the impact sideways; low three-point balance catch with one hand near the ground; controlled rise with the lead forearm guarding; feet and hips realign beneath a rebuilding guard; recovered balanced fighting guard. Motion direction: A sharp body impact breaks the guard into a deep recoil, the monk turns with the force, catches balance in a low stance, redirects momentum through planted hands and feet, then rebuilds the guard.. Overall monk motion is balanced, fluid, controlled, precise, and explosively athletic, with visible guard discipline, hip rotation, and grounded martial-arts footwork. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact portrait identity, clothing, wraps, palette, proportions, and equipment throughout. Keep the authoritative portrait's hand wraps, clothing, belt, jewelry, and any other equipment design and count consistent in every pose. Keep both hands readable, preserve the original handed details, and never invent, duplicate, swap, or transform a staff, blade, shield, or talisman. Monk motion is embodied martial skill rather than spell-casting. Do not add magical projectiles, elemental trails, runes, halos, or aura; if the identity portrait explicitly establishes a subtle ki accent, keep it compact, fixed to that palette, and secondary to anatomy and impact mechanics. Action-specific effects: Use only a compact physical impact accent; no gore, blood, full-body tint, magical ward, or detached equipment. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "death": {
+      "source": "ai-image-metadata/characters/player-animation-sources/human_male_monk/death.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/human_male_monk/chroma/death.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "verticalAnchor": "bottom",
+      "outputFrameMap": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        7,
+        7
+      ],
+      "frameDescriptions": [
+        "fatal impact opens the balanced guard",
+        "arms slacken as weight retreats and balance fails",
+        "knees buckle into a low collapsing stance",
+        "one knee grounds while the torso folds diagonally",
+        "body rolls sideways into full ground contact",
+        "low fallen body settles with limbs clearly articulated",
+        "final fully fallen monk pose at peaceful rest",
+        "same final fallen pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body monk defeat sequence poses of the authoritative Human Monk (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right and then bottom row left-to-right. Player identity metadata: human features balanced proportions warm skin tone male masculine features martial artist wrapped hands disciplined agile focused. Required sequence: fatal impact opens the balanced guard; arms slacken as weight retreats and balance fails; knees buckle into a low collapsing stance; one knee grounds while the torso folds diagonally; body rolls sideways into full ground contact; low fallen body settles with limbs clearly articulated; final fully fallen monk pose at peaceful rest; same final fallen pose held. Motion direction: A decisive impact empties the guard, balance recedes through buckling legs into a low kneel, the torso folds and rolls sideways into ground contact, then settles into an unmistakable fully fallen rest pose.. Overall monk motion is balanced, fluid, controlled, precise, and explosively athletic, with visible guard discipline, hip rotation, and grounded martial-arts footwork. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact portrait identity, clothing, wraps, palette, proportions, and equipment throughout. Keep the authoritative portrait's hand wraps, clothing, belt, jewelry, and any other equipment design and count consistent in every pose. Keep both hands readable, preserve the original handed details, and never invent, duplicate, swap, or transform a staff, blade, shield, or talisman. Monk motion is embodied martial skill rather than spell-casting. Do not add magical projectiles, elemental trails, runes, halos, or aura; if the identity portrait explicitly establishes a subtle ki accent, keep it compact, fixed to that palette, and secondary to anatomy and impact mechanics. Action-specific effects: No gore, blood, dismemberment, spell effect, or rigid rotation of the upright sprite. Preserve articulated limbs, wraps, clothing, and all identity equipment through the grounded collapse. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "dead": {
+      "deriveFrom": {
+        "animation": "death",
+        "frame": 7
+      },
+      "frameDescriptions": [
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held"
+      ],
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity."
+    },
+    "victory": {
+      "source": "ai-image-metadata/characters/player-animation-sources/human_male_monk/victory.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/human_male_monk/chroma/victory.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "quiet realization of victory from fighting guard",
+        "respectful forward bow with hands gathered",
+        "rising cross-body palm kata",
+        "balanced pivot with one knee chambered high",
+        "controlled high celebratory kick",
+        "light landing into an open arms-wide stance",
+        "both wrapped hands raised with proud centered posture",
+        "final poised triumphant monk pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body monk victory kata poses of the authoritative Human Monk (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right and then bottom row left-to-right. Player identity metadata: human features balanced proportions warm skin tone male masculine features martial artist wrapped hands disciplined agile focused. Required sequence: quiet realization of victory from fighting guard; respectful forward bow with hands gathered; rising cross-body palm kata; balanced pivot with one knee chambered high; controlled high celebratory kick; light landing into an open arms-wide stance; both wrapped hands raised with proud centered posture; final poised triumphant monk pose held. Motion direction: The monk recognizes victory, centers with a respectful bow, flows through a crisp palm kata, pivots into a high controlled kick, lands lightly, raises both hands in earned celebration, and holds a poised triumphant finish.. Overall monk motion is balanced, fluid, controlled, precise, and explosively athletic, with visible guard discipline, hip rotation, and grounded martial-arts footwork. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact portrait identity, clothing, wraps, palette, proportions, and equipment throughout. Keep the authoritative portrait's hand wraps, clothing, belt, jewelry, and any other equipment design and count consistent in every pose. Keep both hands readable, preserve the original handed details, and never invent, duplicate, swap, or transform a staff, blade, shield, or talisman. Monk motion is embodied martial skill rather than spell-casting. Do not add magical projectiles, elemental trails, runes, halos, or aura; if the identity portrait explicitly establishes a subtle ki accent, keep it compact, fixed to that palette, and secondary to anatomy and impact mechanics. Action-specific effects: No spell effect, projectile, or weapon; body lines, open hands, wraps, and balanced footwork carry the celebration. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    }
+  },
+  "pins": {
+    "reference": null,
+    "animations": {}
+  }
+}
