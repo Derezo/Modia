@@ -2,7 +2,7 @@
   "version": "2.0.0",
   "category": "items",
   "description": "Item sprites for layered composition system - base sprites combined with overlays at runtime",
-  "totalAssets": 170,
+  "totalAssets": 76,
   "outputDir": "/assets/items/",
   "size": "128x128",
   "format": "webp",
@@ -24,10 +24,10 @@
     "enabled": true,
     "description": "Base sprites have no rarity glow - overlays are composited at runtime",
     "baseAssets": {
-      "weapons": 67,
-      "armor": 39,
-      "accessories": 23,
-      "consumables": 41
+      "weapons": 18,
+      "armor": 17,
+      "accessories": 9,
+      "consumables": 32
     },
     "overlayDirectory": "../overlays/",
     "rarityOverlays": [

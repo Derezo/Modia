@@ -3,6 +3,7 @@
 import {
   ENEMY_BIOME_ALIASES,
   ENEMY_PRIMARY_BIOMES,
+  getNpcCharacterPathCandidates,
   getNpcSpriteBiomeCandidates,
   resolveEnemyBiomeAlias
 } from '../../../shared/assetPaths.js';
@@ -70,6 +71,14 @@ export function resolveSpriteBiome(nodeType) {
  */
 export function getEnemySpriteBiomeCandidates(enemyId, requestedBiome = 'forest') {
   return getNpcSpriteBiomeCandidates(enemyId, requestedBiome);
+}
+
+/** Return canonical artwork-alias-aware enemy sprite paths in lookup order. */
+export function getEnemySpritePathCandidates(enemyId, animation = 'idle', requestedBiome = 'forest') {
+  return getNpcCharacterPathCandidates(enemyId, {
+    requestedBiome,
+    animations: getEnemySpriteAnimationCandidates(animation)
+  });
 }
 
 /** Return enemy animation names in lookup order. */

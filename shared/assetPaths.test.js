@@ -263,6 +263,19 @@ describe('canonical NPC asset identity', () => {
     assert.strictEqual(getNpcPortraitId({ sprite_id: 'Gray Wolf' }), 'enemy_gray_wolf');
     assert.strictEqual(getNpcPortraitId({ spriteId: 'bridge-bandit' }), 'enemy_bridge_bandit');
   });
+
+  it('resolves shared NPC artwork through one canonical sprite path', () => {
+    assert.deepStrictEqual(getNpcCharacterPathCandidates('bandit_captain', {
+      requestedBiome: 'bridge',
+      animation: 'attack'
+    }), [
+      '/assets/characters/enemies/bridge/bridge_bandit/bridge_bandit_attack.webp'
+    ]);
+    assert.strictEqual(
+      getNpcPortraitId({ enemyId: 'bandit_captain' }),
+      'enemy_bandit_captain'
+    );
+  });
 });
 
 // =============================================================================

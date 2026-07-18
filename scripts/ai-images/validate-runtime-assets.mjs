@@ -395,6 +395,9 @@ export function buildEnemySpriteCandidateUrls(
   spawnBiome,
   battleAssetConfig
 ) {
+  if (typeof battleAssetConfig.getEnemySpritePathCandidates === 'function') {
+    return battleAssetConfig.getEnemySpritePathCandidates(enemyId, animation, spawnBiome);
+  }
   const biomes = battleAssetConfig.getEnemySpriteBiomeCandidates(enemyId, spawnBiome);
   const animations = battleAssetConfig.getEnemySpriteAnimationCandidates(animation);
   const urls = [];
@@ -1197,7 +1200,7 @@ export async function createRuntimeAssetReport(options = {}) {
             lookup
           ));
         } else if (!resolvedEnemyFiles.has(resolved.file)) {
-          const resolvedAnimation = path.basename(resolved.file, '.webp').slice(`${enemyId}_`.length);
+          const resolvedAnimation = path.basename(resolved.file, '.webp').split('_').at(-1);
           resolvedEnemyFiles.set(resolved.file, {
             id: enemyId,
             animation: resolvedAnimation,
@@ -1272,7 +1275,10 @@ export async function createRuntimeAssetReport(options = {}) {
     if (!enemyMetadataById.has(entry.enemy.id)) enemyMetadataById.set(entry.enemy.id, []);
     enemyMetadataById.get(entry.enemy.id).push(entry);
   }
-  for (const enemyId of enemyTemplateIds) {
+  const enemyMetadataIds = new Set(
+    [...enemyTemplateIds].map(enemyId => sources.assetPaths.NPC_SPRITE_ALIASES?.[enemyId] || enemyId)
+  );
+  for (const enemyId of enemyMetadataIds) {
     const entries = enemyMetadataById.get(enemyId) || [];
     if (entries.length === 0) {
       const mismatch = { id: enemyId };
@@ -1300,7 +1306,7 @@ export async function createRuntimeAssetReport(options = {}) {
     }
   }
   for (const entry of enemyMetadataEntries) {
-    if (enemyTemplateIds.has(entry.enemy.id)) continue;
+    if (enemyMetadataIds.has(entry.enemy.id)) continue;
     const orphan = {
       id: entry.enemy.id,
       declaredBiome: entry.declaredBiome,

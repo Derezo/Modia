@@ -103,6 +103,8 @@
     "ai:check:player-animations": "node scripts/ai-images/compile-player-animations.js --all --check",
     "ai:test:player-animations": "node --test scripts/ai-images/compile-player-animations.test.js",
     "ai:draft:authored-player-animation": "node scripts/ai-images/draft-authored-player-animation.js",
+    "ai:generate:authored-player-candidates": "node scripts/ai-images/generate-authored-player-candidates.js",
+    "ai:test:authored-player-candidates": "node --test scripts/ai-images/generate-authored-player-candidates.test.js",
     "ai:test:authored-player-animation-drafts": "node --test scripts/ai-images/draft-authored-player-animation.test.js",
     "ai:compile:authored-player-animations": "node scripts/ai-images/compile-authored-player-animations.js",
     "ai:check:authored-player-animations": "node scripts/ai-images/compile-authored-player-animations.js --all-approved --check",

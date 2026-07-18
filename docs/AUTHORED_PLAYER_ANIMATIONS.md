@@ -145,6 +145,58 @@ Do not resize or recompress staged inputs after generation. Their exact bytes ar
 
 Use the exact prompts already rendered into the draft spec.
 
+The recommended operator path uses isolated, ephemeral Codex CLI workers. Generate and
+review the reference first:
+
+```bash
+npm run ai:generate:authored-player-candidates -- \
+  --id human_female_wizard \
+  --phase reference
+```
+
+After accepting `reference.png` as the identity authority, fan out the independent
+animation candidates with bounded concurrency:
+
+```bash
+npm run ai:generate:authored-player-candidates -- \
+  --id human_female_wizard \
+  --phase animations \
+  --concurrency 2
+```
+
+Use `--dry-run` to inspect the resumable plan. Existing chroma/RGBA pairs are skipped.
+If a chroma candidate exists without its RGBA counterpart, the worker only repeats
+matte removal. `--actions idle,walk` limits a run. `--force` intentionally replaces
+existing candidate pairs.
+
+Each asset runs in a separate `codex exec --ephemeral` context. The runner attaches
+only the required identity/style or accepted-reference inputs, directs the worker to
+the exact frozen spec prompt, retains JSONL logs under `tmp/codex-imagegen/`, removes
+the chroma matte, and checks the resulting file contract. It never changes approval
+status, pins, or runtime assets.
+
+The underlying execution shape is:
+
+```bash
+codex exec \
+  --ephemeral \
+  --json \
+  --sandbox danger-full-access \
+  -C "$PWD" \
+  --image <required-input.png>
+```
+
+The complete worker instruction is passed on standard input, so long frozen prompts
+are not exposed to shell quoting. The explicit sandbox mode avoids nested Bubblewrap
+failures on hosts that cannot create a second network namespace. Do not use
+`--dangerously-bypass-approvals-and-sandbox`; the bounded worker instruction still
+limits writes to its exact candidate pair, and built-in image generation does not
+require an API key.
+
+Start with concurrency 2. Increase to 3 only after observing stable image-generation
+latency and account limits; the runner caps concurrency at 4. Separate workers reduce
+thread context growth, but each still consumes its own Codex/image-generation usage.
+
 For the reference:
 
 1. Supply `inputs/identity.png` as the identity authority.

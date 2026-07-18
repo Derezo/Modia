@@ -20,50 +20,12 @@
       "loraModel": "retro-pixel"
     },
     {
-      "id": "ring_silver",
-      "name": "Silver Ring",
-      "prompt": "silver ring polished band elegant shine",
-      "seed": 23002,
-      "generated": true,
-      "generatedAt": "2026-01-28T20:20:55.685Z",
-      "evaluation": {
-        "score": 0,
-        "issues": [],
-        "regenerate": false
-      },
-      "needsRegeneration": false,
-      "loraModel": "retro-pixel"
-    },
-    {
-      "id": "ring_gold",
-      "name": "Gold Ring",
-      "prompt": "gold ring precious band ornate royal",
-      "seed": 23003,
-      "generated": true,
-      "generatedAt": "2026-01-28T20:14:29.594Z",
-      "evaluation": {
-        "score": 0,
-        "issues": [],
-        "regenerate": false
-      },
-      "needsRegeneration": false,
-      "loraModel": "retro-pixel"
-    },
-    {
       "id": "ring_gem",
       "name": "Gemstone Ring",
       "prompt": "gemstone ring jeweled setting sparkling faceted",
       "seed": 23004,
       "generated": true,
       "generatedAt": "2026-01-26T15:33:33.151Z"
-    },
-    {
-      "id": "ring_signet",
-      "name": "Signet Ring",
-      "prompt": "signet ring engraved seal noble heraldic",
-      "seed": 23005,
-      "generated": true,
-      "generatedAt": "2026-01-26T15:34:24.070Z"
     },
     {
       "id": "amulet_bone",
@@ -90,113 +52,12 @@
       "generatedAt": "2026-01-26T15:36:55.509Z"
     },
     {
-      "id": "amulet_holy",
-      "name": "Holy Symbol",
-      "prompt": "holy symbol sacred pendant divine blessed",
-      "seed": 23014,
-      "generated": true,
-      "generatedAt": "2026-01-26T15:37:46.472Z"
-    },
-    {
-      "id": "amulet_dark",
-      "name": "Dark Talisman",
-      "prompt": "dark talisman ominous pendant shadowy cursed",
-      "seed": 23015,
-      "generated": true,
-      "generatedAt": "2026-01-26T15:38:37.397Z"
-    },
-    {
-      "id": "cloak_traveler",
-      "name": "Traveler Cloak",
-      "prompt": "traveler cloak simple brown hooded weathered",
-      "seed": 23021,
-      "generated": true,
-      "generatedAt": "2026-01-26T15:39:26.463Z"
-    },
-    {
-      "id": "cloak_shadow",
-      "name": "Shadow Cloak",
-      "prompt": "shadow cloak dark fabric flowing wispy edges",
-      "seed": 23022,
-      "generated": true,
-      "generatedAt": "2026-01-27T04:03:13.737Z"
-    },
-    {
-      "id": "cloak_royal",
-      "name": "Royal Cape",
-      "prompt": "royal cape rich fabric fur trim elegant regal",
-      "seed": 23023,
-      "generated": true,
-      "generatedAt": "2026-01-27T17:28:43.948Z",
-      "needsRegeneration": false
-    },
-    {
-      "id": "cloak_mage",
-      "name": "Enchanted Mantle",
-      "prompt": "enchanted mantle magical fabric runic patterns",
-      "seed": 23024,
-      "generated": true,
-      "generatedAt": "2026-01-27T17:29:27.628Z",
-      "needsRegeneration": false
-    },
-    {
-      "id": "cloak_feather",
-      "name": "Feathered Cloak",
-      "prompt": "feathered cloak bird plumes colorful tribal",
-      "seed": 23025,
-      "generated": true,
-      "generatedAt": "2026-01-27T17:30:11.982Z",
-      "needsRegeneration": false
-    },
-    {
-      "id": "belt_leather",
-      "name": "Leather Belt",
-      "prompt": "practical leather belt simple buckle",
-      "seed": 23031,
-      "generated": true,
-      "generatedAt": "2026-01-28T20:24:29.956Z",
-      "evaluation": {
-        "score": 0,
-        "issues": [],
-        "regenerate": false
-      },
-      "needsRegeneration": false,
-      "loraModel": "retro-pixel"
-    },
-    {
-      "id": "belt_warrior",
-      "name": "Warrior Belt",
-      "prompt": "warrior belt wide reinforced metal studs",
-      "seed": 23032,
-      "generated": true,
-      "generatedAt": "2026-01-27T17:31:44.356Z",
-      "needsRegeneration": false
-    },
-    {
       "id": "belt_pouch",
       "name": "Utility Belt",
       "prompt": "utility belt multiple pouches adventurer gear",
       "seed": 23033,
       "generated": true,
       "generatedAt": "2026-01-27T17:32:29.137Z",
-      "needsRegeneration": false
-    },
-    {
-      "id": "gloves_leather",
-      "name": "Leather Gloves",
-      "prompt": "leather gloves fingerless grip practical",
-      "seed": 23041,
-      "generated": true,
-      "generatedAt": "2026-01-27T17:33:13.828Z",
-      "needsRegeneration": false
-    },
-    {
-      "id": "gauntlets_steel",
-      "name": "Steel Gauntlets",
-      "prompt": "steel gauntlets armored hands articulated",
-      "seed": 23042,
-      "generated": true,
-      "generatedAt": "2026-01-27T17:33:59.553Z",
       "needsRegeneration": false
     },
     {

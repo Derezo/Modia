@@ -7,6 +7,7 @@ import {
   ENEMY_ANIMATIONS,
   getEnemySpriteAnimationCandidates,
   getEnemySpriteBiomeCandidates,
+  getEnemySpritePathCandidates,
   getPlayerCharacterAnimations,
   resolveSpriteBiome
 } from '../BattleAssetConfig.js';
@@ -70,6 +71,13 @@ describe('battle runtime asset configuration', () => {
   it('falls back from a missing dead pose to the final death frame sheet', () => {
     assert.deepEqual(getEnemySpriteAnimationCandidates('dead'), ['death', 'dead']);
     assert.deepEqual(getEnemySpriteAnimationCandidates('attack'), ['attack']);
+  });
+
+  it('uses one canonical sprite path for identities with shared artwork', () => {
+    assert.deepEqual(
+      getEnemySpritePathCandidates('palace_guard', 'attack', 'palace'),
+      ['/assets/characters/enemies/palace/dark_knight/dark_knight_attack.webp']
+    );
   });
 
   it('preloads cast only for classes with an authored cast capability', () => {

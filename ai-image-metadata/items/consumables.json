@@ -77,26 +77,6 @@
       "loraModel": "retro-pixel"
     },
     {
-      "id": "potion_speed",
-      "name": "Speed Potion",
-      "prompt": "yellow speed potion lightning streaks swift",
-      "rarity": "rare",
-      "seed": 22032,
-      "generated": true,
-      "generatedAt": "2026-01-27T17:39:09.618Z",
-      "needsRegeneration": false
-    },
-    {
-      "id": "potion_defense",
-      "name": "Defense Potion",
-      "prompt": "brown defense potion stone-like swirling shield",
-      "rarity": "rare",
-      "seed": 22033,
-      "generated": true,
-      "generatedAt": "2026-01-27T17:39:53.106Z",
-      "needsRegeneration": false
-    },
-    {
       "id": "antidote",
       "name": "Antidote",
       "prompt": "green antidote vial clear cleansing cure",
@@ -140,82 +120,6 @@
       "seed": 22053,
       "generated": true,
       "generatedAt": "2026-01-27T17:42:48.463Z",
-      "needsRegeneration": false
-    },
-    {
-      "id": "scroll_fire",
-      "name": "Fire Scroll",
-      "prompt": "ancient scroll fire runes burning edges",
-      "rarity": "uncommon",
-      "seed": 22061,
-      "generated": true,
-      "generatedAt": "2026-01-27T17:43:32.858Z",
-      "needsRegeneration": false
-    },
-    {
-      "id": "scroll_teleport",
-      "name": "Teleport Scroll",
-      "prompt": "magical teleport scroll portal symbols glowing",
-      "rarity": "rare",
-      "seed": 22062,
-      "generated": true,
-      "generatedAt": "2026-01-27T17:44:16.569Z",
-      "needsRegeneration": false
-    },
-    {
-      "id": "food_bread",
-      "name": "Bread Loaf",
-      "prompt": "fresh bread loaf crusty brown wholesome",
-      "rarity": "common",
-      "seed": 22071,
-      "generated": true,
-      "generatedAt": "2026-01-27T17:45:01.135Z",
-      "needsRegeneration": false
-    },
-    {
-      "id": "food_meat",
-      "name": "Cooked Meat",
-      "prompt": "cooked meat drumstick roasted savory",
-      "rarity": "common",
-      "seed": 22072,
-      "generated": true,
-      "generatedAt": "2026-01-27T17:45:47.348Z",
-      "needsRegeneration": false
-    },
-    {
-      "id": "food_cheese",
-      "name": "Cheese Wheel",
-      "prompt": "cheese wheel aged yellow wedge",
-      "rarity": "common",
-      "seed": 22073,
-      "generated": true,
-      "generatedAt": "2026-01-28T20:30:50.338Z",
-      "evaluation": {
-        "score": 0,
-        "issues": [],
-        "regenerate": false
-      },
-      "needsRegeneration": false,
-      "loraModel": "retro-pixel"
-    },
-    {
-      "id": "food_apple",
-      "name": "Apple",
-      "prompt": "red apple fresh fruit shiny healthy",
-      "rarity": "common",
-      "seed": 22074,
-      "generated": true,
-      "generatedAt": "2026-01-27T17:47:24.252Z",
-      "needsRegeneration": false
-    },
-    {
-      "id": "food_feast",
-      "name": "Royal Feast",
-      "prompt": "elaborate feast platter turkey wine grapes",
-      "rarity": "rare",
-      "seed": 22075,
-      "generated": true,
-      "generatedAt": "2026-01-27T17:48:11.356Z",
       "needsRegeneration": false
     },
     {

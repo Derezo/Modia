@@ -23,7 +23,6 @@
 import {
   getAssetPath,
   getCharacterPath,
-  getNpcCharacterPathCandidates,
   getNpcPortraitId,
   getNpcVisualIdentity,
   getPlayerCharacterPathCandidates,
@@ -47,6 +46,7 @@ import {
   CHARACTER_ANIMATIONS,
   ENEMY_ANIMATIONS,
   getEnemySpriteAnimationCandidates,
+  getEnemySpritePathCandidates,
   getPlayerCharacterAnimations,
   resolveSpriteBiome
 } from './BattleAssetConfig.js';
@@ -538,11 +538,8 @@ export class AssetLoader {
    * Build ordered, duplicate-free paths for an enemy sprite lookup.
    */
   getEnemySpritePathCandidates(enemyId, animation = 'idle', biome = 'forest') {
-    const animationCandidates = getEnemySpriteAnimationCandidates(animation);
-    return getNpcCharacterPathCandidates(enemyId, {
-      requestedBiome: biome,
-      animations: animationCandidates
-    }).map(path => `${this.basePath}${path.slice('/assets'.length)}`);
+    return getEnemySpritePathCandidates(enemyId, animation, biome)
+      .map(path => `${this.basePath}${path.slice('/assets'.length)}`);
   }
 
   /**
