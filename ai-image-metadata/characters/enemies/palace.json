@@ -71,7 +71,7 @@
     {
       "id": "shadow_assassin",
       "name": "Shadow Assassin",
-      "archetype": "undead",
+      "archetype": "humanoid",
       "visualTraits": "formless darkness glowing red eyes wispy tendrils ethereal presence",
       "sd15Config": {
         "controlnetWeight": null,

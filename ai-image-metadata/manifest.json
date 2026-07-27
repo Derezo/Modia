@@ -96,11 +96,12 @@
       ]
     },
     "characters": {
-      "description": "Portrait-matched player variants, hash-pinned authored player-animation overrides, and canonical enemy strips (64x512, 8 temporal frames)",
-      "assetCount": 354,
+      "description": "Portrait-matched player variants plus hash-pinned Codex-authored player and biome-scoped enemy animation sources compiled to canonical 64x512 strips",
+      "assetCount": 334,
       "playerVariantCount": 300,
       "authoredPlayerAnimationPilots": 1,
-      "enemyCount": 34,
+      "authoredEnemyAnimationDrafts": 16,
+      "enemyCount": 14,
       "legacyPlayerArchetypes": 20,
       "format": {
         "type": "vertical_strip",
@@ -121,6 +122,25 @@
         "characters/player-animation-profiles/monk_v1.json",
         "characters/player-animation-profiles/chemist_v1.json",
         "characters/player-authored-animations/elf_other_wizard.json",
+        "characters/enemy-authored-animation-template.json",
+        "characters/enemy-animation-profiles/enemy_v1.json",
+        "characters/enemy-authored-identity-aliases.json",
+        "characters/enemy-authored-animations/bridge/bandit_captain.json",
+        "characters/enemy-authored-animations/bridge/bridge_bandit.json",
+        "characters/enemy-authored-animations/bridge/bridge_troll.json",
+        "characters/enemy-authored-animations/cave/cave_bat.json",
+        "characters/enemy-authored-animations/cave/skeleton_warrior.json",
+        "characters/enemy-authored-animations/cave/stone_golem.json",
+        "characters/enemy-authored-animations/forest/forest_slime.json",
+        "characters/enemy-authored-animations/forest/giant_spider.json",
+        "characters/enemy-authored-animations/forest/goblin_warrior.json",
+        "characters/enemy-authored-animations/forest/gray_wolf.json",
+        "characters/enemy-authored-animations/mountain/harpy.json",
+        "characters/enemy-authored-animations/mountain/mountain_troll.json",
+        "characters/enemy-authored-animations/mountain/troll_shaman.json",
+        "characters/enemy-authored-animations/palace/dark_knight.json",
+        "characters/enemy-authored-animations/palace/palace_guard.json",
+        "characters/enemy-authored-animations/palace/shadow_assassin.json",
         "characters/enemy-sprite-repairs.json",
         "characters/enemy-animation-stabilizations.json",
         "characters/enemies/forest.json",
@@ -137,12 +157,16 @@
     "cave",
     "mountain",
     "bridge",
-    "castle"
+    "castle",
+    "palace"
   ],
   "regions": {
     "heartlands": {
       "name": "Heartlands",
-      "biomes": ["forest", "bridge"],
+      "biomes": [
+        "forest",
+        "bridge"
+      ],
       "palette": {
         "primary": "#8B7355",
         "secondary": "#D4A574",
@@ -151,7 +175,9 @@
     },
     "sylvan_reaches": {
       "name": "Sylvan Reaches",
-      "biomes": ["forest"],
+      "biomes": [
+        "forest"
+      ],
       "palette": {
         "primary": "#2E8B57",
         "secondary": "#9ACD32",
@@ -160,7 +186,10 @@
     },
     "iron_depths": {
       "name": "Iron Depths",
-      "biomes": ["cave", "mountain"],
+      "biomes": [
+        "cave",
+        "mountain"
+      ],
       "palette": {
         "primary": "#696969",
         "secondary": "#B87333",
@@ -169,7 +198,9 @@
     },
     "shadowmere": {
       "name": "Shadowmere",
-      "biomes": ["cave"],
+      "biomes": [
+        "cave"
+      ],
       "palette": {
         "primary": "#4B0082",
         "secondary": "#8B0000",
@@ -178,7 +209,9 @@
     },
     "bloodplains": {
       "name": "Bloodplains",
-      "biomes": ["mountain"],
+      "biomes": [
+        "mountain"
+      ],
       "palette": {
         "primary": "#8B0000",
         "secondary": "#A0522D",
@@ -266,15 +299,41 @@
     "enabled": true,
     "defaultModel": "isnet-general-use",
     "categorySettings": {
-      "portraits": { "enabled": true, "model": "isnet-anime" },
-      "items": { "enabled": true, "model": "isnet-general-use" },
-      "icons": { "enabled": true, "model": "u2net" },
-      "abilities": { "enabled": true, "model": "u2net" },
-      "nodes": { "enabled": true, "model": "isnet-general-use" },
-      "overlays": { "enabled": true, "model": "isnet-general-use" },
-      "characters": { "enabled": true, "model": "isnet-anime" },
-      "obstacles": { "enabled": true, "model": "isnet-general-use" },
-      "tiles": { "enabled": false }
+      "portraits": {
+        "enabled": true,
+        "model": "isnet-anime"
+      },
+      "items": {
+        "enabled": true,
+        "model": "isnet-general-use"
+      },
+      "icons": {
+        "enabled": true,
+        "model": "u2net"
+      },
+      "abilities": {
+        "enabled": true,
+        "model": "u2net"
+      },
+      "nodes": {
+        "enabled": true,
+        "model": "isnet-general-use"
+      },
+      "overlays": {
+        "enabled": true,
+        "model": "isnet-general-use"
+      },
+      "characters": {
+        "enabled": true,
+        "model": "isnet-anime"
+      },
+      "obstacles": {
+        "enabled": true,
+        "model": "isnet-general-use"
+      },
+      "tiles": {
+        "enabled": false
+      }
     },
     "availableModels": [
       "u2net",

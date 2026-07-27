@@ -1,0 +1,61 @@
+{
+  "version": "1.0.0",
+  "id": "authored-enemy-pose-atlas-v1",
+  "description": "Codex imagegen candidates and deterministic runtime compilation for biome-scoped enemy identities.",
+  "compiler": {
+    "version": "1.0.0",
+    "entrypoint": "scripts/ai-images/compile-authored-enemy-animations.js"
+  },
+  "generator": {
+    "mode": "codex-cli-imagegen",
+    "sourceAtlasLayout": {
+      "columns": 4,
+      "rows": 2,
+      "frameOrder": "top row left-to-right, then bottom row left-to-right",
+      "background": "flat #00ff00 chroma key",
+      "minimumComponentPixels": 12,
+      "minimumSubjectPixels": 64,
+      "minimumDominantRatio": 0.35
+    }
+  },
+  "promptContract": {
+    "identityAuthority": "Image 1 is the canonical enemy portrait and controls recognizable identity, anatomy cues, coloration, markings, costume, and equipment.",
+    "styleAuthority": "Image 2 controls rendering style only and must not replace the enemy identity.",
+    "poseRequirement": "Each atlas must redraw the creature's anatomy, limbs, appendages, equipment, surface motion, and silhouette for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation.",
+    "invariants": [
+      "one enemy identity in every frame",
+      "consistent anatomy, appendage count, equipment count, palette, proportions, and pixel density",
+      "complete uncropped silhouette",
+      "no labels, text, watermark, scenery, floor, cast shadow, or grid borders"
+    ]
+  },
+  "runtimeContract": {
+    "reference": {
+      "width": 512,
+      "height": 512,
+      "format": "lossless RGBA PNG"
+    },
+    "animation": {
+      "frameWidth": 64,
+      "frameHeight": 64,
+      "frameCount": 8,
+      "sheetWidth": 64,
+      "sheetHeight": 512,
+      "layout": "vertical-strip",
+      "format": "lossless RGBA WebP",
+      "minimumTransparentMargin": 4,
+      "baseFacing": "right",
+      "directionPolicy": "mirror for west-facing runtime directions"
+    }
+  },
+  "qualityGates": {
+    "minimumUniquePoses": {
+      "idle": 4,
+      "attack": 6,
+      "hit": 6,
+      "death": 7,
+      "dead": 1
+    },
+    "semanticApproval": "Human review is required for identity fidelity, anatomy, appendage and equipment continuity, action readability, final death pose, and matte edges."
+  }
+}

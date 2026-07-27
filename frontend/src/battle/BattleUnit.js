@@ -6,9 +6,13 @@ import {
   getPlayerCharacterIdentity
 } from '../../../shared/assetPaths.js';
 
-// Compiled strips reserve four transparent pixels below every grounded pose.
-// Advance the frame by that inset so visible feet meet the tile/shadow ground
-// plane instead of floating above it.
+// The tile footpoint sits just above the center of the rendered ground shadow.
+// Lower sprites to that center so their feet read as planted inside the shadow.
+export const SPRITE_SHADOW_CENTER_OFFSET = 4;
+
+// Compiled strips also reserve four transparent pixels below every grounded
+// pose. Advance vertical strips by this additional inset so their visible feet
+// land at the same shadow-centered point as legacy layouts.
 export const VERTICAL_STRIP_GROUND_INSET = 4;
 
 /**
@@ -909,13 +913,17 @@ export class BattleUnit {
 
     // Try to render animated sprite
     if (this.animatedSprite && this.animatedSprite.spriteSheet) {
-      // AnimatedSprite draws upward from the frame bottom. Account for the
-      // canonical transparent safety inset so visible pixels meet the shared
-      // tile/shadow ground plane.
+      // AnimatedSprite draws upward from the frame bottom. Place the visible
+      // feet at the shadow center, then compensate for transparent padding in
+      // canonical vertical strips.
       const groundInset = this.animatedSprite.layout === 'vertical-strip'
         ? VERTICAL_STRIP_GROUND_INSET
         : 0;
-      this.animatedSprite.draw(ctx, drawX, drawY + groundInset);
+      this.animatedSprite.draw(
+        ctx,
+        drawX,
+        drawY + SPRITE_SHADOW_CENTER_OFFSET + groundInset
+      );
     } else {
       // Fallback: Draw colored circle with letter
       const renderY = drawY - 32 + (this.isMoving ? 0 : this.idleOffset);

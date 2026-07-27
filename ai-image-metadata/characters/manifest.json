@@ -38,6 +38,25 @@
       "scopeGate": "exactly_one_of_id_sample_all",
       "existingAssetPolicy": "preserve_unless_targeted_force"
     },
+    "canonicalEnemy": {
+      "animation": {
+        "mode": "deterministic_compilation_of_approved_generated_sources",
+        "candidateGeneration": "nondeterministic_codex_cli_imagegen",
+        "compiler": "scripts/ai-images/compile-authored-enemy-animations.js",
+        "draftScaffold": "scripts/ai-images/draft-authored-enemy-animation.js",
+        "inputStager": "scripts/ai-images/stage-authored-enemy-inputs.js",
+        "candidateRunner": "scripts/ai-images/generate-authored-enemy-candidates.js",
+        "template": "enemy-authored-animation-template.json",
+        "profileDirectory": "enemy-animation-profiles",
+        "specDirectory": "enemy-authored-animations",
+        "sourceDirectory": "enemy-animation-sources",
+        "identityAliasRegistry": "enemy-authored-identity-aliases.json",
+        "scopeGate": "explicit_biome_id_or_sequential_biome_all",
+        "approvalGate": "explicit_approve_with_update_pins",
+        "generationReproducibility": "metadata_prompts_identity_style_inputs_accepted_sources_and_hashes_retained_but_candidate_pixels_not_seed_reproducible",
+        "compilationReproducibility": "byte_deterministic_from_hash_pinned_accepted_rgba_sources"
+      }
+    },
     "stagedCandidate": {
       "optional": true,
       "canonical": false,
@@ -96,6 +115,11 @@
   "authoredAnimationPilotIds": [
     "elf_other_wizard"
   ],
+  "enemyAuthoredAnimationTemplate": "enemy-authored-animation-template.json",
+  "enemyAuthoredAnimationProfileDirectory": "enemy-animation-profiles",
+  "enemyAuthoredAnimationSpecDirectory": "enemy-authored-animations",
+  "enemyAuthoredAnimationSourceDirectory": "enemy-animation-sources",
+  "enemyAuthoredIdentityAliasRegistry": "enemy-authored-identity-aliases.json",
   "enemySpriteRepairManifest": "enemy-sprite-repairs.json",
   "enemyAnimationStabilizationManifest": "enemy-animation-stabilizations.json",
   "weightPresets": {

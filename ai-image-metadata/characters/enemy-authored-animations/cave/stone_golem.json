@@ -1,0 +1,281 @@
+{
+  "version": "1.0.0",
+  "template": "ai-image-metadata/characters/enemy-authored-animation-template.json",
+  "compilerVersion": "1.0.0",
+  "id": "stone_golem",
+  "biome": "cave",
+  "profile": "enemy_v1",
+  "profileSource": "ai-image-metadata/characters/enemy-animation-profiles/enemy_v1.json",
+  "status": "approved",
+  "approvedAt": "2026-07-18T16:11:35.557Z",
+  "metadataFingerprint": "25bef23c8ef37d97d6415b0decdc9bebac9c6df774799cc7f2815e90f1eef652",
+  "draftProvenance": {
+    "registry": "ai-image-metadata/characters/enemies/cave.json",
+    "portraitRegistry": "ai-image-metadata/portraits/enemies.json",
+    "authoredAliasRegistry": "ai-image-metadata/characters/enemy-authored-identity-aliases.json",
+    "authoredAliasRegistrySha256": "db5dd5a2cc9b76f89cc9b2b1538932ed6f0d2a40ce70210d10209246bef53f47",
+    "templateSha256": "42955da8759329a4d76ddc80936dfa33151e8cbc96a925e4bb10a21356256536",
+    "profileSha256": "8f4817eb67c22eb3aa3e5fef73228e1a7e842ff0d5e366e40fac2b38ccc7c116"
+  },
+  "identity": {
+    "name": "Stone Golem",
+    "archetype": "elemental",
+    "visualTraits": "living stone body glowing orange cracks boulder fists runic markings",
+    "biomeTraits": "dark rocky underground subterranean crystalline damp",
+    "baseFacing": "right"
+  },
+  "inputs": {
+    "identity": {
+      "origin": "frontend/public/assets/portraits/originals/enemy_stone_golem.png",
+      "staged": "ai-image-metadata/characters/enemy-animation-sources/cave/stone_golem/inputs/identity.png",
+      "authority": "Canonical enemy identity. Preserve recognizable head and face, anatomy, coloration, markings, and any identity-defining costume or equipment."
+    },
+    "style": {
+      "origin": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+      "staged": "ai-image-metadata/characters/enemy-animation-sources/cave/stone_golem/inputs/style.png",
+      "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. Never import the referenced character's identity, anatomy, costume, or equipment."
+    }
+  },
+  "reference": {
+    "source": "ai-image-metadata/characters/enemy-animation-sources/cave/stone_golem/reference.png",
+    "chromaSource": "ai-image-metadata/characters/enemy-animation-sources/cave/stone_golem/chroma/reference.png",
+    "identitySource": "ai-image-metadata/characters/enemy-animation-sources/cave/stone_golem/inputs/identity.png",
+    "styleSource": "ai-image-metadata/characters/enemy-animation-sources/cave/stone_golem/inputs/style.png",
+    "prompt": "Use case: stylized-concept. Asset type: canonical full-body enemy reference for a 16-bit fantasy tactical RPG. Image 1 is authoritative enemy identity. Preserve its recognizable head and face, anatomy cues, coloration, markings, and any identity-defining costume or equipment while translating the portrait into a complete side-facing-right battle silhouette. Image 2 is rendering-style authority only: use its crisp intentional pixel clusters, bold dark outlines, restrained warm highlights, compact proportions, and muted watercolor-and-parchment ramps without importing its character design. Create exactly one Stone Golem, a elemental enemy from the cave biome. Supporting identity traits: living stone body glowing orange cracks boulder fists runic markings. Biome art direction: dark rocky underground subterranean crystalline damp. The silhouette must remain readable at 64x64. Use a flat #00ff00 chroma key background, square canvas, generous padding, and no floor or scenery. No violation of this invariant: one enemy identity in every frame. No violation of this invariant: consistent anatomy, appendage count, equipment count, palette, proportions, and pixel density. No violation of this invariant: complete uncropped silhouette. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+  },
+  "animations": {
+    "idle": {
+      "source": "ai-image-metadata/characters/enemy-animation-sources/cave/stone_golem/idle.png",
+      "chromaSource": "ai-image-metadata/characters/enemy-animation-sources/cave/stone_golem/chroma/idle.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 4,
+      "frameDescriptions": [
+        "ready pose",
+        "inhale or alert rise",
+        "first weight or appendage shift",
+        "expanded motion extreme",
+        "centered midpoint",
+        "exhale or settling motion",
+        "opposite weight or appendage shift",
+        "return flowing into frame one"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn complete idle cycle poses of the authoritative Stone Golem enemy in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Identity traits: living stone body glowing orange cracks boulder fists runic markings. Existing action direction: pixel art sprite side view 64x64, stone golem with living rock body and glowing orange cracks and boulder fists, idle rumble animation, slowly shifting with magma glowing in cracks and rumbling, rugged mountain terrain. Required sequence: ready pose; inhale or alert rise; first weight or appendage shift; expanded motion extreme; centered midpoint; exhale or settling motion; opposite weight or appendage shift; return flowing into frame one. Create a seamless living loop with breathing, weight, surface, or appendage motion appropriate to this creature. Each atlas must redraw the creature's anatomy, limbs, appendages, equipment, surface motion, and silhouette for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact accepted reference identity, anatomy, appendage and equipment count, palette, proportions, and right-facing orientation throughout. No attack effect. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one enemy identity in every frame. No violation of this invariant: consistent anatomy, appendage count, equipment count, palette, proportions, and pixel density. No violation of this invariant: complete uncropped silhouette. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "attack": {
+      "source": "ai-image-metadata/characters/enemy-animation-sources/cave/stone_golem/attack.png",
+      "chromaSource": "ai-image-metadata/characters/enemy-animation-sources/cave/stone_golem/chroma/attack.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "ready pose",
+        "attack anticipation",
+        "deep windup",
+        "committed forward action",
+        "contact pose",
+        "full follow-through",
+        "recoil",
+        "recovered ready pose"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn complete attack sequence poses of the authoritative Stone Golem enemy in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Identity traits: living stone body glowing orange cracks boulder fists runic markings. Existing action direction: pixel art sprite side view 64x64, stone golem with living rock body and glowing orange cracks and boulder fists, attack slam animation, boulder fist swinging down with earth-trembling impact, rugged mountain terrain. Required sequence: ready pose; attack anticipation; deep windup; committed forward action; contact pose; full follow-through; recoil; recovered ready pose. Show readable anticipation, windup, committed forward action, contact, follow-through, recoil, and recovery using the creature's actual body plan. Each atlas must redraw the creature's anatomy, limbs, appendages, equipment, surface motion, and silhouette for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact accepted reference identity, anatomy, appendage and equipment count, palette, proportions, and right-facing orientation throughout. Any effect must remain compact and may not obscure anatomy or silhouette. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one enemy identity in every frame. No violation of this invariant: consistent anatomy, appendage count, equipment count, palette, proportions, and pixel density. No violation of this invariant: complete uncropped silhouette. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "hit": {
+      "source": "ai-image-metadata/characters/enemy-animation-sources/cave/stone_golem/hit.png",
+      "chromaSource": "ai-image-metadata/characters/enemy-animation-sources/cave/stone_golem/chroma/hit.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "ready before impact",
+        "sharp impact flinch",
+        "maximum recoil",
+        "displaced or compressed pose",
+        "braced recovery",
+        "rising or extending back",
+        "balance restored",
+        "recovered ready pose"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn complete hit reaction and recovery poses of the authoritative Stone Golem enemy in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Identity traits: living stone body glowing orange cracks boulder fists runic markings. Existing action direction: pixel art sprite side view 64x64, stone golem with living rock body and glowing orange cracks and boulder fists, hurt crack animation, chunks breaking off with magma spraying then reforming, rugged mountain terrain. Required sequence: ready before impact; sharp impact flinch; maximum recoil; displaced or compressed pose; braced recovery; rising or extending back; balance restored; recovered ready pose. Show a forceful articulated impact, maximum stagger or compression, displaced recovery, and return to readiness. Each atlas must redraw the creature's anatomy, limbs, appendages, equipment, surface motion, and silhouette for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact accepted reference identity, anatomy, appendage and equipment count, palette, proportions, and right-facing orientation throughout. No gore, blood, full-body tint, or magical redesign. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one enemy identity in every frame. No violation of this invariant: consistent anatomy, appendage count, equipment count, palette, proportions, and pixel density. No violation of this invariant: complete uncropped silhouette. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "death": {
+      "source": "ai-image-metadata/characters/enemy-animation-sources/cave/stone_golem/death.png",
+      "chromaSource": "ai-image-metadata/characters/enemy-animation-sources/cave/stone_golem/chroma/death.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "verticalAnchor": "bottom",
+      "minimumUniquePoses": 7,
+      "outputFrameMap": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        7,
+        7
+      ],
+      "frameDescriptions": [
+        "fatal impact",
+        "support begins to fail",
+        "major collapse step",
+        "low falling or dissolving pose",
+        "ground contact",
+        "settling near final shape",
+        "final defeated rest pose",
+        "same final pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn complete defeat and collapse sequence poses of the authoritative Stone Golem enemy in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Identity traits: living stone body glowing orange cracks boulder fists runic markings. Existing action direction: pixel art sprite side view 64x64, stone golem with living rock body and glowing orange cracks and boulder fists, death crumble animation, crumbling apart with inner light fading into pile of rocks, rugged mountain terrain. Required sequence: fatal impact; support begins to fail; major collapse step; low falling or dissolving pose; ground contact; settling near final shape; final defeated rest pose; same final pose held. Show defeat, loss of support, progressive collapse or dissolution, ground contact, settling, and an unmistakable final motionless rest pose. Each atlas must redraw the creature's anatomy, limbs, appendages, equipment, surface motion, and silhouette for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact accepted reference identity, anatomy, appendage and equipment count, palette, proportions, and right-facing orientation throughout. No gore or dismemberment. The final pose must be fully defeated and not a rotated upright sprite. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one enemy identity in every frame. No violation of this invariant: consistent anatomy, appendage count, equipment count, palette, proportions, and pixel density. No violation of this invariant: complete uncropped silhouette. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "dead": {
+      "deriveFrom": {
+        "animation": "death",
+        "frame": 7
+      },
+      "frameDescriptions": [
+        "terminal pose held",
+        "terminal pose held",
+        "terminal pose held",
+        "terminal pose held",
+        "terminal pose held",
+        "terminal pose held",
+        "terminal pose held",
+        "terminal pose held"
+      ],
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; never generate a separate corpse identity."
+    }
+  },
+  "pins": {
+    "templateSha256": "42955da8759329a4d76ddc80936dfa33151e8cbc96a925e4bb10a21356256536",
+    "profileSha256": "8f4817eb67c22eb3aa3e5fef73228e1a7e842ff0d5e366e40fac2b38ccc7c116",
+    "authoredAliasRegistrySha256": "db5dd5a2cc9b76f89cc9b2b1538932ed6f0d2a40ce70210d10209246bef53f47",
+    "reference": {
+      "sourceSha256": "235936f98286ac9c4247039d1013c49a9ec103507877dca2c940e4c5bb884840",
+      "sourceDimensions": "1254x1254",
+      "chromaSourceSha256": "b1539bd739ac7c2b13e1423f8d3ec25c25876c7e166f54f0870f24fcc27e0128",
+      "chromaSourceDimensions": "1254x1254",
+      "identitySourceSha256": "4623c133bc7d4cc9b05c4f58ae4d91441207d20d5eaf4265793ef719f9f5e6a2",
+      "identitySourceDimensions": "1024x1024",
+      "styleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "styleSourceDimensions": "1254x1254",
+      "promptSha256": "5635e97ab40d3ae4598f60c6f7095f56ea0eb878d6ac1515dd87c2d096e98028",
+      "encodedSha256": "febf089320e8fa91dc20526be2779a10b56ceb65556dcd0d6821b620c2e93413"
+    },
+    "animations": {
+      "idle": {
+        "sourceSha256": "5533bc092951fd1f375cf766bf68c25bb8e472b31b629d97a2540fb9fae99dc8",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "c2522599363ddc2940dfdf728f73cf2a7b7b286ca12c3e5d3d2a4d1985338816",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "62935dbd257971e9cb0e0e99659e822222d57a4200e70c43a8116ea61a7c91a4",
+        "encodedSha256": "f358e9d28cbb2e4c08b7c5c4e59c550b36c03160817acf91bbd8d94e7506a6e9",
+        "poseSha256": [
+          "cb8b1bf78cd68993076768aa94cc334bdda5524b69d281d6de3702ab3ec74ecc",
+          "255cb46e640472ba33d84fd8dd857322de3fac662c19571b6d1310ea2f738ce6",
+          "137eaa713b8518fcc33bd3cee7a337bd02b9fdbf24370b08cbad3a67636d01d8",
+          "cd1fd602c46f245abe6194510386a0ce62130fb2eb58fdf180558e98ac100b66",
+          "1aa193a5b592a64fd2a0ff37a4d05a3993b4cd8e7460cae4b3d9d91a36d9b75c",
+          "aecfdb2328f895a95ff8361eeb23cc4f0771f63414681b3caf309ccd485ab9c3",
+          "7d6f1d8bcb73257df14c158d49c88a7f5774676b8e239d3f275489b9e0bdeda2",
+          "da48bfcd70e9e780fadafcc2960a8822dd7185a15cd36ce07de51fa193ae8040"
+        ]
+      },
+      "attack": {
+        "sourceSha256": "6851f81f6cbb3b6820077ee1f02b9ae3b074d9eb3ec75b24c7c8edb2463869f4",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "de1cfa82ad3bde7f338e28c2d2431c3d36cfb0277584a5d775c662a614b4785f",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "cb137da8bba1c26a14698d217983b86f6d8f1f63bbafa03a3902530a0f0e4e52",
+        "encodedSha256": "42deb119e69cb9cc6655248b9b3a7207d7d0716c79fadc241281f2c8f17d95bd",
+        "poseSha256": [
+          "45f6f2ca2dd90b908dd549baf413006fd64c26b08dcad379395dd83fee4b5487",
+          "44b18cd2d959c9e4a6362a9a7b59159317d2abd7825068042a674d18ec76bb92",
+          "a3316d73dad13ccf5f7cc588398834ebd645425b712b2eb2066c787170b07665",
+          "0bfa13f6d60bfd9889ec2189895652e948769527d8cc2ebce5ef9ee5a5d7318f",
+          "9ebefb4467c22c5739c37760cefaa6803fd4f337985daa013937548c3f313b1e",
+          "4c7db2adf926c7eeefd96d5789f5d29d3850fe93d3add2da191ea0e11fcf386f",
+          "f32a370d47f69cea8ef4076709caab5501d2b34b2cf75194af881e13b99d8fdf",
+          "fd101e52326a00243b0c32e99a3feede3ff1d0b51d5457fb9c68a08d0ce448e9"
+        ]
+      },
+      "hit": {
+        "sourceSha256": "875fbccad3d9010741b39faba9b251f8e57947236ff985153080f6c237d33308",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "5ba8f172f51a6a60c43682fe1ed7bea6d5a18040cba7547566f53071084a2ffd",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "0d51d8140775c30d55fad7e2b56d8b7a48fcf57de37655a943f9c88cc6ddf2f9",
+        "encodedSha256": "ff6b6d217f590cdb9e5c26c7f456cf860c17efcc8b25094c5f250c345e27f994",
+        "poseSha256": [
+          "5a6893f0576fedbff1a0eb3c2b7978a1e4e1c4db8eb33c9ca2c44cdc568b8a03",
+          "267666fcb57e0e0190be29b95ac25fd6d10d1cec3f07abda7b8d80f4bb2beefa",
+          "8aa160ae8e1cd62886d19cd42cf2ac933afceb28ee08587002ca32a715c91824",
+          "e49ef6d81bcbbe3d554866589cfb4331f2a08c2ee0283be78457cf0e8b66621d",
+          "cc6f8642e16bf1818c39d3f7fabe4dfaf801f2cacb5068e765064612ce96d65d",
+          "12863dfb40e1e165728a177b37cae048841e8d870aa5fa93d37c920c6fd9ff37",
+          "345d5eb909244f9f09bd4a8f32f1fe59f3d27a4f51a9c603b2245b8683862dba",
+          "8e1c6afc6b5f711f699a09a8265ef0b6ea3fb7dee6ee47af2f438946f33ade0a"
+        ]
+      },
+      "death": {
+        "sourceSha256": "690f2bac96df998a9326b9b244846f8c705524e86381ed7905530601857a5a87",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "f95dd3f67ea3ef9ef6baa1bd943f4b40e55a159ebab27761fe56e8227693b9f3",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "85b5d3f35d46f3b5cf753142bcbe9968588eea0ed16a9852c96dc62914341fea",
+        "encodedSha256": "afee9e367dabfd799c93bc47fb6247a59a5976f18e37950efa03b892c967e7a7",
+        "poseSha256": [
+          "b605915c1ca4841be6018cc44668b336b8153972db9d2f775980c79813b39965",
+          "852111102e9af64ed29a5ac6cf14c091687ef69f24a0f5a0aea001405f33152e",
+          "5e8e530890dddc8de01a969abb5d27f00ddf2d71fda3aca4cc8983f0dd931155",
+          "48e21c073ffa366a88136173d85bee7d709ac958b67003dc00402386c17c9d42",
+          "c8b0f0b9754ed2f45a2b8eccc66abce7a081721c992f3c2ce346e9a6d4418ebc",
+          "b6a42ffd23a1740c7848f44ab5e7fb271c83231d0fdc3775b061f2efd8fa6ac6",
+          "c29796eec7816cde4dbba315920d15a54ad29b1b4182e0214664050d2c172231",
+          "c29796eec7816cde4dbba315920d15a54ad29b1b4182e0214664050d2c172231"
+        ]
+      },
+      "dead": {
+        "deriveFrom": {
+          "animation": "death",
+          "frame": 7
+        },
+        "promptSha256": "1bf046233c0af7abf16f1abf6e2d83779e66b2570ee52a5aa1d5170709ffbec9",
+        "encodedSha256": "08963996335d77ccd3f8aef3d36aec0b8da78c99ff770fcae2de57aa03dc3667",
+        "poseSha256": [
+          "c29796eec7816cde4dbba315920d15a54ad29b1b4182e0214664050d2c172231",
+          "c29796eec7816cde4dbba315920d15a54ad29b1b4182e0214664050d2c172231",
+          "c29796eec7816cde4dbba315920d15a54ad29b1b4182e0214664050d2c172231",
+          "c29796eec7816cde4dbba315920d15a54ad29b1b4182e0214664050d2c172231",
+          "c29796eec7816cde4dbba315920d15a54ad29b1b4182e0214664050d2c172231",
+          "c29796eec7816cde4dbba315920d15a54ad29b1b4182e0214664050d2c172231",
+          "c29796eec7816cde4dbba315920d15a54ad29b1b4182e0214664050d2c172231",
+          "c29796eec7816cde4dbba315920d15a54ad29b1b4182e0214664050d2c172231"
+        ]
+      }
+    }
+  }
+}

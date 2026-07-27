@@ -179,7 +179,7 @@
           "id": "gray_wolf_dead",
           "frameCount": 8,
           "seed": 41034,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, gray fur amber eyes snarling maw sharp fangs alert ears, dead static pose, lying defeated at final rest motionless, leafy green"
         }
       },
@@ -190,10 +190,10 @@
         "attack": true,
         "hit": true,
         "death": true,
-        "dead": false
+        "dead": true
       },
       "generatedAt": null,
-      "generated": false,
+      "generated": true,
       "loraModel": "retro-pixel"
     },
     {

@@ -1640,44 +1640,37 @@
       "race": "dwarf",
       "gender": "male",
       "class": "warrior",
-      "method": "portrait-head-procedural-fullbody",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "longsword-and-kite-shield",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/dwarf_male_warrior.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/dwarf_male_warrior/inputs/identity.png",
       "sourcePortraitSha256": "2e1576c337fb0c22e3fdb4c4509dfec0e0d37ae7ea42cbc2d9be394df6ea2dfa",
       "genderAnchor": null,
       "genderAnchorSha256": null,
       "genderAnchorReason": null,
-      "sourcePixelSha256": "1d5a71ae8181372f335a6245ad5c74b0291f19917c731be0eac75235c763f56b",
+      "sourcePixelSha256": "a6c4b439bfb5b60a8e8fd0e2ded3cece06e44bb3b376624de112342015770d9f",
       "output": "frontend/public/assets/characters/player/dwarf/male/warrior/dwarf_male_warrior_reference.png",
-      "outputSha256": "c760a453ac6de5efa8011f09938f336d6e97761c5ccd33dabc336f4b1171beb8",
+      "outputSha256": "df05c918829ac47b801ea4568895ed1c97f665e2cf5a50acae65a71a5e4325dc",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 16,
-        "minY": 10,
-        "maxX": 56,
-        "maxY": 58,
-        "width": 41,
-        "height": 49,
-        "alphaPixels": 1106
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 36,
+        "minY": 35,
+        "maxX": 396,
+        "maxY": 466,
+        "width": 361,
+        "height": 432,
+        "alphaPixels": 81673,
+        "centroidX": 248.91603100167742,
+        "centroidY": 261.44586338202345
       },
-      "palette": {
-        "primary": [
-          160,
-          192,
-          192
-        ],
-        "secondary": [
-          224,
-          224,
-          224
-        ],
-        "accent": [
-          128,
-          32,
-          0
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "2e4dc174286231849f1d61929bc935f48e7801a97358cc47ac3aaa36b5344fa6",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_male_warrior/chroma/reference.png",
+      "authoredChromaSourceSha256": "4063117211fd2d0d5129fa293f05df7c37c0e2f6bf5d31266fc1c44784517b6f",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/dwarf_male_warrior/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/dwarf_male_warrior.json",
+      "authoredAnimationSpecSha256": "79a273bf5ec0537b07357d1cadbafdbc00b1c82e8d8c5a878f22ccdd5f6a80bf"
     },
     "dwarf_male_wizard": {
       "compilerVersion": "1.1.0",
@@ -1941,44 +1934,37 @@
       "race": "dwarf",
       "gender": "other",
       "class": "chemist",
-      "method": "dwarf_other-fullbody-anchor",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "potion-flask-vials-and-satchel",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/dwarf_other_chemist.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/dwarf_other_chemist/inputs/identity.png",
       "sourcePortraitSha256": "f83107ada8cf5f200a256fd9f1560a035539a1b69084c4fb7da79ba254e77e28",
-      "genderAnchor": "ai-image-metadata/characters/reference-anchors/dwarf_other_neutral.png",
-      "genderAnchorSha256": "3a93e0c22a2773be423ce1b5c78f818ff83f5763900b42249f0f07c2057a3e6f",
-      "genderAnchorReason": "The canonical dwarf-other portrait cohort is strongly male-coded and contradicts androgynous identity metadata; the approved neutral anchor supplies the androgynous face and full-body silhouette while each class portrait remains the palette and costume-cue source.",
-      "sourcePixelSha256": "19786009377edda5445232672c05bce2097aae1693aab107ed883de0b7078c4d",
+      "genderAnchor": null,
+      "genderAnchorSha256": null,
+      "genderAnchorReason": null,
+      "sourcePixelSha256": "9ced4ff2e24943d603d2c5d4aa7e2c3003c320ae11a4bf1fa00e0580ccf3ded6",
       "output": "frontend/public/assets/characters/player/dwarf/other/chemist/dwarf_other_chemist_reference.png",
-      "outputSha256": "85685a7e3e9c17c537929a3f3bbc2409759c9f1099cafeaef4bb28f14d99e943",
+      "outputSha256": "b889658f1366821df4a7943f8c47e490ce9b57d8c458ae2c8e6c150863cafeb8",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 13,
-        "minY": 10,
-        "maxX": 50,
-        "maxY": 59,
-        "width": 38,
-        "height": 50,
-        "alphaPixels": 962
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 65,
+        "minY": 27,
+        "maxX": 482,
+        "maxY": 475,
+        "width": 418,
+        "height": 449,
+        "alphaPixels": 81919,
+        "centroidX": 222.38153541913354,
+        "centroidY": 247.57180873789963
       },
-      "palette": {
-        "primary": [
-          64,
-          64,
-          32
-        ],
-        "secondary": [
-          96,
-          96,
-          96
-        ],
-        "accent": [
-          96,
-          32,
-          0
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "6935870744cb5811e8e07ebaaec037f57c66ae7e2a5a988f870a171ae045a517",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_other_chemist/chroma/reference.png",
+      "authoredChromaSourceSha256": "fc31f7f4b65618246d08e80768ef144b5cc6fbfbbe86ceb999ebe367668aa732",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/dwarf_other_chemist/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/dwarf_other_chemist.json",
+      "authoredAnimationSpecSha256": "58c8c4ab796ec91acb7e2aee7a4c0812532904b20ed94ee5533480d0048cc6d0"
     },
     "dwarf_other_conjurer": {
       "compilerVersion": "1.1.0",
@@ -2161,44 +2147,37 @@
       "race": "dwarf",
       "gender": "other",
       "class": "monk",
-      "method": "dwarf_other-fullbody-anchor",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "wrapped-fists-and-prayer-beads",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/dwarf_other_monk.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/dwarf_other_monk/inputs/identity.png",
       "sourcePortraitSha256": "3940702480a1b326ebb5de52e49514777add8a130be9e01c771052e363e1e622",
-      "genderAnchor": "ai-image-metadata/characters/reference-anchors/dwarf_other_neutral.png",
-      "genderAnchorSha256": "3a93e0c22a2773be423ce1b5c78f818ff83f5763900b42249f0f07c2057a3e6f",
-      "genderAnchorReason": "The canonical dwarf-other portrait cohort is strongly male-coded and contradicts androgynous identity metadata; the approved neutral anchor supplies the androgynous face and full-body silhouette while each class portrait remains the palette and costume-cue source.",
-      "sourcePixelSha256": "5213ef8e0d873e20e41e366942fafbcbed0c5f97347ad784e7bcb8b78ff0eba8",
+      "genderAnchor": null,
+      "genderAnchorSha256": null,
+      "genderAnchorReason": null,
+      "sourcePixelSha256": "965d84556f152dfb24507b460353b5d80653c517f5022fb80cddc61ab503e814",
       "output": "frontend/public/assets/characters/player/dwarf/other/monk/dwarf_other_monk_reference.png",
-      "outputSha256": "c4df6427d6bb2fa5c1fbb37fde17b0fdddbf2d427dfe91fb73a9b77973c7ebaf",
+      "outputSha256": "5fef1664c8e8849b47d397fe315126c4cc3bba4e59459e6722e32591c131e2a0",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 17,
-        "minY": 10,
-        "maxX": 47,
-        "maxY": 59,
-        "width": 31,
-        "height": 50,
-        "alphaPixels": 926
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 127,
+        "minY": 37,
+        "maxX": 401,
+        "maxY": 470,
+        "width": 275,
+        "height": 434,
+        "alphaPixels": 64266,
+        "centroidX": 262.6716304111039,
+        "centroidY": 251.9826813556157
       },
-      "palette": {
-        "primary": [
-          64,
-          64,
-          32
-        ],
-        "secondary": [
-          96,
-          96,
-          96
-        ],
-        "accent": [
-          96,
-          32,
-          0
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "8515d682c4b71fbd88c979d2e8fb8225b4f02dfe16e1bdab9fe332e64718d261",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_other_monk/chroma/reference.png",
+      "authoredChromaSourceSha256": "edc6aef52c3adcc302d1cb8eb04376cf08081472dffca529615cb024edbca91a",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/dwarf_other_monk/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/dwarf_other_monk.json",
+      "authoredAnimationSpecSha256": "6cd28c9867537002f9913407bd53b99fca53452b8730ba5e93824a32b9920580"
     },
     "dwarf_other_ninja": {
       "compilerVersion": "1.1.0",
@@ -2513,44 +2492,37 @@
       "race": "dwarf",
       "gender": "other",
       "class": "warrior",
-      "method": "dwarf_other-fullbody-anchor",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "longsword-and-kite-shield",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/dwarf_other_warrior.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/dwarf_other_warrior/inputs/identity.png",
       "sourcePortraitSha256": "5e4ac4bb8c48bad0ceed22a28c97d7df4f708dac39f408ecdd12d546f552b18a",
-      "genderAnchor": "ai-image-metadata/characters/reference-anchors/dwarf_other_neutral.png",
-      "genderAnchorSha256": "3a93e0c22a2773be423ce1b5c78f818ff83f5763900b42249f0f07c2057a3e6f",
-      "genderAnchorReason": "The canonical dwarf-other portrait cohort is strongly male-coded and contradicts androgynous identity metadata; the approved neutral anchor supplies the androgynous face and full-body silhouette while each class portrait remains the palette and costume-cue source.",
-      "sourcePixelSha256": "f98923d333018c7a3a3acc32dfae619ae7720f98a3bc5bdb0b59bb676f7fe0fd",
+      "genderAnchor": null,
+      "genderAnchorSha256": null,
+      "genderAnchorReason": null,
+      "sourcePixelSha256": "d4ebf1f55ab4b7d701fcd25b59928215e2a91dcd435ba10bbc1a377b480fedf4",
       "output": "frontend/public/assets/characters/player/dwarf/other/warrior/dwarf_other_warrior_reference.png",
-      "outputSha256": "b8eca9d25e5c5720a5aae8673c2a5a8b2c3d59adaf5a1f97f62fd1fea3d5181c",
+      "outputSha256": "f643db94b37d5cc8d70873455a0c3758aac038001513df278968bea8d075b4b7",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 17,
-        "minY": 10,
-        "maxX": 55,
-        "maxY": 59,
-        "width": 39,
-        "height": 50,
-        "alphaPixels": 1053
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 40,
+        "minY": 32,
+        "maxX": 426,
+        "maxY": 470,
+        "width": 387,
+        "height": 439,
+        "alphaPixels": 86282,
+        "centroidX": 271.3352727104147,
+        "centroidY": 264.61190051227373
       },
-      "palette": {
-        "primary": [
-          32,
-          64,
-          64
-        ],
-        "secondary": [
-          224,
-          224,
-          224
-        ],
-        "accent": [
-          64,
-          32,
-          0
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "f8d614ec0162e475a358058343d2c705eeec404479923257d205a5edda77daee",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_other_warrior/chroma/reference.png",
+      "authoredChromaSourceSha256": "2aabf90b6f5be31b2ef50c1275584e2c130a712440347ff2f9a6edf7e0a097b9",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/dwarf_other_warrior/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/dwarf_other_warrior.json",
+      "authoredAnimationSpecSha256": "149db9e64acb4e3c6093e9bc7ddb17f878d40c05aaacf9b79b6cf868f96f0632"
     },
     "dwarf_other_wizard": {
       "compilerVersion": "1.1.0",
@@ -3057,7 +3029,7 @@
       "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/elf_female_monk/inputs/style.png",
       "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
       "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/elf_female_monk.json",
-      "authoredAnimationSpecSha256": "13d31f07c3953e80717de4d2af4136cc8538582140459b7ef472b0ca76b12edb"
+      "authoredAnimationSpecSha256": "36b637db8d17b7fbb4982258a8ab544047f42f97941d0087c69e7c08bab83737"
     },
     "elf_female_ninja": {
       "compilerVersion": "1.1.0",
@@ -5370,44 +5342,37 @@
       "race": "human",
       "gender": "female",
       "class": "chemist",
-      "method": "portrait-head-procedural-fullbody",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "potion-flask-vials-and-satchel",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/human_female_chemist.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/human_female_chemist/inputs/identity.png",
       "sourcePortraitSha256": "6ef86dde4f04f0b6910f5a9ae80fc2115c9a1f59c33a8e51e19a8debbd4fae97",
       "genderAnchor": null,
       "genderAnchorSha256": null,
       "genderAnchorReason": null,
-      "sourcePixelSha256": "24976928c5b0b9a1a614601193f563c287f2209b0f1b1ed636e3ec446fa9831c",
+      "sourcePixelSha256": "eedabd2df4a39572a0290ae9ab0885dcbd9a32cf8d4258f960ba06b0e9bafc92",
       "output": "frontend/public/assets/characters/player/human/female/chemist/human_female_chemist_reference.png",
-      "outputSha256": "173351721ab76c8658a0330634ed92702c2e46a8c628d4185ac494936d81fd34",
+      "outputSha256": "1f501b7ce9a3fc8fc12c7d1e5bd0d49712239261763c2ea143da2f61db90df61",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 15,
-        "minY": 8,
-        "maxX": 48,
-        "maxY": 58,
-        "width": 34,
-        "height": 51,
-        "alphaPixels": 909
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 103,
+        "minY": 27,
+        "maxX": 376,
+        "maxY": 476,
+        "width": 274,
+        "height": 450,
+        "alphaPixels": 50532,
+        "centroidX": 251.08204701971027,
+        "centroidY": 240.64363175809387
       },
-      "palette": {
-        "primary": [
-          96,
-          128,
-          128
-        ],
-        "secondary": [
-          224,
-          224,
-          224
-        ],
-        "accent": [
-          32,
-          64,
-          96
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "1c725e9fe79185c0056a7ccf15eee3dd33ceb234ff4de70be40822e9a7b84176",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/human_female_chemist/chroma/reference.png",
+      "authoredChromaSourceSha256": "6fcd1a81ec6a2786d503dd58487c424551e0b0569d751310603ef6f732a5730f",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/human_female_chemist/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/human_female_chemist.json",
+      "authoredAnimationSpecSha256": "47fa5cb49f5aba0502aa68f02d81fbe88aa43aaaeeb115215b2fc5d0d0fbf21c"
     },
     "human_female_conjurer": {
       "compilerVersion": "1.1.0",
@@ -5590,44 +5555,37 @@
       "race": "human",
       "gender": "female",
       "class": "monk",
-      "method": "portrait-head-procedural-fullbody",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "wrapped-fists-and-prayer-beads",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/human_female_monk.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/human_female_monk/inputs/identity.png",
       "sourcePortraitSha256": "24e38100c58d6d734e105219330a564258ab955cbd02e1999241015d201260e3",
       "genderAnchor": null,
       "genderAnchorSha256": null,
       "genderAnchorReason": null,
-      "sourcePixelSha256": "898ea5f10e06e0dcec8764c58a8da680046933efdc0273b373ffdc27509f7a22",
+      "sourcePixelSha256": "eef1569233c62543e3880d3b4ea210d277ec5447b9dc35cd2b19b055b5123bae",
       "output": "frontend/public/assets/characters/player/human/female/monk/human_female_monk_reference.png",
-      "outputSha256": "58f81e3ad40af47485cc4ba86a87b004f5e4698ec22b93727db482b14b4e8c76",
+      "outputSha256": "bafbfac1db9202eed5250c74def0ab1a696d6f36c6a922d6dd14d4c53c4770b9",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 19,
-        "minY": 7,
-        "maxX": 45,
-        "maxY": 58,
-        "width": 27,
-        "height": 52,
-        "alphaPixels": 885
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 133,
+        "minY": 23,
+        "maxX": 375,
+        "maxY": 488,
+        "width": 243,
+        "height": 466,
+        "alphaPixels": 51740,
+        "centroidX": 250.83142636258214,
+        "centroidY": 255.88531117124083
       },
-      "palette": {
-        "primary": [
-          64,
-          96,
-          128
-        ],
-        "secondary": [
-          32,
-          32,
-          32
-        ],
-        "accent": [
-          160,
-          32,
-          32
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "99dab76bb5aa9bfd7331420a12354d752f0fc4fcc7864e2a86544bdd3eca9c02",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/human_female_monk/chroma/reference.png",
+      "authoredChromaSourceSha256": "fbf2d1364bd37964e0fe5b92a78cc1bfff727fddabc355ac9bd46c4a774d89a2",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/human_female_monk/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/human_female_monk.json",
+      "authoredAnimationSpecSha256": "c742e5d4f989ff08712e14a43c9d41998915e47a8ab10043696d036b91f313f1"
     },
     "human_female_ninja": {
       "compilerVersion": "1.1.0",
@@ -5942,44 +5900,37 @@
       "race": "human",
       "gender": "female",
       "class": "warrior",
-      "method": "portrait-head-procedural-fullbody",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "longsword-and-kite-shield",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/human_female_warrior.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/human_female_warrior/inputs/identity.png",
       "sourcePortraitSha256": "0445d90ec69960901ce4cdd3c1e6cd19a37e753130b06d28133cf900eec5bb58",
       "genderAnchor": null,
       "genderAnchorSha256": null,
       "genderAnchorReason": null,
-      "sourcePixelSha256": "54a18b810b817d724d8bf16d13bcfea91aaaf1bf67349eff5483ca35a8ba1e37",
+      "sourcePixelSha256": "d66a03af65acc480e9303000c846db330707473caad74e5f786d436e65b709d8",
       "output": "frontend/public/assets/characters/player/human/female/warrior/human_female_warrior_reference.png",
-      "outputSha256": "58c6aa2f39942d9f711210d5677544963adf443b92444e6f3c4a9f681e2e2bfa",
+      "outputSha256": "e6c29eb4c8d5178ccf931aa8d7d0d25e11fdb7e05542379093371bd167da6b42",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 19,
-        "minY": 7,
-        "maxX": 53,
-        "maxY": 58,
-        "width": 35,
-        "height": 52,
-        "alphaPixels": 988
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 125,
+        "minY": 34,
+        "maxX": 383,
+        "maxY": 480,
+        "width": 259,
+        "height": 447,
+        "alphaPixels": 61296,
+        "centroidX": 263.08000522056903,
+        "centroidY": 247.37150874445314
       },
-      "palette": {
-        "primary": [
-          128,
-          160,
-          160
-        ],
-        "secondary": [
-          32,
-          32,
-          32
-        ],
-        "accent": [
-          64,
-          32,
-          0
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "1247fd2d2b0895a0433b03b50fbb3a21b3fe4e6b847fd0745b0761afe2412fcb",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/human_female_warrior/chroma/reference.png",
+      "authoredChromaSourceSha256": "d717e906df720efeaa2d60fa7cfaab2a0eadee25c5c2a76d3f728cf52f8dd97c",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/human_female_warrior/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/human_female_warrior.json",
+      "authoredAnimationSpecSha256": "9f1deb5b323d9d6fd94d0c22acb6eb35645112b2e605837cecc98a792c5828e6"
     },
     "human_female_wizard": {
       "compilerVersion": "1.1.0",
@@ -6243,44 +6194,37 @@
       "race": "human",
       "gender": "male",
       "class": "chemist",
-      "method": "portrait-head-procedural-fullbody",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "potion-flask-vials-and-satchel",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/human_male_chemist.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/human_male_chemist/inputs/identity.png",
       "sourcePortraitSha256": "3be72cc7dedf9ada631d45ceee81bb52f1f645c1292cba40799f5568c14e5ab1",
       "genderAnchor": null,
       "genderAnchorSha256": null,
       "genderAnchorReason": null,
-      "sourcePixelSha256": "c2fca7aade884424543faabf981622cf694bc5d04c455ef304deba4874838d5a",
+      "sourcePixelSha256": "6bf283c7029f3d30d9edeeacc14e9c781ce0401777013b8663b71eeccd9ab5bf",
       "output": "frontend/public/assets/characters/player/human/male/chemist/human_male_chemist_reference.png",
-      "outputSha256": "a283a4ac59dbd1174e030e084472c7b10e7b4824b8ca47b3897d131b21352674",
+      "outputSha256": "f5aa45f174ee8fcdac6ecb5a998785817389d9cc2fe8d80432bc3a0cfa5eb8bf",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 14,
-        "minY": 7,
-        "maxX": 49,
-        "maxY": 58,
-        "width": 36,
-        "height": 52,
-        "alphaPixels": 864
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 122,
+        "minY": 33,
+        "maxX": 377,
+        "maxY": 482,
+        "width": 256,
+        "height": 450,
+        "alphaPixels": 64622,
+        "centroidX": 248.9823898981771,
+        "centroidY": 248.52044195475224
       },
-      "palette": {
-        "primary": [
-          96,
-          32,
-          32
-        ],
-        "secondary": [
-          160,
-          160,
-          160
-        ],
-        "accent": [
-          96,
-          32,
-          0
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "e838f5650ccc14e331edd7d92007e19c6548bd0eb9ad78c1d4b035d09fd35843",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/human_male_chemist/chroma/reference.png",
+      "authoredChromaSourceSha256": "f54858071ca87b719b32d2212b84afc1ada8e2a9845b71d7233da31ba62b2c4f",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/human_male_chemist/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/human_male_chemist.json",
+      "authoredAnimationSpecSha256": "3f212947c5b3515ce174591f1d1e667b3be47c3792989fdf2a13183e5fb0747f"
     },
     "human_male_conjurer": {
       "compilerVersion": "1.1.0",
@@ -7072,44 +7016,37 @@
       "race": "human",
       "gender": "other",
       "class": "chemist",
-      "method": "portrait-head-procedural-fullbody",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "potion-flask-vials-and-satchel",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/human_other_chemist.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/human_other_chemist/inputs/identity.png",
       "sourcePortraitSha256": "a2c8609ed4a7d5a28e1b15f50c4726a109b12fe95385cbfa070f55856e8f097a",
       "genderAnchor": null,
       "genderAnchorSha256": null,
       "genderAnchorReason": null,
-      "sourcePixelSha256": "6ce3eda09671b665b7c142afe832a194428054e54575daa3da11e902d0ded360",
+      "sourcePixelSha256": "c430467afcbd33b0f5103e288487b3cffc7ca539e55e872b31d320f4e95a4c6e",
       "output": "frontend/public/assets/characters/player/human/other/chemist/human_other_chemist_reference.png",
-      "outputSha256": "0921075e26043e45c5498e325681055f9398278b59b10e2083efdf0e64b1d079",
+      "outputSha256": "1c2104e4428040d8508e728abf34eec9e27051b5c3ec360c04d64980f9209fb6",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 15,
-        "minY": 8,
-        "maxX": 48,
-        "maxY": 58,
-        "width": 34,
-        "height": 51,
-        "alphaPixels": 837
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 125,
+        "minY": 36,
+        "maxX": 456,
+        "maxY": 482,
+        "width": 332,
+        "height": 447,
+        "alphaPixels": 50704,
+        "centroidX": 241.4009940044178,
+        "centroidY": 254.84979488797728
       },
-      "palette": {
-        "primary": [
-          64,
-          96,
-          96
-        ],
-        "secondary": [
-          192,
-          192,
-          192
-        ],
-        "accent": [
-          64,
-          128,
-          96
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "d19dd8bf2110a800705a2440d8a9d510af7fff39db005ece7853e4c2b5da3ebd",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/human_other_chemist/chroma/reference.png",
+      "authoredChromaSourceSha256": "c315fd64295ce3ae3de683e39c35516666ec9d977afb4cc909835c95190b93ab",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/human_other_chemist/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/human_other_chemist.json",
+      "authoredAnimationSpecSha256": "9efc509611218b46abfa394248560bbfccb71b25828020df03a3644a85777e5b"
     },
     "human_other_conjurer": {
       "compilerVersion": "1.1.0",
@@ -7292,44 +7229,37 @@
       "race": "human",
       "gender": "other",
       "class": "monk",
-      "method": "portrait-head-procedural-fullbody",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "wrapped-fists-and-prayer-beads",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/human_other_monk.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/human_other_monk/inputs/identity.png",
       "sourcePortraitSha256": "c7d1f71be92073254ed95ea54522f0feecdca42877393c9e9d15b3077d527a39",
       "genderAnchor": null,
       "genderAnchorSha256": null,
       "genderAnchorReason": null,
-      "sourcePixelSha256": "66203ab13b66b7847b416548ffdcd8b2a3b424a331bbdb187d6559885a9b5867",
+      "sourcePixelSha256": "e91b4ffb6c56ef32c4d88b77e25dfd854e4db4b4aa2a8434f4b5e346307c0d6f",
       "output": "frontend/public/assets/characters/player/human/other/monk/human_other_monk_reference.png",
-      "outputSha256": "d79f26bbdb9a885f3cd0745d21b5844b4da279f430f93510465478db8c595d0e",
+      "outputSha256": "4a5130852e7ef882b4beeaa38346bbb9940db2141ec74f8b63ced275be5a1e17",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 19,
-        "minY": 7,
-        "maxX": 45,
-        "maxY": 58,
-        "width": 27,
-        "height": 52,
-        "alphaPixels": 849
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 118,
+        "minY": 23,
+        "maxX": 401,
+        "maxY": 488,
+        "width": 284,
+        "height": 466,
+        "alphaPixels": 58717,
+        "centroidX": 257.3915561081118,
+        "centroidY": 247.45382086959484
       },
-      "palette": {
-        "primary": [
-          160,
-          192,
-          160
-        ],
-        "secondary": [
-          224,
-          224,
-          224
-        ],
-        "accent": [
-          128,
-          192,
-          160
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "08625e1aa2a27fe72c0c125cca4d00de1e2a7f71813a44ec337b4b2083780789",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/human_other_monk/chroma/reference.png",
+      "authoredChromaSourceSha256": "74971df6a4cbc55b9c488759f587b944b21a25968751c052b9a72f905ff184e8",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/human_other_monk/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/human_other_monk.json",
+      "authoredAnimationSpecSha256": "6807cbd211680811fcb0e6a179a32e006492547e6a78c0f8133ef50abb1dc7ee"
     },
     "human_other_ninja": {
       "compilerVersion": "1.1.0",
@@ -7644,44 +7574,37 @@
       "race": "human",
       "gender": "other",
       "class": "warrior",
-      "method": "portrait-head-procedural-fullbody",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "longsword-and-kite-shield",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/human_other_warrior.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/human_other_warrior/inputs/identity.png",
       "sourcePortraitSha256": "f975f2f0241b3549ba4cc4d31945fef42490200f2dba62694d4005f86968ae07",
       "genderAnchor": null,
       "genderAnchorSha256": null,
       "genderAnchorReason": null,
-      "sourcePixelSha256": "47e5640d2f37595a35b106fddc16db4181144418eb7b0fe5693c9680815daf31",
+      "sourcePixelSha256": "10dd6f5e0c2f6270d87d583d5af270c675ea9a6eda2f51e381821713c3275fe8",
       "output": "frontend/public/assets/characters/player/human/other/warrior/human_other_warrior_reference.png",
-      "outputSha256": "502b9f0e2c6d397fa4e2641153ac87ebf5576d02a1c6b823e943ab07c5a09004",
+      "outputSha256": "61c1f13a63c8e8b74126bf51c9746c009f576da9a7ef1001ba3aad35ad660468",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 19,
-        "minY": 8,
-        "maxX": 53,
-        "maxY": 58,
-        "width": 35,
-        "height": 51,
-        "alphaPixels": 927
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 50,
+        "minY": 19,
+        "maxX": 411,
+        "maxY": 492,
+        "width": 362,
+        "height": 474,
+        "alphaPixels": 75705,
+        "centroidX": 265.9212337362129,
+        "centroidY": 262.15533980582524
       },
-      "palette": {
-        "primary": [
-          224,
-          224,
-          192
-        ],
-        "secondary": [
-          160,
-          160,
-          160
-        ],
-        "accent": [
-          160,
-          192,
-          224
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "40b7fe5519fdd00f95990669d671bbbf4236789d455c86fdb8834f301d2c9474",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/human_other_warrior/chroma/reference.png",
+      "authoredChromaSourceSha256": "afd9fdf0f4c84fcda805e2862f57bb80860ce1fb89d2e0b35c7d786591a730a0",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/human_other_warrior/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/human_other_warrior.json",
+      "authoredAnimationSpecSha256": "c4c837ee978d9468a91daaf98b287a5b3be7ed078a4fd40361e3af09fbcecde0"
     },
     "human_other_wizard": {
       "compilerVersion": "1.1.0",
@@ -7945,44 +7868,37 @@
       "race": "orc",
       "gender": "female",
       "class": "chemist",
-      "method": "portrait-head-procedural-fullbody",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "potion-flask-vials-and-satchel",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/orc_female_chemist.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/orc_female_chemist/inputs/identity.png",
       "sourcePortraitSha256": "e168d3bfc93e89442d4b5e3a55cac95b2286a7f88be76fe47d33866702bde356",
       "genderAnchor": null,
       "genderAnchorSha256": null,
       "genderAnchorReason": null,
-      "sourcePixelSha256": "140dbccf86f4aa958519e8f71ba3eab004c395b542c1d02c0a0c5099c87d7b5e",
+      "sourcePixelSha256": "a4cc992b9ba90d49c87f7499e1c2095a3fb086109d1e677257fb7c66e33e26a9",
       "output": "frontend/public/assets/characters/player/orc/female/chemist/orc_female_chemist_reference.png",
-      "outputSha256": "e561504ec1aff0e64ea964bd87a176929f85d4ecc38ef2f44601aed63226f19c",
+      "outputSha256": "1391719f6b2a2e55680fea26f474d954a113ead70f379a7d1edea1d71a0c4b46",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 12,
-        "minY": 6,
-        "maxX": 51,
-        "maxY": 58,
-        "width": 40,
-        "height": 53,
-        "alphaPixels": 1102
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 115,
+        "minY": 30,
+        "maxX": 481,
+        "maxY": 484,
+        "width": 367,
+        "height": 455,
+        "alphaPixels": 63356,
+        "centroidX": 238.34323505271797,
+        "centroidY": 253.0074973167498
       },
-      "palette": {
-        "primary": [
-          224,
-          224,
-          128
-        ],
-        "secondary": [
-          32,
-          32,
-          32
-        ],
-        "accent": [
-          192,
-          224,
-          96
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "e60d8cefa230cdeab2f938ee2592813a66a4ad2ee2c60dc9a35a0ef6fd33b9cd",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/orc_female_chemist/chroma/reference.png",
+      "authoredChromaSourceSha256": "228584fee44a1693a9ebf71df9f05aaadcb82869f6aee00fba2aaeb4c9607820",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/orc_female_chemist/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/orc_female_chemist.json",
+      "authoredAnimationSpecSha256": "984d3e49862d43ebfc4ea21d196081f2a571c8a8faea5c67d63026445f47ba04"
     },
     "orc_female_conjurer": {
       "compilerVersion": "1.1.0",
@@ -8165,44 +8081,37 @@
       "race": "orc",
       "gender": "female",
       "class": "monk",
-      "method": "portrait-head-procedural-fullbody",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "wrapped-fists-and-prayer-beads",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/orc_female_monk.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/orc_female_monk/inputs/identity.png",
       "sourcePortraitSha256": "b9128f912a4ec2fcd9ce06ceca500b99c4b7a41ace24de21e512aa7e26aa42c8",
       "genderAnchor": null,
       "genderAnchorSha256": null,
       "genderAnchorReason": null,
-      "sourcePixelSha256": "c45bd4265c9aa7badd5893f38074ddcab904c00f0f654c0baff77169e0a04b27",
+      "sourcePixelSha256": "f7b51ed26bba7e04eb5d40538042f391888e90926a2ad61a8a80f4cc56ecbe0e",
       "output": "frontend/public/assets/characters/player/orc/female/monk/orc_female_monk_reference.png",
-      "outputSha256": "f1b6252022741d388b14fcc30fe79ac07be0da55e30091ce6eed1344a789b8ab",
+      "outputSha256": "1a164cb712b0f9c3ee6690fefd561217636a2e96baaed2ccfbf1c70da972e043",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 16,
-        "minY": 6,
-        "maxX": 48,
-        "maxY": 58,
-        "width": 33,
-        "height": 53,
-        "alphaPixels": 1128
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 98,
+        "minY": 23,
+        "maxX": 386,
+        "maxY": 485,
+        "width": 289,
+        "height": 463,
+        "alphaPixels": 67601,
+        "centroidX": 251.2232659280188,
+        "centroidY": 243.78738480199996
       },
-      "palette": {
-        "primary": [
-          192,
-          192,
-          128
-        ],
-        "secondary": [
-          32,
-          32,
-          32
-        ],
-        "accent": [
-          160,
-          192,
-          96
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "d59836ef31d3d4fbda23ae6eef81c3e35933abd230f4ba65b2ded108d4765519",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/orc_female_monk/chroma/reference.png",
+      "authoredChromaSourceSha256": "888fa3cb5e114876ecf4430ccc832a3de7414b82f0beb8ebb1f32898d98feccc",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/orc_female_monk/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/orc_female_monk.json",
+      "authoredAnimationSpecSha256": "8376250e5235840d064b862275d47fa40812520ac1df08ecdc0e6b94bc2a45b0"
     },
     "orc_female_ninja": {
       "compilerVersion": "1.1.0",
@@ -8517,88 +8426,74 @@
       "race": "orc",
       "gender": "female",
       "class": "warrior",
-      "method": "portrait-head-procedural-fullbody",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "longsword-and-kite-shield",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/orc_female_warrior.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/orc_female_warrior/inputs/identity.png",
       "sourcePortraitSha256": "c20edad450c8346d279ada98b49f225199192dbf181d8c1d31cf6ea5d7ef1b87",
       "genderAnchor": null,
       "genderAnchorSha256": null,
       "genderAnchorReason": null,
-      "sourcePixelSha256": "1b8ba37d23dba57debebfd77bf11ccf95ae8ca69f79ecd4a7a1cc3ab2d4932c3",
+      "sourcePixelSha256": "8956e1add077b50da7b61cb2b5def701767753ff8d8eed26e229dc47339f3027",
       "output": "frontend/public/assets/characters/player/orc/female/warrior/orc_female_warrior_reference.png",
-      "outputSha256": "62376609f0255c61bc904d7c31dce7cfc7564bf2314dcde47e5f1991eb5bd209",
+      "outputSha256": "238c7fff6582bfb9fd7ac539a4ef71a0da0d053e5f42b3bdc3dd44d07f9184e6",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 16,
-        "minY": 7,
-        "maxX": 56,
-        "maxY": 58,
-        "width": 41,
-        "height": 52,
-        "alphaPixels": 1185
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 47,
+        "minY": 24,
+        "maxX": 399,
+        "maxY": 490,
+        "width": 353,
+        "height": 467,
+        "alphaPixels": 71542,
+        "centroidX": 257.5900450085265,
+        "centroidY": 251.45330015934695
       },
-      "palette": {
-        "primary": [
-          96,
-          32,
-          0
-        ],
-        "secondary": [
-          64,
-          64,
-          64
-        ],
-        "accent": [
-          128,
-          64,
-          0
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "bb0283ea43c59989ee8c60d3865220372307c8fc7b403dec85409910e52bf0e9",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/orc_female_warrior/chroma/reference.png",
+      "authoredChromaSourceSha256": "a17fc79550139ad3f137ee10bffde95a74cc2a3b0a4bb6b6259be21c35e5abe9",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/orc_female_warrior/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/orc_female_warrior.json",
+      "authoredAnimationSpecSha256": "524c9ce20394a96bf64435d9803b605acba5b5f1b46c5b78ca810b7a149bd622"
     },
     "orc_female_wizard": {
       "compilerVersion": "1.1.0",
       "race": "orc",
       "gender": "female",
       "class": "wizard",
-      "method": "portrait-head-procedural-fullbody",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "crystal-staff-and-arcane-robe",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/orc_female_wizard.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/orc_female_wizard/inputs/identity.png",
       "sourcePortraitSha256": "f5c1e41f61933f1ecbae2fd8f353e77e70623e749b8c74acfd310ec403e9b3e0",
       "genderAnchor": null,
       "genderAnchorSha256": null,
       "genderAnchorReason": null,
-      "sourcePixelSha256": "1ddb66ae48fd38655fed9a0148b6877c00cf019a8509a90818cfa3b17630d074",
+      "sourcePixelSha256": "f2b4140a31bee329533bf49a67ac45d1154c767a8b80d29c0167f3b799bc72e2",
       "output": "frontend/public/assets/characters/player/orc/female/wizard/orc_female_wizard_reference.png",
-      "outputSha256": "3b76b0b133de77aa12156067282c8b4ea8437edc380aa102ea4478c5a3a7ee97",
+      "outputSha256": "c79cff98e4998e0e0c19c4814622fdcf232124f943fb124be54706ab1f2e490a",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 18,
-        "minY": 7,
-        "maxX": 55,
-        "maxY": 59,
-        "width": 38,
-        "height": 53,
-        "alphaPixels": 1308
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 128,
+        "minY": 14,
+        "maxX": 372,
+        "maxY": 487,
+        "width": 245,
+        "height": 474,
+        "alphaPixels": 64608,
+        "centroidX": 246.6579990094106,
+        "centroidY": 260.3106736007925
       },
-      "palette": {
-        "primary": [
-          128,
-          160,
-          160
-        ],
-        "secondary": [
-          64,
-          64,
-          96
-        ],
-        "accent": [
-          192,
-          224,
-          128
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "25d2abe6ace6f9f89311263d119c8bc4e9ab577d86462870dbcfd6cf3cf0bb0b",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/orc_female_wizard/chroma/reference.png",
+      "authoredChromaSourceSha256": "de9c38b62f4b7bd5f6fc07fc1dadad9a8362d4e53e4941dafd1e86f4fb0751c2",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/orc_female_wizard/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/orc_female_wizard.json",
+      "authoredAnimationSpecSha256": "07f0fde96b61d2b9805a37f18ca9fbd180bb20e77b45f1dc2c7bee6f77dcc8fe"
     },
     "orc_male_alchemist": {
       "compilerVersion": "1.1.0",
@@ -9397,88 +9292,74 @@
       "race": "orc",
       "gender": "male",
       "class": "warrior",
-      "method": "portrait-head-procedural-fullbody",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "longsword-and-kite-shield",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/orc_male_warrior.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/orc_male_warrior/inputs/identity.png",
       "sourcePortraitSha256": "916c12dd1a77aed79225b6a95fd99c97505864555d9fd27805949712bd3fc21e",
       "genderAnchor": null,
       "genderAnchorSha256": null,
       "genderAnchorReason": null,
-      "sourcePixelSha256": "935c9cc0eccf128b0a69b022e4ce05eda2060624c94abff33420dab60a5ebefa",
+      "sourcePixelSha256": "a2400aa37dd17aeafb15422167459f4a0672da5964ac412e3f84cfdff2fe0210",
       "output": "frontend/public/assets/characters/player/orc/male/warrior/orc_male_warrior_reference.png",
-      "outputSha256": "b47064effe46d9b05b5847c0a57e619ebc250938866e5ead897f4aeac8116485",
+      "outputSha256": "d013dd3989a2e5f067cc30985ded85d715d6f9acf27f2a872762bfd18c76cbc9",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 15,
-        "minY": 7,
-        "maxX": 57,
-        "maxY": 58,
-        "width": 43,
-        "height": 52,
-        "alphaPixels": 1191
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 56,
+        "minY": 30,
+        "maxX": 423,
+        "maxY": 473,
+        "width": 368,
+        "height": 444,
+        "alphaPixels": 80098,
+        "centroidX": 276.5936852355864,
+        "centroidY": 259.4267647132263
       },
-      "palette": {
-        "primary": [
-          64,
-          64,
-          32
-        ],
-        "secondary": [
-          224,
-          224,
-          224
-        ],
-        "accent": [
-          96,
-          32,
-          0
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "fd30c31c77f957f64f3c6ebccab4bc5192654b33402f5a2452ab43605805e0fd",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/orc_male_warrior/chroma/reference.png",
+      "authoredChromaSourceSha256": "16cfe2a70313c4f3b49ad418b015d2e78bd592fb6267bd476136f3d79bd752b8",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/orc_male_warrior/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/orc_male_warrior.json",
+      "authoredAnimationSpecSha256": "e8b24e82c6515ddae1500b332f410293e4ed1c7f034611f2bc2661a1bdc511d7"
     },
     "orc_male_wizard": {
       "compilerVersion": "1.1.0",
       "race": "orc",
       "gender": "male",
       "class": "wizard",
-      "method": "portrait-head-procedural-fullbody",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "crystal-staff-and-arcane-robe",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/orc_male_wizard.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/orc_male_wizard/inputs/identity.png",
       "sourcePortraitSha256": "36a74e7cc8e6defebc10f3e545a15b9db91272741b21acc3f8d9557d5875f29b",
       "genderAnchor": null,
       "genderAnchorSha256": null,
       "genderAnchorReason": null,
-      "sourcePixelSha256": "0633e5a39f2eda6b41db1667af574dc07b192de9d59f8534a34fc3fd7b1eea13",
+      "sourcePixelSha256": "e412c12899b0d81ebdc0254e9a2bd0a087577ee404922f65d32a2cf0af1e6d9d",
       "output": "frontend/public/assets/characters/player/orc/male/wizard/orc_male_wizard_reference.png",
-      "outputSha256": "bd77f546739319b973bdf911d047980efa2d2ded995eda7223d1aa09a4a6cb46",
+      "outputSha256": "4495258f53ba585576a23c446277f534f950d6ad4d6116c1bbb046fb36f4bc56",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 17,
-        "minY": 6,
-        "maxX": 56,
-        "maxY": 59,
-        "width": 40,
-        "height": 54,
-        "alphaPixels": 1341
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 115,
+        "minY": 20,
+        "maxX": 424,
+        "maxY": 494,
+        "width": 310,
+        "height": 475,
+        "alphaPixels": 83969,
+        "centroidX": 253.56722123640867,
+        "centroidY": 263.87620431349666
       },
-      "palette": {
-        "primary": [
-          128,
-          128,
-          160
-        ],
-        "secondary": [
-          96,
-          96,
-          96
-        ],
-        "accent": [
-          224,
-          224,
-          128
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "8d95abc58a210c6af2df93daf8484ae5e6a7b031af2130e60498069f28ead171",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/orc_male_wizard/chroma/reference.png",
+      "authoredChromaSourceSha256": "b55f0c9b0f8bf3b4d087e9a7b31133c7f9b8cadcbb0b1d6b6d2b8e62e2030c3c",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/orc_male_wizard/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/orc_male_wizard.json",
+      "authoredAnimationSpecSha256": "aefaa362d1fb6854293685573f3471feea87c56c8e9708ea501390ac1975dad4"
     },
     "orc_other_alchemist": {
       "compilerVersion": "1.1.0",
@@ -9705,44 +9586,37 @@
       "race": "orc",
       "gender": "other",
       "class": "chemist",
-      "method": "portrait-head-procedural-fullbody",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "potion-flask-vials-and-satchel",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/orc_other_chemist.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/orc_other_chemist/inputs/identity.png",
       "sourcePortraitSha256": "c39374ecc4ae958ca8520585f0af783ad49d3e512b861646a768dd396358ff14",
       "genderAnchor": null,
       "genderAnchorSha256": null,
       "genderAnchorReason": null,
-      "sourcePixelSha256": "b28bec3eb269a20c72c6c48a3f5a3d3778ec67d670319a670043405c487ca504",
+      "sourcePixelSha256": "ba3f77791469bc7facabf8497e637c87306c3e81f0f4505211e79dc64c1c0099",
       "output": "frontend/public/assets/characters/player/orc/other/chemist/orc_other_chemist_reference.png",
-      "outputSha256": "e9934c283184a6a33135c6d8d46e1575b1ed807b31dfc03e5d2a0763948f67c9",
+      "outputSha256": "c7f8550d689dc8e7c65225e5622d4f04b93c8129281e885539f4c6a1c90d2da5",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 12,
-        "minY": 6,
-        "maxX": 51,
-        "maxY": 58,
-        "width": 40,
-        "height": 53,
-        "alphaPixels": 1058
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 62,
+        "minY": 33,
+        "maxX": 451,
+        "maxY": 480,
+        "width": 390,
+        "height": 448,
+        "alphaPixels": 77406,
+        "centroidX": 250.33550370772292,
+        "centroidY": 256.0912332377335
       },
-      "palette": {
-        "primary": [
-          160,
-          128,
-          128
-        ],
-        "secondary": [
-          96,
-          96,
-          96
-        ],
-        "accent": [
-          160,
-          192,
-          64
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "34b8ba2769858cd78126c49db5b039b3ad97cd2fe06e4819ab31cae40f2839d5",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/orc_other_chemist/chroma/reference.png",
+      "authoredChromaSourceSha256": "8079c3321b94f40ac8478a05ca6fb4f64868d068f5617d0723f3810d028d5b52",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/orc_other_chemist/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/orc_other_chemist.json",
+      "authoredAnimationSpecSha256": "8d93a3eee5c0d51a471827c94b4283569399b53803f62fe4ab12733726ee1c57"
     },
     "orc_other_conjurer": {
       "compilerVersion": "1.1.0",
@@ -9925,44 +9799,37 @@
       "race": "orc",
       "gender": "other",
       "class": "monk",
-      "method": "portrait-head-procedural-fullbody",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "wrapped-fists-and-prayer-beads",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/orc_other_monk.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/orc_other_monk/inputs/identity.png",
       "sourcePortraitSha256": "a40641c38d61265f0423eef3bd1c874b7b6d46490b9c106ba382e6134a9b6c07",
       "genderAnchor": null,
       "genderAnchorSha256": null,
       "genderAnchorReason": null,
-      "sourcePixelSha256": "5ae490b7430e824a61436c5166fe0b4aef606c03214780d1ead21d482b763e22",
+      "sourcePixelSha256": "95fbc0f5f3443fe228e297a2888fb188570a0ba46746ac027140aecc33f662f0",
       "output": "frontend/public/assets/characters/player/orc/other/monk/orc_other_monk_reference.png",
-      "outputSha256": "d89d818e5117582469586a22086dac244201fffdb18873de2ae759ef1fa970de",
+      "outputSha256": "a6f560afe4193fec346b842206ce2af99f3d6456f58fb8b726280c1990426bb6",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 16,
-        "minY": 7,
-        "maxX": 48,
-        "maxY": 58,
-        "width": 33,
-        "height": 52,
-        "alphaPixels": 1060
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 106,
+        "minY": 18,
+        "maxX": 404,
+        "maxY": 495,
+        "width": 299,
+        "height": 478,
+        "alphaPixels": 69332,
+        "centroidX": 244.70463855074135,
+        "centroidY": 250.84242485432412
       },
-      "palette": {
-        "primary": [
-          224,
-          224,
-          128
-        ],
-        "secondary": [
-          64,
-          64,
-          64
-        ],
-        "accent": [
-          192,
-          224,
-          96
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "ba8f79306387df37be4a676229cb1e8a373f947efe645bdb56bf59066ccd8726",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/orc_other_monk/chroma/reference.png",
+      "authoredChromaSourceSha256": "0cb2f5010686af067063a2e4530287831252be500c76182358933b070991fe36",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/orc_other_monk/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/orc_other_monk.json",
+      "authoredAnimationSpecSha256": "13d51bd79ea460b8928fc117740814ca2c8e04af90c3ccbd3d24f295b486cc07"
     },
     "orc_other_ninja": {
       "compilerVersion": "1.1.0",
@@ -10585,44 +10452,37 @@
       "race": "vampire",
       "gender": "female",
       "class": "chemist",
-      "method": "portrait-head-procedural-fullbody",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "potion-flask-vials-and-satchel",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/vampire_female_chemist.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/vampire_female_chemist/inputs/identity.png",
       "sourcePortraitSha256": "f37987f8ad46e3f52a66e1fbd91bc92388b4c096da9d7d85f10537dcacaf8ab3",
       "genderAnchor": null,
       "genderAnchorSha256": null,
       "genderAnchorReason": null,
-      "sourcePixelSha256": "6fa22442ee0645111f13eff87118f772359d06d5dae981ecb452196f2f030bae",
+      "sourcePixelSha256": "e0d53be78733a0ff49b10255aaf3f3f94577c34f0037be92b69fd5c0933caaae",
       "output": "frontend/public/assets/characters/player/vampire/female/chemist/vampire_female_chemist_reference.png",
-      "outputSha256": "c11f10cd627917b9ca317c0e5240b058ba244761a41abf2ec745bd055c8ddbc9",
+      "outputSha256": "3fceb2be33ad5898d915dbb7aaeff609877182ae70a108389b4ab711d163e7ac",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 15,
-        "minY": 6,
-        "maxX": 48,
-        "maxY": 58,
-        "width": 34,
-        "height": 53,
-        "alphaPixels": 974
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 119,
+        "minY": 38,
+        "maxX": 462,
+        "maxY": 478,
+        "width": 344,
+        "height": 441,
+        "alphaPixels": 62710,
+        "centroidX": 237.88558443629404,
+        "centroidY": 262.8854568649338
       },
-      "palette": {
-        "primary": [
-          128,
-          96,
-          96
-        ],
-        "secondary": [
-          32,
-          32,
-          32
-        ],
-        "accent": [
-          96,
-          32,
-          32
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "1aaeed7217ebcef0d1c048e58ca3503b36d9b3ec90e2d62042d3911e615e711f",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_female_chemist/chroma/reference.png",
+      "authoredChromaSourceSha256": "0a1c028a302b0b700ec53c7ce5e1fd376346fbf9f7d4a3ca9f2e4885b9e430e7",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/vampire_female_chemist/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/vampire_female_chemist.json",
+      "authoredAnimationSpecSha256": "07774fba3c09f6c4b4fc0a2cc7d96be3156cd29c5de67782ad51bcbeef6be68e"
     },
     "vampire_female_conjurer": {
       "compilerVersion": "1.1.0",
@@ -10805,44 +10665,37 @@
       "race": "vampire",
       "gender": "female",
       "class": "monk",
-      "method": "portrait-head-procedural-fullbody",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "wrapped-fists-and-prayer-beads",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/vampire_female_monk.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/vampire_female_monk/inputs/identity.png",
       "sourcePortraitSha256": "7176f69197141cfbdcf2052ae1aa9b5ef14ff8253b77843be59abd69a98b8f5f",
       "genderAnchor": null,
       "genderAnchorSha256": null,
       "genderAnchorReason": null,
-      "sourcePixelSha256": "d41d4e32c5db58e65a188f5c8950aa70c39edf2b9781f1e682e7f524226c8a42",
+      "sourcePixelSha256": "e045eaa98d4cdff31147a4146bfd2916c957383fac9570d5dc35df61b1d17324",
       "output": "frontend/public/assets/characters/player/vampire/female/monk/vampire_female_monk_reference.png",
-      "outputSha256": "98c784bd17f490dde16e754f29e34cc1a99b2f4732cb891501b40f486b28227d",
+      "outputSha256": "853efe7221664b219b8a21a280edfdd3cbb5ab6eb976318a5c3f837859f9d771",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 19,
-        "minY": 6,
-        "maxX": 45,
-        "maxY": 58,
-        "width": 27,
-        "height": 53,
-        "alphaPixels": 913
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 119,
+        "minY": 23,
+        "maxX": 380,
+        "maxY": 489,
+        "width": 262,
+        "height": 467,
+        "alphaPixels": 61835,
+        "centroidX": 251.67893587773915,
+        "centroidY": 255.68524298536428
       },
-      "palette": {
-        "primary": [
-          64,
-          64,
-          32
-        ],
-        "secondary": [
-          224,
-          224,
-          224
-        ],
-        "accent": [
-          192,
-          0,
-          0
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "38fca63d584680a6f9cb56ae3583565e27bea11ccbba7fcee6310cea1619b44f",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_female_monk/chroma/reference.png",
+      "authoredChromaSourceSha256": "1f7ad22244d5efa1ffc100d9a73f2def78c1e79e1775e8c9552661a70b0d2f08",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/vampire_female_monk/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/vampire_female_monk.json",
+      "authoredAnimationSpecSha256": "6b478bb6c9562b620260ac908b6b3797925ee6765a18678b667f0af65b48a6f5"
     },
     "vampire_female_ninja": {
       "compilerVersion": "1.1.0",
@@ -11157,88 +11010,74 @@
       "race": "vampire",
       "gender": "female",
       "class": "warrior",
-      "method": "portrait-head-procedural-fullbody",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "longsword-and-kite-shield",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/vampire_female_warrior.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/vampire_female_warrior/inputs/identity.png",
       "sourcePortraitSha256": "a451d65d967cf1eebebbf8ff765503d8c2360c373ab921b7a5f469839fe7fcfe",
       "genderAnchor": null,
       "genderAnchorSha256": null,
       "genderAnchorReason": null,
-      "sourcePixelSha256": "25f7d432c4a011e969901267163902a31772c5c2bb1ce49fc4177c337ee46dd1",
+      "sourcePixelSha256": "600f1ee99e201af90e30f887f3f67e3a7d53a6670ed78cedfc0d412483685b10",
       "output": "frontend/public/assets/characters/player/vampire/female/warrior/vampire_female_warrior_reference.png",
-      "outputSha256": "f393e323302a2e9d2e769e7dbc2ed7f7e363fcb00c38867e9449a576a186424c",
+      "outputSha256": "2268d19eb8ff6bd66a643b3e93b04b36acca5cc56e3d11a1e42fc03381653272",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 19,
-        "minY": 6,
-        "maxX": 53,
-        "maxY": 58,
-        "width": 35,
-        "height": 53,
-        "alphaPixels": 1034
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 76,
+        "minY": 31,
+        "maxX": 387,
+        "maxY": 481,
+        "width": 312,
+        "height": 451,
+        "alphaPixels": 72736,
+        "centroidX": 260.9234216893973,
+        "centroidY": 267.7649444566652
       },
-      "palette": {
-        "primary": [
-          64,
-          64,
-          32
-        ],
-        "secondary": [
-          224,
-          224,
-          224
-        ],
-        "accent": [
-          64,
-          32,
-          0
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "46e0e801f767ced6a024707595c510d393d072ddf651ad6efa78487c5a83534b",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_female_warrior/chroma/reference.png",
+      "authoredChromaSourceSha256": "6e2a776c9fbd0d629ec738c0da494656ff3e3c3985ca46d43f2ae680e3c3061d",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/vampire_female_warrior/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/vampire_female_warrior.json",
+      "authoredAnimationSpecSha256": "0335723150402ace45942b22a95c22d6529fe1b79fca460ae2fb3e09df80ce17"
     },
     "vampire_female_wizard": {
       "compilerVersion": "1.1.0",
       "race": "vampire",
       "gender": "female",
       "class": "wizard",
-      "method": "portrait-head-procedural-fullbody",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "crystal-staff-and-arcane-robe",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/vampire_female_wizard.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/vampire_female_wizard/inputs/identity.png",
       "sourcePortraitSha256": "1204fef9ae62045bc3bfe474bf2749642cc49bc4c9447740c2260f17d007380b",
       "genderAnchor": null,
       "genderAnchorSha256": null,
       "genderAnchorReason": null,
-      "sourcePixelSha256": "5c8709c791bc37aecfafd63ccc56f12f0c669e2ff041657658064d54ef5a609b",
+      "sourcePixelSha256": "5e7aa8ff9ec46a154840ba27bf26db622bcd5e580f7a2d151c8b7b387eef7563",
       "output": "frontend/public/assets/characters/player/vampire/female/wizard/vampire_female_wizard_reference.png",
-      "outputSha256": "284879eaf1be0ea900a88eba9461f76fdbb40b24f65ac32f9219b6cf1a3e2ff9",
+      "outputSha256": "c91f42b85802d67e1db8ecf267a11b7924555dcd50e3145634fd16d4cf1bb3b0",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 20,
-        "minY": 6,
-        "maxX": 52,
-        "maxY": 59,
-        "width": 33,
-        "height": 54,
-        "alphaPixels": 1180
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 122,
+        "minY": 24,
+        "maxX": 381,
+        "maxY": 492,
+        "width": 260,
+        "height": 469,
+        "alphaPixels": 69183,
+        "centroidX": 246.1084948614544,
+        "centroidY": 276.8085945969386
       },
-      "palette": {
-        "primary": [
-          32,
-          64,
-          64
-        ],
-        "secondary": [
-          128,
-          32,
-          64
-        ],
-        "accent": [
-          160,
-          32,
-          64
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "8c896490eddfb03cb28528e48c81e29f67eca89ec30f8a4a980ec16b61af780e",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_female_wizard/chroma/reference.png",
+      "authoredChromaSourceSha256": "63d767edbfdde07f508919b85efedfcf4beb4526c21b7d86cee08a668f9607ed",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/vampire_female_wizard/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/vampire_female_wizard.json",
+      "authoredAnimationSpecSha256": "bc57d52ba7b2a248d9d76a2ab5b72208367c4cfa30601007a65d105f0084d24f"
     },
     "vampire_male_alchemist": {
       "compilerVersion": "1.1.0",
@@ -12037,88 +11876,74 @@
       "race": "vampire",
       "gender": "male",
       "class": "warrior",
-      "method": "portrait-head-procedural-fullbody",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "longsword-and-kite-shield",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/vampire_male_warrior.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/vampire_male_warrior/inputs/identity.png",
       "sourcePortraitSha256": "4841c856a5bfe6c789ca2b8e31de8e1bef6de05e268085edbb9800c843be7994",
       "genderAnchor": null,
       "genderAnchorSha256": null,
       "genderAnchorReason": null,
-      "sourcePixelSha256": "4f6037f7fd9344e93ee6afa63c52223016f0e3446947e8ddacb3c8297a17c550",
+      "sourcePixelSha256": "a69b56662fbe8a19ea20a275335513e3c24a2310579fb8f48adccdf88d0ffb39",
       "output": "frontend/public/assets/characters/player/vampire/male/warrior/vampire_male_warrior_reference.png",
-      "outputSha256": "1a783f0fac1f1962a8fc091ccf0dc9dd7f130c9dfb0b88a3f51573ff3fc6c177",
+      "outputSha256": "1986da56b17102c2a260097dd3327d56533d893b3711cd6cffb41765808ce4c8",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 18,
-        "minY": 6,
-        "maxX": 54,
-        "maxY": 58,
-        "width": 37,
-        "height": 53,
-        "alphaPixels": 1017
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 61,
+        "minY": 23,
+        "maxX": 379,
+        "maxY": 480,
+        "width": 319,
+        "height": 458,
+        "alphaPixels": 63975,
+        "centroidX": 258.0328722157093,
+        "centroidY": 250.8294177413052
       },
-      "palette": {
-        "primary": [
-          224,
-          64,
-          0
-        ],
-        "secondary": [
-          64,
-          64,
-          64
-        ],
-        "accent": [
-          224,
-          64,
-          0
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "04404e273c3dc840f0c0ce9d29828d7870b02fc379ff37df6518d3319784ae82",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_male_warrior/chroma/reference.png",
+      "authoredChromaSourceSha256": "b7915530bc9c5a4258b28bffd8cc29855a527e4c6e11de20a89a090d22932de1",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/vampire_male_warrior/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/vampire_male_warrior.json",
+      "authoredAnimationSpecSha256": "792079b682ff49f0fe979c15f839813d60bf9e329727f5ef58357871204fb8a4"
     },
     "vampire_male_wizard": {
       "compilerVersion": "1.1.0",
       "race": "vampire",
       "gender": "male",
       "class": "wizard",
-      "method": "portrait-head-procedural-fullbody",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "crystal-staff-and-arcane-robe",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/vampire_male_wizard.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/vampire_male_wizard/inputs/identity.png",
       "sourcePortraitSha256": "0ead6d0dee66a44081146581d97dd04e3a92d03691c9c99fbc47c824f042f917",
       "genderAnchor": null,
       "genderAnchorSha256": null,
       "genderAnchorReason": null,
-      "sourcePixelSha256": "90216dbcb16678e0c702a207c49b55d7284a8a079c959a5928594d64e96304b0",
+      "sourcePixelSha256": "ca247443558321a3a4e70d3490ea66613e38e254cd742ec6677f97f6e98ed9d9",
       "output": "frontend/public/assets/characters/player/vampire/male/wizard/vampire_male_wizard_reference.png",
-      "outputSha256": "dd886cb46a7b86cc7ce6dc344e123328c20900d306d72d28273a551c0cc3cede",
+      "outputSha256": "1f29b1e11ecd38217bce2c6decca54626bb9a009e42f90a7015c33a1f1408263",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 20,
-        "minY": 7,
-        "maxX": 53,
-        "maxY": 59,
-        "width": 34,
-        "height": 53,
-        "alphaPixels": 1141
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 130,
+        "minY": 27,
+        "maxX": 380,
+        "maxY": 487,
+        "width": 251,
+        "height": 461,
+        "alphaPixels": 67573,
+        "centroidX": 262.3020437156853,
+        "centroidY": 274.38877954212484
       },
-      "palette": {
-        "primary": [
-          128,
-          96,
-          96
-        ],
-        "secondary": [
-          64,
-          64,
-          64
-        ],
-        "accent": [
-          96,
-          32,
-          0
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "89d6cac7eaf555e2b614be9a12ab972a1b8b45073a369ef029049139e587bddf",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_male_wizard/chroma/reference.png",
+      "authoredChromaSourceSha256": "e73268a234ae785d5b617414c57d4546d41f5b787ccc7b79e98abbf03325a5fe",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/vampire_male_wizard/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/vampire_male_wizard.json",
+      "authoredAnimationSpecSha256": "ba4605346781a0c7ce7b8a2a2b32693af772b7173ea6ea11ecdac31f670d6c08"
     },
     "vampire_other_alchemist": {
       "compilerVersion": "1.1.0",
@@ -12345,44 +12170,37 @@
       "race": "vampire",
       "gender": "other",
       "class": "chemist",
-      "method": "portrait-head-procedural-fullbody",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "potion-flask-vials-and-satchel",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/vampire_other_chemist.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/vampire_other_chemist/inputs/identity.png",
       "sourcePortraitSha256": "a932a21df082acf4514ffc2029485ea64dde6289766faf97dcbb498a4657e6cb",
       "genderAnchor": null,
       "genderAnchorSha256": null,
       "genderAnchorReason": null,
-      "sourcePixelSha256": "2dea82ae52ac91ee6ca1ea98faf0c1d79acd872c4375a33d2ea4a3bafe2c1c10",
+      "sourcePixelSha256": "fc94786610fa37df607bd14c48787a682657b4a5345de304866df1b47062bf3f",
       "output": "frontend/public/assets/characters/player/vampire/other/chemist/vampire_other_chemist_reference.png",
-      "outputSha256": "02f73c7220525e7b19e55deb3bf948fa3f27e8c9ba6b9e92a1b8b50b3965f03c",
+      "outputSha256": "c1c5af8c5db1452005349296dd37f350dc3a3b1d37ae7b2c1ac5b71ba4c04b70",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 15,
-        "minY": 7,
-        "maxX": 48,
-        "maxY": 58,
-        "width": 34,
-        "height": 52,
-        "alphaPixels": 1013
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 120,
+        "minY": 28,
+        "maxX": 454,
+        "maxY": 482,
+        "width": 335,
+        "height": 455,
+        "alphaPixels": 60672,
+        "centroidX": 241.5555940137131,
+        "centroidY": 260.4442741297468
       },
-      "palette": {
-        "primary": [
-          32,
-          64,
-          64
-        ],
-        "secondary": [
-          192,
-          192,
-          192
-        ],
-        "accent": [
-          64,
-          32,
-          0
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "ce99c9ee0af8f43c522027a769e042a1828e46a08ff3265872dd0fc5167160cb",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_other_chemist/chroma/reference.png",
+      "authoredChromaSourceSha256": "bce1f506cca1b07e8a04a335ca63ab3dbcaf20e6ad34b439f65b8ebc8aba96b9",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/vampire_other_chemist/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/vampire_other_chemist.json",
+      "authoredAnimationSpecSha256": "dc1ca573192097eeba1a3561e4307b0c1fc3e113c4af0e4910a7617ea550c0d1"
     },
     "vampire_other_conjurer": {
       "compilerVersion": "1.1.0",
@@ -12565,44 +12383,37 @@
       "race": "vampire",
       "gender": "other",
       "class": "monk",
-      "method": "portrait-head-procedural-fullbody",
+      "method": "openai-built-in-imagegen-authored-reference",
       "semanticSignature": "wrapped-fists-and-prayer-beads",
-      "sourcePortrait": "frontend/public/assets/portraits/originals/vampire_other_monk.png",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/vampire_other_monk/inputs/identity.png",
       "sourcePortraitSha256": "4469999af649d032e89be63d5190e8762f2741220e603c2cbdcd950243195863",
       "genderAnchor": null,
       "genderAnchorSha256": null,
       "genderAnchorReason": null,
-      "sourcePixelSha256": "65a00225f3226363f1c62f91747f6b07ef87dcb00d8a83e2e2142730ab999acf",
+      "sourcePixelSha256": "d2b37003f501b313e1cf52db2172f0b793d5f454b3cf13b99985201aba871d3e",
       "output": "frontend/public/assets/characters/player/vampire/other/monk/vampire_other_monk_reference.png",
-      "outputSha256": "4aedcce52eba028af9a9b97d1f4aa626a1797ae542628e5c66f95341e36a454d",
+      "outputSha256": "df6cb21ebf20b3457cee5ffe4c67ce9eaae6f204246e8cc5bb03709a583272b2",
       "dimensions": "512x512",
-      "encoding": "lossless-rgba-png-nearest-neighbor-8x",
-      "alphaBounds64": {
-        "minX": 19,
-        "minY": 7,
-        "maxX": 45,
-        "maxY": 58,
-        "width": 27,
-        "height": 52,
-        "alphaPixels": 910
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 136,
+        "minY": 21,
+        "maxX": 391,
+        "maxY": 492,
+        "width": 256,
+        "height": 472,
+        "alphaPixels": 59805,
+        "centroidX": 252.61188863807374,
+        "centroidY": 258.60043474625866
       },
-      "palette": {
-        "primary": [
-          64,
-          96,
-          96
-        ],
-        "secondary": [
-          32,
-          32,
-          32
-        ],
-        "accent": [
-          64,
-          96,
-          96
-        ]
-      }
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "3929fddf656da8fe543e930f57f808a002329b1d8efeb48ce5abda08a0943068",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_other_monk/chroma/reference.png",
+      "authoredChromaSourceSha256": "c23ce10b1523c887ef4adbe988516fcf40f1af685fa147d9756f17db5c9a8244",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/vampire_other_monk/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/vampire_other_monk.json",
+      "authoredAnimationSpecSha256": "a0590e053b5c127171aa86bf7f3d81be3b6339ec103dc64d60d63f378aeb1778"
     },
     "vampire_other_ninja": {
       "compilerVersion": "1.1.0",
@@ -12999,6 +12810,43 @@
           192
         ]
       }
+    },
+    "human_male_warrior": {
+      "compilerVersion": "1.1.0",
+      "race": "human",
+      "gender": "male",
+      "class": "warrior",
+      "method": "openai-built-in-imagegen-authored-reference",
+      "semanticSignature": "warrior-authored-equipment",
+      "sourcePortrait": "ai-image-metadata/characters/player-animation-sources/human_male_warrior/inputs/identity.png",
+      "sourcePortraitSha256": "0f8506d4e73528b8dd4b70a426d5a9612c9553502edfa1088a153874b3bbf00d",
+      "genderAnchor": null,
+      "genderAnchorSha256": null,
+      "genderAnchorReason": null,
+      "sourcePixelSha256": "2d166fbace296dd4542ff30134d08bbe8eb1c4b214f688912a0042128cfb39b8",
+      "output": "frontend/public/assets/characters/player/human/male/warrior/human_male_warrior_reference.png",
+      "outputSha256": "b69e1c5ee710b3cee34b5383f40977ab6394e3be68d30e5f92ce159ccaac0c23",
+      "dimensions": "512x512",
+      "encoding": "lossless-rgba-png-authored-source-nearest-downscale",
+      "alphaBounds512": {
+        "minX": 48,
+        "minY": 25,
+        "maxX": 365,
+        "maxY": 484,
+        "width": 318,
+        "height": 460,
+        "alphaPixels": 60883,
+        "centroidX": 256.81357686053576,
+        "centroidY": 257.27061741372796
+      },
+      "authoredCompilerVersion": "1.2.0",
+      "authoredPromptSha256": "742418b83022e82c190f3dde3f999b89e5ac2c39c82837e6d2314357c1f44b3c",
+      "authoredChromaSource": "ai-image-metadata/characters/player-animation-sources/human_male_warrior/chroma/reference.png",
+      "authoredChromaSourceSha256": "103a62f54baa1d4a143168fba1f13307ee05f13811ad50fac7b03175586106b4",
+      "authoredStyleSource": "ai-image-metadata/characters/player-animation-sources/human_male_warrior/inputs/style.png",
+      "authoredStyleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "authoredAnimationSpec": "ai-image-metadata/characters/player-authored-animations/human_male_warrior.json",
+      "authoredAnimationSpecSha256": "11681a31a890f80cc04218770c850674c010ccc711e9e82267e38a67ddf15da9"
     }
   }
 }

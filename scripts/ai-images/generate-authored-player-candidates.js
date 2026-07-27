@@ -7,9 +7,12 @@ const { spawn, spawnSync } = require('child_process');
 const sharp = require('sharp');
 
 const PROJECT_ROOT = path.resolve(__dirname, '../..');
+const CHARACTER_KIND = process.env.MODIA_AUTHORED_CHARACTER_KIND === 'enemy' ? 'enemy' : 'player';
 const SPEC_ROOT = path.join(
   PROJECT_ROOT,
-  'ai-image-metadata/characters/player-authored-animations'
+  CHARACTER_KIND === 'enemy'
+    ? 'ai-image-metadata/characters/enemy-authored-animations'
+    : 'ai-image-metadata/characters/player-authored-animations'
 );
 const DEFAULT_CONCURRENCY = 2;
 const MAX_CONCURRENCY = 4;
@@ -17,13 +20,15 @@ const VALID_PHASES = new Set(['reference', 'animations']);
 
 function usage() {
   return `
-Generate authored player candidates with isolated Codex CLI workers.
+Generate authored ${CHARACTER_KIND} candidates with isolated Codex CLI workers.
 
 Usage:
-  node scripts/ai-images/generate-authored-player-candidates.js --id <id> [options]
+  node scripts/ai-images/generate-authored-${CHARACTER_KIND}-candidates.js ${CHARACTER_KIND === 'enemy' ? '--biome <biome> (--id <id>|--all)' : '--id <id>'} [options]
 
 Options:
-  --id <id>                 Required authored player identity
+  --id <id>                 Required authored ${CHARACTER_KIND} identity
+  --biome <biome>           Required for enemies; selects the biome-scoped spec
+  ${CHARACTER_KIND === 'enemy' ? '--all                     Process every configured enemy in the biome sequentially' : ''}
   --phase <phase>           reference or animations (default: reference)
   --actions <a,b,...>       Limit the animations phase to named actions
   --concurrency <n>         Parallel animation workers, 1-${MAX_CONCURRENCY} (default: ${DEFAULT_CONCURRENCY})
@@ -50,6 +55,7 @@ function readValue(argv, index, flag) {
 function parseArgs(argv) {
   const options = {
     id: null,
+    ...(CHARACTER_KIND === 'enemy' ? { biome: null, all: false } : {}),
     phase: 'reference',
     actions: null,
     concurrency: DEFAULT_CONCURRENCY,
@@ -69,6 +75,14 @@ function parseArgs(argv) {
       case '--phase':
         options.phase = readValue(argv, index, arg);
         index++;
+        break;
+      case '--biome':
+        options.biome = readValue(argv, index, arg);
+        index++;
+        break;
+      case '--all':
+        if (CHARACTER_KIND !== 'enemy') throw new Error('--all is only supported for enemies');
+        options.all = true;
         break;
       case '--actions':
         options.actions = readValue(argv, index, arg)
@@ -101,10 +115,17 @@ function parseArgs(argv) {
   }
 
   if (options.help) return options;
-  if (!options.id) throw new Error('--id is required');
-  if (!/^[a-z0-9_]+$/.test(options.id)) {
+  if (CHARACTER_KIND === 'enemy' && Boolean(options.id) === Boolean(options.all)) {
+    throw new Error('provide exactly one of --id or --all');
+  }
+  if (CHARACTER_KIND !== 'enemy' && !options.id) throw new Error('--id is required');
+  if (options.id && !/^[a-z0-9_]+$/.test(options.id)) {
     throw new Error(`Invalid --id '${options.id}'`);
   }
+  if (options.biome && !/^[a-z0-9_]+$/.test(options.biome)) {
+    throw new Error(`Invalid --biome '${options.biome}'`);
+  }
+  if (CHARACTER_KIND === 'enemy' && !options.biome) throw new Error('--biome is required for enemies');
   if (!VALID_PHASES.has(options.phase)) {
     throw new Error(`Invalid --phase '${options.phase}'; use reference or animations`);
   }
@@ -122,8 +143,8 @@ function parseArgs(argv) {
   return options;
 }
 
-function loadSpec(id) {
-  const specPath = path.join(SPEC_ROOT, `${id}.json`);
+function loadSpec(id, biome = null) {
+  const specPath = path.join(SPEC_ROOT, ...(biome ? [biome] : []), `${id}.json`);
   if (!fs.existsSync(specPath)) {
     throw new Error(`Authored animation spec not found: ${path.relative(PROJECT_ROOT, specPath)}`);
   }
@@ -135,8 +156,8 @@ function absolute(relativePath) {
 }
 
 function referenceInputImages(spec) {
-  const identitySource = spec.inputs?.identity?.staged || spec.reference?.identitySource;
   const styleSource = spec.inputs?.style?.staged || spec.reference?.styleSource;
+  const identitySource = spec.inputs?.identity?.staged || spec.reference?.identitySource;
   const missing = [];
   if (!identitySource) missing.push('identity');
   if (!styleSource) missing.push('style');
@@ -476,6 +497,7 @@ async function runPool(items, concurrency, worker) {
 
 function displayPlan(jobs, states, options) {
   console.log(`Identity: ${options.id}`);
+  if (options.biome) console.log(`Biome: ${options.biome}`);
   console.log(`Phase: ${options.phase}`);
   console.log(`Concurrency: ${options.phase === 'reference' ? 1 : options.concurrency}`);
   for (const [index, job] of jobs.entries()) {
@@ -489,16 +511,13 @@ function displayPlan(jobs, states, options) {
   }
 }
 
-async function main(argv = process.argv.slice(2)) {
-  const options = parseArgs(argv);
-  if (options.help) {
-    console.log(usage());
-    return;
-  }
-
-  const { specPath, spec } = loadSpec(options.id);
+async function processIdentity(options) {
+  const { specPath, spec } = loadSpec(options.id, options.biome);
   if (spec.id !== options.id) {
     throw new Error(`Spec ID '${spec.id}' does not match --id '${options.id}'`);
+  }
+  if (options.biome && spec.biome !== options.biome) {
+    throw new Error(`Spec biome '${spec.biome}' does not match --biome '${options.biome}'`);
   }
   const jobs = buildJobs(spec, options);
   assertInputs(jobs);
@@ -529,7 +548,11 @@ async function main(argv = process.argv.slice(2)) {
   }
 
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const runDirectory = path.join(PROJECT_ROOT, 'tmp/codex-imagegen', `${timestamp}-${options.id}`);
+  const runDirectory = path.join(
+    PROJECT_ROOT,
+    'tmp/codex-imagegen',
+    `${timestamp}-${options.biome ? `${options.biome}-` : ''}${options.id}`
+  );
   fs.mkdirSync(runDirectory, { recursive: true });
   console.log(`Worker logs: ${path.relative(PROJECT_ROOT, runDirectory)}`);
 
@@ -552,8 +575,34 @@ async function main(argv = process.argv.slice(2)) {
   console.log(
     options.phase === 'reference'
       ? 'Reference candidate ready for visual review. Do not start animations until it is accepted.'
-      : 'Animation candidates ready for visual review. Approval, pinning, and compilation remain manual.'
+      : `Animation candidates ready for visual review. After review, run the explicit ${CHARACTER_KIND === 'enemy' ? '--approve ' : ''}compile command.`
   );
+}
+
+async function main(argv = process.argv.slice(2)) {
+  const options = parseArgs(argv);
+  if (options.help) {
+    console.log(usage());
+    return;
+  }
+  if (!options.all) return processIdentity(options);
+
+  const registryPath = path.join(PROJECT_ROOT, 'ai-image-metadata/characters/enemies', `${options.biome}.json`);
+  const registry = JSON.parse(await fs.promises.readFile(registryPath, 'utf8'));
+  if (registry.biome !== options.biome) throw new Error(`registry biome '${registry.biome}' does not match --biome '${options.biome}'`);
+  const aliasPath = path.join(PROJECT_ROOT, 'ai-image-metadata/characters/enemy-authored-identity-aliases.json');
+  const aliasRegistry = JSON.parse(await fs.promises.readFile(aliasPath, 'utf8'));
+  const ids = [
+    ...(registry.enemies || []).map(enemy => enemy.id),
+    ...(aliasRegistry.aliases || []).filter(alias => alias.biome === options.biome).map(alias => alias.id)
+  ];
+  if (!ids.length) throw new Error(`${options.biome} has no configured enemies`);
+  console.log(`Sequential biome batch: ${options.biome} (${ids.length} enemies)`);
+  for (const id of ids) {
+    console.log(`\n=== ${options.biome}/${id} ===`);
+    await processIdentity({ ...options, all: false, id });
+  }
+  return { ok: true, biome: options.biome, targets: ids.length };
 }
 
 if (require.main === module) {
@@ -573,5 +622,7 @@ module.exports = {
   parseArgs,
   requiredOutputsWereUpdated,
   runPool,
-  snapshotRequiredOutputs
+  snapshotRequiredOutputs,
+  processIdentity,
+  main
 };

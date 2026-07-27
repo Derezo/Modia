@@ -1,0 +1,281 @@
+{
+  "version": "1.0.0",
+  "template": "ai-image-metadata/characters/enemy-authored-animation-template.json",
+  "compilerVersion": "1.0.0",
+  "id": "skeleton_warrior",
+  "biome": "cave",
+  "profile": "enemy_v1",
+  "profileSource": "ai-image-metadata/characters/enemy-animation-profiles/enemy_v1.json",
+  "status": "approved",
+  "approvedAt": "2026-07-18T16:01:57.292Z",
+  "metadataFingerprint": "dfbcbd01e99df6b290723f1207b3b0b47228d2355061d86aa6d25147d77d9e10",
+  "draftProvenance": {
+    "registry": "ai-image-metadata/characters/enemies/cave.json",
+    "portraitRegistry": "ai-image-metadata/portraits/enemies.json",
+    "authoredAliasRegistry": "ai-image-metadata/characters/enemy-authored-identity-aliases.json",
+    "authoredAliasRegistrySha256": "db5dd5a2cc9b76f89cc9b2b1538932ed6f0d2a40ce70210d10209246bef53f47",
+    "templateSha256": "42955da8759329a4d76ddc80936dfa33151e8cbc96a925e4bb10a21356256536",
+    "profileSha256": "8f4817eb67c22eb3aa3e5fef73228e1a7e842ff0d5e366e40fac2b38ccc7c116"
+  },
+  "identity": {
+    "name": "Skeleton Warrior",
+    "archetype": "undead",
+    "visualTraits": "animated bones purple eye glow rusted sword tattered armor rattling",
+    "biomeTraits": "dark rocky underground subterranean crystalline damp",
+    "baseFacing": "right"
+  },
+  "inputs": {
+    "identity": {
+      "origin": "frontend/public/assets/portraits/originals/enemy_skeleton_warrior.png",
+      "staged": "ai-image-metadata/characters/enemy-animation-sources/cave/skeleton_warrior/inputs/identity.png",
+      "authority": "Canonical enemy identity. Preserve recognizable head and face, anatomy, coloration, markings, and any identity-defining costume or equipment."
+    },
+    "style": {
+      "origin": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+      "staged": "ai-image-metadata/characters/enemy-animation-sources/cave/skeleton_warrior/inputs/style.png",
+      "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. Never import the referenced character's identity, anatomy, costume, or equipment."
+    }
+  },
+  "reference": {
+    "source": "ai-image-metadata/characters/enemy-animation-sources/cave/skeleton_warrior/reference.png",
+    "chromaSource": "ai-image-metadata/characters/enemy-animation-sources/cave/skeleton_warrior/chroma/reference.png",
+    "identitySource": "ai-image-metadata/characters/enemy-animation-sources/cave/skeleton_warrior/inputs/identity.png",
+    "styleSource": "ai-image-metadata/characters/enemy-animation-sources/cave/skeleton_warrior/inputs/style.png",
+    "prompt": "Use case: stylized-concept. Asset type: canonical full-body enemy reference for a 16-bit fantasy tactical RPG. Image 1 is authoritative enemy identity. Preserve its recognizable head and face, anatomy cues, coloration, markings, and any identity-defining costume or equipment while translating the portrait into a complete side-facing-right battle silhouette. Image 2 is rendering-style authority only: use its crisp intentional pixel clusters, bold dark outlines, restrained warm highlights, compact proportions, and muted watercolor-and-parchment ramps without importing its character design. Create exactly one Skeleton Warrior, a undead enemy from the cave biome. Supporting identity traits: animated bones purple eye glow rusted sword tattered armor rattling. Biome art direction: dark rocky underground subterranean crystalline damp. The silhouette must remain readable at 64x64. Use a flat #00ff00 chroma key background, square canvas, generous padding, and no floor or scenery. No violation of this invariant: one enemy identity in every frame. No violation of this invariant: consistent anatomy, appendage count, equipment count, palette, proportions, and pixel density. No violation of this invariant: complete uncropped silhouette. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+  },
+  "animations": {
+    "idle": {
+      "source": "ai-image-metadata/characters/enemy-animation-sources/cave/skeleton_warrior/idle.png",
+      "chromaSource": "ai-image-metadata/characters/enemy-animation-sources/cave/skeleton_warrior/chroma/idle.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 4,
+      "frameDescriptions": [
+        "ready pose",
+        "inhale or alert rise",
+        "first weight or appendage shift",
+        "expanded motion extreme",
+        "centered midpoint",
+        "exhale or settling motion",
+        "opposite weight or appendage shift",
+        "return flowing into frame one"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn complete idle cycle poses of the authoritative Skeleton Warrior enemy in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Identity traits: animated bones purple eye glow rusted sword tattered armor rattling. Existing action direction: pixel art sprite side view 64x64, skeleton warrior with purple glowing eyes and rusted sword and tattered armor, idle rattle animation, bones rattling with jaw clicking in eternal vigilance, dark castle corridor. Required sequence: ready pose; inhale or alert rise; first weight or appendage shift; expanded motion extreme; centered midpoint; exhale or settling motion; opposite weight or appendage shift; return flowing into frame one. Create a seamless living loop with breathing, weight, surface, or appendage motion appropriate to this creature. Each atlas must redraw the creature's anatomy, limbs, appendages, equipment, surface motion, and silhouette for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact accepted reference identity, anatomy, appendage and equipment count, palette, proportions, and right-facing orientation throughout. No attack effect. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one enemy identity in every frame. No violation of this invariant: consistent anatomy, appendage count, equipment count, palette, proportions, and pixel density. No violation of this invariant: complete uncropped silhouette. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "attack": {
+      "source": "ai-image-metadata/characters/enemy-animation-sources/cave/skeleton_warrior/attack.png",
+      "chromaSource": "ai-image-metadata/characters/enemy-animation-sources/cave/skeleton_warrior/chroma/attack.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "ready pose",
+        "attack anticipation",
+        "deep windup",
+        "committed forward action",
+        "contact pose",
+        "full follow-through",
+        "recoil",
+        "recovered ready pose"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn complete attack sequence poses of the authoritative Skeleton Warrior enemy in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Identity traits: animated bones purple eye glow rusted sword tattered armor rattling. Existing action direction: pixel art sprite side view 64x64, skeleton warrior with purple glowing eyes and rusted sword and tattered armor, attack swing animation, sword swinging with bones creaking in relentless strike, dark castle corridor. Required sequence: ready pose; attack anticipation; deep windup; committed forward action; contact pose; full follow-through; recoil; recovered ready pose. Show readable anticipation, windup, committed forward action, contact, follow-through, recoil, and recovery using the creature's actual body plan. Each atlas must redraw the creature's anatomy, limbs, appendages, equipment, surface motion, and silhouette for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact accepted reference identity, anatomy, appendage and equipment count, palette, proportions, and right-facing orientation throughout. Any effect must remain compact and may not obscure anatomy or silhouette. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one enemy identity in every frame. No violation of this invariant: consistent anatomy, appendage count, equipment count, palette, proportions, and pixel density. No violation of this invariant: complete uncropped silhouette. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "hit": {
+      "source": "ai-image-metadata/characters/enemy-animation-sources/cave/skeleton_warrior/hit.png",
+      "chromaSource": "ai-image-metadata/characters/enemy-animation-sources/cave/skeleton_warrior/chroma/hit.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "ready before impact",
+        "sharp impact flinch",
+        "maximum recoil",
+        "displaced or compressed pose",
+        "braced recovery",
+        "rising or extending back",
+        "balance restored",
+        "recovered ready pose"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn complete hit reaction and recovery poses of the authoritative Skeleton Warrior enemy in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Identity traits: animated bones purple eye glow rusted sword tattered armor rattling. Existing action direction: pixel art sprite side view 64x64, skeleton warrior with purple glowing eyes and rusted sword and tattered armor, hurt scatter animation, bones scattering and reassembling with undying persistence, dark castle corridor. Required sequence: ready before impact; sharp impact flinch; maximum recoil; displaced or compressed pose; braced recovery; rising or extending back; balance restored; recovered ready pose. Show a forceful articulated impact, maximum stagger or compression, displaced recovery, and return to readiness. Each atlas must redraw the creature's anatomy, limbs, appendages, equipment, surface motion, and silhouette for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact accepted reference identity, anatomy, appendage and equipment count, palette, proportions, and right-facing orientation throughout. No gore, blood, full-body tint, or magical redesign. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one enemy identity in every frame. No violation of this invariant: consistent anatomy, appendage count, equipment count, palette, proportions, and pixel density. No violation of this invariant: complete uncropped silhouette. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "death": {
+      "source": "ai-image-metadata/characters/enemy-animation-sources/cave/skeleton_warrior/death.png",
+      "chromaSource": "ai-image-metadata/characters/enemy-animation-sources/cave/skeleton_warrior/chroma/death.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "verticalAnchor": "bottom",
+      "minimumUniquePoses": 7,
+      "outputFrameMap": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        7,
+        7
+      ],
+      "frameDescriptions": [
+        "fatal impact",
+        "support begins to fail",
+        "major collapse step",
+        "low falling or dissolving pose",
+        "ground contact",
+        "settling near final shape",
+        "final defeated rest pose",
+        "same final pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn complete defeat and collapse sequence poses of the authoritative Skeleton Warrior enemy in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Identity traits: animated bones purple eye glow rusted sword tattered armor rattling. Existing action direction: pixel art sprite side view 64x64, skeleton warrior with purple glowing eyes and rusted sword and tattered armor, death collapse animation, collapsing into pile with eye glow fading to stillness, dark castle corridor. Required sequence: fatal impact; support begins to fail; major collapse step; low falling or dissolving pose; ground contact; settling near final shape; final defeated rest pose; same final pose held. Show defeat, loss of support, progressive collapse or dissolution, ground contact, settling, and an unmistakable final motionless rest pose. Each atlas must redraw the creature's anatomy, limbs, appendages, equipment, surface motion, and silhouette for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact accepted reference identity, anatomy, appendage and equipment count, palette, proportions, and right-facing orientation throughout. No gore or dismemberment. The final pose must be fully defeated and not a rotated upright sprite. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one enemy identity in every frame. No violation of this invariant: consistent anatomy, appendage count, equipment count, palette, proportions, and pixel density. No violation of this invariant: complete uncropped silhouette. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "dead": {
+      "deriveFrom": {
+        "animation": "death",
+        "frame": 7
+      },
+      "frameDescriptions": [
+        "terminal pose held",
+        "terminal pose held",
+        "terminal pose held",
+        "terminal pose held",
+        "terminal pose held",
+        "terminal pose held",
+        "terminal pose held",
+        "terminal pose held"
+      ],
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; never generate a separate corpse identity."
+    }
+  },
+  "pins": {
+    "templateSha256": "42955da8759329a4d76ddc80936dfa33151e8cbc96a925e4bb10a21356256536",
+    "profileSha256": "8f4817eb67c22eb3aa3e5fef73228e1a7e842ff0d5e366e40fac2b38ccc7c116",
+    "authoredAliasRegistrySha256": "db5dd5a2cc9b76f89cc9b2b1538932ed6f0d2a40ce70210d10209246bef53f47",
+    "reference": {
+      "sourceSha256": "f2320dded2244c7a11a75ca2f10281cbef6730b9ba7866ab7a1e029d2b0aef92",
+      "sourceDimensions": "1254x1254",
+      "chromaSourceSha256": "e47118c33adfd6060b327e7ba250f00c72b584ff99f81f5ede1774ab57394a91",
+      "chromaSourceDimensions": "1254x1254",
+      "identitySourceSha256": "7f4b5ad73d1921a49bede8b91421049ab80c750da5092912161eb2a618eceb03",
+      "identitySourceDimensions": "1024x1024",
+      "styleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "styleSourceDimensions": "1254x1254",
+      "promptSha256": "7b9f6ce2b6a5f3f1024e89e5b35875d13808e7d77be2c9fbf751051c612d86bf",
+      "encodedSha256": "2194dd9c962578288037f73d70b7a8fa77f7b375502cae54909eddab5f2059ad"
+    },
+    "animations": {
+      "idle": {
+        "sourceSha256": "7525fc441346b6c2e632aacd0a6ee256f32afc55d909e67e842548f8088be7b5",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "52a330c45694e23cf53a1dfe4a4c054bef17ca69d66a0ab9499702232f08cccd",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "8ae41bb4da47972e8746f4112185f0999182c50c1feb1dcc911122f42c984703",
+        "encodedSha256": "d1387779fb40c30a62be254e63b0e74a09ed82f7f78cfe20487ed8a4cc4fc578",
+        "poseSha256": [
+          "f43796c70a6467de9400538fe4b43223cd238d3397ff137cbfd095b561ff68e4",
+          "6142960c7e135d9f455d8c0d0ca5faee65e6bcd1d1e4e2279a373f0100f63129",
+          "cefd76ef36babefd074cbddf5434749dffdebc61edac1cdc1f71b885e77280a6",
+          "173582df3447c08219232e1dc54722698f3d8a6cf0197ca14687f78115962a0f",
+          "51123f4a9ae5a9ec22e33836260d6459e67e89fe8d8356fe02bc6a155c52e2c0",
+          "785bafc9ed6e864e7fbf0710bf1ab443edb32349f7c724c7c410e41d703db0c1",
+          "749a47e30538ac720e519cb43c7efd74f260eeec27a2961a3daa41cf9c0891ac",
+          "f66f763c05a075bdc37e91258532203151b6c950b047ff71f0f98c17f4007962"
+        ]
+      },
+      "attack": {
+        "sourceSha256": "26507dbd706fbf897a340eb3a4758016af5a156e42b218a946a3657d9bc66c77",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "6e5fcf305994a24cbe52bbdf389ddb536d3914fe1803d4b8e5f5199f2ad4c2fe",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "24ebae51a45466d6afcda9f7104ed322e7cb0ae9f4ecdbcd2afec70e1bf8fba7",
+        "encodedSha256": "511bc8363a938544832e48998ef97e8dce4122532b01a51752713fc5450b91b0",
+        "poseSha256": [
+          "cac460fde1d2cd42624fc79b9546d299f28d764510f4647a2bfd3aa87db17fff",
+          "69e04bd8300a6605ec1c3554c30b750d63e5bd4837e54206adc86b5183e8cd40",
+          "4b8f064a5e544f8410b6a4f9c3804ed1d56e80403c57df3d0a43abe079ae23df",
+          "a4223672e9ccc4fb60009c5a7d4c1b7020b4ccb8943ebfb8d460cfb15fc0ec50",
+          "ad39717e53b0fb97b58a117c9eb129f585f872a6725407eaa52dd4898c846476",
+          "0e34329c8903ecb71575a901b117b6b9a11315c72c4cb34dde7803cb4b8daa88",
+          "b8143974ca36ce58da8d43659405a10be3a7bf1f9e470e4465407065ed0ceb06",
+          "6d7ac50c6c2d0ca7bafea8c6fb65724ee5ac4b255f1704163a385fea0dc40cba"
+        ]
+      },
+      "hit": {
+        "sourceSha256": "9a90c514550f95e7296406d2949005d88b4a0684f31745718c60cd765edfcc4a",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "01bf91340f15b7882cf76b9f82cb943b12b09eed419440fefe92afeaeb265571",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "f346f3f0634a3b38830e0a38cb1bef5a3aac9a633a492c4f7101d9e2fd30e277",
+        "encodedSha256": "b28fb81bcfd1c4a81357dafca187edabee537df0babfd23c725129e6ebfbe7c1",
+        "poseSha256": [
+          "1e8af4ed32c1b0cb6a4376659e8a5de65d787741e678beb217801222dadfb3ba",
+          "7520e1407dd959aebcb98da624f39554ac9d2d47809fe5096eb08450aaf4ad33",
+          "14157a010d5ef3547b2d035970f14e417df7d9a49be0eaf2ee9e814b49548250",
+          "eaba3ef31fa19667fa6a5534891a235ed6a0e097bf0847815ca534df6c6a74e3",
+          "607766bbb19f1ab624d2543980227cc8a0c27049a3e2da4c7c2e9d84c8991905",
+          "c85471eda820ea1861e1d2168d69e75fb30de27613d3fd78c4ebd09b7cf8bb8b",
+          "e0f2497ed32840121e87a77c6e7ed29bfa9e7166d188d54346bb64592096af59",
+          "bea80b6f6f9b15e48c4a06c2966e3572b6acfc302433afeca9f1a63cf3117da2"
+        ]
+      },
+      "death": {
+        "sourceSha256": "e9a46fbdd55995e38e13a454c21656edddb181a0ed6f80322179fb3684e43487",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "9c1c3b92244f73651be6cc0e882940d011132b76747478ff9bc11bd54eeb1df8",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "bf7e25e00379bf1b5fd5c2731adc1de732b3220bb6d21c02fbe5a52b30aa4127",
+        "encodedSha256": "4d831eb783249b00d61e98484c10c4d4546ecaf66bc7bce36740db7480b9ee24",
+        "poseSha256": [
+          "58f2aef27d00fd2c9feda92ef936a7e58e01591270d7b75488a6e04573ca4073",
+          "92c55daf46f38b689d38322b2d574849bd988f4a00915b2c3b53ea39b3bc3326",
+          "33931ec7e8468c45cadb500c3a1c6a90e010287dd5c14dd8829a653f53b89525",
+          "c26ee1b363f946dbd46eda6b57e5c42256e4e347e4ad45db7c98db91d050e668",
+          "211c8f6340fe418a53eabb936f9128231610973fb228d2df3381d4a57f58032a",
+          "471227062f2e3d5b012f0de9e4b18b5298fd233d495e4ec77c0f381fde113bea",
+          "f135038980138a8b7ccfa585fb17f916e3b58941b2f83774474e7b4901505c21",
+          "f135038980138a8b7ccfa585fb17f916e3b58941b2f83774474e7b4901505c21"
+        ]
+      },
+      "dead": {
+        "deriveFrom": {
+          "animation": "death",
+          "frame": 7
+        },
+        "promptSha256": "1bf046233c0af7abf16f1abf6e2d83779e66b2570ee52a5aa1d5170709ffbec9",
+        "encodedSha256": "ff793f0cc68d93beeccbde17aeaa8481316a16d2a9ae6405596222101cd6fa53",
+        "poseSha256": [
+          "f135038980138a8b7ccfa585fb17f916e3b58941b2f83774474e7b4901505c21",
+          "f135038980138a8b7ccfa585fb17f916e3b58941b2f83774474e7b4901505c21",
+          "f135038980138a8b7ccfa585fb17f916e3b58941b2f83774474e7b4901505c21",
+          "f135038980138a8b7ccfa585fb17f916e3b58941b2f83774474e7b4901505c21",
+          "f135038980138a8b7ccfa585fb17f916e3b58941b2f83774474e7b4901505c21",
+          "f135038980138a8b7ccfa585fb17f916e3b58941b2f83774474e7b4901505c21",
+          "f135038980138a8b7ccfa585fb17f916e3b58941b2f83774474e7b4901505c21",
+          "f135038980138a8b7ccfa585fb17f916e3b58941b2f83774474e7b4901505c21"
+        ]
+      }
+    }
+  }
+}

@@ -17,7 +17,11 @@ globalThis.document = {
   head: { appendChild() {} }
 };
 
-const { BattleUnit, VERTICAL_STRIP_GROUND_INSET } = await import('../BattleUnit.js');
+const {
+  BattleUnit,
+  SPRITE_SHADOW_CENTER_OFFSET,
+  VERTICAL_STRIP_GROUND_INSET
+} = await import('../BattleUnit.js');
 
 function animationHarness(spriteCache = {}) {
   const unit = Object.create(BattleUnit.prototype);
@@ -80,7 +84,7 @@ describe('BattleUnit strip presentation', () => {
     assert.equal(walk.frameRate, 12);
   });
 
-  it('grounds canonical vertical strips without shifting legacy layouts', () => {
+  it('centers sprite feet in the shadow and compensates vertical-strip padding', () => {
     function renderBottom(layout) {
       const unit = Object.create(BattleUnit.prototype);
       const drawCalls = [];
@@ -117,9 +121,10 @@ describe('BattleUnit strip presentation', () => {
       return drawCalls[0];
     }
 
+    assert.equal(SPRITE_SHADOW_CENTER_OFFSET, 4);
     assert.equal(VERTICAL_STRIP_GROUND_INSET, 4);
-    assert.deepEqual(renderBottom('vertical-strip'), { x: 30, y: 84 });
-    assert.deepEqual(renderBottom('directional-grid'), { x: 30, y: 80 });
+    assert.deepEqual(renderBottom('vertical-strip'), { x: 30, y: 88 });
+    assert.deepEqual(renderBottom('directional-grid'), { x: 30, y: 84 });
   });
 });
 

@@ -1,0 +1,16 @@
+{
+  "version": "1.0.0",
+  "description": "First-class authored identities that currently inherit choreography metadata from a runtime fallback enemy.",
+  "aliases": [
+    {
+      "id": "bandit_captain",
+      "biome": "bridge",
+      "animationSourceId": "bridge_bandit"
+    },
+    {
+      "id": "palace_guard",
+      "biome": "palace",
+      "animationSourceId": "dark_knight"
+    }
+  ]
+}

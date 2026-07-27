@@ -1,0 +1,176 @@
+{
+  "version": "1.0.0",
+  "template": "ai-image-metadata/characters/enemy-authored-animation-template.json",
+  "compilerVersion": "1.0.0",
+  "id": "mountain_troll",
+  "biome": "mountain",
+  "profile": "enemy_v1",
+  "profileSource": "ai-image-metadata/characters/enemy-animation-profiles/enemy_v1.json",
+  "status": "draft-awaiting-generation",
+  "approvedAt": null,
+  "metadataFingerprint": "1ea12974e7a0f317bd0485d8c0fa1f28f35aadc63710f61080bf64306bc33041",
+  "draftProvenance": {
+    "registry": "ai-image-metadata/characters/enemies/mountain.json",
+    "portraitRegistry": "ai-image-metadata/portraits/enemies.json",
+    "authoredAliasRegistry": "ai-image-metadata/characters/enemy-authored-identity-aliases.json",
+    "authoredAliasRegistrySha256": "db5dd5a2cc9b76f89cc9b2b1538932ed6f0d2a40ce70210d10209246bef53f47",
+    "templateSha256": "42955da8759329a4d76ddc80936dfa33151e8cbc96a925e4bb10a21356256536",
+    "profileSha256": "8f4817eb67c22eb3aa3e5fef73228e1a7e842ff0d5e366e40fac2b38ccc7c116"
+  },
+  "identity": {
+    "name": "Mountain Troll",
+    "archetype": "humanoid",
+    "visualTraits": "massive rocky skin mossy patches tusks crude stone club mountain hardy",
+    "biomeTraits": "rocky alpine windswept rugged high altitude harsh",
+    "baseFacing": "right"
+  },
+  "inputs": {
+    "identity": {
+      "origin": "frontend/public/assets/portraits/originals/enemy_mountain_troll.png",
+      "staged": "ai-image-metadata/characters/enemy-animation-sources/mountain/mountain_troll/inputs/identity.png",
+      "authority": "Canonical enemy identity. Preserve recognizable head and face, anatomy, coloration, markings, and any identity-defining costume or equipment."
+    },
+    "style": {
+      "origin": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+      "staged": "ai-image-metadata/characters/enemy-animation-sources/mountain/mountain_troll/inputs/style.png",
+      "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. Never import the referenced character's identity, anatomy, costume, or equipment."
+    }
+  },
+  "reference": {
+    "source": "ai-image-metadata/characters/enemy-animation-sources/mountain/mountain_troll/reference.png",
+    "chromaSource": "ai-image-metadata/characters/enemy-animation-sources/mountain/mountain_troll/chroma/reference.png",
+    "identitySource": "ai-image-metadata/characters/enemy-animation-sources/mountain/mountain_troll/inputs/identity.png",
+    "styleSource": "ai-image-metadata/characters/enemy-animation-sources/mountain/mountain_troll/inputs/style.png",
+    "prompt": "Use case: stylized-concept. Asset type: canonical full-body enemy reference for a 16-bit fantasy tactical RPG. Image 1 is authoritative enemy identity. Preserve its recognizable head and face, anatomy cues, coloration, markings, and any identity-defining costume or equipment while translating the portrait into a complete side-facing-right battle silhouette. Image 2 is rendering-style authority only: use its crisp intentional pixel clusters, bold dark outlines, restrained warm highlights, compact proportions, and muted watercolor-and-parchment ramps without importing its character design. Create exactly one Mountain Troll, a humanoid enemy from the mountain biome. Supporting identity traits: massive rocky skin mossy patches tusks crude stone club mountain hardy. Biome art direction: rocky alpine windswept rugged high altitude harsh. The silhouette must remain readable at 64x64. Use a flat #00ff00 chroma key background, square canvas, generous padding, and no floor or scenery. No violation of this invariant: one enemy identity in every frame. No violation of this invariant: consistent anatomy, appendage count, equipment count, palette, proportions, and pixel density. No violation of this invariant: complete uncropped silhouette. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+  },
+  "animations": {
+    "idle": {
+      "source": "ai-image-metadata/characters/enemy-animation-sources/mountain/mountain_troll/idle.png",
+      "chromaSource": "ai-image-metadata/characters/enemy-animation-sources/mountain/mountain_troll/chroma/idle.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 4,
+      "frameDescriptions": [
+        "ready pose",
+        "inhale or alert rise",
+        "first weight or appendage shift",
+        "expanded motion extreme",
+        "centered midpoint",
+        "exhale or settling motion",
+        "opposite weight or appendage shift",
+        "return flowing into frame one"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn complete idle cycle poses of the authoritative Mountain Troll enemy in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Identity traits: massive rocky skin mossy patches tusks crude stone club mountain hardy. Existing action direction: pixel art sprite side view 64x64, mountain troll with rocky skin and mossy patches and tusks holding stone club, idle rest animation, hunched on rocks with club resting and snorting, high altitude crag. Required sequence: ready pose; inhale or alert rise; first weight or appendage shift; expanded motion extreme; centered midpoint; exhale or settling motion; opposite weight or appendage shift; return flowing into frame one. Create a seamless living loop with breathing, weight, surface, or appendage motion appropriate to this creature. Each atlas must redraw the creature's anatomy, limbs, appendages, equipment, surface motion, and silhouette for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact accepted reference identity, anatomy, appendage and equipment count, palette, proportions, and right-facing orientation throughout. No attack effect. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one enemy identity in every frame. No violation of this invariant: consistent anatomy, appendage count, equipment count, palette, proportions, and pixel density. No violation of this invariant: complete uncropped silhouette. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "attack": {
+      "source": "ai-image-metadata/characters/enemy-animation-sources/mountain/mountain_troll/attack.png",
+      "chromaSource": "ai-image-metadata/characters/enemy-animation-sources/mountain/mountain_troll/chroma/attack.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "ready pose",
+        "attack anticipation",
+        "deep windup",
+        "committed forward action",
+        "contact pose",
+        "full follow-through",
+        "recoil",
+        "recovered ready pose"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn complete attack sequence poses of the authoritative Mountain Troll enemy in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Identity traits: massive rocky skin mossy patches tusks crude stone club mountain hardy. Existing action direction: pixel art sprite side view 64x64, mountain troll with rocky skin and mossy patches and tusks holding stone club, attack smash animation, swinging massive stone club with ground-cracking force, high altitude crag. Required sequence: ready pose; attack anticipation; deep windup; committed forward action; contact pose; full follow-through; recoil; recovered ready pose. Show readable anticipation, windup, committed forward action, contact, follow-through, recoil, and recovery using the creature's actual body plan. Each atlas must redraw the creature's anatomy, limbs, appendages, equipment, surface motion, and silhouette for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact accepted reference identity, anatomy, appendage and equipment count, palette, proportions, and right-facing orientation throughout. Any effect must remain compact and may not obscure anatomy or silhouette. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one enemy identity in every frame. No violation of this invariant: consistent anatomy, appendage count, equipment count, palette, proportions, and pixel density. No violation of this invariant: complete uncropped silhouette. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "hit": {
+      "source": "ai-image-metadata/characters/enemy-animation-sources/mountain/mountain_troll/hit.png",
+      "chromaSource": "ai-image-metadata/characters/enemy-animation-sources/mountain/mountain_troll/chroma/hit.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "ready before impact",
+        "sharp impact flinch",
+        "maximum recoil",
+        "displaced or compressed pose",
+        "braced recovery",
+        "rising or extending back",
+        "balance restored",
+        "recovered ready pose"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn complete hit reaction and recovery poses of the authoritative Mountain Troll enemy in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Identity traits: massive rocky skin mossy patches tusks crude stone club mountain hardy. Existing action direction: pixel art sprite side view 64x64, mountain troll with rocky skin and mossy patches and tusks holding stone club, hurt rage animation, staggering and roaring in rage with rocks crumbling off body, high altitude crag. Required sequence: ready before impact; sharp impact flinch; maximum recoil; displaced or compressed pose; braced recovery; rising or extending back; balance restored; recovered ready pose. Show a forceful articulated impact, maximum stagger or compression, displaced recovery, and return to readiness. Each atlas must redraw the creature's anatomy, limbs, appendages, equipment, surface motion, and silhouette for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact accepted reference identity, anatomy, appendage and equipment count, palette, proportions, and right-facing orientation throughout. No gore, blood, full-body tint, or magical redesign. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one enemy identity in every frame. No violation of this invariant: consistent anatomy, appendage count, equipment count, palette, proportions, and pixel density. No violation of this invariant: complete uncropped silhouette. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "death": {
+      "source": "ai-image-metadata/characters/enemy-animation-sources/mountain/mountain_troll/death.png",
+      "chromaSource": "ai-image-metadata/characters/enemy-animation-sources/mountain/mountain_troll/chroma/death.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "verticalAnchor": "bottom",
+      "minimumUniquePoses": 7,
+      "outputFrameMap": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        7,
+        7
+      ],
+      "frameDescriptions": [
+        "fatal impact",
+        "support begins to fail",
+        "major collapse step",
+        "low falling or dissolving pose",
+        "ground contact",
+        "settling near final shape",
+        "final defeated rest pose",
+        "same final pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn complete defeat and collapse sequence poses of the authoritative Mountain Troll enemy in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Identity traits: massive rocky skin mossy patches tusks crude stone club mountain hardy. Existing action direction: pixel art sprite side view 64x64, mountain troll with rocky skin and mossy patches and tusks holding stone club, death crash animation, crashing down heavily with club rolling away to stillness, high altitude crag. Required sequence: fatal impact; support begins to fail; major collapse step; low falling or dissolving pose; ground contact; settling near final shape; final defeated rest pose; same final pose held. Show defeat, loss of support, progressive collapse or dissolution, ground contact, settling, and an unmistakable final motionless rest pose. Each atlas must redraw the creature's anatomy, limbs, appendages, equipment, surface motion, and silhouette for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact accepted reference identity, anatomy, appendage and equipment count, palette, proportions, and right-facing orientation throughout. No gore or dismemberment. The final pose must be fully defeated and not a rotated upright sprite. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one enemy identity in every frame. No violation of this invariant: consistent anatomy, appendage count, equipment count, palette, proportions, and pixel density. No violation of this invariant: complete uncropped silhouette. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "dead": {
+      "deriveFrom": {
+        "animation": "death",
+        "frame": 7
+      },
+      "frameDescriptions": [
+        "terminal pose held",
+        "terminal pose held",
+        "terminal pose held",
+        "terminal pose held",
+        "terminal pose held",
+        "terminal pose held",
+        "terminal pose held",
+        "terminal pose held"
+      ],
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; never generate a separate corpse identity."
+    }
+  },
+  "pins": {
+    "reference": null,
+    "animations": {}
+  }
+}

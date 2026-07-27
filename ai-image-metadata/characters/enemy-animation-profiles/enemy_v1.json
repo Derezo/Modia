@@ -1,0 +1,51 @@
+{
+  "version": "1.0.0",
+  "id": "enemy_v1",
+  "templateId": "authored-enemy-pose-atlas-v1",
+  "description": "Shared enemy body-plan direction. Identity and action-specific direction come from the biome enemy registry.",
+  "style": {
+    "source": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+    "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. Never import the referenced character's identity, anatomy, costume, or equipment."
+  },
+  "promptTemplates": {
+    "reference": "Use case: stylized-concept. Asset type: canonical full-body enemy reference for a 16-bit fantasy tactical RPG. Image 1 is authoritative enemy identity. Preserve its recognizable head and face, anatomy cues, coloration, markings, and any identity-defining costume or equipment while translating the portrait into a complete side-facing-right battle silhouette. Image 2 is rendering-style authority only: use its crisp intentional pixel clusters, bold dark outlines, restrained warm highlights, compact proportions, and muted watercolor-and-parchment ramps without importing its character design. Create exactly one {{name}}, a {{archetype}} enemy from the {{biome}} biome. Supporting identity traits: {{visualTraits}}. Biome art direction: {{biomeTraits}}. The silhouette must remain readable at 64x64. Use a {{background}} background, square canvas, generous padding, and no floor or scenery. {{invariants}}",
+    "animation": "Draw exactly {{frameCount}} genuinely redrawn complete {{actionLabel}} poses of the authoritative {{name}} enemy in a {{columns}}-column by {{rows}}-row atlas, ordered top row left-to-right then bottom row left-to-right. Identity traits: {{visualTraits}}. Existing action direction: {{actionDirection}}. Required sequence: {{frameSequence}}. {{motionDirection}} {{poseRequirement}} Preserve the exact accepted reference identity, anatomy, appendage and equipment count, palette, proportions, and right-facing orientation throughout. {{effectRule}} Use a {{background}} background with generous gutters. {{invariants}}"
+  },
+  "animations": {
+    "idle": {
+      "actionLabel": "idle cycle",
+      "minimumUniquePoses": 4,
+      "motionDirection": "Create a seamless living loop with breathing, weight, surface, or appendage motion appropriate to this creature.",
+      "effectRule": "No attack effect.",
+      "frameDescriptions": ["ready pose", "inhale or alert rise", "first weight or appendage shift", "expanded motion extreme", "centered midpoint", "exhale or settling motion", "opposite weight or appendage shift", "return flowing into frame one"]
+    },
+    "attack": {
+      "actionLabel": "attack sequence",
+      "minimumUniquePoses": 6,
+      "motionDirection": "Show readable anticipation, windup, committed forward action, contact, follow-through, recoil, and recovery using the creature's actual body plan.",
+      "effectRule": "Any effect must remain compact and may not obscure anatomy or silhouette.",
+      "frameDescriptions": ["ready pose", "attack anticipation", "deep windup", "committed forward action", "contact pose", "full follow-through", "recoil", "recovered ready pose"]
+    },
+    "hit": {
+      "actionLabel": "hit reaction and recovery",
+      "minimumUniquePoses": 6,
+      "motionDirection": "Show a forceful articulated impact, maximum stagger or compression, displaced recovery, and return to readiness.",
+      "effectRule": "No gore, blood, full-body tint, or magical redesign.",
+      "frameDescriptions": ["ready before impact", "sharp impact flinch", "maximum recoil", "displaced or compressed pose", "braced recovery", "rising or extending back", "balance restored", "recovered ready pose"]
+    },
+    "death": {
+      "actionLabel": "defeat and collapse sequence",
+      "minimumUniquePoses": 7,
+      "verticalAnchor": "bottom",
+      "motionDirection": "Show defeat, loss of support, progressive collapse or dissolution, ground contact, settling, and an unmistakable final motionless rest pose.",
+      "effectRule": "No gore or dismemberment. The final pose must be fully defeated and not a rotated upright sprite.",
+      "outputFrameMap": [0, 1, 2, 3, 4, 5, 7, 7],
+      "frameDescriptions": ["fatal impact", "support begins to fail", "major collapse step", "low falling or dissolving pose", "ground contact", "settling near final shape", "final defeated rest pose", "same final pose held"]
+    },
+    "dead": {
+      "deriveFrom": { "animation": "death", "frame": 7 },
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; never generate a separate corpse identity.",
+      "frameDescriptions": ["terminal pose held", "terminal pose held", "terminal pose held", "terminal pose held", "terminal pose held", "terminal pose held", "terminal pose held", "terminal pose held"]
+    }
+  }
+}

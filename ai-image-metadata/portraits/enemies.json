@@ -92,7 +92,7 @@
       "id": "enemy_giant_spider",
       "name": "Giant Spider",
       "archetype": "beast",
-      "region": "cave",
+      "region": "forest",
       "visualTraits": "8 red eyes cluster mandibles hairy body segmented legs",
       "seed": 32002,
       "generated": true,

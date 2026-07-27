@@ -10,6 +10,7 @@ const sharp = require('sharp');
 const { parseArgs } = require('./compile-authored-player-animations');
 const {
   COMPILER_VERSION,
+  applyApproval,
   compileAtlasAnimation,
   compileAuthoredVariant,
   compileDeadAnimation,
@@ -152,7 +153,24 @@ test('CLI argument parsing accepts both assignment forms and rejects ambiguous p
     () => parseArgs(['--id', 'elf_other_wizard', '--check', '--update-pins']),
     /mutually exclusive/
   );
+  assert.throws(
+    () => parseArgs(['--id', 'elf_other_wizard', '--approve']),
+    /requires --update-pins/
+  );
+  assert.deepEqual(
+    parseArgs(['--id', 'elf_other_wizard', '--update-pins', '--approve', '--force']),
+    { id: 'elf_other_wizard', updatePins: true, approve: true, force: true }
+  );
   assert.throws(() => parseArgs(['--id', 'elf_other_wizard', '--surprise']), /Unknown argument/);
+});
+
+test('approval transition records status and timestamp without replacing an existing approval date', () => {
+  const draft = { status: 'draft-awaiting-generation', approvedAt: null };
+  applyApproval(draft, '2026-07-18T15:30:00.000Z');
+  assert.deepEqual(draft, { status: 'approved', approvedAt: '2026-07-18T15:30:00.000Z' });
+
+  applyApproval(draft, '2026-07-19T00:00:00.000Z');
+  assert.equal(draft.approvedAt, '2026-07-18T15:30:00.000Z');
 });
 
 test('component extraction preserves a connected pose that crosses its nominal atlas cell', async t => {
@@ -460,14 +478,13 @@ test('pin acceptance preflights divergent outputs before changing the spec', asy
   assert.match(rejectedDraft.issues.join('\n'), /is not approved for canonical compilation/);
   assert.equal(fs.existsSync(referenceOutput), false);
 
-  spec.status = 'approved-test';
   const originalSpec = `${JSON.stringify(spec, null, 2)}\n`;
   await fs.promises.writeFile(specPath, originalSpec);
   await fs.promises.mkdir(outputDirectory, { recursive: true });
   await fs.promises.writeFile(referenceOutput, 'existing divergent output');
 
   await assert.rejects(
-    compileAuthoredVariant({ projectRoot, registryPath, id, updatePins: true }),
+    compileAuthoredVariant({ projectRoot, registryPath, id, updatePins: true, approve: true }),
     /exists; use --force/
   );
   assert.equal(await fs.promises.readFile(specPath, 'utf8'), originalSpec);
@@ -478,10 +495,13 @@ test('pin acceptance preflights divergent outputs before changing the spec', asy
     registryPath,
     id,
     updatePins: true,
+    approve: true,
     force: true
   });
   assert.equal(accepted.ok, true);
   const updatedSpec = JSON.parse(await fs.promises.readFile(specPath, 'utf8'));
   assert.equal(updatedSpec.pins.reference.encodedSha256, accepted.referencePin.encodedSha256);
   assert.equal(updatedSpec.pins.animations.idle.encodedSha256, accepted.animationPins.idle.encodedSha256);
+  assert.equal(updatedSpec.status, 'approved');
+  assert.match(updatedSpec.approvedAt, /^\d{4}-\d{2}-\d{2}T/);
 });

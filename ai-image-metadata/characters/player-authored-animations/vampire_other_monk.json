@@ -5,8 +5,8 @@
   "id": "vampire_other_monk",
   "profile": "monk_v1",
   "profileSource": "ai-image-metadata/characters/player-animation-profiles/monk_v1.json",
-  "status": "draft-awaiting-generation",
-  "approvedAt": null,
+  "status": "approved",
+  "approvedAt": "2026-07-18T16:00:44.455Z",
   "metadataFingerprint": "32b5f0354fddf960dba6e2ed4203c50fe862dbd1371f9aa13ec1798342052820",
   "draftProvenance": {
     "registry": "ai-image-metadata/characters/player-variants.json",
@@ -220,7 +220,365 @@
     }
   },
   "pins": {
-    "reference": null,
-    "animations": {}
+    "templateSha256": "93943004e340d113943e06dea61fd7dfad67c20750dd4fc30d76d3be1fb7c144",
+    "profileSha256": "6550aa17a4d7ebdad701416b5963267eb25882969390480e792db13badbf92e5",
+    "reference": {
+      "sourceSha256": "c03c1449c54a852792eefb8452aaa5aa162c5a8e670c91f9d6c4ce71b529274c",
+      "sourceDimensions": "1254x1254",
+      "chromaSourceSha256": "c23ce10b1523c887ef4adbe988516fcf40f1af685fa147d9756f17db5c9a8244",
+      "chromaSourceDimensions": "1254x1254",
+      "identitySourceSha256": "4469999af649d032e89be63d5190e8762f2741220e603c2cbdcd950243195863",
+      "identitySourceDimensions": "1024x1024",
+      "styleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "styleSourceDimensions": "1254x1254",
+      "promptSha256": "3929fddf656da8fe543e930f57f808a002329b1d8efeb48ce5abda08a0943068",
+      "encodedSha256": "df6cb21ebf20b3457cee5ffe4c67ce9eaae6f204246e8cc5bb03709a583272b2",
+      "decodedSha256": "38b25825a6e6985532ffbf245e7e821ea1dde2a14f937ed825080dde2e127a4b"
+    },
+    "animations": {
+      "idle": {
+        "sourceSha256": "72fcd32b1d84a8c49a2645ca768c1b29fa28dafc99b0b654c2b504a8521a51b1",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "67b1f94d09975e144ba904c63c3b60f0328f68d65bb761a526ad2aad4101a871",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "b537205e1f0777aed2c36b20565369f0176fb8360e45290cf02a4905d303d0eb",
+        "encodedSha256": "6ab769ff9d62cefc25f1a888f3a56572720a16593395abff7e6592f0ccf3cd0b",
+        "decodedSha256": "3b295cbdadabf84dd2d61659175e125bc488bbd247574bee8bc22a0a5c3839a4",
+        "frameSha256": [
+          "a69e4486713899edffcc64866a05f920492e3a08bda657c98c576a624e03ce31",
+          "d7858f7982844a0d9f0023e85ef7e3e3c3d3adc13111f47e00eb33ff7eb3653a",
+          "048e999829acb1d860316f3b2bafb5bb43a4aded85f0b6e63899af29f17a1298",
+          "0502de1bbfdead133e5729f1b6ac65121c511fc3f1c23645a4f1ba3dfd5510b1",
+          "2fd7e81fd3f62cac93d6b2416e8f25299e8374e2b796614d342a6f409f57549e",
+          "242dca6ee0bc459c729ddec414636d4151c5b2eee20361806108e7b1ea41cc48",
+          "28bb43be4059355e13d79e833fae2eb23a394965dcff99bb5e4e7122707b1ac8",
+          "f455d573a0b31fff02733fef9e093e3f0777e62a3acc9bd62bb976d8499b1f48"
+        ],
+        "poseSha256": [
+          "011ff5e1ef56c217dcb629ffdaf0ae4b7c821af4a511687f4ee3e032f53891b0",
+          "a0ca50407d6823f8e5680fc49cc6863a8a49af85b4aec9cafab3e0d19ab11fbb",
+          "da9406998265f27533c21f86ebe3a7929e1d3643f757a0b2d270fdca35d84adc",
+          "d3995cd7433a392e8f1a9d9d9392a1172dbada3ae02c7eb1aabd4eabc549541e",
+          "a6091d8571ea16cad0fe5f492542cc4c4c0a2371079b6a4075d97943ad95e95e",
+          "430b6bfd874c47f2cdb451d5dcc2db6e1b8b2583c32648920f6cdbfbf0e77df2",
+          "a7a37c897e06de1612bb8424bcc09493c34391742002a4234bb679ec77db4514",
+          "5d204100f9e25ea88989fbd55d3f25a37893b345a29115ad1fc8d84e2a4e2c51"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "walk": {
+        "sourceSha256": "ef3b46dbba7fc25bd081e16891522c7699d3b0e7e2dea810cdcb944dfdb7b932",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "2f02eefa4acbcc069331753c9912e43cb2be8cf320cf20cfe2a783f82fe2d48a",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "5b73e43ef9927612cbdf93e98edb5923aaafbed29d0f8100c1bb3fe411dcf2e5",
+        "encodedSha256": "d63c08e78c009ec6f356faf3b1c1885f992f7ff324fe217783cefb03a59de332",
+        "decodedSha256": "dca26de00f63d7e86e2579942066ce1c51a2e7d5c6af1810ba8d382878970200",
+        "frameSha256": [
+          "5fb2d37e5fb29badb14866adbc0082cbf0328ba31768643e711804616363783c",
+          "439c233f5d2bbede54e9e86b027c141b04eace765cde138c177471128cceecd4",
+          "ec7e86857f2ba6380d003af48fc8d5e83a970b05de4f99d7547011f8e4d39f9d",
+          "9249ce6aff4bc5a9fa784ca6014959920a56e2751c2d0056425c5889cc070402",
+          "9e65cfcbed7b543f75907ddcd0ef37e9d340da61fdd226a3c734abea87667812",
+          "89d7ff5f004c2ecbd2f3a53f2d69ed1d3ad67f3399e3e480c398aab52437d0c9",
+          "e4ed14808ac43f3db4ac96db084957b2d724ff0b1bb7e8333a63238cc91b35ac",
+          "8a1917b781c96dd82ce3c68ffca8617f8ed66613d9046f8767bbdfba3dca70a4"
+        ],
+        "poseSha256": [
+          "6ee323cc3bb23965c420a928dc0a247aebe9d3cf9a7150c16a2c67228a1dbf99",
+          "c79d30bdeab9a2f668e918529e87154a5f792894dbd676594bc8adff47f030ad",
+          "aae0bc2c2c0b28db20c9a5b3b0304f6072dd588f0ad9f1ed76765fa61fd63261",
+          "e2bb74f83f19b359e7cf7faf6c5434c9f670a281ae5f3116bf471dc0dc853d97",
+          "105359bd61ef4006b5ca6d506a05645b2f3b46913d7dc749395dbbac693a342b",
+          "8a0d49cb4a91553f728cbf8b99b7c25c7fe728964d663f682175d90e3da2ffd7",
+          "fcac8fe5f1ee4a1065c3a79c047438b3e091ca937e7ff7b03eec6ac81764ae02",
+          "1df553d5cf4d42a72cbe7ec3473bf255ba94d0f4b74d55290dd341e6f2007712"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "attack": {
+        "sourceSha256": "e3bb4db069d851563bd8b7d278049d592d53e244f46234a543fce5a0a1f547af",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "8452833645a375b7d3adaed82ecbabf255c3cdc6f226a866b58315944f14bc10",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "d0d0c30d2970c021f61a5d55532acbe243c8881037482dc50b459668aaf841be",
+        "encodedSha256": "4d29af86e95049906f69c725fc26d2036a23feea631bd2bad4ef25dc1dbd004c",
+        "decodedSha256": "15468e7c8527c64e41ad7821f99ca694230500f95d2ffef2167507a982f06abe",
+        "frameSha256": [
+          "b08daab90a3ed016105d4212840ade1b8c85882b2cc0a1383fa8591524e4a53c",
+          "f545d44fc211d1c408f562466344bd7c4328e8333ff2ec5e4e09cd1cede475dc",
+          "64904ad66e3031a46b0fced1e3160bd00746f79ed8e3a31c313b17d3c755be0c",
+          "03732897dbffbf263a4360d90173c743af498c006717284b618a635f4dc41c27",
+          "3e80cb000311a1c9e306d0d4e7181943f5964268e3b7e9d496020c8dec0160d0",
+          "45e0013f34ab2b55b9979fce5adf279c67ef80a68e10ebd7662e232d5ad48240",
+          "b290fe3d3ed079d200e77954c49e744dd8fdc2ceca2e9bf7e073fa058362f23b",
+          "61c8c4d6da7ab20a458d11494bbc5deaf89d3ff48d9c945bce1a813cfd2d82f6"
+        ],
+        "poseSha256": [
+          "c7d6c7d9a5b0540cc25928cb048a73eddd5ab3901aacf14a9ccd1d3599ecc57e",
+          "ba3361102cc5a014de8aa212590faa494947aeffcf5f756b8828a21110f7a4bc",
+          "124f0eaf170258cc99fc743ab3e0261b99cca928e11a59e6d6e939de3927a5c1",
+          "7818165fe77ac45776d93ea90074de140838bfacee2547d12ef615fa2fb19ffc",
+          "20d2f8161cd767a77524cd32b350f7098a69a37d1fa32be534917741583b7c9f",
+          "a0a9adba7920a0366c1e7db9023d1a842864151df0c19e75ff525a2976598e81",
+          "d1250a507e38a1d17f350a11ff486a1977b6c204e86fd65256b5d0ba4c3c4b20",
+          "426221549010f490e850567f0116ff5b9cc9a72c954459ed54b7315c42cc20ac"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "hurt": {
+        "sourceSha256": "e85937b9a14f50e67a17f7b5050b3cd08438acc3689dc598aa479c31774de897",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "d8f014a7fb72f335931e783463b54051c04a0d15c682da96983b4d275d7c4585",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "2399df3e4cd79774cea766a72d638b10cd24d66a3a6669db1b9291848f76820b",
+        "encodedSha256": "da8cecc5e4e489eff6515e5edb0edeb8830603ccfcb8758f594f90aaeefec272",
+        "decodedSha256": "c395ffb51fd1e1370d55cede11d602d1049de4cddd68ded2bee5a199cc6cebd3",
+        "frameSha256": [
+          "647019421ec66886c2ee63941f8cf2d72987901817e1e145e564a2392bfb5755",
+          "9810e048c06d0887ec9f3400cc20d220333fcca7e0d3d1fbeaeecd2d9cb47687",
+          "16ebb73808469611a84597a7abe1bc9e25080afd69ebd1b11db1b730ddbaa1dd",
+          "5795ac56ac340169b52e6fc74fe6dfe9988944c5acde06739da038c30a28ae97",
+          "626f74daf64c0fc31eeae3e17ae9c6a41175b3cfc75f7d59edaf2bdcbbe5b986",
+          "6905b1463014ea4d26847eb40c743d9c6a808d1f9a3af1c7055bf89161fb01ef",
+          "789ad8c0ec1978508ce30af9e03d8534d7dbedade6f4439163eb9d4849b4eaf7",
+          "021ebc838239060bbe9f8ca0fb0d2e2572fd865a2b7c138e4c627aff3fadbfb6"
+        ],
+        "poseSha256": [
+          "f525fb54a7073f32501c28fba443d5f600862c954aef4f6dd0ada721e3eb5ec2",
+          "5caae67c4e7b93a4430dee7067475440ace0f065862b1a5287bb27991f08c83e",
+          "7414f9ead99d6c6d2f83da758faf5bd929fcb37a7f41b9cea487cfda498fbc3d",
+          "20c9fc4d83783d2e881fddbd988b58181fd97f2a07270aaa60d64120922447b5",
+          "3bdea8961428a1afbdb0fccc440e15460f4b0a74e37dbaeb82e757a143dfe3d1",
+          "5a0d2028903a8c6fbccaa7589b1a5f2054d6b6fec22f29a62611be06eae60ca7",
+          "e042f000a64fc711112144a53bc4f770ede07987ca46c22c163407dd0568e733",
+          "6424c69ad5e163182edc3e2228be6cff735c715c4c35e300bc4b8183a07f5182"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          0.979543,
+          0.992843,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "death": {
+        "sourceSha256": "cfc6a7f16f52d4deb017f7b4e350a629cc3344a76fc27c518d4730d890bcda8f",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "3b7b622db854943b86c20553ec532fc266dbedfa69a14e0458d051a725d6b99b",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "b6298a987a2927367ba1f8a220c83f12a8dd736e978956d654a1bb045b8850da",
+        "encodedSha256": "96875f86c0335ff29ccd5e364278f9633b715ddce501c6e3e71fc7a0e76ac964",
+        "decodedSha256": "d3a1864df6f00bc2c407c706efcd56b2f35ba7630632ede4a2c0a22747a9059e",
+        "frameSha256": [
+          "9ae99f7e970f0e2bc0aacee92fd4dbeee26ccfcfcae0dbab0f2a4f53d5b81184",
+          "be15a03a18367e039adf2c8283d13e2d52132ad6ac1845b56189e06ca06f7d61",
+          "32c6dd4682a675dfffdd464aab5f0b23d99d71322e61caa68f7df97d4259783e",
+          "53b2b7062a5ad37c86e02bcdac60f1af4516d06f41babb277ff7acb63aa8d85d",
+          "6bd505013a931f0cacbf2da459887e3d10d89a1f5a53f1d33ba0b28867039aa3",
+          "54dd8406a43c6ba7785a408668863d4f69d2c9bf0b5ea71dea2182745de4998e",
+          "cf4317adf278dd5baedcb3a97cb7bb3dc2193ffda0cabf42350d4be2ad01a06e",
+          "cf4317adf278dd5baedcb3a97cb7bb3dc2193ffda0cabf42350d4be2ad01a06e"
+        ],
+        "poseSha256": [
+          "b8665b8d0412a466d8267a2cb6e4c316d348411ad79e7b1fe2974f6a347f8c56",
+          "0d44a8f4739a699c06cc31ca97abcda03b1a987432e737110c2efd0f5f09736d",
+          "d460a1355ecd8e61f56be9b9d6da264a2e60bd036c26b8609ecaba8e9caface3",
+          "5c85832b7205d17c5bc835ff517f5dce5e8a8a021d69aab58d221528220a415c",
+          "49b57b0159c4d1cd5dc78e9866eb4593d0baad6c3eda79e15e87eb5bb9d2989c",
+          "9a10e0eaf0031f62aa783703435559920fa0577487834f31db0bc8a776ede507",
+          "ec44a4f6513dd171e6fc93fa4084ef761f19d72bfd0d2ed6b4f24127cf7a702d",
+          "ec44a4f6513dd171e6fc93fa4084ef761f19d72bfd0d2ed6b4f24127cf7a702d"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "victory": {
+        "sourceSha256": "47a6871e1ef089280af2fe53faa70b9658dabf2b7bc7b65142c431a975a5b7a5",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "2d8eaf6743c2e710a2e553d0cd91cc355344eb8217e6a19b805acfb356ba6cdd",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "f21949ee7c38450f2ddacbf8d300cc480ab132170a7623ed93d61d073f108fde",
+        "encodedSha256": "2e76083773d7ee9965f63f120ed7129b7f00ab643dcefcb715ca04b9ac3186c0",
+        "decodedSha256": "9d4939eda5debf09ccbce2a4d27f5f01169c8d034938d3f3887829fc50e14814",
+        "frameSha256": [
+          "7cf233a39576cced821b97b480c2a7b5e41a9636d428fa365e47e04f984fbd39",
+          "ac82d2c6393b715625f098a2e250a872855ecd19ea6dbb31063db560746aac67",
+          "c8037ee92c2df0baf48f8b8a8f431e4ae299e58b36a644c5e762223f4b60f273",
+          "2be0874026fdc3747ff1aa39f46f051ccde8c466a3fbede020df3124a7871987",
+          "6a428828d0d38a213c407acc6d15cf6f436debb29fa17e14c2b594382ec89058",
+          "ef02a4cd33c18a0d3e0d08f58deba671121ffbcd7fe1b471fbf3f260aebdad16",
+          "346b41527405d7defa809d8996389e5701feca527e535136ca9c4d5da008e0b9",
+          "1247e9772a3777a35208f6e6107a5e11c7fb18bf7a75217c889dcfb64db4ef59"
+        ],
+        "poseSha256": [
+          "44df92f9e08d33684c0b62aacdadf732be667ea4e8c0ecd97a417dd6811d741b",
+          "12a3878ada45f63e59e266b5a8497f7153468bd5445b37d634d88968e6d627e0",
+          "a16df6988239c8d3da39f5c7c1192bbe269848b45ad3f81095bc6054f914f358",
+          "dcf72ac65e26f9ac28e1388d875d514820342909561848153df52e38824e844f",
+          "6316664a5ecb29eedebf16c620ec013447f6ce30c4ce2240b8cffb5f4c446349",
+          "93f0ce710f2a147d6f655558428f4ec5e9678f16d7b1994356f440acb617a7bc",
+          "6fa296b460287c86b70b83c0a729da80b31f595756e1e2ec51a131fd8377743e",
+          "033654754bed9e899e1d62d7df895a43c7110db5c27f96f5f666c7d5bdd0812d"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "dead": {
+        "sourceSha256": "cfc6a7f16f52d4deb017f7b4e350a629cc3344a76fc27c518d4730d890bcda8f",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "3b7b622db854943b86c20553ec532fc266dbedfa69a14e0458d051a725d6b99b",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "f631a7fd605211260b28b5a5bba3503e06dc1064497d1e5769d62e40e178e2b1",
+        "encodedSha256": "595f2c0aecb37807712ef2d3d1c6aa32b92dc44d84df44d72f36ecbe76a35780",
+        "decodedSha256": "d83feecfff3be7307b4911e28f8b59512f59d215fa0c478b4a16a0d6e409d6f2",
+        "frameSha256": [
+          "cf4317adf278dd5baedcb3a97cb7bb3dc2193ffda0cabf42350d4be2ad01a06e",
+          "cf4317adf278dd5baedcb3a97cb7bb3dc2193ffda0cabf42350d4be2ad01a06e",
+          "cf4317adf278dd5baedcb3a97cb7bb3dc2193ffda0cabf42350d4be2ad01a06e",
+          "cf4317adf278dd5baedcb3a97cb7bb3dc2193ffda0cabf42350d4be2ad01a06e",
+          "cf4317adf278dd5baedcb3a97cb7bb3dc2193ffda0cabf42350d4be2ad01a06e",
+          "cf4317adf278dd5baedcb3a97cb7bb3dc2193ffda0cabf42350d4be2ad01a06e",
+          "cf4317adf278dd5baedcb3a97cb7bb3dc2193ffda0cabf42350d4be2ad01a06e",
+          "cf4317adf278dd5baedcb3a97cb7bb3dc2193ffda0cabf42350d4be2ad01a06e"
+        ],
+        "poseSha256": [
+          "ec44a4f6513dd171e6fc93fa4084ef761f19d72bfd0d2ed6b4f24127cf7a702d",
+          "ec44a4f6513dd171e6fc93fa4084ef761f19d72bfd0d2ed6b4f24127cf7a702d",
+          "ec44a4f6513dd171e6fc93fa4084ef761f19d72bfd0d2ed6b4f24127cf7a702d",
+          "ec44a4f6513dd171e6fc93fa4084ef761f19d72bfd0d2ed6b4f24127cf7a702d",
+          "ec44a4f6513dd171e6fc93fa4084ef761f19d72bfd0d2ed6b4f24127cf7a702d",
+          "ec44a4f6513dd171e6fc93fa4084ef761f19d72bfd0d2ed6b4f24127cf7a702d",
+          "ec44a4f6513dd171e6fc93fa4084ef761f19d72bfd0d2ed6b4f24127cf7a702d",
+          "ec44a4f6513dd171e6fc93fa4084ef761f19d72bfd0d2ed6b4f24127cf7a702d"
+        ],
+        "sourceFrameIndexes": [
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    }
   }
 }

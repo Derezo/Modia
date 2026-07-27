@@ -1,5 +1,7 @@
 # Authored Player Animation Pipeline
 
+Enemy identities use the parallel biome-scoped Codex CLI workflow in [AUTHORED_ENEMY_ANIMATIONS.md](AUTHORED_ENEMY_ANIMATIONS.md).
+
 This is the operator runbook for creating and rebuilding Modia's higher-quality player animation sets. It covers one identity such as `elf_other_wizard`, from registry metadata through tracked source art to the runtime sprite strips.
 
 The pipeline does not add a separate approval service or workflow. A per-identity JSON spec, its tracked PNG sources, and the existing compiler are the complete system.
@@ -271,20 +273,19 @@ The compiler enforces technical gates, while visual review covers semantics the 
 
 The translation-normalized pose gate catches rigid copies moved or uniformly resized around the canvas. It cannot prove anatomy or action quality, so inspect every frame.
 
-### 8. Enable compilation, pin, and compile
+### 8. Approve, pin, and compile
 
-The existing `status` field is the only enable switch. There is no external approval system. After visual review, set it to `approved` or another value beginning with `approved-` or `approved_`. Set `approvedAt` to an ISO timestamp for audit history; the compiler does not populate it.
-
-Do not commit the brief intermediate state with an approved status and empty pins. Immediately run the targeted acceptance command:
+After visual review, use the targeted acceptance command. It performs the approval transition and pin update together, so the spec does not need to be edited manually:
 
 ```bash
 npm run ai:compile:authored-player-animations -- \
   --id human_female_wizard \
   --update-pins \
+  --approve \
   --force
 ```
 
-`--update-pins` records the complete accepted state:
+`--approve` sets `status` to `approved` and records `approvedAt` automatically. It requires `--update-pins`, which records the complete accepted state:
 
 - compiler version and player-metadata fingerprint;
 - raw template and profile hashes;
@@ -427,7 +428,7 @@ If one of these contracts changes, update every listed location and its tests in
 | Failure | Correct response |
 |---|---|
 | Draft already exists | Use draft `--check` while it is untouched. Inspect differences before any draft `--force`. |
-| Spec status is not approved | Finish visual review, then use the existing status switch; do not change compiler code to bypass it. |
+| Spec status is not approved | Finish visual review, then compile with `--update-pins --approve`; do not edit approval fields manually. |
 | Accepted source is missing or not RGBA | Restore/create the declared transparent PNG and retain its chroma original. |
 | Corners or margins fail | Correct chroma removal or atlas layout. Do not weaken the thresholds to admit a bad source. |
 | Missing subject/poor dominant ratio | Regenerate with clearer gutters and one dominant character per cell. |

@@ -25,6 +25,7 @@ function parseArgs(argv = process.argv.slice(2)) {
     else if (argument === '--check') options.check = true;
     else if (argument === '--force') options.force = true;
     else if (argument === '--update-pins') options.updatePins = true;
+    else if (argument === '--approve') options.approve = true;
     else if (argument === '--json') options.json = true;
     else if (argument === '--help' || argument === '-h') options.help = true;
     else throw new Error(`Unknown argument: ${argument}`);
@@ -34,6 +35,9 @@ function parseArgs(argv = process.argv.slice(2)) {
   if (options.allApproved && !options.check) throw new Error('--all-approved is read-only and requires --check');
   if (options.allApproved && options.specPath) throw new Error('--spec cannot be combined with --all-approved');
   if (options.check && options.updatePins) throw new Error('--check and --update-pins are mutually exclusive');
+  if (options.approve && !options.updatePins) throw new Error('--approve requires --update-pins');
+  if (options.approve && options.check) throw new Error('--approve and --check are mutually exclusive');
+  if (options.approve && options.allApproved) throw new Error('--approve cannot be used with --all-approved');
   return options;
 }
 
@@ -48,6 +52,7 @@ Options:
   --all-approved   With --check, verify every spec whose status starts with "approved"
   --force          Replace existing canonical reference and animation strips
   --update-pins    Refresh deterministic source/prompt/output provenance in the identity spec
+  --approve        Mark the spec approved and set approvedAt; requires --update-pins
   --spec <path>    Override the default per-identity authored animation spec
   --registry <p>   Override player-variants.json
   --project-root   Override the project root (primarily for isolated tests)

@@ -1,0 +1,281 @@
+{
+  "version": "1.0.0",
+  "template": "ai-image-metadata/characters/enemy-authored-animation-template.json",
+  "compilerVersion": "1.0.0",
+  "id": "cave_bat",
+  "biome": "cave",
+  "profile": "enemy_v1",
+  "profileSource": "ai-image-metadata/characters/enemy-animation-profiles/enemy_v1.json",
+  "status": "approved",
+  "approvedAt": "2026-07-18T15:55:13.374Z",
+  "metadataFingerprint": "d8cf4c409f3a0d73d484416878b27bbcf96226af02600604ccd84443d778b694",
+  "draftProvenance": {
+    "registry": "ai-image-metadata/characters/enemies/cave.json",
+    "portraitRegistry": "ai-image-metadata/portraits/enemies.json",
+    "authoredAliasRegistry": "ai-image-metadata/characters/enemy-authored-identity-aliases.json",
+    "authoredAliasRegistrySha256": "db5dd5a2cc9b76f89cc9b2b1538932ed6f0d2a40ce70210d10209246bef53f47",
+    "templateSha256": "42955da8759329a4d76ddc80936dfa33151e8cbc96a925e4bb10a21356256536",
+    "profileSha256": "8f4817eb67c22eb3aa3e5fef73228e1a7e842ff0d5e366e40fac2b38ccc7c116"
+  },
+  "identity": {
+    "name": "Cave Bat",
+    "archetype": "beast",
+    "visualTraits": "cluster of bats red eyes wing membranes fangs screeching",
+    "biomeTraits": "dark rocky underground subterranean crystalline damp",
+    "baseFacing": "right"
+  },
+  "inputs": {
+    "identity": {
+      "origin": "frontend/public/assets/portraits/originals/enemy_cave_bat.png",
+      "staged": "ai-image-metadata/characters/enemy-animation-sources/cave/cave_bat/inputs/identity.png",
+      "authority": "Canonical enemy identity. Preserve recognizable head and face, anatomy, coloration, markings, and any identity-defining costume or equipment."
+    },
+    "style": {
+      "origin": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+      "staged": "ai-image-metadata/characters/enemy-animation-sources/cave/cave_bat/inputs/style.png",
+      "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. Never import the referenced character's identity, anatomy, costume, or equipment."
+    }
+  },
+  "reference": {
+    "source": "ai-image-metadata/characters/enemy-animation-sources/cave/cave_bat/reference.png",
+    "chromaSource": "ai-image-metadata/characters/enemy-animation-sources/cave/cave_bat/chroma/reference.png",
+    "identitySource": "ai-image-metadata/characters/enemy-animation-sources/cave/cave_bat/inputs/identity.png",
+    "styleSource": "ai-image-metadata/characters/enemy-animation-sources/cave/cave_bat/inputs/style.png",
+    "prompt": "Use case: stylized-concept. Asset type: canonical full-body enemy reference for a 16-bit fantasy tactical RPG. Image 1 is authoritative enemy identity. Preserve its recognizable head and face, anatomy cues, coloration, markings, and any identity-defining costume or equipment while translating the portrait into a complete side-facing-right battle silhouette. Image 2 is rendering-style authority only: use its crisp intentional pixel clusters, bold dark outlines, restrained warm highlights, compact proportions, and muted watercolor-and-parchment ramps without importing its character design. Create exactly one Cave Bat, a beast enemy from the cave biome. Supporting identity traits: cluster of bats red eyes wing membranes fangs screeching. Biome art direction: dark rocky underground subterranean crystalline damp. The silhouette must remain readable at 64x64. Use a flat #00ff00 chroma key background, square canvas, generous padding, and no floor or scenery. No violation of this invariant: one enemy identity in every frame. No violation of this invariant: consistent anatomy, appendage count, equipment count, palette, proportions, and pixel density. No violation of this invariant: complete uncropped silhouette. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+  },
+  "animations": {
+    "idle": {
+      "source": "ai-image-metadata/characters/enemy-animation-sources/cave/cave_bat/idle.png",
+      "chromaSource": "ai-image-metadata/characters/enemy-animation-sources/cave/cave_bat/chroma/idle.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 4,
+      "frameDescriptions": [
+        "ready pose",
+        "inhale or alert rise",
+        "first weight or appendage shift",
+        "expanded motion extreme",
+        "centered midpoint",
+        "exhale or settling motion",
+        "opposite weight or appendage shift",
+        "return flowing into frame one"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn complete idle cycle poses of the authoritative Cave Bat enemy in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Identity traits: cluster of bats red eyes wing membranes fangs screeching. Existing action direction: pixel art sprite side view 64x64, swarm of cave bats with glowing red eyes and leathery wings, idle hovering animation, circling in tight formation with wings flapping rhythmically, dark cavern depths. Required sequence: ready pose; inhale or alert rise; first weight or appendage shift; expanded motion extreme; centered midpoint; exhale or settling motion; opposite weight or appendage shift; return flowing into frame one. Create a seamless living loop with breathing, weight, surface, or appendage motion appropriate to this creature. Each atlas must redraw the creature's anatomy, limbs, appendages, equipment, surface motion, and silhouette for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact accepted reference identity, anatomy, appendage and equipment count, palette, proportions, and right-facing orientation throughout. No attack effect. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one enemy identity in every frame. No violation of this invariant: consistent anatomy, appendage count, equipment count, palette, proportions, and pixel density. No violation of this invariant: complete uncropped silhouette. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "attack": {
+      "source": "ai-image-metadata/characters/enemy-animation-sources/cave/cave_bat/attack.png",
+      "chromaSource": "ai-image-metadata/characters/enemy-animation-sources/cave/cave_bat/chroma/attack.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "ready pose",
+        "attack anticipation",
+        "deep windup",
+        "committed forward action",
+        "contact pose",
+        "full follow-through",
+        "recoil",
+        "recovered ready pose"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn complete attack sequence poses of the authoritative Cave Bat enemy in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Identity traits: cluster of bats red eyes wing membranes fangs screeching. Existing action direction: pixel art sprite side view 64x64, swarm of cave bats with glowing red eyes and leathery wings, attack dive animation, swooping forward as mass with fangs bared and screeching, dark cavern depths. Required sequence: ready pose; attack anticipation; deep windup; committed forward action; contact pose; full follow-through; recoil; recovered ready pose. Show readable anticipation, windup, committed forward action, contact, follow-through, recoil, and recovery using the creature's actual body plan. Each atlas must redraw the creature's anatomy, limbs, appendages, equipment, surface motion, and silhouette for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact accepted reference identity, anatomy, appendage and equipment count, palette, proportions, and right-facing orientation throughout. Any effect must remain compact and may not obscure anatomy or silhouette. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one enemy identity in every frame. No violation of this invariant: consistent anatomy, appendage count, equipment count, palette, proportions, and pixel density. No violation of this invariant: complete uncropped silhouette. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "hit": {
+      "source": "ai-image-metadata/characters/enemy-animation-sources/cave/cave_bat/hit.png",
+      "chromaSource": "ai-image-metadata/characters/enemy-animation-sources/cave/cave_bat/chroma/hit.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "ready before impact",
+        "sharp impact flinch",
+        "maximum recoil",
+        "displaced or compressed pose",
+        "braced recovery",
+        "rising or extending back",
+        "balance restored",
+        "recovered ready pose"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn complete hit reaction and recovery poses of the authoritative Cave Bat enemy in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Identity traits: cluster of bats red eyes wing membranes fangs screeching. Existing action direction: pixel art sprite side view 64x64, swarm of cave bats with glowing red eyes and leathery wings, hurt scatter animation, bats tumbling and scattering briefly then reforming, dark cavern depths. Required sequence: ready before impact; sharp impact flinch; maximum recoil; displaced or compressed pose; braced recovery; rising or extending back; balance restored; recovered ready pose. Show a forceful articulated impact, maximum stagger or compression, displaced recovery, and return to readiness. Each atlas must redraw the creature's anatomy, limbs, appendages, equipment, surface motion, and silhouette for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact accepted reference identity, anatomy, appendage and equipment count, palette, proportions, and right-facing orientation throughout. No gore, blood, full-body tint, or magical redesign. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one enemy identity in every frame. No violation of this invariant: consistent anatomy, appendage count, equipment count, palette, proportions, and pixel density. No violation of this invariant: complete uncropped silhouette. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "death": {
+      "source": "ai-image-metadata/characters/enemy-animation-sources/cave/cave_bat/death.png",
+      "chromaSource": "ai-image-metadata/characters/enemy-animation-sources/cave/cave_bat/chroma/death.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "verticalAnchor": "bottom",
+      "minimumUniquePoses": 7,
+      "outputFrameMap": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        7,
+        7
+      ],
+      "frameDescriptions": [
+        "fatal impact",
+        "support begins to fail",
+        "major collapse step",
+        "low falling or dissolving pose",
+        "ground contact",
+        "settling near final shape",
+        "final defeated rest pose",
+        "same final pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn complete defeat and collapse sequence poses of the authoritative Cave Bat enemy in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Identity traits: cluster of bats red eyes wing membranes fangs screeching. Existing action direction: pixel art sprite side view 64x64, swarm of cave bats with glowing red eyes and leathery wings, death disperse animation, bats falling individually and dispersing into darkness, dark cavern depths. Required sequence: fatal impact; support begins to fail; major collapse step; low falling or dissolving pose; ground contact; settling near final shape; final defeated rest pose; same final pose held. Show defeat, loss of support, progressive collapse or dissolution, ground contact, settling, and an unmistakable final motionless rest pose. Each atlas must redraw the creature's anatomy, limbs, appendages, equipment, surface motion, and silhouette for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve the exact accepted reference identity, anatomy, appendage and equipment count, palette, proportions, and right-facing orientation throughout. No gore or dismemberment. The final pose must be fully defeated and not a rotated upright sprite. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one enemy identity in every frame. No violation of this invariant: consistent anatomy, appendage count, equipment count, palette, proportions, and pixel density. No violation of this invariant: complete uncropped silhouette. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "dead": {
+      "deriveFrom": {
+        "animation": "death",
+        "frame": 7
+      },
+      "frameDescriptions": [
+        "terminal pose held",
+        "terminal pose held",
+        "terminal pose held",
+        "terminal pose held",
+        "terminal pose held",
+        "terminal pose held",
+        "terminal pose held",
+        "terminal pose held"
+      ],
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; never generate a separate corpse identity."
+    }
+  },
+  "pins": {
+    "templateSha256": "42955da8759329a4d76ddc80936dfa33151e8cbc96a925e4bb10a21356256536",
+    "profileSha256": "8f4817eb67c22eb3aa3e5fef73228e1a7e842ff0d5e366e40fac2b38ccc7c116",
+    "authoredAliasRegistrySha256": "db5dd5a2cc9b76f89cc9b2b1538932ed6f0d2a40ce70210d10209246bef53f47",
+    "reference": {
+      "sourceSha256": "01caeead28280b9b435a6ce3f1b5a944983c28fd9f6091ad32897c0ce828001d",
+      "sourceDimensions": "1254x1254",
+      "chromaSourceSha256": "dc66f250c7e499d760d2c899fad8bd897ed2fc26664c45ae599784d694b5893d",
+      "chromaSourceDimensions": "1254x1254",
+      "identitySourceSha256": "9497f6e266517e2569bd840902858f4e2cc02e234ab7399f9e267d45ac707f4e",
+      "identitySourceDimensions": "1024x1024",
+      "styleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "styleSourceDimensions": "1254x1254",
+      "promptSha256": "19396dad879fbf00398d8c9d3ba82e8acb6249c8f4db4894452879b02042afdd",
+      "encodedSha256": "aaf5ddcc4fba0ca2cdc604ffeea22ce064170f173a4d8a8c1427982b9559a59a"
+    },
+    "animations": {
+      "idle": {
+        "sourceSha256": "edcec1111da62694aab95aed01e62dc1dbf499cabbe567cfff0535910b4c4823",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "3d7462f2b48f396e592aa34a745cc6484fa2d0574bafdfe33ac13d49e34f555c",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "740fdc01a14849f7fd8c9e75fa840b092442efaf8af7b6a0e2378be85dedb50c",
+        "encodedSha256": "f77c930eba7ffb7ad8b501d82dd84b31d5b37c596a5b58ab20ec596b6f400d7d",
+        "poseSha256": [
+          "f38a248e1566e898cc99e0e9ca890180953dd42a5bc64c7571389bb0dc47e19d",
+          "1c9224765837ef8145d720f3782f861e8f15dbeb7a3515358c8f4908e8b5bf7d",
+          "86b2ef71b40f178f1e5cd4e3da5c3a3367c8d66c6ab0c1459ecb772895e228a8",
+          "980f6c77a41d319bb1fde9b929ae13fcda6d048819be96fd69acd7a55e83c549",
+          "9d9102f161a9c4f083b6e4ac75193f9067ebc922fa8575340ddbb9dd6b00db11",
+          "9a394318e435e589d6079779983d707fc2ba092c1e0d31ec2da625b33fa736e0",
+          "4a02c5b1ef38cccafa3ed1bc0d69223a2586e7919880bfd44c0303a326ebc175",
+          "f6b84bafd72d2293fd9dcf4bb890990e3a1f3831e757a3417bbebb9c9eace144"
+        ]
+      },
+      "attack": {
+        "sourceSha256": "203d7f4e5ea56ad7fae05140b9455fe733394ac857bc9c7d3afb082364f349ca",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "109519ada02a62c69a4bfb0f4637e80d94c732c4c9a61c87ddfbf1a6719a90c2",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "ec2858ad64361a60f82b737f68534cb699815dac8e6639f2b258f76f29b9ceba",
+        "encodedSha256": "6413c80cef9ab789f5f456589b8aa4bd5ea440e2b87de40d191b575c97406010",
+        "poseSha256": [
+          "f5420bf5f9ba7c23fe291322a1224fc52e8dc9280354c4582533ef69b4ee10a3",
+          "36c72f697559041902bc63c32f1801ac633ca3269108f83dd654769d10d21e0c",
+          "c964c9fb632aa7e53433b30cd0e68b48b7e0a45cd2981405b546b626c3d68ee1",
+          "bc8e5a2cae4371950ae5714c52a84738a0fef10166179c47fb6a3b9c21ddd083",
+          "dffa277f5e27b3bec60598642f42d5bda63fc8007f06d561ab4e3664c3780de2",
+          "1e5397b1d6746135cc4f19a47b913f98cf6003ca4320f2be97898b98b8875589",
+          "0ab13ecbe64030fdb024827055b2fbc191aeda5f9248cd2632d0255b3be9a270",
+          "da31c94a940be99a4a6f6951b4575dd4b48db991f38827085ebc55d9988bd853"
+        ]
+      },
+      "hit": {
+        "sourceSha256": "fe1075ce7632cb93fcb80a59117ca8bf5d07c598cc3e31003060921b2b5203e6",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "07078fbf6ca25bce0a8bbf357af3d6b10c406be2d5838a6bb25aa0067c49f73b",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "77cea97a1c6568cab028fe885c5103f435b8bc66a924ad9c4249deedb16beae5",
+        "encodedSha256": "909d3f0767659e78e93e95423728ef94d98f773ffd9667aa8058005cdfcc0ea9",
+        "poseSha256": [
+          "f6a4572459dfcda227d9ce532266e50263a093da321872baeee55a0a077e2455",
+          "14b79d2c1b9c2a3d9a30455a7696776b15d078813fe4df7e5e84700039d8c267",
+          "2051c52c8830bc6397501ca99477e48b5d68d47df159942830d52c1d93c21b6b",
+          "a1209816cef1e87fa4efb6ed3889fbf5de512f3ae51c10b0ba92b7bbf92020e6",
+          "905ac8486db6c82ef963ecd483937c9506fe72ed791a4c9dbbf6b6413bf0dc5a",
+          "17c3d6026f5e550a8f4ee803be895f2de310f557c1b78d65dbf2c3ff04397895",
+          "a30d3819063dc9c4c044fcfe76984d403db05fa893f12821ce6be0ab9f785ae8",
+          "8ea2588abd70eaca5d95192ada09d75aac321153d30286ebba79e312182f3952"
+        ]
+      },
+      "death": {
+        "sourceSha256": "480c79ea6f478360e19ed255cfd8e162852b3fb6de73d13b399378ab377c9f47",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "23a985c708f2936eb6122476f0384f764a2373b88edc293cbafbcf6846380bbc",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "14c26c591a66c29e874a1165735d260d7af0072e174cedb8355f897e747e4424",
+        "encodedSha256": "aa60e4027003fd83fb58c47dea73b1ed8971a980551dcfe11292fc224a52f05c",
+        "poseSha256": [
+          "9831a762f6de4c6358d92e4e49ce3d7b3808c0df2692700c38a1f907621f7fab",
+          "47c703fed19f49f1011b7e5e637a83dd5138a4464631659a7ec36119c0891c09",
+          "5f45cc568419356902bb4b952846cd378f0ac45d20129a27deef583ace56405f",
+          "da70a4d40bfb94bbf008dafcddd0ae48137554642771042b65942e76efcd6e58",
+          "9437515446fb27d8b4d557c2bcd79e91e6a704783231bb774856efaca07612aa",
+          "34c726d60d1f60017d1a7b6b5ada8dbf082692e0dd9f2baa79184a51b2b4d7e1",
+          "867101c1c44c6754af43c83699a470e77e26c016ecd138ed5f57978605a48577",
+          "867101c1c44c6754af43c83699a470e77e26c016ecd138ed5f57978605a48577"
+        ]
+      },
+      "dead": {
+        "deriveFrom": {
+          "animation": "death",
+          "frame": 7
+        },
+        "promptSha256": "1bf046233c0af7abf16f1abf6e2d83779e66b2570ee52a5aa1d5170709ffbec9",
+        "encodedSha256": "d617bd60a85fcf974dfb8faf69cc7b746532518116449e4ab39a441b21389a5b",
+        "poseSha256": [
+          "867101c1c44c6754af43c83699a470e77e26c016ecd138ed5f57978605a48577",
+          "867101c1c44c6754af43c83699a470e77e26c016ecd138ed5f57978605a48577",
+          "867101c1c44c6754af43c83699a470e77e26c016ecd138ed5f57978605a48577",
+          "867101c1c44c6754af43c83699a470e77e26c016ecd138ed5f57978605a48577",
+          "867101c1c44c6754af43c83699a470e77e26c016ecd138ed5f57978605a48577",
+          "867101c1c44c6754af43c83699a470e77e26c016ecd138ed5f57978605a48577",
+          "867101c1c44c6754af43c83699a470e77e26c016ecd138ed5f57978605a48577",
+          "867101c1c44c6754af43c83699a470e77e26c016ecd138ed5f57978605a48577"
+        ]
+      }
+    }
+  }
+}

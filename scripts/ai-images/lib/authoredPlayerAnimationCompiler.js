@@ -35,6 +35,16 @@ const MINIMUM_UNIQUE_POSES = Object.freeze({
   dead: 1
 });
 
+function applyApproval(spec, approvedAt = new Date().toISOString()) {
+  if (!APPROVED_STATUS.test(String(spec.status || ''))) {
+    spec.status = 'approved';
+    spec.approvedAt = approvedAt;
+  } else if (!spec.approvedAt) {
+    spec.approvedAt = approvedAt;
+  }
+  return spec;
+}
+
 function sha256(value) {
   return crypto.createHash('sha256').update(value).digest('hex');
 }
@@ -642,6 +652,8 @@ async function compileAuthoredVariant(options = {}) {
   const projectRoot = path.resolve(options.projectRoot || path.join(__dirname, '../../..'));
   const id = String(options.id || '').trim().toLowerCase();
   if (!id) throw new Error('--id is required');
+  if (options.approve && !options.updatePins) throw new Error('--approve requires --update-pins');
+  if (options.approve && options.check) throw new Error('--approve and --check are mutually exclusive');
   const registryPath = path.resolve(options.registryPath || path.join(projectRoot, DEFAULT_REGISTRY));
   const specPath = path.resolve(options.specPath || path.join(projectRoot, DEFAULT_SPEC_DIRECTORY, `${id}.json`));
   const registry = await readJson(registryPath);
@@ -655,7 +667,7 @@ async function compileAuthoredVariant(options = {}) {
   const issues = [];
   const inputSnapshots = [];
 
-  if (!APPROVED_STATUS.test(String(spec.status || ''))) {
+  if (!APPROVED_STATUS.test(String(spec.status || '')) && !options.approve) {
     return {
       ok: false,
       check: Boolean(options.check),
@@ -852,6 +864,7 @@ async function compileAuthoredVariant(options = {}) {
       spec.compilerVersion = COMPILER_VERSION;
       spec.metadataFingerprint = fingerprint;
       spec.pins = { templateSha256, profileSha256, reference: referencePin, animations: animationPins };
+      if (options.approve) applyApproval(spec);
       delete spec.__filePath;
       await atomicWrite(specPath, Buffer.from(serializeJson(spec)));
       spec.__filePath = specPath;
@@ -878,6 +891,7 @@ module.exports = {
   COMPILER_VERSION,
   DEFAULT_SPEC_DIRECTORY,
   MINIMUM_UNIQUE_POSES,
+  applyApproval,
   compileAtlasAnimation,
   compileAuthoredVariant,
   compileDeadAnimation,
