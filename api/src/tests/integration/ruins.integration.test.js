@@ -1,11 +1,51 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
 import { request, createTestContext, query } from '../testHelper.js';
+import {
+  PUZZLE_ALGORITHM_VERSION,
+  createPuzzleSolution
+} from '../../routes/ruins.js';
 
 describe('Ruins API', () => {
   let ctx;
   let user;
   let ruinsNode;
+
+  async function authorizeAtRuins(testUser, { discover = true } = {}) {
+    const character = await ctx.createCharacter(testUser.accessToken);
+    await query(
+      'UPDATE characters SET current_node_id = $1 WHERE id = $2',
+      [ruinsNode.id, character.id]
+    );
+
+    if (discover) {
+      await query(`
+        INSERT INTO user_node_discovery (user_id, node_id, discovery_method)
+        VALUES ($1, $2, 'travel')
+        ON CONFLICT (user_id, node_id) DO NOTHING
+      `, [testUser.userId, ruinsNode.id]);
+    }
+
+    return character;
+  }
+
+  async function createAuthorizedSolver() {
+    const solver = await ctx.createUser();
+    await authorizeAtRuins(solver);
+    return solver;
+  }
+
+  function validSolution(gridSize) {
+    return createPuzzleSolution(ruinsNode.local_seed, gridSize);
+  }
+
+  function solutionBody(gridSize, overrides = {}) {
+    return {
+      moves: validSolution(gridSize),
+      puzzleVersion: PUZZLE_ALGORITHM_VERSION,
+      ...overrides
+    };
+  }
 
   before(async () => {
     ctx = createTestContext();
@@ -13,7 +53,7 @@ describe('Ruins API', () => {
 
     // Find an existing ruins node from the seeded world
     const ruinsResult = await query(`
-      SELECT id, name, ruins_reward_tier, region_race
+      SELECT id, name, ruins_reward_tier, region_race, local_seed
       FROM world_nodes
       WHERE node_type = 'ruins'
       LIMIT 1
@@ -24,6 +64,7 @@ describe('Ruins API', () => {
     }
 
     ruinsNode = ruinsResult.rows[0];
+    await authorizeAtRuins(user);
   });
 
   after(async () => {
@@ -77,14 +118,14 @@ describe('Ruins API', () => {
       assert.strictEqual(res1.body.rewards.gold, res2.body.rewards.gold, 'Gold reward should be deterministic');
     });
 
-    it('should return 404 for non-existent node', async () => {
+    it('should not reveal whether an inaccessible node exists', async () => {
       const res = await request('GET', '/api/ruins/999999/puzzle', null, user.accessToken);
 
-      assert.strictEqual(res.status, 404);
+      assert.strictEqual(res.status, 403);
       assert.ok(res.body.error);
     });
 
-    it('should reject non-ruins node type', async () => {
+    it('should not reveal the type of an inaccessible node', async () => {
       // Find a non-ruins node
       const nonRuinsResult = await query(`
         SELECT id FROM world_nodes
@@ -95,9 +136,37 @@ describe('Ruins API', () => {
       if (nonRuinsResult.rows.length > 0) {
         const res = await request('GET', `/api/ruins/${nonRuinsResult.rows[0].id}/puzzle`, null, user.accessToken);
 
-        assert.strictEqual(res.status, 400);
-        assert.ok(res.body.error.includes('not a ruins'));
+        assert.strictEqual(res.status, 403);
+        assert.ok(res.body.error);
       }
+    });
+
+    it('should not reveal puzzle or reward data to a remote party leader', async () => {
+      const remoteUser = await ctx.createUser();
+      await ctx.createCharacter(remoteUser.accessToken);
+
+      const res = await request('GET', `/api/ruins/${ruinsNode.id}/puzzle`, null, remoteUser.accessToken);
+
+      assert.strictEqual(res.status, 403);
+      assert.ok(res.body.error);
+      assert.strictEqual(res.body.puzzleState, undefined);
+      assert.strictEqual(res.body.rewards, undefined);
+      assert.strictEqual(res.body.tier, undefined);
+    });
+
+    it('should require the current ruins to be discovered', async () => {
+      const undiscoveredUser = await ctx.createUser();
+      await authorizeAtRuins(undiscoveredUser, { discover: false });
+      await query(
+        'DELETE FROM user_node_discovery WHERE user_id = $1 AND node_id = $2',
+        [undiscoveredUser.userId, ruinsNode.id]
+      );
+
+      const res = await request('GET', `/api/ruins/${ruinsNode.id}/puzzle`, null, undiscoveredUser.accessToken);
+
+      assert.strictEqual(res.status, 403);
+      assert.strictEqual(res.body.puzzleState, undefined);
+      assert.strictEqual(res.body.rewards, undefined);
     });
 
     it('should reject unauthenticated requests', async () => {
@@ -109,20 +178,17 @@ describe('Ruins API', () => {
 
   describe('POST /api/ruins/:nodeId/solve', () => {
     it('should accept valid solution and award gold', async () => {
-      // Create a fresh user to test solving
-      const solver = await ctx.createUser();
+      const solver = await createAuthorizedSolver();
 
-      // Get puzzle config to determine valid move count
       const puzzleRes = await request('GET', `/api/ruins/${ruinsNode.id}/puzzle`, null, solver.accessToken);
       assert.strictEqual(puzzleRes.status, 200);
 
-      const gridSize = puzzleRes.body.gridSize;
-      const minMoves = gridSize === 3 ? 8 : gridSize === 4 ? 15 : 30;
-      const moveCount = minMoves + 5; // Valid move count above minimum
-
-      const res = await request('POST', `/api/ruins/${ruinsNode.id}/solve`, {
-        moveCount
-      }, solver.accessToken);
+      const res = await request(
+        'POST',
+        `/api/ruins/${ruinsNode.id}/solve`,
+        solutionBody(puzzleRes.body.gridSize),
+        solver.accessToken
+      );
 
       assert.strictEqual(res.status, 200);
       assert.strictEqual(res.body.success, true);
@@ -132,84 +198,181 @@ describe('Ruins API', () => {
       assert.ok(typeof res.body.newGold === 'number');
     });
 
-    it('should award par bonus for under-par completion', async () => {
-      const solver = await ctx.createUser();
+    it('should award exactly the previewed reward for an over-par solution', async () => {
+      const solver = await createAuthorizedSolver();
 
-      // Get puzzle config
       const puzzleRes = await request('GET', `/api/ruins/${ruinsNode.id}/puzzle`, null, solver.accessToken);
-      const parMoves = puzzleRes.body.parMoves;
-      const gridSize = puzzleRes.body.gridSize;
-      const minMoves = gridSize === 3 ? 8 : gridSize === 4 ? 15 : 30;
+      const moves = validSolution(puzzleRes.body.gridSize);
+      assert.ok(moves.length > puzzleRes.body.parMoves);
 
-      // Solve at exactly par moves (under par)
       const res = await request('POST', `/api/ruins/${ruinsNode.id}/solve`, {
-        moveCount: Math.max(minMoves, parMoves)
+        moves,
+        puzzleVersion: puzzleRes.body.puzzleVersion
       }, solver.accessToken);
 
       assert.strictEqual(res.status, 200);
-      assert.strictEqual(res.body.rewards.underPar, true);
-      assert.ok(res.body.message.includes('par bonus'));
+      assert.strictEqual(res.body.rewards.underPar, false);
+      assert.strictEqual(res.body.rewards.gold, puzzleRes.body.rewards.gold);
     });
 
     it('should reject solving same ruins twice', async () => {
-      const solver = await ctx.createUser();
+      const solver = await createAuthorizedSolver();
 
       const puzzleRes = await request('GET', `/api/ruins/${ruinsNode.id}/puzzle`, null, solver.accessToken);
-      const gridSize = puzzleRes.body.gridSize;
-      const minMoves = gridSize === 3 ? 8 : gridSize === 4 ? 15 : 30;
+      const moves = validSolution(puzzleRes.body.gridSize);
 
       // First solve - should succeed
       const firstRes = await request('POST', `/api/ruins/${ruinsNode.id}/solve`, {
-        moveCount: minMoves + 10
+        moves,
+        puzzleVersion: puzzleRes.body.puzzleVersion
       }, solver.accessToken);
       assert.strictEqual(firstRes.status, 200);
 
       // Second solve - should fail
       const secondRes = await request('POST', `/api/ruins/${ruinsNode.id}/solve`, {
-        moveCount: minMoves + 10
+        moves,
+        puzzleVersion: puzzleRes.body.puzzleVersion
       }, solver.accessToken);
       assert.strictEqual(secondRes.status, 400);
       assert.ok(secondRes.body.error.includes('already been solved'));
     });
 
-    it('should reject solution with too few moves (exploit prevention)', async () => {
-      const solver = await ctx.createUser();
+    it('should allow only one reward for concurrent solve submissions', async () => {
+      const solver = await createAuthorizedSolver();
+      const puzzleRes = await request('GET', `/api/ruins/${ruinsNode.id}/puzzle`, null, solver.accessToken);
+      const moves = validSolution(puzzleRes.body.gridSize);
+      const beforeResult = await query('SELECT gold FROM users WHERE id = $1', [solver.userId]);
 
-      // Try to solve with 1 move (impossible for any grid)
+      const responses = await Promise.all([
+        request('POST', `/api/ruins/${ruinsNode.id}/solve`, {
+          moves,
+          puzzleVersion: puzzleRes.body.puzzleVersion
+        }, solver.accessToken),
+        request('POST', `/api/ruins/${ruinsNode.id}/solve`, {
+          moves,
+          puzzleVersion: puzzleRes.body.puzzleVersion
+        }, solver.accessToken)
+      ]);
+
+      const successResponses = responses.filter(response => response.status === 200);
+      const rejectedResponses = responses.filter(response => response.status === 400);
+      assert.strictEqual(successResponses.length, 1);
+      assert.strictEqual(rejectedResponses.length, 1);
+      assert.ok(rejectedResponses[0].body.error.includes('already been solved'));
+
+      const afterResult = await query('SELECT gold FROM users WHERE id = $1', [solver.userId]);
+      assert.strictEqual(
+        afterResult.rows[0].gold - beforeResult.rows[0].gold,
+        successResponses[0].body.rewards.gold
+      );
+
+      const completionResult = await query(
+        'SELECT COUNT(*)::int AS count FROM user_ruins_completions WHERE user_id = $1 AND node_id = $2',
+        [solver.userId, ruinsNode.id]
+      );
+      assert.strictEqual(completionResult.rows[0].count, 1);
+    });
+
+    it('should reject a legal move sequence that does not solve the puzzle', async () => {
+      const solver = await createAuthorizedSolver();
+      const puzzleRes = await request('GET', `/api/ruins/${ruinsNode.id}/puzzle`, null, solver.accessToken);
+      const firstMove = validSolution(puzzleRes.body.gridSize)[0];
       const res = await request('POST', `/api/ruins/${ruinsNode.id}/solve`, {
-        moveCount: 1
+        moves: [firstMove],
+        puzzleVersion: puzzleRes.body.puzzleVersion
       }, solver.accessToken);
 
       assert.strictEqual(res.status, 400);
-      assert.ok(res.body.error.includes('Invalid solution') || res.body.error.includes('at least'));
+      assert.ok(res.body.error.includes('Invalid solution'));
     });
 
-    it('should reject invalid move count values', async () => {
+    it('should reject invalid move sequence values', async () => {
       const res = await request('POST', `/api/ruins/${ruinsNode.id}/solve`, {
-        moveCount: -5
+        moves: [1.5],
+        puzzleVersion: PUZZLE_ALGORITHM_VERSION
       }, user.accessToken);
 
       assert.strictEqual(res.status, 400);
       assert.ok(res.body.error);
     });
 
-    it('should reject missing move count', async () => {
+    it('should reject a missing move sequence', async () => {
       const res = await request('POST', `/api/ruins/${ruinsNode.id}/solve`, {}, user.accessToken);
 
       assert.strictEqual(res.status, 400);
     });
 
-    it('should return 404 for non-existent node', async () => {
+    it('should reject a valid solution from a remote party leader', async () => {
+      const remoteUser = await ctx.createUser();
+      await ctx.createCharacter(remoteUser.accessToken);
+      const tier = Number(ruinsNode.ruins_reward_tier);
+      const gridSize = tier === 1 ? 3 : tier === 2 ? 4 : 5;
+
+      const res = await request(
+        'POST',
+        `/api/ruins/${ruinsNode.id}/solve`,
+        solutionBody(gridSize),
+        remoteUser.accessToken
+      );
+
+      assert.strictEqual(res.status, 403);
+      const completionResult = await query(
+        'SELECT COUNT(*)::int AS count FROM user_ruins_completions WHERE user_id = $1',
+        [remoteUser.userId]
+      );
+      assert.strictEqual(completionResult.rows[0].count, 0);
+    });
+
+    it('should reject a valid solution at undiscovered ruins', async () => {
+      const undiscoveredUser = await ctx.createUser();
+      await authorizeAtRuins(undiscoveredUser, { discover: false });
+      await query(
+        'DELETE FROM user_node_discovery WHERE user_id = $1 AND node_id = $2',
+        [undiscoveredUser.userId, ruinsNode.id]
+      );
+      const tier = Number(ruinsNode.ruins_reward_tier);
+      const gridSize = tier === 1 ? 3 : tier === 2 ? 4 : 5;
+
+      const res = await request(
+        'POST',
+        `/api/ruins/${ruinsNode.id}/solve`,
+        solutionBody(gridSize),
+        undiscoveredUser.accessToken
+      );
+
+      assert.strictEqual(res.status, 403);
+    });
+
+    it('should reject a stale puzzle version', async () => {
+      const solver = await createAuthorizedSolver();
+      const puzzleRes = await request('GET', `/api/ruins/${ruinsNode.id}/puzzle`, null, solver.accessToken);
+
+      const res = await request(
+        'POST',
+        `/api/ruins/${ruinsNode.id}/solve`,
+        solutionBody(puzzleRes.body.gridSize, {
+          puzzleVersion: puzzleRes.body.puzzleVersion + 1
+        }),
+        solver.accessToken
+      );
+
+      assert.strictEqual(res.status, 409);
+      assert.ok(res.body.error.includes('version'));
+    });
+
+    it('should not reveal whether an inaccessible solve target exists', async () => {
       const res = await request('POST', '/api/ruins/999999/solve', {
-        moveCount: 20
+        moves: [0],
+        puzzleVersion: PUZZLE_ALGORITHM_VERSION
       }, user.accessToken);
 
-      assert.strictEqual(res.status, 404);
+      assert.strictEqual(res.status, 403);
     });
 
     it('should reject unauthenticated requests', async () => {
       const res = await request('POST', `/api/ruins/${ruinsNode.id}/solve`, {
-        moveCount: 20
+        moves: [0],
+        puzzleVersion: PUZZLE_ALGORITHM_VERSION
       });
 
       assert.strictEqual(res.status, 401);
@@ -218,16 +381,17 @@ describe('Ruins API', () => {
 
   describe('GET /api/ruins/:nodeId/puzzle (after completion)', () => {
     it('should return null puzzleState for completed ruins', async () => {
-      const solver = await ctx.createUser();
+      const solver = await createAuthorizedSolver();
 
       // Get puzzle config and solve
       const puzzleRes = await request('GET', `/api/ruins/${ruinsNode.id}/puzzle`, null, solver.accessToken);
-      const gridSize = puzzleRes.body.gridSize;
-      const minMoves = gridSize === 3 ? 8 : gridSize === 4 ? 15 : 30;
 
-      await request('POST', `/api/ruins/${ruinsNode.id}/solve`, {
-        moveCount: minMoves + 10
-      }, solver.accessToken);
+      await request(
+        'POST',
+        `/api/ruins/${ruinsNode.id}/solve`,
+        solutionBody(puzzleRes.body.gridSize),
+        solver.accessToken
+      );
 
       // Fetch puzzle again
       const res = await request('GET', `/api/ruins/${ruinsNode.id}/puzzle`, null, solver.accessToken);
@@ -252,16 +416,17 @@ describe('Ruins API', () => {
     });
 
     it('should return completions after solving ruins', async () => {
-      const solver = await ctx.createUser();
+      const solver = await createAuthorizedSolver();
 
       // Solve a ruins
       const puzzleRes = await request('GET', `/api/ruins/${ruinsNode.id}/puzzle`, null, solver.accessToken);
-      const gridSize = puzzleRes.body.gridSize;
-      const minMoves = gridSize === 3 ? 8 : gridSize === 4 ? 15 : 30;
 
-      await request('POST', `/api/ruins/${ruinsNode.id}/solve`, {
-        moveCount: minMoves + 10
-      }, solver.accessToken);
+      await request(
+        'POST',
+        `/api/ruins/${ruinsNode.id}/solve`,
+        solutionBody(puzzleRes.body.gridSize),
+        solver.accessToken
+      );
 
       // Check completions
       const res = await request('GET', '/api/ruins/completions', null, solver.accessToken);

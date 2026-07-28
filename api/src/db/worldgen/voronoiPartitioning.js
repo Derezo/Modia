@@ -38,18 +38,64 @@ import { generateCastlePlacements } from './castlePlacement.js';
 export function createVoronoiRegions(castles) {
   console.log('\nCreating Voronoi partitioning from castle positions...');
 
-  // Convert castle positions to flat array for d3-delaunay
-  const points = castles.map(c => [c.x, c.y]);
+  if (!Array.isArray(castles) || castles.length === 0) {
+    throw new Error('Voronoi partitioning requires at least one castle generator');
+  }
+
+  const identities = castles.map((castle, index) => {
+    const regionId = castle?.regionId ?? castle?.region?.id;
+    const castleKey = castle?.castleKey ?? (
+      regionId == null ? null : `castle:${regionId}`
+    );
+
+    if (regionId == null || castleKey == null) {
+      throw new Error(`Voronoi castle generator at index ${index} is missing castleKey/regionId`);
+    }
+    if (!Number.isFinite(castle?.x) || !Number.isFinite(castle?.y)) {
+      throw new Error(
+        `Voronoi castle generator ${castleKey} (regionId ${regionId}) has nonfinite coordinates`
+      );
+    }
+
+    return { castleKey, regionId };
+  });
+
+  const duplicateCastleKeys = identities
+    .map(({ castleKey }) => castleKey)
+    .filter((castleKey, index, all) => all.indexOf(castleKey) !== index);
+  const duplicateRegionIds = identities
+    .map(({ regionId }) => regionId)
+    .filter((regionId, index, all) => all.indexOf(regionId) !== index);
+  if (duplicateCastleKeys.length > 0 || duplicateRegionIds.length > 0) {
+    throw new Error(
+      'Voronoi castle identities must be unique: ' +
+      `duplicate castleKeys [${[...new Set(duplicateCastleKeys)].join(', ')}], ` +
+      `duplicate regionIds [${[...new Set(duplicateRegionIds)].join(', ')}]`
+    );
+  }
+
+  // Freeze the exact finalized values supplied by castle placement and use
+  // this same coordinate set as the Delaunay/Voronoi generators.
+  const generatorPoints = Object.freeze(
+    castles.map(castle => Object.freeze([castle.x, castle.y]))
+  );
 
   // Step 1: Create Delaunay triangulation
-  const delaunay = Delaunay.from(points);
+  const delaunay = Delaunay.from(generatorPoints);
 
   // Step 2: Generate Voronoi diagram with bounding box
   // The bounding box should be larger than the world to ensure all edges are finite
   const voronoi = delaunay.voronoi(VORONOI_CONFIG.WORLD_BOUNDS);
 
   // Step 3: Extract cell polygons for each region
-  const cells = [];
+  const cells = new Array(castles.length).fill(null);
+  const cellsByRegion = new Map();
+  const cellsByCastleKey = new Map();
+  for (const { regionId, castleKey } of identities) {
+    cellsByRegion.set(regionId, null);
+    cellsByCastleKey.set(castleKey, null);
+  }
+
   for (let i = 0; i < castles.length; i++) {
     const polygon = voronoi.cellPolygon(i);
 
@@ -57,19 +103,79 @@ export function createVoronoiRegions(castles) {
       // Calculate centroid and area for potential use in node distribution
       const { centroid, area } = calculatePolygonProperties(polygon);
 
-      cells.push({
+      const cell = {
         regionIndex: i,
+        regionId: identities[i].regionId,
+        castleKey: identities[i].castleKey,
         region: castles[i].region,
-        castle: { x: castles[i].x, y: castles[i].y },
+        castle: Object.freeze({
+          x: generatorPoints[i][0],
+          y: generatorPoints[i][1]
+        }),
         polygon: polygon,
         centroid: centroid,
         area: area
-      });
+      };
+      cells[i] = cell;
+      cellsByRegion.set(cell.regionId, cell);
+      cellsByCastleKey.set(cell.castleKey, cell);
 
       console.log(`  Region ${i + 1} (${castles[i].region.name}): area=${area.toFixed(1)}, centroid=(${centroid.x.toFixed(1)}, ${centroid.y.toFixed(1)})`);
     } else {
       console.warn(`  Warning: No polygon for region ${i} (${castles[i].region.name})`);
     }
+  }
+
+  const invalidCells = cells.flatMap((cell, index) => {
+    const reasons = [];
+    if (!cell) {
+      reasons.push('missing polygon');
+    } else {
+      if (!Array.isArray(cell.polygon) || cell.polygon.length === 0) {
+        reasons.push('empty polygon');
+      } else if (cell.polygon.length < 4) {
+        reasons.push(`degenerate polygon (${cell.polygon.length} points)`);
+      } else if (cell.polygon.some(point =>
+        !Array.isArray(point) ||
+        !Number.isFinite(point[0]) ||
+        !Number.isFinite(point[1])
+      )) {
+        reasons.push('nonfinite polygon coordinates');
+      }
+      if (!Number.isFinite(cell.area)) {
+        reasons.push('nonfinite area');
+      } else if (cell.area <= 0.001) {
+        reasons.push(`degenerate area (${cell.area})`);
+      }
+      if (!Number.isFinite(cell.centroid?.x) || !Number.isFinite(cell.centroid?.y)) {
+        reasons.push('nonfinite centroid');
+      }
+    }
+
+    return reasons.length === 0
+      ? []
+      : [{
+        index,
+        castleKey: identities[index].castleKey,
+        regionId: identities[index].regionId,
+        reasons
+      }];
+  });
+
+  if (invalidCells.length > 0) {
+    const descriptions = invalidCells.map(invalid =>
+      `${invalid.castleKey} (regionId ${invalid.regionId}, index ${invalid.index}): ` +
+      invalid.reasons.join(', ')
+    );
+    const error = new Error(
+      `Voronoi partitioning produced invalid cells for ${descriptions.join('; ')}`
+    );
+    error.code = 'INVALID_VORONOI_CELLS';
+    error.invalidCells = invalidCells;
+    error.cells = cells;
+    error.cellsByRegion = cellsByRegion;
+    error.cellsByCastleKey = cellsByCastleKey;
+    throw error;
   }
 
   // Step 4: Extract edges (borders between regions)
@@ -83,7 +189,10 @@ export function createVoronoiRegions(castles) {
   return {
     delaunay,
     voronoi,
+    generatorPoints,
     cells,
+    cellsByRegion,
+    cellsByCastleKey,
     edges,
     vertices
   };
@@ -169,6 +278,10 @@ export function extractVoronoiEdges(voronoi, castles) {
           edges.push({
             region1: i,
             region2: j,
+            region1Id: castles[i].regionId ?? castles[i].region.id,
+            region2Id: castles[j].regionId ?? castles[j].region.id,
+            castle1Key: castles[i].castleKey ?? `castle:${castles[i].region.id}`,
+            castle2Key: castles[j].castleKey ?? `castle:${castles[j].region.id}`,
             region1Name: castles[i].region.name,
             region2Name: castles[j].region.name,
             points: edgePoints,
@@ -301,6 +414,7 @@ export function extractVoronoiVertices(voronoi, castles) {
         x: data.x,
         y: data.y,
         adjacentRegions: adjacentRegions,
+        adjacentRegionIds: adjacentRegions.map(i => castles[i].regionId ?? castles[i].region.id),
         regionNames: adjacentRegions.map(i => castles[i].region.name),
         distanceFromCenter: distanceFromCenter
       });
@@ -330,6 +444,33 @@ export function extractVoronoiVertices(voronoi, castles) {
  * @param {Array} castles - Castle positions
  * @returns {{x: number, y: number, adjacentRegions: number[], reason: string}}
  */
+function resolveFallbackPalaceAdjacency(point, castles) {
+  const adjacent = castles
+    .map((castle, index) => ({
+      castle,
+      index,
+      distance: Math.hypot(point.x - castle.x, point.y - castle.y)
+    }))
+    .sort((left, right) =>
+      left.distance - right.distance
+      || String(left.castle.castleKey).localeCompare(String(right.castle.castleKey))
+    )
+    .slice(0, Math.min(2, castles.length));
+
+  if (adjacent.length === 0 || adjacent.some(({ castle }) =>
+    castle.regionId == null
+    || !castle.castleKey
+    || !castle.region?.name
+  )) {
+    throw new Error('Grand Palace fallback requires explicit castle and region identity');
+  }
+  return {
+    adjacentRegions: adjacent.map(({ index }) => index),
+    adjacentRegionIds: adjacent.map(({ castle }) => castle.regionId),
+    regionNames: adjacent.map(({ castle }) => castle.region.name)
+  };
+}
+
 export function findGrandPalacePosition(voronoiData, castles) {
   console.log('\nFinding Grand Palace position...');
 
@@ -339,10 +480,11 @@ export function findGrandPalacePosition(voronoiData, castles) {
     // Fallback: place at the farthest point from all castles
     console.log('  No multi-region vertices found, using fallback position');
     const fallbackPos = findFarthestPointFromCastles(castles);
+    const adjacency = resolveFallbackPalaceAdjacency(fallbackPos, castles);
     return {
       x: fallbackPos.x,
       y: fallbackPos.y,
-      adjacentRegions: [],
+      ...adjacency,
       reason: 'fallback_farthest_from_castles'
     };
   }
@@ -375,6 +517,7 @@ export function findGrandPalacePosition(voronoiData, castles) {
           x: candidate.x,
           y: candidate.y,
           adjacentRegions: candidate.adjacentRegions,
+          adjacentRegionIds: candidate.adjacentRegionIds,
           regionNames: candidate.regionNames,
           distanceFromCenter: candidate.distanceFromCenter,
           reason: 'vertex_multi_region_alternate'
@@ -385,10 +528,11 @@ export function findGrandPalacePosition(voronoiData, castles) {
     // All vertices too close, use fallback
     console.log('  All vertices too close to castles, using fallback');
     const fallbackPos = findFarthestPointFromCastles(castles);
+    const adjacency = resolveFallbackPalaceAdjacency(fallbackPos, castles);
     return {
       x: fallbackPos.x,
       y: fallbackPos.y,
-      adjacentRegions: [],
+      ...adjacency,
       reason: 'fallback_all_vertices_too_close'
     };
   }
@@ -402,6 +546,7 @@ export function findGrandPalacePosition(voronoiData, castles) {
     x: bestVertex.x,
     y: bestVertex.y,
     adjacentRegions: bestVertex.adjacentRegions,
+    adjacentRegionIds: bestVertex.adjacentRegionIds,
     regionNames: bestVertex.regionNames,
     distanceFromCenter: bestVertex.distanceFromCenter,
     reason: 'vertex_multi_region'
@@ -469,6 +614,23 @@ export function getRegionBorders(voronoiData) {
   const { edges } = voronoiData;
 
   return edges.map(edge => {
+    const requiredIdentityFields = [
+      'region1Id',
+      'region2Id',
+      'castle1Key',
+      'castle2Key',
+      'region1Name',
+      'region2Name'
+    ];
+    const missing = requiredIdentityFields.filter((field) =>
+      edge[field] === undefined || edge[field] === null || edge[field] === ''
+    );
+    if (missing.length > 0) {
+      throw new Error(
+        `Voronoi border is missing explicit identity fields: ${missing.join(', ')}`
+      );
+    }
+
     // Determine connection type based on edge length
     // Short borders (< 10 units): Bridge chokepoint only
     // Medium borders (10-20 units): Bridge + wilderness zone
@@ -485,6 +647,10 @@ export function getRegionBorders(voronoiData) {
     return {
       region1: edge.region1,
       region2: edge.region2,
+      region1Id: edge.region1Id,
+      region2Id: edge.region2Id,
+      castle1Key: edge.castle1Key,
+      castle2Key: edge.castle2Key,
       region1Name: edge.region1Name,
       region2Name: edge.region2Name,
       edgeLength: edge.length,

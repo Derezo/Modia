@@ -38,6 +38,15 @@ describe('calculateDifficultyTier', () => {
     assert.strictEqual(calculateDifficultyTier({ nodeType: 'palace', ringDistance: 1 }), 5);
   });
 
+  it('applies an explicit route tier before generic type and ring rules', () => {
+    assert.strictEqual(calculateDifficultyTier({
+      nodeType: 'forest',
+      ringDistance: 4,
+      difficultyPolicy: 'lower_risk_trade',
+      routeDifficultyTier: 2
+    }), 2);
+  });
+
   // Settlements by ring distance
   it('returns tier 1 for city in ring 0', () => {
     assert.strictEqual(calculateDifficultyTier({ nodeType: 'city', ringDistance: 0 }), 1);

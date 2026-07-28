@@ -9,13 +9,15 @@
 import { describe, test, beforeEach, afterEach, after } from 'node:test';
 import assert from 'node:assert';
 import { createMockBattleState, createMockPlayerUnit, createMockEnemyUnit } from '../testUtils/index.js';
+import { pool } from '../../config/database.js';
 
 // Import the service once and clean up between tests
 import * as battleReconnection from '../../services/battleReconnection.js';
 
 // Clean up all timeouts after all tests complete to prevent hanging
-after(() => {
+after(async () => {
   battleReconnection._clearAllTimeouts();
+  await pool.end();
 });
 
 // Counter for unique IDs to avoid state pollution between tests
@@ -41,7 +43,17 @@ function setupMocks() {
 
   originalSetTimeout = globalThis.setTimeout;
   globalThis.setTimeout = (callback, delay) => {
-    const id = Math.random();
+    // Match the timer-handle surface used by dependencies such as pg-pool
+    // while keeping the callback fully controlled by this test.
+    const id = {
+      token: Math.random(),
+      ref() {
+        return this;
+      },
+      unref() {
+        return this;
+      }
+    };
     scheduledTimeouts.push({ id, callback, delay });
     return id;
   };

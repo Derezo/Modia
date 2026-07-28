@@ -4,7 +4,68 @@
  * Supports variance levels for dynamic curve intensity
  */
 
-import { SeededRandom } from '@shared/constants.js';
+import { SeededRandom } from '@modia/shared/constants';
+
+/**
+ * Colorblind-safe route styling. Route meaning is encoded by pattern and width,
+ * with color acting only as a secondary cue.
+ */
+export function getWorldRouteStyle(
+  pathType = 'road',
+  routeKind = null,
+  visited = true,
+  displayScale = 1
+) {
+  const styles = {
+    road: { color: '#5d4e37', width: 4, lineDash: [] },
+    trail: { color: '#315b45', width: 2, lineDash: [12, 3] },
+    bridge: { color: '#8b5a2b', width: 5, lineDash: [14, 3] },
+    tunnel: { color: '#343442', width: 3, lineDash: [2, 4] }
+  };
+  const wildernessDashes = {
+    road: [8, 5],
+    trail: [8, 5, 2, 5],
+    bridge: [14, 5, 2, 5],
+    tunnel: [2, 5, 2, 8]
+  };
+  const clampedScale = Math.min(2, Math.max(0.5,
+    Number.isFinite(displayScale) ? displayScale : 1
+  ));
+  const normalizedType = Object.hasOwn(styles, pathType)
+    ? pathType
+    : routeKind === 'wilderness'
+      ? 'trail'
+      : 'road';
+  const style = styles[normalizedType] ?? styles.road;
+  const lineDash = routeKind === 'wilderness'
+    ? wildernessDashes[normalizedType]
+    : style.lineDash;
+  const routeRisk = routeKind === 'trade'
+    ? 'Lower-risk combat'
+    : routeKind === 'wilderness'
+      ? 'Higher-risk wilderness'
+      : null;
+  const segmentLabel = normalizedType === 'bridge'
+    ? 'bridge crossing'
+    : normalizedType === 'tunnel'
+      ? 'tunnel passage'
+      : normalizedType;
+  const label = routeRisk
+    ? `${routeRisk} ${segmentLabel}`
+    : normalizedType === 'road' || normalizedType === 'trail'
+      ? 'Regional path'
+      : `${segmentLabel.charAt(0).toUpperCase()}${segmentLabel.slice(1)}`;
+  return {
+    ...style,
+    dashed: lineDash.length > 0,
+    color: visited ? style.color : `${style.color}99`,
+    // Canvas is displayed with CSS scaling. Compensating here keeps route
+    // patterns legible across the supported 0.5x-2x display-scale range.
+    width: style.width / clampedScale,
+    lineDash: lineDash.map((length) => length / clampedScale),
+    label
+  };
+}
 
 /**
  * Path variance configuration for different curve intensities
@@ -255,6 +316,7 @@ export function renderOrganicPath(ctx, x1, y1, x2, y2, fromNodeId, toNodeId, sty
     color = '#5d4e37',
     width = 2,
     dashed = false,
+    lineDash = dashed ? [5, 5] : [],
     shadowColor = null,
     shadowOffset = 2
   } = style;
@@ -274,6 +336,9 @@ export function renderOrganicPath(ctx, x1, y1, x2, y2, fromNodeId, toNodeId, sty
     ctx.lineWidth = width + 1;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
+    if (lineDash.length > 0) {
+      ctx.setLineDash(lineDash);
+    }
 
     ctx.beginPath();
     ctx.moveTo(splinePoints[0].x + shadowOffset, splinePoints[0].y + shadowOffset);
@@ -281,6 +346,9 @@ export function renderOrganicPath(ctx, x1, y1, x2, y2, fromNodeId, toNodeId, sty
       ctx.lineTo(splinePoints[i].x + shadowOffset, splinePoints[i].y + shadowOffset);
     }
     ctx.stroke();
+    if (lineDash.length > 0) {
+      ctx.setLineDash([]);
+    }
     ctx.restore();
   }
 
@@ -291,8 +359,8 @@ export function renderOrganicPath(ctx, x1, y1, x2, y2, fromNodeId, toNodeId, sty
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
-  if (dashed) {
-    ctx.setLineDash([5, 5]);
+  if (lineDash.length > 0) {
+    ctx.setLineDash(lineDash);
   }
 
   ctx.beginPath();
@@ -302,7 +370,7 @@ export function renderOrganicPath(ctx, x1, y1, x2, y2, fromNodeId, toNodeId, sty
   }
   ctx.stroke();
 
-  if (dashed) {
+  if (lineDash.length > 0) {
     ctx.setLineDash([]);
   }
   ctx.restore();
@@ -368,4 +436,3 @@ export function renderPathReveal(ctx, x1, y1, x2, y2, fromNodeId, toNodeId, base
     ctx.stroke();
   }
 }
-

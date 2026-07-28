@@ -4,18 +4,23 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 1.1 |
-| Last Updated | January 2026 |
-| Total Code | ~5,500 lines across 9 modules |
+| Version | 2.0 |
+| Last Updated | July 2026 |
+| Total Code | Canonical assembly plus phase modules |
 
 ---
 
 ## Overview
 
-Modia's world map generation system is a sophisticated 6-phase procedural generation pipeline that creates a deterministic 5-region world from a single seed value. Each region is race-themed with a central castle, and regions are connected via bridges, wilderness zones, and trade routes.
+Modia's world map generation system uses five structural phases followed by
+deterministic finalization, read-only validation, and atomic persistence. It
+creates a 5-region world from a strict signed 32-bit seed plus generator and
+random-stream versions. Each region is race-themed with a central castle, and
+regions are connected via bridges, wilderness zones, and trade routes.
 
 **Key Characteristics:**
-- **Deterministic:** Same seed always produces identical world
+- **Deterministic:** The same seed, generator version, and random-stream version
+  produce the same canonical world and hashes
 - **Regional:** 5 distinct regions with racial themes
 - **Graph-based:** Nodes connected via edges, not a grid
 - **Hierarchical:** Ring-based difficulty progression from castles outward
@@ -29,14 +34,16 @@ Modia's world map generation system is a sophisticated 6-phase procedural genera
 ```
 api/src/db/worldgen/
 ├── index.js                   # Module exports (96 lines)
+├── randomStreams.js           # Strict seed contract + isolated named RNG streams
+├── worldAssembly.js           # Pure canonical assembly/finalization orchestration
 ├── constants.js               # All configuration (464 lines)
 ├── castlePlacement.js         # Phase 1: Castle positions (362 lines)
 ├── voronoiPartitioning.js     # Phase 2: Region boundaries (622 lines)
 ├── nodeGeneration.js          # Phase 3: Internal nodes (832 lines)
 ├── internalConnections.js     # Phase 4: MST + connections (965 lines)
 ├── interRegionConnections.js  # Phase 5: Bridges/trade routes (1,063 lines)
-├── validation.js              # Phase 6: Cleanup/validation (528 lines)
-└── terrain.js                 # Obstacle generation (144 lines)
+├── validation.js              # Canonical read-only validator + legacy helpers
+└── terrain.js                 # Decorative world-map landmarks + node features
 ```
 
 ### Coordinate System
@@ -51,13 +58,13 @@ api/src/db/worldgen/
 
 ---
 
-## The 6-Phase Generation Pipeline
+## Canonical Generation Pipeline
 
 ```
 npm run db:seed
     │
     ▼
-seed.js: generateWorld(WORLD_SEED)
+seed.js: assembleWorld(WORLD_SEED)
     │
     ├─▶ Phase 1: generateCastlePlacements(rng)
     │       Output: 5 castle positions + region metadata
@@ -74,11 +81,13 @@ seed.js: generateWorld(WORLD_SEED)
     ├─▶ Phase 5: generateInterRegionConnections(...)
     │       Output: bridges, wilderness, trade routes, palace
     │
-    ├─▶ Phase 6: validateAndCleanup(...)
-    │       Output: difficulty tiers, terminators, validation
+    ├─▶ Deterministic finalization
+    │       Output: frozen coordinates, tiers, reward roles, names, local seeds
+    ├─▶ Read-only validation
+    │       Output: hard errors, warnings, pacing metrics
     │
     ▼
-Database Insertion (world_regions, world_nodes, world_node_connections)
+Atomic database persistence (stable keys resolve to database IDs in one transaction)
 ```
 
 ---
@@ -230,7 +239,7 @@ VORONOI_CONFIG = {
 | 0 | 0-5 units | Castle + guard battle nodes only |
 | 1 | 5-12 units | Cities, villages, primary guild |
 | 2 | 12-20 units | Keep, secondary guilds, farms |
-| 3 | 20+ units | Battle nodes, activity nodes, terminators |
+| 3 | 20+ units | Battle nodes, activity nodes, reward-site candidates |
 
 **IMPORTANT:** Phase 4 recalculates ring distance via BFS. This Euclidean distance is an approximation for initial type assignment.
 
@@ -357,9 +366,9 @@ REGION_NODE_CONFIG = {
 |------------|---------|-------|
 | Battle ↔ Battle | Yes | |
 | Battle ↔ Settlement | Yes | |
-| Castle ↔ Battle | Yes | Castle guards |
+| Castle ↔ Battle | Yes | Tier-1 opening boundary and castle guards |
 | Settlement ↔ Settlement | No (10000× penalty) | Forces battle nodes between |
-| Castle ↔ Non-battle | No (10000× penalty) | |
+| Castle ↔ Non-battle | Designated exception | One explicit settlement/guild opening per castle |
 
 ### Connection Limits
 
@@ -372,13 +381,13 @@ MIN_CONNECTIONS = {
   farm: 2,
   forest/cave/mountain: 2,
   bridge: 2,
-  chest/shrine/discovery: 1  // Terminators
+  chest/shrine/discovery: 1  // Low-degree reward sites
 }
 
 MAX_CONNECTIONS = {
   bridge: 2,      // Chokepoints
   watchtower: 3,
-  chest/shrine/discovery: 1  // Dead ends
+  chest/shrine/discovery: 2  // Mostly route-preserving; minority dead ends
 }
 ```
 
@@ -477,9 +486,19 @@ WILDERNESS_ZONE_NAMES = {
 ### Trade Routes
 
 - **Position:** Longer borders only (≥20 units)
-- **Difficulty:** -1 tier (safer alternative)
+- **Traversal:** Combat-gated until each blocking encounter is cleared
+- **Difficulty:** Every blocking segment is at least one tier below the lowest
+  blocking tier on its paired wilderness route
 - **Node Count:** 3-5 nodes
 - **Names:** Commerce/journey themes
+
+Trade and wilderness alternatives retain `routeId`, `routePairKey`,
+`routeKind`, region pair, segment kind, and ordered segment identity through
+canonical assembly and persistence. Inserted gap nodes inherit the same route
+identity and difficulty policy. Once both alternatives in a competing pair are
+discovered, the map shows a legend with “Lower-risk combat” and “Higher-risk
+wilderness” labels. Trade roads and wilderness trails differ by line width and
+dash pattern as well as color, so route meaning does not depend on color alone.
 
 ```javascript
 TRADE_ROUTE_NAMES = {
@@ -518,24 +537,35 @@ INTER_REGION_CONFIG = {
 }
 ```
 
-### Pitfalls
+### Historical Pre-Canonical Failure Modes
 
-- **Region Index Mismatch:** Voronoi uses 0-indexed, nodesByRegion uses 1-indexed regionIds
-- **Null Bridge:** bridgeNode could be null when passed to createWildernessZone
-- **Gap Infill:** Also applies here for long inter-region edges
+- **Region Index Mismatch:** Earlier phase-local assembly mixed Voronoi array
+  positions with one-based region IDs. Canonical assembly now carries explicit
+  region identity.
+- **Null Bridge:** Earlier route construction could pass a null bridge into
+  wilderness creation; hard assembly errors now stop persistence.
+- **Gap Infill:** Intermediate nodes must join the same canonical node
+  collection and inherit their route identity and tier policy.
 
 ---
 
-## Phase 6: Validation & Cleanup
+## Finalization and Validation
 
-**File:** `validation.js` (528 lines)
+**Files:** `worldAssembly.js` owns deterministic finalization;
+`validation.js` owns the canonical read-only validator and also retains
+explicitly labeled compatibility helpers for the former phase API.
 
-### Process
+Finalization is the last mutating generation stage. It assigns database-ready
+coordinates, difficulty, route metadata, reward roles, names/features, and
+node-local seeds before hashing. Validation is observationally pure and rejects
+invalid identities, endpoints, cells, spacing, connectivity, opening
+progression, route tiers, and persisted-field domains. No structural or
+persisted field changes after validation: the exact validated model is
+serialized, queried back, and compared before the reset transaction commits.
 
-1. **Connectivity Check:** BFS from any castle - all nodes must be reachable
-2. **Difficulty Tier Assignment**
-3. **Terminator Assignment:** Ring 3+ dead-ends
-4. **Max Spacing Validation:** All connections ≤ 13.3 units
+Each castle has one designated settlement/guild opening. Its full nonblocking
+component is bounded, and every exit crosses a Tier-1 combat node. An uncleared
+combat node may be selected as a destination but is never expanded through.
 
 ### Difficulty Tier Matrix
 
@@ -545,7 +575,7 @@ INTER_REGION_CONFIG = {
 | Battle | 1 | 2 | 3 | 4 | 3-4 |
 | Palace | - | - | - | - | 5 |
 
-### Terminator Distribution
+### Reward-Site Type Distribution
 
 | Type | Percentage | Description |
 |------|------------|-------------|
@@ -553,12 +583,26 @@ INTER_REGION_CONFIG = {
 | Shrine | 30% | Zodiac shrines with buffs |
 | Discovery | 40% | Lore/exploration rewards |
 
-### Terminator Selection Criteria
+### Reward-Site Selection Criteria
 
-- Must be Ring 3+ (MIN_RING_FOR_TERMINATOR: 3)
-- Must have 1-2 connections (dead-end)
-- Must be battle terrain type (forest, cave, mountain)
-- Target: ~6% of total nodes
+- Prefer eligible outer-route degree-2 battle nodes.
+- Preserve every opening-to-progression-anchor minimum combat-gate count.
+- Target about 6% of nodes; approximately 15% of selected sites are true
+  degree-1 dead ends.
+- Emit a balance warning if the safe candidate pool cannot meet the target.
+- Exclude routed nodes, designated openings, and progression anchors; if no
+  eligible degree-2 conversion is safe, reduce the count or use an eligible
+  degree-1 site instead of weakening progression.
+
+Trade and wilderness alternatives remain combat-gated. The trade road is the
+lower-risk route, with every blocking segment below its paired wilderness
+route. Road/trail/bridge/tunnel styles differ by line width and pattern as well
+as color.
+
+Activity types are drawn only after the activity-density decision, using
+race-keyed regional profiles. Lakes, mountain ranges, and dense forests in
+`world_obstacles` are decorative world-map landmarks; they never affect graph
+placement, traversal, or tactical blocking.
 
 ### Key Constants
 
@@ -568,6 +612,7 @@ PHASE6_CONFIG = {
   TERMINATOR_SHRINE_RATIO: 0.30,
   MIN_RING_FOR_TERMINATOR: 3,
   TARGET_TERMINATOR_RATIO: 0.06,
+  TERMINATOR_DEAD_END_RATIO: 0.15,
   SHRINE_BUFF_TYPES: ['stamina_regen', 'exp_bonus', 'gold_bonus']
 }
 
@@ -583,11 +628,18 @@ ZODIAC_CONFIG = {
 ### Pitfalls
 
 - **Orphaned Nodes:** Will fail connectivity check
-- **Terminator Selection:** Only considers battle terrain types
+- **Reward-Site Eligibility:** Only outer/wilderness combat nodes of degree 1
+  or 2 are candidates; routed nodes, openings, and progression anchors are
+  excluded, and every degree-2 conversion must pass gate-vector simulation
 
 ---
 
-## Critical Technical Gotchas
+## Historical and Phase-Level Implementation Notes
+
+Some entries below preserve the original phase-level implementation analysis.
+The current release contract is the canonical stable-key graph described above:
+finalization resolves all persisted fields, and fail-closed validation prevents
+the repaired identity, endpoint, or Voronoi failures from reaching persistence.
 
 ### 1. Ring Distance Dual Calculation
 
@@ -618,13 +670,14 @@ Math.abs(10.0009 - 10.0005) = 0.0004 > 0.001? NO, passes
 
 ### 3. Region Index Mismatch
 
-**Problem:** Voronoi uses 0-indexed regions, nodesByRegion uses 1-indexed regionIds
+**Historical Problem:** Voronoi array positions and one-based region IDs were
+previously conflated.
 
-**Pattern:** Fragile `+1` conversion appears in 6 locations
+**Current Contract:** Region identity is explicit from castle/Voronoi creation
+through route assembly; shuffled array order cannot change it.
 
-**Location:** `interRegionConnections.js:288`
-
-**Risk:** Off-by-one errors connecting wrong regions
+**Regression Coverage:** Seed `12345` retains its shuffled region order without
+connecting route endpoints to the wrong region.
 
 ### 4. State Mutation
 
@@ -656,11 +709,12 @@ Math.abs(10.0009 - 10.0005) = 0.0004 > 0.001? NO, passes
 
 ### 7. Degenerate Voronoi Cells
 
-**Problem:** If 3+ castles are collinear, could produce < 5 cells
+**Historical Problem:** Coincident or degenerate castle points could produce
+fewer than five usable cells.
 
-**Impact:** Would break all downstream phases expecting 5 regions
-
-**Not Currently Handled:** No validation for this edge case
+**Current Contract:** Castle coordinates are deterministically separated and
+frozen before Voronoi construction; exact cell cardinality and castle/cell
+alignment are hard-validated before persistence.
 
 ---
 
@@ -738,10 +792,13 @@ JOIN world_nodes n1 ON c.from_node_id = n1.id
 JOIN world_nodes n2 ON c.to_node_id = n2.id
 WHERE SQRT(POWER(n1.x_coord - n2.x_coord, 2) + POWER(n1.y_coord - n2.y_coord, 2)) > 13;
 
--- Find terminators
-SELECT name, node_type, ring_distance
-FROM world_nodes
-WHERE node_type IN ('chest', 'shrine', 'discovery');
+-- Find low-degree reward sites and inspect final degree
+SELECT n.name, n.node_type, n.ring_distance, COUNT(c.id) AS degree
+FROM world_nodes n
+LEFT JOIN world_node_connections c
+  ON c.from_node_id = n.id OR c.to_node_id = n.id
+WHERE n.node_type IN ('chest', 'shrine', 'discovery')
+GROUP BY n.id, n.name, n.node_type, n.ring_distance;
 
 -- Check connectivity from castle
 WITH RECURSIVE reachable AS (
@@ -768,7 +825,7 @@ See `api/src/db/worldgen/constants.js` for complete definitions:
 - `REGION_NODE_CONFIG` - Phase 3 node generation
 - `CONNECTION_CONFIG` - Phase 4 MST and connections
 - `INTER_REGION_CONFIG` - Phase 5 bridges and routes
-- `PHASE6_CONFIG` - Phase 6 validation
+- `PHASE6_CONFIG` - Legacy-named reward-site/finalization tuning
 - `GUILD_CONFIG` - Guild assignment rules (includes global same-type spacing)
 - `NODE_DISTRIBUTION` - Type percentages
 - `TERRAIN_ANTI_CLUSTERING` - Battle node anti-clustering settings
@@ -780,8 +837,23 @@ See `api/src/db/worldgen/constants.js` for complete definitions:
 
 | Variable | Purpose | Default |
 |----------|---------|---------|
-| `WORLD_SEED` | Deterministic generation seed | Random |
+| `WORLD_SEED` | Strict signed 32-bit deterministic seed | `123456` |
 | `DEBUG` | Enable verbose logging | false |
+
+Only an unset `WORLD_SEED` receives the `123456` default; empty, fractional,
+out-of-range, and otherwise malformed values fail parsing. Seed identity is the
+versioned tuple `(WORLD_SEED, generator version, random-stream version)`, not
+the integer alone. The active tuple, normalized route manifest, and
+structural/output/route hashes are persisted atomically, and the seed API
+reports those persisted values rather than the current environment.
+
+`npm run db:seed` is a destructive bootstrap/reset for an empty or explicitly
+authorized disposable/maintenance environment. Assembly and hard validation
+happen before the first database mutation and participating writes share one
+transaction, but a successful reset still replaces node-linked world state.
+Follow the [World Reset Backup and Restore](WORLD_RESET_BACKUP_RESTORE.md)
+runbook before an authorized non-disposable reset. Preserving live player
+state requires a separate migration.
 
 ---
 
@@ -789,5 +861,6 @@ See `api/src/db/worldgen/constants.js` for complete definitions:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.0 | Jul 2026 | Canonical stable-key assembly, pure validation, progression/route/reward contracts, isolated RNG streams |
 | 1.1 | Jan 2026 | Added global guild spacing, terrain anti-clustering, removed GAP_INFILL_CONFIG |
 | 1.0 | Jan 2026 | Initial document from codebase analysis |

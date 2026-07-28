@@ -30,7 +30,7 @@ import {
 async function findTestNodes() {
   // Find castle (starting point, never blocked)
   const castle = await query(
-    `SELECT id, name FROM world_nodes WHERE node_type = 'castle' LIMIT 1`
+    'SELECT id, name FROM world_nodes WHERE node_type = \'castle\' LIMIT 1'
   );
 
   if (castle.rows.length === 0) {
@@ -52,9 +52,14 @@ async function findTestNodes() {
   if (adjacentForest.rows.length > 0) {
     const beyond = await query(
       `SELECT wn.id, wn.name, wn.node_type FROM world_nodes wn
-       JOIN world_node_connections wnc ON (wnc.from_node_id = wn.id OR wnc.to_node_id = wn.id)
+       JOIN world_node_connections wnc
+         ON wn.id = CASE
+           WHEN wnc.from_node_id = $1 THEN wnc.to_node_id
+           WHEN wnc.to_node_id = $1 THEN wnc.from_node_id
+         END
        WHERE (wnc.from_node_id = $1 OR wnc.to_node_id = $1)
-       AND wn.id != $2
+       AND wn.id NOT IN ($1, $2)
+       ORDER BY wn.id
        LIMIT 1`,
       [adjacentForest.rows[0].id, castle.rows[0].id]
     );
@@ -66,6 +71,41 @@ async function findTestNodes() {
     forest: adjacentForest.rows[0] || null,
     beyondForest
   };
+}
+
+/**
+ * Find a connected three-node route where the endpoints are not adjacent.
+ * This lets tests make only the endpoints discovered and prove that the
+ * intermediate node cannot be crossed through fog of war.
+ */
+async function findNonAdjacentRoute() {
+  const result = await query(
+    `WITH edges AS (
+       SELECT from_node_id AS from_id, to_node_id AS to_id
+       FROM world_node_connections
+       UNION
+       SELECT to_node_id AS from_id, from_node_id AS to_id
+       FROM world_node_connections
+     )
+     SELECT origin.id AS origin_id,
+            intermediate.id AS intermediate_id,
+            destination.id AS destination_id
+     FROM world_nodes origin
+     JOIN edges first_edge ON first_edge.from_id = origin.id
+     JOIN world_nodes intermediate ON intermediate.id = first_edge.to_id
+     JOIN edges second_edge ON second_edge.from_id = intermediate.id
+     JOIN world_nodes destination ON destination.id = second_edge.to_id
+     WHERE origin.node_type::text = ANY($1::text[])
+       AND destination.id != origin.id
+       AND NOT EXISTS (
+         SELECT 1 FROM edges direct
+         WHERE direct.from_id = origin.id
+           AND direct.to_id = destination.id
+       )
+     LIMIT 1`,
+    [['forest', 'cave', 'mountain', 'bridge']]
+  );
+  return result.rows[0] || null;
 }
 
 /**
@@ -104,7 +144,7 @@ async function clearNode(userId, nodeId) {
  */
 async function blockNode(userId, nodeId) {
   await query(
-    `DELETE FROM user_node_clearance WHERE user_id = $1 AND node_id = $2`,
+    'DELETE FROM user_node_clearance WHERE user_id = $1 AND node_id = $2',
     [userId, nodeId]
   );
 }
@@ -332,6 +372,85 @@ describe('Node Blocking System', () => {
 
       const currentNode = await getCurrentNodeId(user.userId);
       assert.strictEqual(currentNode, testNodes.castle.id);
+    });
+
+    it('should reject retreat to a visited destination through an undiscovered intermediate', async () => {
+      const route = await findNonAdjacentRoute();
+      assert.ok(route, 'Expected a three-node route with a combat origin');
+
+      const isolatedUser = await createTestUser();
+      const isolatedCharacter = await createTestCharacter(isolatedUser.accessToken);
+
+      try {
+        await teleportToNode(isolatedUser.userId, route.origin_id);
+        await setStamina(isolatedCharacter.id, 100);
+
+        // Keep every combat node except the origin nonblocking so discovery is
+        // the only reason this otherwise valid two-edge route is rejected.
+        await query(
+          `INSERT INTO user_node_clearance (user_id, node_id)
+           SELECT $1, id FROM world_nodes
+           WHERE node_type::text = ANY($3::text[]) AND id != $2
+           ON CONFLICT (user_id, node_id) DO NOTHING`,
+          [
+            isolatedUser.userId,
+            route.origin_id,
+            ['forest', 'cave', 'mountain', 'bridge']
+          ]
+        );
+        await blockNode(isolatedUser.userId, route.origin_id);
+
+        // Both endpoints are visited, but no intermediate node is discovered.
+        await query(
+          'DELETE FROM user_node_discovery WHERE user_id = $1',
+          [isolatedUser.userId]
+        );
+        await discoverNode(isolatedUser.userId, route.origin_id, 'travel');
+        await discoverNode(isolatedUser.userId, route.destination_id, 'travel');
+
+        const res = await request(
+          'POST',
+          '/api/world/travel',
+          { targetNodeId: route.destination_id },
+          isolatedUser.accessToken
+        );
+
+        assert.strictEqual(res.status, 400);
+        assert.match(
+          res.body.message || res.body.error || '',
+          /No path found to destination/
+        );
+        assert.strictEqual(
+          await getCurrentNodeId(isolatedUser.userId),
+          route.origin_id
+        );
+
+        // Once the nonblocking intermediate is visible, the same retreat path
+        // is valid and the visited destination can be reached.
+        await discoverNode(
+          isolatedUser.userId,
+          route.intermediate_id,
+          'adjacent'
+        );
+        const retry = await request(
+          'POST',
+          '/api/world/travel',
+          { targetNodeId: route.destination_id },
+          isolatedUser.accessToken
+        );
+
+        assert.strictEqual(
+          retry.status,
+          200,
+          `Retreat should succeed after discovery: ${JSON.stringify(retry.body)}`
+        );
+        assert.strictEqual(
+          await getCurrentNodeId(isolatedUser.userId),
+          route.destination_id
+        );
+      } finally {
+        await cleanupTestUser(isolatedUser.userId);
+      }
     });
 
     it('should BLOCK travel from blocked node to non-visited node', async () => {

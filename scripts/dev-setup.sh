@@ -187,6 +187,11 @@ check_docker() {
 # =============================================================================
 # Migration Check
 # =============================================================================
+list_forward_migrations() {
+    find "$1" -maxdepth 1 -type f \
+        -name '*.sql' ! -name '*.rollback.sql' -printf '%f\n' | sort
+}
+
 check_migrations() {
     echo -ne "[Migrations] Checking for pending migrations... "
 
@@ -197,8 +202,8 @@ check_migrations() {
         exit 1
     fi
 
-    # Get all migration files
-    MIGRATION_FILES=$(ls -1 "$MIGRATIONS_DIR"/*.sql 2>/dev/null | xargs -n1 basename | sort)
+    # Match the migration runner's inventory (rollback scripts are not applied).
+    MIGRATION_FILES=$(list_forward_migrations "$MIGRATIONS_DIR")
 
     if [ -z "$MIGRATION_FILES" ]; then
         echo -e "${GREEN}no migration files found${NC}"
@@ -255,81 +260,132 @@ check_migrations() {
 # =============================================================================
 # Seed Check - Smart detection for when seeding is needed
 # =============================================================================
+# Defined outside check_seed so focused tests and alternate callers can inject a
+# fail-closed query runner without accidentally reaching a real database.
+run_query() {
+    local query="$1"
+    if psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1" &>/dev/null; then
+        psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -t -A -c "$query" 2>/dev/null
+    else
+        docker exec modia-postgres psql -U "$DB_USER" -d "$DB_NAME" -t -A -c "$query" 2>/dev/null
+    fi
+}
+
 check_seed() {
     echo -e "[Seed] Checking database state..."
 
     export PGPASSWORD="$DB_PASSWORD"
 
-    # Helper function to run psql query (tries direct connection first, then docker)
-    run_query() {
-        local query="$1"
-        if psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1" &>/dev/null; then
-            psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -t -A -c "$query" 2>/dev/null
-        else
-            docker exec modia-postgres psql -U "$DB_USER" -d "$DB_NAME" -t -A -c "$query" 2>/dev/null
-        fi
-    }
-
-    # Extract expected SEED_VERSION from seed.js
-    EXPECTED_SEED_VERSION=$(grep "const SEED_VERSION" "$PROJECT_ROOT/api/src/db/seed.js" | grep -oP '\d+' || echo "1")
-    EXPECTED_WORLD_SEED="${WORLD_SEED:-123456}"
+    # Read the import-safe seed contract from the same modules used by seeding.
+    if ! EXPECTED_CONTRACT=$(
+        cd "$PROJECT_ROOT/api" &&
+        node --input-type=module -e '
+            import { SEED_VERSION } from "./src/db/seed.js";
+            import { createWorldgenConfig } from "./src/db/worldgen/randomStreams.js";
+            const config = createWorldgenConfig({ seed: process.env.WORLD_SEED });
+            console.log([
+                SEED_VERSION,
+                config.worldSeed,
+                config.generatorVersion,
+                config.randomStreamVersion
+            ].join("|"));
+        '
+    ); then
+        echo -e "${CROSS} ${RED}could not load the current seed contract${NC}"
+        exit 1
+    fi
+    if [ -z "$EXPECTED_CONTRACT" ]; then
+        echo -e "${CROSS} ${RED}could not load the current seed contract${NC}"
+        exit 1
+    fi
+    IFS='|' read -r EXPECTED_SEED_VERSION EXPECTED_WORLD_SEED \
+        EXPECTED_GENERATOR_VERSION EXPECTED_RANDOM_STREAM_VERSION \
+        <<< "$EXPECTED_CONTRACT"
 
     # Check if seed_metadata table exists and has data
     METADATA_EXISTS=$(run_query "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'seed_metadata')" || echo "f")
 
     if [ "$METADATA_EXISTS" = "t" ]; then
-        # Get stored metadata
-        STORED_VERSION=$(run_query "SELECT seed_version FROM seed_metadata WHERE id = 1" || echo "")
-        STORED_WORLD_SEED=$(run_query "SELECT world_seed FROM seed_metadata WHERE id = 1" || echo "")
-        STORED_NODE_COUNT=$(run_query "SELECT world_node_count FROM seed_metadata WHERE id = 1" || echo "0")
+        # Read the persisted contract atomically so its fields cannot be mixed.
+        STORED_CONTRACT=$(run_query "
+            SELECT seed_version || '|' || world_seed || '|' ||
+                   generator_version || '|' || random_stream_version || '|' ||
+                   world_node_count
+            FROM seed_metadata
+            WHERE id = 1
+        " || echo "")
+        IFS='|' read -r STORED_VERSION STORED_WORLD_SEED \
+            STORED_GENERATOR_VERSION STORED_RANDOM_STREAM_VERSION \
+            STORED_NODE_COUNT <<< "$STORED_CONTRACT"
     else
         STORED_VERSION=""
         STORED_WORLD_SEED=""
+        STORED_GENERATOR_VERSION=""
+        STORED_RANDOM_STREAM_VERSION=""
         STORED_NODE_COUNT="0"
     fi
 
     # Check actual world_nodes count
-    NODE_COUNT=$(run_query "SELECT COUNT(*) FROM world_nodes" 2>/dev/null || echo "0")
+    if ! NODE_COUNT=$(run_query "SELECT COUNT(*) FROM world_nodes" 2>/dev/null); then
+        echo -e "${CROSS} ${RED}could not read the persisted world node count${NC}"
+        exit 1
+    fi
     if ! [[ "$NODE_COUNT" =~ ^[0-9]+$ ]]; then
-        NODE_COUNT=0
+        echo -e "${CROSS} ${RED}database returned an invalid world node count${NC}"
+        exit 1
     fi
 
     # Decision logic
-    NEEDS_SEED=false
     SEED_REASON=""
 
     if [ "$NODE_COUNT" -eq 0 ]; then
-        NEEDS_SEED=true
         SEED_REASON="database is empty"
-    elif [ -z "$STORED_VERSION" ]; then
-        # Has data but no metadata - legacy database from before tracking
-        echo -e "       ${YELLOW}Legacy database detected${NC} (${NODE_COUNT} nodes, no seed metadata)"
-        echo -e "       ${CYAN}To enable seed tracking, run 'npm run db:fresh' when convenient.${NC}"
-        echo -e "       ${GREEN}Continuing with existing data...${NC} ${CHECK}"
-        echo ""
-        return 0
-    elif [ "$STORED_VERSION" != "$EXPECTED_SEED_VERSION" ]; then
-        # Seed version mismatch
-        echo -e "       ${YELLOW}Seed version mismatch detected${NC}"
-        echo -e "       Stored: v${STORED_VERSION} | Current: v${EXPECTED_SEED_VERSION}"
-        echo -e "       ${CYAN}New seed data is available. Run 'npm run db:fresh' to update.${NC}"
-        echo -e "       ${GREEN}Continuing with existing data...${NC} ${CHECK}"
-        echo ""
-        return 0
-    elif [ "$STORED_WORLD_SEED" != "$EXPECTED_WORLD_SEED" ]; then
-        # World seed mismatch
-        echo -e "       ${YELLOW}World seed mismatch detected${NC}"
-        echo -e "       Stored: ${STORED_WORLD_SEED} | Current: ${EXPECTED_WORLD_SEED}"
-        echo -e "       ${CYAN}Run 'npm run db:fresh' to regenerate world with new seed.${NC}"
-        echo -e "       ${GREEN}Continuing with existing data...${NC} ${CHECK}"
-        echo ""
-        return 0
     else
-        # Everything matches
-        echo -ne "       World data (${NODE_COUNT} nodes, seed v${STORED_VERSION})... "
-        echo -e "${GREEN}up to date${NC} ${CHECK}"
-        echo ""
-        return 0
+        MISMATCH_DETAILS=()
+        if [ -z "$STORED_VERSION" ]; then
+            MISMATCH_DETAILS+=("seed metadata is missing")
+        else
+            if [ "$STORED_WORLD_SEED" != "$EXPECTED_WORLD_SEED" ]; then
+                MISMATCH_DETAILS+=("world seed ${STORED_WORLD_SEED} -> ${EXPECTED_WORLD_SEED}")
+            fi
+            if [ "$STORED_VERSION" != "$EXPECTED_SEED_VERSION" ]; then
+                MISMATCH_DETAILS+=("content version ${STORED_VERSION} -> ${EXPECTED_SEED_VERSION}")
+            fi
+            if [ "$STORED_GENERATOR_VERSION" != "$EXPECTED_GENERATOR_VERSION" ]; then
+                MISMATCH_DETAILS+=("generator version ${STORED_GENERATOR_VERSION} -> ${EXPECTED_GENERATOR_VERSION}")
+            fi
+            if [ "$STORED_RANDOM_STREAM_VERSION" != "$EXPECTED_RANDOM_STREAM_VERSION" ]; then
+                MISMATCH_DETAILS+=("random-stream version ${STORED_RANDOM_STREAM_VERSION} -> ${EXPECTED_RANDOM_STREAM_VERSION}")
+            fi
+            if [ "$STORED_NODE_COUNT" != "$NODE_COUNT" ]; then
+                MISMATCH_DETAILS+=("persisted node count ${STORED_NODE_COUNT} != actual ${NODE_COUNT}")
+            fi
+        fi
+
+        if [ ${#MISMATCH_DETAILS[@]} -eq 0 ]; then
+            echo -ne "       World data (${NODE_COUNT} nodes, seed v${STORED_VERSION})... "
+            echo -e "${GREEN}up to date${NC} ${CHECK}"
+            echo ""
+            return 0
+        fi
+
+        echo -e "       ${YELLOW}World seed contract mismatch detected:${NC}"
+        for DETAIL in "${MISMATCH_DETAILS[@]}"; do
+            echo "       - ${DETAIL}"
+        done
+
+        if [ "${ALLOW_DESTRUCTIVE_WORLD_RESET:-false}" != "true" ] ||
+           [ "${WORLD_RESET_MAINTENANCE_WINDOW:-false}" != "true" ] ||
+           [ "${WORLD_RESET_BACKUP_VERIFIED:-false}" != "true" ]; then
+            echo -e "       ${RED}Refusing to replace a nonempty world.${NC}"
+            echo "       Set all of the following only for an authorized disposable/reset environment:"
+            echo "       ALLOW_DESTRUCTIVE_WORLD_RESET=true"
+            echo "       WORLD_RESET_MAINTENANCE_WINDOW=true"
+            echo "       WORLD_RESET_BACKUP_VERIFIED=true"
+            exit 1
+        fi
+
+        SEED_REASON="authorized seed-contract reset"
     fi
 
     # Run seeding if needed
@@ -409,10 +465,12 @@ launch_dev() {
 # =============================================================================
 # Main
 # =============================================================================
-load_env
-cleanup_ports
-check_docker
-check_migrations
-check_seed
-check_icons
-launch_dev
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    load_env
+    cleanup_ports
+    check_docker
+    check_migrations
+    check_seed
+    check_icons
+    launch_dev
+fi

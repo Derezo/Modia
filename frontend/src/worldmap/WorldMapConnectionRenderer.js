@@ -1,4 +1,35 @@
-import { generatePathControlPoints, generateSplinePoints } from './PathRenderer.js';
+import {
+  generatePathControlPoints,
+  generateSplinePoints,
+  getWorldRouteStyle
+} from './PathRenderer.js';
+
+export function hasVisibleCompetingRoutePair(connections) {
+  const routeKindsByPair = new Map();
+  for (const connection of connections) {
+    if (!connection.route_pair_key
+        || !['trade', 'wilderness'].includes(connection.route_kind)) continue;
+    const kinds = routeKindsByPair.get(connection.route_pair_key) ?? new Set();
+    kinds.add(connection.route_kind);
+    routeKindsByPair.set(connection.route_pair_key, kinds);
+  }
+  return [...routeKindsByPair.values()].some((kinds) =>
+    kinds.has('trade') && kinds.has('wilderness')
+  );
+}
+
+export function getRouteDescriptionsForNode(connections, nodeId) {
+  const descriptions = new Set();
+  for (const connection of connections) {
+    if (connection.from_node_id !== nodeId && connection.to_node_id !== nodeId) continue;
+    if (!['trade', 'wilderness'].includes(connection.route_kind)) continue;
+    descriptions.add(getWorldRouteStyle(
+      connection.path_type,
+      connection.route_kind
+    ).label);
+  }
+  return [...descriptions];
+}
 
 /**
  * Renders connections between nodes on the world map
@@ -9,6 +40,10 @@ export class WorldMapConnectionRenderer {
    */
   constructor(scene) {
     this.scene = scene;
+  }
+
+  getRouteDescriptionsForNode(nodeId) {
+    return getRouteDescriptionsForNode(this.scene.connections, nodeId);
   }
 
   /**
@@ -59,11 +94,14 @@ export class WorldMapConnectionRenderer {
         // Use effects system for path rendering (organic or textured)
         if (effects) {
           // Pass node IDs for organic path generation
-          effects.renderTexturedPath(ctx, x1, y1, x2, y2, conn.path_type, control, conn.from_node_id, conn.to_node_id);
+          effects.renderTexturedPath(
+            ctx, x1, y1, x2, y2, conn.path_type, control,
+            conn.from_node_id, conn.to_node_id, conn.route_kind, game.scale
+          );
         } else {
           // Fallback to simple bezier path (with proper state isolation)
           ctx.save();
-          const style = this.getPathStyle(conn.path_type);
+          const style = this.getPathStyle(conn.path_type, conn.route_kind, game.scale);
 
           // Draw path shadow for depth
           ctx.beginPath();
@@ -71,6 +109,7 @@ export class WorldMapConnectionRenderer {
           ctx.quadraticCurveTo(control.x, control.y, x2, y2);
           ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
           ctx.lineWidth = style.width + 2;
+          ctx.setLineDash(style.lineDash);
           ctx.stroke();
 
           // Draw main path
@@ -79,14 +118,59 @@ export class WorldMapConnectionRenderer {
           ctx.quadraticCurveTo(control.x, control.y, x2, y2);
           ctx.strokeStyle = style.color;
           ctx.lineWidth = style.width;
-          if (style.dashed) {
-            ctx.setLineDash([5, 5]);
+          if (style.lineDash.length > 0) {
+            ctx.setLineDash(style.lineDash);
           }
           ctx.stroke();
           ctx.restore();
         }
       }
     }
+  }
+
+  /**
+   * Draw a compact route-choice legend whenever competing routes are visible.
+   */
+  renderRouteLegend(ctx) {
+    const { connections, game } = this.scene;
+    if (!hasVisibleCompetingRoutePair(connections)) return;
+
+    const displayScale = Math.min(2, Math.max(0.5,
+      Number.isFinite(game.scale) ? game.scale : 1
+    ));
+    const layoutScale = 1 / displayScale;
+    const entries = [
+      getWorldRouteStyle('road', 'trade', true, game.scale),
+      getWorldRouteStyle('trail', 'wilderness', true, game.scale)
+    ];
+    const width = 228 * layoutScale;
+    const height = 58 * layoutScale;
+    const x = Math.max(12 * layoutScale, game.targetWidth - width - (14 * layoutScale));
+    const y = 14 * layoutScale;
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(244, 228, 188, 0.92)';
+    ctx.strokeStyle = '#5d4e37';
+    ctx.lineWidth = layoutScale;
+    ctx.fillRect(x, y, width, height);
+    ctx.strokeRect(x, y, width, height);
+    ctx.font = `${12 * layoutScale}px Georgia, serif`;
+    ctx.textBaseline = 'middle';
+
+    entries.forEach((style, index) => {
+      const rowY = y + ((17 + index * 24) * layoutScale);
+      ctx.beginPath();
+      ctx.moveTo(x + (10 * layoutScale), rowY);
+      ctx.lineTo(x + (48 * layoutScale), rowY);
+      ctx.strokeStyle = style.color;
+      ctx.lineWidth = style.width;
+      ctx.setLineDash(style.lineDash);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#2d2418';
+      ctx.fillText(style.label, x + (58 * layoutScale), rowY);
+    });
+    ctx.restore();
   }
 
   /**
@@ -302,15 +386,11 @@ export class WorldMapConnectionRenderer {
   /**
    * Get path styling based on path type
    * @param {string} pathType - Type of path (road, trail, bridge, tunnel)
+   * @param {string|null} routeKind - Competing route identity
+   * @param {number} displayScale - CSS pixels per logical canvas pixel
    * @returns {{color: string, width: number, dashed?: boolean}} Style config
    */
-  getPathStyle(pathType) {
-    const styles = {
-      road: { color: '#5a5a7a', width: 3 },
-      trail: { color: '#3a5a3a', width: 2 },
-      bridge: { color: '#8b7355', width: 4 },
-      tunnel: { color: '#2a2a3a', width: 3, dashed: true }
-    };
-    return styles[pathType] || styles.road;
+  getPathStyle(pathType, routeKind = null, displayScale = 1) {
+    return getWorldRouteStyle(pathType, routeKind, true, displayScale);
   }
 }

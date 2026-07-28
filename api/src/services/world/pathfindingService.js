@@ -3,9 +3,12 @@
  */
 
 import { query } from '../../config/database.js';
+import {
+  COMBAT_NODE_TYPES,
+  calculateReachableNodeIds
+} from '../../../../shared/constants.js';
 
-// Combat node types that require clearance (forest, cave, mountain, bridge)
-export const COMBAT_NODE_TYPES = ['forest', 'cave', 'mountain', 'bridge'];
+export { COMBAT_NODE_TYPES };
 
 /**
  * Build adjacency map from world node connections
@@ -32,25 +35,41 @@ export function buildAdjacencyMap(connections) {
  * @param {number} toNodeId - Destination node ID
  * @param {Map<number, Set<number>>} adjacency - Adjacency map
  * @param {Set<number>} blockedNodes - Set of blocked node IDs (cannot pass through)
+ * @param {Set<number>|null} allowedNodeIds - Optional nodes allowed in the path
  * @returns {number[]|null} Array of node IDs forming the path, or null if no path
  */
-export function bfsPath(fromNodeId, toNodeId, adjacency, blockedNodes = new Set()) {
+export function bfsPath(
+  fromNodeId,
+  toNodeId,
+  adjacency,
+  blockedNodes = new Set(),
+  allowedNodeIds = null
+) {
   if (fromNodeId === toNodeId) {
     return [fromNodeId];
   }
 
   const visited = new Set([fromNodeId]);
-  const queue = [[fromNodeId]];
+  const predecessors = new Map();
+  const queue = [fromNodeId];
+  let head = 0;
 
-  while (queue.length > 0) {
-    const path = queue.shift();
-    const current = path[path.length - 1];
+  while (head < queue.length) {
+    const current = queue[head++];
 
     const neighbors = adjacency.get(current) || new Set();
     for (const neighbor of neighbors) {
+      if (allowedNodeIds && !allowedNodeIds.has(neighbor)) {
+        continue;
+      }
       // Destination is always reachable (can travel TO blocked node to fight)
       if (neighbor === toNodeId) {
-        return [...path, neighbor];
+        predecessors.set(neighbor, current);
+        const path = [neighbor];
+        while (path[0] !== fromNodeId) {
+          path.unshift(predecessors.get(path[0]));
+        }
+        return path;
       }
       // Skip blocked intermediate nodes (cannot pass THROUGH)
       if (blockedNodes.has(neighbor)) {
@@ -58,7 +77,8 @@ export function bfsPath(fromNodeId, toNodeId, adjacency, blockedNodes = new Set(
       }
       if (!visited.has(neighbor)) {
         visited.add(neighbor);
-        queue.push([...path, neighbor]);
+        predecessors.set(neighbor, current);
+        queue.push(neighbor);
       }
     }
   }
@@ -75,12 +95,12 @@ export function bfsPath(fromNodeId, toNodeId, adjacency, blockedNodes = new Set(
 export async function getBlockedNodes(userId) {
   const result = await query(
     `SELECT wn.id FROM world_nodes wn
-     WHERE wn.node_type IN ('forest', 'cave', 'mountain', 'bridge')
+     WHERE wn.node_type::text = ANY($2::text[])
      AND NOT EXISTS (
        SELECT 1 FROM user_node_clearance unc
        WHERE unc.user_id = $1 AND unc.node_id = wn.id
      )`,
-    [userId]
+    [userId, COMBAT_NODE_TYPES]
   );
   return new Set(result.rows.map(r => r.id));
 }
@@ -113,6 +133,19 @@ export async function getVisitedNodes(userId) {
 }
 
 /**
+ * Get all nodes discovered by a user, regardless of discovery method.
+ * @param {number} userId - User ID
+ * @returns {Promise<Set<number>>} Set of discovered node IDs
+ */
+export async function getDiscoveredNodes(userId) {
+  const result = await query(
+    'SELECT node_id FROM user_node_discovery WHERE user_id = $1',
+    [userId]
+  );
+  return new Set(result.rows.map(r => r.node_id));
+}
+
+/**
  * Load all world connections and build adjacency map
  * @returns {Promise<Map<number, Set<number>>>} Adjacency map
  */
@@ -128,15 +161,35 @@ export async function loadAdjacencyMap() {
  * @param {number} fromNodeId - Starting node ID
  * @param {number} toNodeId - Destination node ID
  * @param {number|null} userId - User ID for blocking check (null to ignore blocking)
+ * @param {Object} options - Pathfinding options
+ * @param {boolean} options.restrictToDiscovered - Limit path to the user's discovered subgraph
  * @returns {Promise<{path: number[], distance: number, blockedInPath: number[]}|null>}
  */
-export async function findWorldPath(fromNodeId, toNodeId, userId = null) {
+export async function findWorldPath(
+  fromNodeId,
+  toNodeId,
+  userId = null,
+  { restrictToDiscovered = false } = {}
+) {
+  if (restrictToDiscovered && !userId) {
+    throw new Error('userId is required when restricting paths to discovered nodes');
+  }
+
   const adjacency = await loadAdjacencyMap();
 
   // Get blocked nodes if userId provided
   const blockedNodes = userId ? await getBlockedNodes(userId) : new Set();
+  const allowedNodeIds = restrictToDiscovered
+    ? await getDiscoveredNodes(userId)
+    : null;
 
-  const path = bfsPath(fromNodeId, toNodeId, adjacency, blockedNodes);
+  const path = bfsPath(
+    fromNodeId,
+    toNodeId,
+    adjacency,
+    blockedNodes,
+    allowedNodeIds
+  );
 
   if (!path) {
     return null;
@@ -161,24 +214,16 @@ export async function findWorldPath(fromNodeId, toNodeId, userId = null) {
 export async function getReachableNodes(fromNodeId, userId) {
   const adjacency = await loadAdjacencyMap();
   const blockedNodes = await getBlockedNodes(userId);
-
-  const reachable = new Set([fromNodeId]);
-  const queue = [fromNodeId];
-
-  while (queue.length > 0) {
-    const current = queue.shift();
-    const neighbors = adjacency.get(current) || new Set();
-
-    for (const neighbor of neighbors) {
-      if (!reachable.has(neighbor)) {
-        reachable.add(neighbor);
-        // Can traverse through cleared nodes
-        if (!blockedNodes.has(neighbor)) {
-          queue.push(neighbor);
-        }
-      }
-    }
+  const nodeIds = new Set([fromNodeId]);
+  for (const [nodeId, neighbors] of adjacency) {
+    nodeIds.add(nodeId);
+    for (const neighborId of neighbors) nodeIds.add(neighborId);
   }
-
-  return reachable;
+  const nodeById = new Map([...nodeIds].map((id) => [id, { id }]));
+  return calculateReachableNodeIds({
+    startNodeId: fromNodeId,
+    adjacency,
+    nodeById,
+    isBlocked: (node) => blockedNodes.has(node.id)
+  });
 }

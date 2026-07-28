@@ -15,6 +15,11 @@ import { ruinsSolveLimiter } from '../middleware/economyRateLimiter.js';
 
 const router = Router();
 
+const PUZZLE_ALGORITHM_VERSION = 1;
+const PUZZLE_SEED_SALT_V1 = 0x52555A31;
+const REWARD_SEED_SALT_V1 = 0x52575231;
+const MAX_SOLUTION_MOVES = 4096;
+
 // Puzzle configuration by tier
 const PUZZLE_CONFIG = {
   1: { gridSize: 3, minMoves: 8, parMoves: 15 },
@@ -45,10 +50,19 @@ const PUZZLE_THEMES = {
  * @returns {number[]} Array of tile positions (0 = empty space)
  */
 function generateShuffledPuzzle(gridSize, rng) {
+  return generatePuzzleWithSolution(gridSize, rng).tiles;
+}
+
+/**
+ * Generate the shuffled puzzle and its deterministic reverse path. The reverse
+ * path is kept server-side and is useful for verifying the generator itself.
+ */
+function generatePuzzleWithSolution(gridSize, rng) {
   const totalTiles = gridSize * gridSize;
   // Start with solved state: [1, 2, 3, ..., n-1, 0] where 0 is empty
   const tiles = Array.from({ length: totalTiles - 1 }, (_, i) => i + 1);
   tiles.push(0); // Empty space at the end (bottom-right)
+  const reverseMoves = [];
 
   // Shuffle by making random valid moves (guarantees solvability)
   let emptyIndex = totalTiles - 1;
@@ -59,12 +73,16 @@ function generateShuffledPuzzle(gridSize, rng) {
     const moveIndex = validMoves[Math.floor(rng.next() * validMoves.length)];
 
     // Swap empty with adjacent tile
+    reverseMoves.push(emptyIndex);
     tiles[emptyIndex] = tiles[moveIndex];
     tiles[moveIndex] = 0;
     emptyIndex = moveIndex;
   }
 
-  return tiles;
+  return {
+    tiles,
+    solutionMoves: reverseMoves.reverse()
+  };
 }
 
 /**
@@ -103,14 +121,126 @@ function _isPuzzleSolved(tiles) {
 }
 
 /**
+ * Derive an independent deterministic RNG seed from a persisted node seed.
+ * The fixed salt constants are versioned with the puzzle algorithm so puzzle
+ * generation and reward generation cannot consume one another's streams.
+ */
+function deriveStreamSeed(localSeed, salt) {
+  const numericSeed = Number(localSeed);
+  if (!Number.isSafeInteger(numericSeed)) {
+    throw new Error('Ruins node has an invalid local seed');
+  }
+
+  let seed = (numericSeed >>> 0) ^ salt;
+  seed = Math.imul(seed ^ (seed >>> 16), 0x45D9F3B);
+  seed = Math.imul(seed ^ (seed >>> 16), 0x45D9F3B);
+  return (seed ^ (seed >>> 16)) >>> 0;
+}
+
+function getTierDefinition(tierValue) {
+  const tier = Number(tierValue);
+  const config = PUZZLE_CONFIG[tier];
+  const rewards = TIER_REWARDS[tier];
+
+  if (!Number.isInteger(tier) || tier < 1 || tier > 3 || !config || !rewards) {
+    throw new Error(`Ruins node has invalid reward tier: ${tierValue}`);
+  }
+
+  return { tier, config, rewards };
+}
+
+function createPuzzleState(localSeed, gridSize) {
+  const puzzleRng = new SeededRandom(deriveStreamSeed(localSeed, PUZZLE_SEED_SALT_V1));
+  return generateShuffledPuzzle(gridSize, puzzleRng);
+}
+
+function createPuzzleSolution(localSeed, gridSize) {
+  const puzzleRng = new SeededRandom(deriveStreamSeed(localSeed, PUZZLE_SEED_SALT_V1));
+  return generatePuzzleWithSolution(gridSize, puzzleRng).solutionMoves;
+}
+
+function createRewardPreview(localSeed, rewards) {
+  const rewardRng = new SeededRandom(deriveStreamSeed(localSeed, REWARD_SEED_SALT_V1));
+  const gold = Math.floor(rewardRng.next() * (rewards.goldMax - rewards.goldMin + 1)) + rewards.goldMin;
+
+  return {
+    gold,
+    underParGold: Math.floor(gold * (1 + rewards.parBonus))
+  };
+}
+
+function getAwardedGold(rewardPreview, parMoves, moveCount) {
+  return moveCount <= parMoves ? rewardPreview.underParGold : rewardPreview.gold;
+}
+
+/**
+ * Replay a client-supplied sequence of tile positions against the canonical
+ * board. Each position must contain a tile adjacent to the empty position.
+ */
+function replayPuzzleMoves(initialTiles, gridSize, moves) {
+  if (!Array.isArray(moves) || moves.length === 0 || moves.length > MAX_SOLUTION_MOVES) {
+    return { valid: false, solved: false, tiles: [...initialTiles] };
+  }
+
+  const tiles = [...initialTiles];
+
+  for (const moveIndex of moves) {
+    if (!Number.isInteger(moveIndex) || moveIndex < 0 || moveIndex >= tiles.length) {
+      return { valid: false, solved: false, tiles };
+    }
+
+    const emptyIndex = tiles.indexOf(0);
+    if (!getValidMoves(emptyIndex, gridSize).includes(moveIndex)) {
+      return { valid: false, solved: false, tiles };
+    }
+
+    tiles[emptyIndex] = tiles[moveIndex];
+    tiles[moveIndex] = 0;
+  }
+
+  return {
+    valid: true,
+    solved: _isPuzzleSolved(tiles),
+    tiles
+  };
+}
+
+async function hasRuinsAccess(db, userId, nodeId, lockPartyLeader = false) {
+  const lockClause = lockPartyLeader ? 'FOR UPDATE OF c' : '';
+  const result = await db.query(`
+    SELECT c.id
+    FROM characters c
+    JOIN user_node_discovery und
+      ON und.user_id = c.user_id
+     AND und.node_id = c.current_node_id
+    WHERE c.user_id = $1
+      AND c.party_slot = 1
+      AND c.current_node_id = $2
+    ${lockClause}
+  `, [userId, nodeId]);
+
+  return result.rows.length > 0;
+}
+
+/**
  * GET /ruins/:nodeId/puzzle
  * Returns puzzle configuration and completion status
  */
 router.get('/:nodeId/puzzle', authenticate, async (req, res) => {
   const { nodeId } = req.params;
   const userId = req.user.userId;
+  const nodeIdNum = Number(nodeId);
+
+  if (!Number.isInteger(nodeIdNum) || nodeIdNum < 1) {
+    return res.status(400).json({ error: 'Invalid node ID' });
+  }
 
   try {
+    const hasAccess = await hasRuinsAccess(pool, userId, nodeIdNum);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'These ruins are inaccessible' });
+    }
+
     // Get ruins node data
     const nodeResult = await pool.query(`
       SELECT
@@ -119,10 +249,11 @@ router.get('/:nodeId/puzzle', authenticate, async (req, res) => {
         node_type,
         ruins_puzzle_type,
         ruins_reward_tier,
-        region_race
+        region_race,
+        local_seed
       FROM world_nodes
       WHERE id = $1
-    `, [nodeId]);
+    `, [nodeIdNum]);
 
     if (nodeResult.rows.length === 0) {
       return res.status(404).json({ error: 'Node not found' });
@@ -139,31 +270,25 @@ router.get('/:nodeId/puzzle', authenticate, async (req, res) => {
       SELECT puzzle_solved, reward_claimed, completed_at
       FROM user_ruins_completions
       WHERE user_id = $1 AND node_id = $2
-    `, [userId, nodeId]);
+    `, [userId, nodeIdNum]);
 
     const completion = completionResult.rows[0] || null;
     const isCompleted = completion?.puzzle_solved || false;
 
-    // Get puzzle tier (default to 1 if not set)
-    const tier = node.ruins_reward_tier || 1;
-    const config = PUZZLE_CONFIG[tier] || PUZZLE_CONFIG[1];
-    const rewards = TIER_REWARDS[tier] || TIER_REWARDS[1];
+    const { tier, config, rewards } = getTierDefinition(node.ruins_reward_tier);
 
     // Get theme based on region race
     const race = node.region_race || 'human';
     const theme = PUZZLE_THEMES[race] || PUZZLE_THEMES.human;
 
-    // Generate deterministic puzzle based on node ID
-    const rng = new SeededRandom(node.id * 12345);
-    const puzzleState = isCompleted ? null : generateShuffledPuzzle(config.gridSize, rng);
-
-    // Calculate potential reward
-    const goldReward = Math.floor(rng.next() * (rewards.goldMax - rewards.goldMin + 1)) + rewards.goldMin;
+    const puzzleState = isCompleted ? null : createPuzzleState(node.local_seed, config.gridSize);
+    const rewardPreview = createRewardPreview(node.local_seed, rewards);
 
     res.json({
       nodeId: node.id,
       nodeName: node.name,
       tier,
+      puzzleVersion: PUZZLE_ALGORITHM_VERSION,
       gridSize: config.gridSize,
       parMoves: config.parMoves,
       theme: {
@@ -175,7 +300,8 @@ router.get('/:nodeId/puzzle', authenticate, async (req, res) => {
       isCompleted,
       completedAt: completion?.completed_at || null,
       rewards: {
-        gold: goldReward,
+        gold: rewardPreview.gold,
+        underParGold: rewardPreview.underParGold,
         parBonus: `+${rewards.parBonus * 100}% gold for under-par completion`
       }
     });
@@ -191,17 +317,22 @@ router.get('/:nodeId/puzzle', authenticate, async (req, res) => {
  */
 router.post('/:nodeId/solve', authenticate, ruinsSolveLimiter, async (req, res) => {
   const { nodeId } = req.params;
-  const { moveCount } = req.body;
+  const { moves, puzzleVersion } = req.body;
   const userId = req.user.userId;
 
-  if (typeof moveCount !== 'number' || moveCount < 1) {
-    return res.status(400).json({ error: 'Invalid move count' });
+  if (!Array.isArray(moves) || moves.length === 0 || moves.length > MAX_SOLUTION_MOVES) {
+    return res.status(400).json({
+      error: `Invalid move sequence: submit between 1 and ${MAX_SOLUTION_MOVES} moves`
+    });
   }
 
-  // Validate minimum moves based on grid size to prevent instant completion
-  const nodeIdNum = parseInt(nodeId, 10);
-  if (isNaN(nodeIdNum)) {
+  const nodeIdNum = Number(nodeId);
+  if (!Number.isInteger(nodeIdNum) || nodeIdNum < 1) {
     return res.status(400).json({ error: 'Invalid node ID' });
+  }
+
+  if (puzzleVersion !== PUZZLE_ALGORITHM_VERSION) {
+    return res.status(409).json({ error: 'Puzzle version is no longer current; reload the puzzle' });
   }
 
   const client = await pool.connect();
@@ -209,16 +340,23 @@ router.post('/:nodeId/solve', authenticate, ruinsSolveLimiter, async (req, res) 
   try {
     await client.query('BEGIN');
 
+    const hasAccess = await hasRuinsAccess(client, userId, nodeIdNum, true);
+    if (!hasAccess) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ error: 'These ruins are inaccessible' });
+    }
+
     // Get ruins node data
     const nodeResult = await client.query(`
       SELECT
         wn.id,
         wn.name,
         wn.node_type,
-        wn.ruins_reward_tier
+        wn.ruins_reward_tier,
+        wn.local_seed
       FROM world_nodes wn
       WHERE wn.id = $1
-    `, [nodeId]);
+    `, [nodeIdNum]);
 
     if (nodeResult.rows.length === 0) {
       await client.query('ROLLBACK');
@@ -232,58 +370,42 @@ router.post('/:nodeId/solve', authenticate, ruinsSolveLimiter, async (req, res) 
       return res.status(400).json({ error: 'This node is not a ruins' });
     }
 
-    // Get tier config for validation
-    const tier = node.ruins_reward_tier || 1;
-    const rewards = TIER_REWARDS[tier] || TIER_REWARDS[1];
-    const config = PUZZLE_CONFIG[tier] || PUZZLE_CONFIG[1];
+    const { tier, config, rewards } = getTierDefinition(node.ruins_reward_tier);
+    const initialPuzzle = createPuzzleState(node.local_seed, config.gridSize);
+    const replay = replayPuzzleMoves(initialPuzzle, config.gridSize, moves);
 
-    // Validate minimum moves (prevent instant completion exploits)
-    if (moveCount < config.minMoves) {
+    if (!replay.valid || !replay.solved) {
       await client.query('ROLLBACK');
-      return res.status(400).json({
-        error: `Invalid solution: ${config.gridSize}x${config.gridSize} puzzle requires at least ${config.minMoves} moves`
-      });
+      return res.status(400).json({ error: 'Invalid solution: move sequence does not solve this puzzle' });
     }
 
-    // Check if already completed with FOR UPDATE to prevent race conditions
-    const completionResult = await client.query(`
-      SELECT puzzle_solved FROM user_ruins_completions
-      WHERE user_id = $1 AND node_id = $2
-      FOR UPDATE
-    `, [userId, nodeId]);
-
-    if (completionResult.rows.length > 0 && completionResult.rows[0].puzzle_solved) {
-      await client.query('ROLLBACK');
-      return res.status(400).json({ error: 'This ruins has already been solved' });
-    }
-
-    // Deterministic gold amount based on node ID
-    const rng = new SeededRandom(node.id * 12345);
-    let goldReward = Math.floor(rng.next() * (rewards.goldMax - rewards.goldMin + 1)) + rewards.goldMin;
-
-    // Apply par bonus if completed under par
+    const rewardPreview = createRewardPreview(node.local_seed, rewards);
+    const moveCount = moves.length;
     const underPar = moveCount <= config.parMoves;
-    if (underPar) {
-      goldReward = Math.floor(goldReward * (1 + rewards.parBonus));
-    }
+    const goldReward = getAwardedGold(rewardPreview, config.parMoves, moveCount);
 
-    // Record completion
-    await client.query(`
+    // Claim before awarding. The conditional conflict branch supports legacy
+    // unsolved rows while ensuring only one concurrent transaction can claim.
+    const claimResult = await client.query(`
       INSERT INTO user_ruins_completions (user_id, node_id, puzzle_solved, reward_claimed, completed_at)
       VALUES ($1, $2, true, true, NOW())
       ON CONFLICT (user_id, node_id)
       DO UPDATE SET puzzle_solved = true, reward_claimed = true, completed_at = NOW()
-    `, [userId, nodeId]);
+      WHERE user_ruins_completions.puzzle_solved IS NOT TRUE
+        AND user_ruins_completions.reward_claimed IS NOT TRUE
+      RETURNING node_id
+    `, [userId, nodeIdNum]);
+
+    if (claimResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'This ruins has already been solved' });
+    }
 
     // Award gold to user (capped at MAX_GOLD to prevent overflow)
-    await client.query(`
-      UPDATE users SET gold = LEAST(gold + $1, $2) WHERE id = $3
-    `, [goldReward, MAX_GOLD, userId]);
-
-    // Get updated gold
     const userResult = await client.query(`
-      SELECT gold FROM users WHERE id = $1
-    `, [userId]);
+      UPDATE users SET gold = LEAST(gold + $1, $2) WHERE id = $3
+      RETURNING gold
+    `, [goldReward, MAX_GOLD, userId]);
 
     await client.query('COMMIT');
 
@@ -355,3 +477,17 @@ router.get('/completions', authenticate, async (req, res) => {
 });
 
 export default router;
+
+export {
+  MAX_SOLUTION_MOVES,
+  PUZZLE_ALGORITHM_VERSION,
+  createPuzzleSolution,
+  createPuzzleState,
+  createRewardPreview,
+  deriveStreamSeed,
+  generateShuffledPuzzle,
+  getAwardedGold,
+  getTierDefinition,
+  getValidMoves,
+  replayPuzzleMoves
+};

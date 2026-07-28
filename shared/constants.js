@@ -164,7 +164,7 @@ export const NODE_TYPES = {
   GUILD: 'guild',
   PALACE: 'palace',
   KEEP: 'keep',
-  // Terminator nodes (edge of map, 1 connection)
+  // Peripheral reward-site nodes (low degree near the edge of the map)
   CHEST: 'chest',
   SHRINE: 'shrine',
   DISCOVERY: 'discovery'
@@ -176,7 +176,55 @@ export const BATTLE_NODE_TYPES = [NODE_TYPES.FOREST, NODE_TYPES.CAVE, NODE_TYPES
 // Alias for backward compatibility (used by pathfinding and clearance checks)
 export const COMBAT_NODE_TYPES = BATTLE_NODE_TYPES;
 
-// Terminator node types (special reward nodes at map edges)
+/**
+ * Shared traversal contract: uncleared combat locations can be reached as a
+ * destination, but traversal never expands through them.
+ */
+export function isBlockingNode(node, clearedNodeIds = new Set()) {
+  const nodeType = node?.node_type ?? node?.nodeType;
+  const nodeId = node?.id ?? node?.nodeKey;
+  const explicitlyBlocked = node?.blocked ?? node?.blockedByDefault;
+  if (typeof explicitlyBlocked === 'boolean') return explicitlyBlocked;
+  return COMBAT_NODE_TYPES.includes(nodeType) && !clearedNodeIds.has(nodeId);
+}
+
+/**
+ * Return all reachable destinations while respecting the shared blocking
+ * contract. `isDiscovered` lets the browser apply fog-of-war without changing
+ * traversal semantics.
+ */
+export function calculateReachableNodeIds({
+  startNodeId,
+  adjacency,
+  nodeById,
+  isDiscovered = () => true,
+  isBlocked = (node) => isBlockingNode(node)
+}) {
+  const reachable = new Set([startNodeId]);
+  const expanded = new Set();
+  const queue = [startNodeId];
+  let head = 0;
+
+  while (head < queue.length) {
+    const currentId = queue[head++];
+    if (expanded.has(currentId)) continue;
+    expanded.add(currentId);
+    const currentNode = nodeById.get(currentId);
+    if (isBlocked(currentNode)) continue;
+
+    for (const neighborId of adjacency.get(currentId) ?? []) {
+      const neighbor = nodeById.get(neighborId);
+      if (!neighbor || !isDiscovered(neighbor)) continue;
+      reachable.add(neighborId);
+      if (!isBlocked(neighbor) && !expanded.has(neighborId)) {
+        queue.push(neighborId);
+      }
+    }
+  }
+  return reachable;
+}
+
+// Reward-site node types (special low-degree nodes near map edges)
 export const TERMINATOR_NODE_TYPES = [NODE_TYPES.CHEST, NODE_TYPES.SHRINE, NODE_TYPES.DISCOVERY];
 
 // Shrine buff definitions

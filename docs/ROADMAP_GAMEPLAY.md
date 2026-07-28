@@ -367,12 +367,16 @@ Per ITEM_SYSTEM.md specifications:
 
 ### 5.1.1 Terminator Treasure Nodes (Complete)
 
-> **Purpose:** Reward exploration with unique nodes at map edges
+> **Purpose:** Reward exploration with low-degree sites on peripheral routes
 
 #### Node Types
 - [x] Chest nodes - One-time gold rewards (scaling with distance)
 - [x] Shrine nodes - Timed buffs with 24-hour cooldown
 - [x] Discovery nodes - Lore unlocks (revisitable)
+- [x] Degree-2 reward sites preferred; configurable minority (~15%) retained as
+  true degree-1 dead ends
+- [x] Blocking-aware gate analysis prevents reward conversion from weakening
+  required combat progression
 
 #### Database
 - [x] 027_terminator_nodes.sql - New node types, tracking tables
@@ -397,7 +401,8 @@ Per ITEM_SYSTEM.md specifications:
 ### 5.1.2 Regional World Generation (Complete - v8.4)
 
 > **Purpose:** Replace single-castle world with 5-region Voronoi-based system
-> **Design Doc:** [Regional World Generation Design](./plans/2026-01-13-regional-world-generation-design.md)
+> **Design Doc:** [Regional World Generation Design](./archive/design-docs/2026-01-13-regional-world-generation-design.md)
+> **Current Implementation:** [World Generation Technical Deep Dive](./WORLDGEN_TECHNICAL_DEEP_DIVE.md)
 
 #### 5-Region System
 - [x] Voronoi partitioning from castle positions (d3-delaunay)
@@ -416,12 +421,14 @@ Per ITEM_SYSTEM.md specifications:
 - [x] Ring 0 - Castle core (battle node guards)
 - [x] Ring 1 - Inner civilization (cities, villages)
 - [x] Ring 2 - Frontier (keeps, guilds)
-- [x] Ring 3 - Wilderness edge (terminators)
+- [x] Ring 3 - Wilderness edge (primary reward-site candidate area)
 
 #### Inter-Region Connections
 - [x] Bridge chokepoints (1-2 per border)
 - [x] Border wilderness zones (mixed terrain)
-- [x] Trade routes (safe corridors between cities)
+- [x] Trade routes (lower-risk combat roads paired with higher-risk wilderness trails)
+- [x] Route/pair/segment identity survives persistence; the map legend uses
+  width and dash patterns as well as color to distinguish discovered choices
 - [x] Grand Palace at multi-region vertex
 
 #### Node Generation
@@ -429,6 +436,15 @@ Per ITEM_SYSTEM.md specifications:
 - [x] 70/30 terrain distribution (dominant/secondary)
 - [x] MST + extra connections for connectivity
 - [x] Settlement adjacency rules enforced
+
+#### Pipeline Contract
+- [x] Canonical stable-key graph is deterministically finalized before
+  read-only fail-closed validation
+- [x] Persistence serializes and round-trips the exact validated representation
+  in the guarded reset transaction
+- [x] `WORLD_SEED` is a strict signed 32-bit value (default `123456` when
+  unset); persisted seed, generator/stream versions, and hashes describe the
+  active world
 
 #### API Endpoints
 - [x] GET /api/world/regions - List all regions

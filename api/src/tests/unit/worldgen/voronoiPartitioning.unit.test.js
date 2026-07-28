@@ -13,6 +13,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert';
 
 import {
+  createVoronoiRegions,
   calculatePolygonProperties,
   calculateEdgeLength,
   calculateEdgeMidpoint,
@@ -20,6 +21,76 @@ import {
   getRegionBorders,
   findSharedEdge
 } from '../../../db/worldgen/voronoiPartitioning.js';
+import { generateCastlePlacements } from '../../../db/worldgen/castlePlacement.js';
+import { SeededRandom } from '../../../config/constants.js';
+
+// =============================================================================
+// createVoronoiRegions
+// =============================================================================
+
+describe('createVoronoiRegions', () => {
+  it('uses exact frozen castle coordinates and keys every cell by castle and region identity', () => {
+    for (const seed of [86, 445]) {
+      const castles = generateCastlePlacements(new SeededRandom(seed));
+      const result = createVoronoiRegions(castles);
+
+      assert.strictEqual(result.cells.length, castles.length);
+      assert.ok(Object.isFrozen(result.generatorPoints));
+
+      castles.forEach((castle, index) => {
+        const cell = result.cells[index];
+        assert.deepStrictEqual(result.generatorPoints[index], [castle.x, castle.y]);
+        assert.ok(Object.isFrozen(result.generatorPoints[index]));
+        assert.strictEqual(result.delaunay.points[index * 2], castle.x);
+        assert.strictEqual(result.delaunay.points[index * 2 + 1], castle.y);
+        assert.deepStrictEqual(cell.castle, { x: castle.x, y: castle.y });
+        assert.ok(Object.isFrozen(cell.castle));
+        assert.strictEqual(result.cellsByRegion.get(castle.regionId), cell);
+        assert.strictEqual(result.cellsByCastleKey.get(castle.castleKey), cell);
+        assert.strictEqual(cell.regionId, castle.regionId);
+        assert.strictEqual(cell.castleKey, castle.castleKey);
+      });
+    }
+  });
+
+  it('preserves missing keyed entries and fails duplicate generators descriptively', () => {
+    const castles = [
+      { x: 0, y: 0, castleKey: 'castle:a', regionId: 11, region: { id: 11, name: 'A' } },
+      { x: 0, y: 0, castleKey: 'castle:b', regionId: 22, region: { id: 22, name: 'B' } },
+      { x: 20, y: 20, castleKey: 'castle:c', regionId: 33, region: { id: 33, name: 'C' } }
+    ];
+
+    assert.throws(
+      () => createVoronoiRegions(castles),
+      error => {
+        assert.strictEqual(error.code, 'INVALID_VORONOI_CELLS');
+        assert.match(error.message, /castle:b \(regionId 22, index 1\): missing polygon/);
+        assert.strictEqual(error.cells.length, castles.length);
+        assert.strictEqual(error.cells[1], null);
+        assert.strictEqual(error.cellsByRegion.get(22), null);
+        assert.strictEqual(error.cellsByCastleKey.get('castle:b'), null);
+        return true;
+      }
+    );
+  });
+
+  it('rejects nonfinite generator coordinates with castle identity', () => {
+    const castles = [
+      {
+        x: Number.NaN,
+        y: 0,
+        castleKey: 'castle:bad',
+        regionId: 99,
+        region: { id: 99, name: 'Bad' }
+      }
+    ];
+
+    assert.throws(
+      () => createVoronoiRegions(castles),
+      /castle:bad \(regionId 99\) has nonfinite coordinates/
+    );
+  });
+});
 
 // =============================================================================
 // calculatePolygonProperties
@@ -424,10 +495,18 @@ describe('findFarthestPointFromCastles', () => {
 // =============================================================================
 
 describe('getRegionBorders', () => {
+  const explicitEdge = (edge) => ({
+    region1Id: 101 + edge.region1,
+    region2Id: 101 + edge.region2,
+    castle1Key: `castle:${101 + edge.region1}`,
+    castle2Key: `castle:${101 + edge.region2}`,
+    ...edge
+  });
+
   it('classifies short borders as bridge_only', () => {
     const mockVoronoiData = {
       edges: [
-        {
+        explicitEdge({
           region1: 0,
           region2: 1,
           region1Name: 'Region A',
@@ -435,7 +514,7 @@ describe('getRegionBorders', () => {
           points: [{ x: 0, y: 0 }, { x: 5, y: 0 }],
           length: 5,  // < 10 units
           midpoint: { x: 2.5, y: 0 }
-        }
+        })
       ]
     };
 
@@ -449,7 +528,7 @@ describe('getRegionBorders', () => {
   it('classifies medium borders as bridge_wilderness', () => {
     const mockVoronoiData = {
       edges: [
-        {
+        explicitEdge({
           region1: 0,
           region2: 1,
           region1Name: 'Region A',
@@ -457,7 +536,7 @@ describe('getRegionBorders', () => {
           points: [{ x: 0, y: 0 }, { x: 15, y: 0 }],
           length: 15,  // >= 10, < 20 units
           midpoint: { x: 7.5, y: 0 }
-        }
+        })
       ]
     };
 
@@ -470,7 +549,7 @@ describe('getRegionBorders', () => {
   it('classifies long borders as bridge_wilderness_trade', () => {
     const mockVoronoiData = {
       edges: [
-        {
+        explicitEdge({
           region1: 0,
           region2: 1,
           region1Name: 'Region A',
@@ -478,7 +557,7 @@ describe('getRegionBorders', () => {
           points: [{ x: 0, y: 0 }, { x: 25, y: 0 }],
           length: 25,  // >= 20 units
           midpoint: { x: 12.5, y: 0 }
-        }
+        })
       ]
     };
 
@@ -491,7 +570,7 @@ describe('getRegionBorders', () => {
   it('preserves region names in output', () => {
     const mockVoronoiData = {
       edges: [
-        {
+        explicitEdge({
           region1: 0,
           region2: 2,
           region1Name: 'Heartlands',
@@ -499,7 +578,7 @@ describe('getRegionBorders', () => {
           points: [],
           length: 15,
           midpoint: { x: 0, y: 0 }
-        }
+        })
       ]
     };
 
@@ -512,7 +591,7 @@ describe('getRegionBorders', () => {
   it('preserves midpoint coordinates', () => {
     const mockVoronoiData = {
       edges: [
-        {
+        explicitEdge({
           region1: 0,
           region2: 1,
           region1Name: 'A',
@@ -520,7 +599,7 @@ describe('getRegionBorders', () => {
           points: [],
           length: 10,
           midpoint: { x: 42, y: 73 }
-        }
+        })
       ]
     };
 
@@ -532,9 +611,9 @@ describe('getRegionBorders', () => {
   it('handles multiple edges', () => {
     const mockVoronoiData = {
       edges: [
-        { region1: 0, region2: 1, region1Name: 'A', region2Name: 'B', points: [], length: 5, midpoint: { x: 0, y: 0 } },
-        { region1: 1, region2: 2, region1Name: 'B', region2Name: 'C', points: [], length: 15, midpoint: { x: 0, y: 0 } },
-        { region1: 2, region2: 0, region1Name: 'C', region2Name: 'A', points: [], length: 25, midpoint: { x: 0, y: 0 } }
+        explicitEdge({ region1: 0, region2: 1, region1Name: 'A', region2Name: 'B', points: [], length: 5, midpoint: { x: 0, y: 0 } }),
+        explicitEdge({ region1: 1, region2: 2, region1Name: 'B', region2Name: 'C', points: [], length: 15, midpoint: { x: 0, y: 0 } }),
+        explicitEdge({ region1: 2, region2: 0, region1Name: 'C', region2Name: 'A', points: [], length: 25, midpoint: { x: 0, y: 0 } })
       ]
     };
 
@@ -556,7 +635,7 @@ describe('getRegionBorders', () => {
 
   it('border connection type boundaries are correct', () => {
     // Test exact boundary values
-    const createEdge = (length) => ({
+    const createEdge = (length) => explicitEdge({
       region1: 0, region2: 1, region1Name: 'A', region2Name: 'B',
       points: [], length, midpoint: { x: 0, y: 0 }
     });

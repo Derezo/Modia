@@ -7,7 +7,7 @@
  */
 
 import { FogOfWarState } from './FogOfWarState.js';
-import { renderOrganicPath } from './PathRenderer.js';
+import { getWorldRouteStyle, renderOrganicPath } from './PathRenderer.js';
 import { responsive } from '../core/Responsive.js';
 
 export class WorldMapEffects {
@@ -171,7 +171,8 @@ export class WorldMapEffects {
     // Layer 1: Parchment background
     this.renderParchmentBackground(ctx, canvasWidth, canvasHeight);
 
-    // Layer 2: Terrain obstacles (lakes, mountains, forests)
+    // Layer 2: decorative world-map landmarks. Paths/nodes render later so
+    // landmarks never obscure interaction targets or imply traversal blocking.
     this.renderObstacles(ctx, cameraX, cameraY, obstacles);
 
     // Layer 3: Region illustrations (hatching patterns)
@@ -228,7 +229,7 @@ export class WorldMapEffects {
   }
 
   /**
-   * Layer 2: Render terrain obstacles (lakes, mountains, dense forests)
+   * Layer 2: Render decorative world-map landmarks (visual only)
    * Hand-drawn parchment aesthetic
    */
   renderObstacles(ctx, cameraX, cameraY, obstacles) {
@@ -260,7 +261,7 @@ export class WorldMapEffects {
   }
 
   /**
-   * Render a lake obstacle with hand-drawn style
+   * Render a decorative lake landmark with hand-drawn style
    * @param {number} seed - Consistent seed for random generation (prevents jitter)
    */
   renderLake(ctx, x, y, radius, seed) {
@@ -312,7 +313,7 @@ export class WorldMapEffects {
   }
 
   /**
-   * Render a mountain range obstacle with hand-drawn style
+   * Render a decorative mountain-range landmark with hand-drawn style
    * @param {number} seed - Consistent seed for random generation (prevents jitter)
    */
   renderMountainRange(ctx, x, y, length, angle, seed) {
@@ -368,7 +369,7 @@ export class WorldMapEffects {
   }
 
   /**
-   * Render a dense forest obstacle with hand-drawn style
+   * Render a decorative dense-forest landmark with hand-drawn style
    * @param {number} seed - Consistent seed for random generation (prevents jitter)
    */
   renderDenseForest(ctx, x, y, radius, seed) {
@@ -565,17 +566,16 @@ export class WorldMapEffects {
       if (this.useOrganicPaths) {
         // Use Catmull-Rom spline for organic curves
         renderOrganicPath(ctx, x1, y1, x2, y2, fromNode.id, toNode.id, {
-          color: bothVisited ? '#5d4e37' : 'rgba(93, 78, 55, 0.6)',
-          width: bothVisited ? 2 : 1.5,
-          dashed: !bothVisited,
+          ...getWorldRouteStyle(conn.path_type, conn.route_kind, bothVisited),
           shadowColor: 'rgba(0, 0, 0, 0.2)',
           shadowOffset: 1
         });
       } else {
         // Legacy: wavy line for hand-drawn effect
-        ctx.strokeStyle = bothVisited ? '#5d4e37' : 'rgba(93, 78, 55, 0.6)';
-        ctx.lineWidth = bothVisited ? 2 : 1.5;
-        ctx.setLineDash(bothVisited ? [] : [5, 5]);
+        const style = getWorldRouteStyle(conn.path_type, conn.route_kind, bothVisited);
+        ctx.strokeStyle = style.color;
+        ctx.lineWidth = style.width;
+        ctx.setLineDash(style.lineDash);
 
         ctx.beginPath();
         ctx.moveTo(x1, y1);
@@ -717,10 +717,13 @@ export class WorldMapEffects {
     this.particles = [];
   }
 
-  renderTexturedPath(ctx, x1, y1, x2, y2, pathType, controlPoint, fromNodeId = 0, toNodeId = 0) {
+  renderTexturedPath(
+    ctx, x1, y1, x2, y2, pathType, controlPoint,
+    fromNodeId = 0, toNodeId = 0, routeKind = null, displayScale = 1
+  ) {
     // Use organic path rendering if enabled and node IDs provided
     if (this.useOrganicPaths && fromNodeId && toNodeId) {
-      const style = this.getPathTypeStyle(pathType);
+      const style = this.getPathTypeStyle(pathType, routeKind, displayScale);
       renderOrganicPath(ctx, x1, y1, x2, y2, fromNodeId, toNodeId, style);
 
       // Add subtle river/canyon visual hint for bridge paths
@@ -730,9 +733,10 @@ export class WorldMapEffects {
     } else {
       // Fallback to bezier curve (with proper state isolation)
       ctx.save();
-      ctx.strokeStyle = '#5d4e37';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([5, 5]);
+      const style = this.getPathTypeStyle(pathType, routeKind, displayScale);
+      ctx.strokeStyle = style.color;
+      ctx.lineWidth = style.width;
+      ctx.setLineDash(style.lineDash);
       ctx.beginPath();
       ctx.moveTo(x1, y1);
       ctx.quadraticCurveTo(controlPoint.x, controlPoint.y, x2, y2);
@@ -794,13 +798,7 @@ export class WorldMapEffects {
   /**
    * Get style configuration for path type
    */
-  getPathTypeStyle(pathType) {
-    const styles = {
-      road: { color: '#5d4e37', width: 2, dashed: false },
-      trail: { color: '#3a5a3a', width: 1.5, dashed: true },
-      bridge: { color: '#8b7355', width: 3, dashed: false },
-      tunnel: { color: '#2a2a3a', width: 2, dashed: true }
-    };
-    return styles[pathType] || styles.road;
+  getPathTypeStyle(pathType, routeKind = null, displayScale = 1) {
+    return getWorldRouteStyle(pathType, routeKind, true, displayScale);
   }
 }

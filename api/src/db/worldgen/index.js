@@ -9,7 +9,7 @@
  * 3. Internal Node Generation - Poisson disk sampling within each region
  * 4. Internal Connections - MST + extra connections per region
  * 5. Inter-Region Connections - Bridges, wilderness zones, trade routes, palace
- * 6. Validation & Cleanup - Terminators, difficulty tiers, connectivity check
+ * 6. Deterministic finalization followed by pure canonical-graph validation
  */
 
 // Export all constants
@@ -80,14 +80,19 @@ export {
   validateInterRegionConnections
 } from './interRegionConnections.js';
 
-// Phase 6: Validation & Cleanup
+// Finalized-world validation and legacy Phase 6 compatibility helpers
 export {
   calculateDifficultyTier,
   assignTerminatorNodesRegional,
   verifyConnectivity,
   validateAndCleanup,
+  validateFinalizedWorld,
   validatePhase6
 } from './validation.js';
+
+// Deterministic assembly boundary and versioned random-stream contract
+export * from './randomStreams.js';
+export { assembleWorld } from './worldAssembly.js';
 
 // Terrain Generation
 export {

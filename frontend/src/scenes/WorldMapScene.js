@@ -13,7 +13,10 @@ import { WorldMapNodeRenderer } from '../worldmap/WorldMapNodeRenderer.js';
 import { WorldMapConnectionRenderer } from '../worldmap/WorldMapConnectionRenderer.js';
 import { WorldMapRegionRenderer } from '../worldmap/WorldMapRegionRenderer.js';
 import { WorldMapQuestMarkerRenderer } from '../worldmap/WorldMapQuestMarkerRenderer.js';
-import { WorldMapInputHandler } from '../worldmap/WorldMapInputHandler.js';
+import {
+  findInteractiveNodeAtPosition,
+  WorldMapInputHandler
+} from '../worldmap/WorldMapInputHandler.js';
 import { ProfileDropdown } from '../ui/parchment/ProfileDropdown.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { PartyInviteModal } from '../components/PartyInviteModal.js';
@@ -518,7 +521,8 @@ export class WorldMapScene extends Scene {
       isDiscovered: this.isNodeDiscovered(node),
       isVisited: node.visited === true,
       currentStamina: this.hudPanel?.staminaSegment?.current || 0,
-      zodiacCollection: this.zodiacCollectionData // Pass for shrine tooltips
+      zodiacCollection: this.zodiacCollectionData, // Pass for shrine tooltips
+      routeDescriptions: this.connectionRenderer.getRouteDescriptionsForNode(node.id)
     };
 
     // Show the tooltip
@@ -1206,21 +1210,7 @@ export class WorldMapScene extends Scene {
   }
 
   getNodeAtPosition(screenX, screenY) {
-    for (const node of this.nodes) {
-      // Skip nodes that are not reachable from current position
-      if (!this.pathSystem.isNodeReachable(node.id)) {
-        continue;
-      }
-
-      const nodeX = node.x_coord * this.nodeSpacing + this.cameraX;
-      const nodeY = node.y_coord * this.nodeSpacing + this.cameraY;
-      const dist = Math.sqrt((screenX - nodeX) ** 2 + (screenY - nodeY) ** 2);
-
-      if (dist <= this.nodeSize) {
-        return node;
-      }
-    }
-    return null;
+    return findInteractiveNodeAtPosition(this, screenX, screenY);
   }
 
   isNodeAdjacent(node) {
@@ -1456,7 +1446,7 @@ export class WorldMapScene extends Scene {
       ctx.fillRect(0, 0, this.game.targetWidth, this.game.targetHeight);
     }
 
-    // Render terrain obstacles (lakes, mountains, forests)
+    // Render decorative world-map landmarks (lakes, mountains, forests)
     if (this.effects && this.obstacles && this.obstacles.length > 0) {
       this.effects.renderObstacles(ctx, this.cameraX, this.cameraY, this.obstacles);
     }
@@ -1540,6 +1530,8 @@ export class WorldMapScene extends Scene {
       this.hudCtx.clearRect(0, 0, this.hudCanvas.width, this.hudCanvas.height);
       // Render HUD panel
       this.hudPanel.render(this.hudCtx);
+      // Route guidance is UI, so keep it above fog and world objects.
+      this.connectionRenderer.renderRouteLegend(this.hudCtx);
     }
 
     // Update node action menu position (DOM element follows current node)

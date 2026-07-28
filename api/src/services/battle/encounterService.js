@@ -3,7 +3,8 @@
  * @description Handles battle encounter generation including terrain, enemies, and map seeds.
  *
  * Key responsibilities:
- * - Map seed generation with configurable modulus
+ * - Legacy random map seed generation with a configurable modulus
+ * - Stable signed 32-bit terrain seed derivation from world-node identity
  * - Terrain generation with elevation validation
  * - Encounter setup orchestration
  *
@@ -14,7 +15,7 @@
 import { generateTerrain } from '../../../../shared/mapGeneration.js';
 
 /**
- * Modulus for map seed generation.
+ * Modulus for legacy random map seed generation.
  * Seeds are integers in range [0, MAP_SEED_MODULUS).
  * Using 1,000,000 provides sufficient variety while keeping seeds human-readable.
  */
@@ -27,11 +28,65 @@ export const DEFAULT_MAP_WIDTH = 32;
 export const DEFAULT_MAP_HEIGHT = 32;
 
 /**
+ * Version of the node-seed-to-tactical-map contract.
+ *
+ * Increment this when either the seed derivation or terrain generation contract
+ * changes. Active battles retain this value together with their authoritative
+ * map layers, so reconnects never need to regenerate terrain.
+ */
+export const TERRAIN_GENERATION_VERSION = 1;
+
+/**
+ * Fixed namespace for tactical terrain seeds. Keeping this derivation local to
+ * encounter terrain prevents enemy selection, placement, and combat randomness
+ * from sharing or advancing the terrain stream.
+ */
+const TERRAIN_SEED_NAMESPACE = 'modia:tactical-terrain';
+
+/**
  * Generate a random map seed for battle terrain generation.
  * @returns {number} Integer seed in range [0, MAP_SEED_MODULUS)
  */
 export function generateMapSeed() {
   return Math.floor(Math.random() * MAP_SEED_MODULUS);
+}
+
+/**
+ * Derive the tactical terrain seed from the stable world-node contract.
+ *
+ * @param {number|string} localSeed - Persisted world_nodes.local_seed
+ * @param {string} nodeType - Node type used by the terrain generator
+ * @param {number} [terrainGenerationVersion=1] - Versioned derivation contract
+ * @returns {number} Signed 32-bit integer seed
+ */
+export function deriveEncounterTerrainSeed(
+  localSeed,
+  nodeType,
+  terrainGenerationVersion = TERRAIN_GENERATION_VERSION
+) {
+  const numericLocalSeed = typeof localSeed === 'string'
+    ? Number(localSeed)
+    : localSeed;
+
+  if (!Number.isSafeInteger(numericLocalSeed)) {
+    throw new TypeError('Encounter terrain localSeed must be a safe integer');
+  }
+  if (typeof nodeType !== 'string' || nodeType.length === 0) {
+    throw new TypeError('Encounter terrain nodeType must be a non-empty string');
+  }
+  if (!Number.isSafeInteger(terrainGenerationVersion) || terrainGenerationVersion < 1) {
+    throw new TypeError('Encounter terrain generation version must be a positive integer');
+  }
+
+  // FNV-1a provides a stable 32-bit mix for the explicit, versioned contract.
+  const contract = `${TERRAIN_SEED_NAMESPACE}:${terrainGenerationVersion}:${nodeType}:${numericLocalSeed}`;
+  let hash = 0x811C9DC5;
+  for (let index = 0; index < contract.length; index++) {
+    hash ^= contract.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+
+  return hash | 0;
 }
 
 /**
@@ -72,12 +127,38 @@ export function generateBattleTerrain(mapSeed, nodeType, width = DEFAULT_MAP_WID
  * Generate a complete battle encounter including terrain and map data.
  * This is the main entry point for PvE battle initialization.
  *
- * @param {string} nodeType - Node type for terrain generation
+ * The preferred call shape is an explicit stable contract:
+ * `generateEncounterTerrain({ nodeType, localSeed, terrainGenerationVersion })`.
+ * The legacy `(nodeType, width, height)` form remains random for compatibility.
+ *
+ * @param {string|{nodeType: string, localSeed: number|string, terrainGenerationVersion?: number, width?: number, height?: number}} contractOrNodeType
+ *   Stable encounter contract or legacy node type
  * @param {number} [width=32] - Map width
  * @param {number} [height=32] - Map height
- * @returns {{terrain: number[][], elevation: number[][]|null, mapSeed: number, mapWidth: number, mapHeight: number}}
+ * @returns {{terrain: number[][], elevation: number[][]|null, mapSeed: number, mapWidth: number, mapHeight: number, terrainGenerationVersion?: number}}
  */
-export function generateEncounterTerrain(nodeType, width = DEFAULT_MAP_WIDTH, height = DEFAULT_MAP_HEIGHT) {
+export function generateEncounterTerrain(
+  contractOrNodeType,
+  width = DEFAULT_MAP_WIDTH,
+  height = DEFAULT_MAP_HEIGHT
+) {
+  if (contractOrNodeType && typeof contractOrNodeType === 'object') {
+    const {
+      nodeType,
+      localSeed,
+      terrainGenerationVersion = TERRAIN_GENERATION_VERSION,
+      width: contractWidth = width,
+      height: contractHeight = height
+    } = contractOrNodeType;
+    const mapSeed = deriveEncounterTerrainSeed(localSeed, nodeType, terrainGenerationVersion);
+
+    return {
+      ...generateBattleTerrain(mapSeed, nodeType, contractWidth, contractHeight),
+      terrainGenerationVersion
+    };
+  }
+
+  const nodeType = contractOrNodeType;
   const mapSeed = generateMapSeed();
   return generateBattleTerrain(mapSeed, nodeType, width, height);
 }

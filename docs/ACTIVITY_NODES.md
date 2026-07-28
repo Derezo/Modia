@@ -142,16 +142,20 @@ Puzzle images are themed by the region's dominant race:
 
 - Classic 15-puzzle (sliding tiles) mechanics
 - Puzzles are generated with guaranteed solvability
-- Deterministic generation based on node ID (same puzzle each attempt)
-- No time limit, but move count is tracked
-- Minimum move validation prevents instant-completion exploits
+- Deterministic generation from the node's persisted `local_seed`, with separate
+  versioned puzzle and reward streams
+- World difficulty maps to ruins tier as 1 → 1, 2 → 2, and 3-5 → 3
+- Preview and solve both require normal character authorization, progression
+  access, and physical presence at the ruins
+- No time limit; the server replays the submitted legal move sequence and
+  calculates the move count
 
 ### 3.5 API Endpoints
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
 | `/api/ruins/:nodeId/puzzle` | GET | Get puzzle config and state |
-| `/api/ruins/:nodeId/solve` | POST | Submit solution (with moveCount) |
+| `/api/ruins/:nodeId/solve` | POST | Submit a replayable legal move sequence |
 | `/api/ruins/completions` | GET | List all completed ruins |
 
 ---
@@ -254,7 +258,12 @@ For each node in range:
 
 ## 6. Terminator Nodes
 
-Terminator nodes are one-time or cooldown-based interaction points that serve as "dead ends" in the world graph.
+“Terminator” is the persistence-compatible name for chest, shrine, and discovery
+reward sites on peripheral routes. Most are degree-2 sites that preserve route
+flow; a configurable minority (targeting about 15%) are true degree-1 dead
+ends. A degree-2 battle node is converted only when blocking-aware analysis
+proves that the change does not reduce any required source-to-progression-anchor
+combat-gate count or create an opening bypass.
 
 ### 6.1 Chest Nodes
 

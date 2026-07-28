@@ -1,9 +1,9 @@
 /**
  * Terrain Generation
  *
- * Generates terrain obstacles and node features for the world map.
- * Used by the regional world generation system to create visual barriers
- * and populate node-specific features.
+ * Generates decorative world-map landmarks and node features.
+ * Landmarks are visual only: they never participate in node placement,
+ * connection generation, traversal, or tactical-map blocking.
  *
  * Functions:
  * - generateObstacles: Create lakes, mountain ranges, and dense forests
@@ -14,8 +14,7 @@ import { OBSTACLE_TYPES, PALACE_FEATURES } from './constants.js';
 import { CASTLE_FEATURES, CITY_OPTIONS } from '../../../../shared/constants.js';
 
 /**
- * Generate terrain obstacles (lakes, mountain ranges, dense forests)
- * These provide visual barriers that nodes are placed around
+ * Generate decorative world-map landmarks (lakes, ranges, dense forests).
  *
  * @param {SeededRandom} rng - Seeded random generator
  * @returns {Array<Object>} Array of obstacle objects with type, position, and dimensions
@@ -102,7 +101,7 @@ export function generateObstacles(rng) {
     }
   }
 
-  console.log(`Generated ${obstacles.length} terrain obstacles`);
+  console.log(`Generated ${obstacles.length} decorative world-map landmarks`);
   return obstacles;
 }
 

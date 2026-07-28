@@ -58,6 +58,14 @@ npm run dev
 
 The API runs on `http://localhost:3000` and the frontend on `http://localhost:8080`.
 
+`db:seed`, `db:reset`, and `db:fresh` are destructive bootstrap/reset
+operations for empty or disposable environments. They are not a live-world
+migration: authorize the reset explicitly and verify a backup before using
+them against persistent player data. Assembly and validation complete before
+the transaction mutates existing data, and any pre-commit failure rolls back.
+Use the [world reset backup and restore runbook](docs/WORLD_RESET_BACKUP_RESTORE.md)
+for snapshot verification, a disposable restore drill, and post-commit recovery.
+
 ### Development Commands
 
 ```bash
@@ -116,6 +124,7 @@ Detailed documentation is available in the `docs/` directory:
 - [Authored Player Animations](docs/AUTHORED_PLAYER_ANIMATIONS.md) - Reproducible character source-art and sprite-strip workflow
 - [Development Roadmap](docs/DEVELOPMENT_ROADMAP.md) - Progress tracking
 - [Deployment](docs/DEPLOYMENT.md) - Production deploy workflow (lsd CLI)
+- [World Reset Backup and Restore](docs/WORLD_RESET_BACKUP_RESTORE.md) - Verified PostgreSQL snapshot and recovery procedure
 
 ## Game Overview
 

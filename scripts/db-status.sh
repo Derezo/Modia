@@ -18,12 +18,32 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_ROOT"
 
-# Load .env if it exists
+# Preserve an explicitly selected target. Loading .env must provide defaults,
+# not silently redirect a status check away from caller-supplied connection
+# settings.
+CALLER_DB_HOST_SET="${DB_HOST+x}"
+CALLER_DB_HOST="${DB_HOST-}"
+CALLER_DB_PORT_SET="${DB_PORT+x}"
+CALLER_DB_PORT="${DB_PORT-}"
+CALLER_DB_NAME_SET="${DB_NAME+x}"
+CALLER_DB_NAME="${DB_NAME-}"
+CALLER_DB_USER_SET="${DB_USER+x}"
+CALLER_DB_USER="${DB_USER-}"
+CALLER_DB_PASSWORD_SET="${DB_PASSWORD+x}"
+CALLER_DB_PASSWORD="${DB_PASSWORD-}"
+
+# Load .env if it exists.
 if [ -f ".env" ]; then
     set -a
     source <(grep -v '^#' .env | grep -v '^$' | sed 's/\r$//')
     set +a
 fi
+
+[ -z "$CALLER_DB_HOST_SET" ] || DB_HOST="$CALLER_DB_HOST"
+[ -z "$CALLER_DB_PORT_SET" ] || DB_PORT="$CALLER_DB_PORT"
+[ -z "$CALLER_DB_NAME_SET" ] || DB_NAME="$CALLER_DB_NAME"
+[ -z "$CALLER_DB_USER_SET" ] || DB_USER="$CALLER_DB_USER"
+[ -z "$CALLER_DB_PASSWORD_SET" ] || DB_PASSWORD="$CALLER_DB_PASSWORD"
 
 # Use defaults if not set
 DB_HOST="${DB_HOST:-localhost}"
@@ -40,8 +60,17 @@ if [ ! -d "$MIGRATIONS_DIR" ]; then
     exit 1
 fi
 
-# Get all migration files
-MIGRATION_FILES=$(ls -1 "$MIGRATIONS_DIR"/*.sql 2>/dev/null | xargs -n1 basename | sort)
+# Get forward migrations only. Rollback companions are executable procedures,
+# not pending entries in the forward migration ledger.
+MIGRATION_FILES=$(
+    find "$MIGRATIONS_DIR" \
+        -maxdepth 1 \
+        -type f \
+        -name '[0-9][0-9][0-9]_*.sql' \
+        ! -name '*.rollback.sql' \
+        -printf '%f\n' \
+        | sort
+)
 
 if [ -z "$MIGRATION_FILES" ]; then
     echo "No migration files found in $MIGRATIONS_DIR"

@@ -2,6 +2,10 @@ import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
 import http from 'http';
 import { request, createTestUser, createTestContext, query, cleanupTestUser, BASE_URL } from '../testHelper.js';
+import {
+  TERRAIN_GENERATION_VERSION,
+  deriveEncounterTerrainSeed
+} from '../../services/battle/encounterService.js';
 
 /**
  * Extended request helper that supports custom headers and returns response headers
@@ -86,6 +90,7 @@ describe('Battle API', () => {
   let user = null;
   let characters = [];
   let battle = null;
+  let battleNode = null;
 
   before(async () => {
     // Create user and first character via API (allowed)
@@ -106,19 +111,18 @@ describe('Battle API', () => {
     // First, try to move the character directly to a battle node via database
     // This bypasses travel restrictions for test setup
     const battleNodeResult = await query(
-      `SELECT id FROM world_nodes
+      `SELECT id, node_type, local_seed FROM world_nodes
        WHERE node_type IN ('forest', 'cave', 'mountain')
        LIMIT 1`
     );
 
-    if (battleNodeResult.rows.length > 0) {
-      const battleNodeId = battleNodeResult.rows[0].id;
-      // Move all characters to the battle node directly
-      await query(
-        `UPDATE characters SET current_node_id = $1 WHERE user_id = $2`,
-        [battleNodeId, user.userId]
-      );
-    }
+    assert.ok(battleNodeResult.rows.length > 0, 'battle integration setup requires a battle node');
+    battleNode = battleNodeResult.rows[0];
+    // Move all characters to the battle node directly
+    await query(
+      `UPDATE characters SET current_node_id = $1 WHERE user_id = $2`,
+      [battleNode.id, user.userId]
+    );
   });
 
   after(async () => {
@@ -129,13 +133,6 @@ describe('Battle API', () => {
     it('should start a battle successfully', async () => {
       const res = await request('POST', '/api/battle/start', {}, user.accessToken);
 
-      // If we get 400, it might be because we're not at a battle node
-      // which is acceptable for test setup issues
-      if (res.status === 400) {
-        console.log('Note: Could not start battle - may not be at a battle node');
-        return;
-      }
-
       assert.strictEqual(res.status, 201);
       assert.ok(res.body.battleId);
       assert.ok(res.body.state);
@@ -144,8 +141,52 @@ describe('Battle API', () => {
       assert.ok(res.body.mapHeight);
       // nodeType is critical for frontend terrain generation to match server
       assert.ok(res.body.nodeType, 'nodeType must be included for terrain sync');
+      assert.equal(
+        res.body.mapSeed,
+        deriveEncounterTerrainSeed(
+          battleNode.local_seed,
+          battleNode.node_type,
+          TERRAIN_GENERATION_VERSION
+        ),
+        'battle map seed must derive from the current world node'
+      );
+      assert.equal(res.body.state.terrainSeed, res.body.mapSeed);
+      assert.equal(res.body.state.terrainGenerationVersion, TERRAIN_GENERATION_VERSION);
 
       battle = res.body;
+
+      const persisted = await query(
+        'SELECT battle_state, map_seed FROM battles WHERE id = $1',
+        [battle.battleId]
+      );
+      assert.equal(persisted.rows[0].map_seed, battle.mapSeed);
+      assert.equal(persisted.rows[0].battle_state.terrainSeed, battle.mapSeed);
+      assert.deepStrictEqual(persisted.rows[0].battle_state.terrain, battle.state.terrain);
+      assert.deepStrictEqual(persisted.rows[0].battle_state.elevation, battle.state.elevation);
+      assert.deepStrictEqual(persisted.rows[0].battle_state.obstacles, battle.state.obstacles);
+      assert.deepStrictEqual(persisted.rows[0].battle_state.variants, battle.state.variants);
+      assert.equal(
+        persisted.rows[0].battle_state.terrainGenerationVersion,
+        TERRAIN_GENERATION_VERSION
+      );
+
+      const rejoin = await request(
+        'GET',
+        `/api/battle/${battle.battleId}/rejoin`,
+        null,
+        user.accessToken
+      );
+      assert.equal(rejoin.status, 200);
+      assert.equal(rejoin.body.mapSeed, persisted.rows[0].map_seed);
+      assert.equal(rejoin.body.state.terrainSeed, persisted.rows[0].battle_state.terrainSeed);
+      assert.deepStrictEqual(rejoin.body.state.terrain, persisted.rows[0].battle_state.terrain);
+      assert.deepStrictEqual(rejoin.body.state.elevation, persisted.rows[0].battle_state.elevation);
+      assert.deepStrictEqual(rejoin.body.state.obstacles, persisted.rows[0].battle_state.obstacles);
+      assert.deepStrictEqual(rejoin.body.state.variants, persisted.rows[0].battle_state.variants);
+      assert.equal(
+        rejoin.body.state.terrainGenerationVersion,
+        TERRAIN_GENERATION_VERSION
+      );
     });
 
     it('should reject starting battle without battle party', async () => {

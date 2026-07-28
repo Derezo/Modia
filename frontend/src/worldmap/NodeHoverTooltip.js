@@ -22,7 +22,7 @@ import {
 } from '../ui/parchment/ParchmentTheme.js';
 import { Icon } from '../components/Icon.js';
 import { responsive } from '../core/Responsive.js';
-import { ZODIAC_SHRINE_BUFFS, ZODIAC_CRYSTALS } from '@shared/constants.js';
+import { ZODIAC_SHRINE_BUFFS, ZODIAC_CRYSTALS } from '@modia/shared/constants';
 
 const STYLE_ID = 'node-hover-tooltip-styles';
 
@@ -203,6 +203,14 @@ export class NodeHoverTooltip {
         color: ${PARCHMENT_COLORS.text.muted};
       }
 
+      .node-hover-tooltip__route {
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: 10px;
+        line-height: 1.25;
+        color: ${PARCHMENT_COLORS.text.secondary};
+        padding-top: 2px;
+      }
+
       /* Extended info section */
       .node-hover-tooltip__extended {
         max-height: 0;
@@ -308,6 +316,9 @@ export class NodeHoverTooltip {
   createElement() {
     this.element = document.createElement('div');
     this.element.className = 'node-hover-tooltip';
+    this.element.id = 'world-map-node-tooltip';
+    this.element.setAttribute('role', 'tooltip');
+    this.element.setAttribute('aria-hidden', 'true');
 
     const card = document.createElement('div');
     card.className = 'node-hover-tooltip__card';
@@ -330,6 +341,16 @@ export class NodeHoverTooltip {
     this.statusElement = document.createElement('div');
     this.statusElement.className = 'node-hover-tooltip__status';
     card.appendChild(this.statusElement);
+
+    // Route-risk language is always textual, so it remains understandable
+    // without relying on the line colors shown on the canvas.
+    this.routeElement = document.createElement('div');
+    this.routeElement.className = 'node-hover-tooltip__route';
+    this.routeElement.setAttribute('role', 'status');
+    this.routeElement.setAttribute('aria-live', 'polite');
+    this.routeElement.setAttribute('aria-atomic', 'true');
+    this.routeElement.hidden = true;
+    card.appendChild(this.routeElement);
 
     // Extended info container
     this.extendedElement = document.createElement('div');
@@ -362,6 +383,7 @@ export class NodeHoverTooltip {
    * @param {boolean} context.previewCannotReach - Whether origin is blocked
    * @param {boolean} context.isDiscovered - Whether node is discovered
    * @param {boolean} context.isVisited - Whether node is visited
+   * @param {string[]} context.routeDescriptions - Risk and route-surface labels
    */
   show(node, screenX, screenY, context = {}) {
     if (!node) {
@@ -392,6 +414,7 @@ export class NodeHoverTooltip {
     this.updatePosition(screenX, screenY, context.nodeSize, context.canvasHeight);
     this.isVisible = true;
     this.element.classList.add('node-hover-tooltip--visible');
+    this.element.setAttribute('aria-hidden', 'false');
 
     // Schedule Level 2 extended info
     const delay = this.isMobile ? 300 : EXTENDED_DELAY;
@@ -423,6 +446,7 @@ export class NodeHoverTooltip {
     this.isExtended = false;
     this.currentNode = null;
     this.element.classList.remove('node-hover-tooltip--visible', 'node-hover-tooltip--extended');
+    this.element.setAttribute('aria-hidden', 'true');
 
     if (this.extendedTimer) {
       clearTimeout(this.extendedTimer);
@@ -484,6 +508,10 @@ export class NodeHoverTooltip {
     this.typeElement.appendChild(typeName);
     this.typeElement.style.backgroundColor = `${typeInfo.color}20`;
     this.typeElement.style.color = typeInfo.color;
+
+    const routeDescriptions = context.routeDescriptions || [];
+    this.routeElement.textContent = routeDescriptions.join(' / ');
+    this.routeElement.hidden = routeDescriptions.length === 0;
 
     // Status line
     this.renderStatusLine(node, context);

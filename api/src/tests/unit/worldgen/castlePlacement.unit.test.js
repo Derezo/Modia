@@ -193,6 +193,16 @@ describe('applyForceDirectedRepulsion', () => {
       assert.ok(p.y >= -limit && p.y <= limit, `y=${p.y} out of bounds [-${limit}, ${limit}]`);
     }
   });
+
+  it('uses the supplied seed-derived rotation to separate coincident pairs', () => {
+    const positions = [{ x: 0, y: 0 }, { x: 0, y: 0 }];
+    const first = applyForceDirectedRepulsion(positions, 25, 10, 0);
+    const second = applyForceDirectedRepulsion(positions, 25, 10, 1);
+
+    assert.ok(findMinimumPairDistance(first) > 0);
+    assert.ok(findMinimumPairDistance(second) > 0);
+    assert.notDeepStrictEqual(first, second);
+  });
 });
 
 // =============================================================================
@@ -313,11 +323,9 @@ describe('generateCastlePlacements', () => {
     const rng = new SeededRandom(42);
     const castles = generateCastlePlacements(rng);
     const minDist = findMinimumPairDistance(castles);
-    // Allow small tolerance since the algorithm may not fully converge
-    const tolerance = CASTLE_PLACEMENT.MIN_DISTANCE * 0.9;
     assert.ok(
-      minDist >= tolerance,
-      `Min distance ${minDist.toFixed(2)} below tolerance ${tolerance}`
+      minDist >= CASTLE_PLACEMENT.MIN_DISTANCE,
+      `Min distance ${minDist.toFixed(2)} below ${CASTLE_PLACEMENT.MIN_DISTANCE}`
     );
   });
 
@@ -351,14 +359,111 @@ describe('generateCastlePlacements', () => {
     assert.ok(anyDifferent, 'Different seeds should produce different placements');
   });
 
-  it('rounds positions to 1 decimal place', () => {
+  it('finalizes castles as frozen integer coordinates with stable identities', () => {
     const rng = new SeededRandom(42);
     const castles = generateCastlePlacements(rng);
+    assert.ok(Object.isFrozen(castles));
+    assert.strictEqual(new Set(castles.map(castle => castle.castleKey)).size, 5);
+    assert.strictEqual(new Set(castles.map(castle => castle.regionId)).size, 5);
+
     for (const castle of castles) {
-      const xDecimal = Math.round(castle.x * 10) / 10;
-      const yDecimal = Math.round(castle.y * 10) / 10;
-      assert.strictEqual(castle.x, xDecimal, `x=${castle.x} not rounded to 1 decimal`);
-      assert.strictEqual(castle.y, yDecimal, `y=${castle.y} not rounded to 1 decimal`);
+      assert.ok(Number.isInteger(castle.x), `x=${castle.x} is not an integer`);
+      assert.ok(Number.isInteger(castle.y), `y=${castle.y} is not an integer`);
+      assert.ok(Object.isFrozen(castle));
+      assert.strictEqual(castle.castleKey, `castle:${castle.regionId}`);
+    }
+  });
+
+  it('performs bounded deterministic resampling before fallback', () => {
+    class CountingRandom extends SeededRandom {
+      constructor(seed) {
+        super(seed);
+        this.nextIntCalls = 0;
+      }
+
+      nextInt(min, max) {
+        this.nextIntCalls++;
+        return super.nextInt(min, max);
+      }
+    }
+
+    const rng = new CountingRandom(445);
+    const castles = generateCastlePlacements(rng);
+
+    assert.strictEqual(rng.nextIntCalls, 20, 'seed 445 should succeed on its second ordinary sample');
+    assert.ok(findMinimumPairDistance(castles) >= CASTLE_PLACEMENT.MIN_DISTANCE);
+  });
+
+  it('derives coincident-candidate separation from the supplied random stream', () => {
+    class CoincidentRandom {
+      constructor(rotationDraw) {
+        this.rotationDraw = rotationDraw;
+        this.nextCalls = 0;
+      }
+
+      nextInt() {
+        return 0;
+      }
+
+      next() {
+        this.nextCalls++;
+        return this.rotationDraw;
+      }
+
+      shuffle(values) {
+        return [...values];
+      }
+    }
+
+    const firstRng = new CoincidentRandom(0);
+    const secondRng = new CoincidentRandom(0.25);
+    const first = generateCastlePlacements(firstRng);
+    const second = generateCastlePlacements(secondRng);
+
+    assert.strictEqual(firstRng.nextCalls, 1);
+    assert.strictEqual(secondRng.nextCalls, 1);
+    assert.notDeepStrictEqual(
+      first.map(({ x, y }) => [x, y]),
+      second.map(({ x, y }) => [x, y])
+    );
+  });
+
+  it('uses the well-spaced fallback only after all ordinary samples are exhausted', () => {
+    class InvalidSampleRandom {
+      constructor() {
+        this.nextIntCalls = 0;
+      }
+
+      nextInt() {
+        this.nextIntCalls++;
+        return Number.NaN;
+      }
+
+      next() {
+        return 0.25;
+      }
+
+      shuffle(values) {
+        return [...values];
+      }
+    }
+
+    const rng = new InvalidSampleRandom();
+    const castles = generateCastlePlacements(rng);
+
+    assert.strictEqual(rng.nextIntCalls, 80, 'expected 8 complete samples of 10 coordinates');
+    assert.ok(findMinimumPairDistance(castles) >= CASTLE_PLACEMENT.MIN_DISTANCE);
+    assert.ok(castles.every(({ x, y }) => Number.isInteger(x) && Number.isInteger(y)));
+  });
+
+  it('keeps collision regression seeds 86 and 445 distinct and deterministic', () => {
+    for (const seed of [86, 445]) {
+      const first = generateCastlePlacements(new SeededRandom(seed));
+      const second = generateCastlePlacements(new SeededRandom(seed));
+
+      assert.deepStrictEqual(first, second, `seed ${seed} was not deterministic`);
+      assert.strictEqual(new Set(first.map(({ x, y }) => `${x},${y}`)).size, 5);
+      assert.ok(findMinimumPairDistance(first) >= CASTLE_PLACEMENT.MIN_DISTANCE);
     }
   });
 });

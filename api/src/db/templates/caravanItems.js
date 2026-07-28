@@ -681,5 +681,6 @@ export function getRegionalItems(region) {
  * @returns {number} Offset in milliseconds (0 to 47 hours)
  */
 export function calculateRefreshOffset(localSeed) {
-  return (localSeed % 48) * 60 * 60 * 1000; // 0-47 hours offset
+  const hourOffset = ((localSeed % 48) + 48) % 48;
+  return hourOffset * 60 * 60 * 1000; // 0-47 hours offset
 }

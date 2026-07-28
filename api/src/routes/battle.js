@@ -11,6 +11,7 @@ import * as enemyService from '../services/enemyService.js';
 import battleWebsocket from '../services/battleWebsocket.js';
 import { createPlayerBattleUnit } from '../services/battleUnitFactory.js';
 import { validateFormationPayload } from '../services/battle/formationValidation.js';
+import { TERRAIN_GENERATION_VERSION } from '../services/battle/encounterService.js';
 import * as traitService from '../services/traitService.js';
 import * as bossService from '../services/bossService.js';
 import * as battleTurnManager from '../services/battleTurnManager.js';
@@ -319,8 +320,21 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
   }
 
   // Generate battle terrain using encounter service
-  const { terrain, elevation, elevationFormat, obstacles, variants, mapSeed, mapWidth, mapHeight } =
-    battleService.generateEncounterTerrain(node.node_type);
+  const {
+    terrain,
+    elevation,
+    elevationFormat,
+    obstacles,
+    variants,
+    mapSeed,
+    mapWidth,
+    mapHeight,
+    terrainGenerationVersion
+  } = battleService.generateEncounterTerrain({
+    nodeType: node.node_type,
+    localSeed: node.local_seed,
+    terrainGenerationVersion: TERRAIN_GENERATION_VERSION
+  });
 
   // Load character traits for all party members
   const characterTraits = await traitService.loadCharacterTraits(characterIds);
@@ -346,6 +360,8 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
     activeUnitId: null,
     mapWidth,
     mapHeight,
+    terrainSeed: mapSeed,
+    terrainGenerationVersion,
     terrain, // Store terrain for server-side movement validation
     elevation, // Store elevation for 3D pathfinding and rendering
     elevationFormat,

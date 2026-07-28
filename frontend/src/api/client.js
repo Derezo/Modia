@@ -389,8 +389,8 @@ export class ApiClient {
     return this.get(`/ruins/${nodeId}/puzzle`);
   }
 
-  solveRuinsPuzzle(nodeId, moveCount) {
-    return this.post(`/ruins/${nodeId}/solve`, { moveCount });
+  solveRuinsPuzzle(nodeId, moves, puzzleVersion) {
+    return this.post(`/ruins/${nodeId}/solve`, { moves, puzzleVersion });
   }
 
   getRuinsCompletions() {

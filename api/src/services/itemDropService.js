@@ -393,11 +393,13 @@ function generateAugments(rng, bonusSlots, isConsumable) {
  * @param {number} seed - Generation seed for deterministic results
  * @param {number} targetLevel - Target level for scaling
  * @param {string} forcedRarity - Force a specific rarity
+ * @param {Object} [client] - Optional transaction client
  * @returns {Promise<Object|null>} Generated item or null
  */
-async function generateItem(templateId, seed, targetLevel, forcedRarity) {
+async function generateItem(templateId, seed, targetLevel, forcedRarity, client) {
   // Get template from database
-  const result = await query(
+  const queryFn = client ? client.query.bind(client) : query;
+  const result = await queryFn(
     `SELECT id, name, item_type, equipment_slot, stat_bonuses, level_requirement, base_price, rarity, sprite_id
      FROM item_templates WHERE id = $1`,
     [templateId]

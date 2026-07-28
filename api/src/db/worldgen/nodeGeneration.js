@@ -13,7 +13,7 @@
  *    - Ring 0 (0-5): Battle nodes only (guards around castle)
  *    - Ring 1 (5-12): Cities, villages, battle nodes
  *    - Ring 2 (12-20): Keep, guild, villages, battle nodes
- *    - Ring 3 (20+): Battle nodes, future terminators
+ *    - Ring 3 (20+): Battle nodes, including future reward-site candidates
  * 4. Ensure required counts: 2-3 cities, 1 keep, 1 guild, 6-10 villages
  *
  * Dependencies:
@@ -27,6 +27,7 @@ import {
   REGION_NODE_CONFIG,
   GUILD_CONFIG,
   NODE_DISTRIBUTION,
+  REGIONAL_ACTIVITY_PROFILES,
   WATCHTOWER_CONFIG,
   ZODIAC_CONFIG,
   TERRAIN_ANTI_CLUSTERING
@@ -219,8 +220,14 @@ export function poissonDiskSampleInPolygon(polygon, minDistance, rng, targetCoun
  * @returns {string} Guild type (warrior, wizard, monk, chemist)
  */
 function getPrimaryGuildType(region) {
-  const raceToGuild = GUILD_CONFIG.RACE_PRIMARY_GUILD;
-  return raceToGuild[region.race] || 'warrior';
+  const guildType = GUILD_CONFIG.RACE_PRIMARY_GUILD[region.race];
+  if (!GUILD_CONFIG.TYPES.includes(guildType)) {
+    throw new Error(
+      `Region ${region.id ?? region.name ?? '<unknown>'} race `
+      + `${region.race ?? '<missing>'} has no supported primary guild class`
+    );
+  }
+  return guildType;
 }
 
 /**
@@ -288,8 +295,15 @@ export function assignRegionNodeTypes(positions, castle, region, rng) {
   let ruinsAssigned = 0;
 
   // Target activity node count (20-30% of total)
-  const activityTarget = Math.floor(positions.length * (NODE_DISTRIBUTION.ACTIVITY_PERCENT.min +
-    rng.next() * (NODE_DISTRIBUTION.ACTIVITY_PERCENT.max - NODE_DISTRIBUTION.ACTIVITY_PERCENT.min)));
+  const activityTarget = Math.max(
+    NODE_DISTRIBUTION.ACTIVITY_FLOOR_PER_REGION,
+    Math.ceil(positions.length * (
+      NODE_DISTRIBUTION.ACTIVITY_PERCENT.min
+      + rng.next() * (
+        NODE_DISTRIBUTION.ACTIVITY_PERCENT.max - NODE_DISTRIBUTION.ACTIVITY_PERCENT.min
+      )
+    ))
+  );
 
   // Track assigned battle nodes for anti-clustering
   const assignedBattleNodes = [];
@@ -385,8 +399,17 @@ export function assignRegionNodeTypes(positions, castle, region, rng) {
 
   // Helper to pick activity node type
   function pickActivityType() {
-    const types = NODE_DISTRIBUTION.ACTIVITY_TYPES;
-    return types[rng.nextInt(0, types.length - 1)];
+    const profile = REGIONAL_ACTIVITY_PROFILES[region.race];
+    if (!profile) {
+      throw new Error(`Missing activity profile for region race ${region.race}`);
+    }
+    const roll = rng.next();
+    let cumulative = 0;
+    for (const type of NODE_DISTRIBUTION.ACTIVITY_TYPES) {
+      cumulative += profile[type] ?? 0;
+      if (roll < cumulative) return type;
+    }
+    return NODE_DISTRIBUTION.ACTIVITY_TYPES.at(-1);
   }
 
   // Assign types based on distance bands
@@ -474,7 +497,8 @@ export function assignRegionNodeTypes(positions, castle, region, rng) {
       continue;
     }
 
-    // Ring 3 (20+): Watchtower, Activity nodes, Battle nodes (converted to terminators in Phase 6)
+    // Ring 3 (20+): watchtower, activity, and battle nodes. Canonical
+    // finalization may convert eligible low-degree battle nodes to reward sites.
     // Watchtower (very rare, outer rings only)
     if (!watchtowerAssigned && dist >= WATCHTOWER_CONFIG.MIN_RING * 5 && rng.next() < WATCHTOWER_CONFIG.SPAWN_CHANCE * 0.3) {
       node.nodeType = 'watchtower';
@@ -517,6 +541,7 @@ export function assignRegionNodeTypes(positions, castle, region, rng) {
   // Cities
   const availableForCity = nodesWithDist.filter(n =>
     n.nodeType !== 'castle' && n.nodeType !== 'city' && n.nodeType !== 'guild' &&
+    !NODE_DISTRIBUTION.ACTIVITY_TYPES.includes(n.nodeType) &&
     n.distFromCastle >= 6 && n.distFromCastle <= 12
   );
   while (citiesAssigned < cityCount && availableForCity.length > 0) {
@@ -529,6 +554,7 @@ export function assignRegionNodeTypes(positions, castle, region, rng) {
   // Keep
   const availableForKeep = nodesWithDist.filter(n =>
     n.nodeType !== 'castle' && n.nodeType !== 'city' && n.nodeType !== 'keep' && n.nodeType !== 'guild' &&
+    !NODE_DISTRIBUTION.ACTIVITY_TYPES.includes(n.nodeType) &&
     n.distFromCastle >= 12 && n.distFromCastle <= 20
   );
   while (keepAssigned < keepCount && availableForKeep.length > 0) {
@@ -543,6 +569,7 @@ export function assignRegionNodeTypes(positions, castle, region, rng) {
   // Villages (fill to target)
   const availableForVillage = nodesWithDist.filter(n =>
     !['castle', 'city', 'keep', 'guild', 'village', 'farm', 'watchtower'].includes(n.nodeType) &&
+    !NODE_DISTRIBUTION.ACTIVITY_TYPES.includes(n.nodeType) &&
     n.distFromCastle >= 5 && n.distFromCastle <= 18
   );
   while (villagesAssigned < villageCount && availableForVillage.length > 0) {
@@ -555,6 +582,7 @@ export function assignRegionNodeTypes(positions, castle, region, rng) {
   // Farms (fill to target if any remain)
   const availableForFarm = nodesWithDist.filter(n =>
     !['castle', 'city', 'keep', 'guild', 'village', 'farm', 'watchtower'].includes(n.nodeType) &&
+    !NODE_DISTRIBUTION.ACTIVITY_TYPES.includes(n.nodeType) &&
     n.distFromCastle >= 10
   );
   while (farmsAssigned < farmCount && availableForFarm.length > 0) {
@@ -562,6 +590,28 @@ export function assignRegionNodeTypes(positions, castle, region, rng) {
     const node = availableForFarm.splice(idx, 1)[0];
     node.nodeType = 'farm';
     farmsAssigned++;
+  }
+
+  // Fill the independently sampled total-density target after fixed
+  // settlements have been satisfied. Type selection remains weighted and can
+  // legitimately omit any individual activity type.
+  let totalActivity = nodesWithDist.filter((node) =>
+    NODE_DISTRIBUTION.ACTIVITY_TYPES.includes(node.nodeType)
+  ).length;
+  const activityCandidates = rng.shuffle(nodesWithDist
+    .filter((node) =>
+      NODE_DISTRIBUTION.BATTLE_TYPES.includes(node.nodeType)
+      && node.distFromCastle > REGION_NODE_CONFIG.RING_0_MAX_DIST
+    )
+    .sort((left, right) =>
+      left.distFromCastle - right.distFromCastle
+      || left.x - right.x
+      || left.y - right.y
+    ));
+  while (totalActivity < activityTarget && activityCandidates.length > 0) {
+    const node = activityCandidates.pop();
+    node.nodeType = pickActivityType();
+    totalActivity++;
   }
 
   return nodesWithDist;
@@ -625,14 +675,14 @@ export function generateAllRegionNodes(castles, voronoiData, rng) {
 
   for (let i = 0; i < castles.length; i++) {
     const castle = castles[i];
-    const cell = voronoiData.cells[i];
+    const cell = voronoiData.cellsByRegion?.get(castle.regionId ?? castle.region.id)
+      ?? voronoiData.cells[i];
     const region = castle.region;
 
     // Get the cell polygon
-    const polygon = cell.polygon;
+    const polygon = cell?.polygon;
     if (!polygon || polygon.length < 3) {
-      console.warn(`  Warning: Invalid polygon for region ${region.name}, skipping`);
-      continue;
+      throw new Error(`Missing or invalid Voronoi polygon for region ${region.id} (${region.name})`);
     }
 
     // Generate nodes for this region
@@ -709,27 +759,70 @@ function assignGlobalSecondaryGuilds(allNodes, nodesByRegion, castles, _rng) {
   // For each region, assign 2 secondary guilds
   const targetSecondaryPerRegion = GUILD_CONFIG.RING_2_3_COUNT;
 
-  for (const castle of castles) {
+  // The global class caps are feasible only when every region gets a fair,
+  // stable turn. Placement order is deliberately shuffled elsewhere and must
+  // not decide which region loses its second secondary guild.
+  for (const castle of [...castles].sort(
+    (left, right) => left.region.id - right.region.id
+  )) {
     const regionNodes = nodesByRegion.get(castle.region.id);
     if (!regionNodes) continue;
 
     // Get primary guild type for this region (to exclude)
-    const primaryType = GUILD_CONFIG.RACE_PRIMARY_GUILD[castle.region.race] || 'warrior';
+    const primaryType = getPrimaryGuildType(castle.region);
 
-    // Find candidates: nodes in Ring 2-3 (distance 12-25 from castle)
-    const candidates = regionNodes.filter(node => {
-      if (node.nodeType === 'guild' || node.nodeType === 'castle') return false;
-
-      // Skip settlements (except battle nodes which can be converted)
-      const protectedTypes = ['city', 'village', 'keep', 'farm', 'watchtower', 'shrine'];
-      if (protectedTypes.includes(node.nodeType)) return false;
-
+    // Prefer battle nodes in the intended Ring 2-3 distance band. Very small
+    // Voronoi cells can contain fewer than two battle nodes outside Ring 1, so
+    // use outer battle nodes first and then the farthest inner battle nodes.
+    // The inner fallback preserves the hard guild-count invariant without
+    // consuming activity draws or settlement nodes.
+    const battleCandidates = regionNodes.filter(node => {
+      // Guild placement may replace battle terrain, but must not silently
+      // consume activity draws and skew the configured regional profile.
+      return NODE_DISTRIBUTION.BATTLE_TYPES.includes(node.nodeType);
+    });
+    const preferredCandidates = battleCandidates.filter(node => {
       const dist = Math.hypot(node.x - castle.x, node.y - castle.y);
       return dist >= 12 && dist <= 25;
     });
+    const outerFallbackCandidates = battleCandidates
+      .filter(node => Math.hypot(node.x - castle.x, node.y - castle.y) > 25)
+      .sort((left, right) =>
+        Math.hypot(left.x - castle.x, left.y - castle.y)
+          - Math.hypot(right.x - castle.x, right.y - castle.y)
+        || left.x - right.x
+        || left.y - right.y
+      );
+    const innerFallbackCount = Math.max(
+      0,
+      targetSecondaryPerRegion
+        - preferredCandidates.length
+        - outerFallbackCandidates.length
+    );
+    const innerFallbackCandidates = battleCandidates
+      .filter(node => Math.hypot(node.x - castle.x, node.y - castle.y) < 12)
+      .sort((left, right) =>
+        Math.hypot(right.x - castle.x, right.y - castle.y)
+          - Math.hypot(left.x - castle.x, left.y - castle.y)
+        || left.x - right.x
+        || left.y - right.y
+      )
+      .slice(0, innerFallbackCount);
+    const candidates = preferredCandidates.length >= targetSecondaryPerRegion
+      ? preferredCandidates
+      : [
+        ...preferredCandidates,
+        ...outerFallbackCandidates,
+        ...innerFallbackCandidates
+      ];
+    const preferredCandidateSet = new Set(preferredCandidates);
 
-    if (candidates.length < targetSecondaryPerRegion) {
-      console.log(`    Warning: ${castle.region.name} has only ${candidates.length} candidates for secondary guilds`);
+    if (preferredCandidates.length < targetSecondaryPerRegion) {
+      console.log(
+        `    Warning: ${castle.region.name} has only ${preferredCandidates.length} `
+        + 'preferred candidates for secondary guilds; using deterministic '
+        + 'regional battle-node fallback'
+      );
     }
 
     // Determine which guild types to assign (exclude primary)
@@ -750,6 +843,7 @@ function assignGlobalSecondaryGuilds(allNodes, nodesByRegion, castles, _rng) {
 
       // Score candidates by distance to same-type guilds
       let bestCandidate = null;
+      let bestCandidateIsPreferred = false;
       let bestScore = -Infinity;
 
       for (const candidate of candidates) {
@@ -765,9 +859,15 @@ function assignGlobalSecondaryGuilds(allNodes, nodesByRegion, castles, _rng) {
 
         // Score = distance (higher = better spacing)
         const score = minSameTypeDist === Infinity ? 1000 : minSameTypeDist;
-        if (score > bestScore) {
+        const candidateIsPreferred = preferredCandidateSet.has(candidate);
+        if (
+          bestCandidate == null
+          || (candidateIsPreferred && !bestCandidateIsPreferred)
+          || (candidateIsPreferred === bestCandidateIsPreferred && score > bestScore)
+        ) {
           bestScore = score;
           bestCandidate = candidate;
+          bestCandidateIsPreferred = candidateIsPreferred;
         }
       }
 
@@ -820,12 +920,11 @@ function assignZodiacShrines(allNodes, castles, rng) {
   // - Not a settlement (castle, city, village, guild, keep, farm)
   // - Not already assigned (shrine, watchtower)
   // - In outer rings (Ring 2+)
-  const settlements = ['castle', 'city', 'village', 'guild', 'keep', 'farm'];
-  const reserved = ['shrine', 'watchtower', 'bridge'];
-
   // Calculate distance from nearest castle for each node
   const eligibleNodes = allNodes.filter(node => {
-    if (settlements.includes(node.nodeType) || reserved.includes(node.nodeType)) {
+    // Zodiac placement is a progression concern and may replace ordinary
+    // battle terrain, but activity density/type draws remain untouched.
+    if (!NODE_DISTRIBUTION.BATTLE_TYPES.includes(node.nodeType)) {
       return false;
     }
 
@@ -968,8 +1067,11 @@ export function validateRegionNodeGeneration(seed = 12345) {
     if (farms < 1) {
       issues.push(`Region ${regionId} has no farms (expected at least 1)`);
     }
-    if (activityNodes < 3) {
-      issues.push(`Region ${regionId} has too few activity nodes: ${activityNodes} (expected at least 3)`);
+    if (activityNodes < NODE_DISTRIBUTION.ACTIVITY_FLOOR_PER_REGION) {
+      issues.push(
+        `Region ${regionId} has too few activity nodes: ${activityNodes} `
+        + `(expected at least ${NODE_DISTRIBUTION.ACTIVITY_FLOOR_PER_REGION})`
+      );
     }
   }
 

@@ -6,8 +6,8 @@
 |-------|-------|
 | Project Name | Modia |
 | Version | 2.5 |
-| Last Updated | February 2026 |
-| Last Validated | 2026-02-01 |
+| Last Updated | July 2026 |
+| Last Validated | 2026-07-27 |
 
 ---
 
@@ -116,7 +116,11 @@ api/
     │
     ├── db/
     │   ├── migrate.js           # Migration runner
-    │   └── seed.js              # Database seeding script
+    │   ├── seed.js              # Guarded transactional bootstrap/reset adapter
+    │   └── worldgen/
+    │       ├── worldAssembly.js # Import-safe canonical graph assembly
+    │       ├── randomStreams.js # Seed/version contract and named RNG streams
+    │       └── validation.js    # Canonical read-only validator + legacy helpers
     │
     ├── utils/
     │   └── recruitmentUtils.js  # Shared recruit pricing and generation utilities
@@ -332,6 +336,9 @@ Message Types:
       │           │           │               │ from_node_id (FK)   │
       │           │           │               │ to_node_id (FK)     │
       │           │           │               │ path_type           │
+      │           │           │               │ route_id/kind       │
+      │           │           │               │ route_pair_key      │
+      │           │           │               │ segment_index/order │
       │           │           │               └─────────────────────┘
       │           │           │
       │           │           ▼
@@ -436,7 +443,19 @@ Message Types:
 **Constraints:**
 - `UNIQUE (x_coord, y_coord)` - No overlapping nodes
 
-#### 3.2.5 battles
+#### 3.2.5 world_node_connections
+
+Connections persist both presentation and structural route identity.
+`path_type` selects the physical road/trail/bridge/tunnel style, while
+`route_id`, `route_pair_key`, `route_kind`, `region_pair`, `segment_index`,
+`segment_order`, `segment_kind`, and `difficulty_policy` preserve the
+competition and ordered-route semantics validated before insertion. The world
+map renders discovered competing choices with a compact legend: lower-risk
+combat routes use the wider road treatment, while higher-risk wilderness routes
+use the narrower dashed trail treatment. Pattern and width carry the meaning;
+color is only a secondary cue.
+
+#### 3.2.6 battles
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
@@ -455,7 +474,7 @@ Message Types:
 | started_at | TIMESTAMP | DEFAULT NOW() | Start time |
 | ended_at | TIMESTAMP | | End time |
 
-#### 3.2.6 character_xp
+#### 3.2.7 character_xp
 
 Tracks unspent and spent XP for the XP-spending leveling system.
 
@@ -471,7 +490,7 @@ Tracks unspent and spent XP for the XP-spending leveling system.
 - Character level is derived from `total_xp_spent` using formula: `XP Required for Level N = 100 × N^2.8`
 - `xp_pool = total_xp_earned - total_xp_spent`
 
-#### 3.2.7 character_guilds
+#### 3.2.8 character_guilds
 
 Tracks guild memberships for multi-guild system.
 
@@ -492,7 +511,7 @@ Tracks guild memberships for multi-guild system.
 **Indexes:**
 - `idx_character_guilds_lookup` on `(character_id, is_active)`
 
-#### 3.2.8 character_skills
+#### 3.2.9 character_skills
 
 Tracks learned skills and their levels.
 
@@ -513,7 +532,7 @@ Tracks learned skills and their levels.
 **Indexes:**
 - `idx_character_skills_lookup` on `(character_id, guild_id)`
 
-#### 3.2.9 enemy_templates
+#### 3.2.10 enemy_templates
 
 Templates for enemy generation with player-level scaling.
 
@@ -545,7 +564,7 @@ Templates for enemy generation with player-level scaling.
 **Indexes:**
 - `idx_enemy_templates_terrain` on `(terrain_type, difficulty_tier)`
 
-#### 3.2.10 traits
+#### 3.2.11 traits
 
 Permanent passive bonuses acquired through guild recruitment.
 
@@ -566,7 +585,7 @@ Permanent passive bonuses acquired through guild recruitment.
 - `utility`: Movement, initiative, XP/gold bonuses
 - `situational`: Conditional bonuses (vs enemy types, terrain, low HP)
 
-#### 3.2.11 guild_recruits
+#### 3.2.12 guild_recruits
 
 Guild recruitment pool (shared across all players).
 
@@ -594,7 +613,7 @@ Guild recruitment pool (shared across all players).
 | purchased_at | TIMESTAMP | | Purchase time |
 | created_at | TIMESTAMP | DEFAULT NOW() | Generation time |
 
-#### 3.2.12 recruit_traits
+#### 3.2.13 recruit_traits
 
 Junction table for recruit traits.
 
@@ -607,7 +626,7 @@ Junction table for recruit traits.
 **Constraints:**
 - `UNIQUE (recruit_id, trait_id)` - No duplicate traits
 
-#### 3.2.13 recruit_skills
+#### 3.2.14 recruit_skills
 
 Junction table for recruit starting skills.
 
@@ -620,7 +639,7 @@ Junction table for recruit starting skills.
 **Constraints:**
 - `UNIQUE (recruit_id, skill_id)` - No duplicate skills
 
-#### 3.2.14 character_traits
+#### 3.2.15 character_traits
 
 Permanent traits attached to characters.
 
@@ -634,7 +653,7 @@ Permanent traits attached to characters.
 **Constraints:**
 - `UNIQUE (character_id, trait_id)` - No duplicate traits per character
 
-#### 3.2.15 exception_groups
+#### 3.2.16 exception_groups
 
 Groups exceptions by fingerprint for tracking recurring errors.
 
@@ -660,7 +679,7 @@ Groups exceptions by fingerprint for tracking recurring errors.
 - `idx_exception_groups_fingerprint` on `fingerprint`
 - `idx_exception_groups_status` on `(status, last_seen_at DESC)`
 
-#### 3.2.16 exception_events
+#### 3.2.17 exception_events
 
 Individual exception occurrences with request context.
 
@@ -686,7 +705,7 @@ Individual exception occurrences with request context.
 - `idx_exception_events_user` on `user_id` WHERE user_id IS NOT NULL
 - `idx_exception_events_request` on `request_id` WHERE request_id IS NOT NULL
 
-#### 3.2.17 user_feedback
+#### 3.2.18 user_feedback
 
 User-submitted feedback including enhancement requests, bug reports, and abuse reports.
 
@@ -715,7 +734,7 @@ User-submitted feedback including enhancement requests, bug reports, and abuse r
 - `idx_user_feedback_reported` on `reported_user_id` WHERE reported_user_id IS NOT NULL
 - `idx_user_feedback_status` on `(status, created_at DESC)`
 
-#### 3.2.18 garrison_recruits
+#### 3.2.19 garrison_recruits
 
 Castle garrison recruitment pool with regional race/class bias (shared across all players).
 
@@ -780,7 +799,7 @@ CREATE TYPE node_type AS ENUM (
   'fishing_spot', 'merchant_caravan', 'ruins', 'watchtower',
   -- Inter-region types
   'bridge', 'palace',
-  -- Terminator types (Ring 3+ dead-ends)
+  -- Low-degree reward-site types (mostly degree 2; minority degree 1)
   'chest', 'shrine', 'discovery'
 );
 CREATE TYPE item_type AS ENUM ('weapon', 'armor', 'accessory',
@@ -915,7 +934,7 @@ All database migrations are located in `api/src/migrations/` and run sequentiall
 | 024 | 024_shared_inventory.sql | user_inventory | Shared inventory system across characters |
 | 025 | 025_clans.sql | clans, clan_members, clan_invites | Clan system with ranks and invites |
 | 026 | 026_skill_system_overhaul.sql | skill_templates, character_skills | Skill system overhaul with cooldowns |
-| 027 | 027_terminator_nodes.sql | world_nodes (terminator cols) | Terminator nodes at map edges |
+| 027 | 027_terminator_nodes.sql | world_nodes (terminator cols) | Persistence-compatible reward-site metadata |
 | 028 | 028_world_obstacles.sql | world_obstacles | World obstacle system for terrain |
 | 029 | 029_regional_world.sql | world_regions, world_nodes (region cols) | Regional world system with 5 racial regions |
 | 030 | 030_performance_indexes.sql | (indexes only) | Performance optimization indexes |
@@ -1072,28 +1091,31 @@ class Game {
 
 ### 5.1 World Generation Algorithm
 
-The world uses a 6-phase 5-region generation system. Each region has a unique race-themed castle and is partitioned using Voronoi tessellation.
+The world uses five structural generation phases followed by deterministic
+finalization, read-only validation, and atomic persistence. Each region has a
+unique race-themed castle and is partitioned using Voronoi tessellation.
 
 **Coordinate System:** 1 unit = 30 pixels. World bounds: [-50, 50] in both X and Y axes.
 
 > **Full Documentation:** See `docs/WORLDGEN_TECHNICAL_DEEP_DIVE.md` for complete algorithm details, configuration reference, and debugging guide.
 
 ```
-Input: seed (integer)
+Input: WORLD_SEED (strict signed 32-bit integer), generator version,
+       random-stream version
 
 Phase 1: Castle Placement
-  - Initialize SeededRandom(seed)
+  - Use the dedicated castle-placement random stream
   - Place 5 castles using force-directed simulation + Lloyd's relaxation
+  - Quantize and freeze final castle coordinates before Voronoi construction
   - Minimum distance between castles: 25 units
   - Each castle assigned a race (orc, elf, human, dwarf, vampire)
-  - Note: Lloyd's implementation pushes AWAY from centroid (unconventional)
 
 Phase 2: Voronoi Partitioning
-  - Generate Voronoi diagram from castle positions (d3-delaunay library)
+  - Generate Voronoi cells from the exact frozen castle coordinates
   - Each region bounded by Voronoi edges
   - Identify border segments between adjacent regions
   - Find Grand Palace position (farthest Voronoi vertex from all castles)
-  - Note: Voronoi uses 0-indexed regions; other phases use 1-indexed
+  - Carry explicit stable region identity; array position is never a region ID
 
 Phase 3: Internal Node Generation (per region)
   - ~60-80 nodes per region using Poisson disk sampling
@@ -1101,7 +1123,7 @@ Phase 3: Internal Node Generation (per region)
     - Ring 0 (0-5 units): Castle guards only
     - Ring 1 (5-12 units): Cities, villages, primary guild
     - Ring 2 (12-20 units): Keep, secondary guilds, farms
-    - Ring 3 (20+ units): Battle nodes, activity nodes
+    - Ring 3 (20+ units): Battle nodes, activity nodes, reward-site candidates
   - Node type distribution:
     - Settlements: castle, 2-3 cities, 6-10 villages, 1 keep, 2-4 farms
     - Guilds: 3 per region (1 primary matching castle race, 2 secondary)
@@ -1112,6 +1134,7 @@ Phase 3: Internal Node Generation (per region)
 Phase 4: Internal Connections
   - Minimum Spanning Tree for base connectivity
   - 20% extra connections beyond MST (max distance: 12 units)
+  - Assemble inserted gap nodes into the same canonical stable-key graph
   - Ring distance RECALCULATED via BFS from castle (authoritative):
     - Ring 0: 0 hops (castle itself)
     - Ring 1: 1-2 hops
@@ -1125,20 +1148,36 @@ Phase 5: Inter-Region Connections
     - Long (20+ units): Bridge + wilderness + trade route (3-5 nodes)
   - Bridge nodes: chokepoints between regions (exactly 2 connections)
   - Wilderness zones: higher difficulty border conflicts (thematic names)
-  - Trade routes: safe paths connecting cities (commerce-themed names)
+  - Trade routes: lower-risk combat routes; every blocking segment is at least
+    one tier below the paired higher-risk wilderness route
+  - Carry route ID, competing-pair ID, route kind, segment kind, and segment
+    order through every route and gap/infill segment
   - Grand Palace: endgame destination (tier 5 difficulty)
   - Gap infill: intermediate nodes inserted when connections exceed 13.3 units (400px)
 
-Phase 6: Validation & Cleanup
-  - Calculate difficulty tiers (1-5) based on ring distance
-  - Assign terminators to Ring 3+ dead-ends (~6% of nodes):
+Deterministic Finalization
+  - Resolve collision-safe database coordinates, difficulty, route metadata,
+    names/features, local seeds, and every other persisted field
+  - Assign low-degree reward sites on peripheral routes (~6% of nodes):
+    - Prefer progression-safe degree-2 nodes
+    - Target ~15% true degree-1 dead ends
     - 30% chest (one-time loot)
     - 30% shrine (temporary buffs)
     - 40% discovery (lore rewards)
-  - Verify full connectivity (BFS from any castle)
-  - Validate max spacing constraint (all connections ≤ 13.3 units / 400px)
+  - Build the normalized route manifest and canonical hashes
 
-Output: nodes[], connections[], regions[], palace
+Read-Only Validation
+  - Reject invalid identity, endpoints, cells, coordinates, domains, spacing,
+    connectivity, opening progression, reward-site gates, or route tiers
+  - Consume no RNG and mutate no finalized data
+
+Persistence
+  - Serialize the exact validated representation in one transaction
+  - Resolve stable node keys to database IDs without changing semantics
+  - Round-trip the persisted model and route manifest before commit
+
+Output: canonical nodes, connections, regions, obstacles, route manifest,
+        seed/version metadata, and structural/output/route hashes
 ```
 
 **Ring Distance Clarification:**
@@ -1150,6 +1189,12 @@ Output: nodes[], connections[], regions[], palace
 - Trade routes: "Merchant's Rest", "Trader's Crossing", "Wayfarer's Glen"
 - Wilderness zones: "Bandit's Hollow", "Outlaw Pass", "No Man's Land"
 - Bridges: Region-pair specific names ("Border Crossing", "War's End Bridge")
+
+`WORLD_SEED` defaults to `123456` only when unset and must parse as a signed
+32-bit integer. Determinism is scoped to the tuple `(WORLD_SEED, generator
+version, random-stream version)`. The resolved tuple and canonical hashes are
+persisted with the active world, and `/api/world/seed` reports that persisted
+contract rather than the current process environment.
 
 ### 5.2 Seeded Random Number Generator
 
@@ -1263,6 +1308,15 @@ npm run dev:api
 # 7. Start frontend dev server (separate terminal)
 npm run dev:frontend
 ```
+
+`db:seed` is a destructive bootstrap/reset, supported for an empty environment
+or an explicitly authorized disposable/maintenance reset. Generation and hard
+validation finish before database mutation, and participating reset writes are
+atomic, but a successful reset still replaces node-linked world state. Back up
+and verify restoration with the
+[World Reset Backup and Restore](WORLD_RESET_BACKUP_RESTORE.md) runbook before
+an authorized non-disposable reset; preserving a live world requires a separate
+migration design.
 
 #### Useful Docker Commands
 

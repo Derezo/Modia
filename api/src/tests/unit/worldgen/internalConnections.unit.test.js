@@ -20,7 +20,9 @@ import {
   addExtraConnections,
   calculateRingDistances,
   enforceAdjacencyRules,
-  ensureMinimumConnections
+  ensureMinimumConnections,
+  ensureRegionNodeKeys,
+  generateAllRegionConnections
 } from '../../../db/worldgen/internalConnections.js';
 
 import { SeededRandom } from '../../../config/constants.js';
@@ -511,5 +513,60 @@ describe('ensureMinimumConnections', () => {
       result.length >= connections.length,
       `Should have at least as many connections (${result.length}) as before (${connections.length})`
     );
+  });
+});
+
+describe('Phase 4 stable graph identity', () => {
+  it('assigns the same node keys when regional input order changes', () => {
+    const first = [
+      { x: 7, y: 2, nodeType: 'forest', name: 'Pines' },
+      { x: 1, y: 1, nodeType: 'castle', name: 'Citadel' },
+      { x: 4, y: 8, nodeType: 'cave', name: 'Deep Hall' }
+    ];
+    const second = [structuredClone(first[2]), structuredClone(first[0]), structuredClone(first[1])];
+
+    ensureRegionNodeKeys(first, 42);
+    ensureRegionNodeKeys(second, 42);
+
+    const keysByName = nodes => Object.fromEntries(nodes.map(node => [node.name, node.nodeKey]));
+    assert.deepStrictEqual(keysByName(first), keysByName(second));
+  });
+
+  it('returns gap nodes first-class and stable-key edge endpoints', () => {
+    const nodes = [
+      {
+        x: 0,
+        y: 0,
+        nodeType: 'castle',
+        regionId: 42,
+        regionName: 'Heartlands',
+        name: 'Citadel'
+      },
+      {
+        x: 40,
+        y: 0,
+        nodeType: 'forest',
+        regionId: 42,
+        regionName: 'Heartlands',
+        name: 'Far Woods'
+      }
+    ];
+    const result = generateAllRegionConnections(
+      { nodesByRegion: new Map([[42, nodes]]) },
+      new SeededRandom(12345)
+    );
+
+    assert.ok(result.insertedNodes.length > 0);
+    assert.strictEqual(result.insertedNodesByRegion.get(42).length, result.insertedNodes.length);
+    assert.ok(result.insertedNodes.every(node => node.nodeKey));
+    assert.ok(result.allConnections.every(connection =>
+      connection.fromNodeKey && connection.toNodeKey
+    ));
+
+    const nodeKeys = new Set(result.nodesByRegion.get(42).map(node => node.nodeKey));
+    for (const connection of result.allConnections) {
+      assert.ok(nodeKeys.has(connection.fromNodeKey));
+      assert.ok(nodeKeys.has(connection.toNodeKey));
+    }
   });
 });

@@ -67,7 +67,24 @@ npm run db:reset                        # Re-run migrations + seed
 npm run db:fresh                        # Drop all tables, re-migrate, re-seed
 npm run db:status                       # Show migration status
 npm -w api run migrate:rollback         # Roll back last migration
+npm run world:migrate -- --seed=123456 # Read-only live-world remapping plan
 ```
+
+World resets are destructive bootstrap operations, not live-world migrations.
+For persistent data, follow the [world reset backup and restore
+runbook](WORLD_RESET_BACKUP_RESTORE.md) before enabling reset authorization.
+The supported safety scripts require explicit connections and exact paths:
+
+```bash
+scripts/world-reset-backup.sh --archive /absolute/path/pre-world-reset.dump
+scripts/world-reset-restore.sh --help
+node --test scripts/world-reset-db-operations.test.mjs
+```
+
+For a populated world, do not use `db:seed` or `db:reset`. Use the
+[player-preserving world regeneration runbook](PLAYER_PRESERVING_WORLD_REGENERATION.md).
+Its default command is read-only; execution requires a reviewed plan hash,
+maintenance mode, and a verified backup.
 
 ## Linting & Validation
 

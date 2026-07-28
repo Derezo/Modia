@@ -14,6 +14,9 @@
 import { CASTLE_PLACEMENT } from './constants.js';
 import { SeededRandom, REGIONS } from '../../config/constants.js';
 
+const MAX_ORDINARY_PLACEMENT_ATTEMPTS = 8;
+const ZERO_DISTANCE_EPSILON = 0.001;
+
 /**
  * Calculate Euclidean distance between two points
  * @param {Object} a - Point with x, y coordinates
@@ -61,9 +64,15 @@ export function clampToBounds(value, range, padding) {
  * @param {Array<{x: number, y: number}>} positions - Initial castle positions
  * @param {number} minDistance - Minimum required distance between castles
  * @param {number} maxIterations - Maximum iterations before giving up
+ * @param {number} zeroDistanceRotation - Seed-derived rotation for coincident-pair separation
  * @returns {Array<{x: number, y: number}>} Updated positions
  */
-export function applyForceDirectedRepulsion(positions, minDistance = CASTLE_PLACEMENT.MIN_DISTANCE, maxIterations = CASTLE_PLACEMENT.FORCE_MAX_ITERATIONS) {
+export function applyForceDirectedRepulsion(
+  positions,
+  minDistance = CASTLE_PLACEMENT.MIN_DISTANCE,
+  maxIterations = CASTLE_PLACEMENT.FORCE_MAX_ITERATIONS,
+  zeroDistanceRotation = 0
+) {
   // Deep copy to avoid mutating input
   const pos = positions.map(p => ({ x: p.x, y: p.y }));
   const n = pos.length;
@@ -87,12 +96,23 @@ export function applyForceDirectedRepulsion(positions, minDistance = CASTLE_PLAC
     for (let i = 0; i < n; i++) {
       // Inter-castle repulsion
       for (let j = i + 1; j < n; j++) {
-        const dx = pos[j].x - pos[i].x;
-        const dy = pos[j].y - pos[i].y;
-        const dist = Math.hypot(dx, dy);
+        let dx = pos[j].x - pos[i].x;
+        let dy = pos[j].y - pos[i].y;
+        let dist = Math.hypot(dx, dy);
+
+        // Coincident points have no usable direction vector. Combine a stable
+        // pair angle with the caller's seed-derived rotation so they separate
+        // deterministically without ambient RNG inside this pure helper.
+        if (dist <= ZERO_DISTANCE_EPSILON) {
+          const pairAngle = ((i + 1) * 37 + (j + 1) * 101) * (Math.PI / 180);
+          const angle = zeroDistanceRotation + pairAngle;
+          dx = Math.cos(angle) * ZERO_DISTANCE_EPSILON;
+          dy = Math.sin(angle) * ZERO_DISTANCE_EPSILON;
+          dist = ZERO_DISTANCE_EPSILON;
+        }
 
         // Only apply repulsion if too close
-        if (dist < minDistance && dist > 0.001) {
+        if (dist < minDistance) {
           // Repulsion force inversely proportional to distance squared
           // Stronger when closer, prevents overlap
           const gap = minDistance - dist;
@@ -143,6 +163,40 @@ export function applyForceDirectedRepulsion(positions, minDistance = CASTLE_PLAC
 
   console.log(`  Force-directed: max iterations reached (min dist: ${findMinimumPairDistance(pos).toFixed(2)})`);
   return pos;
+}
+
+function quantizePositions(positions) {
+  return positions.map(({ x, y }) => ({
+    x: Math.round(x),
+    y: Math.round(y)
+  }));
+}
+
+function positionsAreValid(positions, minDistance = CASTLE_PLACEMENT.MIN_DISTANCE) {
+  const limit = CASTLE_PLACEMENT.POSITION_RANGE - CASTLE_PLACEMENT.BOUNDARY_PADDING;
+  return positions.every(({ x, y }) =>
+    Number.isFinite(x) &&
+    Number.isFinite(y) &&
+    x >= -limit &&
+    x <= limit &&
+    y >= -limit &&
+    y <= limit
+  ) && findMinimumPairDistance(positions) >= minDistance;
+}
+
+function hasCoincidentPair(positions) {
+  return findMinimumPairDistance(positions) <= ZERO_DISTANCE_EPSILON;
+}
+
+function createFallbackPositions(count, rotation = 0) {
+  const radius = CASTLE_PLACEMENT.POSITION_RANGE - CASTLE_PLACEMENT.BOUNDARY_PADDING;
+  return Array.from({ length: count }, (_, index) => {
+    const angle = rotation + (index * Math.PI * 2) / count;
+    return {
+      x: Math.round(Math.cos(angle) * radius),
+      y: Math.round(Math.sin(angle) * radius)
+    };
+  });
 }
 
 /**
@@ -241,50 +295,78 @@ export function generateCastlePlacements(rng) {
   const regionList = Object.values(REGIONS);
   const numCastles = regionList.length; // 5
 
-  // Step 1: Generate initial random positions
-  console.log('  Step 1: Generating initial random positions...');
-  let positions = [];
-  for (let i = 0; i < numCastles; i++) {
-    positions.push({
-      x: rng.nextInt(-CASTLE_PLACEMENT.POSITION_RANGE, CASTLE_PLACEMENT.POSITION_RANGE),
-      y: rng.nextInt(-CASTLE_PLACEMENT.POSITION_RANGE, CASTLE_PLACEMENT.POSITION_RANGE)
-    });
+  let positions = null;
+  for (let attempt = 1; attempt <= MAX_ORDINARY_PLACEMENT_ATTEMPTS; attempt++) {
+    // Resample the full candidate set on each bounded ordinary attempt. This
+    // keeps retry behavior deterministic for the supplied seeded stream.
+    console.log(`  Ordinary placement attempt ${attempt}/${MAX_ORDINARY_PLACEMENT_ATTEMPTS}`);
+    let candidate = [];
+    for (let i = 0; i < numCastles; i++) {
+      candidate.push({
+        x: rng.nextInt(-CASTLE_PLACEMENT.POSITION_RANGE, CASTLE_PLACEMENT.POSITION_RANGE),
+        y: rng.nextInt(-CASTLE_PLACEMENT.POSITION_RANGE, CASTLE_PLACEMENT.POSITION_RANGE)
+      });
+    }
+
+    const initialMinDist = findMinimumPairDistance(candidate);
+    console.log(`  Initial positions: min distance = ${initialMinDist.toFixed(2)}`);
+
+    // Only consume the collision-direction draw when a candidate actually
+    // needs one. The direction is therefore seed-derived without perturbing
+    // the established non-collision stream fixtures.
+    const zeroDistanceRotation = hasCoincidentPair(candidate)
+      ? rng.next() * Math.PI * 2
+      : 0;
+
+    candidate = applyForceDirectedRepulsion(
+      candidate,
+      CASTLE_PLACEMENT.MIN_DISTANCE,
+      CASTLE_PLACEMENT.FORCE_MAX_ITERATIONS,
+      zeroDistanceRotation
+    );
+    candidate = applyLloydsRelaxation(candidate, CASTLE_PLACEMENT.LLOYD_ITERATIONS);
+    candidate = applyForceDirectedRepulsion(
+      candidate,
+      CASTLE_PLACEMENT.MIN_DISTANCE,
+      CASTLE_PLACEMENT.FORCE_MAX_ITERATIONS,
+      zeroDistanceRotation
+    );
+    candidate = quantizePositions(candidate);
+
+    if (positionsAreValid(candidate)) {
+      positions = candidate;
+      break;
+    }
+
+    console.warn(
+      `  Ordinary castle placement attempt ${attempt} failed finalized separation; resampling`
+    );
   }
 
-  const initialMinDist = findMinimumPairDistance(positions);
-  console.log(`  Initial positions: min distance = ${initialMinDist.toFixed(2)}`);
-
-  // Step 2: Apply force-directed repulsion
-  console.log('  Step 2: Applying force-directed repulsion...');
-  positions = applyForceDirectedRepulsion(positions, CASTLE_PLACEMENT.MIN_DISTANCE, CASTLE_PLACEMENT.FORCE_MAX_ITERATIONS);
-
-  const postForceDist = findMinimumPairDistance(positions);
-  console.log(`  Post-force positions: min distance = ${postForceDist.toFixed(2)}`);
-
-  // Step 3: Apply Lloyd's relaxation for even spread
-  console.log('  Step 3: Applying Lloyd\'s relaxation...');
-  positions = applyLloydsRelaxation(positions, CASTLE_PLACEMENT.LLOYD_ITERATIONS);
-
-  const postLloydDist = findMinimumPairDistance(positions);
-  console.log(`  Post-Lloyd positions: min distance = ${postLloydDist.toFixed(2)}`);
-
-  // Step 4: Final force-directed pass to enforce minimum distance
-  // Lloyd's may have moved some castles closer together
-  console.log('  Step 4: Final constraint enforcement...');
-  positions = applyForceDirectedRepulsion(positions, CASTLE_PLACEMENT.MIN_DISTANCE, CASTLE_PLACEMENT.FORCE_MAX_ITERATIONS);
-
-  const finalMinDist = findMinimumPairDistance(positions);
-  console.log(`  Final positions: min distance = ${finalMinDist.toFixed(2)}`);
-
-  // Step 5: Shuffle regions and assign to positions
-  console.log('  Step 5: Assigning regions to positions...');
+  // Shuffle regions and assign them only after placement is finalized.
+  console.log('  Assigning regions to finalized positions...');
   const shuffledRegions = rng.shuffle([...regionList]);
 
-  const castles = positions.map((pos, i) => ({
-    x: Math.round(pos.x * 10) / 10, // Round to 1 decimal place
-    y: Math.round(pos.y * 10) / 10,
+  if (!positions) {
+    console.warn('  Ordinary castle placement attempts exhausted; using deterministic fallback layout');
+    const rotation = rng.next() * Math.PI * 2;
+    positions = createFallbackPositions(numCastles, rotation);
+  }
+
+  if (!positionsAreValid(positions)) {
+    throw new Error(
+      `Castle placement is unsatisfiable within +/-${CASTLE_PLACEMENT.POSITION_RANGE - CASTLE_PLACEMENT.BOUNDARY_PADDING} ` +
+      `at minimum separation ${CASTLE_PLACEMENT.MIN_DISTANCE}`
+    );
+  }
+
+  const castles = Object.freeze(positions.map((pos, i) => Object.freeze({
+    x: pos.x,
+    y: pos.y,
+    castleKey: `castle:${shuffledRegions[i].id}`,
+    regionId: shuffledRegions[i].id,
     region: shuffledRegions[i]
-  }));
+  })));
 
   // Log castle placements
   console.log('\n  Castle placements:');
@@ -293,10 +375,6 @@ export function generateCastlePlacements(rng) {
   }
 
   // Validation check
-  if (finalMinDist < CASTLE_PLACEMENT.MIN_DISTANCE) {
-    console.warn(`  WARNING: Minimum distance ${finalMinDist.toFixed(2)} is below target ${CASTLE_PLACEMENT.MIN_DISTANCE}`);
-  }
-
   return castles;
 }
 

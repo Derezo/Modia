@@ -19,7 +19,11 @@ import {
   generateBridgeName,
   generateTradeRouteName,
   generateWildernessName,
-  generateIntermediateNodes
+  generateIntermediateNodes,
+  createBridgeNode,
+  createTradeRoute,
+  createGrandPalace,
+  generateInterRegionConnections
 } from '../../../db/worldgen/interRegionConnections.js';
 
 import { SeededRandom } from '../../../config/constants.js';
@@ -595,5 +599,224 @@ describe('Inter-Region Connections Edge Cases', () => {
     const result = findFrontierNodes([], 0, 0);
 
     assert.deepStrictEqual(result, []);
+  });
+});
+
+describe('Phase 5 explicit region and route identity', () => {
+  const border = {
+    region1: 4,
+    region2: 0,
+    region1Id: 101,
+    region2Id: 205,
+    region1Name: 'North',
+    region2Name: 'South',
+    castle1Key: 'castle:101',
+    castle2Key: 'castle:205',
+    midpoint: { x: 0, y: 0 },
+    points: [{ x: 0, y: -4 }, { x: 0, y: 4 }],
+    edgeLength: 8,
+    connectionType: 'bridge_only'
+  };
+
+  const nodesByRegion = () => new Map([
+    [101, [
+      {
+        x: -4,
+        y: 0,
+        nodeType: 'forest',
+        ringDistance: 2,
+        nodeKey: 'region:101:forest'
+      },
+      {
+        x: -8,
+        y: 0,
+        nodeType: 'city',
+        ringDistance: 1,
+        nodeKey: 'region:101:city'
+      }
+    ]],
+    [205, [
+      {
+        x: 4,
+        y: 0,
+        nodeType: 'forest',
+        ringDistance: 2,
+        nodeKey: 'region:205:forest'
+      },
+      {
+        x: 8,
+        y: 0,
+        nodeType: 'city',
+        ringDistance: 1,
+        nodeKey: 'region:205:city'
+      }
+    ]]
+  ]);
+
+  it('resolves bridges and trade endpoints only by explicit regionId', () => {
+    const regions = nodesByRegion();
+    const bridge = createBridgeNode(border, regions, new SeededRandom(10));
+    const trade = createTradeRoute(border, bridge, regions, new SeededRandom(11));
+
+    assert.deepStrictEqual(bridge.connectsRegions, [101, 205]);
+    assert.strictEqual(bridge.connectTo.region1.node.nodeKey, 'region:101:forest');
+    assert.strictEqual(bridge.connectTo.region2.node.nodeKey, 'region:205:forest');
+    assert.ok(trade.length > 0);
+    assert.deepStrictEqual(trade[0].tradeRegions, [101, 205]);
+    assert.deepStrictEqual(trade[0].connectToCity1, {
+      regionId: 101,
+      nodeKey: 'region:101:city'
+    });
+    assert.deepStrictEqual(trade.at(-1).connectToCity2, {
+      regionId: 205,
+      nodeKey: 'region:205:city'
+    });
+  });
+
+  it('rejects shared borders without region and castle identity', () => {
+    assert.throws(
+      () => createBridgeNode(
+        { ...border, region1Id: undefined, castle2Key: undefined },
+        nodesByRegion(),
+        new SeededRandom(1)
+      ),
+      /region1Id, castle2Key/
+    );
+  });
+
+  it('rejects positional regional endpoints without stable node keys', () => {
+    const regions = nodesByRegion();
+    delete regions.get(101)[0].nodeKey;
+
+    assert.throws(
+      () => createBridgeNode(border, regions, new SeededRandom(2)),
+      /bridge frontier is missing a stable nodeKey/
+    );
+  });
+
+  it('requires explicit palace region IDs instead of castle array positions', () => {
+    assert.throws(
+      () => createGrandPalace({
+        x: 0,
+        y: 0,
+        adjacentRegions: [0, 1],
+        regionNames: ['North', 'South']
+      }),
+      /adjacentRegionIds/
+    );
+
+    const palace = createGrandPalace({
+      x: 0,
+      y: 0,
+      adjacentRegions: [0, 1],
+      adjacentRegionIds: [101, 205],
+      regionNames: ['North', 'South']
+    });
+    assert.deepStrictEqual(palace.regionPair, [101, 205]);
+  });
+
+  it('emits stable-key edges with complete route metadata', () => {
+    const castles = [
+      {
+        x: -20,
+        y: 0,
+        regionId: 101,
+        castleKey: 'castle:101',
+        region: { id: 101, name: 'North' }
+      },
+      {
+        x: 20,
+        y: 0,
+        regionId: 205,
+        castleKey: 'castle:205',
+        region: { id: 205, name: 'South' }
+      }
+    ];
+    const voronoiData = {
+      edges: [{
+        region1: 4,
+        region2: 0,
+        region1Id: 101,
+        region2Id: 205,
+        region1Name: 'North',
+        region2Name: 'South',
+        castle1Key: 'castle:101',
+        castle2Key: 'castle:205',
+        midpoint: { x: 0, y: 0 },
+        points: [{ x: 0, y: -2 }, { x: 0, y: 2 }],
+        length: 4
+      }],
+      vertices: [{
+        x: 0,
+        y: 20,
+        adjacentRegions: [0, 1],
+        adjacentRegionIds: [101, 205],
+        regionNames: ['North', 'South'],
+        distanceFromCenter: 20
+      }]
+    };
+
+    const regions = nodesByRegion();
+    const result = generateInterRegionConnections(
+      voronoiData,
+      regions,
+      [],
+      castles,
+      new SeededRandom(12)
+    );
+
+    assert.deepStrictEqual(
+      result.borders.map(({ region1Id, region2Id, region1Name, region2Name,
+        castle1Key, castle2Key }) => ({
+        region1Id,
+        region2Id,
+        region1Name,
+        region2Name,
+        castle1Key,
+        castle2Key
+      })),
+      [{
+        region1Id: 101,
+        region2Id: 205,
+        region1Name: 'North',
+        region2Name: 'South',
+        castle1Key: 'castle:101',
+        castle2Key: 'castle:205'
+      }]
+    );
+    assert.ok(result.interRegionConnections.length > 0);
+    const knownNodeKeys = new Set([
+      ...[...regions.values()].flat().map(node => node.nodeKey),
+      ...result.interRegionNodes.map(node => node.nodeKey)
+    ]);
+    for (const edge of result.interRegionConnections) {
+      assert.ok(edge.fromNodeKey);
+      assert.ok(edge.toNodeKey);
+      assert.ok(knownNodeKeys.has(edge.fromNodeKey));
+      assert.ok(knownNodeKeys.has(edge.toNodeKey));
+      assert.ok(edge.routeId);
+      assert.ok(Object.hasOwn(edge, 'routePairKey'));
+      assert.ok(edge.routeKind);
+      assert.deepStrictEqual(edge.regionPair, [101, 205]);
+      if (edge.routeKind !== 'palace') {
+        assert.strictEqual(edge.routePairKey, 'route-pair:101-205');
+      }
+      assert.ok(edge.segmentKind);
+      assert.ok(edge.difficultyPolicy);
+      assert.ok(Number.isInteger(edge.segmentIndex));
+    }
+    for (const node of result.interRegionNodes) {
+      assert.ok(node.nodeKey);
+      assert.ok(node.routeId);
+      assert.ok(Object.hasOwn(node, 'routePairKey'));
+      assert.ok(node.routeKind);
+      assert.deepStrictEqual(node.regionPair, [101, 205]);
+      if (node.routeKind !== 'palace') {
+        assert.strictEqual(node.routePairKey, 'route-pair:101-205');
+      }
+      assert.ok(node.segmentKind);
+      assert.ok(node.difficultyPolicy);
+      assert.ok(Number.isInteger(node.segmentIndex));
+    }
   });
 });

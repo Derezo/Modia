@@ -30,15 +30,66 @@ const router = express.Router();
 // Re-export pathfinding functions for backward compatibility
 export { getBlockedNodes, getVisitedNodes, findWorldPath };
 
+export const WORLD_ROUTE_CONNECTION_COLUMNS = Object.freeze([
+  'path_type',
+  'route_id',
+  'route_pair_key',
+  'route_kind',
+  'segment_kind',
+  'segment_order',
+  'difficulty_policy'
+]);
+const worldRouteConnectionSelect = WORLD_ROUTE_CONNECTION_COLUMNS
+  .map((column) => `wnc.${column}`)
+  .join(', ');
+
 // ============================================================================
 // ROUTE HANDLERS
 // ============================================================================
 
-// GET /api/world/seed - Get global world seed
-router.get('/seed', asyncHandler(async (req, res) => {
-  const seed = parseInt(process.env.WORLD_SEED || '12345', 10);
-  res.json({ seed });
-}));
+/**
+ * Load the exact seed contract used for the currently persisted world.
+ * queryFn is injectable so callers can verify this read without a database.
+ */
+export async function loadWorldSeedMetadata(queryFn = query) {
+  const result = await queryFn(
+    `SELECT seed_version, world_seed, generator_version,
+            random_stream_version, structural_graph_hash, output_hash,
+            route_manifest_hash, world_node_count, seeded_at
+     FROM seed_metadata
+     WHERE id = 1`
+  );
+  const row = result.rows[0];
+  if (!row) return null;
+
+  return {
+    seed: row.world_seed,
+    worldSeed: row.world_seed,
+    seedVersion: row.seed_version,
+    generatorVersion: row.generator_version,
+    randomStreamVersion: row.random_stream_version,
+    structuralHash: row.structural_graph_hash,
+    outputHash: row.output_hash,
+    routeManifestHash: row.route_manifest_hash,
+    worldNodeCount: Number(row.world_node_count),
+    seededAt: row.seeded_at
+  };
+}
+
+export async function getWorldSeed(req, res) {
+  const metadata = await loadWorldSeedMetadata();
+  if (!metadata) {
+    return res.status(503).json({
+      seed: null,
+      initialized: false,
+      message: 'World seed metadata is not initialized'
+    });
+  }
+  return res.json(metadata);
+}
+
+// GET /api/world/seed - Get the seed contract for the persisted world.
+router.get('/seed', asyncHandler(getWorldSeed));
 
 // GET /api/world/regions - List all regions with their castles
 router.get('/regions', authenticate, asyncHandler(async (req, res) => {
@@ -296,7 +347,7 @@ router.get('/nodes', authenticate, asyncHandler(async (req, res) => {
 
   // Get connections only between discovered nodes
   const connectionsResult = await query(
-    `SELECT wnc.from_node_id, wnc.to_node_id, wnc.path_type
+    `SELECT wnc.from_node_id, wnc.to_node_id, ${worldRouteConnectionSelect}
      FROM world_node_connections wnc
      WHERE wnc.from_node_id IN (SELECT node_id FROM user_node_discovery WHERE user_id = $1)
        AND wnc.to_node_id IN (SELECT node_id FROM user_node_discovery WHERE user_id = $1)`,
@@ -312,6 +363,7 @@ router.get('/nodes', authenticate, asyncHandler(async (req, res) => {
 // GET /api/world/nodes/:id - Get specific node details
 router.get('/nodes/:id', authenticate, asyncHandler(async (req, res) => {
   const { id } = req.params;
+  const userId = req.user.userId;
 
   const result = await query(
     `SELECT wn.id, wn.node_type, wn.name, wn.x_coord, wn.y_coord, wn.distance_from_center,
@@ -320,8 +372,13 @@ router.get('/nodes/:id', authenticate, asyncHandler(async (req, res) => {
             wr.race as region_name, wr.dominant_terrain as region_terrain
      FROM world_nodes wn
      LEFT JOIN world_regions wr ON wr.id = wn.region_id
-     WHERE wn.id = $1`,
-    [id]
+     WHERE wn.id = $1
+       AND EXISTS (
+         SELECT 1
+         FROM user_node_discovery und
+         WHERE und.node_id = wn.id AND und.user_id = $2
+       )`,
+    [id, userId]
   );
 
   if (result.rows.length === 0) {
@@ -330,12 +387,15 @@ router.get('/nodes/:id', authenticate, asyncHandler(async (req, res) => {
 
   // Get connected nodes with their region info
   const connectionsResult = await query(
-    `SELECT wn.id, wn.node_type, wn.name, wn.region_id, wn.region_race, wnc.path_type
+    `SELECT wn.id, wn.node_type, wn.name, wn.region_id, wn.region_race,
+            ${worldRouteConnectionSelect}
      FROM world_node_connections wnc
      JOIN world_nodes wn ON (wnc.to_node_id = wn.id OR wnc.from_node_id = wn.id)
+     JOIN user_node_discovery und
+       ON und.node_id = wn.id AND und.user_id = $2
      WHERE (wnc.from_node_id = $1 OR wnc.to_node_id = $1)
        AND wn.id != $1`,
-    [id]
+    [id, userId]
   );
 
   res.json({
@@ -375,7 +435,12 @@ router.get('/path/:targetNodeId', authenticate, asyncHandler(async (req, res) =>
   }
 
   // Find path (with blocking awareness)
-  const pathResult = await findWorldPath(currentNodeId, parseInt(targetNodeId, 10), userId);
+  const pathResult = await findWorldPath(
+    currentNodeId,
+    parseInt(targetNodeId, 10),
+    userId,
+    { restrictToDiscovered: true }
+  );
 
   if (!pathResult) {
     // Path might be blocked - provide helpful error
@@ -499,7 +564,12 @@ router.post('/travel', authenticate, travelLimiter, asyncHandler(async (req, res
   }
 
   // Find shortest path with blocking awareness
-  const pathResult = await findWorldPath(currentNodeId, targetNodeId, req.user.userId);
+  const pathResult = await findWorldPath(
+    currentNodeId,
+    targetNodeId,
+    req.user.userId,
+    { restrictToDiscovered: true }
+  );
 
   if (!pathResult) {
     throw new AppError('No path found to destination', 400);

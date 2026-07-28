@@ -21,7 +21,7 @@ export const MIN_CONNECTIONS = {
   merchant_caravan: 2,
   ruins: 2,
   watchtower: 2,
-  // Terminator nodes have exactly 1 connection
+  // Low-degree reward sites retain one or two connections.
   chest: 1,
   shrine: 1,
   discovery: 1
@@ -30,10 +30,10 @@ export const MIN_CONNECTIONS = {
 export const MAX_CONNECTIONS = {
   bridge: 2,  // Bridges act as chokepoints with exactly 2 connections
   watchtower: 3,  // Watchtowers can have a few connections but not many
-  // Terminator nodes are dead ends
-  chest: 1,
-  shrine: 1,
-  discovery: 1
+  // Reward sites may sit on a route; only a configured minority are dead ends.
+  chest: 2,
+  shrine: 2,
+  discovery: 2
 };
 
 // Obstacle types for terrain barriers
@@ -163,7 +163,7 @@ export const REGION_NODE_CONFIG = {
   RING_0_MAX_DIST: 5,                  // Guard battle nodes only
   RING_1_MAX_DIST: 12,                 // Cities, villages, primary guild
   RING_2_MAX_DIST: 20,                 // Keep, secondary guilds, villages, battle
-  // Beyond RING_2: Ring 3 - battle nodes, terminators, watchtowers
+  // Beyond RING_2: Ring 3 - battle nodes, reward-site candidates, watchtowers
 };
 
 // ============================================================================
@@ -245,9 +245,27 @@ export const PHASE6_CONFIG = {
   // Minimum ring distance for terminators
   MIN_RING_FOR_TERMINATOR: 3,
 
-  // Target terminator percentage of total nodes
-  TARGET_TERMINATOR_RATIO: 0.06  // ~6% of nodes become terminators
+  // Target reward-site percentage of total nodes
+  TARGET_TERMINATOR_RATIO: 0.06,
+
+  // A small minority of reward sites may remain true dead ends.
+  TERMINATOR_DEAD_END_RATIO: 0.15
 };
+
+export const FINALIZED_WORLD_DOMAINS = Object.freeze({
+  DIFFICULTY_TIER: Object.freeze({ MIN: 1, MAX: 5 }),
+  REGIONAL_RING_DISTANCES: Object.freeze([0, 1, 2, 3]),
+  INTER_REGION_RING_DISTANCE: 4,
+  PALACE_RING_DISTANCE: 5
+});
+
+export const OPENING_PROGRESSION_CONFIG = Object.freeze({
+  APPROVED_SAFE_TYPES: Object.freeze(['castle', 'city', 'village', 'guild', 'keep', 'farm']),
+  DESIGNATED_DESTINATION_TYPES: Object.freeze(['city', 'village', 'guild', 'keep']),
+  MAX_GENERATION_ATTEMPTS: 16,
+  MAX_SAFE_COMPONENT_SIZE: 8,
+  REQUIRED_BOUNDARY_TIER: 1
+});
 
 // ============================================================================
 // GUILD CONFIGURATION
@@ -291,6 +309,9 @@ export const NODE_DISTRIBUTION = {
   // Target percentages (should sum to ~1.0 excluding settlements which are fixed)
   BATTLE_PERCENT: { min: 0.40, max: 0.50 },
   ACTIVITY_PERCENT: { min: 0.20, max: 0.30 },
+  // This is a total-activity safety floor, not a per-type quota. The normal
+  // percentage target is authoritative whenever the region has enough nodes.
+  ACTIVITY_FLOOR_PER_REGION: 3,
   // Settlements make up the remainder
 
   // Battle node types
@@ -307,6 +328,39 @@ export const NODE_DISTRIBUTION = {
   FARM_COUNT_MAX: 4,
   FARM_MIN_RING: 2                        // Farms not too close to castle
 };
+
+/**
+ * Conditional activity-type shares. These weights are applied only after the
+ * density logic has selected an activity node, so regional flavor cannot
+ * inflate or suppress the overall activity count.
+ */
+export const REGIONAL_ACTIVITY_PROFILES = Object.freeze({
+  human: Object.freeze({
+    fishing_spot: 0.30,
+    merchant_caravan: 0.45,
+    ruins: 0.25
+  }),
+  elf: Object.freeze({
+    fishing_spot: 0.50,
+    merchant_caravan: 0.15,
+    ruins: 0.35
+  }),
+  dwarf: Object.freeze({
+    fishing_spot: 0.15,
+    merchant_caravan: 0.40,
+    ruins: 0.45
+  }),
+  vampire: Object.freeze({
+    fishing_spot: 0.15,
+    merchant_caravan: 0.25,
+    ruins: 0.60
+  }),
+  orc: Object.freeze({
+    fishing_spot: 0.20,
+    merchant_caravan: 0.45,
+    ruins: 0.35
+  })
+});
 
 // ============================================================================
 // TERRAIN ANTI-CLUSTERING CONFIGURATION

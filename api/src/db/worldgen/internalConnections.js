@@ -40,6 +40,91 @@ import { generateCastlePlacements } from './castlePlacement.js';
 import { createVoronoiRegions } from './voronoiPartitioning.js';
 import { generateAllRegionNodes } from './nodeGeneration.js';
 
+function compareNodeIdentity(left, right) {
+  const leftIdentity = [
+    left.regionId ?? 0,
+    left.nodeType ?? '',
+    Number(left.x).toFixed(8),
+    Number(left.y).toFixed(8),
+    left.guildType ?? '',
+    left.shrineBuffType ?? ''
+  ].join('|');
+  const rightIdentity = [
+    right.regionId ?? 0,
+    right.nodeType ?? '',
+    Number(right.x).toFixed(8),
+    Number(right.y).toFixed(8),
+    right.guildType ?? '',
+    right.shrineBuffType ?? ''
+  ].join('|');
+  if (leftIdentity < rightIdentity) return -1;
+  if (leftIdentity > rightIdentity) return 1;
+  return 0;
+}
+
+/**
+ * Assign stable generated keys to any regional nodes that do not already have
+ * one. The ordering is based on node identity, never the current array order.
+ *
+ * @param {Array<Object>} nodes - Regional nodes
+ * @param {number|string} regionId - Explicit region identity
+ * @returns {Array<Object>} The same node array
+ */
+export function ensureRegionNodeKeys(nodes, regionId) {
+  if (regionId === undefined || regionId === null) {
+    throw new Error('Cannot assign regional node keys without an explicit regionId');
+  }
+
+  const usedKeys = new Set();
+  for (const node of nodes) {
+    if (!node.nodeKey) continue;
+    if (usedKeys.has(node.nodeKey)) {
+      throw new Error(`Duplicate nodeKey in region ${regionId}: ${node.nodeKey}`);
+    }
+    usedKeys.add(node.nodeKey);
+  }
+
+  const missing = nodes.filter(node => !node.nodeKey).sort(compareNodeIdentity);
+  for (let i = 1; i < missing.length; i++) {
+    if (compareNodeIdentity(missing[i - 1], missing[i]) === 0) {
+      throw new Error(
+        `Cannot derive stable node keys for indistinguishable nodes in region ${regionId}`
+      );
+    }
+  }
+
+  let ordinal = 0;
+  for (const node of missing) {
+    let nodeKey;
+    do {
+      nodeKey = `region:${regionId}:node:${String(ordinal).padStart(4, '0')}`;
+      ordinal++;
+    } while (usedKeys.has(nodeKey));
+    node.nodeKey = nodeKey;
+    usedKeys.add(nodeKey);
+  }
+
+  return nodes;
+}
+
+function addStableEndpoints(connections, nodes, regionId) {
+  return connections.map(connection => {
+    const fromNodeKey = nodes[connection.from]?.nodeKey;
+    const toNodeKey = nodes[connection.to]?.nodeKey;
+    if (!fromNodeKey || !toNodeKey) {
+      throw new Error(
+        `Unresolved Phase-4 edge in region ${regionId}: `
+        + `${connection.from} -> ${connection.to}`
+      );
+    }
+    return {
+      ...connection,
+      fromNodeKey,
+      toNodeKey
+    };
+  });
+}
+
 // ============================================================================
 // INTERMEDIATE NODE GENERATION HELPERS
 // ============================================================================
@@ -649,7 +734,12 @@ export function generateRegionConnections(regionNodes, rng) {
   const castleIndex = regionNodes.findIndex(n => n.nodeType === 'castle');
   if (castleIndex === -1) {
     console.error('  ERROR: No castle found in region!');
-    return { connections: [], nodes: regionNodes, intermediateCount: 0 };
+    return {
+      connections: [],
+      nodes: regionNodes,
+      insertedNodes: [],
+      intermediateCount: 0
+    };
   }
 
   // Extract region info from castle node
@@ -658,6 +748,7 @@ export function generateRegionConnections(regionNodes, rng) {
     id: castle.regionId,
     name: castle.regionName
   };
+  ensureRegionNodeKeys(regionNodes, region.id);
 
   const regionName = region.name || 'Unknown';
   const originalNodeCount = regionNodes.length;
@@ -687,6 +778,7 @@ export function generateRegionConnections(regionNodes, rng) {
   if (intermediateCount > 0) {
     // Push intermediate nodes onto the regionNodes array (mutating it)
     regionNodes.push(...gapInfillResult.intermediateNodes);
+    ensureRegionNodeKeys(regionNodes, region.id);
     console.log(`    Gap infill: Added ${intermediateCount} intermediate nodes (${originalNodeCount} -> ${regionNodes.length})`);
   }
 
@@ -702,8 +794,9 @@ export function generateRegionConnections(regionNodes, rng) {
   console.log(`    Final connections: ${allConnections.length}`);
 
   return {
-    connections: allConnections,
+    connections: addStableEndpoints(allConnections, regionNodes, region.id),
     nodes: regionNodes,
+    insertedNodes: gapInfillResult.intermediateNodes,
     intermediateCount
   };
 }
@@ -718,6 +811,8 @@ export function generateRegionConnections(regionNodes, rng) {
  *   - allConnections: Array of all connections with region info
  *   - connectionsByRegion: Map of regionId -> connections array
  *   - nodesByRegion: Updated nodesByRegion with ring distances and intermediate nodes
+ *   - insertedNodes: First-class list of all Phase-4 gap nodes
+ *   - insertedNodesByRegion: Map of regionId -> Phase-4 gap nodes
  */
 export function generateAllRegionConnections(nodeData, rng) {
   console.log('\n========================================');
@@ -726,6 +821,8 @@ export function generateAllRegionConnections(nodeData, rng) {
 
   const allConnections = [];
   const connectionsByRegion = new Map();
+  const insertedNodes = [];
+  const insertedNodesByRegion = new Map();
   const { nodesByRegion } = nodeData;
 
   let totalConnections = 0;
@@ -742,6 +839,8 @@ export function generateAllRegionConnections(nodeData, rng) {
     }));
 
     connectionsByRegion.set(regionId, connectionsWithRegion);
+    insertedNodesByRegion.set(regionId, result.insertedNodes);
+    insertedNodes.push(...result.insertedNodes);
     allConnections.push(...connectionsWithRegion);
     totalConnections += result.connections.length;
     totalIntermediates += result.intermediateCount || 0;
@@ -770,6 +869,8 @@ export function generateAllRegionConnections(nodeData, rng) {
     allConnections,
     connectionsByRegion,
     nodesByRegion,
+    insertedNodes,
+    insertedNodesByRegion,
     totalIntermediates
   };
 }

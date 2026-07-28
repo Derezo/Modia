@@ -13,6 +13,7 @@
  */
 
 import { generatePathControlPoints, generateSplinePoints } from './PathRenderer.js';
+import { calculateReachableNodeIds } from '@modia/shared/constants';
 
 // Cache size limit for path preview calculations (LRU eviction when exceeded)
 const PATH_CACHE_MAX_SIZE = 100;
@@ -148,6 +149,7 @@ export class WorldMapPathSystem {
    * Rules:
    * - Can reach adjacent nodes including blocked ones (to show them as potential targets)
    * - Cannot traverse THROUGH blocked nodes (they block further paths)
+   * - From a blocked current node, can only retreat to previously visited nodes
    * - Only considers discovered nodes
    *
    * @returns {Set<number>} Set of reachable node IDs
@@ -157,7 +159,7 @@ export class WorldMapPathSystem {
 
     const { currentNode, nodes, connections } = this.scene;
 
-    if (!currentNode || !nodes.length || !connections.length) {
+    if (!currentNode || !nodes.length) {
       return this.reachableNodes;
     }
 
@@ -180,39 +182,21 @@ export class WorldMapPathSystem {
       nodeMap.set(node.id, node);
     }
 
-    // BFS from current node
-    const visited = new Set();
-    const queue = [currentNode.id];
-    visited.add(currentNode.id);
-    this.reachableNodes.add(currentNode.id);
+    const originBlocked = Boolean(currentNode.blocked);
+    const traversalReachable = calculateReachableNodeIds({
+      startNodeId: currentNode.id,
+      adjacency,
+      nodeById: nodeMap,
+      isDiscovered: (node) => this.scene.isNodeDiscovered(node),
+      isBlocked: (node) =>
+        Boolean(node?.blocked) && (!originBlocked || node.id !== currentNode.id)
+    });
 
-    while (queue.length > 0) {
-      const currentId = queue.shift();
-      const currentNodeData = nodeMap.get(currentId);
-
-      // If this node is blocked (and not the starting node), we can reach it but not traverse through it
-      const isBlocked = currentNodeData?.blocked && currentId !== currentNode.id;
-
-      const neighbors = adjacency.get(currentId) || [];
-      for (const neighborId of neighbors) {
-        if (visited.has(neighborId)) continue;
-
-        const neighborNode = nodeMap.get(neighborId);
-        if (!neighborNode) continue;
-
-        // Only consider discovered nodes
-        if (!this.scene.isNodeDiscovered(neighborNode)) continue;
-
-        visited.add(neighborId);
-        this.reachableNodes.add(neighborId);
-
-        // Only continue BFS from this neighbor if the current node is not blocked
-        // (we can reach neighbors of a blocked node, but we can't traverse through it)
-        if (!isBlocked) {
-          queue.push(neighborId);
-        }
-      }
-    }
+    this.reachableNodes = originBlocked
+      ? new Set([...traversalReachable].filter((nodeId) =>
+        nodeId === currentNode.id || nodeMap.get(nodeId)?.visited === true
+      ))
+      : traversalReachable;
 
     return this.reachableNodes;
   }

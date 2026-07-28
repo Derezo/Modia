@@ -1,0 +1,177 @@
+name: World generation CI
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '23 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  api-ci:
+    name: API tests and worldgen corpus (1-500)
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: modia_ci
+          POSTGRES_USER: modia
+          POSTGRES_PASSWORD: modia_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U modia -d modia_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_NAME: modia_ci
+      DB_USER: modia
+      DB_PASSWORD: modia_ci
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+          cache: npm
+
+      - name: Install dependencies
+        id: install
+        run: npm ci
+
+      - name: Verify world-reset operation guards
+        run: node --test scripts/world-reset-db-operations.test.mjs
+
+      - name: Apply database migrations
+        run: npm run db:migrate
+
+      - name: Seed disposable database
+        env:
+          NODE_ENV: production
+          ALLOW_DESTRUCTIVE_WORLD_RESET: 'true'
+          WORLD_RESET_MAINTENANCE_WINDOW: 'true'
+          WORLD_RESET_BACKUP_VERIFIED: 'true'
+        run: npm run db:seed
+
+      - name: Run worldgen acceptance tests
+        env:
+          NODE_ENV: test
+        run: |
+          npm run start -w api > "$RUNNER_TEMP/modia-api.log" 2>&1 &
+          api_pid=$!
+          trap 'kill "$api_pid" 2>/dev/null || true' EXIT
+
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:3000/api/health/ready > /dev/null; then
+              npm run test:worldgen:ci -w api || {
+                cat "$RUNNER_TEMP/modia-api.log"
+                exit 1
+              }
+              exit 0
+            fi
+            sleep 1
+          done
+
+          cat "$RUNNER_TEMP/modia-api.log"
+          exit 1
+
+      - name: Verify atomic seed rollback in isolation
+        env:
+          NODE_ENV: test
+          RUN_SEED_PERSISTENCE_INTEGRATION: 'true'
+        run: >-
+          node --test
+          api/src/tests/integration/seedPersistenceRollback.integration.test.js
+
+      - name: Write worldgen corpus report
+        if: always() && steps.install.outcome == 'success'
+        run: >-
+          node api/src/scripts/worldgen-corpus-report.js
+          --start=1
+          --end=500
+          > worldgen-corpus-1-500.json
+
+      - name: Upload worldgen corpus report
+        if: always() && steps.install.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: worldgen-corpus-1-500
+          path: worldgen-corpus-1-500.json
+          if-no-files-found: error
+          retention-days: 14
+
+  frontend-ci:
+    name: Frontend tests, lint, and build
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run frontend tests
+        run: npm test -w frontend
+
+      - name: Lint frontend
+        run: npm run lint -w frontend
+
+      - name: Build frontend
+        run: npm run build -w frontend
+
+  extended-corpus:
+    name: Extended worldgen corpus (1-5000)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+          cache: npm
+
+      - name: Install dependencies
+        id: install
+        run: npm ci
+
+      - name: Write extended worldgen corpus report
+        run: >-
+          node api/src/scripts/worldgen-corpus-report.js
+          --start=1
+          --end=5000
+          > worldgen-corpus-1-5000.json
+
+      - name: Upload extended worldgen corpus report
+        if: always() && steps.install.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: worldgen-corpus-1-5000
+          path: worldgen-corpus-1-5000.json
+          if-no-files-found: error
+          retention-days: 30

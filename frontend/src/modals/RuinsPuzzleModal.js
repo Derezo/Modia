@@ -35,6 +35,7 @@ export class RuinsPuzzleModal {
     this.nodeId = null;
     this.gridSize = 3;
     this.tiles = [];
+    this.moves = [];
     this.moveCount = 0;
     this.startTime = null;
     this.timerInterval = null;
@@ -325,6 +326,7 @@ export class RuinsPuzzleModal {
     this.teardown();
 
     this.nodeId = nodeId;
+    this.moves = [];
     this.moveCount = 0;
     this.startTime = null;
     this.isCompleted = false;
@@ -413,6 +415,7 @@ export class RuinsPuzzleModal {
             <div class="ruins-puzzle-reward">
               <div class="ruins-puzzle-reward-label">Reward</div>
               <div class="ruins-puzzle-reward-value">${data.rewards.gold} gold</div>
+              <div class="ruins-puzzle-par">Under par: ${data.rewards.underParGold} gold</div>
               <div class="ruins-puzzle-par">${data.rewards.parBonus}</div>
             </div>
           </div>
@@ -466,6 +469,7 @@ export class RuinsPuzzleModal {
     // Swap tiles
     this.tiles[emptyIndex] = this.tiles[index];
     this.tiles[index] = 0;
+    this.moves.push(index);
     this.moveCount++;
 
     // Update display
@@ -534,7 +538,11 @@ export class RuinsPuzzleModal {
     this.stopTimer();
 
     try {
-      const result = await this.game.api.solveRuinsPuzzle(this.nodeId, this.moveCount);
+      const result = await this.game.api.solveRuinsPuzzle(
+        this.nodeId,
+        this.moves,
+        this.puzzleData.puzzleVersion
+      );
 
       // Update player gold
       this.game.state.set('user', {

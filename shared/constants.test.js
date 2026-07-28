@@ -15,7 +15,8 @@ import {
   MAX_BATTLE_PARTY_SIZE,
   SeededRandom,
   expForLevel,
-  calculateStats
+  calculateStats,
+  calculateReachableNodeIds
 } from './constants.js';
 
 describe('Constants', () => {
@@ -578,5 +579,40 @@ describe('Race traits validation', () => {
       );
       assert.strictEqual(RACE_BASE_STATS[race].trait, expectedTraits[race]);
     }
+  });
+});
+
+describe('calculateReachableNodeIds', () => {
+  const adjacency = new Map([
+    [1, new Set([2])],
+    [2, new Set([1, 3])],
+    [3, new Set([2])]
+  ]);
+  const nodeById = new Map([
+    [1, { id: 1 }],
+    [2, { id: 2 }],
+    [3, { id: 3 }]
+  ]);
+
+  it('includes a blocked destination without expanding through it', () => {
+    const reachable = calculateReachableNodeIds({
+      startNodeId: 1,
+      adjacency,
+      nodeById,
+      isBlocked: (node) => node.id === 2
+    });
+
+    assert.deepStrictEqual([...reachable].sort(), [1, 2]);
+  });
+
+  it('does not expand from a blocked origin', () => {
+    const reachable = calculateReachableNodeIds({
+      startNodeId: 2,
+      adjacency,
+      nodeById,
+      isBlocked: (node) => node.id === 2
+    });
+
+    assert.deepStrictEqual([...reachable], [2]);
   });
 });
