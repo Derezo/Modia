@@ -47,8 +47,7 @@
         "identitySource": "/assets/portraits/originals/human_male_warrior.png",
         "referenceLoraModel": "cps2-pixel-art",
         "animationLoraModel": "cps2-pixel-art"
-      },
-      "frameDescriptionOverrides": null
+      }
     },
     {
       "id": "human_male_wizard",

@@ -51,7 +51,7 @@
           "id": "dark_knight_dead",
           "frameCount": 8,
           "seed": 45034,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, black plate armor glowing red visor corrupted greatsword dark aura, dead static pose, lying defeated at final rest motionless, ornate regal"
         }
       },
@@ -62,10 +62,10 @@
         "attack": true,
         "hit": true,
         "death": true,
-        "dead": false
+        "dead": true
       },
       "generatedAt": null,
-      "generated": false,
+      "generated": true,
       "loraModel": "retro-pixel"
     },
     {
@@ -112,7 +112,7 @@
           "id": "shadow_assassin_dead",
           "frameCount": 8,
           "seed": 42064,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, formless darkness glowing red eyes wispy tendrils ethereal presence, dead static pose, lying defeated at final rest motionless, dark rocky"
         }
       },
@@ -123,10 +123,10 @@
         "attack": true,
         "hit": true,
         "death": true,
-        "dead": false
+        "dead": true
       },
       "generatedAt": null,
-      "generated": false,
+      "generated": true,
       "loraModel": "retro-pixel"
     }
   ]

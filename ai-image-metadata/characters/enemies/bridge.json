@@ -51,7 +51,7 @@
           "id": "bridge_bandit_dead",
           "frameCount": 8,
           "seed": 44014,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, hooded figure leather armor daggers mask scar sneaky, dead static pose, lying defeated at final rest motionless, weathered crossing"
         }
       },
@@ -62,10 +62,10 @@
         "attack": true,
         "hit": true,
         "death": true,
-        "dead": false
+        "dead": true
       },
       "generatedAt": null,
-      "generated": false,
+      "generated": true,
       "loraModel": "retro-pixel"
     },
     {
@@ -112,7 +112,7 @@
           "id": "bridge_troll_dead",
           "frameCount": 8,
           "seed": 44034,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, blue-gray skin barnacles algae massive tusks river smell webbed fingers, dead static pose, lying defeated at final rest motionless, weathered crossing"
         }
       },
@@ -123,10 +123,10 @@
         "attack": true,
         "hit": true,
         "death": true,
-        "dead": false
+        "dead": true
       },
       "generatedAt": "2026-01-31T21:01:03.476Z",
-      "generated": false,
+      "generated": true,
       "loraModel": "retro-pixel"
     }
   ]

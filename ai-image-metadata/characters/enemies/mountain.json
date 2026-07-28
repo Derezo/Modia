@@ -51,7 +51,7 @@
           "id": "harpy_dead",
           "frameCount": 8,
           "seed": 43024,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, feathered body sharp talons woman face bird wings fierce screech, dead static pose, lying defeated at final rest motionless, rocky alpine"
         }
       },
@@ -62,10 +62,10 @@
         "attack": true,
         "hit": true,
         "death": true,
-        "dead": false
+        "dead": true
       },
       "generatedAt": "2026-01-31T18:09:18.572Z",
-      "generated": false,
+      "generated": true,
       "loraModel": "retro-pixel"
     },
     {
@@ -112,7 +112,7 @@
           "id": "mountain_troll_dead",
           "frameCount": 8,
           "seed": 43074,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, massive rocky skin mossy patches tusks crude stone club mountain hardy, dead static pose, lying defeated at final rest motionless, rocky alpine"
         }
       },
@@ -123,10 +123,10 @@
         "attack": true,
         "hit": true,
         "death": true,
-        "dead": false
+        "dead": true
       },
       "generatedAt": null,
-      "generated": false,
+      "generated": true,
       "loraModel": "retro-pixel"
     },
     {
@@ -173,7 +173,7 @@
           "id": "troll_shaman_dead",
           "frameCount": 8,
           "seed": 43084,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, rocky troll skin bone necklace staff with glowing crystal tribal markings feathers, dead static pose, lying defeated at final rest motionless, rocky alpine"
         }
       },
@@ -184,10 +184,10 @@
         "attack": true,
         "hit": true,
         "death": true,
-        "dead": false
+        "dead": true
       },
       "generatedAt": null,
-      "generated": false,
+      "generated": true,
       "loraModel": "retro-pixel"
     }
   ]

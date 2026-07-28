@@ -98,16 +98,6 @@ export const NPC_PRIMARY_BIOMES = Object.freeze({
   palace_guard: 'palace'
 });
 
-/**
- * NPC identities that intentionally share the same sprite artwork. Keeping
- * this alias explicit avoids storing byte-identical animation sheets under
- * multiple runtime paths while preserving each NPC's own portrait identity.
- */
-export const NPC_SPRITE_ALIASES = Object.freeze({
-  bandit_captain: 'bridge_bandit',
-  palace_guard: 'dark_knight'
-});
-
 // Backwards-compatible spelling used by the battle runtime.
 export const ENEMY_PRIMARY_BIOMES = NPC_PRIMARY_BIOMES;
 
@@ -450,7 +440,6 @@ export function getNpcCharacterPathCandidates(unitOrVisualId, options = {}) {
     : { enemyId: unitOrVisualId, biome: requestedBiome };
   const { visualId } = getNpcVisualIdentity(source, { fallbackBiome: requestedBiome });
   if (!visualId) return [];
-  const spriteVisualId = NPC_SPRITE_ALIASES[visualId] || visualId;
 
   const animations = (Array.isArray(options.animations) && options.animations.length > 0
     ? options.animations
@@ -461,7 +450,7 @@ export function getNpcCharacterPathCandidates(unitOrVisualId, options = {}) {
 
   for (const biome of getNpcSpriteBiomeCandidates(source, requestedBiome)) {
     for (const animation of animations) {
-      paths.push(getCharacterPath(spriteVisualId, {
+      paths.push(getCharacterPath(visualId, {
         type: 'enemy',
         biome,
         animation,

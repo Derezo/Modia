@@ -10,12 +10,20 @@ import {
   getCanonicalAbilityIconPath,
   getRuntimeItemSubcategory,
   inspectRaster,
+  isApprovedAuthoredStatus,
   parseCliArgs,
   playerSpriteContract,
   publicAssetUrlToFile,
   validateAbilityAssets,
   validateSpriteContract
 } from './validate-runtime-assets.mjs';
+
+test('authored approval statuses match the compiler contract', () => {
+  assert.equal(isApprovedAuthoredStatus('approved'), true);
+  assert.equal(isApprovedAuthoredStatus('approved-pilot'), true);
+  assert.equal(isApprovedAuthoredStatus('approved_manual'), true);
+  assert.equal(isApprovedAuthoredStatus('draft-awaiting-generation'), false);
+});
 
 test('item categories match the ItemIcon runtime routing contract', () => {
   assert.equal(getRuntimeItemSubcategory('weapon'), 'weapons');

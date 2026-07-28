@@ -264,12 +264,18 @@ describe('canonical NPC asset identity', () => {
     assert.strictEqual(getNpcPortraitId({ spriteId: 'bridge-bandit' }), 'enemy_bridge_bandit');
   });
 
-  it('resolves shared NPC artwork through one canonical sprite path', () => {
+  it('resolves approved authored NPC identities through their own canonical sprite paths', () => {
     assert.deepStrictEqual(getNpcCharacterPathCandidates('bandit_captain', {
       requestedBiome: 'bridge',
       animation: 'attack'
     }), [
-      '/assets/characters/enemies/bridge/bridge_bandit/bridge_bandit_attack.webp'
+      '/assets/characters/enemies/bridge/bandit_captain/bandit_captain_attack.webp'
+    ]);
+    assert.deepStrictEqual(getNpcCharacterPathCandidates('palace_guard', {
+      requestedBiome: 'palace',
+      animation: 'attack'
+    }), [
+      '/assets/characters/enemies/palace/palace_guard/palace_guard_attack.webp'
     ]);
     assert.strictEqual(
       getNpcPortraitId({ enemyId: 'bandit_captain' }),

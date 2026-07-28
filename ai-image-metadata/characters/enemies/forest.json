@@ -51,7 +51,7 @@
           "id": "forest_slime_dead",
           "frameCount": 8,
           "seed": 41014,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, translucent green gelatinous body glowing core dripping tendrils bubbles, dead static pose, lying defeated at final rest motionless, leafy green"
         }
       },
@@ -62,10 +62,10 @@
         "attack": true,
         "hit": true,
         "death": true,
-        "dead": false
+        "dead": true
       },
       "generatedAt": "2026-01-31T21:46:36.523Z",
-      "generated": false,
+      "generated": true,
       "loraModel": "retro-pixel"
     },
     {
@@ -112,7 +112,7 @@
           "id": "giant_spider_dead",
           "frameCount": 8,
           "seed": 41024,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, eight red eyes hairy body segmented legs fangs dripping venom, dead static pose, lying defeated at final rest motionless, leafy green"
         }
       },
@@ -123,10 +123,10 @@
         "attack": true,
         "hit": true,
         "death": true,
-        "dead": false
+        "dead": true
       },
       "generatedAt": "2026-01-31T22:09:17.993Z",
-      "generated": false,
+      "generated": true,
       "prompt": "leafy green natural woodland undergrowth dappled light",
       "seed": null,
       "evaluation": 0,
@@ -240,7 +240,7 @@
           "id": "goblin_warrior_dead",
           "frameCount": 8,
           "seed": 41044,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, green skin pointed ears yellow eyes crude weapon loincloth war paint, dead static pose, lying defeated at final rest motionless, leafy green"
         }
       },
@@ -251,10 +251,10 @@
         "attack": true,
         "hit": true,
         "death": true,
-        "dead": false
+        "dead": true
       },
       "generatedAt": null,
-      "generated": false,
+      "generated": true,
       "loraModel": "retro-pixel"
     }
   ]

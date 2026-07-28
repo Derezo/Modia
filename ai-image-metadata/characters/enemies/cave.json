@@ -51,7 +51,7 @@
           "id": "cave_bat_dead",
           "frameCount": 8,
           "seed": 42014,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, cluster of bats red eyes wing membranes fangs screeching, dead static pose, lying defeated at final rest motionless, dark rocky"
         }
       },
@@ -62,10 +62,10 @@
         "attack": true,
         "hit": true,
         "death": true,
-        "dead": false
+        "dead": true
       },
       "generatedAt": null,
-      "generated": false,
+      "generated": true,
       "loraModel": "retro-pixel"
     },
     {
@@ -112,7 +112,7 @@
           "id": "skeleton_warrior_dead",
           "frameCount": 8,
           "seed": 45014,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, animated bones purple eye glow rusted sword tattered armor rattling, dead static pose, lying defeated at final rest motionless, ornate regal"
         }
       },
@@ -123,10 +123,10 @@
         "attack": true,
         "hit": true,
         "death": true,
-        "dead": false
+        "dead": true
       },
       "generatedAt": null,
-      "generated": false,
+      "generated": true,
       "loraModel": "retro-pixel"
     },
     {
@@ -173,7 +173,7 @@
           "id": "stone_golem_dead",
           "frameCount": 8,
           "seed": 43034,
-          "generated": false,
+          "generated": true,
           "prompt": "pixel art sprite side view 64x64, living stone body glowing orange cracks boulder fists runic markings, dead static pose, lying defeated at final rest motionless, rocky alpine"
         }
       },
@@ -184,10 +184,10 @@
         "attack": true,
         "hit": true,
         "death": true,
-        "dead": false
+        "dead": true
       },
       "generatedAt": null,
-      "generated": false,
+      "generated": true,
       "loraModel": "retro-pixel"
     }
   ]

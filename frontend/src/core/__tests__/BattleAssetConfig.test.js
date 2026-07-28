@@ -73,10 +73,14 @@ describe('battle runtime asset configuration', () => {
     assert.deepEqual(getEnemySpriteAnimationCandidates('attack'), ['attack']);
   });
 
-  it('uses one canonical sprite path for identities with shared artwork', () => {
+  it('uses each approved authored identity’s own canonical sprite path', () => {
     assert.deepEqual(
       getEnemySpritePathCandidates('palace_guard', 'attack', 'palace'),
-      ['/assets/characters/enemies/palace/dark_knight/dark_knight_attack.webp']
+      ['/assets/characters/enemies/palace/palace_guard/palace_guard_attack.webp']
+    );
+    assert.deepEqual(
+      getEnemySpritePathCandidates('bandit_captain', 'attack', 'bridge'),
+      ['/assets/characters/enemies/bridge/bandit_captain/bandit_captain_attack.webp']
     );
   });
 

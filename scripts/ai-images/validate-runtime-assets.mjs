@@ -14,8 +14,10 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import sharp from 'sharp';
+import authoredPlayerAnimationCompiler from './lib/authoredPlayerAnimationCompiler.js';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
+const { APPROVED_STATUS } = authoredPlayerAnimationCompiler;
 export const DEFAULT_PROJECT_ROOT = path.resolve(SCRIPT_DIR, '..', '..');
 export const ITEM_SIZES = Object.freeze([32, 64, 128]);
 export const EXPECTED_ABILITY_ICON_COUNT = 164;
@@ -36,6 +38,10 @@ const ISSUE_SEVERITIES = Object.freeze({
 
 function normalizePath(filePath) {
   return filePath.split(path.sep).join('/');
+}
+
+export function isApprovedAuthoredStatus(status) {
+  return APPROVED_STATUS.test(String(status || ''));
 }
 
 function projectRelative(projectRoot, filePath) {
@@ -358,6 +364,10 @@ async function loadRuntimeSources(projectRoot) {
     file,
     data: await readJson(file)
   })));
+  const authoredEnemySpecFiles = (await walkFiles(
+    path.join(projectRoot, 'ai-image-metadata/characters/enemy-authored-animations')
+  )).filter(file => file.endsWith('.json'));
+  const authoredEnemySpecs = await Promise.all(authoredEnemySpecFiles.map(readJson));
 
   const itemMetadata = [];
   for (const [category, fileName] of Object.entries(itemManifest.categoryFiles || {})) {
@@ -374,6 +384,7 @@ async function loadRuntimeSources(projectRoot) {
     playerMetadata,
     characterManifest,
     enemyMetadata,
+    authoredEnemySpecs,
     itemManifest,
     itemMetadata,
     abilityRegistry,
@@ -1275,12 +1286,16 @@ export async function createRuntimeAssetReport(options = {}) {
     if (!enemyMetadataById.has(entry.enemy.id)) enemyMetadataById.set(entry.enemy.id, []);
     enemyMetadataById.get(entry.enemy.id).push(entry);
   }
-  const enemyMetadataIds = new Set(
-    [...enemyTemplateIds].map(enemyId => sources.assetPaths.NPC_SPRITE_ALIASES?.[enemyId] || enemyId)
+  const enemyMetadataIds = new Set(enemyTemplateIds);
+  const approvedAuthoredEnemyIds = new Set(
+    sources.authoredEnemySpecs
+      .filter(spec => isApprovedAuthoredStatus(spec.status))
+      .map(spec => spec.id)
   );
   for (const enemyId of enemyMetadataIds) {
     const entries = enemyMetadataById.get(enemyId) || [];
     if (entries.length === 0) {
+      if (approvedAuthoredEnemyIds.has(enemyId)) continue;
       const mismatch = { id: enemyId };
       checks.enemies.metadataMismatches.push(mismatch);
       issues.push(makeIssue(
