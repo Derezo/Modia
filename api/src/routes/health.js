@@ -3,6 +3,11 @@ import { pool } from '../config/database.js';
 import { connections, rooms } from '../websocket/index.js';
 import { isRedisConfigured, isRedisConnected, pingRedis } from '../config/redis.js';
 import { isUsingRedisStore, getAllLimiterStats } from '../middleware/rateLimiterFactory.js';
+import { battleTerminalOutbox } from '../services/battle/BattleTerminalOutbox.js';
+import { battleTerminalOutboxWorker } from '../services/battle/BattleTerminalOutboxWorker.js';
+import { getBattleMapOperationalMetrics } from '../services/battle/BattleMapOperations.js';
+import { determineOverallHealthStatus } from '../services/healthStatus.js';
+import { getMetricsSnapshot as getWebSocketMetricsSnapshot } from '../websocket/wsMetrics.js';
 
 const router = express.Router();
 
@@ -66,7 +71,8 @@ router.get('/', (req, res) => {
 router.get('/ready', async (req, res) => {
   const checks = {
     database: { status: 'up', latency: 0 },
-    redis: { status: 'unconfigured', latency: 0 }
+    redis: { status: 'unconfigured', latency: 0 },
+    terminalEffects: { status: 'up', latency: 0 }
   };
 
   let isReady = true;
@@ -89,6 +95,32 @@ router.get('/ready', async (req, res) => {
       // Redis being down is degraded, not failed (we have in-memory fallback)
       checks.redis = { status: 'degraded', latency: redisResult.latency, error: redisResult.error };
     }
+  }
+
+  let terminalDelivery = null;
+  const terminalResult = await measureLatency(async () => {
+    terminalDelivery = await battleTerminalOutbox.getDeliveryStatus();
+  });
+  const terminalWorker = battleTerminalOutboxWorker.getStatus();
+  if (
+    !terminalResult.success ||
+    !terminalWorker.running ||
+    terminalWorker.schemaBlocked
+  ) {
+    checks.terminalEffects = {
+      status: 'down',
+      latency: terminalResult.latency,
+      worker: terminalWorker,
+      ...(terminalResult.error && { error: terminalResult.error })
+    };
+    isReady = false;
+  } else {
+    checks.terminalEffects = {
+      status: terminalDelivery.exhausted > 0 ? 'degraded' : 'up',
+      latency: terminalResult.latency,
+      worker: terminalWorker,
+      delivery: terminalDelivery
+    };
   }
 
   const status = isReady ? 'ok' : 'error';
@@ -140,15 +172,28 @@ router.get('/metrics', async (req, res) => {
     };
   }
 
-  const memoryUsage = process.memoryUsage();
+  let terminalDelivery = null;
+  const terminalResult = await measureLatency(async () => {
+    terminalDelivery = await battleTerminalOutbox.getDeliveryStatus();
+  });
+  const terminalWorker = battleTerminalOutboxWorker.getStatus();
 
-  // Determine overall status
-  let overallStatus = 'healthy';
-  if (!dbResult.success) {
-    overallStatus = 'unhealthy';
-  } else if (isRedisConfigured() && !isRedisConnected()) {
-    overallStatus = 'degraded';
-  }
+  const memoryUsage = process.memoryUsage();
+  const battleMapMetrics = getBattleMapOperationalMetrics();
+  const websocketMetrics = getWebSocketMetricsSnapshot(
+    connections.size,
+    rooms.size
+  );
+
+  const overallStatus = determineOverallHealthStatus({
+    databaseAvailable: dbResult.success,
+    terminalDeliveryAvailable: terminalResult.success,
+    terminalWorkerReady:
+      terminalWorker.running && !terminalWorker.schemaBlocked,
+    terminalEffectsExhausted: (terminalDelivery?.exhausted ?? 0) > 0,
+    redisAvailable: !isRedisConfigured() || isRedisConnected(),
+    battleMapsDegraded: battleMapMetrics.status === 'degraded'
+  });
 
   res.json({
     status: overallStatus,
@@ -192,6 +237,24 @@ router.get('/metrics', async (req, res) => {
     // Redis metrics
     redis: redisStatus,
 
+    // Durable terminal-effect delivery metrics
+    terminalEffects: {
+      status: !terminalResult.success
+        ? 'down'
+        : (!terminalWorker.running ||
+            terminalWorker.schemaBlocked ||
+            terminalDelivery.exhausted > 0
+          ? 'degraded'
+          : 'up'),
+      latency: terminalResult.latency,
+      worker: terminalWorker,
+      ...(terminalDelivery && { delivery: terminalDelivery }),
+      ...(terminalResult.error && { error: terminalResult.error })
+    },
+
+    // Battle-map rollout, payload, capability, and recovery telemetry
+    battleMaps: battleMapMetrics,
+
     // Rate limiter metrics
     rateLimiter: {
       store: isUsingRedisStore() ? 'redis' : 'memory',
@@ -202,7 +265,8 @@ router.get('/metrics', async (req, res) => {
     websocket: {
       connections: connections.size,
       rooms: rooms.size,
-      roomList: Array.from(rooms.keys()).slice(0, 20) // First 20 rooms for debugging
+      roomList: Array.from(rooms.keys()).slice(0, 20), // First 20 rooms for debugging
+      metrics: websocketMetrics
     }
   });
 });

@@ -1,0 +1,86 @@
+{
+  "version": "1.1.0",
+  "id": "paladin_v1",
+  "class": "paladin",
+  "templateId": "authored-pose-atlas-v1",
+  "description": "Reusable authored-pose direction for paladin player identities. Registry metadata and the staged portrait control identity; this profile supplies holy-knight martial and invocation choreography.",
+  "style": {
+    "source": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+    "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+  },
+  "identity": {
+    "baseFacing": "three-quarters right",
+    "motionStyle": "noble, resolute, weighted, and luminous, with disciplined plate-armored footwork, ceremonial control, and readable sword-led devotion",
+    "equipmentRule": "Preserve the portrait's gleaming plate, cape, holy insignia, sword, shield or focus, and exact item count. Keep every item in its original hand and never duplicate, swap, sheath, discard, or transform it.",
+    "magicRule": "Divine light must use the portrait's established holy palette and originate from the depicted sword, insignia, shield, or prayer hand. Keep halos, rays, and ward accents compact so anatomy and equipment remain readable."
+  },
+  "promptTemplates": {
+    "reference": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative {{displayName}} identity portrait; Image 2 is style and proportion reference only. Player identity metadata: {{visualTraits}}. Create one complete head-to-toe {{displayName}} preserving Image 1's face, ancestry traits, gender presentation, plate armor, cape, holy insignia, sword, shield or focus, palette, and proportions. Do not import identity details from Image 2. {{equipmentRule}} Translate the portrait into a compact noble silhouette. Use a {{background}} background with no floor or scenery and a square 1:1 canvas with generous padding. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered paladin in a resolute consecrated guard facing {{baseFacing}}. {{invariants}}",
+    "animation": "Draw exactly {{frameCount}} genuinely redrawn full-body {{actionLabel}} poses of the authoritative {{displayName}} in a {{columns}}-column by {{rows}}-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: {{visualTraits}}. Required sequence: {{frameSequence}}. Motion direction: {{motionDirection}}. Overall paladin motion is {{motionStyle}}. {{poseRequirement}} Preserve exact identity, plate armor, cape, insignia, palette, proportions, and equipment. {{equipmentRule}} {{magicRule}} Action-specific effects: {{effectRule}} Use a {{background}} background with generous gutters. {{invariants}}"
+  },
+  "animations": {
+    "idle": {
+      "actionLabel": "paladin consecrated idle-cycle",
+      "minimumUniquePoses": 4,
+      "anchor": "source-cell",
+      "motionDirection": "A calm armored breathing loop maintains noble guard, scans the field, and briefly acknowledges the holy insignia before returning.",
+      "effectRule": "Only a faint contained holy glint on an established insignia or weapon is permitted.",
+      "frameDescriptions": ["resolute guard with holy equipment controlled", "measured inhale raising the armored chest", "weight shifts forward behind the guard", "brief glance toward the established insignia", "centered consecrated midpoint", "controlled exhale with cape and armor settling", "weight shifts rearward as the weapon angle changes", "resolute guard flowing back to frame one"]
+    },
+    "walk": {
+      "actionLabel": "paladin radiant armored march",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "A disciplined alternating march uses firm contacts, real plate compression, controlled equipment counter-motion, and cape follow-through.",
+      "effectRule": "No active spell; any established equipment glow remains faint and fixed to its source.",
+      "frameDescriptions": ["left foot forward contact in noble guard", "left leg compresses beneath plate armor", "passing pose with weapon and free arm balanced", "right foot reaches as cape trails", "right foot plants with disciplined weight", "right leg compresses beneath the armor", "passing pose with left knee advancing", "left foot reaches into the march"]
+    },
+    "attack": {
+      "actionLabel": "paladin radiant sword strike",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "A guarded anticipation becomes a prayer-steady windup, planted radiant slash, decisive contact, cape-led follow-through, and restored noble guard.",
+      "effectRule": "A short identity-colored holy edge accent may follow the sword only at contact; no projectile or oversized beam.",
+      "frameDescriptions": ["consecrated guard measuring the target", "free arm or shield closes while sword draws back", "deep prayer-steady windup over the rear leg", "committed forward step beginning the slash", "radiant sword contact with full torso rotation", "noble follow-through as cape and light trail settle", "weapon recoils while full guard reforms", "recovered consecrated guard"]
+    },
+    "hurt": {
+      "actionLabel": "paladin faith-braced recovery",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "An impact breaks the guard into a heavy stagger, low devotional brace, armored rise, and resolute recovery.",
+      "effectRule": "One compact impact and a few disrupted holy sparks are permitted; no gore, blood, full-body ward, or lost equipment.",
+      "frameDescriptions": ["resolute guard before impact", "sharp flinch with equipment held tight", "maximum stagger as cape swings wide", "forced backward step on deeply bent knees", "low brace with insignia or weapon close", "faithful push upright through the armor", "feet and equipment reset into guard", "recovered resolute stance"]
+    },
+    "death": {
+      "actionLabel": "paladin defeat sequence",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "verticalAnchor": "bottom",
+      "motionDirection": "A final impact dims the light, knees buckle under plate, the body lowers through a devotional kneel, collapses sideways, and settles fully fallen.",
+      "effectRule": "Holy light fades without gore, blood, dismemberment, or rigid rotation. Keep every item singular and recognizable.",
+      "outputFrameMap": [0, 1, 2, 3, 4, 5, 7, 7],
+      "frameDescriptions": ["fatal impact breaks the consecrated guard", "holy accent dims as equipment lowers", "both knees buckle into a devotional drop", "one knee grounds while torso tips sideways", "armored body reaches full ground contact", "cape, limbs, and equipment settle low", "final fully fallen paladin with light extinguished", "same final fallen pose held"]
+    },
+    "cast": {
+      "actionLabel": "paladin divine invocation",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "motionDirection": "The paladin plants in prayer, raises the established holy focus, gathers compact light at the insignia, opens the free hand, releases a protective blessing, and returns to guard.",
+      "effectRule": "Use one compact holy aura or short blessing pulse in the portrait's palette, sourced visibly from the insignia, weapon, shield, or prayer hand; never hide the body.",
+      "frameDescriptions": ["reverent ready stance", "weapon or shield plants as the free hand gathers inward", "insignia lifts and begins a contained glow", "wide stable stance with prayer hand raised", "maximum compact blessing gathered around the established focus", "controlled outward release of the holy pulse", "light recedes as equipment returns", "composed consecrated finish"]
+    },
+    "dead": {
+      "deriveFrom": {"animation": "death", "frame": 7},
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity.",
+      "frameDescriptions": ["terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held"]
+    },
+    "victory": {
+      "actionLabel": "paladin radiant victory salute",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "motionDirection": "The paladin acknowledges victory, bows briefly, raises the holy weapon, opens into a luminous shield-or-prayer salute, and holds a noble finish.",
+      "effectRule": "A compact holy glint or restrained halo may crown the final salute without obscuring the face or equipment.",
+      "frameDescriptions": ["solemn recognition of victory", "brief respectful bow behind controlled equipment", "torso rises as the holy weapon lifts", "weapon raised in a radiant salute", "free hand or shield opens in blessing", "cape settles around a broad noble stance", "luminous protector pose with insignia displayed", "final triumphant paladin pose held"]
+    }
+  }
+}

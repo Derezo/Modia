@@ -15,14 +15,387 @@ import {
   playerSpriteContract,
   publicAssetUrlToFile,
   validateAbilityAssets,
+  validateEnemyAnimationProvenance,
   validateSpriteContract
 } from './validate-runtime-assets.mjs';
+
+const ENEMY_SOURCE_ACTIONS = ['reference', 'idle', 'attack', 'hit', 'death'];
+
+function makeAuthoredEnemySpec(biome, id, status = 'approved') {
+  const root = `ai-image-metadata/characters/enemy-animation-sources/${biome}/${id}`;
+  return {
+    id,
+    biome,
+    status,
+    inputs: {
+      identity: { staged: `${root}/inputs/identity.png` },
+      style: { staged: `${root}/inputs/style.png` }
+    },
+    reference: {
+      source: `${root}/reference.png`,
+      chromaSource: `${root}/chroma/reference.png`,
+      identitySource: `${root}/inputs/identity.png`,
+      styleSource: `${root}/inputs/style.png`
+    },
+    animations: Object.fromEntries(
+      ENEMY_SOURCE_ACTIONS
+        .filter(animation => animation !== 'reference')
+        .map(animation => [
+          animation,
+          {
+            source: `${root}/${animation}.png`,
+            chromaSource: `${root}/chroma/${animation}.png`
+          }
+        ])
+    )
+  };
+}
+
+async function writeCompleteEnemySourceSet(projectRoot, biome, id) {
+  const root = path.join(
+    projectRoot,
+    'ai-image-metadata/characters/enemy-animation-sources',
+    biome,
+    id
+  );
+  await fs.mkdir(path.join(root, 'inputs'), { recursive: true });
+  await fs.mkdir(path.join(root, 'chroma'), { recursive: true });
+  await Promise.all([
+    fs.writeFile(path.join(root, 'inputs/identity.png'), 'identity'),
+    fs.writeFile(path.join(root, 'inputs/style.png'), 'style'),
+    ...ENEMY_SOURCE_ACTIONS.flatMap(animation => [
+      fs.writeFile(path.join(root, `${animation}.png`), `accepted-${animation}`),
+      fs.writeFile(path.join(root, 'chroma', `${animation}.png`), `chroma-${animation}`)
+    ])
+  ]);
+}
+
+async function writeAuthoredEnemySpec(projectRoot, biome, id, spec) {
+  const file = path.join(
+    projectRoot,
+    'ai-image-metadata/characters/enemy-authored-animations',
+    biome,
+    `${id}.json`
+  );
+  await fs.mkdir(path.dirname(file), { recursive: true });
+  await fs.writeFile(file, `${JSON.stringify(spec, null, 2)}\n`);
+  return file;
+}
 
 test('authored approval statuses match the compiler contract', () => {
   assert.equal(isApprovedAuthoredStatus('approved'), true);
   assert.equal(isApprovedAuthoredStatus('approved-pilot'), true);
   assert.equal(isApprovedAuthoredStatus('approved_manual'), true);
   assert.equal(isApprovedAuthoredStatus('draft-awaiting-generation'), false);
+});
+
+test('enemy provenance requires one approved spec and every new-pipeline source stage', async t => {
+  const projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'modia-enemy-provenance-'));
+  t.after(() => fs.rm(projectRoot, { recursive: true, force: true }));
+  await writeCompleteEnemySourceSet(projectRoot, 'forest', 'gray_wolf');
+  const spec = makeAuthoredEnemySpec('forest', 'gray_wolf', 'approved-pilot');
+  const specFile = await writeAuthoredEnemySpec(projectRoot, 'forest', 'gray_wolf', spec);
+  const compilerCalls = [];
+
+  const validation = await validateEnemyAnimationProvenance({
+    projectRoot,
+    runtimeEnemyIds: ['gray_wolf'],
+    authoredEnemySpecs: [{
+      file: specFile,
+      data: spec
+    }],
+    primaryBiomes: { gray_wolf: 'forest' },
+    verifyAuthoredEnemy: async options => {
+      compilerCalls.push(options);
+      return { ok: true, issues: [] };
+    }
+  });
+
+  assert.deepEqual(validation.summary, {
+    runtimeIdentities: 1,
+    completeIdentities: 1,
+    missingSpecs: 0,
+    duplicateSpecs: 0,
+    unapprovedSpecs: 0,
+    biomeMismatches: 0,
+    pathMismatches: 0,
+    unsafeSpecPaths: 0,
+    incompleteSources: 0,
+    unsafeIdentities: 0,
+    compilerFailures: 0
+  });
+  assert.deepEqual(validation.issues, []);
+  assert.equal(validation.checks[0].complete, true);
+  assert.equal(validation.checks[0].compilerVerified, true);
+  assert.deepEqual(compilerCalls, [{
+    projectRoot,
+    id: 'gray_wolf',
+    biome: 'forest',
+    check: true
+  }]);
+});
+
+test('enemy provenance reports missing, duplicate, unapproved, biome, and path spec errors', async t => {
+  const projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'modia-enemy-provenance-'));
+  t.after(() => fs.rm(projectRoot, { recursive: true, force: true }));
+  const duplicateSpec = makeAuthoredEnemySpec('forest', 'duplicate_enemy');
+  const authoredEnemySpecs = [
+    { data: duplicateSpec },
+    { data: structuredClone(duplicateSpec) },
+    { data: makeAuthoredEnemySpec('forest', 'draft_enemy', 'draft-awaiting-generation') },
+    { data: makeAuthoredEnemySpec('cave', 'wrong_biome_enemy') },
+    {
+      file: path.join(
+        projectRoot,
+        'ai-image-metadata/characters/enemy-authored-animations/cave/not_misplaced_enemy.json'
+      ),
+      data: makeAuthoredEnemySpec('forest', 'misplaced_enemy')
+    }
+  ];
+
+  const validation = await validateEnemyAnimationProvenance({
+    projectRoot,
+    runtimeEnemyIds: [
+      'missing_enemy',
+      'duplicate_enemy',
+      'draft_enemy',
+      'misplaced_enemy',
+      'wrong_biome_enemy'
+    ],
+    authoredEnemySpecs,
+    primaryBiomes: {
+      missing_enemy: 'forest',
+      duplicate_enemy: 'forest',
+      draft_enemy: 'forest',
+      misplaced_enemy: 'forest',
+      wrong_biome_enemy: 'forest'
+    }
+  });
+
+  assert.deepEqual(
+    validation.issues.map(issue => `${issue.id}:${issue.code}`),
+    [
+      'wrong_biome_enemy:enemy_authored_spec_biome_mismatch',
+      'duplicate_enemy:enemy_authored_spec_duplicate',
+      'missing_enemy:enemy_authored_spec_missing',
+      'misplaced_enemy:enemy_authored_spec_path_mismatch',
+      'draft_enemy:enemy_authored_spec_unapproved'
+    ]
+  );
+  assert.equal(validation.summary.completeIdentities, 0);
+  assert.equal(validation.summary.missingSpecs, 1);
+  assert.equal(validation.summary.duplicateSpecs, 1);
+  assert.equal(validation.summary.unapprovedSpecs, 1);
+  assert.equal(validation.summary.biomeMismatches, 1);
+  assert.equal(validation.summary.pathMismatches, 1);
+});
+
+test('enemy provenance reports missing files and source declarations actionably', async t => {
+  const projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'modia-enemy-provenance-'));
+  t.after(() => fs.rm(projectRoot, { recursive: true, force: true }));
+  await writeCompleteEnemySourceSet(projectRoot, 'bridge', 'bridge_troll');
+  await fs.rm(path.join(
+    projectRoot,
+    'ai-image-metadata/characters/enemy-animation-sources/bridge/bridge_troll/chroma/death.png'
+  ));
+  const spec = makeAuthoredEnemySpec('bridge', 'bridge_troll');
+  spec.animations.attack.source = 'legacy/enemies/bridge_troll_attack.png';
+  const specFile = await writeAuthoredEnemySpec(projectRoot, 'bridge', 'bridge_troll', spec);
+
+  const validation = await validateEnemyAnimationProvenance({
+    projectRoot,
+    runtimeEnemyIds: ['bridge_troll'],
+    authoredEnemySpecs: [{
+      file: specFile,
+      data: spec
+    }],
+    primaryBiomes: { bridge_troll: 'bridge' }
+  });
+
+  assert.equal(validation.summary.incompleteSources, 1);
+  assert.equal(validation.checks[0].complete, false);
+  assert.deepEqual(validation.checks[0].missingFiles, [{
+    stage: 'chroma',
+    asset: 'death',
+    path: 'ai-image-metadata/characters/enemy-animation-sources/bridge/bridge_troll/chroma/death.png'
+  }]);
+  assert.deepEqual(validation.checks[0].declarationMismatches, [{
+    stage: 'accepted',
+    asset: 'attack',
+    field: 'animations.attack.source',
+    actual: 'legacy/enemies/bridge_troll_attack.png',
+    expected: 'ai-image-metadata/characters/enemy-animation-sources/bridge/bridge_troll/attack.png'
+  }]);
+  assert.match(validation.issues[0].message, /1 missing or empty file.*1 incorrect source declaration/);
+});
+
+test('enemy provenance surfaces compiler pin, output, and source verification failures', async t => {
+  const projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'modia-enemy-provenance-'));
+  t.after(() => fs.rm(projectRoot, { recursive: true, force: true }));
+  const enemyIds = ['missing_pin_enemy', 'corrupt_output_enemy', 'corrupt_source_enemy'];
+  const authoredEnemySpecs = [];
+  for (const id of enemyIds) {
+    const spec = makeAuthoredEnemySpec('forest', id);
+    await writeCompleteEnemySourceSet(projectRoot, 'forest', id);
+    authoredEnemySpecs.push({
+      file: await writeAuthoredEnemySpec(projectRoot, 'forest', id, spec),
+      data: spec
+    });
+  }
+
+  const validation = await validateEnemyAnimationProvenance({
+    projectRoot,
+    runtimeEnemyIds: enemyIds,
+    authoredEnemySpecs,
+    primaryBiomes: Object.fromEntries(enemyIds.map(id => [id, 'forest'])),
+    verifyAuthoredEnemy: async ({ id }) => {
+      if (id === 'missing_pin_enemy') {
+        return {
+          ok: false,
+          issues: ['reference is not pinned; run with --update-pins after approval']
+        };
+      }
+      if (id === 'corrupt_output_enemy') {
+        return {
+          ok: false,
+          issues: [
+            'frontend/public/assets/characters/enemies/forest/corrupt_output_enemy/corrupt_output_enemy_idle.webp differs from deterministic compilation'
+          ]
+        };
+      }
+      throw new Error('Input buffer contains unsupported image format');
+    }
+  });
+
+  assert.equal(validation.summary.completeIdentities, 0);
+  assert.equal(validation.summary.compilerFailures, 3);
+  assert.deepEqual(
+    validation.issues.map(issue => `${issue.id}:${issue.code}`),
+    enemyIds
+      .toSorted()
+      .map(id => `${id}:enemy_authored_compiler_check_failed`)
+  );
+  assert.match(
+    validation.checks.find(check => check.id === 'missing_pin_enemy').compilerIssues[0],
+    /not pinned/
+  );
+  assert.match(
+    validation.checks.find(check => check.id === 'corrupt_output_enemy').compilerIssues[0],
+    /differs from deterministic compilation/
+  );
+  assert.match(
+    validation.checks.find(check => check.id === 'corrupt_source_enemy').compilerIssues[0],
+    /unsupported image format/
+  );
+});
+
+test('enemy provenance rejects traversal identity segments before resolving source paths', async () => {
+  const validation = await validateEnemyAnimationProvenance({
+    projectRoot: path.resolve(os.tmpdir(), 'modia-enemy-provenance-does-not-need-to-exist'),
+    runtimeEnemyIds: ['../escape', 'safe_enemy'],
+    authoredEnemySpecs: [],
+    primaryBiomes: {
+      '../escape': 'forest',
+      safe_enemy: '../forest'
+    },
+    verifyAuthoredEnemy: async () => {
+      assert.fail('unsafe identities must not reach compiler verification');
+    }
+  });
+
+  assert.equal(validation.summary.unsafeIdentities, 2);
+  assert.equal(validation.summary.missingSpecs, 0);
+  assert.deepEqual(
+    validation.issues.map(issue => issue.code),
+    ['enemy_authored_identity_unsafe', 'enemy_authored_identity_unsafe']
+  );
+});
+
+test('enemy provenance rejects new-pipeline sources reached through external symlinks', async t => {
+  const projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'modia-enemy-provenance-'));
+  const externalRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'modia-enemy-external-'));
+  t.after(() => Promise.all([
+    fs.rm(projectRoot, { recursive: true, force: true }),
+    fs.rm(externalRoot, { recursive: true, force: true })
+  ]));
+  await writeCompleteEnemySourceSet(projectRoot, 'forest', 'symlink_enemy');
+
+  const externalSource = path.join(externalRoot, 'attack.png');
+  const sourcePath = path.join(
+    projectRoot,
+    'ai-image-metadata/characters/enemy-animation-sources/forest/symlink_enemy/attack.png'
+  );
+  await fs.writeFile(externalSource, 'external-source');
+  await fs.rm(sourcePath);
+  await fs.symlink(externalSource, sourcePath);
+  const spec = makeAuthoredEnemySpec('forest', 'symlink_enemy');
+  const specFile = await writeAuthoredEnemySpec(
+    projectRoot,
+    'forest',
+    'symlink_enemy',
+    spec
+  );
+
+  const validation = await validateEnemyAnimationProvenance({
+    projectRoot,
+    runtimeEnemyIds: ['symlink_enemy'],
+    authoredEnemySpecs: [{
+      file: specFile,
+      data: spec
+    }],
+    primaryBiomes: { symlink_enemy: 'forest' },
+    verifyAuthoredEnemy: async () => {
+      assert.fail('unsafe source paths must not reach compiler verification');
+    }
+  });
+
+  assert.equal(validation.summary.incompleteSources, 1);
+  assert.equal(validation.summary.compilerFailures, 0);
+  assert.deepEqual(validation.checks[0].missingFiles, []);
+  assert.deepEqual(validation.checks[0].sourceViolations, [{
+    stage: 'accepted',
+    asset: 'attack',
+    path: 'ai-image-metadata/characters/enemy-animation-sources/forest/symlink_enemy/attack.png',
+    reason: 'path contains a symbolic link at ai-image-metadata/characters/enemy-animation-sources/forest/symlink_enemy/attack.png'
+  }]);
+  assert.match(validation.issues[0].message, /1 unsafe or invalid source file/);
+});
+
+test('enemy provenance rejects canonical authored specs reached through external symlinks', async t => {
+  const projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'modia-enemy-provenance-'));
+  const externalRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'modia-enemy-spec-external-'));
+  t.after(() => Promise.all([
+    fs.rm(projectRoot, { recursive: true, force: true }),
+    fs.rm(externalRoot, { recursive: true, force: true })
+  ]));
+
+  const spec = makeAuthoredEnemySpec('forest', 'external_spec_enemy');
+  await writeCompleteEnemySourceSet(projectRoot, 'forest', 'external_spec_enemy');
+  const externalSpec = path.join(externalRoot, 'forest', 'external_spec_enemy.json');
+  await fs.mkdir(path.dirname(externalSpec), { recursive: true });
+  await fs.writeFile(externalSpec, `${JSON.stringify(spec, null, 2)}\n`);
+  const lexicalSpecRoot = path.join(
+    projectRoot,
+    'ai-image-metadata/characters/enemy-authored-animations'
+  );
+  await fs.mkdir(path.dirname(lexicalSpecRoot), { recursive: true });
+  await fs.symlink(externalRoot, lexicalSpecRoot);
+  const lexicalSpec = path.join(lexicalSpecRoot, 'forest', 'external_spec_enemy.json');
+
+  const validation = await validateEnemyAnimationProvenance({
+    projectRoot,
+    runtimeEnemyIds: ['external_spec_enemy'],
+    authoredEnemySpecs: [{ file: lexicalSpec, data: spec }],
+    primaryBiomes: { external_spec_enemy: 'forest' },
+    verifyAuthoredEnemy: async () => {
+      assert.fail('unsafe spec paths must not reach compiler verification');
+    }
+  });
+
+  assert.equal(validation.summary.unsafeSpecPaths, 1);
+  assert.equal(validation.summary.completeIdentities, 0);
+  assert.equal(validation.issues[0].code, 'enemy_authored_spec_path_unsafe');
+  assert.match(validation.issues[0].reason, /symbolic link/);
 });
 
 test('item categories match the ItemIcon runtime routing contract', () => {

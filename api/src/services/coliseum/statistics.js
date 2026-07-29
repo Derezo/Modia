@@ -11,6 +11,16 @@
 
 import { query } from '../../config/database.js';
 import { MAX_BATTLE_PARTY_SIZE } from '../../config/constants.js';
+import battleStateRepository from '../battle/BattleStateRepository.js';
+
+async function loadBattleForStatistics(battleId) {
+  try {
+    return await battleStateRepository.loadBattle(battleId);
+  } catch (error) {
+    if (error?.code === 'BATTLE_NOT_FOUND') return null;
+    throw error;
+  }
+}
 
 /**
  * Capture team snapshots for match history
@@ -76,20 +86,15 @@ export async function captureTeamSnapshots(winnerId, loserId) {
  * @returns {Promise<Object>} Match statistics
  */
 export async function calculateMatchStats(battleId) {
-  const result = await query(
-    'SELECT battle_state, started_at FROM battles WHERE id = $1',
-    [battleId]
-  );
-
-  if (result.rows.length === 0) return null;
-
-  const { battle_state, started_at } = result.rows[0];
-  const state = battle_state;
+  const battle = await loadBattleForStatistics(battleId);
+  if (!battle) return null;
+  const state = battle.state;
+  const startedAt = battle.startedAt;
 
   // Calculate stats from battle log
   const stats = {
     totalTurns: state.turn || 0,
-    duration: Math.floor((Date.now() - new Date(started_at).getTime()) / 1000),
+    duration: Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000),
     player1: { damageDealt: 0, healingDone: 0, unitsLost: 0 },
     player2: { damageDealt: 0, healingDone: 0, unitsLost: 0 }
   };
@@ -252,14 +257,10 @@ export async function getMatchDetails(matchId) {
  * @returns {Promise<Object|null>} Enhanced match statistics with per-unit breakdown
  */
 export async function calculateEnhancedMatchStats(battleId) {
-  const result = await query(
-    'SELECT battle_state, started_at FROM battles WHERE id = $1',
-    [battleId]
-  );
-
-  if (result.rows.length === 0) return null;
-
-  const { battle_state: state, started_at } = result.rows[0];
+  const battle = await loadBattleForStatistics(battleId);
+  if (!battle) return null;
+  const state = battle.state;
+  const startedAt = battle.startedAt;
 
   if (!state || !state.units) return null;
 
@@ -361,7 +362,7 @@ export async function calculateEnhancedMatchStats(battleId) {
     unitStats,
     battleSummary: {
       totalTurns: state.turn || 0,
-      durationSeconds: Math.floor((Date.now() - new Date(started_at).getTime()) / 1000)
+      durationSeconds: Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000)
     }
   };
 }

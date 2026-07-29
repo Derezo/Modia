@@ -17,6 +17,12 @@ import {
 
 const BASE_CLASSES = ['warrior', 'wizard', 'monk', 'chemist'];
 
+function requireQueryClient(client, operation) {
+  if (!client || typeof client.query !== 'function') {
+    throw new TypeError(`${operation} requires a pg client`);
+  }
+}
+
 /**
  * Get the guild ID for a given class
  */
@@ -168,7 +174,14 @@ export async function acceptQuest(characterId, questTemplateId) {
  * @returns {Object|null} Quest progress or null if no active quest
  */
 export async function getQuestProgress(characterId) {
-  const result = await query(
+  return getQuestProgressWithClient({ query }, characterId);
+}
+
+export async function getQuestProgressWithClient(client, characterId) {
+  if (!client || typeof client.query !== 'function') {
+    throw new TypeError('getQuestProgressWithClient requires a pg client');
+  }
+  const result = await client.query(
     `SELECT cq.*, aqt.quest_name, aqt.quest_description,
             aqt.material_requirements, aqt.enemy_requirements, aqt.node_requirements,
             aqt.target_class, aqt.guild_id, aqt.tier, aqt.gold_reward, aqt.xp_reward,
@@ -307,7 +320,22 @@ function calculateNodeProgress(requirements, progress) {
  * @returns {boolean} True if progress was updated
  */
 export async function updateMaterialProgress(characterId, itemTemplateId, quantity = 1) {
-  const result = await query(
+  return updateMaterialProgressWithClient(
+    { query },
+    characterId,
+    itemTemplateId,
+    quantity
+  );
+}
+
+export async function updateMaterialProgressWithClient(
+  client,
+  characterId,
+  itemTemplateId,
+  quantity = 1
+) {
+  requireQueryClient(client, 'updateMaterialProgressWithClient');
+  const result = await client.query(
     `UPDATE character_quests
      SET material_progress = jsonb_set(
        COALESCE(material_progress, '{}'),
@@ -320,7 +348,7 @@ export async function updateMaterialProgress(characterId, itemTemplateId, quanti
   );
 
   if (result.rows.length > 0) {
-    await checkAndUpdateQuestStatus(characterId);
+    await checkAndUpdateQuestStatus(client, characterId);
     return true;
   }
   return false;
@@ -334,7 +362,22 @@ export async function updateMaterialProgress(characterId, itemTemplateId, quanti
  * @returns {boolean} True if progress was updated
  */
 export async function updateEnemyProgress(characterId, enemyArchetype, count = 1) {
-  const result = await query(
+  return updateEnemyProgressWithClient(
+    { query },
+    characterId,
+    enemyArchetype,
+    count
+  );
+}
+
+export async function updateEnemyProgressWithClient(
+  client,
+  characterId,
+  enemyArchetype,
+  count = 1
+) {
+  requireQueryClient(client, 'updateEnemyProgressWithClient');
+  const result = await client.query(
     `UPDATE character_quests
      SET enemy_progress = jsonb_set(
        COALESCE(enemy_progress, '{}'),
@@ -347,7 +390,7 @@ export async function updateEnemyProgress(characterId, enemyArchetype, count = 1
   );
 
   if (result.rows.length > 0) {
-    await checkAndUpdateQuestStatus(characterId);
+    await checkAndUpdateQuestStatus(client, characterId);
     return true;
   }
   return false;
@@ -361,10 +404,21 @@ export async function updateEnemyProgress(characterId, enemyArchetype, count = 1
  * @returns {boolean} True if progress was updated
  */
 export async function updateNodeProgress(characterId, nodeId, nodeType) {
+  return updateNodeProgressWithClient({ query }, characterId, nodeId, nodeType);
+}
+
+export async function updateNodeProgressWithClient(
+  client,
+  characterId,
+  nodeId,
+  nodeType
+) {
+  requireQueryClient(client, 'updateNodeProgressWithClient');
   // First check if this node is already recorded
-  const checkResult = await query(
+  const checkResult = await client.query(
     `SELECT node_progress FROM character_quests
-     WHERE character_id = $1 AND status = 'active'`,
+     WHERE character_id = $1 AND status = 'active'
+     FOR UPDATE`,
     [characterId]
   );
 
@@ -381,7 +435,7 @@ export async function updateNodeProgress(characterId, nodeId, nodeType) {
   }
 
   // Add this node to the list
-  const result = await query(
+  const result = await client.query(
     `UPDATE character_quests
      SET node_progress = jsonb_set(
        COALESCE(node_progress, '{}'),
@@ -394,7 +448,7 @@ export async function updateNodeProgress(characterId, nodeId, nodeType) {
   );
 
   if (result.rows.length > 0) {
-    await checkAndUpdateQuestStatus(characterId);
+    await checkAndUpdateQuestStatus(client, characterId);
     return true;
   }
   return false;
@@ -404,8 +458,8 @@ export async function updateNodeProgress(characterId, nodeId, nodeType) {
  * Check if all objectives are complete and update quest status
  * @param {number} characterId - Character ID
  */
-async function checkAndUpdateQuestStatus(characterId) {
-  const progress = await getQuestProgress(characterId);
+async function checkAndUpdateQuestStatus(client, characterId) {
+  const progress = await getQuestProgressWithClient(client, characterId);
 
   if (!progress) {
     return;
@@ -413,7 +467,7 @@ async function checkAndUpdateQuestStatus(characterId) {
 
   if (progress.progress.allComplete && progress.status === 'active') {
     // Update status to boss_ready
-    await query(
+    await client.query(
       `UPDATE character_quests
        SET status = 'boss_ready', boss_unlocked_at = NOW()
        WHERE character_id = $1 AND status = 'active'`,
@@ -466,95 +520,137 @@ export async function canStartBossTrial(characterId) {
  * @param {number} battleId - The boss battle ID
  * @returns {Object} Completion result with new class info
  */
-export async function completeQuest(characterId, _battleId) {
-  const progress = await getQuestProgress(characterId);
+export async function completeQuest(characterId, battleId) {
+  return withTransaction(client =>
+    completeQuestWithClient(client, characterId, battleId)
+  );
+}
 
-  if (!progress || progress.status !== 'boss_ready') {
+/**
+ * Complete or reconstruct an advancement completion within a caller-owned
+ * transaction. The quest and character locks serialize concurrent deliveries.
+ */
+export async function completeQuestWithClient(client, characterId, battleId) {
+  requireQueryClient(client, 'completeQuestWithClient');
+  if (!Number.isSafeInteger(battleId) || battleId < 1) {
+    throw new TypeError('battleId must be a positive safe integer');
+  }
+  const result = await client.query(
+    `SELECT cq.id AS quest_id, cq.status,
+            aqt.target_class, aqt.prerequisite_class, aqt.guild_id, aqt.tier,
+            aqt.gold_reward, aqt.xp_reward, aqt.title_reward,
+            c.name, c.class, c.race, c.level, c.user_id
+     FROM character_quests cq
+     JOIN advancement_quest_templates aqt ON aqt.id = cq.quest_template_id
+     JOIN characters c ON c.id = cq.character_id
+     WHERE cq.character_id = $1
+       AND (
+         (
+           cq.status = 'boss_ready'
+           AND EXISTS (
+             SELECT 1
+             FROM battles b
+             WHERE b.id = $2
+               AND b.is_advancement_battle = TRUE
+               AND b.challenger_character_id = cq.character_id
+               AND b.target_class = aqt.target_class
+               AND b.status = 'victory'
+           )
+         )
+         OR
+         (
+           cq.status = 'completed'
+           AND cq.completion_battle_id = $2
+         )
+       )
+     FOR UPDATE OF cq, c`,
+    [characterId, battleId]
+  );
+
+  if (result.rows.length === 0) {
     throw new Error('Quest not ready for completion');
   }
 
-  // Get character info
-  const charResult = await query(
-    'SELECT id, name, race, level, user_id FROM characters WHERE id = $1',
-    [characterId]
+  const row = result.rows[0];
+  const newClass = row.target_class;
+  const previousClass = row.prerequisite_class || row.guild_id;
+  const rewards = {
+    gold: row.gold_reward,
+    xp: row.xp_reward,
+    title: row.title_reward
+  };
+  const newStats = calculateStats(row.race, newClass, row.level);
+  const outcome = {
+    success: true,
+    characterName: row.name,
+    previousClass,
+    newClass,
+    tier: row.tier,
+    rewards,
+    newStats
+  };
+
+  if (row.status === 'completed') {
+    return outcome;
+  }
+
+  await client.query(
+    `UPDATE characters
+     SET class = $1,
+         hp_max = $2,
+         hp_current = LEAST(hp_current, $2),
+         mp_max = $3,
+         mp_current = LEAST(mp_current, $3),
+         strength = $4,
+         intelligence = $5,
+         agility = $6,
+         vitality = $7
+     WHERE id = $8`,
+    [
+      newClass,
+      newStats.hpMax,
+      newStats.mpMax,
+      newStats.strength,
+      newStats.intelligence,
+      newStats.agility,
+      newStats.vitality,
+      characterId
+    ]
   );
 
-  const character = charResult.rows[0];
-  const newClass = progress.targetClass;
+  await client.query(
+    `UPDATE character_quests
+     SET status = 'completed',
+         completed_at = NOW(),
+         completion_battle_id = $2
+     WHERE id = $1 AND status = 'boss_ready'`,
+    [row.quest_id, battleId]
+  );
 
-  // Calculate new stats with advanced class
-  const newStats = calculateStats(character.race, newClass, character.level);
-
-  return await withTransaction(async (client) => {
-    // Update character class
+  if (rewards.gold > 0) {
     await client.query(
-      `UPDATE characters
-       SET class = $1,
-           hp_max = $2,
-           hp_current = LEAST(hp_current, $2),
-           mp_max = $3,
-           mp_current = LEAST(mp_current, $3),
-           strength = $4,
-           intelligence = $5,
-           agility = $6,
-           vitality = $7
-       WHERE id = $8`,
-      [
-        newClass,
-        newStats.hpMax,
-        newStats.mpMax,
-        newStats.strength,
-        newStats.intelligence,
-        newStats.agility,
-        newStats.vitality,
-        characterId
-      ]
+      'UPDATE users SET gold = LEAST(gold + $1, 2147483647) WHERE id = $2',
+      [rewards.gold, row.user_id]
     );
+  }
 
-    // Mark quest as completed
+  if (rewards.xp > 0) {
     await client.query(
-      `UPDATE character_quests
-       SET status = 'completed', completed_at = NOW()
-       WHERE character_id = $1 AND status = 'boss_ready'`,
-      [characterId]
+      'UPDATE characters SET experience = experience + $1 WHERE id = $2',
+      [rewards.xp, characterId]
     );
+  }
 
-    // Award gold reward
-    if (progress.rewards.gold > 0) {
-      await client.query(
-        'UPDATE users SET gold = LEAST(gold + $1, 2147483647) WHERE id = $2',
-        [progress.rewards.gold, character.user_id]
-      );
-    }
+  if (rewards.title) {
+    await client.query(
+      `INSERT INTO character_titles (character_id, title, is_active)
+       VALUES ($1, $2, false)
+       ON CONFLICT (character_id, title) DO NOTHING`,
+      [characterId, rewards.title]
+    );
+  }
 
-    // Award XP reward
-    if (progress.rewards.xp > 0) {
-      await client.query(
-        'UPDATE characters SET experience = experience + $1 WHERE id = $2',
-        [progress.rewards.xp, characterId]
-      );
-    }
-
-    // Award title if present
-    if (progress.rewards.title) {
-      await client.query(
-        `INSERT INTO character_titles (character_id, title, is_active)
-         VALUES ($1, $2, false)
-         ON CONFLICT (character_id, title) DO NOTHING`,
-        [characterId, progress.rewards.title]
-      );
-    }
-
-    return {
-      success: true,
-      characterName: character.name,
-      previousClass: character.class,
-      newClass,
-      tier: progress.tier,
-      rewards: progress.rewards,
-      newStats
-    };
-  });
+  return outcome;
 }
 
 /**
@@ -597,10 +693,14 @@ export default {
   acceptQuest,
   getQuestProgress,
   updateMaterialProgress,
+  updateMaterialProgressWithClient,
   updateEnemyProgress,
+  updateEnemyProgressWithClient,
   updateNodeProgress,
+  updateNodeProgressWithClient,
   canStartBossTrial,
   completeQuest,
+  completeQuestWithClient,
   abandonQuest,
   getCompletedQuests
 };

@@ -1,0 +1,30 @@
+{
+  "versions": [
+    2
+  ],
+  "nodeTypes": [
+    "mountain"
+  ],
+  "seeds": [
+    2
+  ],
+  "dimensions": [
+    {
+      "width": 32,
+      "height": 32
+    }
+  ],
+  "modes": [
+    "pve"
+  ],
+  "shardIndex": 0,
+  "shardCount": 1,
+  "corpusGatesDeferred": false,
+  "fullMapCount": 1,
+  "selectedMapCount": 1,
+  "guardrails": {
+    "maximumCorpusMaps": 20000,
+    "maximumMapBytes": 4194304,
+    "maximumGenerationMs": 10000
+  }
+}

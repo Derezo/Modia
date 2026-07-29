@@ -36,6 +36,7 @@ export {
   playerReady,
   cancelMatch,
   completeMatch,
+  publishColiseumMatchResultEvents,
   submitFormation,
   applyQueueBan,
   checkQueueBan,

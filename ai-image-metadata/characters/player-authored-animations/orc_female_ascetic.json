@@ -1,0 +1,657 @@
+{
+  "version": "1.0.0",
+  "template": "ai-image-metadata/characters/player-authored-animation-template.json",
+  "compilerVersion": "1.2.0",
+  "id": "orc_female_ascetic",
+  "profile": "ascetic_v1",
+  "profileSource": "ai-image-metadata/characters/player-animation-profiles/ascetic_v1.json",
+  "status": "approved",
+  "approvedAt": "2026-07-29T02:31:35.314Z",
+  "metadataFingerprint": "404c822d9d58444d6057f655dbc7bf3ff03bb4565d9ccc9d32dd86ec56bc9cd6",
+  "draftProvenance": {
+    "registry": "ai-image-metadata/characters/player-variants.json",
+    "templateSha256": "7943e69db577b3a4429b47df634f931d3f4cb8e8ce9a91a06578255fbe935bbe",
+    "profileSha256": "a298b3a353fde068bff62a169bb054cfcb4b5555412301fe35f391e4678c08db"
+  },
+  "identity": {
+    "race": "orc",
+    "gender": "female",
+    "class": "ascetic",
+    "presentation": "female orc ascetic",
+    "visualTraits": "orc green skin tusks muscular tribal markings fierce female feminine features enlightened monk prayer beads simple robes glowing aura levitating serene",
+    "baseFacing": "three-quarters right",
+    "sourceMetadata": {
+      "isAdvanced": true,
+      "inheritsFrom": "ascetic",
+      "seed": 24028
+    }
+  },
+  "inputs": {
+    "identity": {
+      "origin": "frontend/public/assets/portraits/originals/orc_female_ascetic.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/orc_female_ascetic/inputs/identity.png",
+      "authority": "face, ancestry, gender presentation, hair, eyes, complexion, costume, palette, proportions, and equipment"
+    },
+    "style": {
+      "origin": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/orc_female_ascetic/inputs/style.png",
+      "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+    }
+  },
+  "reference": {
+    "source": "ai-image-metadata/characters/player-animation-sources/orc_female_ascetic/reference.png",
+    "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_female_ascetic/chroma/reference.png",
+    "identitySource": "ai-image-metadata/characters/player-animation-sources/orc_female_ascetic/inputs/identity.png",
+    "styleSource": "ai-image-metadata/characters/player-animation-sources/orc_female_ascetic/inputs/style.png",
+    "prompt": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative Orc Ascetic (female presentation) identity portrait; Image 2 is style and proportion reference only. Player identity metadata: orc green skin tusks muscular tribal markings fierce female feminine features enlightened monk prayer beads simple robes glowing aura levitating serene. Create one complete head-to-toe Orc Ascetic (female presentation) preserving Image 1's face, ancestry traits, gender presentation, hair, simple robes, prayer beads, wraps, aura palette, proportions, and accessories. Do not import identity details from Image 2. Preserve the portrait's simple robes, prayer beads, wraps, jewelry, and exact accessory count. Keep beads continuous and singular, hands readable, and never invent a staff, duplicate charms, or change the robe design. Translate the portrait into a compact serene silhouette. Use a flat #00ff00 chroma key background with no floor or scenery and a square 1:1 canvas with generous padding. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered ascetic in a calm prayer guard facing three-quarters right. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+  },
+  "animations": {
+    "idle": {
+      "source": "ai-image-metadata/characters/player-animation-sources/orc_female_ascetic/idle.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_female_ascetic/chroma/idle.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 4,
+      "frameDescriptions": [
+        "calm prayer guard with beads resting naturally",
+        "deep inhale as palms draw closer",
+        "heels lighten or body rises by a tiny controlled amount",
+        "weight centers beneath a faint contained aura",
+        "serene meditative midpoint",
+        "long exhale as shoulders descend",
+        "heels settle or weight shifts gently rearward",
+        "calm prayer guard flowing back to frame one"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body ascetic meditative idle-cycle poses of the authoritative Orc Ascetic (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: orc green skin tusks muscular tribal markings fierce female feminine features enlightened monk prayer beads simple robes glowing aura levitating serene. Required sequence: calm prayer guard with beads resting naturally; deep inhale as palms draw closer; heels lighten or body rises by a tiny controlled amount; weight centers beneath a faint contained aura; serene meditative midpoint; long exhale as shoulders descend; heels settle or weight shifts gently rearward; calm prayer guard flowing back to frame one. Motion direction: A slow breathing loop moves through prayer hands, subtle levitation or heel lift, centered weight shifts, and a seamless return.. Overall ascetic motion is serene, weightless, centered, and deliberate, with prayer-led gestures, soft landings, controlled levitation, and precise palm mechanics. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, beads, wraps, aura palette, proportions, and accessories. Preserve the portrait's simple robes, prayer beads, wraps, jewelry, and exact accessory count. Keep beads continuous and singular, hands readable, and never invent a staff, duplicate charms, or change the robe design. Use only the portrait's established subtle aura palette. Ki remains a compact halo, palm glow, or short pulse rooted visibly in breath and gesture; never obscure anatomy or turn into an elemental projectile. Action-specific effects: Only a faint compact aura or bead glint in the established palette is permitted. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "walk": {
+      "source": "ai-image-metadata/characters/player-animation-sources/orc_female_ascetic/walk.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_female_ascetic/chroma/walk.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "left foot light forward contact with palms centered",
+        "left knee compresses beneath simple robes",
+        "passing pose with right knee floating forward",
+        "right foot reaches close to the ground",
+        "right foot light forward contact",
+        "right knee compresses under centered posture",
+        "passing pose with left knee floating forward",
+        "left foot reaches into the serene loop"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body ascetic floating step-cycle poses of the authoritative Orc Ascetic (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: orc green skin tusks muscular tribal markings fierce female feminine features enlightened monk prayer beads simple robes glowing aura levitating serene. Required sequence: left foot light forward contact with palms centered; left knee compresses beneath simple robes; passing pose with right knee floating forward; right foot reaches close to the ground; right foot light forward contact; right knee compresses under centered posture; passing pose with left knee floating forward; left foot reaches into the serene loop. Motion direction: A quiet alternating walk uses light contacts, real knee compression, centered palms, robe drift, and bead follow-through.. Overall ascetic motion is serene, weightless, centered, and deliberate, with prayer-led gestures, soft landings, controlled levitation, and precise palm mechanics. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, beads, wraps, aura palette, proportions, and accessories. Preserve the portrait's simple robes, prayer beads, wraps, jewelry, and exact accessory count. Keep beads continuous and singular, hands readable, and never invent a staff, duplicate charms, or change the robe design. Use only the portrait's established subtle aura palette. Ki remains a compact halo, palm glow, or short pulse rooted visibly in breath and gesture; never obscure anatomy or turn into an elemental projectile. Action-specific effects: No active spell; a faint grounded aura may remain close to the feet. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "attack": {
+      "source": "ai-image-metadata/characters/player-animation-sources/orc_female_ascetic/attack.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_female_ascetic/chroma/attack.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "centered prayer guard",
+        "palms separate as weight roots rearward",
+        "deep torso coil with striking palm chambered",
+        "short forward step sends the open palm outward",
+        "compact ki contact with fingers and elbow readable",
+        "soft follow-through as aura collapses inward",
+        "rear palm guides the striking hand back",
+        "recovered centered guard"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body ascetic focused-palm strike poses of the authoritative Orc Ascetic (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: orc green skin tusks muscular tribal markings fierce female feminine features enlightened monk prayer beads simple robes glowing aura levitating serene. Required sequence: centered prayer guard; palms separate as weight roots rearward; deep torso coil with striking palm chambered; short forward step sends the open palm outward; compact ki contact with fingers and elbow readable; soft follow-through as aura collapses inward; rear palm guides the striking hand back; recovered centered guard. Motion direction: Prayer hands separate, hips coil over a rooted rear foot, one palm drives through a short step, compact ki contacts, and both hands return to center.. Overall ascetic motion is serene, weightless, centered, and deliberate, with prayer-led gestures, soft landings, controlled levitation, and precise palm mechanics. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, beads, wraps, aura palette, proportions, and accessories. Preserve the portrait's simple robes, prayer beads, wraps, jewelry, and exact accessory count. Keep beads continuous and singular, hands readable, and never invent a staff, duplicate charms, or change the robe design. Use only the portrait's established subtle aura palette. Ki remains a compact halo, palm glow, or short pulse rooted visibly in breath and gesture; never obscure anatomy or turn into an elemental projectile. Action-specific effects: One palm-sized ki accent may appear exactly at contact; no detached projectile, elemental trail, or body-obscuring aura. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "hurt": {
+      "source": "ai-image-metadata/characters/player-animation-sources/orc_female_ascetic/hurt.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_female_ascetic/chroma/hurt.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "calm guard before impact",
+        "sharp flinch with palms opening defensively",
+        "maximum stagger as faint aura fragments scatter",
+        "backward step with robes and beads swinging",
+        "low centered brace with palms gathered",
+        "controlled rise through a long exhale",
+        "feet and prayer hands reset",
+        "recovered serene guard"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body ascetic disrupted-center recovery poses of the authoritative Orc Ascetic (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: orc green skin tusks muscular tribal markings fierce female feminine features enlightened monk prayer beads simple robes glowing aura levitating serene. Required sequence: calm guard before impact; sharp flinch with palms opening defensively; maximum stagger as faint aura fragments scatter; backward step with robes and beads swinging; low centered brace with palms gathered; controlled rise through a long exhale; feet and prayer hands reset; recovered serene guard. Motion direction: An impact breaks calm into a flinch, aura disruption, backward floating step, low prayer brace, centered rise, and restored composure.. Overall ascetic motion is serene, weightless, centered, and deliberate, with prayer-led gestures, soft landings, controlled levitation, and precise palm mechanics. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, beads, wraps, aura palette, proportions, and accessories. Preserve the portrait's simple robes, prayer beads, wraps, jewelry, and exact accessory count. Keep beads continuous and singular, hands readable, and never invent a staff, duplicate charms, or change the robe design. Use only the portrait's established subtle aura palette. Ki remains a compact halo, palm glow, or short pulse rooted visibly in breath and gesture; never obscure anatomy or turn into an elemental projectile. Action-specific effects: A few compact aura fragments may disperse; no gore, blood, full-body flash, or broken beads. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "death": {
+      "source": "ai-image-metadata/characters/player-animation-sources/orc_female_ascetic/death.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_female_ascetic/chroma/death.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "verticalAnchor": "bottom",
+      "outputFrameMap": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        7,
+        7
+      ],
+      "frameDescriptions": [
+        "fatal impact breaks the centered guard",
+        "aura dims as prayer hands separate",
+        "knees fold into a quiet low drop",
+        "one hip grounds while torso leans sideways",
+        "body reaches full ground contact",
+        "robes, beads, and limbs settle low",
+        "final fully fallen ascetic with aura extinguished",
+        "same final fallen pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body ascetic defeat sequence poses of the authoritative Orc Ascetic (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: orc green skin tusks muscular tribal markings fierce female feminine features enlightened monk prayer beads simple robes glowing aura levitating serene. Required sequence: fatal impact breaks the centered guard; aura dims as prayer hands separate; knees fold into a quiet low drop; one hip grounds while torso leans sideways; body reaches full ground contact; robes, beads, and limbs settle low; final fully fallen ascetic with aura extinguished; same final fallen pose held. Motion direction: The aura dims, levitation ends, knees fold into a quiet seated drop, torso tips sideways, and the body settles fully fallen.. Overall ascetic motion is serene, weightless, centered, and deliberate, with prayer-led gestures, soft landings, controlled levitation, and precise palm mechanics. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, beads, wraps, aura palette, proportions, and accessories. Preserve the portrait's simple robes, prayer beads, wraps, jewelry, and exact accessory count. Keep beads continuous and singular, hands readable, and never invent a staff, duplicate charms, or change the robe design. Use only the portrait's established subtle aura palette. Ki remains a compact halo, palm glow, or short pulse rooted visibly in breath and gesture; never obscure anatomy or turn into an elemental projectile. Action-specific effects: Aura fades without gore, blood, explosion, rigid rotation, or broken or duplicated prayer beads. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "cast": {
+      "source": "ai-image-metadata/characters/player-animation-sources/orc_female_ascetic/cast.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_female_ascetic/chroma/cast.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "still prayer stance",
+        "palms join as breath gathers",
+        "body lifts subtly above grounded toes or lightens visibly",
+        "palms open around a compact centered aura",
+        "maximum contained enlightenment glow at the heart",
+        "controlled short pulse expands from the prayer posture",
+        "aura recedes as feet and palms settle",
+        "serene enlightened finish"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body ascetic enlightened meditation poses of the authoritative Orc Ascetic (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: orc green skin tusks muscular tribal markings fierce female feminine features enlightened monk prayer beads simple robes glowing aura levitating serene. Required sequence: still prayer stance; palms join as breath gathers; body lifts subtly above grounded toes or lightens visibly; palms open around a compact centered aura; maximum contained enlightenment glow at the heart; controlled short pulse expands from the prayer posture; aura recedes as feet and palms settle; serene enlightened finish. Motion direction: Prayer hands center the breath, body lifts subtly, palms open around a compact aura, energy gathers at the heart, pulses outward, and returns to stillness.. Overall ascetic motion is serene, weightless, centered, and deliberate, with prayer-led gestures, soft landings, controlled levitation, and precise palm mechanics. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, beads, wraps, aura palette, proportions, and accessories. Preserve the portrait's simple robes, prayer beads, wraps, jewelry, and exact accessory count. Keep beads continuous and singular, hands readable, and never invent a staff, duplicate charms, or change the robe design. Use only the portrait's established subtle aura palette. Ki remains a compact halo, palm glow, or short pulse rooted visibly in breath and gesture; never obscure anatomy or turn into an elemental projectile. Action-specific effects: Use one compact portrait-colored aura or short non-elemental pulse centered on the body; keep face, hands, beads, and robes visible. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "dead": {
+      "deriveFrom": {
+        "animation": "death",
+        "frame": 7
+      },
+      "frameDescriptions": [
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held"
+      ],
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity."
+    },
+    "victory": {
+      "source": "ai-image-metadata/characters/player-animation-sources/orc_female_ascetic/victory.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_female_ascetic/chroma/victory.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "quiet recognition of victory",
+        "deep respectful bow with palms joined",
+        "body rises as prayer hands lift",
+        "brief balanced levitation with robes and beads controlled",
+        "palms open outward in gratitude",
+        "soft landing or grounding through bent knees",
+        "serene upright victor pose",
+        "final triumphant ascetic pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body ascetic peaceful victory rite poses of the authoritative Orc Ascetic (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: orc green skin tusks muscular tribal markings fierce female feminine features enlightened monk prayer beads simple robes glowing aura levitating serene. Required sequence: quiet recognition of victory; deep respectful bow with palms joined; body rises as prayer hands lift; brief balanced levitation with robes and beads controlled; palms open outward in gratitude; soft landing or grounding through bent knees; serene upright victor pose; final triumphant ascetic pose held. Motion direction: The ascetic recognizes victory, bows, rises into a balanced levitating prayer, opens the palms in gratitude, and settles into quiet triumph.. Overall ascetic motion is serene, weightless, centered, and deliberate, with prayer-led gestures, soft landings, controlled levitation, and precise palm mechanics. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, beads, wraps, aura palette, proportions, and accessories. Preserve the portrait's simple robes, prayer beads, wraps, jewelry, and exact accessory count. Keep beads continuous and singular, hands readable, and never invent a staff, duplicate charms, or change the robe design. Use only the portrait's established subtle aura palette. Ki remains a compact halo, palm glow, or short pulse rooted visibly in breath and gesture; never obscure anatomy or turn into an elemental projectile. Action-specific effects: A faint compact aura may brighten around the prayer pose; no large halo or elemental effect. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    }
+  },
+  "pins": {
+    "templateSha256": "93943004e340d113943e06dea61fd7dfad67c20750dd4fc30d76d3be1fb7c144",
+    "profileSha256": "e24b104a30fdb2d396287d6ec27482854e265f798811679cb463c89ed6e3a32d",
+    "reference": {
+      "sourceSha256": "576e3b544ad4d5138b9d9370203dc35fbeddc3686621f93a2fe5e0a0b5c6708e",
+      "sourceDimensions": "1254x1254",
+      "chromaSourceSha256": "9962773e05f3701c96220eef55a71c493500af3efba1c0891f41e4716c1ffe5e",
+      "chromaSourceDimensions": "1254x1254",
+      "identitySourceSha256": "d88ab8291f31d480d88a99053d7d17969214911fb993dc0ee26093c98179ed06",
+      "identitySourceDimensions": "1024x1024",
+      "styleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "styleSourceDimensions": "1254x1254",
+      "promptSha256": "c07dd8d10fab2400b16f5cc7a656fd69826c4fc032fd2123ce44bfb156bc6a2e",
+      "encodedSha256": "4501e1d63a370033957cef501289b79f3a533322c6999700e1343080541927c3",
+      "decodedSha256": "c2031e24f4c61e16d11a738de30c9544328e530f8f2972047f83298857a2c73f"
+    },
+    "animations": {
+      "idle": {
+        "sourceSha256": "f32da59b60d499308ed402bf30f43991d33ec2fca6406755f7b2eb42ae03ac9e",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "a4632201b91caf770e56c4f882b13eaf2a337556116ba0c53fcd1fb65beae0e9",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "40e7594b3527a0ebfa80a8a96281a5975768eedf89a60a29f260d425e7f6ba27",
+        "encodedSha256": "07d0730d1bed968fb82a956a8c6803816b27ec25a9cc99141a092c42ea06969c",
+        "decodedSha256": "a192659529160b8412c9ed4724e13bed55349171e0a139dd090042ddc20de578",
+        "frameSha256": [
+          "1c628da21a675559c822cba72ec2c0ef52c19bd89e50225345e4d6894e6d633a",
+          "21948d644e5568181255a16ecf5ddb35766b9e83a988bedfab9b08c01c924f55",
+          "ef33b6d8cf7f5670a7c221143454fd6f8de3a5c38cd61865753fe4df870b0453",
+          "c9a14ec11f9a06c1c7cca84e1c557dbe5aaf1012fa0728868c8afa2d821ebd47",
+          "9da13fc7478ace8ab3f5b58c9c1910b2099eb82481def99ade74766aa56b03bc",
+          "af42f7d5548854173db42768b1e7711364ea86ae72746eb7b0230ff65715edc4",
+          "f5559505e5849929f4de927832a6e5e7c91fb1c7b078d5ba867eb85378b8f082",
+          "47cdd1848ec78ef6fa8d37ad035d84e4531a39842a67315dd300e0d9065ba2bf"
+        ],
+        "poseSha256": [
+          "611bd0d1571a884bc75258bc00590f8aa1a383acda9d153c856c75324363ecca",
+          "a7b346e61f608a695a8d1366773b34b2f655627f97fbf86db46804c7c0366cd3",
+          "4b4d2da5a93de92a2b0bae33c6bb95b20b67eab4db08e7cf19c68a8a9527fc0d",
+          "fb8fe1f64654eb7a3865e085eb2a121c451d979e7e9b1cd3be741442dcb1c36d",
+          "78a61a742ec9d5911efb1aee0950f76cd152121cfbdeef7c1201886a8f352822",
+          "32ebed99394a179a3aac1fb3d0995a30b35a24d7e23d32773fd1d725a971d1e5",
+          "710ede7a01ab61fbd74574d5f39b51e9e5814117b576da679e98d9bf6618325b",
+          "b58fcc329bbc10d946c46c56e92fb5400fc745b7f71c6365a20e465346052f70"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.980849,
+          0.979376,
+          0.974397,
+          0.944713,
+          0.990573,
+          0.953257,
+          0.969021,
+          0.955493
+        ]
+      },
+      "walk": {
+        "sourceSha256": "ff4f05b17baaf4880954437f72e9fe1016bec45f5875cfc7a03a9a68a7beaedd",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "112be069258fcef1a847d67736d0af481c0f19e900036fbeb813474e887d2057",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "65a3fea74d70b8e0c49570c5a394ca53bd7655e1970da94b56e42bfa225460f4",
+        "encodedSha256": "700308946ab81b181dcef2965d44e2f022a62516d521ae10908f0bf0195710e9",
+        "decodedSha256": "58f1ffccc264914e2e293afabe60a3ed7b8077e9373770b76464ffabc3b6ccc8",
+        "frameSha256": [
+          "ef26a5a45bdf452dbf0f018f89384cdb408584be922fdb918fb50f393ac43e8d",
+          "4d7805dd8d36f9d89149cc66f36dcad79420641afe1458a5ad065432f4530d5b",
+          "049fce74bbff13470b585fc7b8de603200c69b247f46bd88a36a02731bcace72",
+          "c93478649dd0303c87841ab73dc2a865e73d2b556890a42ba8090b2891165063",
+          "3c69279334a4be8e8b2beb4d3c416455c44e5dbc63e7e7bd76431681bd96b7c2",
+          "a778eaa2fdb427137fc5be11c5b9b2a1021e9d78bee902af9bb0e55ac3abc426",
+          "a9224fffd2622cc09e44c1ce4d2ab9997a01f809a32871468741072f22bcf876",
+          "50405a801c38d75d5e774fd393e7a94f7e8c437c594899b858c4fe7a3268bf68"
+        ],
+        "poseSha256": [
+          "4d9b07152b3e0e499dfece8d1c8cdd57590183e7a19b7bed1377b7ec0cfc19dc",
+          "1718fdb5107afd1c3eca3b8029158aace5000d8b9520ba2d4257468c21d1bf24",
+          "469dcc5cb2d2f03aa8f3c2163c38bc1aec7c45f348e3b59193f23f7c0a95e4a4",
+          "c7aa0c835893fda74844b6c66fe0fffe466889682f6250e97e83b80efccb3262",
+          "f3fa186c6fc177fab46140da7b03ef852077a3ca1d8da4e536839eccee6e5dc8",
+          "0fcff94e4ed58f376bcbf780e57015aaf12d10ef2b998a1bae998097461edeb0",
+          "2e712ac59d73de4e1e2dfd1d64e46a788f8efbd22666975517228edbc154d73e",
+          "a21f22db387fac2b27dc6aec5d6b8619e371d558c989a0f3ec9fe0d53bfcfe97"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.984481,
+          0.970453,
+          0.973621,
+          0.987044,
+          0.971042,
+          0.987912,
+          0.969018,
+          0.976419
+        ]
+      },
+      "attack": {
+        "sourceSha256": "82c81d1d514e0c72f7ca687f70f275c8102f532c15289e40b2186e8956e01a6e",
+        "sourceDimensions": "1717x916",
+        "chromaSourceSha256": "788cf23234b109ba0a7ee2c6934f996038030c9538942765744d0bc19f794b3b",
+        "chromaSourceDimensions": "1717x916",
+        "promptSha256": "00a43043df6267cabfbac0ec096cb62513a658cc188481c65f4fbca593aceeda",
+        "encodedSha256": "5ee33c7a49f739d10622840c1df9abdfd8c631f6167f17c2af224dedfcc67f85",
+        "decodedSha256": "253a35dc1f1cbd4d00103961ae048070769ae56a0f909d6f615c0d4700ed52a3",
+        "frameSha256": [
+          "4065bf87f0513ec10f6344041de321a495fd5285aa89e2766281facd3837ca96",
+          "452a56702a0feb06224409710f130f20533c61b6a8bd90a7181231eee870aa58",
+          "c17162581fdfa358c9d8794e8d5850854bb2b40dcaef48ae27a12bf016a4041d",
+          "cc434b7cbc15db0b78a260e1ad13639dbb4e03f6b17b7167942d79ae711da3ac",
+          "ed08744e9f2a2dc9f260b4e2d129529fcac172e83a395c92276c83705cb2356a",
+          "76d1ebf3622c3712d19cbfbac572b672ef95a39051588392036bea5a28e4afb3",
+          "743847e93104ebb2b35d4e68108bf567510839eaf987577dfc613ac81d1c8976",
+          "b4f58243b605e5687488a96240effa8320ba9eb4a1addc25dd8be0169b9eeb37"
+        ],
+        "poseSha256": [
+          "3efefaf4a2e91e2104ceb1ab368d5a93b9e68939d26cad07394b34d94f459128",
+          "0cfa2e2e4b01ce9edf08e3cb65eb4d7f4c2d67cc9312ecb4d310e817f6ca1348",
+          "64caf8f4deb9998457bf4f533f157730d474444b5bd30dfc845b06ee354ed95c",
+          "064eb511c1ff6b80337b59f82a62fc01d0ee11176f11b67a1dbe70c5d7209c3c",
+          "b7812e1f922f9e7d906c6a93f7ba321d8b309d4ebdfd8ff1979e1ae36bf9f4c3",
+          "48f48ac3e32e8d70f60d58a75a87ddca6bb6220613af545d459fded46b492611",
+          "180e1777682456a332ec44bbfa27f630906bddc1767c4b7953f5e579dfc83854",
+          "348d033ff2c2e55a978fcc7831fd9003dced5eb0e6d3cc677003f331ae581fdf"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.985514,
+          0.995401,
+          0.966514,
+          0.981693,
+          0.996832,
+          0.993895,
+          0.996156,
+          0.98218
+        ]
+      },
+      "hurt": {
+        "sourceSha256": "f9d3231f4fe13405a2069cb7a87e9aa4088d421a615e744cf5ff2dd70eac765a",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "30a6e255d74af2eeb0fa43b8f032d3e6c7d57855751747edd8b81c4e47dabc97",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "129e19bf8fd37291cbc1009452db83f77354e455de7dd8c4903ea997d73cf13f",
+        "encodedSha256": "8f4db133c60c7f51330ccb5b929880d5719abdfe60e8943924f135f2ca2e4575",
+        "decodedSha256": "624b33fe411b0a8a86b16c544436751ebdcaaa701dc4a12b153f90d3ae6bb61a",
+        "frameSha256": [
+          "e7c0f8a0a0c4d26f276ff0cc31428eeda9c9423dca5044a0076b55414f9c1694",
+          "e61fafbb9de9a7e812cb4f0639816f7177d6a7c3bc7509f39c190aca7abf9b09",
+          "e5bbcf08a628486e0b05103c95c6970f394cb37954027332e990e2b67d3bd91b",
+          "ec7e8b7934e349bfe01020a1448b0fae60443eb9dc58b7b505303f019eb46bd9",
+          "d6917aa571a2e61f75836bc4f3a28fd66ccc175c31218c0675ac900092ab2ca2",
+          "0a77a29d99bc24987cd9269a6ca2ef96746851f37ea04540ae4eb57fb88b2aab",
+          "5ceeb22685160ff8604deb20ace0233c5f6ebddbee4ba57b0c70a5eaef69444a",
+          "f3f37393f94510fd0ab89a261afff61fefefb2b3f89a253c03bb74b56fb29d70"
+        ],
+        "poseSha256": [
+          "a04a3cfbca34d775a7e7c87f27a3e519dc536da37d4c750389ac620dc2376a87",
+          "71d50cb489a1e060dc03181d016a0a01bbcd13c21ceaacfb4b6fc0270d6bdeae",
+          "6f67d66852147bc88787a873c0855ff9ceb25fd0ae8dbd6e13195e5fd31e2ff1",
+          "d4d81b941b43c5ef63651972c62cabc950dee05c0798d3eb95db6c0d8050e897",
+          "ff251e45d283b3b1e7ecd64c0d8b9b041f3070bbf25b37c8a708c63ba14e2ae9",
+          "00a752943e444f901ae96328f4c704cdc153bdd1180bb78700bad1d6f53fc567",
+          "5141cd3685d565204e3187ea9f7b43e6cfd2dec28d3138c765d57179bd8f1d80",
+          "b19f66b9dc876f296e08d0b1a7d5aeb7343d3edb80162e575d7e79b9b3ecdf95"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.953711,
+          0.993988,
+          0.906326,
+          0.995567,
+          0.969787,
+          0.967273,
+          0.927869,
+          0.975169
+        ]
+      },
+      "death": {
+        "sourceSha256": "ce7d691fa0a9b54d81f0d375a57e234489dddec53c36a0beabcfc550cdafb81a",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "28cc87218e18a6c6936fc854ecbca03d6fdf3e564959936261220d22d305d1f8",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "38bc116d3ac2889d1176c789e2fa3c29e5a14950518098afadec829cf3cacf09",
+        "encodedSha256": "a8c0020d8e9bfbd54e260fb6ae4c10cf2ebc215bb3b0db322c4a343954054460",
+        "decodedSha256": "88505d68e5ce9aa4c3dc0313cb53f2c33f4a3feacdfee3b83e6a5c6264ca4ebd",
+        "frameSha256": [
+          "83a29abe250aab47e37585a1ca4eadb09e7f142850e7bc8f401eb57a1aff4589",
+          "fcacf79fee41b4e609325d8b6c5720abba59d44c292af5b2eab7741e33411a94",
+          "4ef8ebc1e8a9f118326e3ce737edbcb593bcaba6c0423b6c856f0b9a70516a8a",
+          "701d5cf31107b8f768c5d10dde15a0308734ee97d7e9826a33603c4414107dbb",
+          "7690c40171408b7b53cc0ce018f2c08649a8fca75f5f004d623a42514f27341d",
+          "1f3123b21ef732730320557b48719c1ae98b8dcb748be7432990f62addddbe0b",
+          "64ca416db0afdf3ef67b877ec331c6d730a7ce42a816b7fefb8942d89b1b1d20",
+          "64ca416db0afdf3ef67b877ec331c6d730a7ce42a816b7fefb8942d89b1b1d20"
+        ],
+        "poseSha256": [
+          "eac1c1319fa34271100824f8a5ac1285b089fcf6df95dde652b40868cdfe9ac3",
+          "f8a8cae22d046e5bfd435f756d8b7f3fe4db1d690ede1056d1bf43d1e88ed410",
+          "a521f15587396a989ff5273c396aa0ccd9ff76d2abc25ff3a427b518e1b427ba",
+          "2c0552f0476a785508bd8aa3ae41e5b749853e288638fe0b70320deeb8eb485d",
+          "f304fbf873ae64785db952612b53bb270ec8334bb2f68e5c2c328178e8cc25bb",
+          "cd9fa9a7b7e84efb8424ad8a0e9583c6abb842a82befab42d10160470bc201ff",
+          "52ba22a06be962b68dde079c0b395cf3200073b2dc1d792f949c5390a7967ece",
+          "52ba22a06be962b68dde079c0b395cf3200073b2dc1d792f949c5390a7967ece"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.971,
+          0.950663,
+          0.955415,
+          0.975206,
+          0.985739,
+          0.982548,
+          1,
+          1
+        ]
+      },
+      "cast": {
+        "sourceSha256": "5c7bdd92d76545bc5a21aacd08639afa299456089d4179e60a23ae13e2857dac",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "9c1c89a0d28434c1fcc91d0796bfdd2000b37fdde4da7acef2d5e3b3c64d342a",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "cc55983e1ed382ec90967343e5c90512dbfd03d76428e65663f3dbba0e05871e",
+        "encodedSha256": "dca2c1dc21690adc169d8cf8d67f4f6243c5513e57c500b845099efe14cba2b5",
+        "decodedSha256": "967ef836ee196c96044a7a926441403bd4d9667b4485ffcdf842cf9d4196b04e",
+        "frameSha256": [
+          "619b2da13c3bd4187b3cb57dba76a3dddb0cb363f3a2ce9c511719135c7c07a4",
+          "e47f49e0d2ea6049e7904c1ed5b86439ff5e2ae9ff87f7d13e7920676433750f",
+          "1730941ea3c127dcae0ea488da617a0247f31fcf03f1f5cf16385d635a2435ed",
+          "e58e75e41ce82a4cf3852de4d61c39548b5f158caaddad10cc5d75bd89c5dd44",
+          "4ac5293250dc424da89b10a9be9a0384e296a531d17f0b9123281869216f6fd5",
+          "32a29372404f7251b09006fb699e0b121c4d931bc7d77116e8d01f9926087a15",
+          "e5d58371edf426248fc9a831f270a5488bbf25138932755b9eebd12d11015a45",
+          "cd0592f852ec097a125dc4b155b8b291455b5706ac4363ed68510bcc3abce605"
+        ],
+        "poseSha256": [
+          "ea4387cf4d54ff7517fd15cd41005a8119fa71708f8edb4626c3e491cad25399",
+          "fe379fa5bdec5445371287808bd99277092c7e3ba7ea9d499db268545aeba42e",
+          "a9bbfb1d313c303e44c4c8c0cd91523c81efe4fe1a0dd6a0039a689a6890e7f4",
+          "28abfa7b48dc58d19073ad02569ce77812fdb46414ae6339f79fd0cdeac151a7",
+          "3b89fac7204a0507cc582aeba7d2018e0c8ba4934a79576e1de746e592a139a5",
+          "20f34e35250965b8be48832861e9cf34c9cfd301e5a4892e6fe1cafde3be76fb",
+          "c10f66b8d11aecb796b391d844973a8b6951f2ac6d158361e23c0fef586678f8",
+          "aec7370ec8ee9dbd7e7f0e7c12b7da5ca422355beba3d02ac0072aec91eec28d"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.95013,
+          0.991163,
+          0.958956,
+          0.991049,
+          0.9912,
+          0.989757,
+          0.949405,
+          0.95005
+        ]
+      },
+      "victory": {
+        "sourceSha256": "5f07867d3fa234c3fe7912fdb1cc615caa6d0f959dcb1611eee5cdc114754310",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "bf51159c512a1646022f686bd5e3d2cc0e38924b301027a5396a157fdac10d7a",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "216608cfea108f435dabdc541bfb7ef82bb5525fe2df4b1b34604e4dde8b09c1",
+        "encodedSha256": "90772cf4f0dc874b69e5735ba14d94e383a088f197620910cf843dd2c11bece0",
+        "decodedSha256": "5cabf1f3ec5ac46d44dcf152d6670a6a0d9a2a3a7fc19d341de9c597fda820b2",
+        "frameSha256": [
+          "d7bb053e17f91046eca3c0a87f2803f7e2def0a0fcc210e3274af609d8c44bf5",
+          "f3d0e18916919493587403b89195fd1ed54d2288348cdf36f4959c50c0dcafc9",
+          "4d31557a9c063a700889ccb6fc496a73628a2eaa425719f65cd409a3cb8e4906",
+          "37dd7fd9f41193788cacbf5f1638407ad3709fd0ca9232a014dff87ff7d7aa53",
+          "7f39ded5c03ac069aad390bf2671bcdb18899572c1a8b7467861c38f4e503b8c",
+          "29b95d4d80da1ce5385c19b156365a0d027d240d1eaeecee9ad6f230fd24d339",
+          "d978712d1b3f96af63058efb8999d10119f79cb03daf347cfe054aa17227652e",
+          "ab7ab2487fbc9fa9ddf792b39696c89a541828cbff528ea8d2923901655f3e1c"
+        ],
+        "poseSha256": [
+          "502f63ede695e1a1f049d9c909eaf968a8e39a167e92505ac63e6b92961b6bbb",
+          "776682fe02604dfe2a88afccab75f04faa46430806275ed1bb5a857e0f157d2f",
+          "c76c6b988dbb7d6592d7c78e8ecb9e827c403ab3af35eec06e237ee5c3c89eb1",
+          "387e73216ef7f1cde7b0731bcfd2aec7e590f5fad34044ad183ade946304617f",
+          "f4dc20dc11b73f0578ff1813c7526f0c89900ea7bd0ac80b247722a4ed3d11b1",
+          "b919483a7db8e1caae49d52891d1f07b75a4670c8329e956e0645aec18d2f0bf",
+          "9bd6dc31fdb8b5359f19eaf75885988da826590596101b1faf0499b61e4eb2d5",
+          "157893387b436a8f9e08f04a16326d566ebc1f71e91b91f03f3be5af9b34c443"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.977812,
+          0.989565,
+          0.992284,
+          0.989473,
+          0.992156,
+          0.995107,
+          0.991861,
+          0.986692
+        ]
+      },
+      "dead": {
+        "sourceSha256": "ce7d691fa0a9b54d81f0d375a57e234489dddec53c36a0beabcfc550cdafb81a",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "28cc87218e18a6c6936fc854ecbca03d6fdf3e564959936261220d22d305d1f8",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "f631a7fd605211260b28b5a5bba3503e06dc1064497d1e5769d62e40e178e2b1",
+        "encodedSha256": "70a7c0256c67a6dd10b3f957902883a6f5ba4de19329332c017f412cfce8eeef",
+        "decodedSha256": "87ac6fba3def802d4b6f1f3ec777dfd547be411aeb5682081157b094293c488f",
+        "frameSha256": [
+          "64ca416db0afdf3ef67b877ec331c6d730a7ce42a816b7fefb8942d89b1b1d20",
+          "64ca416db0afdf3ef67b877ec331c6d730a7ce42a816b7fefb8942d89b1b1d20",
+          "64ca416db0afdf3ef67b877ec331c6d730a7ce42a816b7fefb8942d89b1b1d20",
+          "64ca416db0afdf3ef67b877ec331c6d730a7ce42a816b7fefb8942d89b1b1d20",
+          "64ca416db0afdf3ef67b877ec331c6d730a7ce42a816b7fefb8942d89b1b1d20",
+          "64ca416db0afdf3ef67b877ec331c6d730a7ce42a816b7fefb8942d89b1b1d20",
+          "64ca416db0afdf3ef67b877ec331c6d730a7ce42a816b7fefb8942d89b1b1d20",
+          "64ca416db0afdf3ef67b877ec331c6d730a7ce42a816b7fefb8942d89b1b1d20"
+        ],
+        "poseSha256": [
+          "52ba22a06be962b68dde079c0b395cf3200073b2dc1d792f949c5390a7967ece",
+          "52ba22a06be962b68dde079c0b395cf3200073b2dc1d792f949c5390a7967ece",
+          "52ba22a06be962b68dde079c0b395cf3200073b2dc1d792f949c5390a7967ece",
+          "52ba22a06be962b68dde079c0b395cf3200073b2dc1d792f949c5390a7967ece",
+          "52ba22a06be962b68dde079c0b395cf3200073b2dc1d792f949c5390a7967ece",
+          "52ba22a06be962b68dde079c0b395cf3200073b2dc1d792f949c5390a7967ece",
+          "52ba22a06be962b68dde079c0b395cf3200073b2dc1d792f949c5390a7967ece",
+          "52ba22a06be962b68dde079c0b395cf3200073b2dc1d792f949c5390a7967ece"
+        ],
+        "sourceFrameIndexes": [
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  }
+}

@@ -3,7 +3,7 @@
  * Tests room management, state broadcasts, turn notifications, and direct messaging
  */
 
-import { describe, test, beforeEach } from 'node:test';
+import { describe, test, beforeEach, mock } from 'node:test';
 import assert from 'node:assert';
 import {
   createBattleRoomScenario
@@ -11,6 +11,24 @@ import {
 import {
   createMockBattleState
 } from '../testUtils/index.js';
+import {
+  createBattleMutableStateUpdateV1,
+  createBattleMutableStateV1
+} from '../../../../shared/battleStateProtocol.js';
+import {
+  cleanupConnection,
+  registerBattleMapCapabilities
+} from '../../services/messageReliability.js';
+import { battleStateRepository } from '../../services/battle/BattleStateRepository.js';
+import {
+  assertBattleMapWirePayloadWithinBudget,
+  BATTLE_MAP_INITIAL_SNAPSHOT_COMPRESSED_BYTES_ENV,
+  BATTLE_MAP_INITIAL_SNAPSHOT_UNCOMPRESSED_BYTES_ENV,
+  BATTLE_MAP_MUTABLE_DELTA_COMPRESSED_BYTES_ENV,
+  BATTLE_MAP_MUTABLE_DELTA_UNCOMPRESSED_BYTES_ENV,
+  BATTLE_MAP_REFERENCE_DELTA_ENABLED_ENV,
+  getBattleMapOperationalMetrics
+} from '../../services/battle/BattleMapOperations.js';
 
 // Counter to generate unique battle IDs for each test to avoid state pollution
 let testBattleIdCounter = 1000;
@@ -22,6 +40,18 @@ function getUniqueBattleId() {
 let testUserIdCounter = 10000;
 function getUniqueUserId() {
   return testUserIdCounter++;
+}
+
+function enableReferenceDeltaForTest() {
+  const previous = process.env[BATTLE_MAP_REFERENCE_DELTA_ENABLED_ENV];
+  process.env[BATTLE_MAP_REFERENCE_DELTA_ENABLED_ENV] = 'true';
+  return () => {
+    if (previous === undefined) {
+      delete process.env[BATTLE_MAP_REFERENCE_DELTA_ENABLED_ENV];
+    } else {
+      process.env[BATTLE_MAP_REFERENCE_DELTA_ENABLED_ENV] = previous;
+    }
+  };
 }
 
 describe('battleWebsocket service', () => {
@@ -118,12 +148,239 @@ describe('battleWebsocket service', () => {
     test('broadcastStateUpdate sends to battle room', async () => {
       const battleId = getUniqueBattleId();
       const userId = getUniqueUserId();
-      const state = createMockBattleState({ battleId });
+      const update = createBattleMutableStateUpdateV1({
+        battleId,
+        battleMapSchemaVersion: 1,
+        terrainGenerationVersion: 1,
+        fullHash: null,
+        baseStateRevision: 0,
+        stateRevision: 1,
+        mutableState: createBattleMutableStateV1({
+          units: [],
+          battleType: 'pve',
+          player1Id: userId
+        })
+      });
+      const sentMessages = [];
+      const connection = {
+        readyState: 1,
+        send(data) {
+          sentMessages.push(JSON.parse(data));
+        }
+      };
+      const wsModule = await import('../../websocket/index.js');
+      const restoreReferenceDelta = enableReferenceDeltaForTest();
+      wsModule.connections.set(userId, connection);
+      registerBattleMapCapabilities(connection, battleId, {
+        supportedBattleMapSchemaVersions: [1, 2],
+        supportedTerrainGenerationVersions: [1, 2],
+        supportedHashVersions: ['sha256-canonical-json-v1'],
+        supportedMutableStateProtocolVersions: [1]
+      });
 
-      await battleWs.joinBattle(battleId, userId);
-      await battleWs.broadcastStateUpdate(battleId, state);
+      try {
+        await battleWs.joinBattle(battleId, userId);
+        const deliveries = await battleWs.broadcastStateUpdate(battleId, update);
 
-      assert.ok(true, 'Broadcast completed without error');
+        assert.equal(deliveries.has(userId), true);
+        assert.equal(sentMessages.length, 1);
+        assert.equal(sentMessages[0].type, 'battle:state_update');
+        assert.equal(sentMessages[0].ack, true);
+        assert.deepEqual(sentMessages[0].payload.update, update);
+        assert.equal('state' in sentMessages[0].payload, false);
+      } finally {
+        restoreReferenceDelta();
+        cleanupConnection(userId);
+        wsModule.connections.delete(userId);
+        await battleWs.cleanupBattleRoom(battleId);
+      }
+    });
+
+    test('terminal reference delta projects PvP outcome for each participant', async () => {
+      const battleId = getUniqueBattleId();
+      const player1Id = getUniqueUserId();
+      const player2Id = getUniqueUserId();
+      const rewards = { gold: 100, exp: 50 };
+      const update = createBattleMutableStateUpdateV1({
+        battleId,
+        battleMapSchemaVersion: 1,
+        terrainGenerationVersion: 1,
+        fullHash: null,
+        baseStateRevision: 6,
+        stateRevision: 7,
+        mutableState: createBattleMutableStateV1({
+          units: [],
+          battleType: 'pvp',
+          player1Id,
+          player2Id,
+          winnerId: player1Id,
+          status: 'victory',
+          rewards
+        })
+      });
+      const player1Messages = [];
+      const player2Messages = [];
+      const player1Connection = {
+        readyState: 1,
+        send(data) {
+          player1Messages.push(JSON.parse(data));
+        }
+      };
+      const player2Connection = {
+        readyState: 1,
+        send(data) {
+          player2Messages.push(JSON.parse(data));
+        }
+      };
+      const wsModule = await import('../../websocket/index.js');
+      const restoreReferenceDelta = enableReferenceDeltaForTest();
+      const capabilities = {
+        supportedBattleMapSchemaVersions: [1, 2],
+        supportedTerrainGenerationVersions: [1, 2],
+        supportedHashVersions: ['sha256-canonical-json-v1'],
+        supportedMutableStateProtocolVersions: [1]
+      };
+      wsModule.connections.set(player1Id, player1Connection);
+      wsModule.connections.set(player2Id, player2Connection);
+      registerBattleMapCapabilities(player1Connection, battleId, capabilities);
+      registerBattleMapCapabilities(player2Connection, battleId, capabilities);
+
+      try {
+        await battleWs.joinBattle(battleId, player1Id);
+        await battleWs.joinBattle(battleId, player2Id);
+        const deliveries = await battleWs.broadcastStateUpdate(battleId, update);
+
+        assert.equal(deliveries.has(player1Id), true);
+        assert.equal(deliveries.has(player2Id), true);
+        assert.equal(player1Messages.length, 1);
+        assert.equal(player2Messages.length, 1);
+
+        const winnerUpdate = player1Messages[0].payload.update;
+        const loserUpdate = player2Messages[0].payload.update;
+        assert.equal(winnerUpdate.mutableState.status, 'victory');
+        assert.deepEqual(winnerUpdate.mutableState.rewards, rewards);
+        assert.equal(loserUpdate.mutableState.status, 'defeat');
+        assert.equal(loserUpdate.mutableState.rewards, null);
+        assert.equal(winnerUpdate.baseStateRevision, update.baseStateRevision);
+        assert.equal(loserUpdate.baseStateRevision, update.baseStateRevision);
+        assert.equal(winnerUpdate.stateRevision, update.stateRevision);
+        assert.equal(loserUpdate.stateRevision, update.stateRevision);
+        assert.equal(winnerUpdate.updateId, update.updateId);
+        assert.equal(loserUpdate.updateId, update.updateId);
+      } finally {
+        restoreReferenceDelta();
+        cleanupConnection(player1Id);
+        cleanupConnection(player2Id);
+        wsModule.connections.delete(player1Id);
+        wsModule.connections.delete(player2Id);
+        await battleWs.cleanupBattleRoom(battleId);
+      }
+    });
+
+    test('falls back to a full snapshot when ACK metadata makes the final delta envelope oversized', async () => {
+      const battleId = getUniqueBattleId();
+      const userId = getUniqueUserId();
+      const mutableState = createBattleMutableStateV1({
+        units: [],
+        battleType: 'pve',
+        player1Id: userId,
+        turn: 2
+      });
+      const update = createBattleMutableStateUpdateV1({
+        battleId,
+        battleMapSchemaVersion: 1,
+        terrainGenerationVersion: 1,
+        fullHash: null,
+        baseStateRevision: 1,
+        stateRevision: 2,
+        mutableState
+      });
+      const map = {
+        battleMapSchemaVersion: 1,
+        terrainGenerationVersion: 1,
+        terrainSeed: 91,
+        mapWidth: 1,
+        mapHeight: 1,
+        terrain: [['grass']],
+        elevation: [[0]],
+        obstacles: []
+      };
+      const persistedBattle = {
+        battleId,
+        battleMapSchemaVersion: 1,
+        terrainGenerationVersion: 1,
+        stateRevision: 2,
+        map,
+        mutableState,
+        state: { ...map, ...mutableState }
+      };
+      const sentMessages = [];
+      const connection = {
+        readyState: 1,
+        send(data) {
+          sentMessages.push(JSON.parse(data));
+        }
+      };
+      const wsModule = await import('../../websocket/index.js');
+      const previousEnvironment = Object.fromEntries([
+        BATTLE_MAP_REFERENCE_DELTA_ENABLED_ENV,
+        BATTLE_MAP_MUTABLE_DELTA_UNCOMPRESSED_BYTES_ENV,
+        BATTLE_MAP_MUTABLE_DELTA_COMPRESSED_BYTES_ENV,
+        BATTLE_MAP_INITIAL_SNAPSHOT_UNCOMPRESSED_BYTES_ENV,
+        BATTLE_MAP_INITIAL_SNAPSHOT_COMPRESSED_BYTES_ENV
+      ].map(name => [name, process.env[name]]));
+      const loadBattleMock = mock.method(
+        battleStateRepository,
+        'loadBattle',
+        async () => persistedBattle
+      );
+      wsModule.connections.set(userId, connection);
+      registerBattleMapCapabilities(connection, battleId, {
+        cachedMaps: [],
+        supportedBattleMapSchemaVersions: [1, 2],
+        supportedHashVersions: ['sha256-cjson-v1'],
+        supportedMutableStateProtocolVersions: [1]
+      });
+
+      try {
+        process.env[BATTLE_MAP_REFERENCE_DELTA_ENABLED_ENV] = 'true';
+        process.env[BATTLE_MAP_MUTABLE_DELTA_UNCOMPRESSED_BYTES_ENV] = '1000000';
+        process.env[BATTLE_MAP_MUTABLE_DELTA_COMPRESSED_BYTES_ENV] = '1000000';
+        process.env[BATTLE_MAP_INITIAL_SNAPSHOT_UNCOMPRESSED_BYTES_ENV] = '1000000';
+        process.env[BATTLE_MAP_INITIAL_SNAPSHOT_COMPRESSED_BYTES_ENV] = '1000000';
+        const innerUpdateBytes = assertBattleMapWirePayloadWithinBudget(
+          update,
+          'mutableDelta'
+        ).uncompressed;
+        process.env[BATTLE_MAP_MUTABLE_DELTA_UNCOMPRESSED_BYTES_ENV] =
+          String(innerUpdateBytes);
+        const fallbackCountBefore =
+          getBattleMapOperationalMetrics().counters.referenceDeltaFallbacks;
+
+        await battleWs.joinBattle(battleId, userId);
+        const deliveries = await battleWs.broadcastStateUpdate(battleId, update);
+
+        assert.equal(deliveries.get(userId), 1);
+        assert.equal(loadBattleMock.mock.callCount(), 1);
+        assert.equal(sentMessages.length, 1);
+        assert.equal(sentMessages[0].seq, 1);
+        assert.equal(sentMessages[0].type, 'battle:state_update');
+        assert.equal('update' in sentMessages[0].payload, false);
+        assert.ok(sentMessages[0].payload.snapshot);
+        assert.equal(
+          getBattleMapOperationalMetrics().counters.referenceDeltaFallbacks,
+          fallbackCountBefore + 1
+        );
+      } finally {
+        loadBattleMock.mock.restore();
+        cleanupConnection(userId);
+        wsModule.connections.delete(userId);
+        await battleWs.cleanupBattleRoom(battleId);
+        for (const [name, value] of Object.entries(previousEnvironment)) {
+          if (value === undefined) delete process.env[name];
+          else process.env[name] = value;
+        }
+      }
     });
 
     test('broadcastUnitMoved sends movement event', async () => {

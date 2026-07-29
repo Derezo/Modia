@@ -1,0 +1,78 @@
+{
+  "version": "1.1.0",
+  "id": "alchemist_v1",
+  "class": "alchemist",
+  "templateId": "authored-pose-atlas-v1",
+  "description": "Reusable authored-pose direction for alchemist player identities. Registry metadata and the staged portrait control identity; this profile supplies master-potion and transmutation choreography.",
+  "style": {
+    "source": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+    "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+  },
+  "identity": {
+    "baseFacing": "three-quarters right",
+    "motionStyle": "expert, inventive, quick, and controlled, with exact vial handling, guarded supplies, decisive throws, and readable reaction follow-through",
+    "equipmentRule": "Preserve the portrait's goggles, leather apron, elaborate vials, potions, tools, pouches, transmutation markings, and exact item count. Move exactly one established vial at a time; never duplicate it between hand and holder, invent a weapon, or transform permanent gear.",
+    "magicRule": "All effects are physical alchemy in the portrait's established chemical palette. Reactions originate from the one handled vial or established transmutation tool and remain compact; do not add arcane casting, runes unrelated to depicted equipment, or unexplained aura."
+  },
+  "promptTemplates": {
+    "reference": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative {{displayName}} identity portrait; Image 2 is style and proportion reference only. Player identity metadata: {{visualTraits}}. Create one complete head-to-toe {{displayName}} preserving Image 1's face, ancestry traits, gender presentation, hair, goggles, apron, vials, pouches, tools, markings, palette, and proportions. Do not import identity details from Image 2. {{equipmentRule}} Translate the portrait into a compact expert-inventor silhouette. Use a {{background}} background with no floor or scenery and a square 1:1 canvas with generous padding. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered alchemist in an alert formula-testing stance facing {{baseFacing}}. {{invariants}}",
+    "animation": "Draw exactly {{frameCount}} genuinely redrawn full-body {{actionLabel}} poses of the authoritative {{displayName}} in a {{columns}}-column by {{rows}}-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: {{visualTraits}}. Required sequence: {{frameSequence}}. Motion direction: {{motionDirection}}. Overall alchemist motion is {{motionStyle}}. {{poseRequirement}} Preserve exact identity, goggles, apron, palette, proportions, vials, pouches, markings, and tools. {{equipmentRule}} {{magicRule}} Action-specific effects: {{effectRule}} Use a {{background}} background with generous gutters. {{invariants}}"
+  },
+  "animations": {
+    "idle": {
+      "actionLabel": "alchemist formula-check idle-cycle",
+      "minimumUniquePoses": 4,
+      "anchor": "source-cell",
+      "motionDirection": "An analytical breathing loop alternates supply checks, goggle adjustment, and a careful glance at one secured vial before returning it untouched.",
+      "effectRule": "No active reaction; a tiny liquid glint may remain inside one closed secured vial.",
+      "frameDescriptions": ["alert stance with both hands protecting supplies", "measured inhale while scanning the field", "weight shifts forward as one hand checks a secured vial", "free hand adjusts goggles without moving the vial", "centered analytical midpoint", "controlled exhale as both hands withdraw", "weight shifts rearward while pouches settle", "alert stance flowing back to frame one"]
+    },
+    "walk": {
+      "actionLabel": "alchemist supplies-secured stride",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "A brisk alternating walk uses real leg compression, one hand stabilizing fragile supplies, free-arm counter-motion, and controlled apron follow-through.",
+      "effectRule": "No loose flask or reaction; all vials remain closed and secured.",
+      "frameDescriptions": ["left foot forward contact with one hand steadying vials", "left leg compresses while bottles remain upright", "passing pose with right knee advancing", "right foot reaches as free arm balances", "right foot forward contact with supplies secured", "right leg compresses beneath the apron", "passing pose with left knee advancing", "left foot reaches into the brisk loop"]
+    },
+    "attack": {
+      "actionLabel": "alchemist transmuting vial throw",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "The alchemist identifies a formula, draws exactly one vial, primes it with an established tool or marking, makes a planted throw, observes compact impact, and secures remaining supplies.",
+      "effectRule": "Show exactly one thrown vial and one compact physical chemical reaction at impact; never show the vial held and airborne simultaneously or add spell-casting.",
+      "frameDescriptions": ["calculating stance while selecting a formula", "hand reaches precisely toward one secured vial", "exactly one vial is drawn with its holder now visibly empty", "deep overhand windup while the free hand aims", "committed step releases the single primed vial", "compact chemical impact or transmutation reaction", "throwing arm follows through as supplies are steadied", "recovered alert stance with remaining gear secured"]
+    },
+    "hurt": {
+      "actionLabel": "alchemist inventory-protecting recovery",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "A sudden hit triggers an articulated flinch, backward stagger, protective clutch over fragile supplies, low balance catch, inventory check, and alert recovery.",
+      "effectRule": "One compact physical impact accent only; no gore, blood, broken bottle, duplicated vial, magic, or uncontrolled cloud.",
+      "frameDescriptions": ["alert stance before impact", "sharp flinch with arms protecting goggles and chest", "maximum stagger as apron and straps swing", "scrambling backward step while one hand catches the vial rack", "low balance catch with supplies gathered close", "careful rise while checking bottles", "feet reset with all gear still attached", "recovered formula-testing stance"]
+    },
+    "death": {
+      "actionLabel": "alchemist defeat sequence",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "verticalAnchor": "bottom",
+      "motionDirection": "A final impact overwhelms the alchemist, supplies draw close, knees buckle, the body lowers through a sideward collapse, and settles fully fallen.",
+      "effectRule": "No gore, blood, explosion, broken or duplicated vial, magic, or rigid rotation; keep permanent equipment attached and recognizable.",
+      "outputFrameMap": [0, 1, 2, 3, 4, 5, 7, 7],
+      "frameDescriptions": ["fatal impact breaks the alert stance", "arms gather fragile supplies as balance fails", "knees buckle beneath apron and gear", "one hip grounds while torso tips sideways", "body reaches full ground contact with equipment attached", "low fallen body and supplies settle", "final fully fallen alchemist with gear at rest", "same final fallen pose held"]
+    },
+    "dead": {
+      "deriveFrom": {"animation": "death", "frame": 7},
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity.",
+      "frameDescriptions": ["terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held"]
+    },
+    "victory": {
+      "actionLabel": "alchemist breakthrough celebration",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "motionDirection": "The alchemist confirms success, selects exactly one vial, inspects it, raises it with inspiration, produces a tiny controlled reaction, secures it, and holds a brilliant finish.",
+      "effectRule": "One handheld vial may produce a tiny contained fizz, puff, or sparkle; never duplicate it or create a spell.",
+      "frameDescriptions": ["surprised realization of victory", "exactly one vial lifts for close inspection", "goggles angle toward the selected formula", "vial rises in an inspired upright gesture", "tiny controlled reaction appears above the held vial", "reaction fades as the vial is secured", "proud inventor stance with tools displayed", "final triumphant alchemist pose held"]
+    }
+  }
+}

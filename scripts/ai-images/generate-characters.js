@@ -127,8 +127,8 @@ function firstConfiguredValue(...values) {
  * Resolve the generation mode for one character.
  *
  * An explicit CLI mode always wins. Without one, portrait-matched player
- * variants use the identity-preserving SD1.5 pipeline while legacy player
- * archetypes and enemies keep their historical Flux behavior.
+ * Canonical player variants use the identity-preserving SD1.5 pipeline while
+ * enemies keep their historical Flux behavior.
  */
 function resolveGenerationMode(character, explicitMode = null) {
   if (explicitMode !== null && explicitMode !== undefined) {
@@ -277,8 +277,8 @@ Options:
 
 SD1.5 Animation Mode Options:
   --mode <flux|sd15>          Explicit generation mode override
-                                If omitted: portrait-matched player variants use
-                                SD1.5; legacy player classes and enemies use Flux
+                                If omitted: canonical player variants use SD1.5;
+                                enemies use Flux
                                 flux - Frame-by-frame Flux generation
                                 sd15 - SD1.5 with ControlNet pose + IP-Adapter
   --controlnet-weight <0-1>   ControlNet pose guidance override
@@ -303,25 +303,25 @@ Environment variables:
   HUGGINGFACE_API_TOKEN  Required only for --huggingface mode
 
 Examples:
-  # Automatic mode selection (variants: SD1.5; legacy/enemies: Flux)
+  # Automatic mode selection (canonical player variants: SD1.5; enemies: Flux)
   node scripts/ai-images/generate-characters.js --dry-run
   node scripts/ai-images/generate-characters.js --type player
   node scripts/ai-images/generate-characters.js --type enemies --biome forest
-  node scripts/ai-images/generate-characters.js --id warrior --animation idle --force
+  node scripts/ai-images/generate-characters.js --id human_male_warrior --animation idle --force
   node scripts/ai-images/generate-characters.js --class wizard --animation cast
 
   # SD1.5 animation generation
-  node scripts/ai-images/generate-characters.js --mode sd15 --id warrior
+  node scripts/ai-images/generate-characters.js --mode sd15 --id human_male_warrior
   node scripts/ai-images/generate-characters.js --mode sd15 --controlnet-weight 0.8 --id goblin
-  node scripts/ai-images/generate-characters.js --mode sd15 --reference ./ref.png --id warrior
+  node scripts/ai-images/generate-characters.js --mode sd15 --reference ./ref.png --id human_male_warrior
 
   # Generate reference image only (with custom pose)
-  node scripts/ai-images/generate-characters.js --mode sd15 --reference-only --id warrior
-  node scripts/ai-images/generate-characters.js --mode sd15 --reference-only --reference-pose tpose --id warrior
-  node scripts/ai-images/generate-characters.js --mode sd15 --reference-only --reference-pose ./custom_pose.png --id warrior
+  node scripts/ai-images/generate-characters.js --mode sd15 --reference-only --id human_male_warrior
+  node scripts/ai-images/generate-characters.js --mode sd15 --reference-only --reference-pose tpose --id human_male_warrior
+  node scripts/ai-images/generate-characters.js --mode sd15 --reference-only --reference-pose ./custom_pose.png --id human_male_warrior
 
   # Auto-generate reference during animation generation
-  node scripts/ai-images/generate-characters.js --mode sd15 --auto-reference --id warrior
+  node scripts/ai-images/generate-characters.js --mode sd15 --auto-reference --id human_male_warrior
   node scripts/ai-images/generate-characters.js --mode sd15 --auto-reference --reference-pose tpose --id goblin
 `);
 }
@@ -331,18 +331,19 @@ Examples:
  * Uses shared/assetPaths.js via the bridge module for canonical path construction
  */
 async function getOutputPath(character, animation) {
-  const id = character._type === 'player'
-    ? (character._variant ? character.id : character.class)
-    : character.id;
-  return getCharacterOutputPath(id, {
+  const identity = character._type === 'player' ? character : character.id;
+  const outputPath = await getCharacterOutputPath(identity, {
     type: character._type,
     biome: character.biome,
-    race: character._variant ? character.race : undefined,
-    gender: character._variant ? character.gender : undefined,
-    class: character._variant ? character.class : undefined,
     animation,
     extension: 'png'  // Generation outputs PNG first (converted to WebP after)
   });
+  if (outputPath === null) {
+    throw new Error(
+      `Player '${character.id || character.class || 'unknown'}' is missing a canonical race/gender/class identity`
+    );
+  }
+  return outputPath;
 }
 
 /**
@@ -497,11 +498,8 @@ async function getReferenceImagePath(character, options = {}) {
   const { preferIdentitySource = true } = options;
 
   if (preferIdentitySource && character._variant) {
-    const fullBodyReference = await getCharacterReferencePath(character.id, {
-      type: character._type,
-      race: character.race,
-      gender: character.gender,
-      class: character.class
+    const fullBodyReference = await getCharacterReferencePath(character, {
+      type: character._type
     });
     if (fileExists(fullBodyReference)) {
       return fullBodyReference;
@@ -513,16 +511,17 @@ async function getReferenceImagePath(character, options = {}) {
     }
   }
 
-  const id = character._type === 'player'
-    ? (character._variant ? character.id : character.class)
-    : character.id;
-  return getCharacterReferencePath(id, {
+  const identity = character._type === 'player' ? character : character.id;
+  const referencePath = await getCharacterReferencePath(identity, {
     type: character._type,
-    biome: character.biome,
-    race: character._variant ? character.race : undefined,
-    gender: character._variant ? character.gender : undefined,
-    class: character._variant ? character.class : undefined
+    biome: character.biome
   });
+  if (referencePath === null) {
+    throw new Error(
+      `Player '${character.id || character.class || 'unknown'}' is missing a canonical race/gender/class identity`
+    );
+  }
+  return referencePath;
 }
 
 /**
@@ -923,7 +922,7 @@ async function main() {
   log(
     options.mode
       ? `Mode override: ${options.mode === 'sd15' ? 'SD1.5 (ControlNet + IP-Adapter)' : 'Flux (frame-by-frame)'}`
-      : 'Mode: automatic (portrait-matched variants: SD1.5; legacy classes/enemies: Flux)',
+      : 'Mode: automatic (canonical player variants: SD1.5; enemies: Flux)',
     'info'
   );
 

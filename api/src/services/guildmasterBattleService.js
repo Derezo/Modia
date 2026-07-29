@@ -17,10 +17,17 @@ import {
   serializeBattleSkill
 } from './battle/skillDefinitionService.js';
 import { withBattleVisualIdentity } from './battle/visualIdentityService.js';
+import battleStateRepository from './battle/BattleStateRepository.js';
+import {
+  extractBattleMutableState,
+  generateBattleMap,
+  isBattleMapV2EnabledForMode,
+  selectBattleMapGenerationVersion
+} from './battle/battleMapGenerationService.js';
+import { deriveEncounterTerrainSeed } from './battle/encounterService.js';
 // createPlayerBattleUnit could be used for future multi-character guildmaster battles
 // import { createPlayerBattleUnit } from './battleUnitFactory.js';
 import * as bossService from './bossService.js';
-import { generateTerrain } from '../../../shared/mapGeneration.js';
 
 const BASE_CLASSES = ['warrior', 'wizard', 'monk', 'chemist'];
 
@@ -40,7 +47,15 @@ export function resolveAdvancementSkills(characterClass, learnedSkills) {
  * @param {number} nodeId - Guild node ID where battle takes place
  * @returns {Object} Battle state and configuration
  */
-export async function generateGuildmasterBattle(character, targetClass, _nodeId) {
+export async function generateGuildmasterBattle(
+  character,
+  targetClass,
+  nodeId,
+  {
+    clientCapabilities = null,
+    allowV2 = isBattleMapV2EnabledForMode('guild')
+  } = {}
+) {
   // Get guildmaster template from database
   const templateResult = await query(
     'SELECT * FROM guildmaster_templates WHERE guild_class = $1',
@@ -69,41 +84,70 @@ export async function generateGuildmasterBattle(character, targetClass, _nodeId)
   // Combine enemies (guildmaster first, then disciples)
   const enemies = [guildmaster, ...disciples];
 
-  // Generate battle map - use 'guild' node type for advancement battles
-  const mapSeed = Date.now() % 1000000;
-  const terrainData = generateTerrain(mapSeed, 'guild', 32, 32, { elevation: true });
-
   // Position units on map
   positionUnits([playerUnit], enemies, 32, 32);
 
-  // Build initial battle state
-  const initialState = {
+  // The seed and creation input are stable across retries of the same
+  // advancement trial. Version selection is repeated by generateBattleMap and
+  // must produce the same result for the same rollout/capabilities.
+  const terrainGenerationVersion = selectBattleMapGenerationVersion({
+    mode: 'guild',
+    allowV2,
+    clientCapabilities
+  });
+  const mapSeed = deriveEncounterTerrainSeed(
+    nodeId,
+    'guild',
+    terrainGenerationVersion
+  );
+
+  // Build mutable combat state; the generation boundary appends the immutable
+  // map and, for V2, relocates units to its authored spawn slots.
+  const initialMutableState = {
     turn: 1,
     phase: 'active',
     currentActorIndex: 0,
     units: [playerUnit, ...enemies],
-    terrain: terrainData.terrain,
-    elevation: terrainData.elevation,
-    elevationFormat: terrainData.elevationFormat,
-    obstacles: terrainData.obstacles,
-    variants: terrainData.variants,
-    mapWidth: 32,
-    mapHeight: 32,
     bossStates: {}
   };
 
   // Initialize boss state for guildmaster
   const bossState = bossService.initializeBossState(guildmaster, 0); // Battle ID assigned later
   if (bossState) {
-    initialState.bossStates[guildmaster.id] = bossState;
+    initialMutableState.bossStates[guildmaster.id] = bossState;
   }
 
+  const generatedMap = await generateBattleMap({
+    terrainSeed: mapSeed,
+    nodeType: 'guild',
+    mapWidth: 32,
+    mapHeight: 32,
+    mode: 'guild',
+    playerCount: 1,
+    enemyCount: enemies.length,
+    enemyCapacity: enemies.length,
+    existingUnits: initialMutableState.units,
+    initialMutableState,
+    allowV2,
+    clientCapabilities
+  });
+
   return {
-    initialState,
+    // Advancement setup initializes CT immediately before persistence. Keep a
+    // mutable staging copy for those combat-only edits; createBattleRecord
+    // extracts its closed mutable vocabulary and the repository reconstructs
+    // the immutable authoritative flat state.
+    initialState: structuredClone(generatedMap.flatState),
+    mutableState: generatedMap.mutableState,
+    finalMap: generatedMap.finalMap,
+    legacyFlatState: generatedMap.legacyFlatState,
+    battleMapSchemaVersion: generatedMap.battleMapSchemaVersion,
+    terrainGenerationVersion: generatedMap.terrainGenerationVersion,
     guildmaster,
     disciples,
     playerUnit,
     mapSeed,
+    nodeId,
     guildmasterTemplate,
     isAdvancementBattle: true,
     targetClass,
@@ -442,38 +486,56 @@ function getGuildForClass(className) {
  * Create the actual battle record in database
  */
 export async function createGuildmasterBattleRecord(battleConfig, userId) {
-  const { initialState, mapSeed, isAdvancementBattle, targetClass: _targetClass, challengerId } = battleConfig;
+  const {
+    initialState,
+    mutableState: generatedMutableState,
+    finalMap,
+    legacyFlatState,
+    isAdvancementBattle,
+    targetClass,
+    challengerId,
+    nodeId
+  } = battleConfig;
+  const mutableState = extractBattleMutableState(
+    initialState ?? generatedMutableState
+  );
+  const creationIdempotencyKey = [
+    'guildmaster',
+    userId,
+    challengerId,
+    targetClass,
+    nodeId
+  ].join(':');
 
-  return await withTransaction(async (client) => {
-    // Create battle record with advancement flags
-    const battleResult = await client.query(
-      `INSERT INTO battles (
-        battle_type, status, battle_state, map_seed, map_width, map_height,
-        player1_id, is_advancement_battle, challenger_character_id
-      )
-      VALUES ('pve', 'active', $1, $2, 32, 32, $3, $4, $5)
-      RETURNING id`,
-      [JSON.stringify(initialState), mapSeed, userId, isAdvancementBattle, challengerId]
-    );
-
-    const battleId = battleResult.rows[0].id;
-
-    // Update boss state with actual battle ID
-    if (Object.keys(initialState.bossStates).length > 0) {
-      for (const [_unitId, bossState] of Object.entries(initialState.bossStates)) {
-        bossState.battleId = battleId;
-        await bossService.saveBossEncounter(bossState);
-      }
+  const created = await withTransaction(async (client) => {
+    const result = await battleStateRepository.createBattle({
+      battleType: 'pve',
+      status: 'active',
+      nodeId,
+      player1Id: userId,
+      isAdvancementBattle,
+      challengerCharacterId: challengerId,
+      creationIdempotencyKey,
+      finalMap,
+      legacyFlatState,
+      initialMutableState: mutableState
+    }, { client });
+    for (const bossState of Object.values(mutableState.bossStates)) {
+      await bossService.saveBossEncounter({
+        ...bossState,
+        battleId: result.battleId
+      }, { client });
     }
-
     // Mark character as in battle
     await client.query(
       'UPDATE characters SET in_battle = true WHERE id = $1',
       [challengerId]
     );
-
-    return battleId;
+    return result;
   });
+
+  battleConfig.initialState = created.envelope.state;
+  return created.battleId;
 }
 
 export default {

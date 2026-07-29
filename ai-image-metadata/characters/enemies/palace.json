@@ -4,9 +4,71 @@
   "biome": "palace",
   "description": "Palace biome enemy sprite sheets",
   "biomeTraits": "opulent royal palace halls polished stone gold trim deep crimson banners",
-  "totalAssets": 2,
-  "totalAnimations": 10,
+  "totalAssets": 3,
+  "totalAnimations": 15,
   "enemies": [
+    {
+      "id": "palace_guard",
+      "name": "Palace Guard",
+      "archetype": "humanoid",
+      "visualTraits": "polished plate armor golden trim royal emblem stern visor",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
+      "animations": {
+        "idle": {
+          "id": "dark_knight_idle",
+          "frameCount": 8,
+          "seed": 45021,
+          "generated": true,
+          "prompt": "pixel art sprite side view 64x64, dark knight with black plate armor and glowing red visor and corrupted greatsword, idle menace animation, imposing stance with greatsword planted and darkness seeping around, corrupted throne room"
+        },
+        "attack": {
+          "id": "dark_knight_attack",
+          "frameCount": 8,
+          "seed": 45022,
+          "generated": true,
+          "prompt": "pixel art sprite side view 64x64, dark knight with black plate armor and glowing red visor and corrupted greatsword, attack sweep animation, massive sword sweeping with dark energy trailing behind strike, corrupted throne room"
+        },
+        "hit": {
+          "id": "dark_knight_hit",
+          "frameCount": 8,
+          "seed": 45023,
+          "generated": true,
+          "prompt": "pixel art sprite side view 64x64, dark knight with black plate armor and glowing red visor and corrupted greatsword, hurt stagger animation, armor sparking and staggering while roaring defiance, corrupted throne room"
+        },
+        "death": {
+          "id": "dark_knight_death",
+          "frameCount": 8,
+          "seed": 45024,
+          "generated": true,
+          "prompt": "pixel art sprite side view 64x64, dark knight with black plate armor and glowing red visor and corrupted greatsword, death crumble animation, armor crumbling with darkness releasing leaving empty husk, corrupted throne room"
+        },
+        "dead": {
+          "id": "dark_knight_dead",
+          "frameCount": 8,
+          "seed": 45034,
+          "generated": true,
+          "prompt": "pixel art sprite side view 64x64, black plate armor glowing red visor corrupted greatsword dark aura, dead static pose, lying defeated at final rest motionless, ornate regal"
+        }
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {
+        "idle": true,
+        "attack": true,
+        "hit": true,
+        "death": true,
+        "dead": true
+      },
+      "generatedAt": null,
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "animationSourceId": "dark_knight"
+    },
     {
       "id": "dark_knight",
       "name": "Dark Knight",

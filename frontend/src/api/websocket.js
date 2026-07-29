@@ -2,6 +2,7 @@ import { debugLog } from '../utils/debugLogger.js';
 import { MessageReliabilityManager } from './messageReliability.js';
 import { HeartbeatManager } from './heartbeat.js';
 import { connectionQuality } from './connectionQuality.js';
+import { getBattleMapCapabilities } from '../battle/BattleMapSession.js';
 
 export class GameWebSocket {
   constructor(url) {
@@ -21,7 +22,7 @@ export class GameWebSocket {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
         this.ws.send(JSON.stringify(msg));
       }
-    });
+    }, { getBattleMapCapabilities });
 
     // Initialize heartbeat manager
     // Send callback returns true if send succeeded, false otherwise
@@ -257,11 +258,28 @@ export class GameWebSocket {
   }
 
   send(type, payload = {}) {
+    const outgoingPayload = type === 'coliseum_queue_join'
+      && !Object.hasOwn(payload ?? {}, 'battleMapCapabilities')
+      ? {
+        ...(payload ?? {}),
+        battleMapCapabilities: getBattleMapCapabilities()
+      }
+      : payload;
+
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      debugLog('network.logWebSocketMessages', 'WS sending:', type, payload);
-      this.ws.send(JSON.stringify({ type, payload }));
+      debugLog('network.logWebSocketMessages', 'WS sending:', type, outgoingPayload);
+      this.ws.send(JSON.stringify({ type, payload: outgoingPayload }));
     } else {
       console.warn('WebSocket not connected, message not sent:', type);
+    }
+  }
+
+  sendRaw(message) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      debugLog('network.logWebSocketMessages', 'WS sending:', message.type, message);
+      this.ws.send(JSON.stringify(message));
+    } else {
+      console.warn('WebSocket not connected, message not sent:', message?.type);
     }
   }
 
@@ -333,8 +351,14 @@ export class GameWebSocket {
     this.send('chat_message', { room, message, characterId });
   }
 
-  joinColiseumQueue(partyCharacterIds) {
-    this.send('coliseum_queue_join', { partyCharacterIds });
+  joinColiseumQueue(
+    partyCharacterIds,
+    battleMapCapabilities = getBattleMapCapabilities()
+  ) {
+    this.send('coliseum_queue_join', {
+      partyCharacterIds,
+      battleMapCapabilities
+    });
   }
 
   leaveColiseumQueue() {
@@ -363,12 +387,25 @@ export class GameWebSocket {
   }
 
   // Battle methods
-  joinBattleRoom(battleId) {
-    this.send('join_battle', { battleId });
+  joinBattleRoom(battleId, battleMapCapabilities = getBattleMapCapabilities()) {
+    this.send('join_battle', { battleId, battleMapCapabilities });
   }
 
   leaveBattleRoom(battleId) {
     this.send('leave_battle', { battleId });
+  }
+
+  requestBattleSync(
+    battleId,
+    battleMapCapabilities = getBattleMapCapabilities(),
+    reason = 'client_requested'
+  ) {
+    this.sendRaw({
+      type: 'battle:request_sync',
+      battleId,
+      battleMapCapabilities,
+      reason
+    });
   }
 
   // Party methods
@@ -402,8 +439,18 @@ export class GameWebSocket {
   }
 
   // Coliseum queue methods (enhanced)
-  joinColiseumQueueWithDetails(queueType, partyLevel, partySize) {
-    this.send('coliseum_queue_join', { queueType, partyLevel, partySize });
+  joinColiseumQueueWithDetails(
+    queueType,
+    partyLevel,
+    partySize,
+    battleMapCapabilities = getBattleMapCapabilities()
+  ) {
+    this.send('coliseum_queue_join', {
+      queueType,
+      partyLevel,
+      partySize,
+      battleMapCapabilities
+    });
   }
 
   leaveColiseumQueueByType(queueType) {

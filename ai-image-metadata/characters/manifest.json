@@ -306,7 +306,6 @@
   },
   "categories": [
     "playerVariants",
-    "playerArchetypes",
     "enemies"
   ],
   "categoryFiles": {
@@ -325,16 +324,14 @@
     "forest": 4,
     "cave": 3,
     "mountain": 3,
-    "bridge": 2,
+    "bridge": 3,
     "castle": 0,
-    "palace": 2
+    "palace": 3
   },
-  "totalEnemies": 14,
+  "totalEnemies": 16,
   "totalPlayerVariants": 300,
-  "legacyPlayerArchetypes": 20,
   "outputPaths": {
     "playerVariants": "/assets/characters/player/{race}/{gender}/{class}/{id}_{animation}.webp",
-    "playerArchetypes": "/assets/characters/player/{class}/{class}_{animation}.webp",
     "enemies": "/assets/characters/enemies/{biome}/{id}/{id}_{animation}.webp"
   },
   "tempDirectory": "ai-images-temp/characters"

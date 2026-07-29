@@ -1,0 +1,657 @@
+{
+  "version": "1.0.0",
+  "template": "ai-image-metadata/characters/player-authored-animation-template.json",
+  "compilerVersion": "1.2.0",
+  "id": "vampire_male_ascetic",
+  "profile": "ascetic_v1",
+  "profileSource": "ai-image-metadata/characters/player-animation-profiles/ascetic_v1.json",
+  "status": "approved",
+  "approvedAt": "2026-07-29T02:31:12.570Z",
+  "metadataFingerprint": "d1f142881862e900ebca4164cee5e59aee374768ec73689c5cbd3b328b535ddf",
+  "draftProvenance": {
+    "registry": "ai-image-metadata/characters/player-variants.json",
+    "templateSha256": "7943e69db577b3a4429b47df634f931d3f4cb8e8ce9a91a06578255fbe935bbe",
+    "profileSha256": "a298b3a353fde068bff62a169bb054cfcb4b5555412301fe35f391e4678c08db"
+  },
+  "identity": {
+    "race": "vampire",
+    "gender": "male",
+    "class": "ascetic",
+    "presentation": "male vampire ascetic",
+    "visualTraits": "vampire pale skin red eyes fangs aristocratic elegant male masculine features enlightened monk prayer beads simple robes glowing aura levitating serene",
+    "baseFacing": "three-quarters right",
+    "sourceMetadata": {
+      "isAdvanced": true,
+      "inheritsFrom": "ascetic",
+      "seed": 23012
+    }
+  },
+  "inputs": {
+    "identity": {
+      "origin": "frontend/public/assets/portraits/originals/vampire_male_ascetic.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/vampire_male_ascetic/inputs/identity.png",
+      "authority": "face, ancestry, gender presentation, hair, eyes, complexion, costume, palette, proportions, and equipment"
+    },
+    "style": {
+      "origin": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/vampire_male_ascetic/inputs/style.png",
+      "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+    }
+  },
+  "reference": {
+    "source": "ai-image-metadata/characters/player-animation-sources/vampire_male_ascetic/reference.png",
+    "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_male_ascetic/chroma/reference.png",
+    "identitySource": "ai-image-metadata/characters/player-animation-sources/vampire_male_ascetic/inputs/identity.png",
+    "styleSource": "ai-image-metadata/characters/player-animation-sources/vampire_male_ascetic/inputs/style.png",
+    "prompt": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative Vampire Ascetic (male presentation) identity portrait; Image 2 is style and proportion reference only. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant male masculine features enlightened monk prayer beads simple robes glowing aura levitating serene. Create one complete head-to-toe Vampire Ascetic (male presentation) preserving Image 1's face, ancestry traits, gender presentation, hair, simple robes, prayer beads, wraps, aura palette, proportions, and accessories. Do not import identity details from Image 2. Preserve the portrait's simple robes, prayer beads, wraps, jewelry, and exact accessory count. Keep beads continuous and singular, hands readable, and never invent a staff, duplicate charms, or change the robe design. Translate the portrait into a compact serene silhouette. Use a flat #00ff00 chroma key background with no floor or scenery and a square 1:1 canvas with generous padding. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered ascetic in a calm prayer guard facing three-quarters right. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+  },
+  "animations": {
+    "idle": {
+      "source": "ai-image-metadata/characters/player-animation-sources/vampire_male_ascetic/idle.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_male_ascetic/chroma/idle.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 4,
+      "frameDescriptions": [
+        "calm prayer guard with beads resting naturally",
+        "deep inhale as palms draw closer",
+        "heels lighten or body rises by a tiny controlled amount",
+        "weight centers beneath a faint contained aura",
+        "serene meditative midpoint",
+        "long exhale as shoulders descend",
+        "heels settle or weight shifts gently rearward",
+        "calm prayer guard flowing back to frame one"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body ascetic meditative idle-cycle poses of the authoritative Vampire Ascetic (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant male masculine features enlightened monk prayer beads simple robes glowing aura levitating serene. Required sequence: calm prayer guard with beads resting naturally; deep inhale as palms draw closer; heels lighten or body rises by a tiny controlled amount; weight centers beneath a faint contained aura; serene meditative midpoint; long exhale as shoulders descend; heels settle or weight shifts gently rearward; calm prayer guard flowing back to frame one. Motion direction: A slow breathing loop moves through prayer hands, subtle levitation or heel lift, centered weight shifts, and a seamless return.. Overall ascetic motion is serene, weightless, centered, and deliberate, with prayer-led gestures, soft landings, controlled levitation, and precise palm mechanics. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, beads, wraps, aura palette, proportions, and accessories. Preserve the portrait's simple robes, prayer beads, wraps, jewelry, and exact accessory count. Keep beads continuous and singular, hands readable, and never invent a staff, duplicate charms, or change the robe design. Use only the portrait's established subtle aura palette. Ki remains a compact halo, palm glow, or short pulse rooted visibly in breath and gesture; never obscure anatomy or turn into an elemental projectile. Action-specific effects: Only a faint compact aura or bead glint in the established palette is permitted. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "walk": {
+      "source": "ai-image-metadata/characters/player-animation-sources/vampire_male_ascetic/walk.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_male_ascetic/chroma/walk.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "left foot light forward contact with palms centered",
+        "left knee compresses beneath simple robes",
+        "passing pose with right knee floating forward",
+        "right foot reaches close to the ground",
+        "right foot light forward contact",
+        "right knee compresses under centered posture",
+        "passing pose with left knee floating forward",
+        "left foot reaches into the serene loop"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body ascetic floating step-cycle poses of the authoritative Vampire Ascetic (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant male masculine features enlightened monk prayer beads simple robes glowing aura levitating serene. Required sequence: left foot light forward contact with palms centered; left knee compresses beneath simple robes; passing pose with right knee floating forward; right foot reaches close to the ground; right foot light forward contact; right knee compresses under centered posture; passing pose with left knee floating forward; left foot reaches into the serene loop. Motion direction: A quiet alternating walk uses light contacts, real knee compression, centered palms, robe drift, and bead follow-through.. Overall ascetic motion is serene, weightless, centered, and deliberate, with prayer-led gestures, soft landings, controlled levitation, and precise palm mechanics. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, beads, wraps, aura palette, proportions, and accessories. Preserve the portrait's simple robes, prayer beads, wraps, jewelry, and exact accessory count. Keep beads continuous and singular, hands readable, and never invent a staff, duplicate charms, or change the robe design. Use only the portrait's established subtle aura palette. Ki remains a compact halo, palm glow, or short pulse rooted visibly in breath and gesture; never obscure anatomy or turn into an elemental projectile. Action-specific effects: No active spell; a faint grounded aura may remain close to the feet. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "attack": {
+      "source": "ai-image-metadata/characters/player-animation-sources/vampire_male_ascetic/attack.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_male_ascetic/chroma/attack.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "centered prayer guard",
+        "palms separate as weight roots rearward",
+        "deep torso coil with striking palm chambered",
+        "short forward step sends the open palm outward",
+        "compact ki contact with fingers and elbow readable",
+        "soft follow-through as aura collapses inward",
+        "rear palm guides the striking hand back",
+        "recovered centered guard"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body ascetic focused-palm strike poses of the authoritative Vampire Ascetic (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant male masculine features enlightened monk prayer beads simple robes glowing aura levitating serene. Required sequence: centered prayer guard; palms separate as weight roots rearward; deep torso coil with striking palm chambered; short forward step sends the open palm outward; compact ki contact with fingers and elbow readable; soft follow-through as aura collapses inward; rear palm guides the striking hand back; recovered centered guard. Motion direction: Prayer hands separate, hips coil over a rooted rear foot, one palm drives through a short step, compact ki contacts, and both hands return to center.. Overall ascetic motion is serene, weightless, centered, and deliberate, with prayer-led gestures, soft landings, controlled levitation, and precise palm mechanics. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, beads, wraps, aura palette, proportions, and accessories. Preserve the portrait's simple robes, prayer beads, wraps, jewelry, and exact accessory count. Keep beads continuous and singular, hands readable, and never invent a staff, duplicate charms, or change the robe design. Use only the portrait's established subtle aura palette. Ki remains a compact halo, palm glow, or short pulse rooted visibly in breath and gesture; never obscure anatomy or turn into an elemental projectile. Action-specific effects: One palm-sized ki accent may appear exactly at contact; no detached projectile, elemental trail, or body-obscuring aura. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "hurt": {
+      "source": "ai-image-metadata/characters/player-animation-sources/vampire_male_ascetic/hurt.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_male_ascetic/chroma/hurt.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "calm guard before impact",
+        "sharp flinch with palms opening defensively",
+        "maximum stagger as faint aura fragments scatter",
+        "backward step with robes and beads swinging",
+        "low centered brace with palms gathered",
+        "controlled rise through a long exhale",
+        "feet and prayer hands reset",
+        "recovered serene guard"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body ascetic disrupted-center recovery poses of the authoritative Vampire Ascetic (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant male masculine features enlightened monk prayer beads simple robes glowing aura levitating serene. Required sequence: calm guard before impact; sharp flinch with palms opening defensively; maximum stagger as faint aura fragments scatter; backward step with robes and beads swinging; low centered brace with palms gathered; controlled rise through a long exhale; feet and prayer hands reset; recovered serene guard. Motion direction: An impact breaks calm into a flinch, aura disruption, backward floating step, low prayer brace, centered rise, and restored composure.. Overall ascetic motion is serene, weightless, centered, and deliberate, with prayer-led gestures, soft landings, controlled levitation, and precise palm mechanics. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, beads, wraps, aura palette, proportions, and accessories. Preserve the portrait's simple robes, prayer beads, wraps, jewelry, and exact accessory count. Keep beads continuous and singular, hands readable, and never invent a staff, duplicate charms, or change the robe design. Use only the portrait's established subtle aura palette. Ki remains a compact halo, palm glow, or short pulse rooted visibly in breath and gesture; never obscure anatomy or turn into an elemental projectile. Action-specific effects: A few compact aura fragments may disperse; no gore, blood, full-body flash, or broken beads. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "death": {
+      "source": "ai-image-metadata/characters/player-animation-sources/vampire_male_ascetic/death.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_male_ascetic/chroma/death.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "verticalAnchor": "bottom",
+      "outputFrameMap": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        7,
+        7
+      ],
+      "frameDescriptions": [
+        "fatal impact breaks the centered guard",
+        "aura dims as prayer hands separate",
+        "knees fold into a quiet low drop",
+        "one hip grounds while torso leans sideways",
+        "body reaches full ground contact",
+        "robes, beads, and limbs settle low",
+        "final fully fallen ascetic with aura extinguished",
+        "same final fallen pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body ascetic defeat sequence poses of the authoritative Vampire Ascetic (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant male masculine features enlightened monk prayer beads simple robes glowing aura levitating serene. Required sequence: fatal impact breaks the centered guard; aura dims as prayer hands separate; knees fold into a quiet low drop; one hip grounds while torso leans sideways; body reaches full ground contact; robes, beads, and limbs settle low; final fully fallen ascetic with aura extinguished; same final fallen pose held. Motion direction: The aura dims, levitation ends, knees fold into a quiet seated drop, torso tips sideways, and the body settles fully fallen.. Overall ascetic motion is serene, weightless, centered, and deliberate, with prayer-led gestures, soft landings, controlled levitation, and precise palm mechanics. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, beads, wraps, aura palette, proportions, and accessories. Preserve the portrait's simple robes, prayer beads, wraps, jewelry, and exact accessory count. Keep beads continuous and singular, hands readable, and never invent a staff, duplicate charms, or change the robe design. Use only the portrait's established subtle aura palette. Ki remains a compact halo, palm glow, or short pulse rooted visibly in breath and gesture; never obscure anatomy or turn into an elemental projectile. Action-specific effects: Aura fades without gore, blood, explosion, rigid rotation, or broken or duplicated prayer beads. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "cast": {
+      "source": "ai-image-metadata/characters/player-animation-sources/vampire_male_ascetic/cast.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_male_ascetic/chroma/cast.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "still prayer stance",
+        "palms join as breath gathers",
+        "body lifts subtly above grounded toes or lightens visibly",
+        "palms open around a compact centered aura",
+        "maximum contained enlightenment glow at the heart",
+        "controlled short pulse expands from the prayer posture",
+        "aura recedes as feet and palms settle",
+        "serene enlightened finish"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body ascetic enlightened meditation poses of the authoritative Vampire Ascetic (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant male masculine features enlightened monk prayer beads simple robes glowing aura levitating serene. Required sequence: still prayer stance; palms join as breath gathers; body lifts subtly above grounded toes or lightens visibly; palms open around a compact centered aura; maximum contained enlightenment glow at the heart; controlled short pulse expands from the prayer posture; aura recedes as feet and palms settle; serene enlightened finish. Motion direction: Prayer hands center the breath, body lifts subtly, palms open around a compact aura, energy gathers at the heart, pulses outward, and returns to stillness.. Overall ascetic motion is serene, weightless, centered, and deliberate, with prayer-led gestures, soft landings, controlled levitation, and precise palm mechanics. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, beads, wraps, aura palette, proportions, and accessories. Preserve the portrait's simple robes, prayer beads, wraps, jewelry, and exact accessory count. Keep beads continuous and singular, hands readable, and never invent a staff, duplicate charms, or change the robe design. Use only the portrait's established subtle aura palette. Ki remains a compact halo, palm glow, or short pulse rooted visibly in breath and gesture; never obscure anatomy or turn into an elemental projectile. Action-specific effects: Use one compact portrait-colored aura or short non-elemental pulse centered on the body; keep face, hands, beads, and robes visible. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "dead": {
+      "deriveFrom": {
+        "animation": "death",
+        "frame": 7
+      },
+      "frameDescriptions": [
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held"
+      ],
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity."
+    },
+    "victory": {
+      "source": "ai-image-metadata/characters/player-animation-sources/vampire_male_ascetic/victory.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_male_ascetic/chroma/victory.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "quiet recognition of victory",
+        "deep respectful bow with palms joined",
+        "body rises as prayer hands lift",
+        "brief balanced levitation with robes and beads controlled",
+        "palms open outward in gratitude",
+        "soft landing or grounding through bent knees",
+        "serene upright victor pose",
+        "final triumphant ascetic pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body ascetic peaceful victory rite poses of the authoritative Vampire Ascetic (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant male masculine features enlightened monk prayer beads simple robes glowing aura levitating serene. Required sequence: quiet recognition of victory; deep respectful bow with palms joined; body rises as prayer hands lift; brief balanced levitation with robes and beads controlled; palms open outward in gratitude; soft landing or grounding through bent knees; serene upright victor pose; final triumphant ascetic pose held. Motion direction: The ascetic recognizes victory, bows, rises into a balanced levitating prayer, opens the palms in gratitude, and settles into quiet triumph.. Overall ascetic motion is serene, weightless, centered, and deliberate, with prayer-led gestures, soft landings, controlled levitation, and precise palm mechanics. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, beads, wraps, aura palette, proportions, and accessories. Preserve the portrait's simple robes, prayer beads, wraps, jewelry, and exact accessory count. Keep beads continuous and singular, hands readable, and never invent a staff, duplicate charms, or change the robe design. Use only the portrait's established subtle aura palette. Ki remains a compact halo, palm glow, or short pulse rooted visibly in breath and gesture; never obscure anatomy or turn into an elemental projectile. Action-specific effects: A faint compact aura may brighten around the prayer pose; no large halo or elemental effect. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    }
+  },
+  "pins": {
+    "templateSha256": "93943004e340d113943e06dea61fd7dfad67c20750dd4fc30d76d3be1fb7c144",
+    "profileSha256": "e24b104a30fdb2d396287d6ec27482854e265f798811679cb463c89ed6e3a32d",
+    "reference": {
+      "sourceSha256": "1cd36579b257f0a372dd2a20584063321e3041e3ddb1fa1b320b24511f430476",
+      "sourceDimensions": "1254x1254",
+      "chromaSourceSha256": "43fdfb59cfbeaf01b02ed22a5438989020bf939085da9570cb2a4287afb96bf8",
+      "chromaSourceDimensions": "1254x1254",
+      "identitySourceSha256": "811f131d496ef879449773e6954f17a8ac3787c3b5d775ad685e2309573b3f15",
+      "identitySourceDimensions": "1024x1024",
+      "styleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "styleSourceDimensions": "1254x1254",
+      "promptSha256": "8772a518c47ae4f00bc9a3ae502e0de34942ef7ab5e5dd846289e7ad7829cf9a",
+      "encodedSha256": "c47fe062a1e582047dec19ca686fcbf0bad55edd36aef458ca1a35c60fe3fc69",
+      "decodedSha256": "fc07ef4b30b46d4d26718680992c84e4388675e3dbca56dd8bbe9da3f93d2c87"
+    },
+    "animations": {
+      "idle": {
+        "sourceSha256": "fe39647195cc15d36b57be3d49af0120521a05142c8284389aa80bf9199376b5",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "cf4d53b4a47d338c4a830ea441b0c2ac3beee6364e4ffacf55a5bc781d5ff64a",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "fdb3fb4b3b989c8d53f30735992ee3a83ee6f28b1bc9a9901627fb8acf094e00",
+        "encodedSha256": "6fda60dce7f8ab771d468fe815cb235c34554eb3acc489f3cfafd479538d7d1d",
+        "decodedSha256": "bedb3194db4f75683fddb3a4171c9738298c956f5df6543c44a4b3e3539f9587",
+        "frameSha256": [
+          "6b8f49f8ac20eb9de92c56b940ef64b963588d26c192ffea199a3d13ffcd6f98",
+          "30e412590f6b6e75f9736edaed3cce2161ae80b0939738b544af68fcebaf5b57",
+          "a972350bf27de893f402e676598f93ece95361ede17913bbed56917b012fc47c",
+          "9ae81a4f2561f9f0724fd42a2e520296e9a63f2acf05f89c1791baa7a005dfba",
+          "9f3d0c86ba9a1d11497aeeb8b9784087bbb92774ff8f1de96c95cf2520fc3fa9",
+          "01b6625dfe0d93b174057be09fc8c2b7b4ef06ab6c393d951e72b8168079d6ba",
+          "2964d1ecc65f570cda1f6bc673981418e06a0dae66986a247c3df9255ba22656",
+          "dd71cd42b0f52e70a2e62eeb86b255f3fcde03a685226c2fc01f2533146c97b1"
+        ],
+        "poseSha256": [
+          "50fd09e6a6d9f5a05c8b5ebf17c9bdc46f27ab539b9b010ed088b4b337c44b1f",
+          "fad9dd7b74958be5527527e3f64beabf68a789e092ffee258d966dd372189449",
+          "195fc0047923b1774e461d36eff779622886d0e85c125231a14a633b0b41bcda",
+          "2795b4847cac58f655390767d3b1faea4b5832ed6ad6f0a39457d063958f43dd",
+          "48ca3e4d80e099c969042e16d2aee31b4269d47c5c590a34101743b4ec0fa4f1",
+          "fc45e99d26b39a7716d518ecc69ca2521f7e89717aed961506f15c80346a3753",
+          "42af566f77a6d91a2ae83172d6f1310c51ed6bdd579d4f855b6fda3158b006d4",
+          "9aadfbecd47227c15b224e00564336508c3ee0dc47533e5f68185a566ea4416e"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.99337,
+          0.996549,
+          0.991204,
+          0.995725,
+          0.996545,
+          0.996741,
+          0.99452,
+          0.99243
+        ]
+      },
+      "walk": {
+        "sourceSha256": "8b0a6b683d35263686c513b5d1fd88745c1546912b91006d6f49c8592dc297e0",
+        "sourceDimensions": "1672x941",
+        "chromaSourceSha256": "0c1fc42e47fa37b3938c14a553690909d5fce59883f7210a87dfa50496699ba7",
+        "chromaSourceDimensions": "1672x941",
+        "promptSha256": "eda5a479ac7fb125f310a2ee158c414cc7291ad82593b30e3a7ff912b0cb50c6",
+        "encodedSha256": "bbb816f8fc45094e539802cdfdcdd472e66e6e2bdf8ce008f91fd91a637f105d",
+        "decodedSha256": "f8cb04c783680247e214d428b3f41a0588f21a87a3d386f77444a2edc98cb644",
+        "frameSha256": [
+          "23465c8d0de96824a8f5efe81dcdad4b012b0220a21f6b436531eeefa9735d09",
+          "c371d83286fddd0f0a58f6fb6c6ca55a3f8876752952fe79d73c40e3cddc4071",
+          "31869eeb7f6698eb227f81aa7a098b707ac5a913386404623471c76b00a840d0",
+          "0d25cfff72329406db0ca9dba4b7dd5f1315d42b5de294ea69b94f0c987d29ac",
+          "08e0b918dfc36df65be0a0241d3ebd890fbc3af130e62378291c93a92e3959e1",
+          "4abf8c0ac035321465915e63ced4e04cbc6668730b08bb41d4599e9ba6bca917",
+          "4b2f8dbe21d44e376e893ee814d28fe0541202eecc740475a00ed702e0cce15f",
+          "53d20349f771ed9d96aee2f101c9eef02ea68172def28cb3a30692c46d788c9a"
+        ],
+        "poseSha256": [
+          "bfbb53747911256aef6da6f5552e874b9311c9391b4f859c90cc45d82018b7c8",
+          "7bbdf0956b13aa09f2b8df42136599ac9bffcbb7765d13599bbcfa75df5c2a42",
+          "e40016248481fd132e4551e9d140ab29222894ed5d2fedc7e37911ab24341ede",
+          "1a01202a9e44c68b68e1f11d60eefa7e4a2594d16f926d39f9eacdd94f298a6f",
+          "ae72b57018246f6cc88e8bb4a17f86676700d947926668545b74b548f0ff375d",
+          "42f46d001595b2633c25a6c533a9438d52499fdc35aa3472c2b3a63583e79447",
+          "f9418a1ebcafc608344cacd97741c5b66e41ea90bf4226d1cc34bdd332f02619",
+          "9e11227e1100d3c3ca325014fe9aa166fe67b9b05c1a738f8a412b2c1d06f374"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.987504,
+          0.995362,
+          0.993959,
+          0.993804,
+          0.993892,
+          0.995174,
+          0.995922,
+          0.992563
+        ]
+      },
+      "attack": {
+        "sourceSha256": "d5b81aee18221562c84223e87bb60a5fc89b0ae956758d2f51d2656be62295c0",
+        "sourceDimensions": "1717x916",
+        "chromaSourceSha256": "4b285f8e2108589e38068324872c5bac49e08520f9dc26b06f28514d79036378",
+        "chromaSourceDimensions": "1717x916",
+        "promptSha256": "2f6424a2e55475e2b4ff503c9c6a08acd64a902cf797cd0806401886f7add32d",
+        "encodedSha256": "22d002aab83ff6ee9f7d52a98dfeff44fe1eb1d452032620bb35fb1fdedd5c07",
+        "decodedSha256": "83e8b869001851b6c7257a4e707ae462711230916e44483854050c40c80f691b",
+        "frameSha256": [
+          "ebbc1768d2698f593ffc2a1ab38ae68446a951b70a3c92de9ece4cb45b94747f",
+          "c3f3a527503e2b47aa5854f2d2bd4390f0028d4d1c6125878a8d661dd7bd0b48",
+          "2ad4131a6a88752d03272413dbf1229b061982ecbef276aaf67dc571d897317d",
+          "4e955e2f5c3c26535dcc1b0c5e10ee1073ba9111669f8a7bd30d7c7b392994c9",
+          "ab1c1ae34fbbdf7ca16b1d78e396450de05e2756c32864e1cceee73924aa6116",
+          "c702a483a43abf21882ae8b8a27fc5b509ac0ba10de30962c949f2b8e36682ab",
+          "5f2efde32c6e0fc73e524d7c199e5089243a99043d068288361f2134213eae90",
+          "27d12db87fbafa5bf2dd465b4f83ef29a4c2bf50e9d9eb9f0d97f8cefc42b737"
+        ],
+        "poseSha256": [
+          "7a7726383d4f0449923392e49f2429b13f105fe72b08dbb1c345b9933f3f3ee6",
+          "2faf8c8ae4712c402d4faf1b1bb94a0b1ec38f63daa92e5e741f4b9491e91852",
+          "e2749f5d88d1e9c59cf24a4f26b1a7ac31dd88ae95b45b7f1f6e920a8d282573",
+          "181af854d6c3f2144f3909ea45a1dae1841ed055e30daae347db7328a9c09763",
+          "534e6e6cd8e8cdd9c63c3beb1cd26728c0d7f9a9bfa08acff17b78000dfa4b6b",
+          "ec819e44a670540e457001e6e51625dc7cbcea795524dc3ccbb90698bbe65cc3",
+          "ef41d9e2b662fdfec2f7e2015adb2aec9f363554adc160ac8938ef9ef16db245",
+          "0fa2d939874ea9a6d3c176ba644228e2a85d712086c7f1ca3daddcc20577eb92"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.986381,
+          0.987176,
+          0.974199,
+          0.987411,
+          0.985245,
+          0.98728,
+          0.986089,
+          0.988187
+        ]
+      },
+      "hurt": {
+        "sourceSha256": "0a64a426bd91885654b2b0e048613d8d0da63f89495a06d7c34660842b610e67",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "a58c4f319a547797a0dad4a540c2a0be5e7a956d2f12631cc30101d2ae0b27db",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "16568adb767535433f8fe8ccb28a94a346ba1e0a84a9e7036396ab6ad2439d1e",
+        "encodedSha256": "94b8bf37d82240a3f7558aeb9f6d7bce25b245760258f08ce7edc6ae08b2c99e",
+        "decodedSha256": "d699419e956c41351f26203c25163983c60a7d9d966e1e7a72160059f02f99c7",
+        "frameSha256": [
+          "82aa1ce81b7b81a98de323472f605843a857321f8341b2dc5f34fb5567c64e0d",
+          "85890428a969034f2fdfac88fc436418133a98ea047ae088cb7eae3d34a42eef",
+          "c309da6876030e0b265ec284c4848a8967c80c101e5098a8aaab48e4851387ef",
+          "e35ea74edc2b05eaf7278ad2f33579ea3db8c2064e85ac13d075fcee258b93b6",
+          "18aa8174b13830e4ce3f1a18b9533241022a88284e31e006fe1bef0dd6b6461c",
+          "41ed41c6b53cac86abe5a70ec93fb7958ad10bf866c17c3c5410d88b7d0fa82d",
+          "e08d00247d2c12a45f33a8dc30cc8f2e7e26cbb804fa61e956750a3dfcc9a8ec",
+          "7b8c820e570ca195ef2dcf4959e20a79b7cb40fcd8bc43fe0de197e6a4c521ef"
+        ],
+        "poseSha256": [
+          "d590e0e8def32cc4b5dde52d16f9818cb34dd3bfe0835a382d5021b9925d97c4",
+          "546b43452d40fe713a2326867a4697186762179fcd9e386720b830cb88924811",
+          "9f40dd487791330bd1e9d288c6288b5eb4a53ff1c8cafae8234c0c3ee1110139",
+          "1bd38a44e604a8448082f6a0b49989f9a97a7922edd0c2e83da9212764c07db3",
+          "ad777572f3588244205462bc1fb4b814f74b164974fb83bd88a653cf808f6861",
+          "69ff329ee18c065abe3e4b02e9d06b9eefb53f334a31f5c3f60f1c6247e94692",
+          "d17d74d48b42c15a42d74d455068b1f417f7ad9f98625783c8b251f7e44b8e96",
+          "551b1299febd55db08a5a869bed2448c0c6656346faf4328d8f0bc89cb5b8135"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.988195,
+          0.986468,
+          0.940088,
+          0.994525,
+          0.991982,
+          0.968106,
+          0.987866,
+          0.988958
+        ]
+      },
+      "death": {
+        "sourceSha256": "c01e4057e7f6dee3a1bec7b418afc61e8183c8fca0be2d87e3110c3c47722eb1",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "81609b4b9f4ca3e7588992739716ddab9c807c8523630fd8d72d2a66c0767bb6",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "60579fec3d66e7d2efaf57bc0084352182ed951f12cd3a05c9c82bb8c24d4100",
+        "encodedSha256": "74df6a0b1c6f2249cd8d2ae78f6c21ab295b2d0905e26330936866c62e7ee1e1",
+        "decodedSha256": "69f77b6549c6f352b8598224f92bb930c1e3e81112ef81bbcae5fdd1e2fef52d",
+        "frameSha256": [
+          "4599508fa53949870d4a370c7ce769eb1b1ece7ed149723f1b8dafa666f414ec",
+          "49beb456e47d74a41bbd0450dfd8786293b846fb30060fc01b83864a2933f7d6",
+          "3db75da0a57e25d201118aa52a7d3cc5bfb0f831f1ef96fe0e506136ced903b6",
+          "189f4f3c1137bc78eaeef0e3c289ef3f4950580c386e3511eaf14b495ac19d59",
+          "c22afda923d65b5611cca454a34e5ef6f94f02b7d1c7452d8f572501965232cd",
+          "5458ea0dfc9d7e40bb839843975e4e1176f690c5ba96b4b76c1e995e106bce05",
+          "83af27e227492cdf514df8f5b63f138bfabc69984dbbcd9d4064828cad268895",
+          "83af27e227492cdf514df8f5b63f138bfabc69984dbbcd9d4064828cad268895"
+        ],
+        "poseSha256": [
+          "2b1f718a7c6489a209cde928572b05345811fe578f465194528d3c062d28e39a",
+          "7c7e6c309531c31318a161fa9ae2785113692f7afc6c353b8e849a94fca7463d",
+          "da502b0bf785b0a8c894abd5fb3c73c9151deb436a1e39eaa1ef533953c4c175",
+          "5ddde57e8e95aa8b8845b8c7aca874352339c06f0871b19275e627379184ceb4",
+          "68085be19b65f71747ccfb1f37606ab9f1ca6c13ab4896ce79db891c182a3733",
+          "15c8d07f1fef476a87c0c4b1d01f6fb836928b1b1753d8938e38a6d81d27300e",
+          "b8cfbf0410e16d1c2bc601faeb7840100605d324f106b5b42c11f9cb94dc4e29",
+          "b8cfbf0410e16d1c2bc601faeb7840100605d324f106b5b42c11f9cb94dc4e29"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.994222,
+          0.998218,
+          0.997092,
+          0.998647,
+          0.998291,
+          1,
+          1,
+          1
+        ]
+      },
+      "cast": {
+        "sourceSha256": "01fa129d2a44e95fe4873b7ae232ef0c443f0f9d375f4ad28157ae58bc336c5e",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "67fb9a1806972a5a38db6a40393eccbfecafa2e6e9c1b1e904434a725d53e76c",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "bee46ad9d21042b6d3a0efbad3244b665788968de70f7bfc1d17faed89d11c01",
+        "encodedSha256": "8d3597a5c62bf39dd02f894b308c61f0288fc38b429c530ca391b3f1727a96df",
+        "decodedSha256": "ab0e67a394896d554ea6f2ff3243857c09634465ea917cfbb372f6fa9cea5eed",
+        "frameSha256": [
+          "bc3e717ff0890e1a3294ca03e397279bbd572972c672f3d9a94a33af8dc08036",
+          "87f62eea706d3c084e913ad9b4e30c4055f68d60f940afd66e6cecc6920ec26b",
+          "c22f1f6741c9c9df1a905ead8f5063a738409a6a58a80f0f078b72b2d64afb9e",
+          "217f58957d3351df60d60f24e480fd44eb753764dd9426455e6b24beac0680ae",
+          "775e5ccf3375c77dc403f4c10ddd99de87a515fcc79c83aa88d103616aac4651",
+          "8b8ab283ce000fc218812a610fc5023a9c22135e07c35a0c438264b65c44b506",
+          "9068d754ef2aef2b6edfd4c822208a93a7a98265f311b3a009a8acdfde234535",
+          "e58866bec2426ea9b4df0c01f82d059061aff4a41cc5a1e79f63ea5f0844c25a"
+        ],
+        "poseSha256": [
+          "046f0b4b43715e98515192b823ecb6605b03490922b52ab41b5e13e6a51e9c00",
+          "be9885b91d1652dd00816b3258b2fb08834d508620e0a6648be574d5229624b4",
+          "5bb9ccb3511e2e75e57bdb08011c7e1d09c64488b1b69142baae222a76322b66",
+          "fe54a375ab4ead4135f878fdd803981bc950ec63e386de71a48a964bf3cb39d1",
+          "d6a81f07896c09ebdaa4fb1ae73bc2f1f7edccd11eddbf4513eda924394ced8c",
+          "4fcfb1d8b232f3cefd7d82b3b944c871eaab8c9de060144e0fffd9dbe034fb40",
+          "001e0973bab24c40be07c12adb12b075fedc49713c0396c963a16cb9a7f04fd8",
+          "899f287b3eaab8ac98db31bde22b765161d0376c9a67855cdb405a9db96c678c"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.993423,
+          0.996927,
+          0.992028,
+          0.99569,
+          0.994676,
+          0.995946,
+          0.996518,
+          0.993351
+        ]
+      },
+      "victory": {
+        "sourceSha256": "16ff91f097b947863f10b1df6ba7fc1b67d25fb65784760ba27fec74f87dff50",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "7edb8a8fb19392f1d3ec8622ac11a22fde47fcf19049024bf58a137bbe762213",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "dcaadfbf49f2ef5ebb99f61e62abf17a0745b70ecb4a95501558738adbe5aea0",
+        "encodedSha256": "7decdd012580d6a32557951b87e83442de3e2b59ead16641d160abbe60f21769",
+        "decodedSha256": "9908c1d499382ce75b0d6ca6ead7149ce1492a2681ae1528263e9147d206d24d",
+        "frameSha256": [
+          "99a8d826bbe7fd7e533d6ac8758eddf0b87a720cee2b4f7f29c9678e7b827f14",
+          "1f7d4402c63f504bb2a701e9f9198c539023c3f910c19bd51c290b6d10023dcd",
+          "8dc1f4571bc8d29057dc4f5789ddbdaa8f716f4b8fa7e12ae2c3ac3e0dccbe29",
+          "e7145b5327deee47193d3dd9167cea8e325e5b5f11ff14e1c1876f77b6dff6ad",
+          "3e712f954af53d10d60f8758bf5510538dc988b43db3decfe8d5d68084c1e09b",
+          "f9d59a6351fc327474e46e2f17f246b3c5ca624e0d486532c0b69b6b33d1a8fb",
+          "4c009fde66defce2924e35c2eddd16e583048c489167ff96f3e2e5bdb6e97e23",
+          "574750d8fde120c9c665f5286a9d677a292e08e65ebc97b5c5c84f9a3171b9de"
+        ],
+        "poseSha256": [
+          "50bb900a1c12fae26c54e97ba83cc82c3e9a84b77c4014d4f86f6ba78f8cbed6",
+          "fd1be035605c3957c4ac60e5585ff445ac3121f48c7c9805c1d9d701e4d3bc78",
+          "96d402f954140733a1a393adc609e863b7cd20fcfff497eb18ceeafac0cbf95f",
+          "3acaf9009755ba58ae56ff43a072f7145eedaedd72ffed553273137a71bacfd7",
+          "15f4164e1e57749fab89b0b878a1d6ae59ee8bcbdd3b23c1767f56b7fb5e345b",
+          "82b5194f5375077a72e1ea90814b69f7ca73254fcc34f58598427a5187c553db",
+          "d8f8776f80b7e9ade99ad678e98b64b2dc17e8c452ea57e619da3db8f69fb7f1",
+          "15091bc3b0bdfca113353aba541ae241d747ef375eae07f30db13c4b0eabf4a0"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.992974,
+          0.998432,
+          0.997792,
+          0.995105,
+          0.995266,
+          0.994753,
+          0.996146,
+          0.996378
+        ]
+      },
+      "dead": {
+        "sourceSha256": "c01e4057e7f6dee3a1bec7b418afc61e8183c8fca0be2d87e3110c3c47722eb1",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "81609b4b9f4ca3e7588992739716ddab9c807c8523630fd8d72d2a66c0767bb6",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "f631a7fd605211260b28b5a5bba3503e06dc1064497d1e5769d62e40e178e2b1",
+        "encodedSha256": "c75d53286f0a351c494af31e32fdfb711b3d8a63214fb8ac297e25af42b007ca",
+        "decodedSha256": "519ba4b85e71cc9721dca1dd35c45e55190a9f4f187482f664aac1493a5b3577",
+        "frameSha256": [
+          "83af27e227492cdf514df8f5b63f138bfabc69984dbbcd9d4064828cad268895",
+          "83af27e227492cdf514df8f5b63f138bfabc69984dbbcd9d4064828cad268895",
+          "83af27e227492cdf514df8f5b63f138bfabc69984dbbcd9d4064828cad268895",
+          "83af27e227492cdf514df8f5b63f138bfabc69984dbbcd9d4064828cad268895",
+          "83af27e227492cdf514df8f5b63f138bfabc69984dbbcd9d4064828cad268895",
+          "83af27e227492cdf514df8f5b63f138bfabc69984dbbcd9d4064828cad268895",
+          "83af27e227492cdf514df8f5b63f138bfabc69984dbbcd9d4064828cad268895",
+          "83af27e227492cdf514df8f5b63f138bfabc69984dbbcd9d4064828cad268895"
+        ],
+        "poseSha256": [
+          "b8cfbf0410e16d1c2bc601faeb7840100605d324f106b5b42c11f9cb94dc4e29",
+          "b8cfbf0410e16d1c2bc601faeb7840100605d324f106b5b42c11f9cb94dc4e29",
+          "b8cfbf0410e16d1c2bc601faeb7840100605d324f106b5b42c11f9cb94dc4e29",
+          "b8cfbf0410e16d1c2bc601faeb7840100605d324f106b5b42c11f9cb94dc4e29",
+          "b8cfbf0410e16d1c2bc601faeb7840100605d324f106b5b42c11f9cb94dc4e29",
+          "b8cfbf0410e16d1c2bc601faeb7840100605d324f106b5b42c11f9cb94dc4e29",
+          "b8cfbf0410e16d1c2bc601faeb7840100605d324f106b5b42c11f9cb94dc4e29",
+          "b8cfbf0410e16d1c2bc601faeb7840100605d324f106b5b42c11f9cb94dc4e29"
+        ],
+        "sourceFrameIndexes": [
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  }
+}

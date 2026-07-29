@@ -1,4 +1,12 @@
 import { debugLog } from '../utils/debugLogger.js';
+import { getBattleMapCapabilities } from '../battle/BattleMapSession.js';
+
+function createBattleStartRequestId() {
+  if (globalThis.crypto?.randomUUID) {
+    return globalThis.crypto.randomUUID();
+  }
+  return `battle-${Date.now()}-${Math.random().toString(36).slice(2, 13)}`;
+}
 
 export class ApiClient {
   constructor(baseUrl) {
@@ -6,6 +14,7 @@ export class ApiClient {
     this.token = null;
     this.onUnauthorized = null;
     this.tokenRefreshManager = null;
+    this.pendingBattleStartRequestId = null;
   }
 
   /**
@@ -243,12 +252,32 @@ export class ApiClient {
   }
 
   // Battle endpoints
-  startBattle(options = {}) {
-    return this.post('/battle/start', options);
+  async startBattle(options = {}) {
+    const suppliedRequestId = options.battleStartRequestId;
+    const battleStartRequestId = suppliedRequestId
+      ?? this.pendingBattleStartRequestId
+      ?? createBattleStartRequestId();
+    if (suppliedRequestId === undefined) {
+      this.pendingBattleStartRequestId = battleStartRequestId;
+    }
+
+    const result = await this.post('/battle/start', {
+      ...options,
+      battleStartRequestId,
+      battleMapCapabilities: getBattleMapCapabilities()
+    });
+    if (this.pendingBattleStartRequestId === battleStartRequestId) {
+      this.pendingBattleStartRequestId = null;
+    }
+    return result;
   }
 
   getCurrentBattle() {
-    return this.get('/battle/current');
+    return this.get('/battle/current', {
+      headers: {
+        'x-battle-map-capabilities': JSON.stringify(getBattleMapCapabilities())
+      }
+    });
   }
 
   submitBattleAction(data) {
@@ -341,7 +370,10 @@ export class ApiClient {
   }
 
   startBossTrial(characterId) {
-    return this.post('/advancement/boss/start', { characterId });
+    return this.post('/advancement/boss/start', {
+      characterId,
+      battleMapCapabilities: getBattleMapCapabilities()
+    });
   }
 
   getAdvancementHistory(characterId) {

@@ -178,45 +178,30 @@ See [AUTHORED_PLAYER_ANIMATIONS.md](AUTHORED_PLAYER_ANIMATIONS.md) for the compl
 
 ```bash
 npm run ai:draft:authored-player-animation -- --id human_female_wizard
+npm run ai:generate:characters:player -- --id human_female_wizard --phase reference
+npm run ai:generate:characters:player -- --id human_female_wizard --phase animations
 npm run ai:compile:authored-player-animations -- --id elf_other_wizard
 npm run ai:check:authored-player-animations
 npm run ai:test:authored-player-animations
 ```
 
-### SD1.5 Animation Generation (ControlNet + IP-Adapter)
+#### Authored Enemy Animations
 
-Uses Stable Diffusion 1.5 with pose control and style reference for character animations.
+Enemy generation requires an explicit canonical biome and identity. The retained
+chroma and transparent sources are pinned when the reviewed sheet is compiled.
 
 ```bash
-# Basic SD1.5 generation (uses default weights)
-npm run ai:generate:characters -- --mode sd15 --id warrior
-npm run ai:generate:characters -- --mode sd15 --id goblin
-
-# Custom ControlNet weight (pose accuracy, 0-1)
-npm run ai:generate:characters -- --mode sd15 --controlnet-weight 0.8 --id warrior
-
-# Custom IP-Adapter weight (style/character consistency, 0-1)
-npm run ai:generate:characters -- --mode sd15 --ipadapter-weight 0.8 --id warrior
-
-# Both weights customized
-npm run ai:generate:characters -- --mode sd15 --controlnet-weight 0.8 --ipadapter-weight 0.6 --id warrior
-
-# Generate only reference image (for testing style transfer)
-# Note: Reference images preserve background for better IP-Adapter style transfer
-npm run ai:generate:characters -- --mode sd15 --reference-only --id warrior
-
-# Use external reference image
-npm run ai:generate:characters -- --mode sd15 --reference ./assets/my-character.png --id warrior
+npm run ai:generate:characters:enemies -- --biome forest --id giant_spider --phase reference
+npm run ai:generate:characters:enemies -- --biome forest --id giant_spider --phase animations
+npm run ai:compile:authored-enemy-animations -- --biome forest --id giant_spider --update-pins --approve --force
+npm run ai:check:authored-enemy-animations
 ```
 
-**SD1.5 Weight Presets (recommended combinations):**
-
-| Preset | ControlNet | IP-Adapter | Use Case |
-|--------|------------|------------|----------|
-| balanced | 0.7 | 0.7 | Equal pose/style priority |
-| maxConsistency | 0.6 | 0.8 | Maximum character consistency |
-| precisePoses | 0.8 | 0.5 | Accurate poses, more style variation |
-| creative | 0.4 | 0.4 | More generation variation |
+`npm run ai:generate -- --category characters` is intentionally unsupported:
+the aggregate generator cannot provide the per-identity visual review required
+by the authored player and enemy pipelines. The old SD1.5 character generator
+is retained only as migration implementation code and is not a supported npm
+entry point.
 
 ---
 

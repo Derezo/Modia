@@ -32,3 +32,42 @@ export function getParticipantBattleStatus({
 
   return status;
 }
+
+/**
+ * Project a persisted battle envelope into one participant's terminal view.
+ * The database keeps one shared Coliseum outcome, while snapshots and legacy
+ * state payloads must never tell the losing client that it won.
+ */
+export function getParticipantBattleView(battle, userId) {
+  if (!battle || typeof battle !== 'object') {
+    throw new TypeError('battle is required');
+  }
+
+  const isHeadToHead = battle.battleType === 'pvp'
+    || battle.battleType === 'pvp_coliseum'
+    || battle.mutableState?.battleType === 'pvp'
+    || battle.state?.battleType === 'pvp';
+  const status = getParticipantBattleStatus({
+    status: battle.status ?? battle.mutableState?.status ?? battle.state?.status ?? 'active',
+    userId,
+    player1Id: battle.player1Id,
+    player2Id: battle.player2Id,
+    winnerId: battle.winnerId,
+    isHeadToHead
+  });
+  const rewards = status === 'victory' ? (battle.rewards ?? null) : null;
+
+  return {
+    ...battle,
+    mutableState: {
+      ...battle.mutableState,
+      status,
+      rewards
+    },
+    state: {
+      ...battle.state,
+      status,
+      rewards
+    }
+  };
+}

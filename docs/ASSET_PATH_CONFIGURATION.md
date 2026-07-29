@@ -234,7 +234,7 @@ The cache pattern ensures:
 | `scripts/ai-images/generate-characters.js` | Character sprite generation |
 | `scripts/ai-images/validate-images.js` | Path validation |
 | `scripts/ai-images/validate-paths.js` | Path consistency checks |
-| `scripts/ai-images/validate-asset-paths.js` | Asset path validation |
+| `scripts/ai-images/validate-asset-paths.js` | Asset path validation; the `characters` category delegates to the strict runtime/authored validator |
 
 ---
 

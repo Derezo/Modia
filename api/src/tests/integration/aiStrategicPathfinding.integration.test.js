@@ -250,6 +250,103 @@ describe('calculateStrategicPath', () => {
     assert.ok(result.path !== null, 'Path should be found around obstacles');
     assert.ok(result.path.length > 5, 'Path should be longer due to obstacle avoidance');
   });
+
+  test('uses obstacle layers and persisted elevation connections', () => {
+    const aiUnit = createMockEnemyUnit({
+      id: 'enemy_1',
+      tileX: 0,
+      tileY: 0,
+      movement: 2
+    });
+    const player = createMockPlayerUnit({
+      id: 'player_1',
+      tileX: 2,
+      tileY: 0,
+      hp: 100
+    });
+    const state = createMockBattleState({
+      units: [aiUnit, player],
+      terrain: [[
+        { material: 'grass', movementCost: 1, passable: true, regionId: 'r1' },
+        { material: 'grass', movementCost: 2, passable: true, regionId: 'r1' },
+        { material: 'grass', movementCost: 1, passable: true, regionId: 'r1' }
+      ]],
+      obstacles: [],
+      elevation: [[0.5, 0.7, 0.7]],
+      elevationFormat: 'normalized',
+      elevationConnections: [{
+        id: 'connection:ramp',
+        from: { x: 0, y: 0 },
+        to: { x: 1, y: 0 },
+        kind: 'ramp',
+        direction: 'e',
+        elevationDelta: 0.2,
+        bidirectional: true,
+        featureId: 'route:main'
+      }],
+      mapWidth: 3,
+      mapHeight: 1
+    });
+
+    const connected = calculateStrategicPath(aiUnit, state);
+    assert.deepStrictEqual(
+      connected.path,
+      [
+        { x: 0, y: 0, z: 1 },
+        { x: 1, y: 0, z: 2 },
+        { x: 2, y: 0, z: 2 }
+      ],
+      'strategic targeting explicitly permits its occupied enemy goal'
+    );
+    assert.strictEqual(connected.turnsToReach, 2);
+
+    state.obstacles = [{
+      id: 'obstacle:rock',
+      x: 1,
+      y: 0,
+      kind: 'rock',
+      assetKey: 'mountain/rock',
+      blocking: true,
+      movementCost: 0,
+      featureId: 'r1'
+    }];
+    assert.strictEqual(calculateStrategicPath(aiUnit, state).path, null);
+  });
+
+  test('does not bank unused movement points between strategic turns', () => {
+    const aiUnit = createMockEnemyUnit({
+      id: 'enemy_1',
+      tileX: 0,
+      tileY: 0,
+      movement: 3
+    });
+    const player = createMockPlayerUnit({
+      id: 'player_1',
+      tileX: 3,
+      tileY: 0,
+      hp: 100
+    });
+    const terrain = [[0, 1, 2, 3].map(index => ({
+      material: 'grass',
+      movementCost: index === 0 ? 1 : 2,
+      passable: true,
+      regionId: 'r1'
+    }))];
+    const state = createMockBattleState({
+      units: [aiUnit, player],
+      terrain,
+      mapWidth: 4,
+      mapHeight: 1
+    });
+
+    const result = calculateStrategicPath(aiUnit, state);
+
+    assert.strictEqual(result.turnsToReach, 3);
+    assert.deepStrictEqual(
+      { x: result.nextWaypoint.x, y: result.nextWaypoint.y },
+      { x: 1, y: 0 }
+    );
+  });
 });
 
 // =============================================================================

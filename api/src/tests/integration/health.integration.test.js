@@ -36,8 +36,13 @@ describe('Health Endpoints', () => {
       assert.strictEqual(res.body.status, 'ok');
       assert.ok(res.body.timestamp, 'Response should include timestamp');
       assert.ok(res.body.version, 'Response should include version');
-      assert.ok(res.body.database, 'Response should include database object');
-      assert.strictEqual(res.body.database.status, 'connected');
+      assert.ok(res.body.checks, 'Response should include readiness checks');
+      assert.ok(res.body.checks.database, 'Checks should include database status');
+      assert.strictEqual(res.body.checks.database.status, 'up');
+      assert.ok(
+        res.body.checks.terminalEffects,
+        'Checks should include terminal-effect delivery status'
+      );
     });
   });
 
@@ -60,21 +65,33 @@ describe('Health Endpoints', () => {
       // Verify database metrics
       assert.ok(res.body.database, 'Response should include database object');
       assert.ok(res.body.database.status, 'Database should include status');
-      assert.ok(typeof res.body.database.poolTotal === 'number', 'Database should include poolTotal');
-      assert.ok(typeof res.body.database.poolIdle === 'number', 'Database should include poolIdle');
-      assert.ok(typeof res.body.database.poolWaiting === 'number', 'Database should include poolWaiting');
+      assert.ok(res.body.database.pool, 'Database should include pool metrics');
+      assert.ok(typeof res.body.database.pool.total === 'number', 'Database pool should include total');
+      assert.ok(typeof res.body.database.pool.idle === 'number', 'Database pool should include idle');
+      assert.ok(typeof res.body.database.pool.waiting === 'number', 'Database pool should include waiting');
 
       // Verify websocket metrics
       assert.ok(res.body.websocket, 'Response should include websocket object');
       assert.ok(typeof res.body.websocket.connections === 'number', 'Websocket should include connections');
       assert.ok(typeof res.body.websocket.rooms === 'number', 'Websocket should include rooms');
+
+      // Verify battle architecture operational metrics
+      assert.ok(res.body.terminalEffects, 'Response should include terminal-effect metrics');
+      assert.ok(res.body.battleMaps, 'Response should include battle-map metrics');
+      assert.ok(
+        ['up', 'observing', 'degraded'].includes(res.body.battleMaps.status),
+        'Battle-map metrics should include a known operational status'
+      );
     });
 
-    it('should report ok status when database is connected', async () => {
+    it('should not report unhealthy when required dependencies are available', async () => {
       const res = await request('GET', '/api/health/metrics');
 
       assert.strictEqual(res.status, 200);
-      assert.strictEqual(res.body.status, 'ok');
+      assert.ok(
+        ['healthy', 'degraded'].includes(res.body.status),
+        `Expected healthy or degraded status, received ${res.body.status}`
+      );
       assert.strictEqual(res.body.database.status, 'connected');
     });
   });

@@ -457,7 +457,7 @@ describe('findAdjacentTileToTarget', () => {
     assert.ok(result.y >= 0 && result.y < 2, 'Y should be in bounds');
   });
 
-  test('should ignore dead units when checking occupancy', () => {
+  test('should treat dead units as blocking occupancy consistently', () => {
     const unit = createMockPlayerUnit({ id: 'p1', tileX: 3, tileY: 5 });
     const deadUnit = createMockEnemyUnit({ id: 'e1', tileX: 4, tileY: 5, hp: 0 });
     const state = createMockBattleState({
@@ -469,8 +469,11 @@ describe('findAdjacentTileToTarget', () => {
 
     const result = findAdjacentTileToTarget(state, unit, targetTile);
 
-    // Should allow (4,5) since dead unit doesn't block
-    assert.deepStrictEqual(result, { x: 4, y: 5 }, 'Dead units should not block tiles');
+    assert.deepStrictEqual(
+      result,
+      { x: 4, y: 4 },
+      'Corpses use the same blocking rule as normal traversal'
+    );
   });
 });
 
@@ -697,6 +700,89 @@ describe('calculatePathCost', () => {
     const reachable = getReachableTiles(unit, state);
 
     assert.deepStrictEqual(reachable, [{ x: 1, y: 0, z: 1, cost: 1 }]);
+  });
+
+  test('should apply obstacle and occupied-goal blocking through TraversalView', () => {
+    const unit = createMockPlayerUnit({ id: 'p1', tileX: 0, tileY: 0 });
+    const blocker = createMockEnemyUnit({ id: 'e1', tileX: 2, tileY: 0 });
+    const state = createMockBattleState({
+      units: [unit, blocker],
+      terrain: [['grass', 'grass', 'grass']],
+      obstacles: [[null, { type: 'rocks', passable: false }, null]],
+      mapWidth: 3,
+      mapHeight: 1
+    });
+
+    assert.strictEqual(calculatePathCost(0, 0, 1, 0, state, 10), Infinity);
+
+    state.obstacles[0][1] = null;
+    assert.strictEqual(
+      calculatePathCost(0, 0, 2, 0, state, 10),
+      Infinity,
+      'ordinary movement cannot route onto an occupied destination'
+    );
+  });
+
+  test('should consume directional elevation connections', () => {
+    const unit = createMockPlayerUnit({ id: 'p1', tileX: 0, tileY: 0 });
+    const state = createMockBattleState({
+      units: [unit],
+      terrain: [['grass', 'grass']],
+      elevation: [[0, 2]],
+      elevationFormat: 'discrete',
+      elevationConnections: [[{ e: { type: 'slope', levels: 2 } }, null]],
+      mapWidth: 2,
+      mapHeight: 1
+    });
+
+    assert.strictEqual(calculatePathCost(0, 0, 1, 0, state, 10), 2);
+  });
+
+  test('should adapt BattleMapV2 movement records without losing semantics', () => {
+    const unit = createMockPlayerUnit({
+      id: 'p1',
+      class: 'warrior',
+      tileX: 0,
+      tileY: 0
+    });
+    const state = createMockBattleState({
+      units: [unit],
+      terrain: [[
+        { material: 'grass', movementCost: 1, passable: true, regionId: 'r1' },
+        { material: 'stone', movementCost: 2, passable: true, regionId: 'r1' },
+        { material: 'grass', movementCost: 1, passable: true, regionId: 'r1' }
+      ]],
+      elevation: [[0.5, 0.75, 0.75]],
+      elevationFormat: 'normalized',
+      elevationConnections: [{
+        id: 'connection:ramp',
+        from: { x: 0, y: 0 },
+        to: { x: 1, y: 0 },
+        kind: 'ramp',
+        direction: 'e',
+        elevationDelta: 0.25,
+        bidirectional: true,
+        featureId: 'route:main'
+      }],
+      obstacles: [{
+        id: 'obstacle:tree',
+        x: 2,
+        y: 0,
+        kind: 'tree',
+        assetKey: 'forest/tree',
+        blocking: true,
+        movementCost: 0,
+        featureId: 'r1'
+      }],
+      mapWidth: 3,
+      mapHeight: 1
+    });
+
+    assert.strictEqual(calculatePathCost(0, 0, 1, 0, state, 10), 2);
+    assert.strictEqual(calculatePathCost(0, 0, 2, 0, state, 10), Infinity);
+    assert.deepStrictEqual(getReachableTiles(unit, state), [
+      { x: 1, y: 0, z: 3, cost: 2 }
+    ]);
   });
 });
 

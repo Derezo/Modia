@@ -21,6 +21,7 @@ import {
   predictTurnOrder,
   CT_THRESHOLD
 } from '../../services/battle/turnOrderService.js';
+import { createBattleMutableStateV1 } from '../../../../shared/battleStateProtocol.js';
 
 // =============================================================================
 // CONSTANTS
@@ -397,6 +398,35 @@ describe('predictTurnOrder', () => {
     assert.strictEqual(prediction.enemyId, 'dark_knight');
     assert.strictEqual(prediction.spriteId, 'dark_knight');
     assert.strictEqual(prediction.primaryBiome, 'palace');
+  });
+
+  test('should produce canonical JSON-safe prediction DTOs for mutable battle state', () => {
+    const units = [
+      createMockPlayerUnit({
+        id: 'p1',
+        agility: 20,
+        ct: 100,
+        hp: 100,
+        enemyId: undefined,
+        spriteId: undefined
+      }),
+      createMockEnemyUnit({
+        id: 'e1',
+        agility: 10,
+        ct: 100,
+        hp: 50,
+        race: undefined,
+        gender: undefined
+      })
+    ];
+
+    const predictions = predictTurnOrder({ units }, 2);
+
+    assert.deepStrictEqual(predictions, JSON.parse(JSON.stringify(predictions)));
+    assert.doesNotThrow(() => createBattleMutableStateV1({
+      units: [],
+      turnPredictions: predictions
+    }));
   });
 
   test('should not modify actual unit CT values', () => {

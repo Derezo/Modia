@@ -1,0 +1,86 @@
+{
+  "version": "1.1.0",
+  "id": "conjurer_v1",
+  "class": "conjurer",
+  "templateId": "authored-pose-atlas-v1",
+  "description": "Reusable authored-pose direction for conjurer player identities. Registry metadata and the staged portrait control identity; this profile supplies elemental crystal-focus choreography.",
+  "style": {
+    "source": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+    "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+  },
+  "identity": {
+    "baseFacing": "three-quarters right",
+    "motionStyle": "elemental, sweeping, balanced, and adaptive, with crystal-focus leverage, grounded stance changes, and distinct earth, fire, ice, or nature gestures",
+    "equipmentRule": "Preserve the portrait's robes, crystal staff or focus, elemental ornaments, jewelry, and exact item count. Keep exactly one depicted focus in its original hand; never duplicate crystals, swap equipment, or turn effects into permanent gear.",
+    "magicRule": "Use only the elemental types and palette established in the portrait. Each action shows one compact, readable element at a time, visibly sourced from the crystal focus or casting hand."
+  },
+  "promptTemplates": {
+    "reference": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative {{displayName}} identity portrait; Image 2 is style and proportion reference only. Player identity metadata: {{visualTraits}}. Create one complete head-to-toe {{displayName}} preserving Image 1's face, ancestry traits, gender presentation, robes, crystal focus, elemental ornaments, palette, proportions, and equipment. Do not import identity details from Image 2. {{equipmentRule}} Translate the portrait into a compact elemental-mage silhouette. Use a {{background}} background with no floor or scenery and a square 1:1 canvas with generous padding. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered conjurer in an element-balanced stance facing {{baseFacing}}. {{invariants}}",
+    "animation": "Draw exactly {{frameCount}} genuinely redrawn full-body {{actionLabel}} poses of the authoritative {{displayName}} in a {{columns}}-column by {{rows}}-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: {{visualTraits}}. Required sequence: {{frameSequence}}. Motion direction: {{motionDirection}}. Overall conjurer motion is {{motionStyle}}. {{poseRequirement}} Preserve exact identity, robes, crystal focus, palette, proportions, and elemental ornaments. {{equipmentRule}} {{magicRule}} Action-specific effects: {{effectRule}} Use a {{background}} background with generous gutters. {{invariants}}"
+  },
+  "animations": {
+    "idle": {
+      "actionLabel": "conjurer elemental-balance idle-cycle",
+      "minimumUniquePoses": 4,
+      "anchor": "source-cell",
+      "motionDirection": "A measured breathing loop shifts stance around the crystal focus while one tiny established element alternately brightens and rests.",
+      "effectRule": "Only a thumb-sized pulse of one portrait-established element is permitted.",
+      "frameDescriptions": ["balanced stance with crystal focus grounded", "gentle inhale as the focus crystal brightens", "weight shifts forward and free hand opens", "tiny established element curls near the crystal", "centered elemental midpoint", "soft exhale as the element contracts", "weight shifts rearward with robes settling", "balanced stance flowing back to frame one"]
+    },
+    "walk": {
+      "actionLabel": "conjurer focus-guided walk",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "A coherent alternating walk uses real leg compression, focus counter-motion, and responsive robe movement.",
+      "effectRule": "No active elemental spell; the crystal may retain a faint steady glow.",
+      "frameDescriptions": ["left foot forward contact with focus balanced", "left leg compressed as robes gather", "passing pose with right knee advancing", "right foot reaches while staff or focus counter-swings", "right foot forward contact", "right leg compressed under the stride", "passing pose with left knee advancing", "left foot reaches into the balanced loop"]
+    },
+    "attack": {
+      "actionLabel": "conjurer elemental-focus strike",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "The focus pulls back, free hand selects one element, a planted sweep drives a compact elemental contact, and the body follows through into balance.",
+      "effectRule": "One short earth, fire, ice, or nature accent established by the portrait may mark contact; no mixed-element storm or detached large projectile.",
+      "frameDescriptions": ["element-balanced guard", "focus pulls back as free hand selects one element", "deep windup over the rear leg with crystal charged", "forward step begins the sweeping strike", "compact single-element contact at the focus tip", "full-body follow-through as the element breaks apart", "focus recoils and free hand closes", "recovered balanced guard"]
+    },
+    "hurt": {
+      "actionLabel": "conjurer disrupted-element recovery",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "An impact breaks balance into a sharp flinch, scattered elemental fragments, focus-assisted stagger, grounded brace, and calm recovery.",
+      "effectRule": "A few small fragments of the established element may disperse; no gore, blood, full-body tint, or uncontrolled field effect.",
+      "frameDescriptions": ["balanced guard before impact", "sharp flinch with focus pulled close", "maximum stagger as tiny elemental fragments scatter", "stumbling rear step using the focus for balance", "low planted brace with free hand shielding", "controlled push upright as fragments fade", "feet and focus reset", "recovered element-balanced guard"]
+    },
+    "death": {
+      "actionLabel": "conjurer defeat sequence",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "verticalAnchor": "bottom",
+      "motionDirection": "The focused element extinguishes, knees buckle, the body sinks beside the crystal focus, tips sideways, and settles in a fully fallen rest.",
+      "effectRule": "Elemental light fades without eruption, gore, blood, dismemberment, or rigid rotation; keep the focus singular.",
+      "outputFrameMap": [0, 1, 2, 3, 4, 5, 7, 7],
+      "frameDescriptions": ["fatal impact disrupts elemental balance", "crystal dims as the free arm slackens", "knees buckle beneath the robes", "one knee grounds beside the lowering focus", "body tips into full ground contact", "robes, limbs, and focus settle low", "final fully fallen conjurer with element extinguished", "same final fallen pose held"]
+    },
+    "cast": {
+      "actionLabel": "conjurer elemental shaping sequence",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "motionDirection": "The focus plants, free hand names one element, crystal energy rises, both arms shape a compact form, release it forward, and restore elemental balance.",
+      "effectRule": "Shape and release one compact portrait-established element from the crystal or hand; never combine unrelated elements or cover the body.",
+      "frameDescriptions": ["focused element-balanced stance", "crystal focus plants as free hand rises", "one established element gathers at the crystal", "wide stance shapes the element between focus and hand", "maximum compact elemental form held clearly", "forceful forward release along a short path", "element dissipates as focus lifts", "composed balanced casting finish"]
+    },
+    "dead": {
+      "deriveFrom": {"animation": "death", "frame": 7},
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity.",
+      "frameDescriptions": ["terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held"]
+    },
+    "victory": {
+      "actionLabel": "conjurer elemental flourish",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "motionDirection": "The conjurer recognizes victory, raises the crystal, guides one small element through a controlled orbit, plants the focus, and holds a harmonious finish.",
+      "effectRule": "One compact established element may orbit the focus; no mixed-element spectacle.",
+      "frameDescriptions": ["quiet recognition of victory", "crystal focus rises in one hand", "free hand draws one small element upward", "element completes a compact orbit around the crystal", "graceful pivot follows the elemental path", "focus plants as the element contracts", "harmonious victor stance with crystal displayed", "final triumphant conjurer pose held"]
+    }
+  }
+}

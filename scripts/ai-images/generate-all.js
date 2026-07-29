@@ -34,8 +34,7 @@ const CATEGORY_SCRIPTS = {
   icons: 'generate-icons.js',
   nodes: 'generate-nodes.js',
   overlays: 'generate-overlays.js',
-  obstacles: 'generate-obstacles.js',
-  characters: 'generate-characters.js'
+  obstacles: 'generate-obstacles.js'
 };
 
 /**
@@ -131,7 +130,9 @@ Categories:
   nodes      - World map node icons
   overlays   - Rarity and augment effect overlays
   obstacles  - Environment obstacles for battle maps (rocks, trees)
-  characters - Animated character sprite sheets (64x512 vertical strips)
+Character animation candidates require an explicit reviewed identity. Use:
+  npm run ai:generate:characters:player -- --id <race_gender_class>
+  npm run ai:generate:characters:enemies -- --biome <biome> --id <enemy>
 
 Environment variables:
   HUGGINGFACE_API_TOKEN  Required API token for HuggingFace
@@ -226,6 +227,24 @@ function validateEnvVars(options, categories) {
   }
 }
 
+function getActiveTotals(stats) {
+  const totals = Object.entries(stats.categories || {}).reduce(
+    (result, [category, categoryStats]) => {
+      if (!CATEGORY_SCRIPTS[category]) return result;
+      result.generated += categoryStats.generated || 0;
+      result.total += categoryStats.total || 0;
+      return result;
+    },
+    { generated: 0, total: 0 }
+  );
+  return {
+    ...totals,
+    percentComplete: totals.total > 0
+      ? Math.round((totals.generated / totals.total) * 100)
+      : 100
+  };
+}
+
 /**
  * Main execution
  */
@@ -259,11 +278,13 @@ async function main() {
   console.log('Current Status:');
   console.log('---------------');
   for (const [category, catStats] of Object.entries(stats.categories)) {
+    if (!CATEGORY_SCRIPTS[category]) continue;
     const statusIcon = catStats.pending > 0 ? '○' : '●';
     console.log(`  ${statusIcon} ${category}: ${catStats.generated}/${catStats.total} (${catStats.percentComplete}%)`);
   }
+  const currentTotals = getActiveTotals(stats);
   console.log('');
-  console.log(`  Total: ${stats.total.generated}/${stats.total.total} (${stats.total.percentComplete}%)`);
+  console.log(`  Total: ${currentTotals.generated}/${currentTotals.total} (${currentTotals.percentComplete}%)`);
   console.log('');
 
   // Run generators
@@ -312,11 +333,13 @@ async function main() {
     console.log('Updated Status:');
     console.log('---------------');
     for (const [category, catStats] of Object.entries(updatedStats.categories)) {
+      if (!CATEGORY_SCRIPTS[category]) continue;
       const statusIcon = catStats.pending > 0 ? '○' : '●';
       console.log(`  ${statusIcon} ${category}: ${catStats.generated}/${catStats.total} (${catStats.percentComplete}%)`);
     }
+    const updatedTotals = getActiveTotals(updatedStats);
     console.log('');
-    console.log(`  Total: ${updatedStats.total.generated}/${updatedStats.total.total} (${updatedStats.total.percentComplete}%)`);
+    console.log(`  Total: ${updatedTotals.generated}/${updatedTotals.total} (${updatedTotals.percentComplete}%)`);
   }
 
   process.exit(results.failed.length > 0 ? 1 : 0);
@@ -330,4 +353,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { buildCategoryArgs, runCategoryScript };
+module.exports = { buildCategoryArgs, runCategoryScript, getActiveTotals };

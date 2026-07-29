@@ -22,15 +22,13 @@
 
 import {
   getAssetPath,
-  getCharacterPath,
   getNpcPortraitId,
   getNpcVisualIdentity,
   getPlayerCharacterPathCandidates,
-  resolvePlayerAnimationName,
   SIZE_PRESETS,
   DEFAULT_SIZES,
   getOptimalSize
-} from '@shared/assetPaths.js';
+} from '@modia/shared/assetPaths';
 import { assetCache } from './AssetCache.js';
 import {
   loadItemComposite as loadItemCompositeImpl,
@@ -50,6 +48,161 @@ import {
   getPlayerCharacterAnimations,
   resolveSpriteBiome
 } from './BattleAssetConfig.js';
+import {
+  assertV2AssetCapability,
+  getV2VisualCapabilities
+} from '@modia/shared/mapgen/v2/renderCapabilities';
+
+const V2_TRANSITION_STYLES = Object.freeze({
+  'terrain-edge': Object.freeze({
+    color: '#514737',
+    alpha: 0.46,
+    lineWidth: 2
+  }),
+  shore: Object.freeze({
+    color: '#d8c690',
+    alpha: 0.72,
+    lineWidth: 3
+  }),
+  bank: Object.freeze({
+    color: '#6e5538',
+    alpha: 0.68,
+    lineWidth: 3
+  }),
+  wetness: Object.freeze({
+    color: '#74a4b8',
+    alpha: 0.48,
+    lineWidth: 4
+  }),
+  'route-edge': Object.freeze({
+    color: '#4d3927',
+    alpha: 0.72,
+    lineWidth: 3
+  }),
+  'route-shoulder': Object.freeze({
+    color: '#826542',
+    alpha: 0.58,
+    lineWidth: 4
+  }),
+  'route-center': Object.freeze({
+    color: '#ac8757',
+    alpha: 0.5,
+    lineWidth: 3
+  }),
+  cliff: Object.freeze({
+    color: '#313237',
+    alpha: 0.82,
+    lineWidth: 3
+  }),
+  slope: Object.freeze({
+    color: '#b7a276',
+    alpha: 0.7,
+    lineWidth: 2
+  }),
+  stairs: Object.freeze({
+    color: '#d1c2a0',
+    alpha: 0.76,
+    lineWidth: 3
+  })
+});
+
+const V2_DECORATION_STYLES = Object.freeze({
+  'ground-cover': Object.freeze({
+    color: '#496b35',
+    accentColor: '#829a50',
+    alpha: 0.82,
+    radius: 2
+  }),
+  'leaf-litter': Object.freeze({
+    color: '#765036',
+    accentColor: '#a77b4d',
+    alpha: 0.78,
+    radius: 2
+  }),
+  mushroom: Object.freeze({
+    color: '#bd6c51',
+    accentColor: '#e3c99a',
+    alpha: 0.9,
+    radius: 2
+  }),
+  crystal: Object.freeze({
+    color: '#72c9d6',
+    accentColor: '#d2fbff',
+    alpha: 0.88,
+    radius: 2
+  }),
+  talus: Object.freeze({
+    color: '#77756f',
+    accentColor: '#aaa59a',
+    alpha: 0.86,
+    radius: 2
+  }),
+  scrub: Object.freeze({
+    color: '#6d7040',
+    accentColor: '#a5a365',
+    alpha: 0.82,
+    radius: 2
+  }),
+  reeds: Object.freeze({
+    color: '#7d843a',
+    accentColor: '#bdad5d',
+    alpha: 0.84,
+    radius: 2
+  }),
+  debris: Object.freeze({
+    color: '#66503f',
+    accentColor: '#9c7654',
+    alpha: 0.82,
+    radius: 2
+  }),
+  rubble: Object.freeze({
+    color: '#77746d',
+    accentColor: '#aaa49a',
+    alpha: 0.86,
+    radius: 2
+  }),
+  moss: Object.freeze({
+    color: '#4f713f',
+    accentColor: '#82a263',
+    alpha: 0.82,
+    radius: 2
+  }),
+  ash: Object.freeze({
+    color: '#696967',
+    accentColor: '#99958e',
+    alpha: 0.72,
+    radius: 2
+  })
+});
+
+const V2_DIRT_SURFACE_STYLES = Object.freeze({
+  bridge: Object.freeze({ color: '#80613f', accentColor: '#a17a4c' }),
+  castle: Object.freeze({ color: '#82664a', accentColor: '#a58764' }),
+  cave: Object.freeze({ color: '#67513d', accentColor: '#826b52' }),
+  forest: Object.freeze({ color: '#765632', accentColor: '#9a7544' }),
+  mountain: Object.freeze({ color: '#786247', accentColor: '#9a8260' })
+});
+
+const V2_DIRECTION_CODES = Object.freeze({
+  north: 'n',
+  east: 'e',
+  south: 's',
+  west: 'w',
+  n: 'n',
+  e: 'e',
+  s: 's',
+  w: 'w'
+});
+
+function stableStringHash(value) {
+  let hash = 2166136261;
+  for (const character of String(value)) {
+    hash ^= character.codePointAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
 export class AssetLoader {
   constructor() {
     this.cache = new Map();
@@ -125,6 +278,7 @@ export class AssetLoader {
       },
       terrain: {
         grass: '#6b8e23',   // Olive green
+        dirt: '#80613f',    // Authored code-native V2 route surface
         stone: '#8b8682',   // Warm gray (walkable)
         forest: '#228b22',  // Forest green
         water: '#4682b4',   // Steel blue
@@ -147,6 +301,131 @@ export class AssetLoader {
     if (!this.failedLookups.has(lookupKey)) {
       this.failedLookups.add(lookupKey);
       console.warn(message);
+    }
+  }
+
+  /**
+   * Select one exact authored resource from a validated V2 capability.
+   * Variant indexes never wrap or fall through to another palette/material.
+   * @private
+   */
+  _getV2ResourcePath(capability, variantIndex = 0) {
+    if (!Number.isSafeInteger(variantIndex) || variantIndex < 0 ||
+        variantIndex >= capability.resourcePaths.length) {
+      throw new RangeError(
+        `Invalid variant ${String(variantIndex)} for V2 render asset ` +
+        capability.assetKey
+      );
+    }
+    return capability.resourcePaths[variantIndex];
+  }
+
+  _getV2VariantIndex(capability, options = {}) {
+    if (options.variantIndex !== undefined) return options.variantIndex;
+    if (options.selectionKey === undefined ||
+        capability.resourcePaths.length <= 1) {
+      return 0;
+    }
+    return stableStringHash(options.selectionKey) %
+      capability.resourcePaths.length;
+  }
+
+  _assertV2ExpectedPalette(capability, expectedPalette) {
+    if (expectedPalette !== undefined &&
+        capability.palette !== expectedPalette) {
+      throw new RangeError(
+        `V2 render asset ${capability.assetKey} belongs to palette ` +
+        `${capability.palette}, expected ${expectedPalette}`
+      );
+    }
+  }
+
+  /**
+   * Resolve a V2 asset key exactly. Authored sprites are read only from their
+   * catalogued path; code-native assets return immutable renderer descriptors.
+   */
+  getBattleMapV2Asset(assetKey, options = {}) {
+    const capability = assertV2AssetCapability(assetKey);
+    this._assertV2ExpectedPalette(capability, options.expectedPalette);
+    const variantIndex = this._getV2VariantIndex(capability, options);
+
+    if (capability.source.startsWith('authored-sprite')) {
+      const resourcePath = this._getV2ResourcePath(
+        capability,
+        variantIndex
+      );
+      const result = this.cache.get(resourcePath) ?? null;
+      if (!result) {
+        this._warnOnce(
+          `v2:${assetKey}:${variantIndex}`,
+          '[AssetLoader] Exact V2 asset not found: ' +
+          `assetKey=${assetKey}, variant=${variantIndex}`
+        );
+      }
+      return result;
+    }
+
+    if (capability.source === 'code-native-surface') {
+      const style = capability.semantic === 'dirt'
+        ? V2_DIRT_SURFACE_STYLES[capability.palette]
+        : null;
+      if (!style) {
+        throw new RangeError(
+          `No code-native surface renderer for V2 asset ${assetKey}`
+        );
+      }
+      return Object.freeze({
+        type: 'code-native',
+        assetKey,
+        renderer: capability.renderer,
+        ...style
+      });
+    }
+
+    if (capability.source === 'code-native-overlay') {
+      const style = capability.capabilityKind === 'transition'
+        ? V2_TRANSITION_STYLES[capability.semantic]
+        : capability.capabilityKind === 'decoration'
+          ? V2_DECORATION_STYLES[capability.semantic]
+          : null;
+      if (!style) {
+        throw new RangeError(
+          `No code-native overlay renderer for V2 asset ${assetKey}`
+        );
+      }
+      return Object.freeze({
+        type: 'code-native',
+        assetKey,
+        renderer: capability.renderer,
+        ...style
+      });
+    }
+
+    throw new RangeError(`Unsupported V2 asset source for ${assetKey}`);
+  }
+
+  /**
+   * Load a V2 authored asset from its exact catalogued path. Code-native
+   * assets resolve immediately without network traffic.
+   */
+  async loadBattleMapV2Asset(assetKey, options = {}) {
+    const capability = assertV2AssetCapability(assetKey);
+    this._assertV2ExpectedPalette(capability, options.expectedPalette);
+    if (capability.source.startsWith('code-native')) {
+      return this.getBattleMapV2Asset(assetKey, options);
+    }
+
+    const variantIndex = this._getV2VariantIndex(capability, options);
+    const resourcePath = this._getV2ResourcePath(capability, variantIndex);
+    try {
+      return await this.loadImage(resourcePath);
+    } catch {
+      this._warnOnce(
+        `v2:${assetKey}:${variantIndex}`,
+        '[AssetLoader] Failed to load exact V2 asset: ' +
+        `assetKey=${assetKey}, variant=${variantIndex}`
+      );
+      return null;
     }
   }
 
@@ -312,8 +591,8 @@ export class AssetLoader {
    *
    * See docs/FRONTEND_TECHNICAL_PATTERNS.md for full sprite documentation.
    *
-   * @param {string|Object} character - Character class, or a character object
-   *   with race/gender/class for portrait-matched variant resolution
+   * @param {Object} character - Character object with race/gender/class for
+   *   portrait-matched variant resolution
    * @param {string} animation - Animation type (idle, walk, attack, hit, death, victory)
    * @param {string} [type='player'] - 'player' or 'enemy'
    * @returns {Promise<HTMLImageElement|null>} Loaded sprite or null if failed
@@ -338,17 +617,14 @@ export class AssetLoader {
         : null;
     }
 
-    const paths = typeof character === 'object' && character !== null
-      ? getPlayerCharacterPathCandidates(character, { animation })
-      : [getCharacterPath(String(character || 'warrior').toLowerCase(), {
-        animation: resolvePlayerAnimationName(animation)
-      })];
+    if (typeof character !== 'object' || character === null) return null;
+    const paths = getPlayerCharacterPathCandidates(character, { animation });
 
     for (const path of paths) {
       try {
         return await this.loadImage(path);
       } catch {
-        // Continue to the class-archetype migration fallback.
+        // Continue only to another animation alias for this exact identity.
       }
     }
     return null;
@@ -377,11 +653,8 @@ export class AssetLoader {
         : null;
     }
 
-    const paths = typeof character === 'object' && character !== null
-      ? getPlayerCharacterPathCandidates(character, { animation })
-      : [getCharacterPath(String(character || 'warrior').toLowerCase(), {
-        animation: resolvePlayerAnimationName(animation)
-      })];
+    if (typeof character !== 'object' || character === null) return null;
+    const paths = getPlayerCharacterPathCandidates(character, { animation });
 
     for (const path of paths) {
       const sprite = this.cache.get(path);
@@ -1032,13 +1305,38 @@ export class AssetLoader {
    * @param {number} levels - Number of elevation levels (1-3)
    * @returns {HTMLImageElement|null} Slope sprite or null if not found
    */
-  getSlopeSprite(biome, direction, levels = 1) {
+  getSlopeSprite(biome, direction, levels = 1, options = {}) {
+    const { kind = 'slope', exact = false } = options;
+    const normalizedDirection = {
+      n: 'north',
+      e: 'east',
+      s: 'south',
+      w: 'west'
+    }[direction] ?? direction;
+    if (exact) {
+      const directionCode = V2_DIRECTION_CODES[normalizedDirection];
+      const capability = assertV2AssetCapability(
+        `${biome}:connection:${kind}:${directionCode}:${levels}`
+      );
+      const exactPath = this._getV2ResourcePath(capability);
+      const result = this.cache.get(exactPath) ?? null;
+      if (!result) {
+        this._warnOnce(
+          `connection:${biome}:${kind}:${normalizedDirection}:${levels}`,
+          '[AssetLoader] Exact V2 connection sprite not found: ' +
+          `biome=${biome}, kind=${kind}, direction=${normalizedDirection}, ` +
+          `variant=${levels}`
+        );
+      }
+      return result;
+    }
+
     // Slope files use flat path: {biome}/slope_{biome}_{direction}_{levels}.webp
-    const key = `${this.basePath}/sprites/terrain/${biome}/slope_${biome}_${direction}_${levels}.webp`;
-    const fallbackKey = `${this.basePath}/sprites/terrain/${biome}/slope_${biome}_${direction}_1.webp`;
+    const key = `${this.basePath}/sprites/terrain/${biome}/slope_${biome}_${normalizedDirection}_${levels}.webp`;
+    const fallbackKey = `${this.basePath}/sprites/terrain/${biome}/slope_${biome}_${normalizedDirection}_1.webp`;
     // Additional fallback: base biome
-    const baseFallbackKey = `${this.basePath}/sprites/terrain/base/slope_base_${direction}_${levels}.webp`;
-    const baseDefaultKey = `${this.basePath}/sprites/terrain/base/slope_base_${direction}_1.webp`;
+    const baseFallbackKey = `${this.basePath}/sprites/terrain/base/slope_base_${normalizedDirection}_${levels}.webp`;
+    const baseDefaultKey = `${this.basePath}/sprites/terrain/base/slope_base_${normalizedDirection}_1.webp`;
 
     const result = this.cache.get(key) ||
                    this.cache.get(fallbackKey) ||
@@ -1046,7 +1344,7 @@ export class AssetLoader {
                    this.cache.get(baseDefaultKey);
 
     if (!result) {
-      this._warnOnce(`slope:${biome}:${direction}:${levels}`, `[AssetLoader] Slope sprite not found: biome=${biome}, direction=${direction}, levels=${levels}`);
+      this._warnOnce(`slope:${biome}:${normalizedDirection}:${levels}`, `[AssetLoader] Slope sprite not found: biome=${biome}, direction=${normalizedDirection}, levels=${levels}`);
     }
     return result || null;
   }
@@ -1058,14 +1356,40 @@ export class AssetLoader {
    * @param {number} levels - Number of elevation levels (1-3)
    * @returns {Promise<HTMLImageElement|null>}
    */
-  async loadSlopeSprite(biome, direction, levels = 1) {
+  async loadSlopeSprite(biome, direction, levels = 1, options = {}) {
+    const { kind = 'slope', exact = false } = options;
+    const normalizedDirection = {
+      n: 'north',
+      e: 'east',
+      s: 'south',
+      w: 'west'
+    }[direction] ?? direction;
+    if (exact) {
+      const directionCode = V2_DIRECTION_CODES[normalizedDirection];
+      const capability = assertV2AssetCapability(
+        `${biome}:connection:${kind}:${directionCode}:${levels}`
+      );
+      const exactPath = this._getV2ResourcePath(capability);
+      try {
+        return await this.loadImage(exactPath);
+      } catch {
+        this._warnOnce(
+          `connection:${biome}:${kind}:${normalizedDirection}:${levels}`,
+          '[AssetLoader] Failed to load exact V2 connection sprite: ' +
+          `biome=${biome}, kind=${kind}, direction=${normalizedDirection}, ` +
+          `variant=${levels}`
+        );
+        return null;
+      }
+    }
+
     // Slope files use flat path: {biome}/slope_{biome}_{direction}_{levels}.webp
     const paths = [
-      `${this.basePath}/sprites/terrain/${biome}/slope_${biome}_${direction}_${levels}.webp`,
-      `${this.basePath}/sprites/terrain/${biome}/slope_${biome}_${direction}_1.webp`,
+      `${this.basePath}/sprites/terrain/${biome}/slope_${biome}_${normalizedDirection}_${levels}.webp`,
+      `${this.basePath}/sprites/terrain/${biome}/slope_${biome}_${normalizedDirection}_1.webp`,
       // Additional fallback: base biome
-      `${this.basePath}/sprites/terrain/base/slope_base_${direction}_${levels}.webp`,
-      `${this.basePath}/sprites/terrain/base/slope_base_${direction}_1.webp`
+      `${this.basePath}/sprites/terrain/base/slope_base_${normalizedDirection}_${levels}.webp`,
+      `${this.basePath}/sprites/terrain/base/slope_base_${normalizedDirection}_1.webp`
     ];
 
     for (const path of paths) {
@@ -1076,7 +1400,7 @@ export class AssetLoader {
       }
     }
 
-    this._warnOnce(`slope:${biome}:${direction}:${levels}`, `[AssetLoader] Failed to load slope sprite: biome=${biome}, direction=${direction}, levels=${levels}`);
+    this._warnOnce(`slope:${biome}:${normalizedDirection}:${levels}`, `[AssetLoader] Failed to load slope sprite: biome=${biome}, direction=${normalizedDirection}, levels=${levels}`);
     return null;
   }
 
@@ -1144,11 +1468,25 @@ export class AssetLoader {
     // Load default wall texture
     promises.push(this.loadWallTexture(biome, 'default'));
 
-    // Load slope sprites for all directions and levels
+    // V1 retains its permissive slope preload. V2 authored connection art is
+    // loaded by exact key so stairs can never be disguised by a slope/base
+    // fallback.
     for (const direction of directions) {
       for (const level of levels) {
         promises.push(this.loadSlopeSprite(biome, direction, level));
       }
+      promises.push(this.loadSlopeSprite(
+        biome,
+        direction,
+        1,
+        { kind: 'slope', exact: true }
+      ));
+      promises.push(this.loadSlopeSprite(
+        biome,
+        direction,
+        2,
+        { kind: 'stairs', exact: true }
+      ));
     }
 
     const results = await Promise.allSettled(promises);
@@ -1240,11 +1578,25 @@ export class AssetLoader {
    * @param {boolean} options.includeElevation - DEPRECATED: ignored, elevation sprites no longer used
    * @param {boolean} options.includeWalls - Also preload wall textures (default: true)
    * @param {Function} options.onProgress - Optional callback (loaded, total) for progress tracking
+   * @param {boolean} options.requireV2Assets - Reject if any exact V2 asset is unavailable
    */
   async preloadTerrainSet(nodeType, options = {}) {
-    const { includeWalls = true, onProgress } = options;
+    const {
+      includeWalls = true,
+      onProgress,
+      requireV2Assets = false
+    } = options;
     const promises = [];
+    const requiredV2PromiseIndexes = new Set();
     const biome = this.getSpriteBiome(nodeType);
+    let v2VisualCapabilities = null;
+    try {
+      v2VisualCapabilities = getV2VisualCapabilities(nodeType);
+    } catch {
+      // Legacy node types outside the V2 recipe registry retain their
+      // existing permissive preload behavior.
+    }
+    const v2Palette = v2VisualCapabilities?.palette ?? biome;
     let loaded = 0;
 
     // Progress tracking wrapper
@@ -1257,6 +1609,19 @@ export class AssetLoader {
       onProgress?.(loaded, promises.length);
       throw err;
     });
+    const pushV2Asset = (promise, assetKey) => {
+      if (requireV2Assets) {
+        requiredV2PromiseIndexes.add(promises.length);
+        promises.push(Promise.resolve(promise).then(asset => {
+          if (!asset) {
+            throw new Error(`Required V2 asset unavailable: ${assetKey}`);
+          }
+          return asset;
+        }));
+        return;
+      }
+      promises.push(promise);
+    };
 
     // Load base floor tile variants for all terrain types
     for (const terrain of AssetLoader.TERRAIN_TYPES) {
@@ -1275,6 +1640,46 @@ export class AssetLoader {
       promises.push(this.loadWallTexture(biome, 'default'));
     }
 
+    if (v2VisualCapabilities) {
+      const assetKey = `${v2Palette}:face:stone`;
+      pushV2Asset(this.loadBattleMapV2Asset(assetKey), assetKey);
+    }
+
+    // V2 floors are exact capability-key lookups. Load every authored variant
+    // from the recipe palette in addition to the legacy fallback set above.
+    // Code-native materials (currently dirt) resolve without network traffic.
+    for (const [material, capability] of Object.entries(
+      v2VisualCapabilities?.variants ?? {}
+    )) {
+      for (let variantIndex = 0;
+        variantIndex < capability.count;
+        variantIndex++
+      ) {
+        const assetKey = `${v2Palette}:floor:${material}`;
+        pushV2Asset(this.loadBattleMapV2Asset(
+          assetKey,
+          { variantIndex }
+        ), `${assetKey}:${variantIndex}`);
+      }
+    }
+
+    // BattleGrid consumes persisted V2 connections synchronously during draw.
+    // Preload every authored directional connection before the scene starts.
+    for (const direction of ['north', 'south', 'east', 'west']) {
+      pushV2Asset(this.loadSlopeSprite(
+        v2Palette,
+        direction,
+        1,
+        { kind: 'slope', exact: true }
+      ), `${v2Palette}:connection:slope:${direction}:1`);
+      pushV2Asset(this.loadSlopeSprite(
+        v2Palette,
+        direction,
+        2,
+        { kind: 'stairs', exact: true }
+      ), `${v2Palette}:connection:stairs:${direction}:2`);
+    }
+
     // Track progress for each promise
     const trackedPromises = promises.map(p => trackProgress(p));
     const results = await Promise.allSettled(trackedPromises);
@@ -1284,20 +1689,49 @@ export class AssetLoader {
     if (failed.length > 0) {
       console.warn(`[AssetLoader] ${failed.length} terrain tiles failed:`, failed[0]?.reason?.message);
     }
+    const requiredFailures = results.filter(
+      (result, index) =>
+        requiredV2PromiseIndexes.has(index) && result.status === 'rejected'
+    );
+    if (requiredFailures.length > 0) {
+      throw new AggregateError(
+        requiredFailures.map(result => result.reason),
+        `${requiredFailures.length} required V2 terrain asset(s) failed to load`
+      );
+    }
     return results;
   }
 
   /**
    * Preload character sprites
-   * @param {string|Object} character - Character class or race/gender/class object
+   * @param {Object} character - Canonical race/gender/class player identity
    * @param {Object} options - Preload options
    * @param {string[]} options.animations - Animation types to preload (default: idle, walk, attack, hit, death, dead)
    * @param {Function} options.onProgress - Optional callback (loaded, total) for progress tracking
    */
   async preloadCharacter(character, options = {}) {
+    const identity = character?.visualIdentity?.kind === 'player'
+      ? character.visualIdentity
+      : character;
+    if (
+      !identity
+      || typeof identity !== 'object'
+      || !identity.race
+      || !identity.gender
+      || !(identity.class || identity.className)
+    ) {
+      throw new TypeError('preloadCharacter requires a canonical race/gender/class player identity');
+    }
+
     const animations = options.animations || getPlayerCharacterAnimations(character);
     const { onProgress } = options;
-    const promises = animations.map(anim => this.loadCharacterSprite(character, anim));
+    const promises = animations.map(async anim => {
+      const sprite = await this.loadCharacterSprite(character, anim);
+      if (!sprite) {
+        throw new Error(`Missing canonical player sprite ${identity.race}/${identity.gender}/${identity.class || identity.className}/${anim}`);
+      }
+      return sprite;
+    });
     let loaded = 0;
 
     // Progress tracking wrapper
@@ -1312,7 +1746,15 @@ export class AssetLoader {
     });
 
     const trackedPromises = promises.map(p => trackProgress(p));
-    return Promise.allSettled(trackedPromises);
+    const results = await Promise.allSettled(trackedPromises);
+    const failures = results.filter(result => result.status === 'rejected');
+    if (failures.length > 0) {
+      throw new AggregateError(
+        failures.map(result => result.reason),
+        `${failures.length} canonical player sprite(s) failed to preload`
+      );
+    }
+    return results;
   }
 
   /**
@@ -1447,30 +1889,72 @@ export class AssetLoader {
    * This should be called before battles to ensure obstacles render correctly
    * @param {Object} options - Preload options
    * @param {Function} options.onProgress - Optional callback (loaded, total) for progress tracking
+   * @param {boolean} options.requireV2Assets - Reject missing/non-exact V2 records
    */
   async preloadObstacles(options = {}) {
-    const { onProgress } = options;
+    const { onProgress, requireV2Assets = false } = options;
     // Battles pass their exact map manifest so mobile clients do not decode
     // every giant obstacle source. Retain the complete set as a compatibility
     // fallback for callers that do not yet provide a manifest.
     const defaultObstacles = OBSTACLE_ASSET_CATALOG;
     const descriptors = Array.isArray(options.obstacles)
-      ? options.obstacles.map(obstacle => ({
-        type: obstacle.variant || obstacle.id || obstacle.type,
-        category: this.getObstacleCategory(obstacle.variant || obstacle.id, obstacle.type || obstacle.category)
-      }))
+      ? options.obstacles.map(obstacle => {
+        if (obstacle.assetKey) {
+          return {
+            assetKey: obstacle.assetKey,
+            selectionKey: obstacle.id
+          };
+        }
+        return {
+          type: obstacle.variant || obstacle.id || obstacle.type,
+          category: this.getObstacleCategory(
+            obstacle.variant || obstacle.id,
+            obstacle.type || obstacle.category
+          )
+        };
+      })
       : Object.entries(defaultObstacles).flatMap(([category, types]) =>
         types.map(type => ({ type, category }))
       );
     const uniqueDescriptors = Array.from(new Map(
-      descriptors.filter(item => item.type).map(item => [`${item.category}:${item.type}`, item])
+      descriptors
+        .filter(item => item.assetKey || item.type)
+        .map(item => [
+          item.assetKey
+            ? `${item.assetKey}:${item.selectionKey}`
+            : `${item.category}:${item.type}`,
+          item
+        ])
     ).values());
 
     const promises = [];
+    const requiredV2PromiseIndexes = new Set();
     let loaded = 0;
 
-    for (const { type, category } of uniqueDescriptors) {
-      promises.push(this.loadObstacle(type, category));
+    for (const descriptor of uniqueDescriptors) {
+      if (requireV2Assets && !descriptor.assetKey) {
+        throw new Error(
+          `Required V2 map asset is missing an assetKey: ${descriptor.type}`
+        );
+      }
+      const promise = descriptor.assetKey
+        ? this.loadBattleMapV2Asset(descriptor.assetKey, {
+          selectionKey: descriptor.selectionKey
+        })
+        : this.loadObstacle(descriptor.type, descriptor.category);
+      if (requireV2Assets) {
+        requiredV2PromiseIndexes.add(promises.length);
+        promises.push(Promise.resolve(promise).then(asset => {
+          if (!asset) {
+            throw new Error(
+              `Required V2 asset unavailable: ${descriptor.assetKey}`
+            );
+          }
+          return asset;
+        }));
+      } else {
+        promises.push(promise);
+      }
     }
 
     // Progress tracking wrapper
@@ -1488,18 +1972,31 @@ export class AssetLoader {
     const results = await Promise.allSettled(trackedPromises);
     const loadedCount = results.filter(r => r.status === 'fulfilled' && r.value).length;
     console.log(`Preloaded ${loadedCount}/${results.length} obstacle sprites`);
+    const requiredFailures = results.filter(
+      (result, index) =>
+        requiredV2PromiseIndexes.has(index) && result.status === 'rejected'
+    );
+    if (requiredFailures.length > 0) {
+      throw new AggregateError(
+        requiredFailures.map(result => result.reason),
+        `${requiredFailures.length} required V2 map asset(s) failed to load`
+      );
+    }
     return results;
   }
 
   /**
    * Preload assets for battle scene
+   * @param {string} nodeType
+   * @param {Object[]} playerCharacters - Canonical race/gender/class identities
+   * @param {Array<string|Object>} enemyIds
    */
-  async preloadBattleAssets(nodeType, playerClasses, enemyIds) {
+  async preloadBattleAssets(nodeType, playerCharacters = [], enemyIds = []) {
     console.log(`Preloading battle assets for ${nodeType}...`);
 
     const tasks = [
       this.preloadTerrainSet(nodeType),
-      ...playerClasses.map(cls => this.preloadCharacter(cls)),
+      ...playerCharacters.map(character => this.preloadCharacter(character)),
       // Enemy identity is independent of the encounter terrain. Registered NPCs
       // resolve their canonical biome; legacy unknown IDs use one stable fallback.
       this.preloadEnemies('forest', enemyIds)

@@ -31,7 +31,8 @@ import {
   IMPASSABLE_TERRAIN,
   TERRAIN_COSTS,
   canTraverseElevation,
-  ELEVATION_RULES
+  ELEVATION_RULES,
+  elevationLevelToNormalized
 } from '../../../../shared/terrain.js';
 
 describe('Movement Sync - Pathfinding Consistency', () => {
@@ -159,7 +160,7 @@ describe('Movement Sync - Pathfinding Consistency', () => {
       }
     });
 
-    it('should ignore dead units for collision', () => {
+    it('should treat dead units as blocking battlefield corpses', () => {
       const width = 10;
       const height = 10;
       const terrain = Array.from({ length: height }, () =>
@@ -177,9 +178,9 @@ describe('Movement Sync - Pathfinding Consistency', () => {
 
       const reachable = getReachableTiles(startX, startY, range, terrain, units, width, height);
 
-      // Verify dead unit's tile IS reachable (we can move through dead units)
+      // Corpses remain authoritative occupants until battle cleanup.
       const deadTile = reachable.find(t => t.x === 6 && t.y === 5);
-      assert.ok(deadTile, 'Tile with dead unit should be reachable');
+      assert.equal(deadTile, undefined, 'Tile with dead unit should be blocked');
     });
   });
 
@@ -317,16 +318,19 @@ describe('Movement Sync - Pathfinding Consistency', () => {
         Array(width).fill('grass')
       );
 
-      // Create elevation grid: west at level 2, center/east at level 0
+      const groundElevation = elevationLevelToNormalized(0);
+      const highElevation = elevationLevelToNormalized(2);
+
+      // Create elevation grid: west at level 2, center/east at level 0.
       const elevation = Array.from({ length: height }, () =>
-        Array(width).fill(0)
+        Array(width).fill(groundElevation)
       );
 
       // Elevated starting area
       for (let y = 0; y < height; y++) {
-        elevation[y][3] = 2;
-        elevation[y][4] = 2;
-        elevation[y][5] = 2;
+        elevation[y][3] = highElevation;
+        elevation[y][4] = highElevation;
+        elevation[y][5] = highElevation;
       }
 
       const units = [];
@@ -335,12 +339,12 @@ describe('Movement Sync - Pathfinding Consistency', () => {
       const range = 3;
 
       const reachable = getReachableTiles3D(
-        startX, startY, 2, range,
+        startX, startY, highElevation, range,
         terrain, elevation, null,
         units, width, height
       );
 
-      // Should be able to drop down 2 levels (within MAX_DROP = 2)
+      // A two-level drop is within the canonical MAX_DROP = 3.
       const groundTile = reachable.find(t => t.x === 6 && t.y === 5);
       assert.ok(groundTile, 'Should be able to drop down 2 levels');
     });
@@ -497,6 +501,6 @@ describe('Movement Sync - Terrain Constants', () => {
 
   it('should have consistent elevation rules', () => {
     assert.strictEqual(ELEVATION_RULES.MAX_CLIMB, 1, 'MAX_CLIMB should be 1');
-    assert.strictEqual(ELEVATION_RULES.MAX_DROP, 2, 'MAX_DROP should be 2');
+    assert.strictEqual(ELEVATION_RULES.MAX_DROP, 3, 'MAX_DROP should be 3');
   });
 });

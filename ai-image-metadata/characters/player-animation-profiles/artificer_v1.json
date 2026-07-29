@@ -1,0 +1,78 @@
+{
+  "version": "1.1.0",
+  "id": "artificer_v1",
+  "class": "artificer",
+  "templateId": "authored-pose-atlas-v1",
+  "description": "Reusable authored-pose direction for artificer player identities. Registry metadata and the staged portrait control identity; this profile supplies clockwork-tool choreography.",
+  "style": {
+    "source": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+    "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+  },
+  "identity": {
+    "baseFacing": "three-quarters right",
+    "motionStyle": "inventive, mechanical, precise, and brisk, with articulated tool use, clockwork recoil, deliberate gadget deployment, and readable weight transfer",
+    "equipmentRule": "Preserve the portrait's goggles, mechanical arm, gears, toolbelt, gadgets, tools, clothing, and exact item count. Keep every mechanism attached as depicted; move exactly one established handheld gadget at a time and never duplicate, swap, or transform permanent machinery.",
+    "magicRule": "Effects are physical clockwork, steam, sparks, or compact gadget discharge in the portrait's established palette. Do not add arcane runes, unexplained aura, summoned machinery, or oversized explosions."
+  },
+  "promptTemplates": {
+    "reference": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative {{displayName}} identity portrait; Image 2 is style and proportion reference only. Player identity metadata: {{visualTraits}}. Create one complete head-to-toe {{displayName}} preserving Image 1's face, ancestry traits, gender presentation, hair, goggles, mechanical arm, gears, toolbelt, gadgets, clothing, palette, and proportions. Do not import identity details from Image 2. {{equipmentRule}} Translate the portrait into a compact clockwork-inventor silhouette. Use a {{background}} background with no floor or scenery and a square 1:1 canvas with generous padding. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered artificer in a tool-ready diagnostic stance facing {{baseFacing}}. {{invariants}}",
+    "animation": "Draw exactly {{frameCount}} genuinely redrawn full-body {{actionLabel}} poses of the authoritative {{displayName}} in a {{columns}}-column by {{rows}}-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: {{visualTraits}}. Required sequence: {{frameSequence}}. Motion direction: {{motionDirection}}. Overall artificer motion is {{motionStyle}}. {{poseRequirement}} Preserve exact identity, goggles, mechanical arm, gears, palette, proportions, toolbelt, gadgets, and mechanisms. {{equipmentRule}} {{magicRule}} Action-specific effects: {{effectRule}} Use a {{background}} background with generous gutters. {{invariants}}"
+  },
+  "animations": {
+    "idle": {
+      "actionLabel": "artificer diagnostic idle-cycle",
+      "minimumUniquePoses": 4,
+      "anchor": "source-cell",
+      "motionDirection": "A busy diagnostic loop alternates measured breath, goggle adjustment, mechanical-arm checks, and one secured toolbelt inspection.",
+      "effectRule": "Only a tiny gear motion, indicator glint, or contained steam tick is permitted; no deployed gadget.",
+      "frameDescriptions": ["tool-ready stance with mechanisms secured", "measured inhale as mechanical shoulder lifts", "weight shifts forward during a goggle adjustment", "free hand checks one attached gear or indicator", "centered diagnostic midpoint", "controlled exhale as mechanism settles", "weight shifts rearward while toolbelt stops swaying", "tool-ready stance flowing back to frame one"]
+    },
+    "walk": {
+      "actionLabel": "artificer gear-weighted stride",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "A brisk alternating stride uses real leg compression, mechanical-arm counter-motion, toolbelt stabilization, and delayed gear and coat follow-through.",
+      "effectRule": "No active discharge; attached mechanisms remain closed and singular.",
+      "frameDescriptions": ["left foot forward contact with toolbelt stabilized", "left leg compresses under mechanical weight", "passing pose with right knee advancing", "right foot reaches as mechanical arm counter-swings", "right foot forward contact", "right leg compresses beneath the gear load", "passing pose with left knee advancing", "left foot reaches into the brisk loop"]
+    },
+    "attack": {
+      "actionLabel": "artificer clockwork gadget strike",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "A quick diagnosis selects exactly one established gadget, primes it with the mechanical arm or tool, drives a compact strike or discharge, and retracts safely.",
+      "effectRule": "Use exactly one handheld or attached gadget and one compact spark, steam, or physical contact accent; no duplicate machinery or oversized blast.",
+      "frameDescriptions": ["diagnostic guard assessing the target", "hand reaches toward exactly one established gadget", "single gadget primes while its holder is visibly empty", "planted windup aligns mechanical arm and tool", "compact gadget strike or short discharge at contact", "mechanical recoil travels through shoulders and stance", "gadget retracts or returns as sparks fade", "recovered tool-ready guard"]
+    },
+    "hurt": {
+      "actionLabel": "artificer mechanism-protecting recovery",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "An impact jolts the mechanisms, throws the body into a stagger, triggers a low protective brace, rapid diagnostic check, and determined recovery.",
+      "effectRule": "A few compact physical sparks may leave an established mechanism; no gore, blood, detached arm, duplicated parts, or explosion.",
+      "frameDescriptions": ["tool-ready stance before impact", "sharp flinch with mechanical arm drawn inward", "maximum stagger as a few sparks shake loose", "forced backward step with toolbelt swinging", "low brace protecting attached mechanisms", "careful rise during a rapid diagnostic check", "feet, arm, and tools reset", "recovered inventive guard"]
+    },
+    "death": {
+      "actionLabel": "artificer defeat sequence",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "verticalAnchor": "bottom",
+      "motionDirection": "A final impact powers down the machinery, knees buckle under gear weight, the body lowers into a side collapse, and all attached mechanisms settle fully fallen.",
+      "effectRule": "Sparks and steam fade without gore, blood, explosion, detached machinery, duplicate parts, or rigid rotation.",
+      "outputFrameMap": [0, 1, 2, 3, 4, 5, 7, 7],
+      "frameDescriptions": ["fatal impact breaks the diagnostic stance", "mechanical indicators dim as arms lower", "knees buckle beneath the gear load", "one hip grounds while torso and mechanical arm tip sideways", "body reaches full ground contact", "tools, gears, limbs, and clothing settle low", "final fully fallen artificer with mechanisms inert", "same final fallen pose held"]
+    },
+    "dead": {
+      "deriveFrom": {"animation": "death", "frame": 7},
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity.",
+      "frameDescriptions": ["terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held"]
+    },
+    "victory": {
+      "actionLabel": "artificer successful-invention celebration",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "motionDirection": "The artificer confirms success, checks one mechanism, adjusts goggles, raises exactly one gadget, triggers a tiny celebratory function, secures it, and holds proudly.",
+      "effectRule": "One selected gadget may emit a tiny spark, steam puff, or gear flourish; never duplicate it or create a large blast.",
+      "frameDescriptions": ["surprised recognition that the invention worked", "rapid check of one attached mechanism", "confident goggle adjustment", "exactly one gadget lifts overhead", "tiny controlled spark or steam celebration", "gadget returns as mechanisms settle", "proud inventor stance with mechanical arm displayed", "final triumphant artificer pose held"]
+    }
+  }
+}

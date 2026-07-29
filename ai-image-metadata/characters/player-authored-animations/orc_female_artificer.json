@@ -1,0 +1,584 @@
+{
+  "version": "1.0.0",
+  "template": "ai-image-metadata/characters/player-authored-animation-template.json",
+  "compilerVersion": "1.2.0",
+  "id": "orc_female_artificer",
+  "profile": "artificer_v1",
+  "profileSource": "ai-image-metadata/characters/player-animation-profiles/artificer_v1.json",
+  "status": "approved",
+  "approvedAt": "2026-07-29T02:31:33.710Z",
+  "metadataFingerprint": "154476b57b61bba5b57d7d66eb675b510109df2a6b743dd31db12ebb54878d52",
+  "draftProvenance": {
+    "registry": "ai-image-metadata/characters/player-variants.json",
+    "templateSha256": "7943e69db577b3a4429b47df634f931d3f4cb8e8ce9a91a06578255fbe935bbe",
+    "profileSha256": "509f4912f3bc0f84ba476415c2624eeeac7a3bdeeb4e83bb4da55cc490435922"
+  },
+  "identity": {
+    "race": "orc",
+    "gender": "female",
+    "class": "artificer",
+    "presentation": "female orc artificer",
+    "visualTraits": "orc green skin tusks muscular tribal markings fierce female feminine features inventor gadgets goggles mechanical arm clockwork gears toolbelt steampunk",
+    "baseFacing": "three-quarters right",
+    "sourceMetadata": {
+      "isAdvanced": true,
+      "inheritsFrom": "artificer",
+      "seed": 24032
+    }
+  },
+  "inputs": {
+    "identity": {
+      "origin": "frontend/public/assets/portraits/originals/orc_female_artificer.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/orc_female_artificer/inputs/identity.png",
+      "authority": "face, ancestry, gender presentation, hair, eyes, complexion, costume, palette, proportions, and equipment"
+    },
+    "style": {
+      "origin": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/orc_female_artificer/inputs/style.png",
+      "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+    }
+  },
+  "reference": {
+    "source": "ai-image-metadata/characters/player-animation-sources/orc_female_artificer/reference.png",
+    "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_female_artificer/chroma/reference.png",
+    "identitySource": "ai-image-metadata/characters/player-animation-sources/orc_female_artificer/inputs/identity.png",
+    "styleSource": "ai-image-metadata/characters/player-animation-sources/orc_female_artificer/inputs/style.png",
+    "prompt": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative Orc Artificer (female presentation) identity portrait; Image 2 is style and proportion reference only. Player identity metadata: orc green skin tusks muscular tribal markings fierce female feminine features inventor gadgets goggles mechanical arm clockwork gears toolbelt steampunk. Create one complete head-to-toe Orc Artificer (female presentation) preserving Image 1's face, ancestry traits, gender presentation, hair, goggles, mechanical arm, gears, toolbelt, gadgets, clothing, palette, and proportions. Do not import identity details from Image 2. Preserve the portrait's goggles, mechanical arm, gears, toolbelt, gadgets, tools, clothing, and exact item count. Keep every mechanism attached as depicted; move exactly one established handheld gadget at a time and never duplicate, swap, or transform permanent machinery. Translate the portrait into a compact clockwork-inventor silhouette. Use a flat #00ff00 chroma key background with no floor or scenery and a square 1:1 canvas with generous padding. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered artificer in a tool-ready diagnostic stance facing three-quarters right. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+  },
+  "animations": {
+    "idle": {
+      "source": "ai-image-metadata/characters/player-animation-sources/orc_female_artificer/idle.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_female_artificer/chroma/idle.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 4,
+      "frameDescriptions": [
+        "tool-ready stance with mechanisms secured",
+        "measured inhale as mechanical shoulder lifts",
+        "weight shifts forward during a goggle adjustment",
+        "free hand checks one attached gear or indicator",
+        "centered diagnostic midpoint",
+        "controlled exhale as mechanism settles",
+        "weight shifts rearward while toolbelt stops swaying",
+        "tool-ready stance flowing back to frame one"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body artificer diagnostic idle-cycle poses of the authoritative Orc Artificer (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: orc green skin tusks muscular tribal markings fierce female feminine features inventor gadgets goggles mechanical arm clockwork gears toolbelt steampunk. Required sequence: tool-ready stance with mechanisms secured; measured inhale as mechanical shoulder lifts; weight shifts forward during a goggle adjustment; free hand checks one attached gear or indicator; centered diagnostic midpoint; controlled exhale as mechanism settles; weight shifts rearward while toolbelt stops swaying; tool-ready stance flowing back to frame one. Motion direction: A busy diagnostic loop alternates measured breath, goggle adjustment, mechanical-arm checks, and one secured toolbelt inspection.. Overall artificer motion is inventive, mechanical, precise, and brisk, with articulated tool use, clockwork recoil, deliberate gadget deployment, and readable weight transfer. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, goggles, mechanical arm, gears, palette, proportions, toolbelt, gadgets, and mechanisms. Preserve the portrait's goggles, mechanical arm, gears, toolbelt, gadgets, tools, clothing, and exact item count. Keep every mechanism attached as depicted; move exactly one established handheld gadget at a time and never duplicate, swap, or transform permanent machinery. Effects are physical clockwork, steam, sparks, or compact gadget discharge in the portrait's established palette. Do not add arcane runes, unexplained aura, summoned machinery, or oversized explosions. Action-specific effects: Only a tiny gear motion, indicator glint, or contained steam tick is permitted; no deployed gadget. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "walk": {
+      "source": "ai-image-metadata/characters/player-animation-sources/orc_female_artificer/walk.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_female_artificer/chroma/walk.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "left foot forward contact with toolbelt stabilized",
+        "left leg compresses under mechanical weight",
+        "passing pose with right knee advancing",
+        "right foot reaches as mechanical arm counter-swings",
+        "right foot forward contact",
+        "right leg compresses beneath the gear load",
+        "passing pose with left knee advancing",
+        "left foot reaches into the brisk loop"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body artificer gear-weighted stride poses of the authoritative Orc Artificer (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: orc green skin tusks muscular tribal markings fierce female feminine features inventor gadgets goggles mechanical arm clockwork gears toolbelt steampunk. Required sequence: left foot forward contact with toolbelt stabilized; left leg compresses under mechanical weight; passing pose with right knee advancing; right foot reaches as mechanical arm counter-swings; right foot forward contact; right leg compresses beneath the gear load; passing pose with left knee advancing; left foot reaches into the brisk loop. Motion direction: A brisk alternating stride uses real leg compression, mechanical-arm counter-motion, toolbelt stabilization, and delayed gear and coat follow-through.. Overall artificer motion is inventive, mechanical, precise, and brisk, with articulated tool use, clockwork recoil, deliberate gadget deployment, and readable weight transfer. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, goggles, mechanical arm, gears, palette, proportions, toolbelt, gadgets, and mechanisms. Preserve the portrait's goggles, mechanical arm, gears, toolbelt, gadgets, tools, clothing, and exact item count. Keep every mechanism attached as depicted; move exactly one established handheld gadget at a time and never duplicate, swap, or transform permanent machinery. Effects are physical clockwork, steam, sparks, or compact gadget discharge in the portrait's established palette. Do not add arcane runes, unexplained aura, summoned machinery, or oversized explosions. Action-specific effects: No active discharge; attached mechanisms remain closed and singular. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "attack": {
+      "source": "ai-image-metadata/characters/player-animation-sources/orc_female_artificer/attack.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_female_artificer/chroma/attack.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "diagnostic guard assessing the target",
+        "hand reaches toward exactly one established gadget",
+        "single gadget primes while its holder is visibly empty",
+        "planted windup aligns mechanical arm and tool",
+        "compact gadget strike or short discharge at contact",
+        "mechanical recoil travels through shoulders and stance",
+        "gadget retracts or returns as sparks fade",
+        "recovered tool-ready guard"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body artificer clockwork gadget strike poses of the authoritative Orc Artificer (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: orc green skin tusks muscular tribal markings fierce female feminine features inventor gadgets goggles mechanical arm clockwork gears toolbelt steampunk. Required sequence: diagnostic guard assessing the target; hand reaches toward exactly one established gadget; single gadget primes while its holder is visibly empty; planted windup aligns mechanical arm and tool; compact gadget strike or short discharge at contact; mechanical recoil travels through shoulders and stance; gadget retracts or returns as sparks fade; recovered tool-ready guard. Motion direction: A quick diagnosis selects exactly one established gadget, primes it with the mechanical arm or tool, drives a compact strike or discharge, and retracts safely.. Overall artificer motion is inventive, mechanical, precise, and brisk, with articulated tool use, clockwork recoil, deliberate gadget deployment, and readable weight transfer. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, goggles, mechanical arm, gears, palette, proportions, toolbelt, gadgets, and mechanisms. Preserve the portrait's goggles, mechanical arm, gears, toolbelt, gadgets, tools, clothing, and exact item count. Keep every mechanism attached as depicted; move exactly one established handheld gadget at a time and never duplicate, swap, or transform permanent machinery. Effects are physical clockwork, steam, sparks, or compact gadget discharge in the portrait's established palette. Do not add arcane runes, unexplained aura, summoned machinery, or oversized explosions. Action-specific effects: Use exactly one handheld or attached gadget and one compact spark, steam, or physical contact accent; no duplicate machinery or oversized blast. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "hurt": {
+      "source": "ai-image-metadata/characters/player-animation-sources/orc_female_artificer/hurt.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_female_artificer/chroma/hurt.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "tool-ready stance before impact",
+        "sharp flinch with mechanical arm drawn inward",
+        "maximum stagger as a few sparks shake loose",
+        "forced backward step with toolbelt swinging",
+        "low brace protecting attached mechanisms",
+        "careful rise during a rapid diagnostic check",
+        "feet, arm, and tools reset",
+        "recovered inventive guard"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body artificer mechanism-protecting recovery poses of the authoritative Orc Artificer (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: orc green skin tusks muscular tribal markings fierce female feminine features inventor gadgets goggles mechanical arm clockwork gears toolbelt steampunk. Required sequence: tool-ready stance before impact; sharp flinch with mechanical arm drawn inward; maximum stagger as a few sparks shake loose; forced backward step with toolbelt swinging; low brace protecting attached mechanisms; careful rise during a rapid diagnostic check; feet, arm, and tools reset; recovered inventive guard. Motion direction: An impact jolts the mechanisms, throws the body into a stagger, triggers a low protective brace, rapid diagnostic check, and determined recovery.. Overall artificer motion is inventive, mechanical, precise, and brisk, with articulated tool use, clockwork recoil, deliberate gadget deployment, and readable weight transfer. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, goggles, mechanical arm, gears, palette, proportions, toolbelt, gadgets, and mechanisms. Preserve the portrait's goggles, mechanical arm, gears, toolbelt, gadgets, tools, clothing, and exact item count. Keep every mechanism attached as depicted; move exactly one established handheld gadget at a time and never duplicate, swap, or transform permanent machinery. Effects are physical clockwork, steam, sparks, or compact gadget discharge in the portrait's established palette. Do not add arcane runes, unexplained aura, summoned machinery, or oversized explosions. Action-specific effects: A few compact physical sparks may leave an established mechanism; no gore, blood, detached arm, duplicated parts, or explosion. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "death": {
+      "source": "ai-image-metadata/characters/player-animation-sources/orc_female_artificer/death.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_female_artificer/chroma/death.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "verticalAnchor": "bottom",
+      "outputFrameMap": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        7,
+        7
+      ],
+      "frameDescriptions": [
+        "fatal impact breaks the diagnostic stance",
+        "mechanical indicators dim as arms lower",
+        "knees buckle beneath the gear load",
+        "one hip grounds while torso and mechanical arm tip sideways",
+        "body reaches full ground contact",
+        "tools, gears, limbs, and clothing settle low",
+        "final fully fallen artificer with mechanisms inert",
+        "same final fallen pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body artificer defeat sequence poses of the authoritative Orc Artificer (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: orc green skin tusks muscular tribal markings fierce female feminine features inventor gadgets goggles mechanical arm clockwork gears toolbelt steampunk. Required sequence: fatal impact breaks the diagnostic stance; mechanical indicators dim as arms lower; knees buckle beneath the gear load; one hip grounds while torso and mechanical arm tip sideways; body reaches full ground contact; tools, gears, limbs, and clothing settle low; final fully fallen artificer with mechanisms inert; same final fallen pose held. Motion direction: A final impact powers down the machinery, knees buckle under gear weight, the body lowers into a side collapse, and all attached mechanisms settle fully fallen.. Overall artificer motion is inventive, mechanical, precise, and brisk, with articulated tool use, clockwork recoil, deliberate gadget deployment, and readable weight transfer. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, goggles, mechanical arm, gears, palette, proportions, toolbelt, gadgets, and mechanisms. Preserve the portrait's goggles, mechanical arm, gears, toolbelt, gadgets, tools, clothing, and exact item count. Keep every mechanism attached as depicted; move exactly one established handheld gadget at a time and never duplicate, swap, or transform permanent machinery. Effects are physical clockwork, steam, sparks, or compact gadget discharge in the portrait's established palette. Do not add arcane runes, unexplained aura, summoned machinery, or oversized explosions. Action-specific effects: Sparks and steam fade without gore, blood, explosion, detached machinery, duplicate parts, or rigid rotation. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "dead": {
+      "deriveFrom": {
+        "animation": "death",
+        "frame": 7
+      },
+      "frameDescriptions": [
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held"
+      ],
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity."
+    },
+    "victory": {
+      "source": "ai-image-metadata/characters/player-animation-sources/orc_female_artificer/victory.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_female_artificer/chroma/victory.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "surprised recognition that the invention worked",
+        "rapid check of one attached mechanism",
+        "confident goggle adjustment",
+        "exactly one gadget lifts overhead",
+        "tiny controlled spark or steam celebration",
+        "gadget returns as mechanisms settle",
+        "proud inventor stance with mechanical arm displayed",
+        "final triumphant artificer pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body artificer successful-invention celebration poses of the authoritative Orc Artificer (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: orc green skin tusks muscular tribal markings fierce female feminine features inventor gadgets goggles mechanical arm clockwork gears toolbelt steampunk. Required sequence: surprised recognition that the invention worked; rapid check of one attached mechanism; confident goggle adjustment; exactly one gadget lifts overhead; tiny controlled spark or steam celebration; gadget returns as mechanisms settle; proud inventor stance with mechanical arm displayed; final triumphant artificer pose held. Motion direction: The artificer confirms success, checks one mechanism, adjusts goggles, raises exactly one gadget, triggers a tiny celebratory function, secures it, and holds proudly.. Overall artificer motion is inventive, mechanical, precise, and brisk, with articulated tool use, clockwork recoil, deliberate gadget deployment, and readable weight transfer. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, goggles, mechanical arm, gears, palette, proportions, toolbelt, gadgets, and mechanisms. Preserve the portrait's goggles, mechanical arm, gears, toolbelt, gadgets, tools, clothing, and exact item count. Keep every mechanism attached as depicted; move exactly one established handheld gadget at a time and never duplicate, swap, or transform permanent machinery. Effects are physical clockwork, steam, sparks, or compact gadget discharge in the portrait's established palette. Do not add arcane runes, unexplained aura, summoned machinery, or oversized explosions. Action-specific effects: One selected gadget may emit a tiny spark, steam puff, or gear flourish; never duplicate it or create a large blast. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    }
+  },
+  "pins": {
+    "templateSha256": "93943004e340d113943e06dea61fd7dfad67c20750dd4fc30d76d3be1fb7c144",
+    "profileSha256": "afd9cc4d20b0e00e617817d514ee58c1bcf80f7953af02f5d617e8f38a339536",
+    "reference": {
+      "sourceSha256": "54be192e8cbf75fa8919b44a8eac2a968dd619b643e3d4a70e4c37e98b2827fc",
+      "sourceDimensions": "1254x1254",
+      "chromaSourceSha256": "aa0bd085fe6d4da224ea068d26cf23922053584cf5f62e48a9de54bf392521e2",
+      "chromaSourceDimensions": "1254x1254",
+      "identitySourceSha256": "6c3e3c4d80a8e1abc6a0fc720733a8d8edc28c8059a1f4abb9f6d06dc9a79f94",
+      "identitySourceDimensions": "1024x1024",
+      "styleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "styleSourceDimensions": "1254x1254",
+      "promptSha256": "3ff1d4a64d3dd4b5277efbf5ea327c5d2d7b0b7f6165dc1fee85b3ed31c4829d",
+      "encodedSha256": "f9bd0999729cb49414be7a69cce980f8ff0371df52cdb367441ea0ce8c0e61b2",
+      "decodedSha256": "09ac344dff38dc37cd3f119f4a9487b1e27e2bcff0b96c70e9b5a00c913d6804"
+    },
+    "animations": {
+      "idle": {
+        "sourceSha256": "376a4f5c30b069faf1b15f23df64a24fe0ba79fb22b24b822b90c47febc52050",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "3fa9a9b1824d0b7b69ef4d62034ba3182c4025a380814fcce1ffa5224d7f2f3b",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "2ade8b5a400020fa620f179225885c5568995baa63e8a6e6c1001fcd0597264a",
+        "encodedSha256": "714c1136edc9ace455a1e8d797731dd2bd465a5ec6115b6620521a55ec5d3ba7",
+        "decodedSha256": "4b67910e804014c1b0da105db4bc1144f85b4b44c1fd20bdcef021424f9fd57c",
+        "frameSha256": [
+          "a0bcf7a5a233641ed4de8ec8bed5eff5ea821964b7081df2342b6c5ab8c2d9b2",
+          "e8e088ac4c1ec985f6780260eaf1760ebbb560e1c6ac6b84b4aa05778c6d90fd",
+          "7120b5156ae3dfb518ccd0d2094b143afb80ab1d4924a778f364acf50d4d43d4",
+          "47888c3e9cf11d3a4ad8537cece2083dd39100e1c6100bdedd3b5e9f83e95217",
+          "dde02d2f32aca89833d212d19de03695abbef49fc26720056081ea4e375d0780",
+          "c0b0636bac7ae2bf79bda08ae4c2316bcacdf6450f97a42ea5f2d7c7af4202f6",
+          "45d85803472d8ff5317a5a819d8cb30400dcd2e2048b6ad93c1479969937df2b",
+          "79f64fba6f19e80d66d36431d04bf4f31fba71b944f81c757a44fa4f5d4cde20"
+        ],
+        "poseSha256": [
+          "4f51d408ce3f8f4c388812eef9dbe620a21cea8146ffc324bd259d6661ad1b26",
+          "117df75e393a89593cb1cb9e6eab8abd1e0170cfc0d5238e8e36e13180e59082",
+          "a6907089ba9999a373a605dcf00d443884b8a1e21ebeb695c01631c7cd8f9ade",
+          "19f94a4709cb8e226c56414a23c7b7ff9b8a464814ff7858728f73a44e65c68e",
+          "0053958adc1f5782ee344cb40a4633d73468ffc7514dd08d76703de10ea74f93",
+          "de11826eeb58230a6c5de6ecc77614d4042e4a1fd70b3e4b1a727bb380cb99db",
+          "2bdbed79d6e21259d83e173e7213d2c503821a64db24ae7a81bf4ea1f94e1b9b",
+          "c735edef39f054516910887f7b106fdb277ad0460a55735bf6a3c86a072ba263"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          0.999527,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "walk": {
+        "sourceSha256": "7f010233ae68fdc72c996fe2e86b8f489bb3fa3baaa54d7c0c840ee138c9b7f7",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "0b96d60453c5896855a9c0af4d8c0bdd5942adeb8bcac93b84fd2dc50f58da71",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "9d960cdcb1fc05477596051c31c93f37bf8e1aeff87e336238d4a546989c6007",
+        "encodedSha256": "dcd7af5524186f689ff4aaf96b9fbfcef70b4de5e2c17ccbcdaba5b883534fe0",
+        "decodedSha256": "173673b369744488e94185b77d41e73c4043de58e7e30d661101a00f32f0a5f1",
+        "frameSha256": [
+          "03d7087ea8870418c7b67e2c86268297d0c9a06ae666cef2b31de706a6bc9821",
+          "686ce85051df9d629ccfb084ec11061ab8c038338936d85c327ed617315896e7",
+          "bf26964296fe936643b380f9c3df535ac408c27d73ad857ddffd9e339049491b",
+          "35d7a69e37d6204e53aab602bd993d80165e7f839db7bff89444f5d5c019e856",
+          "b4df6ed9d9fc215f8597b1faea44a4ac772c2da169099f205eace08277add7cc",
+          "10f06b0484b0497007074c050f6a494a2cb11042c69bb2e524bfd16bc6af333c",
+          "757b41c02b110a2de1926d0cfa3e166009be13b0affd6145879490dcff97ab36",
+          "886008fb8c8e8dba9337375ed7e29b582d754b34b15e1b1fe7a588c5d88223ff"
+        ],
+        "poseSha256": [
+          "83ebce0f079f4a1f90efb950a98c30531344218d5ca75b894708b67b4da4c657",
+          "7a5a6580443766a46da3ca2a2db9b0d67b57ddbcceb4cf484a9200f278b9ba87",
+          "b7f249ed09534550d0533404357a9e06d29492a17a7b3052de79468260388282",
+          "1ef26b1d4b2d45f897b093662f3014635263e0424365d3167fa13633fdba5a6c",
+          "e2ef99f542ef3203c411f10919ec9ac23956e9b5fcf4c1130cf27d1e9b54179d",
+          "320f6a05eca5bc0e5df0d7b82032f6bf76c184d53f6363ee765f2d2d2a132a75",
+          "cef89d465d748c2371a7e3b12a56e540e2ee214331924be197d336e85026b117",
+          "450a785eb69ae4e0acb42845597136136631de1a6a509f9f92ea93f9f09e5f0f"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "attack": {
+        "sourceSha256": "7779ebf757b6bb712a78210e66c052ec8f6d28e3d169940f1bdf2283e4bca32b",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "3c767a7b9e4f14a207ca057928b7ce10f6d37c7a348c8eb63a46497dd6b4596e",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "c6ae2f96b3d505424b2ba8bc81d96fd4e292437ba97773d8e2cbae0697aefe17",
+        "encodedSha256": "4f2d057498562bbc9638e1cd2ab56ffa4711bed7e84ecd95ebe32edf90bcb83a",
+        "decodedSha256": "dd9cf9706ccfe65fbbecac5f9fdddfa99c55512d33db7518deb5c107d7760737",
+        "frameSha256": [
+          "996c4fd88572d2a37b95f73c7372e43591fdfafa72b42cad786e5b2ed18d6ce4",
+          "3894003054450b51ddb8f3db4bb479e9c09dcfefd4d7503dc3b55a3feb94443b",
+          "3c62b5ed31dcddbf7a72257947b7a215d504c5f6e64f786b3fb213cc7504efb9",
+          "f9109023caaf44e1b3536504b620d5322ed7622d05b8dc9c3f0048a17d3a9f3c",
+          "0c4b1becf52c2904ece9dab410c00e1ee8d5faa8e999a5594d0129914394746e",
+          "cb4c4c7c60059362b0e2b241a51fa9e1208d325dd9532fd6dab64c46748db861",
+          "6baa74513f01f8e9fe53c63207f6a35b49b416d5f4be3f170cb1114498d4842b",
+          "062306b6b65fd41d28b3701f2a8d366811856b637a08f3f177a01982e3a3cb62"
+        ],
+        "poseSha256": [
+          "5fa60b300c981a1f16a8f1581260c8f52a6706a8b6bde157e78fafa97a8c7d6f",
+          "376e64a3996627b5d53799924141a589c5a0925cc9df99a740af15e49bacef77",
+          "4457be4a1b9cb7f00726b8369105227cef3bddb016cbd31e038205fb2f5d880a",
+          "1a09e210ad5e4c3b73f76f7867b0dc161afec9c55f8d268688227a3a8c6dca7d",
+          "d3dc10b912a2ed0cdabba003a85a87baa3d66a61c99cdf9e32e7f27e1c1596b7",
+          "a885c895fa273b87d4805da6a97ef98ff8251680cb81d251b109c611f94fc9f1",
+          "7754dcd76e75a1db978a1d51dab2f59e0c9e63fa14adc3b387cb1eacd8c9a026",
+          "361520bd3352ac9f5fea3db13632623f2a2b016d876392992c8d6b999ad6ac4c"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          0.999745,
+          0.997754,
+          0.998579,
+          1,
+          1,
+          1
+        ]
+      },
+      "hurt": {
+        "sourceSha256": "fa7522beb20792ed6f07220151b6e50e16b2bbb8ed6a1db4497bef34e46b52ac",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "d3be6d71de023a16f74c93c4412e5c5983357570438523baf71b566ce39ad953",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "7fe6703dba7374b9d2a1334839918abdc9768253a31151c9158f165e0408fc4b",
+        "encodedSha256": "82551784ca67e754c04069fa18ba35d81bf66082de60c00bd36503321ad9da4c",
+        "decodedSha256": "15744998dd9d03410c1e2cf982160078c905956d8169d33de7e2f9e834900780",
+        "frameSha256": [
+          "61376b6d63cd329dde3650618a62dedb11edd606e6fecd23328529ff99b53cd7",
+          "fd3d7d025490610d7e65d30394701a0cd0db95b01343d056e5165a20192dc25b",
+          "df6acd7cde33a8898d38fdc49bda7b5bd3e790c2d5a57bbb4714a4688d11c12a",
+          "fdb86b46bef51b88d51184909ea0c0442418834f70e354e524048f749a3d0f49",
+          "6572e4aa28631efea1a0e426de6518b541e0c8f81d1d077a62ebd808a29d7733",
+          "c79e1ec3d40f3e18154e1e731db1a30ee5ec14e980346d5214f3d1c0cb2e835d",
+          "8bd284a23e2a25f2a7fb5bf21281b6576a9e3790f6f4f5c674408de11da7c6f1",
+          "1e2aa787596b6244ec95032e683660f1bbe232dc19f198119fce034a3f0cdff5"
+        ],
+        "poseSha256": [
+          "ddb034b06d5f0fb9d394d82565d6ded8b5676ea1cc6a6983cee3a21a0beefcdb",
+          "e6ab38de34d76d070adf9c0696fe1449947c091f67615e88db0be211403143ff",
+          "d2501326d0422f666d1e25356fe31b43eb9757d1fdb81b1aa5d97741731ed15d",
+          "c4fb3cb197b2e4a1b84c7dc1baa8cd870b71ea3251126d2eadf409f20a94c101",
+          "73c7ee960099d192c6bea8a742fd694f14260d11044bc921c869ac9229bbb6fa",
+          "b58cdde6abbf53228aa1b6055f073ac5cc7e02ad2f16eca57aacaf3e1ba35b5d",
+          "875e6c51cb43f3b48b2d38a3dbf5a893f19fba5486f04688c07443e62cb4095b",
+          "967bf2d6cbf45f3ab5b750ed897476e8ba926ec61b3d8ddcd8106c3810b25eb8"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          0.998469,
+          0.995298,
+          0.995991,
+          0.997911,
+          1,
+          1,
+          1
+        ]
+      },
+      "death": {
+        "sourceSha256": "8921bf21936fe0ff1b38e18e10d345cd1c9510efdfffebb92bd961061a76d726",
+        "sourceDimensions": "1672x941",
+        "chromaSourceSha256": "5b254fd89874c560c3e5b0dc88c8c043262be5971d22f37043d6401b332724b8",
+        "chromaSourceDimensions": "1672x941",
+        "promptSha256": "08ca6ffd0681125ed8aa16d982a64c9056fe9cc31fe6652ffd8034b47c5de3fa",
+        "encodedSha256": "4242f0ae32b5ad0e76d4ab6c0d4aaa39eff1b15a4993561ece001acc0a8edf59",
+        "decodedSha256": "cc923b14bf3af064319a0cdbf16504868d79f8a6e3f7dc974a8634c798ebff6c",
+        "frameSha256": [
+          "964cda278d267c69cbc3dbc0025d76c74c3ea323dda95a4f02301daf94d54dc5",
+          "0da7972da94742ce58ea75ed836e39fec69d77f7966a833f8fdfb4a08d94e9ef",
+          "22f4e9da5490475c0fc09765a18c09639fbb2d62c2bceb24d57e7de7add05e0b",
+          "27e5c6b74b1111ef8daf430a9d5b63b441cb1a0657e43637213ea8c6077df1b0",
+          "41a7328ef60c79cf320a2872d8e0207f688574d9b36fb5c171feb129e8c67f90",
+          "767d79014ac86f7a35e22701afc4158074fdabf936da34cd3d9d7da720071197",
+          "a0ec66c77cf795a598b33552812b6fcc16c78537b658cb16211e4d7929cb90fe",
+          "a0ec66c77cf795a598b33552812b6fcc16c78537b658cb16211e4d7929cb90fe"
+        ],
+        "poseSha256": [
+          "abebe00e8a65d8eb4a4ea5a6269abf42fc365257391fd2ac8118537ff581a4d1",
+          "77847bb602d2d134af57e864498b8f7b50abf1a659c19d3b31bf86775e7666ed",
+          "10c8c0cf3282847f114f4a1e14408543d92e26321d101771b23d222bec24a74d",
+          "1207bddf6265a0af7294f0a32c4b5904abd7bd33368c5f146006d611cdeaa71b",
+          "9e13c4534e4a5f305508ae4e1a5924c32ad2d5a10e6f00635c1d3ae3e99d2eb8",
+          "cf918db5ba827bd3c45dfbd5014def22566394fcf792111564bd04b54ac2f0aa",
+          "08513117c79b925c5cb65f600f412fb25987a8dea45c0e76b2b2bb94e4529fcb",
+          "08513117c79b925c5cb65f600f412fb25987a8dea45c0e76b2b2bb94e4529fcb"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.991578,
+          0.997587,
+          0.997149,
+          0.998401,
+          0.999492,
+          1,
+          1,
+          1
+        ]
+      },
+      "victory": {
+        "sourceSha256": "d77141033c40bca909bf7ad1f23e200def211a36e7083a478f6776f98461b0d1",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "926a722a58cdbec23f1d6dad9a3eea7460256f074a73d0b5275d92efb4e29be6",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "7603f1548c9549a3edc79fe12131e7fd61b91b8160e5e27c5807b5ee4803e625",
+        "encodedSha256": "6b63dbe8fc17dd725212ff52d449a882d619ffc82defc0048105cfca3a400ba5",
+        "decodedSha256": "76adda148318c14a5a79df81c583f4e64baf3eab8d2b10997fc2ea5e511c7d3e",
+        "frameSha256": [
+          "4502bac2c769f010e106f5e60ac85b843ea94a42e698f72c467ca4579a160bbe",
+          "1c54d4ec81759869f20adebc9c7ba657c61c2b432ed0b2ffb87e9b15faff2aee",
+          "3253a314a4fc0cad61231977bdc18e2a423aaeb8867186841a4fbd98110dbf09",
+          "1ea15a13cf8686d4578ecc91b82ed08aa0c3ed620d5492d45c6778eebaac81bd",
+          "580cf0882e70d152b3dc0a145793a3db514d67d20fffe237c9b5879c97929af0",
+          "153625b9aa37571e971732affb7778fcaf33f29513c6d7d759fccd934774c2f7",
+          "7ab3cb438f4ef4d1f223d1e474e3765d8097c28c8b7f577e2b23fe50df36a282",
+          "9da6266016e9c64485638ad343657a8939a43b448b56c90ae787b744dd604787"
+        ],
+        "poseSha256": [
+          "1fc2efb108a8642df40fc3bd92d1684e9bd7b193e1c8fb3ae648ceafaff288ae",
+          "b76b7623f9fa9dca7b62d94d02cb62e76e5b64574778fec8ebb65b5848e4f765",
+          "e3878d9e45870a000620e4436b3d81cacf69ee18c838cf3553fdc30b068b3c3a",
+          "8306be7673e1031f611f0bfa36b66ca4853f01945cf1015b9a41bdf6fc26fd8d",
+          "f522970c68e4ca3f1f152c7ecda8d5d09b1a6db2bd9f6aac70d3fc4e0109a8ca",
+          "0b85217451378fd8d62580e69869b8ea02397787c53f46b055132db640d16590",
+          "1c61364321165c3b513b4e96af01cd63646ec25cfcfcaca89be69927df082a65",
+          "b96e6cebe4ab06a6ba1bc01f00ce30456e5897a15ea89427375c001fce9da65c"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          0.99959,
+          1,
+          1,
+          1
+        ]
+      },
+      "dead": {
+        "sourceSha256": "8921bf21936fe0ff1b38e18e10d345cd1c9510efdfffebb92bd961061a76d726",
+        "sourceDimensions": "1672x941",
+        "chromaSourceSha256": "5b254fd89874c560c3e5b0dc88c8c043262be5971d22f37043d6401b332724b8",
+        "chromaSourceDimensions": "1672x941",
+        "promptSha256": "f631a7fd605211260b28b5a5bba3503e06dc1064497d1e5769d62e40e178e2b1",
+        "encodedSha256": "e3f3fb927f0d7cc77a37762c857cc05e16694f1712d1d50620cfa7992c68f904",
+        "decodedSha256": "85a726a9936df35ee92dfdaf2007c3a947eb20947373ad341ddca650a749d452",
+        "frameSha256": [
+          "a0ec66c77cf795a598b33552812b6fcc16c78537b658cb16211e4d7929cb90fe",
+          "a0ec66c77cf795a598b33552812b6fcc16c78537b658cb16211e4d7929cb90fe",
+          "a0ec66c77cf795a598b33552812b6fcc16c78537b658cb16211e4d7929cb90fe",
+          "a0ec66c77cf795a598b33552812b6fcc16c78537b658cb16211e4d7929cb90fe",
+          "a0ec66c77cf795a598b33552812b6fcc16c78537b658cb16211e4d7929cb90fe",
+          "a0ec66c77cf795a598b33552812b6fcc16c78537b658cb16211e4d7929cb90fe",
+          "a0ec66c77cf795a598b33552812b6fcc16c78537b658cb16211e4d7929cb90fe",
+          "a0ec66c77cf795a598b33552812b6fcc16c78537b658cb16211e4d7929cb90fe"
+        ],
+        "poseSha256": [
+          "08513117c79b925c5cb65f600f412fb25987a8dea45c0e76b2b2bb94e4529fcb",
+          "08513117c79b925c5cb65f600f412fb25987a8dea45c0e76b2b2bb94e4529fcb",
+          "08513117c79b925c5cb65f600f412fb25987a8dea45c0e76b2b2bb94e4529fcb",
+          "08513117c79b925c5cb65f600f412fb25987a8dea45c0e76b2b2bb94e4529fcb",
+          "08513117c79b925c5cb65f600f412fb25987a8dea45c0e76b2b2bb94e4529fcb",
+          "08513117c79b925c5cb65f600f412fb25987a8dea45c0e76b2b2bb94e4529fcb",
+          "08513117c79b925c5cb65f600f412fb25987a8dea45c0e76b2b2bb94e4529fcb",
+          "08513117c79b925c5cb65f600f412fb25987a8dea45c0e76b2b2bb94e4529fcb"
+        ],
+        "sourceFrameIndexes": [
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  }
+}

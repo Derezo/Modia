@@ -1,0 +1,78 @@
+{
+  "version": "1.1.0",
+  "id": "brawler_v1",
+  "class": "brawler",
+  "templateId": "authored-pose-atlas-v1",
+  "description": "Reusable authored-pose direction for brawler player identities. Registry metadata and the staged portrait control identity; this profile supplies rugged close-quarters boxing choreography.",
+  "style": {
+    "source": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+    "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+  },
+  "identity": {
+    "baseFacing": "three-quarters right",
+    "motionStyle": "rough, compact, stubborn, and heavy-handed, with rolling shoulders, planted hooks, guarded chin, and scrappy recovery",
+    "equipmentRule": "Preserve the portrait's rugged clothing, bandages, scars, spiked knuckles or gloves, belt, and exact accessory count. Keep fist gear on the correct hands and never duplicate spikes, invent a weapon, or heal or relocate scars.",
+    "magicRule": "Brawling is physical. Do not add aura, elemental trails, runes, projectiles, shockwaves, or supernatural afterimages; only small dust and contact accents are allowed."
+  },
+  "promptTemplates": {
+    "reference": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative {{displayName}} identity portrait; Image 2 is style and proportion reference only. Player identity metadata: {{visualTraits}}. Create one complete head-to-toe {{displayName}} preserving Image 1's face, ancestry traits, gender presentation, hair, scars, bandages, rugged clothing, knuckle gear, palette, proportions, and accessories. Do not import identity details from Image 2. {{equipmentRule}} Translate the portrait into a compact hard-bitten silhouette. Use a {{background}} background with no floor or scenery and a square 1:1 canvas with generous padding. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered brawler in a tight bare-knuckle guard facing {{baseFacing}}. {{invariants}}",
+    "animation": "Draw exactly {{frameCount}} genuinely redrawn full-body {{actionLabel}} poses of the authoritative {{displayName}} in a {{columns}}-column by {{rows}}-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: {{visualTraits}}. Required sequence: {{frameSequence}}. Motion direction: {{motionDirection}}. Overall brawler motion is {{motionStyle}}. {{poseRequirement}} Preserve exact identity, scars, bandages, clothing, palette, proportions, and fist gear. {{equipmentRule}} {{magicRule}} Action-specific effects: {{effectRule}} Use a {{background}} background with generous gutters. {{invariants}}"
+  },
+  "animations": {
+    "idle": {
+      "actionLabel": "brawler rolling-guard idle-cycle",
+      "minimumUniquePoses": 4,
+      "anchor": "source-cell",
+      "motionDirection": "A restless boxing loop rolls shoulders, shifts planted weight, adjusts the chin guard, and invites the opponent forward.",
+      "effectRule": "No active effect; bandages, shirt, and loose straps settle with the breathing.",
+      "frameDescriptions": ["tight bare-knuckle guard with chin tucked", "heavy inhale as shoulders roll upward", "weight shifts onto the forward foot", "lead fist makes a short challenging feint", "centered stubborn midpoint", "forceful exhale as shoulders drop", "weight rocks onto the rear foot", "tight guard flowing back to frame one"]
+    },
+    "walk": {
+      "actionLabel": "brawler pressure-step cycle",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "A forward-pressure alternating shuffle uses forefoot contacts, bent knees, close guard, shoulder sway, and rugged clothing follow-through.",
+      "effectRule": "No attack effect or magic; a tiny grounded dust mark may accent a hard plant.",
+      "frameDescriptions": ["left foot pressure-step contact behind tight fists", "left knee compresses as shoulders roll", "passing shuffle with right knee advancing", "right foot reaches without crossing stance", "right foot pressure-step contact", "right knee compresses beneath the guard", "passing shuffle with left knee advancing", "left foot reaches into the pressure loop"]
+    },
+    "attack": {
+      "actionLabel": "brawler body-hook combination",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "A short feint draws the guard, hips drop into a body hook, shoulders rotate through a rising second punch, and the brawler rolls back into cover.",
+      "effectRule": "One tiny physical contact accent per readable punch is permitted; no shockwave, aura, or effect hiding fists and hips.",
+      "frameDescriptions": ["tight guard measuring close range", "lead fist snaps a short feint", "knees dip as rear fist loads beside the ribs", "planted body hook drives through hip rotation", "rising second punch crosses the contact line", "shoulders roll through compact follow-through", "both fists retract to protect the chin", "recovered stubborn guard"]
+    },
+    "hurt": {
+      "actionLabel": "brawler rocked-but-standing recovery",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "A heavy hit snaps the head and torso, forces a stumbling step, drops the brawler to one hand, then resolves through a stubborn rise and guard reset.",
+      "effectRule": "One compact physical impact accent only; no gore, blood spray, magic, or altered scars.",
+      "frameDescriptions": ["tight guard before impact", "sharp head-and-shoulder snap with fists separating", "maximum stagger with torso arched and knees bent", "stumbling backward step", "one-hand low catch with opposite fist guarding", "stubborn push upright through planted legs", "chin tucks and fists reset", "recovered rolling guard"]
+    },
+    "death": {
+      "actionLabel": "brawler defeat sequence",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "verticalAnchor": "bottom",
+      "motionDirection": "A final blow breaks the guard, knees give way, one fist catches low, the body rolls heavily sideways, and settles fully fallen.",
+      "effectRule": "No gore, blood, magic, or rigid rotation; keep knuckle gear, bandages, and limbs recognizable.",
+      "outputFrameMap": [0, 1, 2, 3, 4, 5, 7, 7],
+      "frameDescriptions": ["fatal impact breaks the tight guard", "fists fall as torso reels", "both knees buckle into a low drop", "one fist touches down while hips roll", "body lands in full ground contact", "rugged clothing, limbs, and gear settle", "final fully fallen brawler", "same final fallen pose held"]
+    },
+    "dead": {
+      "deriveFrom": {"animation": "death", "frame": 7},
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity.",
+      "frameDescriptions": ["terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held"]
+    },
+    "victory": {
+      "actionLabel": "brawler hard-won celebration",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "motionDirection": "The brawler checks the opponent, pounds one fist into the opposite palm, throws two shadow punches, raises both fists, and holds a cocky finish.",
+      "effectRule": "No magic; a tiny knuckle glint and clothing follow-through may accent the physical celebration.",
+      "frameDescriptions": ["wary recognition that the fight is won", "one wrapped fist pounds into the opposite palm", "quick celebratory lead shadow punch", "compact rear-hand shadow hook", "shoulders roll back with a rough grin or proud posture", "both fists rise overhead", "wide cocky victor stance", "final triumphant brawler pose held"]
+    }
+  }
+}

@@ -9,8 +9,11 @@
  */
 
 import battleWebsocket from './battleWebsocket.js';
-import { query } from '../config/database.js';
 import { startTurnTimer } from './coliseumService.js';
+import {
+  BattleStateNotFoundError,
+  battleStateRepository
+} from './battle/BattleStateRepository.js';
 
 // Track disconnected players: Map<battleId, Map<playerId, { disconnectTime, timeout }>>
 const disconnectedPlayers = new Map();
@@ -54,11 +57,15 @@ async function handleDisconnect(battleId, playerId, playerName) {
 
   battleDisconnects.set(playerId, disconnectInfo);
 
-  // Notify other players
-  battleWebsocket.broadcastPlayerDisconnected(battleId, playerId, playerName);
-
   // Update battle state to reflect disconnection
-  await updateBattleDisconnectState(battleId, playerId, true);
+  const committedState = await updateBattleDisconnectState(battleId, playerId, true);
+
+  if (committedState) {
+    if (committedState.update) {
+      await battleWebsocket.broadcastStateUpdate(battleId, committedState.update);
+    }
+    battleWebsocket.broadcastPlayerDisconnected(battleId, playerId, playerName);
+  }
 
   console.log(`[Reconnection] Player ${playerName} (${playerId}) disconnected from battle ${battleId}`);
 }
@@ -93,13 +100,21 @@ async function handleReconnect(battleId, playerId, playerName) {
     console.log(`[Reconnection] Player ${playerName} (${playerId}) reconnected to battle ${battleId}`);
   }
 
-  // Update battle state to reflect reconnection
-  await updateBattleDisconnectState(battleId, playerId, false);
+  let battleState = await getBattleStateForReconnect(battleId, playerId);
+  if (!battleState) {
+    return null;
+  }
 
-  // Get current battle state for the player
-  const battleState = await getBattleStateForReconnect(battleId, playerId);
+  // Update battle state to reflect reconnection
+  const committedState = await updateBattleDisconnectState(battleId, playerId, false);
+
+  // Get the repository-fresh state after the reconnect commit.
+  battleState = await getBattleStateForReconnect(battleId, playerId);
 
   if (battleState) {
+    if (committedState?.update) {
+      await battleWebsocket.broadcastStateUpdate(battleId, committedState.update);
+    }
     // Notify other players of reconnection
     battleWebsocket.broadcastPlayerReconnected(battleId, playerId, playerName);
 
@@ -154,18 +169,25 @@ async function handleAbandonTimeout(battleId, playerId) {
     disconnectedPlayers.delete(battleId);
   }
 
-  // Get battle state to check if it's their turn
-  const result = await query(
-    'SELECT battle_state, battle_type FROM battles WHERE id = $1 AND status = $2',
-    [battleId, 'active']
-  );
+  let battle;
+  try {
+    battle = await battleStateRepository.loadBattle(battleId, {
+      requireActive: true
+    });
+  } catch (error) {
+    if (error instanceof BattleStateNotFoundError) {
+      return;
+    }
+    throw error;
+  }
 
-  if (result.rows.length === 0) {
+  if (!battle) {
     return; // Battle already ended
   }
 
-  const battle = result.rows[0];
-  const state = battle.battle_state;
+  const state = structuredClone(battle.state);
+  let autoWaitedUnit = null;
+  let nextTurn = null;
 
   // Check if it's the abandoned player's turn
   const activeUnit = state.units?.find(u => u.id === state.activeUnitId);
@@ -181,27 +203,13 @@ async function handleAbandonTimeout(battleId, playerId) {
     // Advance to next turn
     battleService.advanceToNextActorWithCT(state);
 
-    // Update database
-    await query(
-      'UPDATE battles SET battle_state = $1 WHERE id = $2',
-      [JSON.stringify(state), battleId]
-    );
-
-    // Broadcast the auto-wait action
-    battleWebsocket.broadcastActionExecuted(battleId, activeUnit.id, 'wait', {
-      reason: 'disconnect_timeout'
-    });
-
-    // Broadcast turn change
+    autoWaitedUnit = activeUnit;
     const nextUnit = state.units?.find(u => u.id === state.activeUnitId);
     if (nextUnit) {
-      const turnPredictions = battleService.predictTurnOrder(state, 10);
-      battleWebsocket.broadcastTurnStart(
-        battleId,
-        nextUnit,
-        nextUnit.type,
-        turnPredictions
-      );
+      nextTurn = {
+        unit: nextUnit,
+        predictions: battleService.predictTurnOrder(state, 10)
+      };
     }
   }
 
@@ -209,19 +217,38 @@ async function handleAbandonTimeout(battleId, playerId) {
   if (!state.abandonedPlayers) {
     state.abandonedPlayers = [];
   }
-  state.abandonedPlayers.push(playerId);
+  if (!state.abandonedPlayers.includes(playerId)) {
+    state.abandonedPlayers.push(playerId);
+  }
 
-  await query(
-    'UPDATE battles SET battle_state = $1 WHERE id = $2',
-    [JSON.stringify(state), battleId]
-  );
-
-  // Broadcast abandonment notification
-  battleWebsocket.broadcastStateUpdate(battleId, {
-    type: 'player_abandoned',
-    playerId,
-    playerName: disconnectInfo.playerName
+  const commitResult = await battleStateRepository.commitBattleState({
+    battleId,
+    expectedRevision: battle.stateRevision,
+    commandType: 'player_abandon_timeout',
+    idempotencyKey: `player-abandon:${battleId}:${playerId}:${battle.stateRevision}`,
+    flatState: state,
+    allowedStatuses: ['active']
   });
+  const committedEnvelope = commitResult.envelope
+    ?? await battleStateRepository.loadBattle(battleId, { requireActive: true });
+
+  if (autoWaitedUnit) {
+    battleWebsocket.broadcastActionExecuted(battleId, autoWaitedUnit.id, 'wait', {
+      reason: 'disconnect_timeout'
+    });
+  }
+  if (nextTurn) {
+    const committedNextUnit = committedEnvelope.state.units?.find(
+      unit => unit.id === nextTurn.unit.id
+    ) ?? nextTurn.unit;
+    battleWebsocket.broadcastTurnStart(
+      battleId,
+      committedNextUnit,
+      committedNextUnit.type,
+      nextTurn.predictions
+    );
+  }
+  await battleWebsocket.broadcastStateUpdate(battleId, commitResult.update);
 }
 
 /**
@@ -231,32 +258,57 @@ async function handleAbandonTimeout(battleId, playerId) {
  * @param {boolean} isDisconnected - Whether player is disconnected
  */
 async function updateBattleDisconnectState(battleId, playerId, isDisconnected) {
-  const result = await query(
-    'SELECT battle_state FROM battles WHERE id = $1',
-    [battleId]
-  );
-
-  if (result.rows.length === 0) {
-    return;
+  let battle;
+  try {
+    battle = await battleStateRepository.loadBattle(battleId, {
+      requireActive: true
+    });
+  } catch (error) {
+    if (error instanceof BattleStateNotFoundError) {
+      return null;
+    }
+    throw error;
   }
 
-  const state = result.rows[0].battle_state;
+  const state = structuredClone(battle.state);
 
   // Track disconnected players in state
   if (!state.disconnectedPlayers) {
     state.disconnectedPlayers = [];
   }
 
-  if (isDisconnected && !state.disconnectedPlayers.includes(playerId)) {
+  const wasDisconnected = state.disconnectedPlayers.includes(playerId);
+  if (isDisconnected && !wasDisconnected) {
     state.disconnectedPlayers.push(playerId);
   } else if (!isDisconnected) {
     state.disconnectedPlayers = state.disconnectedPlayers.filter(id => id !== playerId);
   }
 
-  await query(
-    'UPDATE battles SET battle_state = $1 WHERE id = $2',
-    [JSON.stringify(state), battleId]
-  );
+  if (wasDisconnected === isDisconnected) {
+    return {
+      envelope: battle,
+      update: null,
+      committed: false
+    };
+  }
+
+  const commandType = isDisconnected ? 'player_disconnect' : 'player_reconnect';
+  const result = await battleStateRepository.commitBattleState({
+    battleId,
+    expectedRevision: battle.stateRevision,
+    commandType,
+    idempotencyKey: `${commandType}:${battleId}:${playerId}:${battle.stateRevision}`,
+    flatState: state,
+    allowedStatuses: ['active']
+  });
+
+  const envelope = result.envelope
+    ?? await battleStateRepository.loadBattle(battleId, { requireActive: true });
+  return {
+    envelope,
+    update: result.update,
+    committed: !result.idempotent
+  };
 }
 
 /**
@@ -266,28 +318,31 @@ async function updateBattleDisconnectState(battleId, playerId, isDisconnected) {
  * @returns {Object|null} Battle state or null
  */
 async function getBattleStateForReconnect(battleId, playerId) {
-  const result = await query(
-    `SELECT b.id, b.battle_state, b.status, b.battle_type,
-            b.player1_id, b.player2_id
-     FROM battles b
-     WHERE b.id = $1
-       AND (b.player1_id = $2 OR b.player2_id = $2 OR
-            EXISTS (SELECT 1 FROM battle_players bp WHERE bp.battle_id = b.id AND bp.user_id = $2))`,
-    [battleId, playerId]
-  );
-
-  if (result.rows.length === 0) {
-    return null;
+  let battle;
+  try {
+    battle = await battleStateRepository.loadBattleForParticipant(
+      battleId,
+      playerId
+    );
+  } catch (error) {
+    if (error instanceof BattleStateNotFoundError) {
+      return null;
+    }
+    throw error;
   }
-
-  const battle = result.rows[0];
 
   // Return full state for reconnection
   return {
-    battleId: battle.id,
+    battleId: battle.battleId,
     status: battle.status,
-    battleType: battle.battle_type,
-    state: battle.battle_state
+    battleType: battle.battleType,
+    stateRevision: battle.stateRevision,
+    battleMapSchemaVersion: battle.battleMapSchemaVersion,
+    terrainGenerationVersion: battle.terrainGenerationVersion,
+    fullHash: battle.fullHash,
+    map: battle.map,
+    mutableState: battle.mutableState,
+    state: battle.state
   };
 }
 

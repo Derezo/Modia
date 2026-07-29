@@ -10,8 +10,13 @@
  * Usage:
  *   node scripts/ai-images/validate-asset-paths.js
  *   node scripts/ai-images/validate-asset-paths.js --category portraits
+ *   node scripts/ai-images/validate-asset-paths.js --category characters
  *   node scripts/ai-images/validate-asset-paths.js --verbose
  *   node scripts/ai-images/validate-asset-paths.js --json
+ *
+ * Character validation is delegated to validate-runtime-assets.mjs so player
+ * identities, enemy runtime lookups, and authored enemy provenance are checked
+ * against the same strict contract used by `npm run ai:check:runtime-assets`.
  */
 
 const path = require('path');
@@ -100,22 +105,7 @@ const CATEGORY_METADATA = {
     getSubcategory: (data) => data.category // 'rocks', 'trees'
   },
   characters: {
-    metadataFiles: [
-      'characters/players.json',
-      'characters/enemies/forest.json', 'characters/enemies/cave.json',
-      'characters/enemies/mountain.json', 'characters/enemies/bridge.json',
-      'characters/enemies/castle.json', 'characters/enemies/palace.json'
-    ],
-    getAssets: (data) => data.characters || data.players || data.enemies || [],
-    getAssetId: (asset) => asset.id,
-    getSubcategory: (data, filePath) => {
-      // Determine type from file path
-      if (filePath.includes('/enemies/')) {
-        const biome = path.basename(filePath, '.json');
-        return { type: 'enemy', biome };
-      }
-      return { type: 'player' };
-    }
+    canonicalRuntimeValidation: true
   }
 };
 
@@ -174,12 +164,73 @@ async function getExpectedPath(assetPaths, category, id, options = {}) {
   return path.join(PROJECT_ROOT, 'frontend/public', urlPath);
 }
 
+function isCharacterRuntimeIssue(issue) {
+  return issue?.scope === 'players'
+    || issue?.scope === 'enemies'
+    || (issue?.scope === 'metadata' && issue?.code === 'sprite_contract');
+}
+
+/**
+ * Adapt the canonical runtime report to this validator's category result shape.
+ *
+ * Runtime warnings remain orphan-style diagnostics and do not fail the strict
+ * character gate. Every character-scoped runtime error is a missing/invalid
+ * contract entry and therefore produces a non-zero exit from this script.
+ */
+function createCharacterValidationResult(report) {
+  const characterIssues = (report.issues || []).filter(isCharacterRuntimeIssue);
+  const errors = characterIssues.filter(issue => issue.severity === 'error');
+  const warnings = characterIssues.filter(issue => issue.severity === 'warning');
+  const players = report.summary?.players || {};
+  const enemies = report.summary?.enemies || {};
+  const playerVariants = Number(players.variants || 0);
+  const enemyIdentities = Number(enemies.authoredProvenance?.runtimeIdentities || 0);
+  const validPlayerSheets = Number(players.validSheets || 0);
+  const validEnemySheets = Number(enemies.validResolvedSheets || 0);
+
+  return {
+    category: 'characters',
+    validator: 'canonical-strict-runtime',
+    missing: errors.map(issue => ({
+      id: issue.id || null,
+      animation: issue.animation || null,
+      code: issue.code,
+      expectedPath: issue.path || null,
+      message: issue.message
+    })),
+    orphaned: warnings.map(issue => ({
+      path: issue.path || null,
+      basename: issue.id || null,
+      code: issue.code,
+      message: issue.message
+    })),
+    inconsistent: [],
+    valid: validPlayerSheets + validEnemySheets,
+    totalMetadata: playerVariants + enemyIdentities,
+    totalFiles: Number(players.presentSheets || 0) + Number(enemies.uniqueResolvedSheets || 0),
+    canonicalSummary: {
+      status: errors.length === 0 ? 'pass' : 'fail',
+      errors: errors.length,
+      warnings: warnings.length,
+      players,
+      enemies
+    }
+  };
+}
+
+async function validateCharacters(options = {}) {
+  const runtimeReport = options.runtimeReport || await (async () => {
+    const runtimeValidator = await import('./validate-runtime-assets.mjs');
+    return runtimeValidator.createRuntimeAssetReport({ projectRoot: PROJECT_ROOT });
+  })();
+  return createCharacterValidationResult(runtimeReport);
+}
+
 /**
  * Validate a single category
  */
 async function validateCategory(category, options = {}) {
   const { verbose = false } = options;
-  const assetPaths = await getAssetPathsModule();
   const config = CATEGORY_METADATA[category];
 
   if (!config) {
@@ -193,6 +244,11 @@ async function validateCategory(category, options = {}) {
     };
   }
 
+  if (config.canonicalRuntimeValidation) {
+    return validateCharacters(options);
+  }
+
+  const assetPaths = await getAssetPathsModule();
   const results = {
     category,
     missing: [],       // In metadata but not on disk
@@ -346,6 +402,9 @@ function printReport(results, verbose) {
 
     const status = result.missing.length === 0 ? colors.green + '[OK]' : colors.yellow + '[!!]';
     console.log(status + colors.reset + ` ${colors.bright}${result.category.toUpperCase()}${colors.reset}`);
+    if (result.validator) {
+      console.log(`   Validator: ${result.validator}`);
+    }
     console.log(`   Metadata entries: ${result.totalMetadata}`);
     console.log(`   Valid (file exists): ${colors.green}${result.valid}${colors.reset}`);
 
@@ -409,11 +468,13 @@ function printJson(results) {
     },
     categories: results.map(r => ({
       category: r.category,
+      validator: r.validator,
       valid: r.valid,
       missing: r.missing?.length || 0,
       orphaned: r.orphaned?.length || 0,
       missingAssets: r.missing,
-      orphanedFiles: r.orphaned
+      orphanedFiles: r.orphaned,
+      canonicalSummary: r.canonicalSummary
     }))
   };
 
@@ -427,13 +488,13 @@ program
   .option('--category <cat>', 'Validate specific category only')
   .option('-v, --verbose', 'Show detailed missing/orphaned files')
   .option('--json', 'Output results as JSON')
-  .option('--list-categories', 'List available categories')
-  .parse(process.argv);
-
-const cliOptions = program.opts();
+  .option('--list-categories', 'List available categories');
 
 // Main execution
 async function main() {
+  program.parse(process.argv);
+  const cliOptions = program.opts();
+
   // List categories
   if (cliOptions.listCategories) {
     console.log('Available categories:');
@@ -477,7 +538,17 @@ async function main() {
   process.exit(totalMissing > 0 ? 1 : 0);
 }
 
-main().catch(error => {
-  console.error(colors.red + `Error: ${error.message}` + colors.reset);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch(error => {
+    console.error(colors.red + `Error: ${error.message}` + colors.reset);
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  CATEGORY_METADATA,
+  createCharacterValidationResult,
+  isCharacterRuntimeIssue,
+  validateCategory,
+  validateCharacters
+};

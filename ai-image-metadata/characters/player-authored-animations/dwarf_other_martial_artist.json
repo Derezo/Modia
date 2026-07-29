@@ -1,0 +1,584 @@
+{
+  "version": "1.0.0",
+  "template": "ai-image-metadata/characters/player-authored-animation-template.json",
+  "compilerVersion": "1.2.0",
+  "id": "dwarf_other_martial_artist",
+  "profile": "martial_artist_v1",
+  "profileSource": "ai-image-metadata/characters/player-animation-profiles/martial_artist_v1.json",
+  "status": "approved",
+  "approvedAt": "2026-07-29T02:21:55.530Z",
+  "metadataFingerprint": "0f87dc23b5aca55ebdc9c2fee77123b20ca5330b77e8d4b72edff431af83a810",
+  "draftProvenance": {
+    "registry": "ai-image-metadata/characters/player-variants.json",
+    "templateSha256": "7943e69db577b3a4429b47df634f931d3f4cb8e8ce9a91a06578255fbe935bbe",
+    "profileSha256": "3b0bb5b660a59fd55f26a54710a9a358109b3f0b29aaa8e3f826499d770f1116"
+  },
+  "identity": {
+    "race": "dwarf",
+    "gender": "other",
+    "class": "martial_artist",
+    "presentation": "non-binary dwarf martial_artist",
+    "visualTraits": "dwarf stout build thick beard braided hair sturdy androgynous features non-binary gi uniform headband focused stance bare fists athletic powerful",
+    "baseFacing": "three-quarters right",
+    "sourceMetadata": {
+      "isAdvanced": true,
+      "inheritsFrom": "martial_artist",
+      "seed": 22042
+    }
+  },
+  "inputs": {
+    "identity": {
+      "origin": "frontend/public/assets/portraits/originals/dwarf_other_martial_artist.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/dwarf_other_martial_artist/inputs/identity.png",
+      "authority": "face, ancestry, gender presentation, hair, eyes, complexion, costume, palette, proportions, and equipment"
+    },
+    "style": {
+      "origin": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/dwarf_other_martial_artist/inputs/style.png",
+      "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+    }
+  },
+  "reference": {
+    "source": "ai-image-metadata/characters/player-animation-sources/dwarf_other_martial_artist/reference.png",
+    "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_other_martial_artist/chroma/reference.png",
+    "identitySource": "ai-image-metadata/characters/player-animation-sources/dwarf_other_martial_artist/inputs/identity.png",
+    "styleSource": "ai-image-metadata/characters/player-animation-sources/dwarf_other_martial_artist/inputs/style.png",
+    "prompt": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative Dwarf Martial Artist (non-binary presentation) identity portrait; Image 2 is style and proportion reference only. Player identity metadata: dwarf stout build thick beard braided hair sturdy androgynous features non-binary gi uniform headband focused stance bare fists athletic powerful. Create one complete head-to-toe Dwarf Martial Artist (non-binary presentation) preserving Image 1's face, ancestry traits, gender presentation, hair, headband, gi, belt, wraps, palette, proportions, and accessories. Do not import identity details from Image 2. Preserve the portrait's gi, headband, belt, wraps, jewelry, and exact accessory count. Keep both empty hands visible when the portrait is unarmed; never invent a weapon, duplicate wraps, or change belt and headband design. Translate the portrait into a compact athletic full-body silhouette. Use a flat #00ff00 chroma key background with no floor or scenery and a square 1:1 canvas with generous padding. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered martial artist in a technically precise fighting stance facing three-quarters right. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+  },
+  "animations": {
+    "idle": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_other_martial_artist/idle.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_other_martial_artist/chroma/idle.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 4,
+      "frameDescriptions": [
+        "precise empty-hand fighting guard",
+        "measured inhale as guard rises",
+        "weight shifts onto the forward leg",
+        "lead hand tests distance while rear hand protects",
+        "centered balanced midpoint",
+        "controlled exhale lowering the stance",
+        "weight shifts onto the rear foot",
+        "precise guard flowing back to frame one"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body martial artist focused guard-cycle poses of the authoritative Dwarf Martial Artist (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy androgynous features non-binary gi uniform headband focused stance bare fists athletic powerful. Required sequence: precise empty-hand fighting guard; measured inhale as guard rises; weight shifts onto the forward leg; lead hand tests distance while rear hand protects; centered balanced midpoint; controlled exhale lowering the stance; weight shifts onto the rear foot; precise guard flowing back to frame one. Motion direction: A calm guard loop shifts stance height, breath, lead-hand distance, and rear-foot pressure while maintaining technical alignment.. Overall martial artist motion is disciplined, athletic, crisp, balanced, and technically exact, with visible chambering, hip rotation, guard recovery, and bare-fist footwork. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, gi, headband, belt, wraps, palette, proportions, and empty-hand continuity. Preserve the portrait's gi, headband, belt, wraps, jewelry, and exact accessory count. Keep both empty hands visible when the portrait is unarmed; never invent a weapon, duplicate wraps, or change belt and headband design. Martial artistry is entirely physical. Do not add ki aura, elemental trails, runes, projectiles, or supernatural afterimages; a tiny contact accent may mark a real strike. Action-specific effects: No active effect; headband, gi, and belt ends respond subtly to breath. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "walk": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_other_martial_artist/walk.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_other_martial_artist/chroma/walk.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "left forefoot forward contact behind raised guard",
+        "left knee compresses with hips level",
+        "passing pose as right knee advances",
+        "right foot reaches while hands preserve guard",
+        "right forefoot forward contact",
+        "right knee compresses with balanced posture",
+        "passing pose as left knee advances",
+        "left foot reaches into the guarded loop"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body martial artist guarded footwork-cycle poses of the authoritative Dwarf Martial Artist (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy androgynous features non-binary gi uniform headband focused stance bare fists athletic powerful. Required sequence: left forefoot forward contact behind raised guard; left knee compresses with hips level; passing pose as right knee advances; right foot reaches while hands preserve guard; right forefoot forward contact; right knee compresses with balanced posture; passing pose as left knee advances; left foot reaches into the guarded loop. Motion direction: A light alternating advance uses forefoot contacts, real knee compression, smooth passing steps, disciplined guard, and gi follow-through.. Overall martial artist motion is disciplined, athletic, crisp, balanced, and technically exact, with visible chambering, hip rotation, guard recovery, and bare-fist footwork. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, gi, headband, belt, wraps, palette, proportions, and empty-hand continuity. Preserve the portrait's gi, headband, belt, wraps, jewelry, and exact accessory count. Keep both empty hands visible when the portrait is unarmed; never invent a weapon, duplicate wraps, or change belt and headband design. Martial artistry is entirely physical. Do not add ki aura, elemental trails, runes, projectiles, or supernatural afterimages; a tiny contact accent may mark a real strike. Action-specific effects: No magic or attack trail; cloth and headband respond to the footwork. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "attack": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_other_martial_artist/attack.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_other_martial_artist/chroma/attack.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "technical guard measuring distance",
+        "lead hand extends while rear fist chambers",
+        "rear-hand punch drives through rotating hips",
+        "weight transfers as the kicking knee chambers high",
+        "full turning-kick extension with arms counterbalancing",
+        "controlled retraction and landing",
+        "hands and feet rebuild the guard",
+        "recovered precise fighting stance"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body martial artist punch-kick combination poses of the authoritative Dwarf Martial Artist (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy androgynous features non-binary gi uniform headband focused stance bare fists athletic powerful. Required sequence: technical guard measuring distance; lead hand extends while rear fist chambers; rear-hand punch drives through rotating hips; weight transfers as the kicking knee chambers high; full turning-kick extension with arms counterbalancing; controlled retraction and landing; hands and feet rebuild the guard; recovered precise fighting stance. Motion direction: A lead-hand measure becomes a rear-hand punch, hip-loaded kick chamber, full turning kick, controlled landing, and immediate guard recovery.. Overall martial artist motion is disciplined, athletic, crisp, balanced, and technically exact, with visible chambering, hip rotation, guard recovery, and bare-fist footwork. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, gi, headband, belt, wraps, palette, proportions, and empty-hand continuity. Preserve the portrait's gi, headband, belt, wraps, jewelry, and exact accessory count. Keep both empty hands visible when the portrait is unarmed; never invent a weapon, duplicate wraps, or change belt and headband design. Martial artistry is entirely physical. Do not add ki aura, elemental trails, runes, projectiles, or supernatural afterimages; a tiny contact accent may mark a real strike. Action-specific effects: One tiny physical contact accent may mark the punch or kick; no aura, trail, afterimage, or hidden limbs. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "hurt": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_other_martial_artist/hurt.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_other_martial_artist/chroma/hurt.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "precise guard before impact",
+        "sharp articulated flinch with forearms closing",
+        "maximum stagger with torso turned and knees bent",
+        "rolling backward step to absorb force",
+        "low balanced catch behind a tight guard",
+        "technical push upright from the legs",
+        "feet reset to correct stance width",
+        "recovered focused guard"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body martial artist impact-and-reset poses of the authoritative Dwarf Martial Artist (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy androgynous features non-binary gi uniform headband focused stance bare fists athletic powerful. Required sequence: precise guard before impact; sharp articulated flinch with forearms closing; maximum stagger with torso turned and knees bent; rolling backward step to absorb force; low balanced catch behind a tight guard; technical push upright from the legs; feet reset to correct stance width; recovered focused guard. Motion direction: A clean hit breaks alignment into a flinch, maximum stagger, rolling backward step, low guard catch, technical rise, and stance reset.. Overall martial artist motion is disciplined, athletic, crisp, balanced, and technically exact, with visible chambering, hip rotation, guard recovery, and bare-fist footwork. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, gi, headband, belt, wraps, palette, proportions, and empty-hand continuity. Preserve the portrait's gi, headband, belt, wraps, jewelry, and exact accessory count. Keep both empty hands visible when the portrait is unarmed; never invent a weapon, duplicate wraps, or change belt and headband design. Martial artistry is entirely physical. Do not add ki aura, elemental trails, runes, projectiles, or supernatural afterimages; a tiny contact accent may mark a real strike. Action-specific effects: One compact physical impact accent only; no gore, blood, aura, or full-body tint. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "death": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_other_martial_artist/death.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_other_martial_artist/chroma/death.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "verticalAnchor": "bottom",
+      "outputFrameMap": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        7,
+        7
+      ],
+      "frameDescriptions": [
+        "fatal impact breaks the fighting guard",
+        "arms slacken as balance fails",
+        "knees buckle into a low drop",
+        "one hand catches the floor as hips turn",
+        "body rolls into full ground contact",
+        "gi, limbs, and headband settle low",
+        "final fully fallen martial artist",
+        "same final fallen pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body martial artist defeat sequence poses of the authoritative Dwarf Martial Artist (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy androgynous features non-binary gi uniform headband focused stance bare fists athletic powerful. Required sequence: fatal impact breaks the fighting guard; arms slacken as balance fails; knees buckle into a low drop; one hand catches the floor as hips turn; body rolls into full ground contact; gi, limbs, and headband settle low; final fully fallen martial artist; same final fallen pose held. Motion direction: A final blow breaks stance alignment, knees buckle, one hand catches the descent, the body rolls sideways, and settles fully fallen.. Overall martial artist motion is disciplined, athletic, crisp, balanced, and technically exact, with visible chambering, hip rotation, guard recovery, and bare-fist footwork. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, gi, headband, belt, wraps, palette, proportions, and empty-hand continuity. Preserve the portrait's gi, headband, belt, wraps, jewelry, and exact accessory count. Keep both empty hands visible when the portrait is unarmed; never invent a weapon, duplicate wraps, or change belt and headband design. Martial artistry is entirely physical. Do not add ki aura, elemental trails, runes, projectiles, or supernatural afterimages; a tiny contact accent may mark a real strike. Action-specific effects: No gore, blood, magic, or rigid rotation; keep gi, headband, wraps, and limbs clearly articulated. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "dead": {
+      "deriveFrom": {
+        "animation": "death",
+        "frame": 7
+      },
+      "frameDescriptions": [
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held"
+      ],
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity."
+    },
+    "victory": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_other_martial_artist/victory.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_other_martial_artist/chroma/victory.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "calm recognition of victory",
+        "formal forward bow with hands gathered",
+        "rising cross-body palm block",
+        "balanced pivot with knee chambered",
+        "controlled high celebratory kick",
+        "clean landing into an open stance",
+        "fists close at the hips in formal posture",
+        "final triumphant martial artist pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body martial artist formal victory kata poses of the authoritative Dwarf Martial Artist (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy androgynous features non-binary gi uniform headband focused stance bare fists athletic powerful. Required sequence: calm recognition of victory; formal forward bow with hands gathered; rising cross-body palm block; balanced pivot with knee chambered; controlled high celebratory kick; clean landing into an open stance; fists close at the hips in formal posture; final triumphant martial artist pose held. Motion direction: The martial artist confirms victory, bows, executes a compact palm-and-kick kata, lands cleanly, closes both fists, and holds a formal finish.. Overall martial artist motion is disciplined, athletic, crisp, balanced, and technically exact, with visible chambering, hip rotation, guard recovery, and bare-fist footwork. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, gi, headband, belt, wraps, palette, proportions, and empty-hand continuity. Preserve the portrait's gi, headband, belt, wraps, jewelry, and exact accessory count. Keep both empty hands visible when the portrait is unarmed; never invent a weapon, duplicate wraps, or change belt and headband design. Martial artistry is entirely physical. Do not add ki aura, elemental trails, runes, projectiles, or supernatural afterimages; a tiny contact accent may mark a real strike. Action-specific effects: No magic; motion is carried by anatomy, gi, belt, and headband follow-through. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    }
+  },
+  "pins": {
+    "templateSha256": "93943004e340d113943e06dea61fd7dfad67c20750dd4fc30d76d3be1fb7c144",
+    "profileSha256": "340ab025f89403b8d92edd7f82cae24de1e34fa51b0d91077473fc08814aad5d",
+    "reference": {
+      "sourceSha256": "462e4b60389a35d1857558f2b5f5cca092ef4b5cd87d4cbe52676d9d11100f14",
+      "sourceDimensions": "1254x1254",
+      "chromaSourceSha256": "8e29da464cd9f960a12ed4571c55d899417b316aeae5185a4f02e8bc5b2e6466",
+      "chromaSourceDimensions": "1254x1254",
+      "identitySourceSha256": "703a7ab81e9852563d7503c698cdf034240713b0ecad9f7bd1b981264dc76e5c",
+      "identitySourceDimensions": "1024x1024",
+      "styleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "styleSourceDimensions": "1254x1254",
+      "promptSha256": "70f794016c0d1cdad16483a4fd6907f7e10b39888cb6222a9b346e0ea85f6613",
+      "encodedSha256": "af47906d5ef89ea9127b2a050e37ae379a691edd5b601a6aa6d8622ec4d6e3ca",
+      "decodedSha256": "315b938224c55e62380ed2584982c25814d11365715261a3f1dab728dba61c4a"
+    },
+    "animations": {
+      "idle": {
+        "sourceSha256": "f81de41c056237aebf640729e8c84113800a44ce7ae2221f12bfd2d7ed516b2b",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "2401e35db2572a00ddfdc08457a0303334a20c54b15cc3856e249665a4526794",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "2d49294d22b6779310a67db6a5fe8c444383e4952a7f4fe68780b8ca90773ade",
+        "encodedSha256": "01f917af84283649cd7715c2557994fc1b3068ce3a818d190ee885e2d9db7e49",
+        "decodedSha256": "d85f6c9a2c3825613405508effd3f299f87248a86a75f83fa1fcceca3b6e2c67",
+        "frameSha256": [
+          "3038d124928a7f49eaf5bddf4331c5dcf2d903b84d5c9875d31f023ad4fbfad0",
+          "a5ef57bc6f4d862cc00196dfc59819ee212b1833caea3fbf0b0a242ac93288b3",
+          "fd87a78a1e92094dc2abccf7d3938cae00f08e34bb3417b399521f086b28eafa",
+          "d9e9dc5ee9797bbf12826d938626c5965ba2847af2cd993d561c7795f584088a",
+          "0d78231e42c3742408cb8169e99f715737ad86abeb4116ca7609b4b86f1b2a7d",
+          "d0944ea23791b6c433f973869a7e03b142e940f3aec6a473c5755289a9c44328",
+          "04a077d41f6659ed259a41a7f674107afda73f16a00a59b813668e2bd4f305d9",
+          "49c01381907202aba151eef23c1ca65e0d4116a46f599022cc2d48cb112ded7c"
+        ],
+        "poseSha256": [
+          "dd4b904f6a0ecac42b0af2d8b3a7806321ad732d33f70326a255f2cb68a85972",
+          "acf0f7bf8999af264690f6f99d903e09ab063064dcbce5dd3417c70d0dba3190",
+          "27dd9ce89da6ebd646c00a57d9327e9c0c8a6ebdd2be14f5981d221afe3a7ac2",
+          "b2ee7c33b7edb7ac85e57b724096cfe7405fd7129d6261d154d923bcafe6d71a",
+          "7b422203407758533d559a1db3c770f718817768d920a20ea0e8e19831ca5172",
+          "ccb410dcad99768b429ae448b8f60d2f172983201a6c901a14e7e28ca5eec5ad",
+          "050c0da2504475e8ecaaba20ee7f6e6f1327d70dc626fe5fab6894ddf0a741cc",
+          "4e1aef0436618e4733357bb8657515e56962dc28e1d156c867d7bd63bb1f59d4"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "walk": {
+        "sourceSha256": "966253881c216cd7e79aa908857b1664f3ac0e67746b696babd003a1e852162b",
+        "sourceDimensions": "1672x941",
+        "chromaSourceSha256": "6baf89103bf5c7eb5fcb5e59b47760501a6d4a0684fc67665baff84479a5da02",
+        "chromaSourceDimensions": "1672x941",
+        "promptSha256": "d60f4a7aac6ab4e88c9d89b566beaef574e995800195c7826b012549adfaaaf8",
+        "encodedSha256": "aa66073783eb9a378b3763178e27cb7ddc401f3f6aef1fcdb405e8ae1cf28351",
+        "decodedSha256": "51f937d4284568e66559c30edc7d43200706b1e93734eb9982d5b1f1281e0878",
+        "frameSha256": [
+          "0762825893604580e7c817342b344a5a81d43729d29c7b618ecaef4fd9893a4e",
+          "bf8f06f9de0d9b3c79e72c3eadd61e0d37eaa8f2bd6193d7c1613669f9a1fea3",
+          "9b246da4619ede3bb9a3d0ed041d05b987a51dac24f88749e25255eee0eca4c9",
+          "33f6a73dedf4c4ea3855ace88dfebf5e815085ac22968108811603cd5a57b6f8",
+          "cb7262bd4933dfc5cbb7cb71328dae09afdec084525370dbdbacf84d25f8e4bc",
+          "36feeeb6960dcc65c6ebf7e6ccc46d89cc1795d9423e9cdd00b9dfbde31928bf",
+          "c6705e77e30fec1dfa7a03cb902c04d83dc47fd5af9d42498b81b3c9ff9f202c",
+          "eecff9ebb09bbf4fe0c82c71a761ef46222ed6f7974a9ee1eb46c4f0bb05be00"
+        ],
+        "poseSha256": [
+          "277a53f3b57c2523e8022b10ed1aacb3657c421db30776422aba9abe2d814b77",
+          "942d2d18f62e0a44bb050a9149c2ba5d957b368b1432f56320cb7dff3c4d70df",
+          "4d914995e99e61b8a92e0b7859bc43d19ef952f464c80ab4806c6dfc13187b45",
+          "06fab66ac25b7bf790f8691e4ceeb8eaba45afb3958887630e40b4f6a09688a8",
+          "1f4340c322a27f022d007483d6d6235e32fe6e3c9e1857c363faed9e210ae806",
+          "1130472ffe2121ddcf450dfa0a8e82bdc19e3fde0013e344946575a12c19a4da",
+          "afd5fd5132a233387e2adf1c75b02950e1f639222c87cb9fcd35d6bb4fa83895",
+          "216f1b1f96b20f78d114e90f838d0cff0b71d440d2277db5c99edd182c26a743"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "attack": {
+        "sourceSha256": "83aede1e205dacc14d48ade915fc994ab267da5eba29970bce72a5bab1278772",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "93271b03baccbe2e4b2f7df4d725895e71f4371ea3df44097bbaac8e27de98f7",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "70bd1c94082375a6f572eb86cdf41eb7b6a7028a0ab3a101312d28c478905b46",
+        "encodedSha256": "969fa09c5e5f9bf1b896b9a00d19a3937f581dbffc9351904f790f278c629680",
+        "decodedSha256": "e1c8924e555734a8e141f3695603dd7f433df838e406ee713682137a8cbc0777",
+        "frameSha256": [
+          "d6f8c2b6ddefd0bd493ed78aca97fee9e4130c26da649e77e6b31124418cf2bd",
+          "bfcb56796a42b0149c09ada41d135fd5f24e42273afb9cc670dc073d69f0ec58",
+          "0961b4bbc2435762d04cc236751eb8dde2144d13f3f44ceb2f3877a31b9cd749",
+          "1b3cb265b6c6b325efe93f3caa12644b82f261eea4307a2d8efea931ee862c5d",
+          "445da78bb822bcc529ba46c7b7fd37a22f1811546c325adbbfcda346aa0550ac",
+          "f8ef640d28a291289f6bfb9e0b21bdd68b048292030c4d58247899c750483612",
+          "79b309548857efb3144e9ab20de22185f11f200405456510647d73478a644205",
+          "cb2f47b32e3fa6ce66677e2876d02191db82d5a553f111ee2c3c0e9c11133402"
+        ],
+        "poseSha256": [
+          "eea36d96094f657102ac7d2ea62d2d19a26f1ab80227438089181776d095d3c6",
+          "759de8d7a557502fa430711de6709289bf68a924418b551daedb011364aa74b0",
+          "607866c753ce64d522c57a501dd2ac06863a173b0816bd1c778e7354a48646f6",
+          "96f779ef251ac8811c340fb3eca406da412b1fe3a28e75fd1ebbbd16960ffa5d",
+          "acbc317c1635eb4b76175c49906b7c4efd913f8b1cf57acf1b91120b146af820",
+          "b93c62640f8d8f412ebe9d1e343c15ef5a448ba90716de95a70411fac6a2af89",
+          "6f995496295403e9525de8e2667f8939ebd5e5f1481ce6836fe718ad0544cc37",
+          "d6112563b5cacb938070c8f4bd11ad216fdcbd7d9f0d0f56b87aa70028d87da9"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "hurt": {
+        "sourceSha256": "3af8f414c34153c599255d9cd4c0d228cf7bfb039b77ea6ca82a2142a908cd60",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "7e3fc435227dcd01c0164ad700ef63838cd220ec6d546db780db60d09fd6436b",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "7a6c662eb1f0738bbe253c2f824c253c99cd8c6010242d42c6b7f60eefb09f1b",
+        "encodedSha256": "247096460564f0c2b86ffec24f40da7c5e11fa26f59eeb3466bbce2d6b785d4a",
+        "decodedSha256": "6a61bfa9462e164bb5bfdb0d27985a4178486e637b38406ec3d454a6ab5c5a53",
+        "frameSha256": [
+          "b49b88150d1b9284ae1fb4e7f8de5e255232df6631e3d628fb96cfecff8adb0a",
+          "ca32707d865ba083f2ddc1ac91b42ec199aabb6d85470157f9e04f5abc9a282c",
+          "17b8b245b49b92af16c2dbee0018cabcb9e8a06cac58a100f4f380807824006e",
+          "5fc4cb99a284638b5cc5bf35436b6f52b047158641d27721e1435d4ffd33249f",
+          "0ea2b68217ce91acb6166fd7f46dd57fa79f2f1bd637d278d9ec2975ab119f36",
+          "bcfad8232c50286792ee0dc1f84cdd99dd97cc63805410556c64337c808a0fe9",
+          "da8bc7703971d00f922a54837e871aa612422ea580ab624ac8b47d3a677ae8d0",
+          "714e263ad68e62902ebd18fd2d2901b2c8c9d2675e663924f2942745a00da994"
+        ],
+        "poseSha256": [
+          "71d596d9832552f79e36ceae631e56b47bc5d481eea169851a9038d8644be33d",
+          "8a54d8cb7becdafea96e37d4d8cb45b2960e678def0d4ae9a18625c68218cf71",
+          "ba7ffa94c0ffd3c0034fd4216033d67dce9b8d3f229ec491a29c531027817f80",
+          "07901431a3f751abfc2ef60e19aeb5d051c9dfc9561863f48ed7445b03c2d923",
+          "f2cd1967518714712ab8a5fe4551442d782a5a1cc2c27f3582db9f01c830666a",
+          "9f8607a4c0f709edec642fb3ff949002206d5a6ad432b0616e95fed5f34e1c81",
+          "6f04d96a2209140dd44543c80463f0acb81443d1b0a5d9ac0c0d51e257801dbf",
+          "985d5b0157e20d976c80955e9015a265dd8068ce864971b495cad27c214949bd"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          0.978743,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "death": {
+        "sourceSha256": "f5a345f2e41ff7404664dff4d003561dd216c6161fdf179fd1f57c577d980844",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "5885c580ae2e59fbc6f0fa91d31e86a4252996d912e23f6d2e1997cd460d6aa0",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "1fdeaa064c7b8a67a28bc758bdf7c3460bc76ca9b4d6cf4c28fe98b27690295d",
+        "encodedSha256": "290dd8d6acbdf651b14f34e0b79aae08aec1322762edad2d8cf870fa3d3fd800",
+        "decodedSha256": "010a7971bf59fe0d1a9e12cb9e63a64c43e061b872048445c7da1de43857aff3",
+        "frameSha256": [
+          "bbe31c46c9e138f3694e84632cef8bb3ed2a17848eb42f7b52a918ebc9e1e886",
+          "15ff622291f695f4e12ad3dbc5d140940c6b71244eea7ea8cbdaf1dc949e6314",
+          "6af3930b0f6ab91cc2d4112e525fd5602975922fac7b9dc9403ddbd7b25d1e10",
+          "7fd24658a912c72b1230179798b206fbf7d89411d72c394782f45b080e95c9db",
+          "d6546dbab648d41127a71e6868013dd1934dfd23969ff31badcd4d973572d432",
+          "f3fb67888a21b83b95cb3f8c649c15440dc361f6f247e47ad32050be73a809c0",
+          "ee70779dc5c603563f5d23591860a17418e6a7f8be11a70a2d4b5255a342cfe6",
+          "ee70779dc5c603563f5d23591860a17418e6a7f8be11a70a2d4b5255a342cfe6"
+        ],
+        "poseSha256": [
+          "12bfc0e51bec790eb2bbbe1bb84a59bc09e8846488586e4bebecd40ece16eb0c",
+          "55c949f38f0818b6b88e7c22383b37b0bc7ff730cc19a6b35fc9a466082127ee",
+          "7f51bb799bafc23d7e0e1d88f1ac81d7010714b11a0208043a7db0af1d503bf0",
+          "8a19362b1e20c175409730dc8f9df06542eec039edf4f6d004224ee2d82fad09",
+          "670882068b23173d4a69085e994fc92be21b22a4a452105a15b4fe2ca84639d1",
+          "6516fb23301b416425a17692488c9b022a7deccc30f607583a1d6406d10fd237",
+          "8c6be2adc8c470e076543a3f0ebaafed3463034415ee168af7baf7387a5967e1",
+          "8c6be2adc8c470e076543a3f0ebaafed3463034415ee168af7baf7387a5967e1"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.983395,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "victory": {
+        "sourceSha256": "8db3a7c048d40c0371d1e4963814ae90428c24b8ddc71f33976ae44fde2d8ee4",
+        "sourceDimensions": "1717x916",
+        "chromaSourceSha256": "9aaae3d5d1f17b9e93a1e814c40098c2b305fde52c7f632c41307c15abe34ffb",
+        "chromaSourceDimensions": "1717x916",
+        "promptSha256": "a26816b35fde5d1b573531a84292dc45d7d9e513aea6a334aba585645c1832d3",
+        "encodedSha256": "bb5774e2f8f716bcacae854f9786933825b8b176f129c4d2672ac883e57277b4",
+        "decodedSha256": "2d16188b291719ac72547b7b61961ee42f9281b81f4d2c1657ba80df1006eafc",
+        "frameSha256": [
+          "463beda04276cda7ac9c6e3574a8b819c4a083d40d2f578b334f20479ce7fcf9",
+          "0bae47f04ecd7feb2a8698ce1db528c5bc3f47cf86b339a3acd1075a5e7e529c",
+          "a93092c427c6a16f5b89f76385e2e08789be54e283315ec48a1a2465f6a0594d",
+          "4f7e98c8261a302a02c637e47182ed92c2ae11f3703553acbde38b7e862d12e8",
+          "483466e9d92e3f6a5f82704bc21d98248c87ae9d557c25cf785e7931b3f1a384",
+          "e3586d1f29e2e553ad5f776f1c9f36a577b5f989920f0e6552d237f919cd15f7",
+          "b9113fd792758e880f755435cce59cbfe33f84eadec32b766be083c4847e7bcf",
+          "7f8682fd243e01487743ffc2b6376a85129bdd9a865fb68959d6fafaa4c165c5"
+        ],
+        "poseSha256": [
+          "90dcaf92c83b8b2b5bfbd07ac2296f2e774715a9aa77493e4a107fef2efc3b74",
+          "abbea5b837e8e332714d31fc6dfabf2bb0a457d4267cec24afbaea727c53cc08",
+          "33c730f174b9286a2d10ecd6db8deaf4c9ae910289668751577fa4686986e896",
+          "8a6c8960a1639f825c53ea70c82d06a007e93d66789343e1a105a4bc512b546b",
+          "5ef8a35ffdbb87dcafffae5fa1f2dfb917e4787edf58a568bcabfa81c8ecf201",
+          "ee801ad03135c0e73ec54223defe3ed0574f23ba96e4929f6a1eea654bd7d96d",
+          "4c19a3cea3b84fc8ebe4c8251360a4b5ea810d08c0836f6c170df5ec98c18132",
+          "53ad4803af8e81fdc6a07cc6fdad9b15af02f4471cc26d849f998d6657d1b93e"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "dead": {
+        "sourceSha256": "f5a345f2e41ff7404664dff4d003561dd216c6161fdf179fd1f57c577d980844",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "5885c580ae2e59fbc6f0fa91d31e86a4252996d912e23f6d2e1997cd460d6aa0",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "f631a7fd605211260b28b5a5bba3503e06dc1064497d1e5769d62e40e178e2b1",
+        "encodedSha256": "bf6845d67e849bee11dfff633e12fa02cee736f618857033afd187d72cb22075",
+        "decodedSha256": "6a923a485f26df01685e4407f17858b8fb0a36e980d67401703b4ddc13a4f41e",
+        "frameSha256": [
+          "ee70779dc5c603563f5d23591860a17418e6a7f8be11a70a2d4b5255a342cfe6",
+          "ee70779dc5c603563f5d23591860a17418e6a7f8be11a70a2d4b5255a342cfe6",
+          "ee70779dc5c603563f5d23591860a17418e6a7f8be11a70a2d4b5255a342cfe6",
+          "ee70779dc5c603563f5d23591860a17418e6a7f8be11a70a2d4b5255a342cfe6",
+          "ee70779dc5c603563f5d23591860a17418e6a7f8be11a70a2d4b5255a342cfe6",
+          "ee70779dc5c603563f5d23591860a17418e6a7f8be11a70a2d4b5255a342cfe6",
+          "ee70779dc5c603563f5d23591860a17418e6a7f8be11a70a2d4b5255a342cfe6",
+          "ee70779dc5c603563f5d23591860a17418e6a7f8be11a70a2d4b5255a342cfe6"
+        ],
+        "poseSha256": [
+          "8c6be2adc8c470e076543a3f0ebaafed3463034415ee168af7baf7387a5967e1",
+          "8c6be2adc8c470e076543a3f0ebaafed3463034415ee168af7baf7387a5967e1",
+          "8c6be2adc8c470e076543a3f0ebaafed3463034415ee168af7baf7387a5967e1",
+          "8c6be2adc8c470e076543a3f0ebaafed3463034415ee168af7baf7387a5967e1",
+          "8c6be2adc8c470e076543a3f0ebaafed3463034415ee168af7baf7387a5967e1",
+          "8c6be2adc8c470e076543a3f0ebaafed3463034415ee168af7baf7387a5967e1",
+          "8c6be2adc8c470e076543a3f0ebaafed3463034415ee168af7baf7387a5967e1",
+          "8c6be2adc8c470e076543a3f0ebaafed3463034415ee168af7baf7387a5967e1"
+        ],
+        "sourceFrameIndexes": [
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  }
+}

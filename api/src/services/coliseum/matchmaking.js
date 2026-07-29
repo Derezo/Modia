@@ -32,6 +32,18 @@ import {
 } from './queueBroadcaster.js';
 import { createMatch, checkQueueBan } from './matchLifecycle.js';
 import { handlePlayerDisconnect } from './turnTimer.js';
+import { assertBattleMapCapabilities } from '../../../../shared/battleStateProtocol.js';
+
+/**
+ * Validate and detach a client's battle-map declaration before retaining it
+ * in the in-memory queue. A missing declaration is intentionally legacy V1,
+ * not implicit V2 support.
+ */
+export function normalizeQueuedBattleMapCapabilities(capabilities) {
+  if (capabilities === undefined || capabilities === null) return null;
+  assertBattleMapCapabilities(capabilities);
+  return structuredClone(capabilities);
+}
 
 /**
  * Check if two players are matchable based on PPR
@@ -122,13 +134,24 @@ export async function tryMatchmaking(queueType) {
  * @param {string} username - Username
  * @param {number} partyLevel - Average party level
  * @param {number} partySize - Number of characters in battle party
+ * @param {Object|null} battleMapCapabilities - Explicit client map protocol support
  * @returns {Promise<Object>} Queue status
  */
-export async function joinQueue(queueType, userId, username, partyLevel, partySize) {
+export async function joinQueue(
+  queueType,
+  userId,
+  username,
+  partyLevel,
+  partySize,
+  battleMapCapabilities = null
+) {
   const settings = QUEUE_SETTINGS[queueType];
   if (!settings) {
     return { success: false, error: 'Invalid queue type' };
   }
+  const queuedBattleMapCapabilities = normalizeQueuedBattleMapCapabilities(
+    battleMapCapabilities
+  );
 
   // Validate party size
   if (partySize > settings.partySize) {
@@ -167,6 +190,10 @@ export async function joinQueue(queueType, userId, username, partyLevel, partySi
   // Check if already in queue
   const existingIndex = queue.findIndex(p => p.userId === userId);
   if (existingIndex >= 0) {
+    // A reconnecting client may have upgraded or downgraded since its original
+    // queue request. Use the latest explicit declaration without resetting its
+    // fair matchmaking position.
+    queue[existingIndex].battleMapCapabilities = queuedBattleMapCapabilities;
     return {
       success: true,
       position: existingIndex + 1,
@@ -189,7 +216,8 @@ export async function joinQueue(queueType, userId, username, partyLevel, partySi
     partyLevel,
     partySize,
     ppr,
-    queuedAt: Date.now()
+    queuedAt: Date.now(),
+    battleMapCapabilities: queuedBattleMapCapabilities
   };
 
   queue.push(queueEntry);

@@ -1,0 +1,657 @@
+{
+  "version": "1.0.0",
+  "template": "ai-image-metadata/characters/player-authored-animation-template.json",
+  "compilerVersion": "1.2.0",
+  "id": "dwarf_male_summoner",
+  "profile": "summoner_v1",
+  "profileSource": "ai-image-metadata/characters/player-animation-profiles/summoner_v1.json",
+  "status": "approved",
+  "approvedAt": "2026-07-29T02:21:20.666Z",
+  "metadataFingerprint": "793d783bdd3664c119de16503a3015f35d62a3cb1796649125538f6835f3f84a",
+  "draftProvenance": {
+    "registry": "ai-image-metadata/characters/player-variants.json",
+    "templateSha256": "7943e69db577b3a4429b47df634f931d3f4cb8e8ce9a91a06578255fbe935bbe",
+    "profileSha256": "a184b880dd9b74e8c48e0bfb2936585e7f0a38412b18f9a7d56d32837a2b362d"
+  },
+  "identity": {
+    "race": "dwarf",
+    "gender": "male",
+    "class": "summoner",
+    "presentation": "male dwarf summoner",
+    "visualTraits": "dwarf stout build thick beard braided hair sturdy male masculine features flowing robes summoning circle grimoire ethereal wisps mystical orbs",
+    "baseFacing": "three-quarters right",
+    "sourceMetadata": {
+      "isAdvanced": true,
+      "inheritsFrom": "summoner",
+      "seed": 22006
+    }
+  },
+  "inputs": {
+    "identity": {
+      "origin": "frontend/public/assets/portraits/originals/dwarf_male_summoner.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/dwarf_male_summoner/inputs/identity.png",
+      "authority": "face, ancestry, gender presentation, hair, eyes, complexion, costume, palette, proportions, and equipment"
+    },
+    "style": {
+      "origin": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/dwarf_male_summoner/inputs/style.png",
+      "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+    }
+  },
+  "reference": {
+    "source": "ai-image-metadata/characters/player-animation-sources/dwarf_male_summoner/reference.png",
+    "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_male_summoner/chroma/reference.png",
+    "identitySource": "ai-image-metadata/characters/player-animation-sources/dwarf_male_summoner/inputs/identity.png",
+    "styleSource": "ai-image-metadata/characters/player-animation-sources/dwarf_male_summoner/inputs/style.png",
+    "prompt": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative Dwarf Summoner (male presentation) identity portrait; Image 2 is style and proportion reference only. Player identity metadata: dwarf stout build thick beard braided hair sturdy male masculine features flowing robes summoning circle grimoire ethereal wisps mystical orbs. Create one complete head-to-toe Dwarf Summoner (male presentation) preserving Image 1's face, ancestry traits, gender presentation, robes, grimoire, orbs, wisps, jewelry, palette, proportions, and equipment. Do not import identity details from Image 2. Preserve the portrait's robes, grimoire, orbs, jewelry, and exact familiar or wisp count. Keep exactly one depicted book or focus and never duplicate pages, orbs, wisps, or permanent accessories. Translate the portrait into a compact mystical silhouette. Use a flat #00ff00 chroma key background with no floor or scenery and a square 1:1 canvas with generous padding. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered summoner in a receptive ritual stance facing three-quarters right. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+  },
+  "animations": {
+    "idle": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_male_summoner/idle.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_male_summoner/chroma/idle.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 4,
+      "frameDescriptions": [
+        "receptive ready stance with grimoire or focus controlled",
+        "gentle inhale as existing wisps rise",
+        "weight shifts forward during a careful page or focus check",
+        "free hand traces a small closed guiding curve",
+        "centered attuned midpoint",
+        "soft exhale as wisps descend",
+        "weight shifts rearward while the hand closes",
+        "receptive stance flowing back to frame one"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body summoner attuned idle-cycle poses of the authoritative Dwarf Summoner (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy male masculine features flowing robes summoning circle grimoire ethereal wisps mystical orbs. Required sequence: receptive ready stance with grimoire or focus controlled; gentle inhale as existing wisps rise; weight shifts forward during a careful page or focus check; free hand traces a small closed guiding curve; centered attuned midpoint; soft exhale as wisps descend; weight shifts rearward while the hand closes; receptive stance flowing back to frame one. Motion direction: A quiet attunement loop alternates breath, a careful page or focus check, and small receptive hand movements while wisps remain contained.. Overall summoner motion is ritualistic, precise, receptive, and flowing, with careful grimoire handling, circular hand paths, and visible control of ethereal wisps. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, grimoire, palette, proportions, orbs, and wisp count. Preserve the portrait's robes, grimoire, orbs, jewelry, and exact familiar or wisp count. Keep exactly one depicted book or focus and never duplicate pages, orbs, wisps, or permanent accessories. Summoning effects use the portrait's established palette and form one compact circle, aperture, or wisp cluster. Do not create a full creature identity in the pose atlas; keep effects secondary to the summoner's body and hands. Action-specific effects: Existing wisps or orbs may drift through a tiny closed loop; no new summon or open portal. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "walk": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_male_summoner/walk.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_male_summoner/chroma/walk.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "left foot forward contact with focus protected",
+        "left leg compresses as robes gather",
+        "passing pose with right knee advancing",
+        "right foot reaches while free hand balances",
+        "right foot forward contact",
+        "right leg compresses under the stride",
+        "passing pose with left knee advancing",
+        "left foot reaches into the measured loop"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body summoner focus-guarded walk poses of the authoritative Dwarf Summoner (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy male masculine features flowing robes summoning circle grimoire ethereal wisps mystical orbs. Required sequence: left foot forward contact with focus protected; left leg compresses as robes gather; passing pose with right knee advancing; right foot reaches while free hand balances; right foot forward contact; right leg compresses under the stride; passing pose with left knee advancing; left foot reaches into the measured loop. Motion direction: A measured alternating walk protects the grimoire or focus through contacts, passing poses, robe movement, and contained wisp follow-through.. Overall summoner motion is ritualistic, precise, receptive, and flowing, with careful grimoire handling, circular hand paths, and visible control of ethereal wisps. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, grimoire, palette, proportions, orbs, and wisp count. Preserve the portrait's robes, grimoire, orbs, jewelry, and exact familiar or wisp count. Keep exactly one depicted book or focus and never duplicate pages, orbs, wisps, or permanent accessories. Summoning effects use the portrait's established palette and form one compact circle, aperture, or wisp cluster. Do not create a full creature identity in the pose atlas; keep effects secondary to the summoner's body and hands. Action-specific effects: No active summon; established wisps follow closely without changing count. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "attack": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_male_summoner/attack.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_male_summoner/chroma/attack.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "attuned guard sighting the target",
+        "free hand begins a precise circular cue",
+        "existing wisps compress beside the established focus",
+        "forward step directs the cluster along a short path",
+        "compact wisp contact or sigil pulse",
+        "curving follow-through draws the wisps back",
+        "hand closes as the original arrangement reforms",
+        "recovered receptive guard"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body summoner wisp-command attack poses of the authoritative Dwarf Summoner (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy male masculine features flowing robes summoning circle grimoire ethereal wisps mystical orbs. Required sequence: attuned guard sighting the target; free hand begins a precise circular cue; existing wisps compress beside the established focus; forward step directs the cluster along a short path; compact wisp contact or sigil pulse; curving follow-through draws the wisps back; hand closes as the original arrangement reforms; recovered receptive guard. Motion direction: A target lock becomes a circular hand cue, compact wisp compression, short directed strike, curving return, and restored attunement.. Overall summoner motion is ritualistic, precise, receptive, and flowing, with careful grimoire handling, circular hand paths, and visible control of ethereal wisps. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, grimoire, palette, proportions, orbs, and wisp count. Preserve the portrait's robes, grimoire, orbs, jewelry, and exact familiar or wisp count. Keep exactly one depicted book or focus and never duplicate pages, orbs, wisps, or permanent accessories. Summoning effects use the portrait's established palette and form one compact circle, aperture, or wisp cluster. Do not create a full creature identity in the pose atlas; keep effects secondary to the summoner's body and hands. Action-specific effects: Direct only the existing wisp cluster or one compact sigil toward close range; do not add a creature, duplicate a wisp, or obscure the summoner. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "hurt": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_male_summoner/hurt.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_male_summoner/chroma/hurt.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "receptive guard before impact",
+        "sharp flinch with focus drawn close",
+        "maximum stagger as existing wisps spread apart",
+        "stumbling rear step while protecting the grimoire",
+        "low brace with guiding hand gathering wisps",
+        "careful rise as the original formation returns",
+        "feet and focus reset",
+        "recovered attuned guard"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body summoner broken-attunement recovery poses of the authoritative Dwarf Summoner (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy male masculine features flowing robes summoning circle grimoire ethereal wisps mystical orbs. Required sequence: receptive guard before impact; sharp flinch with focus drawn close; maximum stagger as existing wisps spread apart; stumbling rear step while protecting the grimoire; low brace with guiding hand gathering wisps; careful rise as the original formation returns; feet and focus reset; recovered attuned guard. Motion direction: An impact breaks concentration into a flinch, scattered-but-counted wisp recoil, protective focus clutch, low brace, and careful re-attunement.. Overall summoner motion is ritualistic, precise, receptive, and flowing, with careful grimoire handling, circular hand paths, and visible control of ethereal wisps. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, grimoire, palette, proportions, orbs, and wisp count. Preserve the portrait's robes, grimoire, orbs, jewelry, and exact familiar or wisp count. Keep exactly one depicted book or focus and never duplicate pages, orbs, wisps, or permanent accessories. Summoning effects use the portrait's established palette and form one compact circle, aperture, or wisp cluster. Do not create a full creature identity in the pose atlas; keep effects secondary to the summoner's body and hands. Action-specific effects: Existing wisps may scatter slightly but must retain exact count; no gore, blood, extra summon, or full portal. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "death": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_male_summoner/death.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_male_summoner/chroma/death.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "verticalAnchor": "bottom",
+      "outputFrameMap": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        7,
+        7
+      ],
+      "frameDescriptions": [
+        "fatal disruption breaks attunement",
+        "existing wisps dim as the focus lowers",
+        "knees buckle beneath the robes",
+        "one knee grounds while body curls around the focus",
+        "sideward collapse reaches full ground contact",
+        "robes, limbs, and focus settle low",
+        "final fully fallen summoner with wisps extinguished",
+        "same final fallen pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body summoner defeat sequence poses of the authoritative Dwarf Summoner (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy male masculine features flowing robes summoning circle grimoire ethereal wisps mystical orbs. Required sequence: fatal disruption breaks attunement; existing wisps dim as the focus lowers; knees buckle beneath the robes; one knee grounds while body curls around the focus; sideward collapse reaches full ground contact; robes, limbs, and focus settle low; final fully fallen summoner with wisps extinguished; same final fallen pose held. Motion direction: Attunement breaks, wisps fade, knees buckle, the body curls protectively around the focus, collapses sideways, and settles fully fallen.. Overall summoner motion is ritualistic, precise, receptive, and flowing, with careful grimoire handling, circular hand paths, and visible control of ethereal wisps. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, grimoire, palette, proportions, orbs, and wisp count. Preserve the portrait's robes, grimoire, orbs, jewelry, and exact familiar or wisp count. Keep exactly one depicted book or focus and never duplicate pages, orbs, wisps, or permanent accessories. Summoning effects use the portrait's established palette and form one compact circle, aperture, or wisp cluster. Do not create a full creature identity in the pose atlas; keep effects secondary to the summoner's body and hands. Action-specific effects: Wisps fade without spawning a creature, gore, blood, explosion, or rigid rotation; retain all permanent equipment. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "cast": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_male_summoner/cast.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_male_summoner/chroma/cast.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "focused ritual stance",
+        "grimoire or focus opens while the free hand rises",
+        "hand traces a clear circular boundary",
+        "existing wisps occupy evenly spaced points around the circle",
+        "maximum compact aperture held under control",
+        "command gesture sends a restrained pulse through the opening",
+        "circle closes inward as wisps return",
+        "composed attuned casting finish"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body summoner controlled aperture ritual poses of the authoritative Dwarf Summoner (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy male masculine features flowing robes summoning circle grimoire ethereal wisps mystical orbs. Required sequence: focused ritual stance; grimoire or focus opens while the free hand rises; hand traces a clear circular boundary; existing wisps occupy evenly spaced points around the circle; maximum compact aperture held under control; command gesture sends a restrained pulse through the opening; circle closes inward as wisps return; composed attuned casting finish. Motion direction: The focus opens, one hand traces a circle, wisps mark its boundary, a compact aperture forms, responds to a command, closes, and leaves the summoner composed.. Overall summoner motion is ritualistic, precise, receptive, and flowing, with careful grimoire handling, circular hand paths, and visible control of ethereal wisps. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, grimoire, palette, proportions, orbs, and wisp count. Preserve the portrait's robes, grimoire, orbs, jewelry, and exact familiar or wisp count. Keep exactly one depicted book or focus and never duplicate pages, orbs, wisps, or permanent accessories. Summoning effects use the portrait's established palette and form one compact circle, aperture, or wisp cluster. Do not create a full creature identity in the pose atlas; keep effects secondary to the summoner's body and hands. Action-specific effects: Create one compact summoning circle or aperture in the established palette without depicting a full creature; keep hands, focus, and feet visible. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "dead": {
+      "deriveFrom": {
+        "animation": "death",
+        "frame": 7
+      },
+      "frameDescriptions": [
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held"
+      ],
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity."
+    },
+    "victory": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_male_summoner/victory.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_male_summoner/chroma/victory.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "quiet recognition of victory",
+        "focus lifts as the free hand opens",
+        "existing wisps rise into a compact orbit",
+        "graceful pivot guides the orbit around the shoulders",
+        "hand draws the wisps into a small crown-like arc",
+        "focus closes or steadies as wisps descend",
+        "serene victor stance with original wisp arrangement",
+        "final triumphant summoner pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body summoner harmonious victory poses of the authoritative Dwarf Summoner (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy male masculine features flowing robes summoning circle grimoire ethereal wisps mystical orbs. Required sequence: quiet recognition of victory; focus lifts as the free hand opens; existing wisps rise into a compact orbit; graceful pivot guides the orbit around the shoulders; hand draws the wisps into a small crown-like arc; focus closes or steadies as wisps descend; serene victor stance with original wisp arrangement; final triumphant summoner pose held. Motion direction: The summoner confirms victory, lifts the focus, guides existing wisps through a celebratory orbit, closes the book or hand cue, and holds serene command.. Overall summoner motion is ritualistic, precise, receptive, and flowing, with careful grimoire handling, circular hand paths, and visible control of ethereal wisps. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, grimoire, palette, proportions, orbs, and wisp count. Preserve the portrait's robes, grimoire, orbs, jewelry, and exact familiar or wisp count. Keep exactly one depicted book or focus and never duplicate pages, orbs, wisps, or permanent accessories. Summoning effects use the portrait's established palette and form one compact circle, aperture, or wisp cluster. Do not create a full creature identity in the pose atlas; keep effects secondary to the summoner's body and hands. Action-specific effects: Existing wisps may form one compact celebratory ring; do not change count or open a full portal. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    }
+  },
+  "pins": {
+    "templateSha256": "93943004e340d113943e06dea61fd7dfad67c20750dd4fc30d76d3be1fb7c144",
+    "profileSha256": "382580f1f433985c2ff2e2df3a5258598daf02fe0460ba4be78f75fa226f91e3",
+    "reference": {
+      "sourceSha256": "e7118b1c1120a9eb58240178f907fe924a7a912352a17fd5414f51280eeb5671",
+      "sourceDimensions": "1254x1254",
+      "chromaSourceSha256": "472e51000346b54ccf5208be4faf338d7099d2dbff2b83712295009da71b2536",
+      "chromaSourceDimensions": "1254x1254",
+      "identitySourceSha256": "d1adb8e6fad03a6f2c31c0ff7972ed9bfdfbb754ed13684533b18d5bb9fbdd35",
+      "identitySourceDimensions": "1024x1024",
+      "styleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "styleSourceDimensions": "1254x1254",
+      "promptSha256": "17cd87bf3fd2de5b1e825e52a2ff719d4330a6f070bef8772f6a73154c62c374",
+      "encodedSha256": "0da333ef2704f1d133a7f6dd8867c1a1bb261fa92399314de4686d6e5b3c26b7",
+      "decodedSha256": "9832a76be4ef89030fe8d2031cd604287137f1743c4f1e2db6a62aa824705c11"
+    },
+    "animations": {
+      "idle": {
+        "sourceSha256": "88cc35a197c9e30e265aec48e360fc869cafedcc99275d2394b2702fa065a3c5",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "1c12b5ceaa2c2ddbd955e1731848fc925fb60be06db694b24686725a4b33a61d",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "72b1199d626bb177ff628bf9b245cb28733710560c9fbe11aa05d4733e301474",
+        "encodedSha256": "c91e4a682edbd56459171c3368f83acdb28ee72dc3ca3bbc5866e749df1c47b8",
+        "decodedSha256": "57dbe4c6ba78ec25490a516220f02283350e5c0bdbaeb0e225f55652c6b2a7c0",
+        "frameSha256": [
+          "6894453b6435ee2a05e1e88fa2862fbcfec149ec56a67dac1a4bbf2f70250a41",
+          "1fdc096fc6b9ffea66e3675ecba265c69b609a3ef5565b19b73a2ac667dbe0f6",
+          "d3aa57e94de774dc02a2fc2790fa93678fb3ec7fef176e8a69afbbdd0eefabc0",
+          "a9c02bb83d0b87bde9a70adadd6de9484189349eee11c19be90dcf7cb792adee",
+          "7dcccd13fa5ee7b40ecbd13b714dd3da1e258a510b6c249467f3a4661c7c9912",
+          "6b93ad1e24e00418393af0f732ccd24e7f3636aab3eff5eb2a6a5dbe6a62adaa",
+          "4b8b3904038353df37794d56d4a258373d16dc28b5fa9e4584e04fb3eb5348aa",
+          "4d9da363d532a1724ae1e71bd2ea500f75316f50d9f133ff641b366350e3e408"
+        ],
+        "poseSha256": [
+          "5481e373f2fffb3ed30b2ea20bc5554061807c95e8b71cf8a71c11afa921b522",
+          "d3597f010607b686e67be62a4a6b6390b0df55dd02a3f76b5e2b6723d69fe1a3",
+          "758dfdbeb7296ee848fe60d5e1e309d52917a13d1438990a4ec56d2a9a3575c5",
+          "445a3ef997bad02bf6d4f7967fe3dbdd8ed71c95ae743ed857c77719e25ecec8",
+          "01e38022271500421901df85e0ded89a6ec2ab0c9652874e2dc4e20d1663e7c7",
+          "395107a1c703b1e00c5ab91e40043a676b136f1a2e08b62b7533b3238303ac7f",
+          "b6b3464b11cbc364cd215a36c07f9b2d692b4106e16c76a3711ecb02e9576f1a",
+          "3372f725dfb502e2f655392c56740180249ca002b60507fd9e55bd1ef5337abe"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.966677,
+          0.921299,
+          0.941567,
+          0.952395,
+          0.950002,
+          0.933618,
+          0.932633,
+          0.966349
+        ]
+      },
+      "walk": {
+        "sourceSha256": "a9f0a63e4ed3380215822973bae6b458f3b6434ce7808d31ce0dc868b3e30cef",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "914af15fef6d2dd0966eb8bb74ee9a254d24cbac84fa74bb66131a5253369102",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "f933353fd8f28c45212c6a79954b4eb40fcc0774b1baeb37a4aea9903452d459",
+        "encodedSha256": "96a7d7ab2b0d9b700c2fd4e155e52f9f69113023af1846d2183ea277b0a64552",
+        "decodedSha256": "c99dcfee7bb5e4fa458b0a4ff39105f176f1ebda4c3ef17acb81330d8f4e00e3",
+        "frameSha256": [
+          "4705a2aa6a3428ea767af1349027d8cc781799723aea88ec8a876913474a4132",
+          "67ec14bf59b3a14c9e01922cf6a8564c2187a97e9b8c886d6f71ac58c237e28a",
+          "918d64284e952e460cb6c0d994e3573997e708bdc61db6bb0612b5e10753fc91",
+          "1b0490a084558117ebd64993f9b7e951cbe7780e701426f6e5210a12b4e5fb56",
+          "0f3c607286277f4fc07c1059888bdb2ed689dea928aad5484dff9963d973447b",
+          "4afd9ff4765c3ff10a5361c03e531176d9fd76cb5b68c1969ea4ba9ab853e3d2",
+          "37e0e5809a18c56098a15c556add78dc3b2abfd8b9b13c38455438a70b6fb410",
+          "ba9278315a7f9818693bb9c68ec17caa41c9e8b77adc407c190f1be95d541a73"
+        ],
+        "poseSha256": [
+          "d45fdac782ff14fb4731a159126ba91b204bd1b344176d06464223f3b4a34a93",
+          "d7ee0ad765a0054d5bf19185687f405e41bc0599b4059cc85abc710fd0645253",
+          "6ff95489debd237b929b982532eb922b9359b124ecad9c11d06a3cae788e51af",
+          "7006b0f29c0017367d6a48fea3188327d83421aa67e1bb7d53600ec30eee58af",
+          "d923778bb6774db4c88704ec97c806b68cb0c71faf5b79465dc1645e8c8ea7f9",
+          "41efa540f802313a2630477b7a0ef90c7de30e65752a1b08570b3851832a2bf4",
+          "2fdd3c157d641c84fd06e1b3c2233dc927adf9e63c35fa574136be88baeaffd4",
+          "8d6429ca3e30ebd1919d76d4c5eb223b526476e58ea62837222e9cedd7b6d520"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.946652,
+          0.939104,
+          0.937273,
+          0.936483,
+          0.934691,
+          0.936762,
+          0.936773,
+          0.937504
+        ]
+      },
+      "attack": {
+        "sourceSha256": "494699c933d4ce59341ccc8296d753c65b7b50e8bb45dad2bd8a9f4cb8529164",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "fe4804f659122ca387874b81e1adb79215510ef6a8550c9ef1b712ae28216279",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "7e645e714dbcf972e309b0fed6ad47bee3efc0c024a9713f15bc05bc28112f72",
+        "encodedSha256": "5be3e429973e98d1670ea44782080c0e24c648a3ff241e3add919ccccf8fc13e",
+        "decodedSha256": "701c5406919634ad2fbe277bf18be2a36f13384aee8e5ec02e3966d17dfa2d3c",
+        "frameSha256": [
+          "fc7d5018818567a23e09cfd5301e0962668563a7674fe08787c7fc51a3cbf088",
+          "9810d31c27b4dfcf5c28290341ed69f683e839d45879324df218cd0243a4375b",
+          "5df9cd5847704d5db5e664d025ea885d3ac67d6b5cad71b5ccc31e3aa33cf4a0",
+          "b1806e40a9beff666092920509245d5cbf5c9564d5602b24b468fd30971a0f8a",
+          "a9a7eae99d6d1305040c24bce8a4876a80aa2af62052005971a42a05c82081ba",
+          "b9c41a27a99550d36acfdf761b4c6b0947169c6f0bb1a9047af28446f6ade0ec",
+          "4ee83827290af430bd408be7e45316f80017e7739e6ef1ba75e632c16d2b57f6",
+          "ee8470049553aa4a2d12148de35df81e9893f477bd40f6901426bf18c1e9b463"
+        ],
+        "poseSha256": [
+          "482e3ac9a0cd2d7f4d136461ca13e5b9af39b100c1d3c0328acfa089ced81f87",
+          "40b0a9d7f496c96636a933529e368f277987720d300d089ca6d0a2e938f71a47",
+          "7da58eecaf7ec0c70c265fe8a2e1eb01498152c85c8118cf27a5ad679f40ba23",
+          "0e04e6fa1afaf89a0f7c3330b17d957b91c9224d61b4c17888436b060f6935ed",
+          "0584d5393cd635dde360aceec9c89910550216ee10a888c03ab4e78dc968a1b6",
+          "f0f554d504f5a96e9128e631e5621f9b9cc2cdd31f6ad0055efa39e8bd3c52ac",
+          "0256101650d7c03bd5575c7fd9626796b29fca08e475f344f2733d9188166797",
+          "4d2c424f8b3aa9b7d8643e4761a415969a2b983b8c126531eec5fc89cc49b402"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.964646,
+          0.938983,
+          0.996743,
+          0.998423,
+          0.999631,
+          0.994958,
+          0.941428,
+          0.963656
+        ]
+      },
+      "hurt": {
+        "sourceSha256": "cc4d4882223d772829e48f1fe7a1cd193c3ec3934743d2b6e96f70c668cbf15d",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "91b34b36a5f87011246a9f97983eb792d64204fb5e691ccea49f1109125e406e",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "f4e214636dcc433544302c45e2f8bf59044c8224a01094c860cfa845c40fcc44",
+        "encodedSha256": "1f94efe390a9156ffdead4a3788c231ee28cc033e7c6918006dd5f9100ab9a32",
+        "decodedSha256": "80bbc596e26f8ac2552880bc3c0ce8398a36c4e76842741244581c1ccc052afa",
+        "frameSha256": [
+          "7cf64e1f85d2db366080082c03480ea02fc4f85ae9f7f9869ff6108518919c5e",
+          "927305e0c88f4755f3dec07c20f780c680799e6357f4a7816cb246a0a0d9af38",
+          "409d83384035a0d1b40537d05290b5a37b1158f92f92f1078894852c4ab7df58",
+          "d2cc85f828b5887d43142dc2260453e98f1e4b1646783ca79cba834313abf6d7",
+          "8458d038ebcbdcbf49f1a8c4579bb54a5d6e4f1507a70b0112532bb8bcb9e440",
+          "b1e0c7ef5c64a7957af514179eee63378cefff5b408244f146074736f97e8869",
+          "e9ec415d316e092fc210ae73eab5bc74f246b4b7eb9f248bd4bb91d16628ac99",
+          "49d15b5ab12fc134f652e6b1a3765a0ca6fac8116d4c559d564d3412b34f2296"
+        ],
+        "poseSha256": [
+          "b645a699da427d36e776dc4acb87157085ab7879e8ffe7690ed7c2ba552ec626",
+          "0605ff01a0bd00155db17393f3a053c898ed2932c2268b6fb33eda8a2569dfff",
+          "224cee0b48081714b95c5cb4d87965ca6b02a0c37d023452e3a0f35276b7840e",
+          "c52f2e168553f20d5b56fcc99c7a2ae14b18560c98ceefb6442560cd9ba23964",
+          "a0b912553cde4e2a61b17cfb4a5f87c5da39661645eeb01e23f1f7081e9e1b79",
+          "3573529dfffa998fdf4692b97947caa9be98cb51e181f4d0995b3bf74ebe087c",
+          "7015a5a4eaba6868cbce09d85eed06bc40b5ad35b992c92b3038b4f664e53b60",
+          "3d62be06b42649b087ae7b27d7791a0baaa1fdec37e465af7f6ad64b83037f2e"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.939674,
+          0.928952,
+          0.948493,
+          0.892182,
+          0.875086,
+          0.943182,
+          0.907779,
+          0.942236
+        ]
+      },
+      "death": {
+        "sourceSha256": "56d629623b9d1bf1c0de257b37d961b991190c58d20d3e55f6544f17e3380a6f",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "0f8a3961864e86df7007271f13f618244fd26774e144bfe7c2d1d0e6f9bc6aeb",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "9d9af63ccca48b1c1e581398df2f0b45652df6341e79825b9e8f746471d25c72",
+        "encodedSha256": "838a34ba1a052db43896b195a25ebbd41f00d9f9155dacada1dfaea6b1374a79",
+        "decodedSha256": "5b438a7443974bfa2593ee12ca32ed695b0ba93b47d2f6b1ea7f43d9a0a85c82",
+        "frameSha256": [
+          "8082f0ee4ee15b3076118c1fd2342ed0a7ad294fe9a63f64289a818cbf6bb5b5",
+          "36134dab1f18d394b87c2d7b6aa0d8e0f0a5dd99aa1076eff362abfff23b242c",
+          "fd3ecd9920774059b00d4ef925aaf842a4245a2c74f5d858576d43fc7d87550a",
+          "dab7cf3d29c10e53cff3c3432ef4b89d15701804beeeb3203548fb1c8b99624a",
+          "2e2e681e6a300dbdb222c9eb70bb98852c73380ac6b5f93e6d35c433cb7d79ef",
+          "280f2814b0ab610627c4723ce204d7ee8e38f7f221d5faa470e19ec503122129",
+          "7bc039b8bfc99b467f774480d79b1eb7fd5d675626f158f864d52d89b85feb3b",
+          "7bc039b8bfc99b467f774480d79b1eb7fd5d675626f158f864d52d89b85feb3b"
+        ],
+        "poseSha256": [
+          "733a49acd8054e122c5665d860ababcf9ce13d233915897f612547ff17cefb9f",
+          "1638b2826d86cc834e63b4a2efce0dd5fe6092f3ddd682c044152930f4a8c38a",
+          "857699209bb22b418cb39d2372bf32b6563907c2abcfe0d1d18aec85b19c7fd5",
+          "9c568bb65eee1a5483cc89aa0d745d84f4ff4643ff74d4e00d88e235cae96dca",
+          "e53c4d4a461f1c96ff163d18152cfee8a4dfa271c005caa2a039be35a078ffe3",
+          "ecf88ea428cad4385bddc935c032ab82e1b6435521adfbc564a036087b15052d",
+          "29b7aae7f1d3896d9c0d05c81e75d01c4be4f250ab7333c51b665383e8e4379c",
+          "29b7aae7f1d3896d9c0d05c81e75d01c4be4f250ab7333c51b665383e8e4379c"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.965144,
+          0.941987,
+          0.964888,
+          0.975741,
+          0.987093,
+          1,
+          1,
+          1
+        ]
+      },
+      "cast": {
+        "sourceSha256": "983d0d87b84e8c3b7f863adfbd7d1dd81dab274267f84f8739b90586604f41b1",
+        "sourceDimensions": "1717x916",
+        "chromaSourceSha256": "c6024dad511c6a8b708bc6008176826ebcf4347568a592e99bdeeac3ce10fafd",
+        "chromaSourceDimensions": "1717x916",
+        "promptSha256": "1e0284261d0d0ce002cca694162db2619eb0f91589619034cad101ba08fac2bd",
+        "encodedSha256": "24c415e440a6c816ea2dcc882e65ceeff5f88f1208570496ada05141b4dccfef",
+        "decodedSha256": "c491593d1f52bd7c614a24f8e009ba57dd0bb9062310e30501971fac5fe3bdeb",
+        "frameSha256": [
+          "7f2e9498b48ba5918877caf06736fb5c7999475a5b13e860270ed881fdd7a033",
+          "f39a914c97491f2f3fb52e80ab24a1e64b725560e49a1e6af34c8fa58274e1c6",
+          "e745934c09b3954ecfa6b26c683cacfb774e118ba8c95d28bb6d1a78bf3c1d43",
+          "4975b62b94cfacfc9aff139efe5b0bdb28eec8517412ce93d8d4fd02eaf6ab15",
+          "8520adadbe16d489f3cad33cb9f81fa08b2ebf5c6a15fead76dac17370827ac3",
+          "37655262ca80e833f07ae303e83b8d1eebc008c440b12ed07038cec955e3332c",
+          "11f029c79b7eb5ced6f68b80f007fbeed963dca04c78bcfb6766cc9cf6ff13fb",
+          "2d691961a8d777776dab750a1c1b0c1650cc05cf39ad7c3fbd5b9a29a4ebafff"
+        ],
+        "poseSha256": [
+          "018929d99d5a40846ad6bde4f21c6a2a5853732af21e18c3868f273c1af01b02",
+          "9630bbc12937a0e5892dafaf4957aab03bb3d4470622630ac2d05dd797d7db76",
+          "567905a07570dda246eec8094268dca7edf770659875f711585d0496f01763a3",
+          "619a972e3e61336ca791c41cb2f9fdbd122b40802cacf9cca865c726df503ad0",
+          "0d8d244fc9f3919b4e1504c62230fc59dd839b5de60f211820ca4e1d608d6c0e",
+          "b570f7a7a729f76fa1241552d443445c64947be66204c9f18d268e9a408f5218",
+          "de5edd02cc2635a5f5dfd56155da4812ec02a6bec3d2e99a623d2bdaf8f66b52",
+          "e1f33606b0aa224a65ce9b7df6ecb431f57f15a583cf1fb768bc6b17596bfaef"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.965364,
+          1,
+          1,
+          1,
+          1,
+          0.958625,
+          0.955042,
+          0.925395
+        ]
+      },
+      "victory": {
+        "sourceSha256": "610b8d9937a56d32cb9189b0bbf6ba479b790e5e1f716891ee736d356067c4a8",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "f7ec5a2d0678715e5ab6259e86e5e6f0887e1fe3434b7eda54dd13e9f0108dbd",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "1bc2beae7639f62d12aed59de64e3ef82a5198fd2ddb12ea54c54f9ba642d5fe",
+        "encodedSha256": "9deb4e4e7626eef01b9b83b4954395b16c32541291f32dbc3009497ec6e807b3",
+        "decodedSha256": "ff84fe3b7fceb2a450e02b47e0476ff112cd8201be80c6d5c61b1b69567897c8",
+        "frameSha256": [
+          "df50451d6b2082eb83bf9558975bcef52a90a5e286997ad30c0a5179ed653fe4",
+          "b68a42845fc998398e35e26a5c560063da0e54bae3a3a8e078c35cfcd0590b1f",
+          "7e14656948db910078b47ac13ff1cf8d33e1f6328d0ed8d6b1dcb5228ce0c382",
+          "1f3dae6fa119bf5cbf176260c81dcabfe88b365ee4e1b6e781a4bc40a5dc0734",
+          "1f0a86a2c713d74239e5653e057e5e63ae300edfbe16d02b8aa16493c2d9d44e",
+          "3d9f4c117645f7f16c366fbdaca9ee2e26a137a39c1f7a952b5a1c0cda490d4a",
+          "d0fddbfecfb188a1128ef3eac88a623d5c5715b9634e54245f1b4f3744864913",
+          "b511b06ff5e86363fb1512a62f4e1a57d7c33dbf30a9d3b7e1c8f74e4fd06af9"
+        ],
+        "poseSha256": [
+          "3175e6a68ad41f09a93f936debf0f2a789f85340a05591a3b0fdc17de5ca1ac5",
+          "3ffe35ce8495e8b95e3e807155c2d3aad3824c54fa9cae76647ccfdcf393812e",
+          "ab5b6b82570e9e16db4fef29b339c456a1f76952c3c0cad44fcef7f4953e0ebb",
+          "252685f8715273e9c52406e889ffcbcfbf1a7cc3bba483c4bcf041279e045059",
+          "41329989c47a0daebd01d887254f47e2fff875e43a2b72036a8839947aefdb6e",
+          "070cdf6acc719c3196844695462d4af718be61025b093e0df8fff8b4c19fcecc",
+          "9201c39482a5352f2d4e83248fba9ba4f7cb67260eafbf4c2545defb44003f00",
+          "ce0f6b299263f95452aa5deceb076a9d5c41a0bd00ec2e31d7b23bd450bbd1c6"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.945078,
+          0.968294,
+          0.900826,
+          0.969307,
+          0.999722,
+          0.943645,
+          0.969382,
+          0.939157
+        ]
+      },
+      "dead": {
+        "sourceSha256": "56d629623b9d1bf1c0de257b37d961b991190c58d20d3e55f6544f17e3380a6f",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "0f8a3961864e86df7007271f13f618244fd26774e144bfe7c2d1d0e6f9bc6aeb",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "f631a7fd605211260b28b5a5bba3503e06dc1064497d1e5769d62e40e178e2b1",
+        "encodedSha256": "8637930b8112d7dc6ca528685bd0f7270134ec944bb00c35e0949fd77b7ed7c4",
+        "decodedSha256": "c0adfddc3cd4c296acff9293788ead0c2b27dafae6a4007810df68c1dde08d3e",
+        "frameSha256": [
+          "7bc039b8bfc99b467f774480d79b1eb7fd5d675626f158f864d52d89b85feb3b",
+          "7bc039b8bfc99b467f774480d79b1eb7fd5d675626f158f864d52d89b85feb3b",
+          "7bc039b8bfc99b467f774480d79b1eb7fd5d675626f158f864d52d89b85feb3b",
+          "7bc039b8bfc99b467f774480d79b1eb7fd5d675626f158f864d52d89b85feb3b",
+          "7bc039b8bfc99b467f774480d79b1eb7fd5d675626f158f864d52d89b85feb3b",
+          "7bc039b8bfc99b467f774480d79b1eb7fd5d675626f158f864d52d89b85feb3b",
+          "7bc039b8bfc99b467f774480d79b1eb7fd5d675626f158f864d52d89b85feb3b",
+          "7bc039b8bfc99b467f774480d79b1eb7fd5d675626f158f864d52d89b85feb3b"
+        ],
+        "poseSha256": [
+          "29b7aae7f1d3896d9c0d05c81e75d01c4be4f250ab7333c51b665383e8e4379c",
+          "29b7aae7f1d3896d9c0d05c81e75d01c4be4f250ab7333c51b665383e8e4379c",
+          "29b7aae7f1d3896d9c0d05c81e75d01c4be4f250ab7333c51b665383e8e4379c",
+          "29b7aae7f1d3896d9c0d05c81e75d01c4be4f250ab7333c51b665383e8e4379c",
+          "29b7aae7f1d3896d9c0d05c81e75d01c4be4f250ab7333c51b665383e8e4379c",
+          "29b7aae7f1d3896d9c0d05c81e75d01c4be4f250ab7333c51b665383e8e4379c",
+          "29b7aae7f1d3896d9c0d05c81e75d01c4be4f250ab7333c51b665383e8e4379c",
+          "29b7aae7f1d3896d9c0d05c81e75d01c4be4f250ab7333c51b665383e8e4379c"
+        ],
+        "sourceFrameIndexes": [
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  }
+}

@@ -94,7 +94,11 @@ async function inspectIdentityReference(filePath) {
       return { valid: false, reason: `invalid alpha/foreground coverage ${(coverage * 100).toFixed(1)}%`, coverage };
     }
     const broadRows = [...rowForeground].filter(count => count / metadata.width > 0.78).length;
-    if (broadRows >= 4) {
+    // Wide weapons, capes, and spell effects can legitimately span a handful
+    // of rows. A backdrop occupies a material vertical band as well as most of
+    // the canvas width.
+    const broadStageRowThreshold = Math.ceil(metadata.height * 0.1);
+    if (broadRows >= broadStageRowThreshold) {
       return {
         valid: false,
         reason: `background-like alpha stage spans ${broadRows} broad rows`,
@@ -149,12 +153,7 @@ async function inspectIdentityReference(filePath) {
 }
 
 async function getReferencePath(variant) {
-  return getCharacterReferencePath(variant.id, {
-    type: 'player',
-    race: variant.race,
-    gender: variant.gender,
-    class: variant.class
-  });
+  return getCharacterReferencePath(variant, { type: 'player' });
 }
 
 function getCandidatePath(variant) {

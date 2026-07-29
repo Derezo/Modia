@@ -37,7 +37,7 @@ const npc = {
 
 describe('NPC portrait consumers', () => {
   it('turn-order portraits prefer canonical identity over humanoid class fields', () => {
-    assert.equal(buildPortraitId(npc), 'enemy_guildmaster_wizard');
+    assert.equal(buildPortraitId(npc), 'human_female_wizard');
   });
 
   it('uses one stable placeholder when a legacy NPC has no visual identity', () => {
@@ -51,7 +51,7 @@ describe('NPC portrait consumers', () => {
     const table = new BattleStatsTable(null);
     assert.equal(
       table.getPortraitPath(npc),
-      '/assets/portraits/48/enemy_guildmaster_wizard.webp'
+      '/assets/portraits/48/human_female_wizard.webp'
     );
   });
 });

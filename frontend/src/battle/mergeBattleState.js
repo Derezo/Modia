@@ -48,10 +48,13 @@ export function mergeBattleStatePatch(currentState, statePatch) {
   return merged;
 }
 
-/** Apply authoritative row-major map layers carried by a state patch. */
+/** Apply authoritative map layers carried by a state patch. */
 export function applyBattleMapPatch(grid, statePatch) {
   if (!grid || !statePatch || typeof statePatch !== 'object') return;
 
+  if (typeof statePatch.nodeType === 'string' && statePatch.nodeType.length > 0) {
+    grid.nodeType = statePatch.nodeType;
+  }
   if (Array.isArray(statePatch.terrain)) {
     grid.setTerrain(statePatch.terrain);
   }
@@ -61,8 +64,16 @@ export function applyBattleMapPatch(grid, statePatch) {
   if (Array.isArray(statePatch.variants)) {
     grid.setTileVariants(statePatch.variants);
   }
-  if (Array.isArray(statePatch.obstacles) &&
-      (statePatch.obstacles.length === 0 || Array.isArray(statePatch.obstacles[0]))) {
+  if (Array.isArray(statePatch.obstacles)) {
     grid.setObstacles(statePatch.obstacles);
+  }
+  if (Array.isArray(statePatch.elevationConnections)) {
+    grid.setElevationConnections(statePatch.elevationConnections);
+  }
+  if (Array.isArray(statePatch.transitions)) {
+    grid.setTransitions(statePatch.transitions);
+  }
+  if (Array.isArray(statePatch.decorations)) {
+    grid.setDecorations(statePatch.decorations);
   }
 }

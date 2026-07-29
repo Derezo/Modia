@@ -1,0 +1,86 @@
+{
+  "version": "1.1.0",
+  "id": "summoner_v1",
+  "class": "summoner",
+  "templateId": "authored-pose-atlas-v1",
+  "description": "Reusable authored-pose direction for summoner player identities. Registry metadata and the staged portrait control identity; this profile supplies grimoire-and-circle invocation choreography.",
+  "style": {
+    "source": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+    "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+  },
+  "identity": {
+    "baseFacing": "three-quarters right",
+    "motionStyle": "ritualistic, precise, receptive, and flowing, with careful grimoire handling, circular hand paths, and visible control of ethereal wisps",
+    "equipmentRule": "Preserve the portrait's robes, grimoire, orbs, jewelry, and exact familiar or wisp count. Keep exactly one depicted book or focus and never duplicate pages, orbs, wisps, or permanent accessories.",
+    "magicRule": "Summoning effects use the portrait's established palette and form one compact circle, aperture, or wisp cluster. Do not create a full creature identity in the pose atlas; keep effects secondary to the summoner's body and hands."
+  },
+  "promptTemplates": {
+    "reference": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative {{displayName}} identity portrait; Image 2 is style and proportion reference only. Player identity metadata: {{visualTraits}}. Create one complete head-to-toe {{displayName}} preserving Image 1's face, ancestry traits, gender presentation, robes, grimoire, orbs, wisps, jewelry, palette, proportions, and equipment. Do not import identity details from Image 2. {{equipmentRule}} Translate the portrait into a compact mystical silhouette. Use a {{background}} background with no floor or scenery and a square 1:1 canvas with generous padding. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered summoner in a receptive ritual stance facing {{baseFacing}}. {{invariants}}",
+    "animation": "Draw exactly {{frameCount}} genuinely redrawn full-body {{actionLabel}} poses of the authoritative {{displayName}} in a {{columns}}-column by {{rows}}-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: {{visualTraits}}. Required sequence: {{frameSequence}}. Motion direction: {{motionDirection}}. Overall summoner motion is {{motionStyle}}. {{poseRequirement}} Preserve exact identity, robes, grimoire, palette, proportions, orbs, and wisp count. {{equipmentRule}} {{magicRule}} Action-specific effects: {{effectRule}} Use a {{background}} background with generous gutters. {{invariants}}"
+  },
+  "animations": {
+    "idle": {
+      "actionLabel": "summoner attuned idle-cycle",
+      "minimumUniquePoses": 4,
+      "anchor": "source-cell",
+      "motionDirection": "A quiet attunement loop alternates breath, a careful page or focus check, and small receptive hand movements while wisps remain contained.",
+      "effectRule": "Existing wisps or orbs may drift through a tiny closed loop; no new summon or open portal.",
+      "frameDescriptions": ["receptive ready stance with grimoire or focus controlled", "gentle inhale as existing wisps rise", "weight shifts forward during a careful page or focus check", "free hand traces a small closed guiding curve", "centered attuned midpoint", "soft exhale as wisps descend", "weight shifts rearward while the hand closes", "receptive stance flowing back to frame one"]
+    },
+    "walk": {
+      "actionLabel": "summoner focus-guarded walk",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "A measured alternating walk protects the grimoire or focus through contacts, passing poses, robe movement, and contained wisp follow-through.",
+      "effectRule": "No active summon; established wisps follow closely without changing count.",
+      "frameDescriptions": ["left foot forward contact with focus protected", "left leg compresses as robes gather", "passing pose with right knee advancing", "right foot reaches while free hand balances", "right foot forward contact", "right leg compresses under the stride", "passing pose with left knee advancing", "left foot reaches into the measured loop"]
+    },
+    "attack": {
+      "actionLabel": "summoner wisp-command attack",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "A target lock becomes a circular hand cue, compact wisp compression, short directed strike, curving return, and restored attunement.",
+      "effectRule": "Direct only the existing wisp cluster or one compact sigil toward close range; do not add a creature, duplicate a wisp, or obscure the summoner.",
+      "frameDescriptions": ["attuned guard sighting the target", "free hand begins a precise circular cue", "existing wisps compress beside the established focus", "forward step directs the cluster along a short path", "compact wisp contact or sigil pulse", "curving follow-through draws the wisps back", "hand closes as the original arrangement reforms", "recovered receptive guard"]
+    },
+    "hurt": {
+      "actionLabel": "summoner broken-attunement recovery",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "An impact breaks concentration into a flinch, scattered-but-counted wisp recoil, protective focus clutch, low brace, and careful re-attunement.",
+      "effectRule": "Existing wisps may scatter slightly but must retain exact count; no gore, blood, extra summon, or full portal.",
+      "frameDescriptions": ["receptive guard before impact", "sharp flinch with focus drawn close", "maximum stagger as existing wisps spread apart", "stumbling rear step while protecting the grimoire", "low brace with guiding hand gathering wisps", "careful rise as the original formation returns", "feet and focus reset", "recovered attuned guard"]
+    },
+    "death": {
+      "actionLabel": "summoner defeat sequence",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "verticalAnchor": "bottom",
+      "motionDirection": "Attunement breaks, wisps fade, knees buckle, the body curls protectively around the focus, collapses sideways, and settles fully fallen.",
+      "effectRule": "Wisps fade without spawning a creature, gore, blood, explosion, or rigid rotation; retain all permanent equipment.",
+      "outputFrameMap": [0, 1, 2, 3, 4, 5, 7, 7],
+      "frameDescriptions": ["fatal disruption breaks attunement", "existing wisps dim as the focus lowers", "knees buckle beneath the robes", "one knee grounds while body curls around the focus", "sideward collapse reaches full ground contact", "robes, limbs, and focus settle low", "final fully fallen summoner with wisps extinguished", "same final fallen pose held"]
+    },
+    "cast": {
+      "actionLabel": "summoner controlled aperture ritual",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "motionDirection": "The focus opens, one hand traces a circle, wisps mark its boundary, a compact aperture forms, responds to a command, closes, and leaves the summoner composed.",
+      "effectRule": "Create one compact summoning circle or aperture in the established palette without depicting a full creature; keep hands, focus, and feet visible.",
+      "frameDescriptions": ["focused ritual stance", "grimoire or focus opens while the free hand rises", "hand traces a clear circular boundary", "existing wisps occupy evenly spaced points around the circle", "maximum compact aperture held under control", "command gesture sends a restrained pulse through the opening", "circle closes inward as wisps return", "composed attuned casting finish"]
+    },
+    "dead": {
+      "deriveFrom": {"animation": "death", "frame": 7},
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity.",
+      "frameDescriptions": ["terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held"]
+    },
+    "victory": {
+      "actionLabel": "summoner harmonious victory",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "motionDirection": "The summoner confirms victory, lifts the focus, guides existing wisps through a celebratory orbit, closes the book or hand cue, and holds serene command.",
+      "effectRule": "Existing wisps may form one compact celebratory ring; do not change count or open a full portal.",
+      "frameDescriptions": ["quiet recognition of victory", "focus lifts as the free hand opens", "existing wisps rise into a compact orbit", "graceful pivot guides the orbit around the shoulders", "hand draws the wisps into a small crown-like arc", "focus closes or steadies as wisps descend", "serene victor stance with original wisp arrangement", "final triumphant summoner pose held"]
+    }
+  }
+}

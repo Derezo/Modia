@@ -12,6 +12,7 @@
     "migrate:rollback": "node src/db/migrate.js rollback",
     "seed": "node src/db/seed.js",
     "world:migrate": "node src/scripts/world-migration.js",
+    "battle:outbox:redrive": "node src/scripts/battle-terminal-outbox-redrive.js",
     "lint": "eslint src/",
     "test": "npm run test:all",
     "test:unit": "NODE_ENV=test node --test --test-concurrency=4 src/tests/unit/*.test.js src/tests/unit/**/*.test.js src/tests/balance/*.test.js",

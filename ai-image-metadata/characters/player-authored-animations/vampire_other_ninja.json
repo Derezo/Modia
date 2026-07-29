@@ -1,0 +1,584 @@
+{
+  "version": "1.0.0",
+  "template": "ai-image-metadata/characters/player-authored-animation-template.json",
+  "compilerVersion": "1.2.0",
+  "id": "vampire_other_ninja",
+  "profile": "ninja_v1",
+  "profileSource": "ai-image-metadata/characters/player-animation-profiles/ninja_v1.json",
+  "status": "approved",
+  "approvedAt": "2026-07-29T02:54:56.988Z",
+  "metadataFingerprint": "e1163888fba4c134c1516f6261df124c20bf3530072d765c4667a83e8b343ea2",
+  "draftProvenance": {
+    "registry": "ai-image-metadata/characters/player-variants.json",
+    "templateSha256": "7943e69db577b3a4429b47df634f931d3f4cb8e8ce9a91a06578255fbe935bbe",
+    "profileSha256": "e6500266cd0465d909c60db0da580832b0b8dc6a1abf2601efe7d95991d141fc"
+  },
+  "identity": {
+    "race": "vampire",
+    "gender": "other",
+    "class": "ninja",
+    "presentation": "non-binary vampire ninja",
+    "visualTraits": "vampire pale skin red eyes fangs aristocratic elegant androgynous features non-binary masked assassin dark cloth kunai shuriken stealthy agile shadowy",
+    "baseFacing": "three-quarters right",
+    "sourceMetadata": {
+      "isAdvanced": true,
+      "inheritsFrom": "ninja",
+      "seed": 23041
+    }
+  },
+  "inputs": {
+    "identity": {
+      "origin": "frontend/public/assets/portraits/originals/vampire_other_ninja.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/vampire_other_ninja/inputs/identity.png",
+      "authority": "face, ancestry, gender presentation, hair, eyes, complexion, costume, palette, proportions, and equipment"
+    },
+    "style": {
+      "origin": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/vampire_other_ninja/inputs/style.png",
+      "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+    }
+  },
+  "reference": {
+    "source": "ai-image-metadata/characters/player-animation-sources/vampire_other_ninja/reference.png",
+    "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_other_ninja/chroma/reference.png",
+    "identitySource": "ai-image-metadata/characters/player-animation-sources/vampire_other_ninja/inputs/identity.png",
+    "styleSource": "ai-image-metadata/characters/player-animation-sources/vampire_other_ninja/inputs/style.png",
+    "prompt": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative Vampire Ninja (non-binary presentation) identity portrait; Image 2 is style and proportion reference only. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant androgynous features non-binary masked assassin dark cloth kunai shuriken stealthy agile shadowy. Create one complete head-to-toe Vampire Ninja (non-binary presentation) preserving Image 1's covered face, ancestry traits, gender presentation, mask, cloth layers, wraps, pouches, weapons, palette, and proportions. Do not import identity details from Image 2. Preserve the portrait's mask, dark cloth layers, wraps, pouches, kunai, shuriken, blades, and exact item count. Move only one established weapon into action at a time; never duplicate, swap hands, unmask, or invent gear. Translate the portrait into a compact stealth-ready silhouette. Use a flat #00ff00 chroma key background with no floor or scenery and a square 1:1 canvas with generous padding. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered ninja in a low alert crouch facing three-quarters right. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+  },
+  "animations": {
+    "idle": {
+      "source": "ai-image-metadata/characters/player-animation-sources/vampire_other_ninja/idle.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_other_ninja/chroma/idle.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 4,
+      "frameDescriptions": [
+        "low alert crouch with hands ready",
+        "silent inhale with shoulders barely rising",
+        "weight shifts onto the forward toes",
+        "quick side glance while one hand nears a pouch",
+        "centered concealed midpoint",
+        "controlled exhale lowering the silhouette",
+        "weight shifts rearward with hands rebalanced",
+        "low crouch flowing back to frame one"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body ninja concealed idle-cycle poses of the authoritative Vampire Ninja (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant androgynous features non-binary masked assassin dark cloth kunai shuriken stealthy agile shadowy. Required sequence: low alert crouch with hands ready; silent inhale with shoulders barely rising; weight shifts onto the forward toes; quick side glance while one hand nears a pouch; centered concealed midpoint; controlled exhale lowering the silhouette; weight shifts rearward with hands rebalanced; low crouch flowing back to frame one. Motion direction: A low silent loop alternates controlled breath, shoulder checks, and minute hand shifts near established weapons.. Overall ninja motion is silent, low, abrupt, agile, and economical, with precise foot placement, concealed preparation, and crisp attack recovery. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, mask, cloth, wraps, palette, proportions, pouches, and weapon count. Preserve the portrait's mask, dark cloth layers, wraps, pouches, kunai, shuriken, blades, and exact item count. Move only one established weapon into action at a time; never duplicate, swap hands, unmask, or invent gear. Ninja techniques are physical stealth. Do not add shadow clones, teleportation, aura, runes, or elemental magic; a tiny dust puff or short weapon glint may support real movement. Action-specific effects: No smoke or attack effect; cloth tails and wraps settle minimally. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "walk": {
+      "source": "ai-image-metadata/characters/player-animation-sources/vampire_other_ninja/walk.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_other_ninja/chroma/walk.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "left forefoot makes quiet forward contact",
+        "left knee compresses into a low silhouette",
+        "passing pose with right knee tucked forward",
+        "right foot reaches close to the ground",
+        "right forefoot makes quiet contact",
+        "right knee compresses into the crouch",
+        "passing pose with left knee tucked forward",
+        "left foot reaches into the silent loop"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body ninja silent step-cycle poses of the authoritative Vampire Ninja (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant androgynous features non-binary masked assassin dark cloth kunai shuriken stealthy agile shadowy. Required sequence: left forefoot makes quiet forward contact; left knee compresses into a low silhouette; passing pose with right knee tucked forward; right foot reaches close to the ground; right forefoot makes quiet contact; right knee compresses into the crouch; passing pose with left knee tucked forward; left foot reaches into the silent loop. Motion direction: A low forefoot walk uses alternating contacts, deep knee compression, quiet passing poses, close arm motion, and controlled cloth follow-through.. Overall ninja motion is silent, low, abrupt, agile, and economical, with precise foot placement, concealed preparation, and crisp attack recovery. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, mask, cloth, wraps, palette, proportions, pouches, and weapon count. Preserve the portrait's mask, dark cloth layers, wraps, pouches, kunai, shuriken, blades, and exact item count. Move only one established weapon into action at a time; never duplicate, swap hands, unmask, or invent gear. Ninja techniques are physical stealth. Do not add shadow clones, teleportation, aura, runes, or elemental magic; a tiny dust puff or short weapon glint may support real movement. Action-specific effects: No smoke, clone, or magic; one tiny grounded dust accent may appear at a planted step. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "attack": {
+      "source": "ai-image-metadata/characters/player-animation-sources/vampire_other_ninja/attack.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_other_ninja/chroma/attack.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "concealed crouch sighting the opening",
+        "one hand reaches for exactly one established weapon",
+        "weapon clears its holder during a deep lateral coil",
+        "low stepping slash crosses the target line",
+        "compact contact with attacking arm fully readable",
+        "reverse follow-through keeps the body low",
+        "weapon retracts toward its original holder",
+        "recovered concealed crouch"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body ninja draw-and-slash ambush poses of the authoritative Vampire Ninja (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant androgynous features non-binary masked assassin dark cloth kunai shuriken stealthy agile shadowy. Required sequence: concealed crouch sighting the opening; one hand reaches for exactly one established weapon; weapon clears its holder during a deep lateral coil; low stepping slash crosses the target line; compact contact with attacking arm fully readable; reverse follow-through keeps the body low; weapon retracts toward its original holder; recovered concealed crouch. Motion direction: A concealed hand draw becomes a low lateral step, fast close-range slash, compact reverse follow-through, and immediate re-concealment.. Overall ninja motion is silent, low, abrupt, agile, and economical, with precise foot placement, concealed preparation, and crisp attack recovery. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, mask, cloth, wraps, palette, proportions, pouches, and weapon count. Preserve the portrait's mask, dark cloth layers, wraps, pouches, kunai, shuriken, blades, and exact item count. Move only one established weapon into action at a time; never duplicate, swap hands, unmask, or invent gear. Ninja techniques are physical stealth. Do not add shadow clones, teleportation, aura, runes, or elemental magic; a tiny dust puff or short weapon glint may support real movement. Action-specific effects: Show exactly one established handheld weapon and one short physical swish at contact; no duplicate weapon, clone, or projectile. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "hurt": {
+      "source": "ai-image-metadata/characters/player-animation-sources/vampire_other_ninja/hurt.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_other_ninja/chroma/hurt.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "concealed crouch before impact",
+        "sharp torso twist with forearms guarding",
+        "maximum stagger as one leg swings wide",
+        "forced tumbling step backward",
+        "low three-point balance catch",
+        "guarded rise from bent knees",
+        "feet and hands reset near equipment",
+        "recovered concealed crouch"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body ninja exposed-impact recovery poses of the authoritative Vampire Ninja (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant androgynous features non-binary masked assassin dark cloth kunai shuriken stealthy agile shadowy. Required sequence: concealed crouch before impact; sharp torso twist with forearms guarding; maximum stagger as one leg swings wide; forced tumbling step backward; low three-point balance catch; guarded rise from bent knees; feet and hands reset near equipment; recovered concealed crouch. Motion direction: A sudden hit exposes the crouch into a sharp twist, tumbling step, three-point catch, guarded rise, and renewed concealment.. Overall ninja motion is silent, low, abrupt, agile, and economical, with precise foot placement, concealed preparation, and crisp attack recovery. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, mask, cloth, wraps, palette, proportions, pouches, and weapon count. Preserve the portrait's mask, dark cloth layers, wraps, pouches, kunai, shuriken, blades, and exact item count. Move only one established weapon into action at a time; never duplicate, swap hands, unmask, or invent gear. Ninja techniques are physical stealth. Do not add shadow clones, teleportation, aura, runes, or elemental magic; a tiny dust puff or short weapon glint may support real movement. Action-specific effects: One compact physical impact accent only; no gore, blood, smoke disappearance, unmasking, or dropped weapons. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "death": {
+      "source": "ai-image-metadata/characters/player-animation-sources/vampire_other_ninja/death.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_other_ninja/chroma/death.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "verticalAnchor": "bottom",
+      "outputFrameMap": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        7,
+        7
+      ],
+      "frameDescriptions": [
+        "fatal impact breaks the low guard",
+        "arms spread as balance fails",
+        "knees buckle into a deep crouch",
+        "one hand touches down while hips roll sideways",
+        "body reaches full ground contact",
+        "cloth, limbs, and gear settle low",
+        "final fully fallen ninja with mask intact",
+        "same final fallen pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body ninja defeat sequence poses of the authoritative Vampire Ninja (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant androgynous features non-binary masked assassin dark cloth kunai shuriken stealthy agile shadowy. Required sequence: fatal impact breaks the low guard; arms spread as balance fails; knees buckle into a deep crouch; one hand touches down while hips roll sideways; body reaches full ground contact; cloth, limbs, and gear settle low; final fully fallen ninja with mask intact; same final fallen pose held. Motion direction: A final hit breaks the crouch, legs fail, the ninja catches low, rolls into a side collapse, and settles fully fallen with mask and gear intact.. Overall ninja motion is silent, low, abrupt, agile, and economical, with precise foot placement, concealed preparation, and crisp attack recovery. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, mask, cloth, wraps, palette, proportions, pouches, and weapon count. Preserve the portrait's mask, dark cloth layers, wraps, pouches, kunai, shuriken, blades, and exact item count. Move only one established weapon into action at a time; never duplicate, swap hands, unmask, or invent gear. Ninja techniques are physical stealth. Do not add shadow clones, teleportation, aura, runes, or elemental magic; a tiny dust puff or short weapon glint may support real movement. Action-specific effects: No gore, blood, smoke disappearance, clone, or rigid rotation; keep mask and equipment recognizable. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "dead": {
+      "deriveFrom": {
+        "animation": "death",
+        "frame": 7
+      },
+      "frameDescriptions": [
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held"
+      ],
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity."
+    },
+    "victory": {
+      "source": "ai-image-metadata/characters/player-animation-sources/vampire_other_ninja/victory.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_other_ninja/chroma/victory.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "cautious recognition of victory",
+        "low posture rises under control",
+        "exactly one weapon draws into a tight flourish",
+        "fast wrist turn presents the weapon clearly",
+        "weapon returns to its original holder",
+        "restrained hand sign from a balanced stance",
+        "silent victorious posture with all gear secured",
+        "final triumphant ninja pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body ninja disciplined victory poses of the authoritative Vampire Ninja (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant androgynous features non-binary masked assassin dark cloth kunai shuriken stealthy agile shadowy. Required sequence: cautious recognition of victory; low posture rises under control; exactly one weapon draws into a tight flourish; fast wrist turn presents the weapon clearly; weapon returns to its original holder; restrained hand sign from a balanced stance; silent victorious posture with all gear secured; final triumphant ninja pose held. Motion direction: The ninja confirms victory, rises from concealment, performs a tight weapon flourish, returns the weapon to its holder, gives a restrained hand sign, and holds.. Overall ninja motion is silent, low, abrupt, agile, and economical, with precise foot placement, concealed preparation, and crisp attack recovery. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, mask, cloth, wraps, palette, proportions, pouches, and weapon count. Preserve the portrait's mask, dark cloth layers, wraps, pouches, kunai, shuriken, blades, and exact item count. Move only one established weapon into action at a time; never duplicate, swap hands, unmask, or invent gear. Ninja techniques are physical stealth. Do not add shadow clones, teleportation, aura, runes, or elemental magic; a tiny dust puff or short weapon glint may support real movement. Action-specific effects: One established weapon may catch a tiny glint; no smoke, clone, aura, or added weapon. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    }
+  },
+  "pins": {
+    "templateSha256": "93943004e340d113943e06dea61fd7dfad67c20750dd4fc30d76d3be1fb7c144",
+    "profileSha256": "d3e18400f1e995f4a586d30f251867659d0203175239d5588f6bb17ab46fdbe1",
+    "reference": {
+      "sourceSha256": "f2ed0863df8c87a0f3c08a61d34309f0c3825bffe36f4327af8eea29d1cd1a11",
+      "sourceDimensions": "1254x1254",
+      "chromaSourceSha256": "1c2894815580732434d32bc7edd4db5e64858b7e216e760b56dc6bd91d0723c3",
+      "chromaSourceDimensions": "1254x1254",
+      "identitySourceSha256": "f681f2bab1082ac979e2120e8c0545db2ec326b38b144e07a601f633a57668ae",
+      "identitySourceDimensions": "1024x1024",
+      "styleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "styleSourceDimensions": "1254x1254",
+      "promptSha256": "6629587698679111b7b573549925b1cd3823a0e2a2ea7d69cd955460a0212458",
+      "encodedSha256": "a0132047ce09746145746574bdf3445451a68c6f2702c1138bc7b55d86347421",
+      "decodedSha256": "a348ce64a725ed1ed43afd2d336a4cd00ebb1fa97534fcf98b0111d27998d17d"
+    },
+    "animations": {
+      "idle": {
+        "sourceSha256": "0c564b5af9dc8058cee5b8f0aeacae493799c97abf385ab4fdd2c3acae30ed71",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "77f61da73858c825e47f6f7e4437e7a89fd3922821baeaaa9a0a938d217a0a0d",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "c48813240bb1d425b0e6c6cab8bfebda4bcd0f0476abea8598bb1b7618bad7f2",
+        "encodedSha256": "21fa1b17c857f1177a2b1aad0371478cf9f61f3c9b311053df69ee06ec07eb56",
+        "decodedSha256": "efef5f1c7f4ce9c4f2fec1864ab70d866fae158b745cb6bc22c18b140b802219",
+        "frameSha256": [
+          "b4c346cf9b1d78a03dedbb90b05d1672129da6154e0c9ad028ca962c77bc9820",
+          "f9386ac99213e8f0f6042a808a9be6aa0cf40560f39bce1c624a65bb32b8b3ab",
+          "a3e35940dc10152026f27ce10dfe1d041707823c5637c45c0b57cbaf9db8329e",
+          "59f19f20336ecb4aa3514ec75828893da3bc183a460e3775bc320c78841e2203",
+          "9972edb9ab9355e9d6f6d03f6623c3ae795e411329f250306302573457c62a63",
+          "b5034128a9b81f9b598e730864160aa72c1bd01bb5fb60deb77e6f9d2855a994",
+          "0057f15160211d73c6568b44d28eb683d0a63f2e5461fa14ce1f89be18a3b072",
+          "2fa30ae3fea6b02ec239533887cb75920b031af7330ccec8b43fb0fa7dac1653"
+        ],
+        "poseSha256": [
+          "580edd3791f4f2b3ae468bd9b293721bb058e1d43908f5f321650c37292fa462",
+          "3782c2f020aaacc9652cd4d413054ed1cce8bf7ab71d4cf2c425cc27861f1a09",
+          "4319ba03f9b602bffd849aac8d722e78052d3ecedd1cb40987cfde0c66d26bbf",
+          "00eab60522c1f073589cde81e3471da905560e5fe2858ad0f622a4d10d6f79c9",
+          "51f53bd891fe17785704f2a4d4943b5ec5028f525a5c73af36f1ebf04ffc809f",
+          "92963b0213af2195074326b0af70adc2b79880b9f87d26e404b9a0e2373944ee",
+          "e8cae91dac2ce5ef5ea48cefc96d3d37e5d5ec6b08cd8a57950f785669027254",
+          "85bc922c4b0604d8942e7d3b3847d0d4c66bea57168ca828fc81f7a884dac4e8"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "walk": {
+        "sourceSha256": "608447240dd26f757475643f98d98c59d40a66edf47b5e7c40a37788ed21c98a",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "bb501469c50f0c18c4af8d18fd1ee162c34ff227b93493515a518f7fddfdc28c",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "1e51e37492a8bad3333555b196b2f8cc86b7f1b18069c141313722d82ba55919",
+        "encodedSha256": "cd9f71438a9f5e44aa34078e97566a7fa50d6f102f13dff310a5b360ae329d99",
+        "decodedSha256": "70db0b7d4d493367dc7deea093e4e79f32b190bbfd06d128e6f86c3774449c9d",
+        "frameSha256": [
+          "62a1aea6c440a1844eec686d797deee793f7bc52b2610bfb899f4e0aac751a53",
+          "ebdcd3f37366ef57b7dd74feb8744decc88fb8244bb9e09ef6b6320246c6eacb",
+          "fc39cd3ba6f8eecab10118acfac3f4c36a4b8bea3dfd43d2dc82e5781022ad26",
+          "de99ed926d1d8d19cd9691d29fcc280a209fb68f167ebb3ae6231c5aa50e8fa4",
+          "a47fdff0eda9f195a657745ee351f70b5e167b24a28ba917de7c9e754269f265",
+          "b1acff06bea45e81ed719a2af17259863a7c20bcddb6486342e6930791aaa3da",
+          "697100b126f97ddb9144ac232733d77033003910428d14485f6de7ad60fdd245",
+          "899327fadb0ea82d873429a606473b91ea5b25f424989dbddac021c868320589"
+        ],
+        "poseSha256": [
+          "2361ed2ef02504d62c117f25bb5dfe340d214dc4e1f527aa5824c7982ab3850f",
+          "c65bb6fb7fb36e074d684fca89494363d410677ade1a2ba324c5749d2e5c8690",
+          "3f9f2d3394465aa78f6ec58432fbec02c06ddbbde694a7935a304b417f8d47e1",
+          "5071bdd574e5097ebdfb6d202988ebc20277b87de070f48fb518232d07f5d173",
+          "4dfdd7e501e2eabe85457425bf9aabc5f8065bdfcaa586f8bd4347d3189f480a",
+          "c3aec035fe7423879faad237d5db1ae73a0892deabcc2249f5e0ce68ade3f5dc",
+          "096565abe803a99e87937c86aae754a87e5c7b0cd27660b0a15020fbd722ee76",
+          "8cc39ce1d448f4dbe10ae6336fe3afaa6d254a085da359a4b79e0acc4d407437"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          0.999662,
+          1,
+          1,
+          1
+        ]
+      },
+      "attack": {
+        "sourceSha256": "3af435834991dfb172d38449b38916ff45eb6fd1a7a54995d48fe796bc20fdd2",
+        "sourceDimensions": "1672x941",
+        "chromaSourceSha256": "375309d57b0244c14e955f942a24ee7ce258bdfe1e3ad752d224a484a1b19a4f",
+        "chromaSourceDimensions": "1672x941",
+        "promptSha256": "ec165c99f574581cd0c99f6a794117d7ef38199ae93353f48feb287e78e276ca",
+        "encodedSha256": "1def3a611d6a1329e7934a3750b265fa4fe68839e4445a60762d7aa280073a49",
+        "decodedSha256": "e32afb55efb66ac81fe1c742c8c6a85b7f955eadcacf53e458b9cb85b8732868",
+        "frameSha256": [
+          "23b668bb18b75e2bfe3be618e31624ebd9c6d4b4d1d742f7a164fbbe7a18cdb3",
+          "c564fd68ec8c39d53998f65ba796bc95d7f3156af7a2de78d3ef3f7c51ad543f",
+          "d7aeac63813b4d113839487d744ed747c799cc74c732574db74e129add0ffa2a",
+          "520021e2aef89a71305cefd2d91108c5d45a32bf3cebce4019fc06952a55b07c",
+          "0e574aab37dc06012028558eb99c2c11ff12117cd582631228e75548f46d2d33",
+          "47e2fa1d7cf92e129da730e844db6109759695a5cd8e6a23f85ebfaa8c2e6162",
+          "1977167a81047359810b3569ebdbdd23e96000497e1a9db1169a526a01eef89a",
+          "82fc5292968579cd754053ef68a1439ae1f469869b647defda7896b55ee13122"
+        ],
+        "poseSha256": [
+          "4dd204d5afc6604185eaec79674a04531e5aefeb09ca612ca8773d26de59c1bc",
+          "9cb4d2a00589656c5e42088a402fe4354744871867c1ce456ac627149e6100fe",
+          "2943421c760a16c520d82ef705852cf9214442ea9f12d69c902890fc7b8f1b14",
+          "f2e0755a1a9b941bcb28fef0d8173ca20f5b6f244d2b3a2cf1f976e454d93fa0",
+          "7367793132d03b315d96f627497b4391e2c9442febe07c45498dbe4e4091f84f",
+          "f636ee3c6fb5c210062177385a53a7d22278dbfc5e374dcb0aa8b2c48fc586d3",
+          "01178ef7b0bd68fad9fadc6c518a2a47d72a95c90459e084b355fc6bdb9d8e9e",
+          "fbac13e5cfa2fcb461a1dbe1e9caef4cc5a77c67670c1744fa7e77a64f563f71"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          0.999514,
+          0.997492,
+          1,
+          1
+        ]
+      },
+      "hurt": {
+        "sourceSha256": "fe07acd0b6c9476aeb5060d514853258b6aa5a6749cb9a6e8c1d36ccbd1672a8",
+        "sourceDimensions": "1672x941",
+        "chromaSourceSha256": "1bcafff62102a0cdb1317bd51d178b19f9f2ed13ed5fd061c43ba695b702f4e2",
+        "chromaSourceDimensions": "1672x941",
+        "promptSha256": "f8ff337048df4ed94a4cd4a6963b60618de4238d0f8b48869f4bb87157e23ea6",
+        "encodedSha256": "82bd3b9b0de52744f94fbe9eb7fe095c64014807ba8182c08dafa74326150c9b",
+        "decodedSha256": "b874f4502b2c706566f3ba2ff17177f3ee4ff7d09b43c09e57b35624b6a793b6",
+        "frameSha256": [
+          "a12cf2e1ea1ce663d43bcec1b56f5230e240b61df767cdc3d4fb927003ad5320",
+          "bee789cad191fa5fbee56c5859b5bcccf659a17405f10904c9e0909071cf3604",
+          "a9ba3366a4f7b70982ee5af3ad87866b563e1a3ac2ca0e32535c86b2c59f71fa",
+          "9fcf1be167855480106e5b2228c12988345f82a5b77b9e85129a33179c9e5efa",
+          "4db11cb71317582fa27eb3d584b1e85d38f88e56cb390c21baf43cd3d57ac951",
+          "8d7b4a54d7ec54028a4e5745313f9cde340c8633ea26d1e483ffeb831f6e8885",
+          "583243a7fe7cacd66ea944212f949d763418466da65d1d382b1ea402b11c8481",
+          "1c5cfe7782469cd2e611aaa11829c56c579035af75f4ea1f96b661b606d6fd14"
+        ],
+        "poseSha256": [
+          "0bd8de3576bf354fdd08d3ae9f19316fe76a5780b7966d1fa5aa596aecbe7bbe",
+          "fbf74c561e5a604236e1b384e87cfcb469b99cb4d0dc02c43b1922e2a0c585e8",
+          "6a53414aea6d8cdb8ccfc92ffefbb12f53f391d5000358dbdb6c457689f4f805",
+          "a328dd6176f26ce27a4e87da07c6bc8405091df91945e81bf5b6238c584b7d58",
+          "0497ee18bd374596697e2925c798e3255305e7521674f98fe712eacd11cc298a",
+          "81dbd63161e7793e6f65136a590c21130347c6015593b0e24db37b10cc1c67ca",
+          "e8470407b914870f463bf869a6cc9e7e8c0dba3a32fa0682ac023d8fd5ada826",
+          "abde75b760ea619a3a70a4a0780b20aa9b9849dd66ae9f109fda5214c67d83d4"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          0.995205,
+          1,
+          0.998101,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "death": {
+        "sourceSha256": "da0a93cfc66aa2dfb4839e8a81bc0121a5a4ad1c60085d39b529d76d7b9e2613",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "1663f6fc59dbe2e4732b0c087901208cfc180d2d6af65040a2951387f3b3f22a",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "1394fa4eb0466890b7033352fafa43621c99c6e1d5b78149c652b0612bdac908",
+        "encodedSha256": "750b25203f24938b571ffa6ca58b0832defea929397a912dd4f671562579d623",
+        "decodedSha256": "b598fb250863da795987d8aa04c399a036e2c8afacfd73769f8ca60e941886e6",
+        "frameSha256": [
+          "7bdbfd5c22923762486f26986e1645498c7e1737f641997a9636b6110c47d613",
+          "ab4912034296c959cb3fe2bcb5426a8be9da7ab3912c1e055a1c721d77877999",
+          "7108fb24a8760d515a14d2619b70022f26434a44fd487d1608371f404ef6ba34",
+          "7c0e7b634a284486ac2fdcb60756b5229c9287213f06a0c6298c8aa60352b041",
+          "8db7ce2bde7d5b86f551d92c460f2058b4d4e111419a95beae8d65bcbcb32f9a",
+          "85e007d4721ec88127e6d0896d17c3730b1dc04a1cb9f9ead8ad733fe4d28c44",
+          "7557cf38e486a41d2776e87928f55a18b04e5b04b18f5292aebdd9cd661b734e",
+          "7557cf38e486a41d2776e87928f55a18b04e5b04b18f5292aebdd9cd661b734e"
+        ],
+        "poseSha256": [
+          "1ff0ee5aa74a53e508b44bd116b9f2a8d2d7105e68e1c5fce31c649c49f00448",
+          "80a2737fdc47b5edfa57e1afe0984e4a918e8173f896d08bf8145444a917a08e",
+          "51a3433362736b0bc4d64a82edfcf301f840ba8900e729a379bb7d46f8a96d50",
+          "56e78f1049e0694c7120d6d24086d693ebb1f1033c16d04fb4540b6afffa224c",
+          "6643448c72ae678c77edcf3de34c05a148d0d3c30b4ec336855174d558afac39",
+          "5d95f781d2a8cffec2e189c00e43512325551b8a43d5e64d8b3889f48c85d639",
+          "9e7723f2fb75641f106e05d7ae772e946f757b54c6d162823f95de8e8a757fe2",
+          "9e7723f2fb75641f106e05d7ae772e946f757b54c6d162823f95de8e8a757fe2"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.997621,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "victory": {
+        "sourceSha256": "1e2ee52271855299accfc9ec1dd579cf89f2cf7ec988874cb14699e7156e0fca",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "c4540543076830da962d55ae6149c108a82178afdcb6ead7f5176a3435706282",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "0e3efb5f31776d4ea81726b40ca80124deca5399aca467f7002adec9bdcfcbd1",
+        "encodedSha256": "bfb5d58401f61f21c448a9976cdafef982922f46357db877dc0df7ce7f4da691",
+        "decodedSha256": "336d5b552e8cda5843e3195f5b43ea2703150386f785c71b2efd0960c27fde6e",
+        "frameSha256": [
+          "2462d35eafab24579afce1c7caf4bddb269a2e87e3c4344b5ec77415e2d12373",
+          "e37cda9c030b3191a3b1ec79c5528ebdea304158dacb1b26e8e1ba5304a2cb2a",
+          "387a37b45dd6a7e052541e924c0a25ee875bb4ca488563c026ffa882c6fe40c5",
+          "9c88018e9f9ed7d058a174f208b4bcbfa4c3aa3abafe318b2ed83a71aa5b180c",
+          "264077579ff4684ba53f40f4ceb8696b8247ab5b8b6bb872bacf66a587715db2",
+          "0bade69ca8947658874d9253e09ec3fa39c525927b6d8151233a4ef3ba78ec6e",
+          "f75d7ae62f159b444d8a4f9f80bab743c15c926e231f72c9281d78e6963116d2",
+          "8d04e6a49835800e3ef856606c7a1600977a8d91f69be81dde56fce20e9acba1"
+        ],
+        "poseSha256": [
+          "0285baff38137a611deccd603d140f6a0652e184a5941024af41b9153d138f7b",
+          "2eb18ed771c6705d31c169a9e2bce7076e12f81c4f552acb48f23adb5f93137a",
+          "bf22612a313dff4c56d2832ff854e58cd0d533639ca19147d5ee79eadd1860e1",
+          "d751626fb77a5774c8910ffeec2cc10ef6555e4df801c740acba48e95dfbba5b",
+          "1c8f6a57776091b9f156c0c81614bc09abb26ff962af2a9d7715d281651f79d6",
+          "4fa04d03e682020c7b8d711a149201c2d7da8490390f163d7401e0209469bbf9",
+          "1da9eafb2f6caf7862b4230edc63dc5e14366e492ea9cc2d282ed974a1642d59",
+          "33d696ae120f081f1e821febe3c4adfc6bc1a66410067c21e15877366ce05256"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "dead": {
+        "sourceSha256": "da0a93cfc66aa2dfb4839e8a81bc0121a5a4ad1c60085d39b529d76d7b9e2613",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "1663f6fc59dbe2e4732b0c087901208cfc180d2d6af65040a2951387f3b3f22a",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "f631a7fd605211260b28b5a5bba3503e06dc1064497d1e5769d62e40e178e2b1",
+        "encodedSha256": "3c6ab9a35593e6fe18082d276dff5fc52d7c26e7d06f2297bf451d5ff9ac7d21",
+        "decodedSha256": "0c23bbdcc3f0f76d338269d5032ffa0d4c375acd29345d3a35b4d088dbd4589f",
+        "frameSha256": [
+          "7557cf38e486a41d2776e87928f55a18b04e5b04b18f5292aebdd9cd661b734e",
+          "7557cf38e486a41d2776e87928f55a18b04e5b04b18f5292aebdd9cd661b734e",
+          "7557cf38e486a41d2776e87928f55a18b04e5b04b18f5292aebdd9cd661b734e",
+          "7557cf38e486a41d2776e87928f55a18b04e5b04b18f5292aebdd9cd661b734e",
+          "7557cf38e486a41d2776e87928f55a18b04e5b04b18f5292aebdd9cd661b734e",
+          "7557cf38e486a41d2776e87928f55a18b04e5b04b18f5292aebdd9cd661b734e",
+          "7557cf38e486a41d2776e87928f55a18b04e5b04b18f5292aebdd9cd661b734e",
+          "7557cf38e486a41d2776e87928f55a18b04e5b04b18f5292aebdd9cd661b734e"
+        ],
+        "poseSha256": [
+          "9e7723f2fb75641f106e05d7ae772e946f757b54c6d162823f95de8e8a757fe2",
+          "9e7723f2fb75641f106e05d7ae772e946f757b54c6d162823f95de8e8a757fe2",
+          "9e7723f2fb75641f106e05d7ae772e946f757b54c6d162823f95de8e8a757fe2",
+          "9e7723f2fb75641f106e05d7ae772e946f757b54c6d162823f95de8e8a757fe2",
+          "9e7723f2fb75641f106e05d7ae772e946f757b54c6d162823f95de8e8a757fe2",
+          "9e7723f2fb75641f106e05d7ae772e946f757b54c6d162823f95de8e8a757fe2",
+          "9e7723f2fb75641f106e05d7ae772e946f757b54c6d162823f95de8e8a757fe2",
+          "9e7723f2fb75641f106e05d7ae772e946f757b54c6d162823f95de8e8a757fe2"
+        ],
+        "sourceFrameIndexes": [
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  }
+}

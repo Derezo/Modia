@@ -25,8 +25,19 @@ import { handleSurrender as coliseumHandleSurrender } from '../services/coliseum
 import * as partyWebsocket from '../services/partyWebsocket.js';
 import adminGenerationService from '../services/adminGenerationService.js';
 import audioGenerationService from '../services/adminAudioGenerationService.js';
-import { query } from '../config/database.js';
-import { handleAck } from '../services/messageReliability.js';
+import {
+  createBattleMapUpgradeRequiredPayload,
+  createNegotiatedBattleStateSnapshot,
+  handleAck,
+  registerBattleMapCapabilities,
+  sendWithAck
+} from '../services/messageReliability.js';
+import {
+  BattleStateNotFoundError,
+  battleStateRepository
+} from '../services/battle/BattleStateRepository.js';
+import { recordBattleMapResyncRequest } from '../services/battle/BattleMapOperations.js';
+import { assertBattleMapCapabilities } from '../../../shared/battleStateProtocol.js';
 
 import {
   connections,
@@ -76,21 +87,29 @@ function buildBattleStateForSync(state) {
  * @param {number} battleId - Battle ID
  * @returns {Object|null} Battle state or null if not found
  */
-async function getBattleStateForSync(battleId) {
+async function getBattleStateForSync(battleId, clientCapabilities) {
   try {
-    const result = await query(
-      'SELECT battle_state FROM battles WHERE id = $1 AND status = \'active\'',
-      [battleId]
+    const battle = await battleStateRepository.loadBattle(battleId, {
+      requireActive: true
+    });
+    const { negotiation, snapshot } = createNegotiatedBattleStateSnapshot(
+      battle,
+      clientCapabilities
     );
-
-    if (result.rows.length === 0) {
+    return {
+      battle,
+      state: battle.battleMapSchemaVersion === 1
+        ? buildBattleStateForSync(battle.state)
+        : undefined,
+      stateRevision: battle.stateRevision,
+      negotiation,
+      snapshot
+    };
+  } catch (error) {
+    if (error instanceof BattleStateNotFoundError) {
       return null;
     }
-
-    return buildBattleStateForSync(result.rows[0].battle_state);
-  } catch (error) {
-    console.error('Error getting battle state for sync:', error);
-    return null;
+    throw error;
   }
 }
 
@@ -427,13 +446,22 @@ function handleLeaveRoom(ws, userId, payload) {
 async function handleColiseumQueueJoin(ws, userId, username, payload) {
   if (!userId) return;
   try {
-    const { queueType, partyLevel, partySize } = payload;
+    const {
+      queueType,
+      partyLevel,
+      partySize,
+      battleMapCapabilities
+    } = payload || {};
+    if (battleMapCapabilities !== undefined && battleMapCapabilities !== null) {
+      assertBattleMapCapabilities(battleMapCapabilities);
+    }
     const result = await coliseumService.joinQueue(
       queueType || '1v1',
       userId,
       username,
       partyLevel || 1,
-      partySize || 1
+      partySize || 1,
+      battleMapCapabilities ?? null
     );
     if (!result.success) {
       ws.send(JSON.stringify({
@@ -445,7 +473,12 @@ async function handleColiseumQueueJoin(ws, userId, username, payload) {
     console.error('Coliseum queue join error:', err);
     ws.send(JSON.stringify({
       type: 'coliseum:error',
-      payload: { message: 'Failed to join queue' }
+      payload: {
+        ...(err instanceof TypeError && { code: 'battle_map_capabilities_invalid' }),
+        message: err instanceof TypeError
+          ? 'Invalid battle map capabilities'
+          : 'Failed to join queue'
+      }
     }));
   }
 }
@@ -535,8 +568,16 @@ async function handleColiseumFormationSubmit(ws, userId, payload) {
 async function handleJoinBattle(ws, userId, payload) {
   if (!userId) return;
   try {
-    const { battleId } = payload;
-    const battleRoom = `battle:${battleId}`;
+    const { battleId, battleMapCapabilities } = payload || {};
+    const numericBattleId = Number(battleId);
+    if (!Number.isSafeInteger(numericBattleId) || numericBattleId <= 0) {
+      ws.send(JSON.stringify({
+        type: 'error',
+        payload: { message: 'Invalid battleId' }
+      }));
+      return;
+    }
+    const battleRoom = `battle:${numericBattleId}`;
 
     const accessResult = await validateRoomAccess(userId, battleRoom);
     if (!accessResult.authorized) {
@@ -547,13 +588,56 @@ async function handleJoinBattle(ws, userId, payload) {
       return;
     }
 
+    if (battleMapCapabilities !== undefined && battleMapCapabilities !== null) {
+      assertBattleMapCapabilities(battleMapCapabilities);
+    } else {
+      // Clear before loading/negotiating: even a legacy client that cannot
+      // consume this battle must not leave an earlier V2 declaration active.
+      registerBattleMapCapabilities(ws, numericBattleId, battleMapCapabilities);
+    }
+    const syncState = await getBattleStateForSync(numericBattleId, battleMapCapabilities);
+    if (!syncState) {
+      ws.send(JSON.stringify({
+        type: 'error',
+        payload: { message: 'Battle not found or not active' }
+      }));
+      return;
+    }
+    if (!syncState.negotiation.compatible) {
+      ws.send(JSON.stringify({
+        type: 'battle_map_upgrade_required',
+        payload: createBattleMapUpgradeRequiredPayload(syncState.negotiation)
+      }));
+      return;
+    }
+    // A successful join/rejoin is also a capability declaration boundary.
+    // Omission or null means legacy behavior and must clear any declaration
+    // cached earlier on this same socket.
+    if (battleMapCapabilities !== undefined && battleMapCapabilities !== null) {
+      registerBattleMapCapabilities(ws, numericBattleId, battleMapCapabilities);
+    }
+
     addUserToRoom(battleRoom, userId);
+    const joinedPayload = { battleId };
+    if (battleMapCapabilities !== undefined && battleMapCapabilities !== null) {
+      joinedPayload.battleMapCapabilities = syncState.negotiation;
+      joinedPayload.snapshot = syncState.snapshot;
+    }
     ws.send(JSON.stringify({
       type: 'battle_room_joined',
-      payload: { battleId }
+      payload: joinedPayload
     }));
   } catch (err) {
     console.error('Join battle room error:', err);
+    ws.send(JSON.stringify({
+      type: 'error',
+      payload: {
+        ...(err instanceof TypeError && { code: 'battle_map_capabilities_invalid' }),
+        message: err instanceof TypeError
+          ? 'Invalid battle map capabilities'
+          : 'Failed to join battle room'
+      }
+    }));
   }
 }
 
@@ -589,11 +673,19 @@ async function handleBattleSyncRequest(ws, userId, message) {
     }));
     return;
   }
+  const numericBattleId = Number(battleId);
+  if (!Number.isSafeInteger(numericBattleId) || numericBattleId <= 0) {
+    ws.send(JSON.stringify({
+      type: 'error',
+      payload: { message: 'Invalid battleId' }
+    }));
+    return;
+  }
 
   // Joining a battle room performs the participant authorization check. Do
   // not expose the now-complete map/unit snapshot to an authenticated user who
   // merely guesses another active battle ID.
-  if (!isUserInRoom(`battle:${battleId}`, userId)) {
+  if (!isUserInRoom(`battle:${numericBattleId}`, userId)) {
     ws.send(JSON.stringify({
       type: 'error',
       payload: { message: 'Access denied to battle sync' }
@@ -601,16 +693,49 @@ async function handleBattleSyncRequest(ws, userId, message) {
     return;
   }
 
+  recordBattleMapResyncRequest(message?.reason);
+
   try {
-    const battleState = await getBattleStateForSync(battleId);
-    if (battleState) {
-      ws.send(JSON.stringify({
+    const declaredCapabilities = message?.battleMapCapabilities;
+    if (declaredCapabilities !== undefined && declaredCapabilities !== null) {
+      assertBattleMapCapabilities(declaredCapabilities);
+    } else {
+      // The declaration takes effect before repository I/O/negotiation so an
+      // incompatible or missing battle cannot preserve stale V2 support.
+      registerBattleMapCapabilities(ws, numericBattleId, declaredCapabilities);
+    }
+    // Each explicit sync request is a fresh declaration boundary. Omission or
+    // null opts into legacy delivery instead of inheriting stale V2 support
+    // from an earlier join/sync on this socket.
+    const clientCapabilities = declaredCapabilities ?? undefined;
+    const syncState = await getBattleStateForSync(numericBattleId, clientCapabilities);
+    if (syncState) {
+      if (!syncState.negotiation.compatible) {
+        ws.send(JSON.stringify({
+          type: 'battle_map_upgrade_required',
+          payload: createBattleMapUpgradeRequiredPayload(syncState.negotiation)
+        }));
+        return;
+      }
+      if (declaredCapabilities !== undefined && declaredCapabilities !== null) {
+        registerBattleMapCapabilities(ws, numericBattleId, declaredCapabilities);
+      }
+      const syncPayload = {
+        battleId,
+        stateRevision: syncState.stateRevision,
+        snapshot: syncState.snapshot,
+        reason: 'full_sync'
+      };
+      if (syncState.state !== undefined) {
+        syncPayload.state = syncState.state;
+      }
+      if (clientCapabilities !== undefined && clientCapabilities !== null) {
+        syncPayload.battleMapCapabilities = syncState.negotiation;
+      }
+      sendWithAck(ws, {
         type: 'battle:state_update',
-        payload: {
-          battleId,
-          state: battleState
-        }
-      }));
+        payload: syncPayload
+      }, numericBattleId, userId);
     } else {
       ws.send(JSON.stringify({
         type: 'error',
@@ -621,7 +746,12 @@ async function handleBattleSyncRequest(ws, userId, message) {
     console.error('Battle sync request error:', err);
     ws.send(JSON.stringify({
       type: 'error',
-      payload: { message: 'Failed to sync battle state' }
+      payload: {
+        ...(err instanceof TypeError && { code: 'battle_map_capabilities_invalid' }),
+        message: err instanceof TypeError
+          ? 'Invalid battle map capabilities'
+          : 'Failed to sync battle state'
+      }
     }));
   }
 }
@@ -1170,6 +1300,7 @@ async function handlePresenceUpdate(ws, userId, username, payload, broadcastPres
 export {
   // Battle state helper
   buildBattleStateForSync,
+  getBattleStateForSync,
 
   // Chat
   handleChatMessage,

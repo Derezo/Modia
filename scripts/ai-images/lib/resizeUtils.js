@@ -1356,7 +1356,7 @@ async function generateCanonicalSizeVariants(sourcePath, category, id, options =
  * await concatenateVerticalStrip([
  *   '/tmp/frame_0.png', '/tmp/frame_1.png', '/tmp/frame_2.png', '/tmp/frame_3.png',
  *   '/tmp/frame_4.png', '/tmp/frame_5.png', '/tmp/frame_6.png', '/tmp/frame_7.png'
- * ], '/assets/characters/player/warrior/warrior_idle.png');
+ * ], '/assets/characters/player/human/male/warrior/human_male_warrior_idle.png');
  */
 async function concatenateVerticalStrip(framePaths, outputPath, options = {}) {
   const { verbose = false } = options;

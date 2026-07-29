@@ -222,12 +222,11 @@ getRegenProgress() {
 ### 5.1 AssetLoader Path Structure
 
 ```javascript
-// Base path for all sprites
-this.basePath = '/assets/sprites';
+const basePath = '/assets';
 
-// Character sprites
-`${basePath}/characters/player/${charClass}/${charClass}_${animation}.png`
-`${basePath}/characters/enemies/${biome}/${enemyId}/${enemyId}_${animation}.png`
+// Character animation sheets (compiled by the authored-image pipeline)
+`/assets/characters/player/${race}/${gender}/${charClass}/${race}_${gender}_${charClass}_${animation}.webp`
+`/assets/characters/enemies/${canonicalBiome}/${enemyId}/${enemyId}_${animation}.webp`
 
 // Node sprites
 `${basePath}/nodes/${nodeType}.png`

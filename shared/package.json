@@ -6,7 +6,7 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "test": "node --test *.test.js mapgen/*.test.js"
+    "test": "node --test *.test.js mapgen/*.test.js mapgen/v2/*.test.js"
   },
   "exports": {
     ".": "./index.js",
@@ -14,9 +14,16 @@
     "./nameData": "./nameData.js",
     "./terrain": "./terrain.js",
     "./mapGeneration": "./mapGeneration.js",
+    "./battleMap": "./battleMap/index.js",
+    "./battleStateProtocol": "./battleStateProtocol.js",
     "./pathfinding": "./pathfinding.js",
+    "./traversal": "./traversal.js",
     "./battleMath": "./battleMath.js",
+    "./assetPaths": "./assetPaths.js",
     "./obstacles": "./obstacles.js",
-    "./mapgen/SpawnPlacer": "./mapgen/SpawnPlacer.js"
+    "./mapgen/SpawnPlacer": "./mapgen/SpawnPlacer.js",
+    "./mapgen/v2": "./mapgen/v2/index.js",
+    "./mapgen/v2/BattleMapGenerator": "./mapgen/v2/BattleMapGenerator.js",
+    "./mapgen/v2/renderCapabilities": "./mapgen/v2/RenderCapabilities.js"
   }
 }

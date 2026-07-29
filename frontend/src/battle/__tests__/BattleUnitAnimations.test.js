@@ -170,8 +170,8 @@ describe('BattleUnit canonical NPC identity', () => {
 
     assert.equal(unit.enemyId, 'guildmaster_wizard');
     assert.equal(unit.biome, 'mountain', 'encounter biome remains available');
-    assert.equal(unit.primaryBiome, 'guild');
-    assert.deepEqual(calls, [['guildmaster_wizard', 'attack', 'guild']]);
+    assert.equal(unit.primaryBiome, 'castle');
+    assert.deepEqual(calls, [['guildmaster_wizard', 'attack', 'castle']]);
   });
 
   it('backfills canonical homes for persisted legacy battle units', () => {
@@ -229,6 +229,54 @@ describe('BattleUnit canonical player identity', () => {
       gender: 'other',
       class: 'monk'
     }, 'idle', 'player']]);
+  });
+});
+
+describe('BattleUnit authoritative movement reconciliation', () => {
+  const grid = {
+    elevationPixelsPerLevel: 16,
+    gridToScreenWorld(x, y) { return { x: x * 64, y: y * 32 }; },
+    getElevation() { return 0; }
+  };
+
+  it('does not restart an in-flight walk when the same destination arrives twice', () => {
+    const unit = new BattleUnit({
+      id: 2,
+      type: 'player',
+      name: 'Walker',
+      race: 'human',
+      gender: 'other',
+      class: 'warrior',
+      hp: 10,
+      maxHp: 10,
+      tileX: 1,
+      tileY: 2
+    }, grid);
+    unit.assetLoader = {
+      getCharacterSprite() { return null; }
+    };
+
+    assert.equal(unit.moveTo(4, 2), true);
+    unit.update(100);
+
+    const progress = unit.movementProgress;
+    const screenX = unit.screenX;
+    assert.ok(progress > 0 && progress < 1);
+    assert.equal(unit.animationState, 'walk');
+
+    assert.equal(unit.moveTo(4, 2), false);
+    assert.equal(unit.prevGridX, 1);
+    assert.equal(unit.prevGridY, 2);
+    assert.equal(unit.movementProgress, progress);
+    assert.equal(unit.screenX, screenX);
+    assert.equal(unit.isMoving, true);
+    assert.equal(unit.animationState, 'walk');
+
+    unit.update(2000);
+    assert.equal(unit.isMoving, false);
+    assert.equal(unit.animationState, 'idle');
+    assert.equal(unit.screenX, 4 * 64);
+    assert.equal(unit.screenY, 2 * 32);
   });
 });
 

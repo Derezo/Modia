@@ -21,8 +21,19 @@ import { ANIMATION_TIMING } from './BattleAnimations.js';
 import { BattleStatePoller } from './BattleStatePoller.js';
 import { connectionQuality } from '../api/connectionQuality.js';
 import { applyBattleMapPatch, mergeBattleStatePatch } from './mergeBattleState.js';
+import { getBattleMapCapabilities } from './BattleMapSession.js';
 
 const QUEUE_TIMEOUT_MS = 5000; // 5 second timeout for queue events
+
+function battleMapResyncReason(error) {
+  const code = String(error?.code ?? '').toLowerCase();
+  if (code.includes('reference')) return 'map_reference_mismatch';
+  if (code.includes('cache')) return 'cache_miss';
+  if (code.includes('hash') || code.includes('verification')) {
+    return 'map_hash_mismatch';
+  }
+  return 'client_apply_error';
+}
 
 /**
  * Return the duration of the actor's currently selected sprite animation.
@@ -94,6 +105,10 @@ export class BattleWebSocketManager {
     // Action sequence number for validation (increments with each action)
     // This helps the server detect stale/duplicate actions after reconnection
     this.actionSequence = 0;
+
+    // Serialize snapshot/hash verification and revision application so async
+    // verification cannot reorder consecutive WebSocket updates.
+    this.stateUpdateChain = Promise.resolve();
   }
 
   // ===========================================================================
@@ -109,6 +124,7 @@ export class BattleWebSocketManager {
   get grid() { return this.scene.grid; }
   get camera() { return this.scene.camera; }
   get animations() { return this.scene.animations; }
+  get mapSession() { return this.scene.mapSession; }
   get selectedUnit() { return this.scene.selectedUnit; }
   set selectedUnit(value) { this.scene.selectedUnit = value; }
   get inEnemySequence() { return this.scene.inEnemySequence; }
@@ -152,13 +168,21 @@ export class BattleWebSocketManager {
     if (!socket) return;
 
     // Join battle room
-    socket.joinBattleRoom(this.battleId);
+    socket.joinBattleRoom(this.battleId, this.mapSession?.capabilities ?? getBattleMapCapabilities());
+
+    // A join/rejoin can carry a negotiated full or cached snapshot.
+    const roomJoinedUnsub = socket.on('battle_room_joined', (payload) => {
+      if (String(payload.battleId) === String(this.battleId) && payload.snapshot) {
+        this.queueRemoteStateUpdate(payload);
+      }
+    });
+    this.wsUnsubscribers.push(roomJoinedUnsub);
 
     // Handle battle state updates (for multiplayer sync)
     const stateUpdateUnsub = socket.on('battle:state_update', (payload) => {
       console.log('[Battle WS] State update received:', payload.battleId);
-      if (payload.battleId === this.battleId) {
-        this.handleRemoteStateUpdate(payload);
+      if (String(payload.battleId) === String(this.battleId)) {
+        this.queueRemoteStateUpdate(payload);
       }
     });
     this.wsUnsubscribers.push(stateUpdateUnsub);
@@ -324,6 +348,7 @@ export class BattleWebSocketManager {
     this.statePoller = null;
     this.timeoutCount = 0;
     this.battleEndPending = false;
+    this.stateUpdateChain = Promise.resolve();
 
     // Clean up reliability manager for this battle
     const websocket = this.game?.websocket;
@@ -477,25 +502,42 @@ export class BattleWebSocketManager {
       // This prevents stale actions from being submitted while we're reconnecting
       this.clearPendingActions();
 
-      const response = await this.game.api.request(`/battle/${this.battleId}/rejoin`);
+      const capabilities = this.mapSession?.capabilities ?? getBattleMapCapabilities();
+      const requestOptions = {
+        headers: {
+          'x-battle-map-capabilities': JSON.stringify(capabilities)
+        }
+      };
+      const response = typeof this.game.api.get === 'function'
+        ? await this.game.api.get(`/battle/${this.battleId}/rejoin`, requestOptions)
+        : await this.game.api.request(
+          'GET',
+          `/battle/${this.battleId}/rejoin`,
+          null,
+          requestOptions
+        );
 
       if (response.success) {
         console.log('[Battle] Rejoin successful');
 
-        // Update local state with server state
-        this.battleState = response.state;
-        this.scene.syncUnitsWithState(response.state.units);
+        const hydrated = this.mapSession
+          ? await this.mapSession.hydrateResponse(response)
+          : response;
+
+        // Update local state only after the map/snapshot has been verified.
+        this.battleState = hydrated.state;
+        this.scene.syncUnitsWithState(hydrated.state.units);
 
         // Store server-provided available actions for movement validation
-        this.scene.serverAvailableActions = response.availableActions || null;
+        this.scene.serverAvailableActions = hydrated.availableActions || null;
 
         // Sync every authoritative map layer from the full rejoin snapshot.
-        applyBattleMapPatch(this.scene.grid, response.state);
+        applyBattleMapPatch(this.scene.grid, hydrated.state);
 
         // Apply turn state from availableActions (two-action system)
-        if (response.availableActions) {
-          this.scene.canMove = response.availableActions.canMove ?? true;
-          this.scene.canAct = response.availableActions.canAct ?? true;
+        if (hydrated.availableActions) {
+          this.scene.canMove = hydrated.availableActions.canMove ?? true;
+          this.scene.canAct = hydrated.availableActions.canAct ?? true;
           const bothAvailable = this.scene.canMove && this.scene.canAct;
           const neitherAvailable = !this.scene.canMove && !this.scene.canAct;
           this.scene.turnPhase = bothAvailable ? 'ready' : (neitherAvailable ? 'done' : 'partial');
@@ -512,7 +554,10 @@ export class BattleWebSocketManager {
 
         // Rejoin WebSocket room
         if (this.game.socket) {
-          this.game.socket.joinBattleRoom(this.battleId);
+          this.game.socket.joinBattleRoom(
+            this.battleId,
+            this.mapSession?.capabilities ?? capabilities
+          );
         }
 
         // Update poller state with fresh server state
@@ -522,13 +567,13 @@ export class BattleWebSocketManager {
         parchmentToast.success('Connection', 'Reconnected!');
 
         // Handle grace period (brief delay before turn timer resumes)
-        if (response.gracePeriod > 0) {
-          console.log(`[Battle] Grace period: ${response.gracePeriod}ms`);
+        if (hydrated.gracePeriod > 0) {
+          console.log(`[Battle] Grace period: ${hydrated.gracePeriod}ms`);
         }
 
         // Show any disconnected players
-        if (response.disconnectedPlayers?.length > 0) {
-          for (const player of response.disconnectedPlayers) {
+        if (hydrated.disconnectedPlayers?.length > 0) {
+          for (const player of hydrated.disconnectedPlayers) {
             parchmentToast.warning('Player Status', `${player.playerName} is disconnected`);
           }
         }
@@ -539,6 +584,13 @@ export class BattleWebSocketManager {
       console.error('[Battle] Rejoin failed:', error);
 
       parchmentToast.error('Connection', 'Reconnection failed');
+
+      if (error?.code?.startsWith('battle_map_')) {
+        this.requestFullStateSync({
+          includeCachedMaps: false,
+          reason: battleMapResyncReason(error)
+        });
+      }
 
       // If battle is no longer active, return to world map
       if (error.message?.includes('no longer active')) {
@@ -575,18 +627,72 @@ export class BattleWebSocketManager {
    * NOTE: Only updates unit positions/HP, doesn't control camera during active play.
    * Camera is controlled by the turn event queue.
    */
-  handleRemoteStateUpdate(payload) {
+  queueRemoteStateUpdate(payload) {
+    this.stateUpdateChain = this.stateUpdateChain
+      .then(() => this.handleRemoteStateUpdate(payload))
+      .catch(error => {
+        console.error('[Battle WS] Authoritative state update failed:', error);
+        this.requestFullStateSync({
+          includeCachedMaps: false,
+          reason: battleMapResyncReason(error)
+        });
+      });
+    return this.stateUpdateChain;
+  }
+
+  async handleRemoteStateUpdate(payload) {
     console.log('[Battle WS] Processing state update (sync only, no camera control)');
     // Sync unit data but preserve activeUnitId if queue is processing
     const preserveActiveUnit = this.isProcessingQueue || this.inEnemySequence;
     const currentActiveId = this.battleState?.activeUnitId;
 
-    this.battleState = mergeBattleStatePatch(this.battleState, payload.state);
+    let nextState;
+    let mapPatch = null;
+    if (payload.snapshot) {
+      if (!this.mapSession) {
+        throw new Error('A BattleMapSession is required for revisioned snapshots');
+      }
+      const accepted = await this.mapSession.acceptSnapshot(payload.snapshot);
+      nextState = accepted.state;
+      mapPatch = accepted.map;
+    } else {
+      const update = payload.update
+        ?? payload.delta
+        ?? (payload.state?.protocolVersion === 1 && payload.state?.mutableState
+          ? payload.state
+          : null)
+        ?? (payload.protocolVersion === 1 && payload.mutableState ? payload : null);
+      if (update) {
+        if (!this.mapSession) {
+          throw new Error('A BattleMapSession is required for revisioned updates');
+        }
+        const result = this.mapSession.acceptUpdate(update);
+        if (result.status === 'duplicate') return result;
+        if (result.status === 'resync_required') {
+          this.requestFullStateSync({
+            includeCachedMaps: result.reason !== 'map_reference_mismatch',
+            reason: result.reason
+          });
+          return result;
+        }
+        nextState = result.state;
+      } else if (payload.state) {
+        if (this.mapSession?.current?.battleMapSchemaVersion === 2) {
+          this.requestFullStateSync({ reason: 'revisioned_update_required' });
+          return { status: 'resync_required', reason: 'revisioned_update_required' };
+        }
+        nextState = mergeBattleStatePatch(this.battleState, payload.state);
+        mapPatch = payload.state;
+      } else {
+        this.requestFullStateSync({ reason: 'state_payload_missing' });
+        return { status: 'resync_required', reason: 'state_payload_missing' };
+      }
+    }
+
+    this.battleState = nextState;
     this.scene.syncUnitsWithState(this.battleState?.units || []);
-    // Explicit battle:request_sync responses arrive on this same event and
-    // include full map layers; apply them as well as the unit snapshot.
-    applyBattleMapPatch(this.scene.grid, payload.state);
-    this.queueAuthoritativeBattleEnd(payload.state?.status, payload.state?.rewards);
+    if (mapPatch) applyBattleMapPatch(this.scene.grid, mapPatch);
+    this.queueAuthoritativeBattleEnd(nextState?.status, nextState?.rewards);
 
     // Restore activeUnitId if we should preserve it (queue handles transitions)
     if (preserveActiveUnit && currentActiveId != null) {
@@ -596,6 +702,7 @@ export class BattleWebSocketManager {
 
     // Update poller baseline to prevent false drift detection
     this.updatePollerState();
+    return { status: 'applied', state: nextState };
   }
 
   /**
@@ -784,20 +891,27 @@ export class BattleWebSocketManager {
   /**
    * Handle full state sync (for reconnection)
    */
-  handleRemoteStateSync(payload) {
+  async handleRemoteStateSync(payload) {
     const { state, reason } = payload;
     console.log(`[Battle WS] State sync: ${reason}`);
 
-    // Update battle state
+    if (payload.snapshot || payload.update || payload.delta) {
+      const result = await this.queueRemoteStateUpdate(payload);
+      if (result?.status === 'applied') this.scene.updateUI();
+      return result;
+    }
+
+    // Legacy V1 full-state sync.
+    if (this.mapSession?.current?.battleMapSchemaVersion === 2) {
+      this.requestFullStateSync({ reason: 'revisioned_snapshot_required' });
+      return { status: 'resync_required', reason: 'revisioned_snapshot_required' };
+    }
     this.battleState = state;
-
-    // Resync all units
     this.scene.syncUnitsWithState(state.units);
-
+    applyBattleMapPatch(this.scene.grid, state);
     this.queueAuthoritativeBattleEnd(state.status, state.rewards);
-
-    // Update UI
     this.scene.updateUI();
+    return { status: 'applied', state };
   }
 
   /**
@@ -1006,7 +1120,7 @@ export class BattleWebSocketManager {
     // If multiple timeouts, trigger full resync
     if (this.timeoutCount >= 3) {
       console.warn('[Battle Queue] Multiple queue timeouts - requesting full state sync');
-      this.requestFullStateSync();
+      this.requestFullStateSync({ reason: 'queue_timeout' });
       this.timeoutCount = 0;
     }
   }
@@ -1014,10 +1128,23 @@ export class BattleWebSocketManager {
   /**
    * Request a full state sync from the server via WebSocket
    */
-  requestFullStateSync() {
+  requestFullStateSync({
+    includeCachedMaps = true,
+    reason = 'client_requested'
+  } = {}) {
     const socket = this.game?.socket;
     if (socket) {
-      socket.send('battle:request_sync', { battleId: this.battleId });
+      const capabilities = this.mapSession?.getCapabilities({ includeCachedMaps })
+        ?? getBattleMapCapabilities({ includeCachedMaps });
+      if (typeof socket.requestBattleSync === 'function') {
+        socket.requestBattleSync(this.battleId, capabilities, reason);
+      } else {
+        socket.send('battle:request_sync', {
+          battleId: this.battleId,
+          battleMapCapabilities: capabilities,
+          reason
+        });
+      }
     }
   }
 

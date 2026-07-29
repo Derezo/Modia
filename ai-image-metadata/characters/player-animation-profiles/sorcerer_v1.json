@@ -1,0 +1,86 @@
+{
+  "version": "1.1.0",
+  "id": "sorcerer_v1",
+  "class": "sorcerer",
+  "templateId": "authored-pose-atlas-v1",
+  "description": "Reusable authored-pose direction for sorcerer player identities. Registry metadata and the staged portrait control identity; this profile supplies volatile innate-magic choreography.",
+  "style": {
+    "source": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+    "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+  },
+  "identity": {
+    "baseFacing": "three-quarters right",
+    "motionStyle": "intense, instinctive, forceful, and barely contained, with hand-led energy control, grounded recoil, and sharp robe follow-through",
+    "equipmentRule": "Preserve the portrait's dark robes, hood, arcane tattoos, jewelry, focus, and exact item count. Never invent a staff, duplicate a focus, alter tattoo placement, or replace permanent costume details with effects.",
+    "magicRule": "All power is innate and must use the portrait's established energy and tattoo palette. Energy originates visibly from the marked body or existing focus, remains compact, and never hides hands, face, or pose mechanics."
+  },
+  "promptTemplates": {
+    "reference": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative {{displayName}} identity portrait; Image 2 is style and proportion reference only. Player identity metadata: {{visualTraits}}. Create one complete head-to-toe {{displayName}} preserving Image 1's face, ancestry traits, gender presentation, hair, hood, robes, tattoos, jewelry, focus, palette, proportions, and intense gaze. Do not import identity details from Image 2. {{equipmentRule}} Translate the portrait into a compact volatile full-body silhouette. Use a {{background}} background with no floor or scenery and a square 1:1 canvas with generous padding. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered sorcerer in a power-contained ready stance facing {{baseFacing}}. {{invariants}}",
+    "animation": "Draw exactly {{frameCount}} genuinely redrawn full-body {{actionLabel}} poses of the authoritative {{displayName}} in a {{columns}}-column by {{rows}}-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: {{visualTraits}}. Required sequence: {{frameSequence}}. Motion direction: {{motionDirection}}. Overall sorcerer motion is {{motionStyle}}. {{poseRequirement}} Preserve exact identity, robes, tattoos, palette, proportions, and equipment. {{equipmentRule}} {{magicRule}} Action-specific effects: {{effectRule}} Use a {{background}} background with generous gutters. {{invariants}}"
+  },
+  "animations": {
+    "idle": {
+      "actionLabel": "sorcerer power-contained idle-cycle",
+      "minimumUniquePoses": 4,
+      "anchor": "source-cell",
+      "motionDirection": "A tense breathing loop shifts weight as marked hands alternately clench and relax around a tightly contained current.",
+      "effectRule": "Only a faint pulse along established tattoos or focus is permitted; no free-floating spell.",
+      "frameDescriptions": ["tense ready stance with marked hands controlled", "sharp inhale as shoulders and tattoos lift", "weight leans forward over one clenched hand", "compact energy pulse travels along established markings", "centered power-contained midpoint", "forceful exhale as fingers open", "weight shifts rearward while robes settle", "tense stance flowing back to frame one"]
+    },
+    "walk": {
+      "actionLabel": "sorcerer charged stride",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "A purposeful alternating stride uses real leg compression, opposite arm motion, and charged but controlled robe and tattoo accents.",
+      "effectRule": "No active spell; established markings may retain a faint constant glow.",
+      "frameDescriptions": ["left foot forward contact with hands guarded", "left leg compressed as robes gather", "passing pose with right knee advancing", "right foot reaches while marked hand counter-swings", "right foot forward contact", "right leg compressed under the stride", "passing pose with left knee advancing", "left foot reaches into the charged loop"]
+    },
+    "attack": {
+      "actionLabel": "sorcerer close-range arcane lash",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "Innate power coils through the torso, loads one marked arm, snaps into a compact close-range lash, rebounds through the shoulders, and is forcibly contained.",
+      "effectRule": "One short identity-colored energy lash may extend from the attacking hand at contact; no detached projectile or anatomy-obscuring explosion.",
+      "frameDescriptions": ["power-contained guard", "marked hand closes as energy gathers inward", "deep torso coil with attacking elbow drawn back", "forward step snapping the charged arm outward", "compact arcane lash at close-range contact", "whole-body recoil as energy curls back", "fingers clamp down on the fading current", "recovered intense guard"]
+    },
+    "hurt": {
+      "actionLabel": "sorcerer disrupted-power recovery",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "An impact disrupts control into a violent flinch, scattered energy recoil, stumbling brace, forceful containment, and wary recovery.",
+      "effectRule": "A few compact disrupted sparks may leave established markings; no gore, blood, full-body tint, or large detonation.",
+      "frameDescriptions": ["tense guard before impact", "sharp flinch with marked hands thrown apart", "maximum stagger amid a few broken sparks", "stumbling backward as robes whip forward", "low brace with both hands drawing energy inward", "forceful push upright while sparks extinguish", "feet reset and fingers close", "recovered power-contained guard"]
+    },
+    "death": {
+      "actionLabel": "sorcerer defeat sequence",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "verticalAnchor": "bottom",
+      "motionDirection": "A final disruption extinguishes innate power, knees fail, the body folds and tips sideways, reaches full ground contact, and settles completely fallen.",
+      "effectRule": "Energy fades without explosion, gore, blood, dismemberment, or rigid rotation; preserve costume and focus continuity.",
+      "outputFrameMap": [0, 1, 2, 3, 4, 5, 7, 7],
+      "frameDescriptions": ["fatal disruption breaks magical control", "tattoo light flickers as arms slacken", "knees buckle beneath the robes", "one knee grounds while torso folds sideways", "body reaches full ground contact", "robes and limbs settle into a low fallen shape", "final fully fallen sorcerer with energy extinguished", "same final fallen pose held"]
+    },
+    "cast": {
+      "actionLabel": "sorcerer innate-power eruption",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "motionDirection": "Both marked hands draw power from the body, arms spread under pressure, energy compresses between the palms, erupts forward, and recoils into controlled stillness.",
+      "effectRule": "Build one compact identity-colored spell visibly between the hands or at the established focus, then release it forward without hiding anatomy.",
+      "frameDescriptions": ["intense ready stance", "both marked hands draw inward toward the chest", "arms spread as tattoo energy brightens", "wide grounded stance compressing power between palms", "maximum compact energy mass under visible control", "forceful two-hand forward release", "arms recoil as residual sparks collapse inward", "composed but intense casting finish"]
+    },
+    "dead": {
+      "deriveFrom": {"animation": "death", "frame": 7},
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity.",
+      "frameDescriptions": ["terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held"]
+    },
+    "victory": {
+      "actionLabel": "sorcerer triumphant power display",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "motionDirection": "Victory releases a sharp laugh, rising hand flourish, controlled energy spiral, proud turn, and a final pose with power compressed safely in one palm.",
+      "effectRule": "A compact spiral and palm-sized glow in the established palette may celebrate victory; no oversized storm.",
+      "frameDescriptions": ["surprised recognition of victory", "shoulders open into a sharp triumphant laugh", "one marked hand sweeps upward", "compact energy spiral follows the rising hand", "proud pivot as robes and glow follow", "energy compresses safely into one palm", "intense victor stance presenting controlled power", "final triumphant sorcerer pose held"]
+    }
+  }
+}

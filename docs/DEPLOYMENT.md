@@ -41,9 +41,9 @@ lsd rollback modia v0.4.44      # Roll back to a specific release
 | **3.5. Secrets write** | VPS-side: `lsd-vault-agent` decrypts and renders `<release>/.env.production` (mode 0600, owner `modia`). Secrets never touch the network in plaintext. |
 | **4. nginx** | Render `api-spa.conf.tpl` → `/etc/nginx/sites-available/<app>.conf`. `nginx -t` (isolated) → move into place → `nginx -T` (full-tree). |
 | **5. Cutover** | **Point of no return.** Atomic `ln -sfn` swap + `mv -T` → `current/`. nginx reload under `nginx.reload` lock. |
-| **5b. Service reload** | PM2: `modia-api` (fork mode, singleton, 512M cap) reload. |
-| **6. Post-deploy hooks** | `npm run db:migrate` (declared in `deploy.yaml`'s `hooks.post_deploy`). |
-| **7. Health** | Probe `https://<PRODUCTION_DOMAIN>/api/health`. Expect 200, retries 6, 30s timeout. Failure → fail the deploy (rollback responsibility is on the operator). |
+| **5b. Service reload** | PM2: `modia-api` (fork mode, singleton, 512M cap) reload. A worker that observes not-yet-migrated outbox schema enters a quiet schema-blocked retry state. |
+| **6. Post-deploy hooks** | `npm run db:migrate` (declared in `deploy.yaml`'s `hooks.post_deploy`). The worker automatically resumes after the additive schema appears. |
+| **7. Health** | Probe `https://<PRODUCTION_DOMAIN>/api/health/ready`. Expect 200, retries 6, 30s timeout. Readiness includes the database and durable terminal-effect worker; failure fails the deploy (rollback responsibility is on the operator). |
 | **8. Prune + ledger** | Keep newest 5 finalized releases. Append entry to `lsd` ledger and git-push it. |
 
 Run `lsd plan modia` at any time to print the current pipeline for the latest tag — it's the source of truth.
@@ -107,7 +107,13 @@ secrets:
   provider: lsd-vault
   lsd_vault:
     keys: [ DB_HOST, DB_NAME, DB_PORT, DB_USER, DB_PASSWORD,
-            JWT_SECRET, JWT_REFRESH_SECRET, WORLD_SEED, NODE_ENV ]
+            JWT_SECRET, JWT_REFRESH_SECRET, WORLD_SEED, NODE_ENV,
+            BATTLE_MAP_DIAGNOSTICS_TOKEN,
+            BATTLE_MAP_V2_ENABLED_MODES,
+            BATTLE_MAP_V2_SHADOW_SAMPLE_RATE,
+            BATTLE_MAP_V2_SHADOW_MAX_CONCURRENT,
+            BATTLE_MAP_V2_GENERATION_P95_SLO_MS,
+            BATTLE_MAP_REFERENCE_DELTA_ENABLED ]
 services:
   - name: modia-api
     kind: pm2
@@ -116,7 +122,7 @@ services:
     singleton: true
     max_memory: 512M
 health:
-  url: https://<PRODUCTION_DOMAIN>/api/health
+  url: https://<PRODUCTION_DOMAIN>/api/health/ready
   expect_status: 200
 db_sanity_check:
   min_tables: 80
@@ -142,6 +148,109 @@ baseline; without it, nginx does not emit HSTS, clickjacking protection, or the
 other template-managed headers. The `csp` value is independent and must also be
 set explicitly. LSD checks the configured headers after a deploy and records a
 warning if the public response is missing any of them.
+
+---
+
+## Battle-map V2 staged rollout
+
+Battle-map V2 has independent generation and transport kill switches. Both
+default off. Do not use `*` for the initial rollout, and do not enable
+reference/delta delivery in the same change that first enables V2 generation.
+
+### Controls
+
+| Variable | Safe initial value | Purpose |
+|----------|--------------------|---------|
+| `BATTLE_MAP_V2_ENABLED_MODES` | unset or empty | Comma-separated generation modes. Authoritative creation paths currently use `pve`, `guild`, and `pvp_coliseum`; `pve_coop` and `pvp` are generator-reserved values until matching creation paths exist. |
+| `BATTLE_MAP_V2_SHADOW_SAMPLE_RATE` | `0` | Deterministic fraction from `0` through `1` of eligible V1 generations shadowed by V2. |
+| `BATTLE_MAP_V2_SHADOW_MAX_CONCURRENT` | `1` | Bounds shadow CPU and memory work; values above 8 are clamped. |
+| `BATTLE_MAP_V2_GENERATION_P95_SLO_MS` | unset during baseline | Absolute deployment p95 SLO evaluated from live `generation.active.v2.durationMs` samples. Until set, telemetry enforces the initial shadow-V2/paired-V1 p95 ratio of at most 2 after 20 paired samples. |
+| `BATTLE_MAP_REFERENCE_DELTA_ENABLED` | `false` | Enables negotiated immutable-map references and revisioned mutable updates. Full snapshots remain the safe fallback. |
+| `BATTLE_MAP_DIAGNOSTICS_TOKEN` | unique 32+ byte secret | Protects seed/hash-level operator diagnostics. A player JWT is not accepted. |
+
+The tested default wire limits may be overridden only from measured deployment
+data:
+
+| Variable | Default bytes |
+|----------|---------------|
+| `BATTLE_MAP_INITIAL_SNAPSHOT_UNCOMPRESSED_BYTES` | `4000000` |
+| `BATTLE_MAP_INITIAL_SNAPSHOT_COMPRESSED_BYTES` | `1250000` |
+| `BATTLE_MAP_MUTABLE_DELTA_UNCOMPRESSED_BYTES` | `1000000` |
+| `BATTLE_MAP_MUTABLE_DELTA_COMPRESSED_BYTES` | `256000` |
+
+Omitting an override retains the default. Invalid values fail closed to the
+default rather than removing the limit.
+
+### Pre-enable checklist
+
+1. Run the complete test/build suite, the 1,600-map audit, and the browser
+   gallery. Review both fixed-seed and unseen-seed screenshots; a passing
+   numeric corpus is not a substitute for visual approval.
+2. Deploy with live modes empty, shadow sampling `0`, and reference/delta
+   delivery false.
+3. Confirm migrations `052` through `056` are applied with
+   `npm run db:status`. `/api/health/ready` must report the database and
+   terminal-effect worker up. A missing outbox schema intentionally makes
+   readiness fail.
+4. Configure `BATTLE_MAP_DIAGNOSTICS_TOKEN` through `lsd-vault`. Never reuse
+   either JWT secret or a player access token.
+5. Start shadowing at a small rate, normally `0.01` to `0.05`, with concurrency
+   `1`. Observe at least 20 paired samples across representative sizes and
+   recipes before increasing the sample.
+6. Monitor `/api/health/metrics`, especially `battleMaps.alerts.active`,
+   generation distributions, payload distributions, capability rejection,
+   retry, cache-miss, ACK exhaustion, and recovery counters. The initial
+   relative-p95 guardrail must pass.
+7. Set `BATTLE_MAP_V2_GENERATION_P95_SLO_MS` from the measured production
+   baseline and capacity budget. Setting it replaces the initial relative
+   guardrail. Confirm `battleMaps.generationP95Slo` reports
+   `source=generation.active.v2.durationMs`, `ready=true`, and `breached=false`;
+   the threshold must not be chosen merely to silence an alert.
+
+Detailed diagnostics are bounded to the 32 most recent generation and shadow
+records and are deliberately absent from public health metrics. Successful
+records retain the bounded seed, mode, node type, dimensions, recipe
+identity/version, selected attempt, and authoritative/visual/full hashes needed
+for deterministic replay. Failure records retain the request/recipe context
+without inventing an attempt or hash. Operators can retrieve them with:
+
+```bash
+curl -H "Authorization: Bearer <BATTLE_MAP_DIAGNOSTICS_TOKEN>" \
+  https://<PRODUCTION_DOMAIN>/api/operations/battle-maps/diagnostics
+```
+
+The response is marked `Cache-Control: no-store`. An unset or undersized
+operator token makes the route unavailable.
+
+### Activation and rollback
+
+Enable one authoritative mode at a time, beginning with `pve`. Keep each stage
+long enough to cover creation, current-state fetch, reconnect, completion,
+reward delivery, and client cache-miss recovery before adding the next mode. A
+typical sequence is `pve`, then `pve,guild`, then
+`pve,guild,pvp_coliseum` after the corresponding mode-specific smoke tests
+pass. Do not add the reserved `pve_coop` or `pvp` values until an authoritative
+creation path and its end-to-end coverage are implemented.
+
+Enable `BATTLE_MAP_REFERENCE_DELTA_ENABLED=true` only after generation is
+stable and compatible clients are deployed. Confirm the target client
+population advertises the revisioned mutable-state protocol, verify that
+unsupported clients retain the bounded full-snapshot fallback, and compare
+initial/rejoin snapshot plus mutable-update byte distributions before and after
+that change.
+
+The immediate generation rollback is a configuration rollback in the current
+V2-capable release:
+
+1. unset or empty `BATTLE_MAP_V2_ENABLED_MODES`;
+2. set `BATTLE_MAP_V2_SHADOW_SAMPLE_RATE=0`;
+3. set `BATTLE_MAP_REFERENCE_DELTA_ENABLED=false`; and
+4. redeploy/reload the service and verify metrics plus a new V1 battle.
+
+This affects only newly created battles. Persisted V2 battles keep their stored
+schema and must remain loadable, so do not roll the binary back to a
+pre-V2 release after any live V2 battle has been created. Retain V1 and V2
+readers until the persisted-battle retention window has elapsed.
 
 ---
 

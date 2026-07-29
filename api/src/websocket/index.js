@@ -22,6 +22,7 @@ import * as partyWebsocket from '../services/partyWebsocket.js';
 import * as marketplaceWebsocket from '../services/marketplaceWebsocket.js';
 import * as garrisonWebsocket from './garrisonWebsocket.js';
 import { cleanupConnection } from '../services/messageReliability.js';
+import { WEBSOCKET_PER_MESSAGE_DEFLATE_OPTIONS } from './compressionConfig.js';
 
 // Import extracted modules
 import { checkRateLimit, cleanupUserRateLimits, isInfrastructureMessage } from './rateLimiter.js';
@@ -121,7 +122,11 @@ const activeConnectionIds = new Map();
 // ============================================================
 
 function setupWebSocket(server) {
-  const wss = new WebSocketServer({ server, path: '/ws' });
+  const wss = new WebSocketServer({
+    server,
+    path: '/ws',
+    perMessageDeflate: WEBSOCKET_PER_MESSAGE_DEFLATE_OPTIONS
+  });
 
   // Initialize marketplace WebSocket service with server references
   marketplaceWebsocket.initialize(wss, rooms, connections);

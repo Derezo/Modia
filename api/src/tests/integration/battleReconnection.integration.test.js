@@ -155,6 +155,10 @@ describe('battleReconnection service', () => {
 
       try {
         await battleReconnection.handleDisconnect(battleId, player1Id, 'Player1');
+      } catch {
+        // Ignore DB errors
+      }
+      try {
         await battleReconnection.handleDisconnect(battleId, player2Id, 'Player2');
       } catch {
         // Ignore DB errors
@@ -434,6 +438,10 @@ describe('battleReconnection service', () => {
 
       try {
         await battleReconnection.handleDisconnect(battleId, player1Id, 'Player1');
+      } catch {
+        // Ignore DB errors
+      }
+      try {
         await battleReconnection.handleDisconnect(battleId, player2Id, 'Player2');
       } catch {
         // Ignore DB errors
@@ -462,6 +470,10 @@ describe('battleReconnection service', () => {
 
       try {
         await battleReconnection.handleDisconnect(battleId, player1Id, 'Player1');
+      } catch {
+        // Ignore DB errors
+      }
+      try {
         await battleReconnection.handleDisconnect(battleId, player2Id, 'Player2');
       } catch {
         // Ignore DB errors

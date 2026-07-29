@@ -1,0 +1,657 @@
+{
+  "version": "1.0.0",
+  "template": "ai-image-metadata/characters/player-authored-animation-template.json",
+  "compilerVersion": "1.2.0",
+  "id": "dwarf_male_medic",
+  "profile": "medic_v1",
+  "profileSource": "ai-image-metadata/characters/player-animation-profiles/medic_v1.json",
+  "status": "approved",
+  "approvedAt": "2026-07-29T02:21:35.132Z",
+  "metadataFingerprint": "5896aa9804450e7ba86bc824935fcc98999b7ffd7b783bb855be523b36f3267b",
+  "draftProvenance": {
+    "registry": "ai-image-metadata/characters/player-variants.json",
+    "templateSha256": "7943e69db577b3a4429b47df634f931d3f4cb8e8ce9a91a06578255fbe935bbe",
+    "profileSha256": "d254eb88c8806964c4c60981f5a034dd843f41c2be4bd0d46a6d88601a72408f"
+  },
+  "identity": {
+    "race": "dwarf",
+    "gender": "male",
+    "class": "medic",
+    "presentation": "male dwarf medic",
+    "visualTraits": "dwarf stout build thick beard braided hair sturdy male masculine features field healer medical bag bandages white coat caring determined satchel",
+    "baseFacing": "three-quarters right",
+    "sourceMetadata": {
+      "isAdvanced": true,
+      "inheritsFrom": "medic",
+      "seed": 22015
+    }
+  },
+  "inputs": {
+    "identity": {
+      "origin": "frontend/public/assets/portraits/originals/dwarf_male_medic.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/dwarf_male_medic/inputs/identity.png",
+      "authority": "face, ancestry, gender presentation, hair, eyes, complexion, costume, palette, proportions, and equipment"
+    },
+    "style": {
+      "origin": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/dwarf_male_medic/inputs/style.png",
+      "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+    }
+  },
+  "reference": {
+    "source": "ai-image-metadata/characters/player-animation-sources/dwarf_male_medic/reference.png",
+    "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_male_medic/chroma/reference.png",
+    "identitySource": "ai-image-metadata/characters/player-animation-sources/dwarf_male_medic/inputs/identity.png",
+    "styleSource": "ai-image-metadata/characters/player-animation-sources/dwarf_male_medic/inputs/style.png",
+    "prompt": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative Dwarf Medic (male presentation) identity portrait; Image 2 is style and proportion reference only. Player identity metadata: dwarf stout build thick beard braided hair sturdy male masculine features field healer medical bag bandages white coat caring determined satchel. Create one complete head-to-toe Dwarf Medic (male presentation) preserving Image 1's face, ancestry traits, gender presentation, hair, coat, bag, satchel, bandages, bottles, tools, insignia, palette, and proportions. Do not import identity details from Image 2. Preserve the portrait's coat, medical bag, satchel, bandages, bottles, tools, insignia, and exact item count. Move exactly one established treatment item at a time; never duplicate supplies, invent a weapon, or alter medical markings. Translate the portrait into a compact field-ready healer silhouette. Use a flat #00ff00 chroma key background with no floor or scenery and a square 1:1 canvas with generous padding. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered medic in an attentive triage stance facing three-quarters right. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+  },
+  "animations": {
+    "idle": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_male_medic/idle.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_male_medic/chroma/idle.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 4,
+      "frameDescriptions": [
+        "attentive stance with one hand guarding the medical bag",
+        "measured inhale while scanning for casualties",
+        "weight shifts forward as free hand opens",
+        "quick check of a secured bandage or tool",
+        "centered triage midpoint",
+        "controlled exhale as the item remains secured",
+        "weight shifts rearward while satchel settles",
+        "attentive stance flowing back to frame one"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body medic attentive triage idle-cycle poses of the authoritative Dwarf Medic (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy male masculine features field healer medical bag bandages white coat caring determined satchel. Required sequence: attentive stance with one hand guarding the medical bag; measured inhale while scanning for casualties; weight shifts forward as free hand opens; quick check of a secured bandage or tool; centered triage midpoint; controlled exhale as the item remains secured; weight shifts rearward while satchel settles; attentive stance flowing back to frame one. Motion direction: An alert loop alternates breathing, battlefield scans, bag checks, and a ready open hand while all supplies remain secured.. Overall medic motion is caring, decisive, efficient, and field-ready, with protected medical supplies, quick triage gestures, and readable tool handling. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, coat, bag, satchel, palette, proportions, insignia, and supply count. Preserve the portrait's coat, medical bag, satchel, bandages, bottles, tools, insignia, and exact item count. Move exactly one established treatment item at a time; never duplicate supplies, invent a weapon, or alter medical markings. Healing uses the portrait's established medical or restorative palette and originates from a depicted tool, bandage, bottle, or open treatment hand. Keep effects compact and clinical; do not add unrelated arcane runes or offensive elemental magic. Action-specific effects: No active treatment effect; a tiny clean glint may appear on one closed instrument. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "walk": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_male_medic/walk.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_male_medic/chroma/walk.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "left foot forward contact with bag stabilized",
+        "left leg compresses under the urgent step",
+        "passing pose with right knee advancing",
+        "right foot reaches as free arm counter-swings",
+        "right foot forward contact with satchel controlled",
+        "right leg compresses beneath the coat",
+        "passing pose with left knee advancing",
+        "left foot reaches into the urgent loop"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body medic urgent field stride poses of the authoritative Dwarf Medic (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy male masculine features field healer medical bag bandages white coat caring determined satchel. Required sequence: left foot forward contact with bag stabilized; left leg compresses under the urgent step; passing pose with right knee advancing; right foot reaches as free arm counter-swings; right foot forward contact with satchel controlled; right leg compresses beneath the coat; passing pose with left knee advancing; left foot reaches into the urgent loop. Motion direction: A brisk alternating stride uses real leg compression, one hand stabilizing the bag, free-arm counter-motion, and coat and satchel follow-through.. Overall medic motion is caring, decisive, efficient, and field-ready, with protected medical supplies, quick triage gestures, and readable tool handling. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, coat, bag, satchel, palette, proportions, insignia, and supply count. Preserve the portrait's coat, medical bag, satchel, bandages, bottles, tools, insignia, and exact item count. Move exactly one established treatment item at a time; never duplicate supplies, invent a weapon, or alter medical markings. Healing uses the portrait's established medical or restorative palette and originates from a depicted tool, bandage, bottle, or open treatment hand. Keep effects compact and clinical; do not add unrelated arcane runes or offensive elemental magic. Action-specific effects: No active healing; all supplies remain attached, closed, and singular. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "attack": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_male_medic/attack.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_male_medic/chroma/attack.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "attentive guard protecting the medical bag",
+        "free hand reaches for one established defensive item",
+        "exactly one item clears its holder",
+        "short planted windup with bag held behind",
+        "compact disabling strike or toss at contact",
+        "controlled follow-through keeping distance",
+        "item returns or hand withdraws as supplies are secured",
+        "recovered attentive guard"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body medic defensive instrument strike poses of the authoritative Dwarf Medic (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy male masculine features field healer medical bag bandages white coat caring determined satchel. Required sequence: attentive guard protecting the medical bag; free hand reaches for one established defensive item; exactly one item clears its holder; short planted windup with bag held behind; compact disabling strike or toss at contact; controlled follow-through keeping distance; item returns or hand withdraws as supplies are secured; recovered attentive guard. Motion direction: The medic protects the bag, draws exactly one established defensive instrument or bottle, makes a short disabling strike or toss, and immediately secures supplies.. Overall medic motion is caring, decisive, efficient, and field-ready, with protected medical supplies, quick triage gestures, and readable tool handling. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, coat, bag, satchel, palette, proportions, insignia, and supply count. Preserve the portrait's coat, medical bag, satchel, bandages, bottles, tools, insignia, and exact item count. Move exactly one established treatment item at a time; never duplicate supplies, invent a weapon, or alter medical markings. Healing uses the portrait's established medical or restorative palette and originates from a depicted tool, bandage, bottle, or open treatment hand. Keep effects compact and clinical; do not add unrelated arcane runes or offensive elemental magic. Action-specific effects: Use exactly one portrait-established instrument or bottle with one compact physical impact; no duplicated item, gore, or offensive spell. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "hurt": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_male_medic/hurt.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_male_medic/chroma/hurt.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "attentive stance before impact",
+        "sharp flinch with forearms protecting chest and bag",
+        "maximum stagger as coat and satchel swing",
+        "forced backward step while bag is clutched close",
+        "low balance catch on deeply bent knees",
+        "careful rise with a rapid self-check",
+        "feet reset and supplies settle",
+        "recovered determined stance"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body medic supplies-protecting recovery poses of the authoritative Dwarf Medic (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy male masculine features field healer medical bag bandages white coat caring determined satchel. Required sequence: attentive stance before impact; sharp flinch with forearms protecting chest and bag; maximum stagger as coat and satchel swing; forced backward step while bag is clutched close; low balance catch on deeply bent knees; careful rise with a rapid self-check; feet reset and supplies settle; recovered determined stance. Motion direction: An impact causes a sharp flinch, backward stagger, protective clutch over the medical bag, low balance catch, self-check, and determined recovery.. Overall medic motion is caring, decisive, efficient, and field-ready, with protected medical supplies, quick triage gestures, and readable tool handling. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, coat, bag, satchel, palette, proportions, insignia, and supply count. Preserve the portrait's coat, medical bag, satchel, bandages, bottles, tools, insignia, and exact item count. Move exactly one established treatment item at a time; never duplicate supplies, invent a weapon, or alter medical markings. Healing uses the portrait's established medical or restorative palette and originates from a depicted tool, bandage, bottle, or open treatment hand. Keep effects compact and clinical; do not add unrelated arcane runes or offensive elemental magic. Action-specific effects: One compact impact accent only; no gore, blood, broken supplies, duplicated item, or large healing flash. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "death": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_male_medic/death.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_male_medic/chroma/death.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "verticalAnchor": "bottom",
+      "outputFrameMap": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        7,
+        7
+      ],
+      "frameDescriptions": [
+        "fatal impact breaks the triage stance",
+        "arms gather the medical bag as balance fails",
+        "knees buckle beneath the coat",
+        "one hip grounds while torso tips sideways",
+        "body reaches full ground contact with bag attached",
+        "coat, limbs, and satchel settle low",
+        "final fully fallen medic with supplies at rest",
+        "same final fallen pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body medic defeat sequence poses of the authoritative Dwarf Medic (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy male masculine features field healer medical bag bandages white coat caring determined satchel. Required sequence: fatal impact breaks the triage stance; arms gather the medical bag as balance fails; knees buckle beneath the coat; one hip grounds while torso tips sideways; body reaches full ground contact with bag attached; coat, limbs, and satchel settle low; final fully fallen medic with supplies at rest; same final fallen pose held. Motion direction: A final impact overwhelms the medic, bag draws close, knees buckle, the body lowers into a sideward collapse, and settles fully fallen.. Overall medic motion is caring, decisive, efficient, and field-ready, with protected medical supplies, quick triage gestures, and readable tool handling. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, coat, bag, satchel, palette, proportions, insignia, and supply count. Preserve the portrait's coat, medical bag, satchel, bandages, bottles, tools, insignia, and exact item count. Move exactly one established treatment item at a time; never duplicate supplies, invent a weapon, or alter medical markings. Healing uses the portrait's established medical or restorative palette and originates from a depicted tool, bandage, bottle, or open treatment hand. Keep effects compact and clinical; do not add unrelated arcane runes or offensive elemental magic. Action-specific effects: No gore, blood, broken or duplicated supplies, magic burst, or rigid rotation; preserve coat, bag, and insignia. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "cast": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_male_medic/cast.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_male_medic/chroma/cast.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "focused triage stance",
+        "medical bag opens under one steadying hand",
+        "exactly one treatment item is selected",
+        "low stable treatment posture with both hands engaged",
+        "maximum compact restorative effect at the treatment point",
+        "careful application completes as the glow recedes",
+        "item returns and bag closes",
+        "composed field-ready finish"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body medic restorative treatment sequence poses of the authoritative Dwarf Medic (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy male masculine features field healer medical bag bandages white coat caring determined satchel. Required sequence: focused triage stance; medical bag opens under one steadying hand; exactly one treatment item is selected; low stable treatment posture with both hands engaged; maximum compact restorative effect at the treatment point; careful application completes as the glow recedes; item returns and bag closes; composed field-ready finish. Motion direction: The medic opens the bag, selects exactly one treatment item, kneels or braces, applies it with both hands, releases a compact restorative pulse, then reseals the kit.. Overall medic motion is caring, decisive, efficient, and field-ready, with protected medical supplies, quick triage gestures, and readable tool handling. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, coat, bag, satchel, palette, proportions, insignia, and supply count. Preserve the portrait's coat, medical bag, satchel, bandages, bottles, tools, insignia, and exact item count. Move exactly one established treatment item at a time; never duplicate supplies, invent a weapon, or alter medical markings. Healing uses the portrait's established medical or restorative palette and originates from a depicted tool, bandage, bottle, or open treatment hand. Keep effects compact and clinical; do not add unrelated arcane runes or offensive elemental magic. Action-specific effects: One compact restorative glow may originate from the selected bandage, bottle, tool, or treatment hand; no duplicated supply or anatomy-obscuring aura. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "dead": {
+      "deriveFrom": {
+        "animation": "death",
+        "frame": 7
+      },
+      "frameDescriptions": [
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held"
+      ],
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity."
+    },
+    "victory": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_male_medic/victory.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_male_medic/chroma/victory.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "careful recognition that the field is safe",
+        "quick final check inside the medical bag",
+        "bag closes with all supplies secured",
+        "free hand gives a clear all-safe signal",
+        "relieved light hop or full shoulder release",
+        "coat and satchel settle on landing",
+        "proud field-healer stance",
+        "final triumphant medic pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body medic all-clear celebration poses of the authoritative Dwarf Medic (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy male masculine features field healer medical bag bandages white coat caring determined satchel. Required sequence: careful recognition that the field is safe; quick final check inside the medical bag; bag closes with all supplies secured; free hand gives a clear all-safe signal; relieved light hop or full shoulder release; coat and satchel settle on landing; proud field-healer stance; final triumphant medic pose held. Motion direction: The medic confirms the field is safe, checks the kit, closes it, gives an all-clear signal, makes a relieved hop or shoulder release, and holds a proud caring finish.. Overall medic motion is caring, decisive, efficient, and field-ready, with protected medical supplies, quick triage gestures, and readable tool handling. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, coat, bag, satchel, palette, proportions, insignia, and supply count. Preserve the portrait's coat, medical bag, satchel, bandages, bottles, tools, insignia, and exact item count. Move exactly one established treatment item at a time; never duplicate supplies, invent a weapon, or alter medical markings. Healing uses the portrait's established medical or restorative palette and originates from a depicted tool, bandage, bottle, or open treatment hand. Keep effects compact and clinical; do not add unrelated arcane runes or offensive elemental magic. Action-specific effects: No spell effect; a tiny clean instrument glint may accent the secured kit. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    }
+  },
+  "pins": {
+    "templateSha256": "93943004e340d113943e06dea61fd7dfad67c20750dd4fc30d76d3be1fb7c144",
+    "profileSha256": "b64f647e840e27f91df1b18fe9d42dbf35e9e393b2ea93ab0366d949dd1b51db",
+    "reference": {
+      "sourceSha256": "9e3dc434178c212f365952f565c4dc4404be146918b038db9591d4cb95cafece",
+      "sourceDimensions": "1254x1254",
+      "chromaSourceSha256": "78bf539559dcbcb9758fde85cb9a9bf01e39fcd192fa182f9f6f73e9ec86900d",
+      "chromaSourceDimensions": "1254x1254",
+      "identitySourceSha256": "2a1bc810c05768722ff63d41c207eb5a4f376c78437957c77d5058c9de8f7992",
+      "identitySourceDimensions": "985x985",
+      "styleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "styleSourceDimensions": "1254x1254",
+      "promptSha256": "cbc1e532a9ca1ff99a69f151179d98f5aa67da5049ffdeb38a396bfbaa90e3f8",
+      "encodedSha256": "0f22c295953125d152e4787fd24721a84326ab59d8be695c948c60f364913cb5",
+      "decodedSha256": "526d596ada239c58ae71fa6b6fffb86ee57cf7dbb59a75d1d1649ee5f558be4e"
+    },
+    "animations": {
+      "idle": {
+        "sourceSha256": "479280f8099c73eb6e820784c9539e93952a54661b9ab9b074f39f32710e9bf9",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "70653931ebaeb057e5668a3e0608af014a964bdf1dc9de3ed95a786f7de74254",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "d91e29861dcfb794b75ca2a9998d2b1f4e0a2bb530c05bae9b05d74c1bd5e7a4",
+        "encodedSha256": "286573f6d9c7a1705c97eca1ec74b6ed946fa9ae852da2c16c7cbf6f895e4c60",
+        "decodedSha256": "6045ccf93ac9a9ad19c1c86116a4f4d2527d8a6f797029fd14b986965db86ec4",
+        "frameSha256": [
+          "478051d4185adcbc3eb3a4995423c465e57ba868ea45118afccc627fc226a5ed",
+          "da6cfb173e678cc93abbfec0a6b0749c9dfdbedf7edf8ea09815ebcd2e14d793",
+          "5ddda55d3f6cc92075c5f79418a57e689a4ea7bffe7b727a611088b2914ef9af",
+          "14a537081b1d1349ed560ea90061ab0425c0a24612522f00222a8a2739aa4903",
+          "a372e82199b11856c25f1e372eb98364d6ebd948b2d17217c60c7aa85148236d",
+          "2522cddd3da27b9f81c8bd08cc9b2ec06b6eed7cb7a11d56d0cd28debe2d639b",
+          "d05c7cf7d321cdca408a8083baceadfc324cfd3501902e57c50c5e3eab03d164",
+          "cffa7b439756060a434591bf0bd0a6ba88dab0fb2ca81c09389a9a36faa42146"
+        ],
+        "poseSha256": [
+          "27457a3eb3dbe82355461b41e5ef0e3bf76fc8dcf4b743d5726666a1b23be4fc",
+          "215edaa3cbb1aaaa9c575bb7f6d648e7f788a72fc7f57761c65afce0da749330",
+          "eadc7ee1a589b9158c03f659e272494afd0f84b1bd64b10f0adf60c03528b8cf",
+          "56bf5acfd57e774d1391035511e686ef67203e20cc3107b6e4dff7ef98e39ca2",
+          "a1986d0fb61b3f097b024cbbcf6fc71887df6980b2bf525c400db0b10b096fd5",
+          "83eb8fbb79364f165c39111b5dd074d7dd7601118ca8627f84d2fe163b0f9d27",
+          "b43233ab0743eea302820c973fdba5f925246810c78c278252092397f52f64b9",
+          "c19e0d8495f97ff3c34c09ae1d1f80f505238776f60521ba3b148b528ecad32d"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          0.999763,
+          1,
+          0.992503,
+          1,
+          1
+        ]
+      },
+      "walk": {
+        "sourceSha256": "7a54f11da79280b52d0572da6ee6c13773972ca8bba30a742903d36e12c48c19",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "da1cdf3516e8582c9710d9a770810b07e76ebce9bfe9c42e85e11678f8525421",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "7c8683559dd975578dcb8fc56e3d1974540b631410d3332e2cdf39f66f34f7e0",
+        "encodedSha256": "a30e21e7febd45715d4a9a9f9f29e1b90cda913215002d93c3ed3084c998daef",
+        "decodedSha256": "389592d2e9cbcb1cc0541cd88228a75eeace1ea282e937dba754554c52e28040",
+        "frameSha256": [
+          "759fd07d2a2f60868ab1ef11e80e4db989eaa338c8dc739529ab29775689ef6a",
+          "420e3cdd47097ad7c7eb752433eb179bb71b02d8126c04d13c79ed4f873ee004",
+          "0bc3f4dbfbecb2e685cdad003a6f13265a9f0e9aa2ec6635e92750277e5b6f9c",
+          "88dbc30ba1f2864f90015874c8c6eebd0bc15aa5c578b23cd424bc3416633b26",
+          "a2cf5f292f22cc6bf93ac7c03680530ee543dfb85614cf08ee3c15d309adcd8a",
+          "1173316d556229a28e702cb129d33b063b528ef0842ede04efe8c46feec34617",
+          "b270fa3b203cb9ae10359c17e17e97c2da478fe9f2975e726d40496c241e64a9",
+          "1f3dca49a89dcd2a12e4599e167af6c80634551edaaa100d03b32c9d81168657"
+        ],
+        "poseSha256": [
+          "aa929feb683aa25dcfb727aaaa6dff424bf51b782fe460bc07eca0c7c19529a4",
+          "2fea27c3618e8ccb9e2004858a7a6ff1276332c57333827e2573a1175ec4b568",
+          "715739223481e421c4adb8fe8db3c28f7c176c27e598856b32d44696f5d56b24",
+          "22ea5591592f9fc3469c2346996b22b6dcd3d7d04a00a9e035da5c404a2685a7",
+          "e0101197d33f1904d86bd64b9c5ea9b74b59b6123391bd1d398c51dc25b55e38",
+          "31947f792a2db72fad2a991368a834a6f8964eb583b982973782376d8d526390",
+          "d7d67f2163c381ba2e66d47b18cd0d91eb51e1ee0f1ad7bfaa9f4a811bc821d4",
+          "45390ddc6a9df611c25fd374fc4b641985988305fce7c01fca0d1718c1a92288"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "attack": {
+        "sourceSha256": "e4bb63db768684480b2cc57deddf8b125eab1c5716858884b10b54a5ff03b3bb",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "c19bebb8f93f9eae0c98335eefe60184437de31866142578b70c837255978767",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "358e880bb7671a94379333056520938b3398ddde26e6487b90546463fea3049f",
+        "encodedSha256": "fdcf837260c497a555393a6219b2867844b1cda3901e09ac0055bda7f1f384d3",
+        "decodedSha256": "2c6045d65192478d542109dfedd1c38e93206a7ca68af752d662c7b872b46cf7",
+        "frameSha256": [
+          "b1667c98b9cc83a84c661591a16c0522a462e6b8d40ea4e86e66819824bc0969",
+          "59e2ea2f6ca0ce7c936cf635738cffc556fdd555371f00d3cc5fe0200898b231",
+          "61e05991caf18d844baa77919f80a26bfe6325d6ea6269b6dd701ce03a219fd5",
+          "8ed010151b2ceea89f78892828f18f779f636230d40ec9ca19b0f95afd3fb3e2",
+          "5e4a2fad2a0463379f8eafcf427dac3576d8db18384ff9bbbca886940cff2550",
+          "9a24905a83eaa6e0bf6c6aeca4f823189f18849e61030e75b0505cb8bfe1ae26",
+          "b9b7bda88bb1ed62a704a98208a3207cd671ff1b15a213c57892b6f822fc926c",
+          "d409c4782874ae31d1b85dd9de8a8491b0fdac8c19c2d42dbe0bff201efe1dc6"
+        ],
+        "poseSha256": [
+          "ec837ddb96386cb68e6454ac326cdd1b53cbd497c0f752988d3f2fcf80a73c18",
+          "c30ed08b2b397ddd6427812a6dbf2449b27542699cb24e1fc273aa0281d477cd",
+          "d7c0cf0c5dd6501b27bdf64c8b7ea977bda00e8115f5dc809c6a4327492758a6",
+          "67e6a5644f0e929ae6e01549cc3cf5618799aab7b6f5ddba0fe1b0ca304e79b7",
+          "1e8484a146c040cd4a49e5bdd1c943dd4dcc520b65609368adfc7f212b4b2970",
+          "742e3f05afb03630c458b9769459c22c02a4e542c10fa98932ef300509ba82fd",
+          "260833cf474fa375db27e80abfbfb9aae067b4715b7dfeb427237275b1dd51ed",
+          "f8d69c3cb5d9d5d2454b96db0564318b9eed3c41b203d9cb89b0a512b1512adc"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          0.962211,
+          1,
+          1,
+          1
+        ]
+      },
+      "hurt": {
+        "sourceSha256": "b1f9a452a05c63a96de6db3ff0a39910ac7e1971338740b9f7a21fb3d38771f1",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "3dd5483e223c5a220113e3629d8b721685e304ad450965dbdf48b6536e6b2285",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "7d0077a84f68a23024b3017ee7d36da88fb279c7dc8ec2807234537ae2340210",
+        "encodedSha256": "d02f8039c9d5b5ac91e23ca3779fc2baa20b8352201dd8c36cfb4d677c129122",
+        "decodedSha256": "9f06f9f4ae450e1b46c3f0b8b117c3af4bacdc80ce6d84e962590befb2bf958e",
+        "frameSha256": [
+          "52b0b0472ce07c789d2dc5808decea4dbb400d8f4bb317f0b82cbef7c790bdeb",
+          "7b56fb4e57cbb05a58c833a77fcc85e8d627bc8c9cf68268cb2f23fa9e243d03",
+          "2e806d9bcf044a0ec6d42ac5c16ffca20b3a3798339c4538eae038709dff36f6",
+          "93e12df1aa39c9e64169c28695e79e3028cf3bcec6fe2c33129929dc86fed80d",
+          "40d30108b980caf11b8d0f4df79636203c3eb5ff872e797577a41575b9cb88ae",
+          "5c72f1f03a5185fbf1e44289be10fe26b6a35197937fb8e72b9d9d3fd7c8c7ac",
+          "416dca406ed13e2cc8b0732576219ad13a86f9e32be9278bc36e4ae599dae42e",
+          "afd9e0d348d7d151c084cdb731de35e91de75bc2e9179e1781338f89540f865f"
+        ],
+        "poseSha256": [
+          "e36c4b452e583f888e2334577063420ad9540f932cce4a3dfca91c0dcebbe489",
+          "84ffe24821190e45c17549277f1460e65170080d624d41a8e026252776394609",
+          "5cb195a3a60141c69c7c6d7c9d4eb266d756a8ac258f8fe2a60aadb60050a66f",
+          "6738415585ab12e526600aafd3c75ef131e4b8db7ec3b07dbadc18b74b1753e0",
+          "73055252a9189b730e5c79567d06a173fcc411209b1801c9abae55af2259ec44",
+          "8d1c367a674dab0375262a9fb979d78deb8bb5d8ee39a069bbc33885d0cdf843",
+          "64eef115a3154edb18cbc2d79b3eb060e769795f39a831caab6d5bd13dea554e",
+          "f9e7b110b03dd58df9328214136fd1e749401ed9864dc47e102c1cf05475d1e8"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          0.971975,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "death": {
+        "sourceSha256": "0e3766307751b3ba6ca8e8f1c85d07dbe9826f8357ca2c6e77b99c2542b4f990",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "a8e64768ec1fd749141d86651a5f5e4e406685fed3036361c62f321f25a6fc7d",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "11dc9eec26db5015d3a1108894efe08a760e44f99117b45dd877e98893b6a60b",
+        "encodedSha256": "2b7f996b9fc97ae5a7a2b92d57e65d347d4f08d5b492def1e7506f992ad2812d",
+        "decodedSha256": "ac3b6bcc03c7bc1e4c3393cbdd866af26eff6d732fcccbf08723be53691169a8",
+        "frameSha256": [
+          "470c3e158029bd9f66183956ddedc3816e0eeb0c45925598db91cbe86f25569c",
+          "d3d365e87ca39288193fe6b5472cd925f8af0d3fa3c95eb94556f6e095844144",
+          "a56b109b0ecb564f69500a9eebd594efdc2c3e6533c0e7f159aa9fb1db91a06d",
+          "8bcc6b0100138ac65adca441282ebda4d4aba7bdb8fa6356ad4b793160f851cf",
+          "b8baece9dd48038f83cc66988597c37aae61d7634c0cead6d616227070723e22",
+          "2d9dbcf7e9dea936096e3e2881db8b9853f6e081c93ae5de41841a2fcc632c80",
+          "83158f560158df595ac06d2a91da41996b0fa770a8a689a1d29f3c9b1408eb29",
+          "83158f560158df595ac06d2a91da41996b0fa770a8a689a1d29f3c9b1408eb29"
+        ],
+        "poseSha256": [
+          "a8dbb9c670544e395c45741f7a74982a43dd88c22e8ce65d909de6b391659ef2",
+          "91560a2ebe76c1915f09d085319298c12866966534fcfed47958dbf476372f08",
+          "92dd7858c71168370060fca3debbf1cd39ed6228448fd3dbebaff4f4327e0f05",
+          "6f3e00fe9a5ccb9b652b16a1c1de42a1cf12fe7da5e665626f362fdf3dc36c97",
+          "d7b0f00737b202217882de28314d0e17f24d93c87fad0412797ab69e21e2aad9",
+          "490a1e1ab8d37079cb1ea6a76c0f76d1394de7bb6e1841f22268b7ecbea75c0a",
+          "877bbd866e7883c6be13f480bf907ef50fe26ce6f084f77e5c9d4d8c647e7f34",
+          "877bbd866e7883c6be13f480bf907ef50fe26ce6f084f77e5c9d4d8c647e7f34"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "cast": {
+        "sourceSha256": "1b6010743da879a8aa217171f205bb4db60755219a2815a29b9ca069287f51fb",
+        "sourceDimensions": "1717x916",
+        "chromaSourceSha256": "e6d6c1a8efe5c1af4f6c6fc3fbe37f770715b18239fbd5107075923f37e262c6",
+        "chromaSourceDimensions": "1717x916",
+        "promptSha256": "f039571dc99c65c5e53dbb9ba2613a20b99b4e2b66b27a90aade516c7262f3f0",
+        "encodedSha256": "609de3c8fedc9a989fc9b0da15571cf3fd050ec83a427aaea68b47c32ec376d6",
+        "decodedSha256": "4543d9f63b4e54b888f9565da7eac1d0d0b1cc8990887a3750d62996a35608bf",
+        "frameSha256": [
+          "f719506bc91293d0d2198a5c84c0a819326e466bbf2fdee722b978a6b8f8b814",
+          "92ae95a81181f806ac79f1b3203e88461ae4296f7e3c1b6417beea604c09c08c",
+          "9efcd20430363ffa1190deae49cca570505b0d5b9ad4f4f063869a9ffd34b98e",
+          "1d706889fc74ce60071edc8e4a42dca7587b8c9efa20c73b0ad0eefb105219fa",
+          "5f7d726017f47735d8e046c78273ec2e4f6d907d28ce862b6945488b5371d2d3",
+          "af3d03169cb4116ae19034f261f6f03e6adfbdbd4b01b750939682f10286d172",
+          "4880661ce4507f6ff85ce796152bdf7abfef1d67c3bc5d07f9019e6ac1706b42",
+          "00af9a2102e8fabd2198ab3a8f186b61d5e0e52be872ccf646f6cd39da13d831"
+        ],
+        "poseSha256": [
+          "03856058b2921daa7375dd0887af66d333ad382afd87d23f8ecd3542054850c2",
+          "e540e4e9ee9f2e89a190d1a6efe516d99f4553b6906d99168fbd1b053f0545f1",
+          "fdc416612d904c390e399d8c5b60908636bb0a3156f96009eedca4b09f6b1d6c",
+          "9492077cab95abbbecceb98aeebe34c7b0df8524ca3b9c9f03a54792efa8a6e7",
+          "dfce74448d3ff03cf3ccc8baa10cab99a8ec18c8ab00797170ec9e7021333d49",
+          "aa0e43baf16a36363b60e6cca8a24222517616e949fec876e613c98260db47c3",
+          "3cee45d234fc448cea13ce37b4cf86b1f94f9854cd5f40999c36d126fd18f25b",
+          "3e3e3a5d44b36e7af960303b29fee179c94d0d9f843b09710399a65016a8b58c"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "victory": {
+        "sourceSha256": "d02b51c0fd1aa6224fd4693d569091742377bb85a2ac9b1f853bdcf52a9a121e",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "8c75a5260a9abd9e88d59b11cde63b38001a30d600086f0759ee21d9b663b231",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "902d12f9eecf94fc0bed45afdc38c5e8832ba6562c7430e9b50be8a8402a0ef0",
+        "encodedSha256": "3123912fe73a6fb295c45cada5b999854f4ed3b840934a67f74851ca7a614468",
+        "decodedSha256": "7ac4053b78cc9057da89e883e928e3d4b0316ad0b29de30f748f8dbfc7cfe579",
+        "frameSha256": [
+          "ab5efe0b4dcca3993b042c411ce42a90cc483e64056c9519f87d2047ab3d25c9",
+          "a216e267eaf8e3faad0a9ef98446185427a4bed4e9438315309f08ed467632e9",
+          "09b89fef2d69991d4b2975594cefdb031b254231f0f1251d033136ab04941715",
+          "384f68ae22d1c4317a54e3eba79558ac03ebafc0e699e012958b215eca92228d",
+          "cf657c0bda0d70acb1c70b1984015404546bb35e28d975837555b9ecb6e498fe",
+          "14d0dcf1510ae5d42e592bb0876b1d12d2debdc946e6636852311be07683042c",
+          "c1d657e593f11db9454114c38ec073125dc96e551e16c26db3580c12ce66e27e",
+          "fba564fdfb68545736a5d2b0e774665611a0bd588703b33a6b06d95eccf3983e"
+        ],
+        "poseSha256": [
+          "850e62ac4cea6415dc96d6ef11f2db0f02b4baf1ddf091d7c90cef21644a0d40",
+          "b1b4c17ea25174c87b2f1b030bf66a9127597a941a22dc6a38d4464cdfbab9b9",
+          "df9313fc1c8977e868fb7608dd15abeee150b4e12113c253f10d4d76b6479e6a",
+          "6849345adb723347cd69f7fce7fd50a751501eabc69cc87a516e305be951240e",
+          "9b694d3e728e32f02364f1df7fc6a474e9d19542dc02f8b7bcde3e13cce6266d",
+          "34e2055c11eed61cc03e5a5a4d68eac6ffed1e002636ac8dbdf566a6c375dc47",
+          "67df44c257ec786519dce4fdd0640fb0acefd7c9899125ea4d122d92f5998972",
+          "4f1548fe2140d52934348c46d1425575b6fcb19fa4e44bdb0094300b777146b9"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "dead": {
+        "sourceSha256": "0e3766307751b3ba6ca8e8f1c85d07dbe9826f8357ca2c6e77b99c2542b4f990",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "a8e64768ec1fd749141d86651a5f5e4e406685fed3036361c62f321f25a6fc7d",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "f631a7fd605211260b28b5a5bba3503e06dc1064497d1e5769d62e40e178e2b1",
+        "encodedSha256": "e75eadee97446df78c93bc2e285f6c349378a7cb5a8dd844948747bfad552310",
+        "decodedSha256": "c93bb6a357730e5a9fab53975db5ec12487705342246bbd4bb8433860c8401c1",
+        "frameSha256": [
+          "83158f560158df595ac06d2a91da41996b0fa770a8a689a1d29f3c9b1408eb29",
+          "83158f560158df595ac06d2a91da41996b0fa770a8a689a1d29f3c9b1408eb29",
+          "83158f560158df595ac06d2a91da41996b0fa770a8a689a1d29f3c9b1408eb29",
+          "83158f560158df595ac06d2a91da41996b0fa770a8a689a1d29f3c9b1408eb29",
+          "83158f560158df595ac06d2a91da41996b0fa770a8a689a1d29f3c9b1408eb29",
+          "83158f560158df595ac06d2a91da41996b0fa770a8a689a1d29f3c9b1408eb29",
+          "83158f560158df595ac06d2a91da41996b0fa770a8a689a1d29f3c9b1408eb29",
+          "83158f560158df595ac06d2a91da41996b0fa770a8a689a1d29f3c9b1408eb29"
+        ],
+        "poseSha256": [
+          "877bbd866e7883c6be13f480bf907ef50fe26ce6f084f77e5c9d4d8c647e7f34",
+          "877bbd866e7883c6be13f480bf907ef50fe26ce6f084f77e5c9d4d8c647e7f34",
+          "877bbd866e7883c6be13f480bf907ef50fe26ce6f084f77e5c9d4d8c647e7f34",
+          "877bbd866e7883c6be13f480bf907ef50fe26ce6f084f77e5c9d4d8c647e7f34",
+          "877bbd866e7883c6be13f480bf907ef50fe26ce6f084f77e5c9d4d8c647e7f34",
+          "877bbd866e7883c6be13f480bf907ef50fe26ce6f084f77e5c9d4d8c647e7f34",
+          "877bbd866e7883c6be13f480bf907ef50fe26ce6f084f77e5c9d4d8c647e7f34",
+          "877bbd866e7883c6be13f480bf907ef50fe26ce6f084f77e5c9d4d8c647e7f34"
+        ],
+        "sourceFrameIndexes": [
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  }
+}

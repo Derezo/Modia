@@ -389,7 +389,7 @@ describe('Battle API', () => {
       assert.strictEqual(secondRes.status, 304, 'Should return 304 Not Modified when ETag matches');
     });
 
-    it('should return 403 for non-participant', async () => {
+    it('should conceal battle existence from a non-participant', async () => {
       if (!battle) {
         console.log('Skipping - no battle started');
         return;
@@ -405,10 +405,10 @@ describe('Battle API', () => {
         otherUser.accessToken
       );
 
-      assert.strictEqual(res.status, 403);
-      assert.ok(res.body.error?.includes('Not a battle participant') ||
-                res.body.message?.includes('Not a battle participant'),
-        'Should return "Not a battle participant" error');
+      assert.strictEqual(res.status, 404);
+      assert.ok(res.body.error?.includes('not have access') ||
+                res.body.message?.includes('not have access'),
+        'Should return an access-concealing not-found error');
 
       // Cleanup
       await cleanupTestUser(otherUser.userId);

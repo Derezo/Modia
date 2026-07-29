@@ -1,0 +1,657 @@
+{
+  "version": "1.0.0",
+  "template": "ai-image-metadata/characters/player-authored-animation-template.json",
+  "compilerVersion": "1.2.0",
+  "id": "vampire_other_conjurer",
+  "profile": "conjurer_v1",
+  "profileSource": "ai-image-metadata/characters/player-animation-profiles/conjurer_v1.json",
+  "status": "approved",
+  "approvedAt": "2026-07-29T02:54:54.458Z",
+  "metadataFingerprint": "e2f8eba9b10e3a758876988f10163160259cffdf439a7fd2bfb02afd70f47ee7",
+  "draftProvenance": {
+    "registry": "ai-image-metadata/characters/player-variants.json",
+    "templateSha256": "7943e69db577b3a4429b47df634f931d3f4cb8e8ce9a91a06578255fbe935bbe",
+    "profileSha256": "040b4a9c5fa584702f2cdacb905efd93c95b666fe63aee8ac22996fa19205e6d"
+  },
+  "identity": {
+    "race": "vampire",
+    "gender": "other",
+    "class": "conjurer",
+    "presentation": "non-binary vampire conjurer",
+    "visualTraits": "vampire pale skin red eyes fangs aristocratic elegant androgynous features non-binary elemental mage crystal staff swirling elements nature magic earth fire ice",
+    "baseFacing": "three-quarters right",
+    "sourceMetadata": {
+      "isAdvanced": true,
+      "inheritsFrom": "conjurer",
+      "seed": 23039
+    }
+  },
+  "inputs": {
+    "identity": {
+      "origin": "frontend/public/assets/portraits/originals/vampire_other_conjurer.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/vampire_other_conjurer/inputs/identity.png",
+      "authority": "face, ancestry, gender presentation, hair, eyes, complexion, costume, palette, proportions, and equipment"
+    },
+    "style": {
+      "origin": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/vampire_other_conjurer/inputs/style.png",
+      "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+    }
+  },
+  "reference": {
+    "source": "ai-image-metadata/characters/player-animation-sources/vampire_other_conjurer/reference.png",
+    "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_other_conjurer/chroma/reference.png",
+    "identitySource": "ai-image-metadata/characters/player-animation-sources/vampire_other_conjurer/inputs/identity.png",
+    "styleSource": "ai-image-metadata/characters/player-animation-sources/vampire_other_conjurer/inputs/style.png",
+    "prompt": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative Vampire Conjurer (non-binary presentation) identity portrait; Image 2 is style and proportion reference only. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant androgynous features non-binary elemental mage crystal staff swirling elements nature magic earth fire ice. Create one complete head-to-toe Vampire Conjurer (non-binary presentation) preserving Image 1's face, ancestry traits, gender presentation, robes, crystal focus, elemental ornaments, palette, proportions, and equipment. Do not import identity details from Image 2. Preserve the portrait's robes, crystal staff or focus, elemental ornaments, jewelry, and exact item count. Keep exactly one depicted focus in its original hand; never duplicate crystals, swap equipment, or turn effects into permanent gear. Translate the portrait into a compact elemental-mage silhouette. Use a flat #00ff00 chroma key background with no floor or scenery and a square 1:1 canvas with generous padding. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered conjurer in an element-balanced stance facing three-quarters right. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+  },
+  "animations": {
+    "idle": {
+      "source": "ai-image-metadata/characters/player-animation-sources/vampire_other_conjurer/idle.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_other_conjurer/chroma/idle.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 4,
+      "frameDescriptions": [
+        "balanced stance with crystal focus grounded",
+        "gentle inhale as the focus crystal brightens",
+        "weight shifts forward and free hand opens",
+        "tiny established element curls near the crystal",
+        "centered elemental midpoint",
+        "soft exhale as the element contracts",
+        "weight shifts rearward with robes settling",
+        "balanced stance flowing back to frame one"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body conjurer elemental-balance idle-cycle poses of the authoritative Vampire Conjurer (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant androgynous features non-binary elemental mage crystal staff swirling elements nature magic earth fire ice. Required sequence: balanced stance with crystal focus grounded; gentle inhale as the focus crystal brightens; weight shifts forward and free hand opens; tiny established element curls near the crystal; centered elemental midpoint; soft exhale as the element contracts; weight shifts rearward with robes settling; balanced stance flowing back to frame one. Motion direction: A measured breathing loop shifts stance around the crystal focus while one tiny established element alternately brightens and rests.. Overall conjurer motion is elemental, sweeping, balanced, and adaptive, with crystal-focus leverage, grounded stance changes, and distinct earth, fire, ice, or nature gestures. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, crystal focus, palette, proportions, and elemental ornaments. Preserve the portrait's robes, crystal staff or focus, elemental ornaments, jewelry, and exact item count. Keep exactly one depicted focus in its original hand; never duplicate crystals, swap equipment, or turn effects into permanent gear. Use only the elemental types and palette established in the portrait. Each action shows one compact, readable element at a time, visibly sourced from the crystal focus or casting hand. Action-specific effects: Only a thumb-sized pulse of one portrait-established element is permitted. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "walk": {
+      "source": "ai-image-metadata/characters/player-animation-sources/vampire_other_conjurer/walk.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_other_conjurer/chroma/walk.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "left foot forward contact with focus balanced",
+        "left leg compressed as robes gather",
+        "passing pose with right knee advancing",
+        "right foot reaches while staff or focus counter-swings",
+        "right foot forward contact",
+        "right leg compressed under the stride",
+        "passing pose with left knee advancing",
+        "left foot reaches into the balanced loop"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body conjurer focus-guided walk poses of the authoritative Vampire Conjurer (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant androgynous features non-binary elemental mage crystal staff swirling elements nature magic earth fire ice. Required sequence: left foot forward contact with focus balanced; left leg compressed as robes gather; passing pose with right knee advancing; right foot reaches while staff or focus counter-swings; right foot forward contact; right leg compressed under the stride; passing pose with left knee advancing; left foot reaches into the balanced loop. Motion direction: A coherent alternating walk uses real leg compression, focus counter-motion, and responsive robe movement.. Overall conjurer motion is elemental, sweeping, balanced, and adaptive, with crystal-focus leverage, grounded stance changes, and distinct earth, fire, ice, or nature gestures. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, crystal focus, palette, proportions, and elemental ornaments. Preserve the portrait's robes, crystal staff or focus, elemental ornaments, jewelry, and exact item count. Keep exactly one depicted focus in its original hand; never duplicate crystals, swap equipment, or turn effects into permanent gear. Use only the elemental types and palette established in the portrait. Each action shows one compact, readable element at a time, visibly sourced from the crystal focus or casting hand. Action-specific effects: No active elemental spell; the crystal may retain a faint steady glow. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "attack": {
+      "source": "ai-image-metadata/characters/player-animation-sources/vampire_other_conjurer/attack.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_other_conjurer/chroma/attack.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "element-balanced guard",
+        "focus pulls back as free hand selects one element",
+        "deep windup over the rear leg with crystal charged",
+        "forward step begins the sweeping strike",
+        "compact single-element contact at the focus tip",
+        "full-body follow-through as the element breaks apart",
+        "focus recoils and free hand closes",
+        "recovered balanced guard"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body conjurer elemental-focus strike poses of the authoritative Vampire Conjurer (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant androgynous features non-binary elemental mage crystal staff swirling elements nature magic earth fire ice. Required sequence: element-balanced guard; focus pulls back as free hand selects one element; deep windup over the rear leg with crystal charged; forward step begins the sweeping strike; compact single-element contact at the focus tip; full-body follow-through as the element breaks apart; focus recoils and free hand closes; recovered balanced guard. Motion direction: The focus pulls back, free hand selects one element, a planted sweep drives a compact elemental contact, and the body follows through into balance.. Overall conjurer motion is elemental, sweeping, balanced, and adaptive, with crystal-focus leverage, grounded stance changes, and distinct earth, fire, ice, or nature gestures. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, crystal focus, palette, proportions, and elemental ornaments. Preserve the portrait's robes, crystal staff or focus, elemental ornaments, jewelry, and exact item count. Keep exactly one depicted focus in its original hand; never duplicate crystals, swap equipment, or turn effects into permanent gear. Use only the elemental types and palette established in the portrait. Each action shows one compact, readable element at a time, visibly sourced from the crystal focus or casting hand. Action-specific effects: One short earth, fire, ice, or nature accent established by the portrait may mark contact; no mixed-element storm or detached large projectile. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "hurt": {
+      "source": "ai-image-metadata/characters/player-animation-sources/vampire_other_conjurer/hurt.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_other_conjurer/chroma/hurt.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "balanced guard before impact",
+        "sharp flinch with focus pulled close",
+        "maximum stagger as tiny elemental fragments scatter",
+        "stumbling rear step using the focus for balance",
+        "low planted brace with free hand shielding",
+        "controlled push upright as fragments fade",
+        "feet and focus reset",
+        "recovered element-balanced guard"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body conjurer disrupted-element recovery poses of the authoritative Vampire Conjurer (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant androgynous features non-binary elemental mage crystal staff swirling elements nature magic earth fire ice. Required sequence: balanced guard before impact; sharp flinch with focus pulled close; maximum stagger as tiny elemental fragments scatter; stumbling rear step using the focus for balance; low planted brace with free hand shielding; controlled push upright as fragments fade; feet and focus reset; recovered element-balanced guard. Motion direction: An impact breaks balance into a sharp flinch, scattered elemental fragments, focus-assisted stagger, grounded brace, and calm recovery.. Overall conjurer motion is elemental, sweeping, balanced, and adaptive, with crystal-focus leverage, grounded stance changes, and distinct earth, fire, ice, or nature gestures. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, crystal focus, palette, proportions, and elemental ornaments. Preserve the portrait's robes, crystal staff or focus, elemental ornaments, jewelry, and exact item count. Keep exactly one depicted focus in its original hand; never duplicate crystals, swap equipment, or turn effects into permanent gear. Use only the elemental types and palette established in the portrait. Each action shows one compact, readable element at a time, visibly sourced from the crystal focus or casting hand. Action-specific effects: A few small fragments of the established element may disperse; no gore, blood, full-body tint, or uncontrolled field effect. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "death": {
+      "source": "ai-image-metadata/characters/player-animation-sources/vampire_other_conjurer/death.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_other_conjurer/chroma/death.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "verticalAnchor": "bottom",
+      "outputFrameMap": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        7,
+        7
+      ],
+      "frameDescriptions": [
+        "fatal impact disrupts elemental balance",
+        "crystal dims as the free arm slackens",
+        "knees buckle beneath the robes",
+        "one knee grounds beside the lowering focus",
+        "body tips into full ground contact",
+        "robes, limbs, and focus settle low",
+        "final fully fallen conjurer with element extinguished",
+        "same final fallen pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body conjurer defeat sequence poses of the authoritative Vampire Conjurer (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant androgynous features non-binary elemental mage crystal staff swirling elements nature magic earth fire ice. Required sequence: fatal impact disrupts elemental balance; crystal dims as the free arm slackens; knees buckle beneath the robes; one knee grounds beside the lowering focus; body tips into full ground contact; robes, limbs, and focus settle low; final fully fallen conjurer with element extinguished; same final fallen pose held. Motion direction: The focused element extinguishes, knees buckle, the body sinks beside the crystal focus, tips sideways, and settles in a fully fallen rest.. Overall conjurer motion is elemental, sweeping, balanced, and adaptive, with crystal-focus leverage, grounded stance changes, and distinct earth, fire, ice, or nature gestures. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, crystal focus, palette, proportions, and elemental ornaments. Preserve the portrait's robes, crystal staff or focus, elemental ornaments, jewelry, and exact item count. Keep exactly one depicted focus in its original hand; never duplicate crystals, swap equipment, or turn effects into permanent gear. Use only the elemental types and palette established in the portrait. Each action shows one compact, readable element at a time, visibly sourced from the crystal focus or casting hand. Action-specific effects: Elemental light fades without eruption, gore, blood, dismemberment, or rigid rotation; keep the focus singular. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "cast": {
+      "source": "ai-image-metadata/characters/player-animation-sources/vampire_other_conjurer/cast.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_other_conjurer/chroma/cast.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "focused element-balanced stance",
+        "crystal focus plants as free hand rises",
+        "one established element gathers at the crystal",
+        "wide stance shapes the element between focus and hand",
+        "maximum compact elemental form held clearly",
+        "forceful forward release along a short path",
+        "element dissipates as focus lifts",
+        "composed balanced casting finish"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body conjurer elemental shaping sequence poses of the authoritative Vampire Conjurer (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant androgynous features non-binary elemental mage crystal staff swirling elements nature magic earth fire ice. Required sequence: focused element-balanced stance; crystal focus plants as free hand rises; one established element gathers at the crystal; wide stance shapes the element between focus and hand; maximum compact elemental form held clearly; forceful forward release along a short path; element dissipates as focus lifts; composed balanced casting finish. Motion direction: The focus plants, free hand names one element, crystal energy rises, both arms shape a compact form, release it forward, and restore elemental balance.. Overall conjurer motion is elemental, sweeping, balanced, and adaptive, with crystal-focus leverage, grounded stance changes, and distinct earth, fire, ice, or nature gestures. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, crystal focus, palette, proportions, and elemental ornaments. Preserve the portrait's robes, crystal staff or focus, elemental ornaments, jewelry, and exact item count. Keep exactly one depicted focus in its original hand; never duplicate crystals, swap equipment, or turn effects into permanent gear. Use only the elemental types and palette established in the portrait. Each action shows one compact, readable element at a time, visibly sourced from the crystal focus or casting hand. Action-specific effects: Shape and release one compact portrait-established element from the crystal or hand; never combine unrelated elements or cover the body. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "dead": {
+      "deriveFrom": {
+        "animation": "death",
+        "frame": 7
+      },
+      "frameDescriptions": [
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held"
+      ],
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity."
+    },
+    "victory": {
+      "source": "ai-image-metadata/characters/player-animation-sources/vampire_other_conjurer/victory.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_other_conjurer/chroma/victory.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "quiet recognition of victory",
+        "crystal focus rises in one hand",
+        "free hand draws one small element upward",
+        "element completes a compact orbit around the crystal",
+        "graceful pivot follows the elemental path",
+        "focus plants as the element contracts",
+        "harmonious victor stance with crystal displayed",
+        "final triumphant conjurer pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body conjurer elemental flourish poses of the authoritative Vampire Conjurer (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant androgynous features non-binary elemental mage crystal staff swirling elements nature magic earth fire ice. Required sequence: quiet recognition of victory; crystal focus rises in one hand; free hand draws one small element upward; element completes a compact orbit around the crystal; graceful pivot follows the elemental path; focus plants as the element contracts; harmonious victor stance with crystal displayed; final triumphant conjurer pose held. Motion direction: The conjurer recognizes victory, raises the crystal, guides one small element through a controlled orbit, plants the focus, and holds a harmonious finish.. Overall conjurer motion is elemental, sweeping, balanced, and adaptive, with crystal-focus leverage, grounded stance changes, and distinct earth, fire, ice, or nature gestures. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, crystal focus, palette, proportions, and elemental ornaments. Preserve the portrait's robes, crystal staff or focus, elemental ornaments, jewelry, and exact item count. Keep exactly one depicted focus in its original hand; never duplicate crystals, swap equipment, or turn effects into permanent gear. Use only the elemental types and palette established in the portrait. Each action shows one compact, readable element at a time, visibly sourced from the crystal focus or casting hand. Action-specific effects: One compact established element may orbit the focus; no mixed-element spectacle. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    }
+  },
+  "pins": {
+    "templateSha256": "93943004e340d113943e06dea61fd7dfad67c20750dd4fc30d76d3be1fb7c144",
+    "profileSha256": "430c3a8c40b67e68cfcd9e1d7e4fbc611d2423b9f846c88a53ce80aa0e9db871",
+    "reference": {
+      "sourceSha256": "b7d6cb19227609973337c02c9d9e4eaff5cbecfc452209ca72399798fb444920",
+      "sourceDimensions": "1254x1254",
+      "chromaSourceSha256": "9101333a7fdaba4a948aa9450c399c2f87aafa6a2a41cfedd0e8d9522ec40645",
+      "chromaSourceDimensions": "1254x1254",
+      "identitySourceSha256": "8c057298bb234ed3542b0b53256b080347e4685ba699468f2b9c5c64c4b50643",
+      "identitySourceDimensions": "1024x1024",
+      "styleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "styleSourceDimensions": "1254x1254",
+      "promptSha256": "ef0508fcf353ff8be20db33643e90bde958d4b75d5dd48eb3b120debeed0ddc2",
+      "encodedSha256": "37d2c5417917eb5c38fa0bee84609a5cddcd3d0b726ef18a39a7ff6f36307490",
+      "decodedSha256": "328d5ce5e36b52c410cf811fc3b511bc8e466f52e4c29802327facf1bcb9fbd6"
+    },
+    "animations": {
+      "idle": {
+        "sourceSha256": "9bcea3853b58c13159ba830f7f23c312d4748edd3e9e86527e9cad2fdd02d358",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "802e04bea3c8bc9bf0e1c13e82da33e8cc175e70519ff5cff0a57a39feff7585",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "47e6f93c0cba604a8c4ed8c60121e6d9a9aa21d629869d92707a30e27cf5e47b",
+        "encodedSha256": "518b59028870b5b9f3859e12713b4c2084bce6731bf0cd8b9492f9e3b47784b0",
+        "decodedSha256": "d184fc2cb93fc2b4de7291aec663efcb498f59b337582b7c57e55b2cad292d7f",
+        "frameSha256": [
+          "b13ddb663a4a46fe0c8df83a7c433f056b34a5fded248ba843905a47f263c8d8",
+          "78da81a2cf86d6ad6fde63f0a6a31113e5d61dc09d27e0152226b91f758248b5",
+          "7663499778c4d8f65e8ae00c1545d38baf492137343629fb6c72c6de140f0735",
+          "a6b7422c6e9547f719a6dfc1e7db89c25f7cddc90ab9c45a5ed4944f542e6381",
+          "02fac1c8717dd74d83e10c66f933f8de89063334c4fc15556d503357199ba072",
+          "89e63152833152e070283afda6e7e0fb9738a8e7c6ca93c8003c284f57debdfc",
+          "ba691cbe6b719c8238d27280e53ce78b343613ff4d1e6bc832c5d1bfa8af5489",
+          "0ed4ce2ee82b5efd398eadd46e9f10536cd09eff22be175e114f1158ee72b92b"
+        ],
+        "poseSha256": [
+          "cb3ddceaff96f0e59b2349709e6a37875ac9776aec5f0401796e3943858a17cd",
+          "860b0fd6b193f799698296e894bf3609bfaad20a91d9d14f326cbfa6428ada81",
+          "d03e9100762eb628c39604099b3bc436add2ca3c5b52799a8f12a978335d6e5f",
+          "ffb45f0b4d8306906170da1c2ddfdd3cc2b0f9d39927db62805993c27f72cceb",
+          "ed69e6ad391d9e4eafab28b9d3464cb93de16cb202c6fd4be87f6ff130f3ad24",
+          "cc05ac66e9fa5a2182b91d4a1567602a2fcf83a46ad61fb3e8a5dd378388759a",
+          "d9debf6121204e2a1da687e1ce3043539c6f33f375cabbb0649db6191780d508",
+          "0424015db84cace51f732b2f820f0f6b540e6e85788fa835a521a3cf1fcf4775"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.987109,
+          0.98566,
+          0.984574,
+          0.978157,
+          0.986952,
+          0.986262,
+          0.986226,
+          0.987162
+        ]
+      },
+      "walk": {
+        "sourceSha256": "324509ee6b0212d8ac29ffdedfa95501c479d6efc3fc53cea4af2235e69f462b",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "40d31f95884fbc0c2ce575c3f03904dd10537f45e8034f83ef32aba70c2e8c48",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "b922aefe5d8009dd6b1752f657f3c1db9c3ff6843c914d7d2f71bd77c6e3f1f0",
+        "encodedSha256": "2de967fdef04fd3879d6ea0d243b6bc5e8c8fb22fa6b89f2fe4cd55e80e68820",
+        "decodedSha256": "0966125258b19a7bd45492bb06335d47f5c0187e8c89f4daf90834a4899e7e98",
+        "frameSha256": [
+          "9e81d0b8ed8f21e282b164a20d13cceb28e3d31d1cbce1365962c1c38403f50b",
+          "4143a506a6510fc7aabaa8eb8d510b3ea7bc1517d0933c0ff6dbf26559631f55",
+          "c1837d0a79d0c6f298bfa404dd448e76ba32f630fff51d34efeb4d969c860eaa",
+          "6833e5f2416afd4125a2796d0b964cefd8235f0af821e8130cdffe1f65006339",
+          "6ce2de6ee3a9b4feee2f428b4c6d8307a4baca9d506ee97068f052416ba90ded",
+          "ed1c17e2514da8cc06557b4329c1a947d4205b85630b8f1ddd2373a5dc67ec81",
+          "e7a430316c5996b40c16612710b4fffce33873454b279bd8cb0db77b7e4d6fd5",
+          "35b926f5afd8cf7efc6af90d9ce036c695e745065a71e3bf534f45a7630c49e2"
+        ],
+        "poseSha256": [
+          "fa076e4ce0946136c77cee5f6b2d5a6c3dbe70c907746ec7c5185c16d5988d94",
+          "5045b4be34fa531ae66cb521c58bb79db03ddecc585c6b591b263728c70eb361",
+          "3c7f8ef8903af7fca0e37506607f8dd5424a97580a881d8763ac56b9d833f82d",
+          "5c351971c85afe1d9c32d0ea60c2898781b0b483d71e489f747e8746615cb30d",
+          "250194682ad84578a4b94e30e56c79a03cfdbde90e07ecbd2eb600049ad31dba",
+          "ab6b5ccd02ad857551f764341ecdfa8974031a17597016c44e855f2e655ef2b3",
+          "0a584aec29ea00dc6635f8ded080b8daf11f96399ede7c84bb601c47d8331043",
+          "b7550dd99e94e69e5a746b0687dc660ed15faf065eedf3c6495bf6f79d9c02eb"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.98561,
+          0.985551,
+          0.984536,
+          0.986059,
+          0.985199,
+          0.983395,
+          0.983522,
+          0.986117
+        ]
+      },
+      "attack": {
+        "sourceSha256": "edba1630f4b8d6e759eb89c7a228c8240dc2eb70d6994b410a4ddfc21d8a5be1",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "a87168e44f3e73b37b7f2b153be6c2660cb62bf87e761301189cb4fe86557612",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "7a7e8616d8b2edbce20ee3359636df736efefce4aa467591d71d19a11e218f87",
+        "encodedSha256": "2ec774bcfb6d779e206cf7f658025ea230f1942a4259ee99ceae0b130b0415a7",
+        "decodedSha256": "d58525a809434935335a80ea2d4b590dd13e696833d5a29061f731e8ca546969",
+        "frameSha256": [
+          "fc922a2823299f1f0421b1ff2389a4b81d26fa825b6cd31d90719f03cca88b2d",
+          "086d3323d0928ec40950ba4db8069dc67f9212111bd63dbe424522568d02a284",
+          "05678475738b78f8637d52b986639a25745972cf9996e3a739af333520bab852",
+          "0ac84523f5fc33f300ba3626adacb0bffbe39ad7b8211fe2450ed651839ddbd3",
+          "a0e99fdfa88fb0b5b826741b867b66a21dd74ffc21ce65474c7b3aac1decf2f7",
+          "c245b064bd26837bfa802232d9f45be7f6b8e6464f620ece4c7f2387df28809e",
+          "ddae36dd58254adea47321aa7a5b0c10f3751793ce40063b5dc88b23d2f45d7e",
+          "ea46a203860f0a023a8bbc05ce1f4954e338688a7c0e7a617a9c3330cf38145b"
+        ],
+        "poseSha256": [
+          "b991e357cf555e4a6105c94200c69ae07e2e4f9e561ef632651c6ad98a3a3b28",
+          "86050326bb417e5bc7489060156c571967bb7960ee989279855e495a307c3d89",
+          "dea30e925c8d967bfee74bd75ed647c0c11986ede5147c4820823bc459eb9edf",
+          "280b2a6053cdd8e2c08a139c4d7ede50f90ede3650288eb5494d1055e85eddf7",
+          "1d6ed3e86ff0265be5db94c4c2eac7ee885dde95346384c1eb202848ceada8ab",
+          "4f3b8fca201fbc2292b7410632d46dba9504f3ad938c2cbecffe143ca4ca0793",
+          "2e6d677a8c3e8581a049fb080f7d9a8dcbfb2617e921cf14d3a90ed0664809c7",
+          "cdd6bc2e2d7d13fedfb3215bf0c5b94858b93b55b027dbbbbc171389178d0fa2"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.986085,
+          0.986685,
+          0.998074,
+          0.992607,
+          0.986518,
+          0.959542,
+          0.999588,
+          0.988203
+        ]
+      },
+      "hurt": {
+        "sourceSha256": "8707c14a12a5c71f7169c03f9aca976e72d03bf09d4d94b9fb756297902ae73d",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "80030dc3e3ca8f2638532899421a761a6102924bc957adfcb00d9be2d370d48e",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "8c320bd05b5a6765de67e76dc4e6f6a3f1b6485bec89befbee80385f910cf776",
+        "encodedSha256": "8834e2f11661eb851a31103ac5ec4bcf499c100267a088a9c99986e35252a703",
+        "decodedSha256": "5255c2ed04bfffc78c4535bfd75f2ff9eea47baf53e4433e04b8e2a175a8fca9",
+        "frameSha256": [
+          "13697f2fffacf4008fe97067e2f4aa469e7828c59877fc5d4ba264706e0269ae",
+          "25c4cdeb86e70a8dc1d8b1df9fce888e6541e0bd0b8165b880be3cb50b9131c6",
+          "31eae0eea18abd68c34f9eedd1b1d23d7057bae292bac8329cd26da93a081440",
+          "ef5c967ef152d1fba77891199d98147c95aaf801e55b1e1959b597e940186759",
+          "d843a71e9b44a000263d975fc6cb899899d43b59ea2cbe533bab727accd224a6",
+          "4060f24b1cc84fae49d8d21ed082b46bdcb54e4d06db2bee91709a74c92c5f92",
+          "dfdf2eccaa5f3a05e114e937b6a2d1cc7bfc5438bd6edcbe9539fbaec0a8258a",
+          "b498910e5e08ae87f73d1cd15acbbb4162c2128727f4c08fb67a6f77e78c311e"
+        ],
+        "poseSha256": [
+          "c161c90fb837b2532bbf7a6e1f87078bf84ab1f90f61bc3469fdda5bef48e51c",
+          "9a448a6e4ed1e88e12b4e000c5fc17b0201d92dae0c00e7740c21957454e15ff",
+          "315720eb94cf0739ce1fc5654b8e138e7f346ded205fb1bae821a6d7d70933eb",
+          "ba4c3ed00b2b6323bdaed11de6a77ee4ed149bdb7c1f0acb36d23d4227e6b9cd",
+          "e229305c5fe45c0806b2fe7bfcbb864d6fc6d3922da33a8a74e9b83652b319f4",
+          "a6140f75750dbaf31c9cfdacf34956ebe9302d44caf4935ee4d0a5769385bb06",
+          "251ae1b63940164dddea6cc24d7573c200356c1524f3ea25b571cfbc62ff2950",
+          "f895f1133b188343a3f9e0e2c39442c858ba00745fe54ab60cfe7b1fd4fd68ba"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.956466,
+          0.982822,
+          0.953583,
+          0.992638,
+          0.986271,
+          0.990783,
+          0.997263,
+          0.98281
+        ]
+      },
+      "death": {
+        "sourceSha256": "afc4e5145fa74adb93a270a9487daf00a57cce84d268504c99ea7864493b2fba",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "d1953f9595bdd157d40a294e748b3f938f26dc900dc711ad8ee016ceedec4599",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "81baf93c947c9fbb315ad6b183f2bcdf0101744b1010b62c00044832b2602fb2",
+        "encodedSha256": "a9eb636d23035955eb5cc9b62f6ec77e7667d04c73b6e2bbc124fd0c6512635e",
+        "decodedSha256": "e4d39765e0c9d6d0fc86bac562bdbf536a9a8cc46bf6163b06801d7f57c967e6",
+        "frameSha256": [
+          "31e22cc58f34eedb71fe189fbeddc4b075d4ccece52de66a88c70c40bf29e9e8",
+          "121d1902258443ef3680fd102f9ad6f2fe99d0093aea9e9e418a3076675e003d",
+          "acde239c5c79f0f576ce5e701a89875a84c44856857537d429b8bddbc48549fd",
+          "489456a707104eea89eedd5b56f2a6251798c9465685af05641e88239d1edb0c",
+          "fb4799ae906c218299c6a2b453c7420c6c11c8ac5cec43203e6f5a452ba4974f",
+          "4170cb91318baf2bd666023e19f5b2ed8db08e7fc60601e93c7fd6614bbb22ca",
+          "21406ba12b8e07cda2e29fb437a37f6d3607b0ce43188407f8aac69f9ba82708",
+          "21406ba12b8e07cda2e29fb437a37f6d3607b0ce43188407f8aac69f9ba82708"
+        ],
+        "poseSha256": [
+          "f93e4158cfa37c1a231d3f862dfc3e7e7a20a85f5587a40c511165d9f5b60f59",
+          "515c0e204d4ba4bf696ba5fe20c7052a0c23c7dd8267a279af2fcdae2127bef6",
+          "e9a7a6c51a1be69fafcb9da18ab5fb4cb13cb604832b1535e2c957e8ac499d9a",
+          "c5d23e534d3bb4b8fe1a1fbb8e7a6203ec840cefa4b9981a7b858221aad95ed6",
+          "6e77f0946c943a5ede1d77c2dbf48587f7770c8b66a199376fcc3b7f249af0f5",
+          "20553cb4dd7eb4ccf499dd45411baa4c46f343af9a284980344c37a7e614d8f1",
+          "6b3c8b824ac604f959eb2b457ff21025b0635b8f8c2cb69c17a71121dbed557c",
+          "6b3c8b824ac604f959eb2b457ff21025b0635b8f8c2cb69c17a71121dbed557c"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.959277,
+          0.985336,
+          0.981805,
+          0.986204,
+          0.987328,
+          1,
+          1,
+          1
+        ]
+      },
+      "cast": {
+        "sourceSha256": "514a667b732549df3ff308305afba386d939b6ed1429e829879417b387300c87",
+        "sourceDimensions": "1672x941",
+        "chromaSourceSha256": "398b57bcef6bb2591785d65fee94ed4f918834938cdf883d71c05918de15de7e",
+        "chromaSourceDimensions": "1672x941",
+        "promptSha256": "5a967eb9551bc637942a66302b378fe780486f9451072555d0f0612550c9d9a1",
+        "encodedSha256": "5f9aa3b1dd7343cff068d7860a539d93ed7d719617832545bc45f56e2b15106d",
+        "decodedSha256": "e30d1fefb65b052ce09fc4a7815164491db98072aeae1afb4d2b7ef622d54624",
+        "frameSha256": [
+          "f7e0272ae62d871d795612725ae3d4e651ad0fe6b196cddac32b79c9ac5cb36a",
+          "2739aaa20667c7f7f91eabfc40c11ae24f1b1002ff6046576d59ddddd2b056d8",
+          "9fd971e8a323e3ff054390557e1164affafe7b7fb9e0e0a3b79e8a04ee0d4401",
+          "fac083432d0d4849b5b05108371f0e15bcf527d03c52f09abb02c2071c99bb5c",
+          "26c8af16decc2188316ff49adb65781c19102247a21c9ae0d92a4652d9eac248",
+          "6a4e7c5ee16fe86c38668d6696072a6fc95fa1ae3c4e60ba65bc7155d1f50e92",
+          "3e82f88b8555b15c291f8405f068f4b4dfd60108cb1e624d7d014e80f7a51b51",
+          "ba867e881762e2c622575252c6c10eda2a374361913e6c2590a6a3d406918ad2"
+        ],
+        "poseSha256": [
+          "006e19e27034345c4aac2815c7f2ae58c673e03ba36b20fcb260d3625bdf4b4f",
+          "4a9f723ba9ecfa3856b84ce6a6ea58f710750c811b7268ce6fb6bb07205f6116",
+          "8ae6aaccd977cb7f490287d22424b45aaf261a6ecb3b2316ca5d30ba2f2124c7",
+          "fa86dc3ce7d3aa7a35e6432d990fc43cbdd82cf63b055a2c1ad5fba697578b62",
+          "dbd3fe58eab7a36fe519d4463242a73a2744f4090219bb4989388821a16ae412",
+          "e5a12bd6ae65f61f3459bf943ae68e5804671c0fc2fc69f40229d3dc4785055c",
+          "3ff839b1989b0ca4dc1793f295e75f1024e4111ebd58dee7723f6a819fffaf90",
+          "d562879fef5da3689dc5d4e8b5b4accf0b737b14d555cde4134d71511756fc14"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.984595,
+          0.999395,
+          0.988503,
+          0.985596,
+          0.995672,
+          0.992199,
+          0.988203,
+          0.987088
+        ]
+      },
+      "victory": {
+        "sourceSha256": "4259194934217edd3d5936f8da45c414b7a2266a9fba4898563013b99bb02658",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "98b61cdc0f66f512bb6434695950c8098545d16faa97f1e3223317a9a5493e6a",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "284f1ded4f8d1e93d313f6ff34616dda2d4cba685fd568b3f14ff6dfcd55ea0e",
+        "encodedSha256": "c000b25d671625950dadc4a079990679657216c08c394c90b15462f11ac588a8",
+        "decodedSha256": "0fa7028cb85279578603c0c094faff66c868c8af88d887540befe9f5eda892f7",
+        "frameSha256": [
+          "3c8c551e72ec9e4229aa5287d5dafa90f8f2ea3f66c4e2667971c237e631ad51",
+          "d5124e659d80b489677a88dc93c31c3e494b0bd023c5b1dacf7098836cccc34c",
+          "a37f4553a6083245879781cb9d3cbe4ef93bab2adf42626dcc7d139f1ea76b6a",
+          "86472e479f070d192ef286b9e811ff65a4e6adc0a19fa7247632ddf61b37ab58",
+          "a5d5f77e649b20b809289d404456e7582a00f8ce4fb6d3560308e239b15bdf7c",
+          "b51124d13bb4401ac077af8482e28f3f31545752b78137dcee25af3aa471bb02",
+          "d280ef7c835fe8aa98be72c41f3839d0c83b3f9fcb262e992a08b27f6f3411aa",
+          "0ee87e63139348cb3ab24a79ff6fe3ec34665df35d4f068e4d91777675de91b2"
+        ],
+        "poseSha256": [
+          "a51fe1a9ef0076c30d7fb00c29b9824947cf94cd66c110b3c58e92808354fbbc",
+          "3bbace99a5df811be84de8d48ae038bcfb0dd878caee582d63f273c89c0260b9",
+          "42ad441dfc16abf07d5aa3c729996b71c03a13bb8215b82ec0e121e787721685",
+          "720d6a49d6767d1b55fd819bc3c9bc458d8aec7e4ce600ffa07e0e3749dd2800",
+          "3e869eb567b82201f74125f65676b2316b2a386d9f007e2b7e24d162a3ac1616",
+          "5c7c303404e966a0e7255d319cc75d7d09a9e3bbdc39c72a72160a48260e59bb",
+          "38b6c6957ef1b12223c36e52ce524fdc4dda4c733e78c5ec4b02100f3ba0cd87",
+          "4dfce7a87a9dd51df36b570c372ece65badda3eaa2e0497714577b0812a70920"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.990034,
+          0.998759,
+          0.991167,
+          0.987806,
+          0.991745,
+          0.999422,
+          0.993336,
+          0.993972
+        ]
+      },
+      "dead": {
+        "sourceSha256": "afc4e5145fa74adb93a270a9487daf00a57cce84d268504c99ea7864493b2fba",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "d1953f9595bdd157d40a294e748b3f938f26dc900dc711ad8ee016ceedec4599",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "f631a7fd605211260b28b5a5bba3503e06dc1064497d1e5769d62e40e178e2b1",
+        "encodedSha256": "8e93e1c3744f72852e4a5681aac87fac3ccd8ee9748a4e8c437b8314abe1bb2e",
+        "decodedSha256": "51fe786fb2b544eb26d86a5cc462c77cfa3830554567ef41829a22e5d1b66222",
+        "frameSha256": [
+          "21406ba12b8e07cda2e29fb437a37f6d3607b0ce43188407f8aac69f9ba82708",
+          "21406ba12b8e07cda2e29fb437a37f6d3607b0ce43188407f8aac69f9ba82708",
+          "21406ba12b8e07cda2e29fb437a37f6d3607b0ce43188407f8aac69f9ba82708",
+          "21406ba12b8e07cda2e29fb437a37f6d3607b0ce43188407f8aac69f9ba82708",
+          "21406ba12b8e07cda2e29fb437a37f6d3607b0ce43188407f8aac69f9ba82708",
+          "21406ba12b8e07cda2e29fb437a37f6d3607b0ce43188407f8aac69f9ba82708",
+          "21406ba12b8e07cda2e29fb437a37f6d3607b0ce43188407f8aac69f9ba82708",
+          "21406ba12b8e07cda2e29fb437a37f6d3607b0ce43188407f8aac69f9ba82708"
+        ],
+        "poseSha256": [
+          "6b3c8b824ac604f959eb2b457ff21025b0635b8f8c2cb69c17a71121dbed557c",
+          "6b3c8b824ac604f959eb2b457ff21025b0635b8f8c2cb69c17a71121dbed557c",
+          "6b3c8b824ac604f959eb2b457ff21025b0635b8f8c2cb69c17a71121dbed557c",
+          "6b3c8b824ac604f959eb2b457ff21025b0635b8f8c2cb69c17a71121dbed557c",
+          "6b3c8b824ac604f959eb2b457ff21025b0635b8f8c2cb69c17a71121dbed557c",
+          "6b3c8b824ac604f959eb2b457ff21025b0635b8f8c2cb69c17a71121dbed557c",
+          "6b3c8b824ac604f959eb2b457ff21025b0635b8f8c2cb69c17a71121dbed557c",
+          "6b3c8b824ac604f959eb2b457ff21025b0635b8f8c2cb69c17a71121dbed557c"
+        ],
+        "sourceFrameIndexes": [
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  }
+}

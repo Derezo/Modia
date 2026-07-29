@@ -45,8 +45,13 @@ import { BattleContextMenu } from '../battle/BattleContextMenu.js';
 import { GridCursor } from '../battle/GridCursor.js';
 import { BossPhaseIndicator } from '../battle/BossPhaseIndicator.js';
 import { BattleWebSocketManager } from '../battle/BattleWebSocketManager.js';
+import { BattleMapSession } from '../battle/BattleMapSession.js';
 import { BattleInputHandler } from '../battle/BattleInputHandler.js';
 import { BattleAudioManager } from '../battle/BattleAudioManager.js';
+import {
+  collectBattleMapAssetManifest
+} from '../battle/BattleMapAssets.js';
+import { applyBattleMapPatch } from '../battle/mergeBattleState.js';
 import {
   transitionFromBattleIfCurrent,
   waitForPostBattleSessionRefresh
@@ -69,6 +74,39 @@ import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { BattleLoadingScreen } from '../ui/parchment/BattleLoadingScreen.js';
 import { responsive } from '../core/Responsive.js';
 
+export function createAssetPreloadProgress(loadingScreen) {
+  const phases = new Map();
+
+  const publish = (label) => {
+    const totals = Array.from(phases.values());
+    const total = totals.reduce((sum, phase) => sum + phase.total, 0);
+    const loaded = totals.reduce((sum, phase) => sum + phase.loaded, 0);
+    if (total <= 0) {
+      loadingScreen.updateProgress(0, 1, label);
+      return;
+    }
+    loadingScreen.updateProgress(Math.min(total, Math.max(0, loaded)), total, label);
+  };
+
+  return {
+    track(key, label) {
+      return (loaded, total) => {
+        const safeTotal = Number.isFinite(total) ? Math.max(0, total) : 0;
+        const safeLoaded = Number.isFinite(loaded)
+          ? Math.min(safeTotal, Math.max(0, loaded))
+          : 0;
+        phases.set(key, { loaded: safeLoaded, total: safeTotal });
+        publish(label);
+      };
+    },
+    finish(label = 'Ready') {
+      const total = Array.from(phases.values())
+        .reduce((sum, phase) => sum + phase.total, 0);
+      loadingScreen.updateProgress(Math.max(1, total), Math.max(1, total), label);
+    }
+  };
+}
+
 /**
  * BattleScene - Tactical turn-based combat on an isometric grid with camera
  */
@@ -79,6 +117,7 @@ export class BattleScene extends Scene {
     // Battle state
     this.battleId = null;
     this.battleState = null;
+    this.mapSession = null;
     this.mapSeed = null;
     this.nodeType = null; // Node type for terrain generation (forest, mountain, etc.)
 
@@ -153,6 +192,12 @@ export class BattleScene extends Scene {
 
     // Loading screen overlay with progress
     this.loadingScreen = null;
+
+    // V2 maps cannot render without their exact authored assets. Preserve the
+    // failed response and error so the loading overlay can offer a safe retry.
+    this.assetLoadError = null;
+    this.assetLoadRetryData = null;
+    this.assetLoadRetryInProgress = false;
   }
 
   /**
@@ -160,6 +205,12 @@ export class BattleScene extends Scene {
    */
   async enter(data) {
     // data = { battleId, mapSeed, mapWidth, mapHeight, state, initialEnemyActions, battleType, opponentUsername, nodeType }
+    const battleResponse = data;
+    this.assetLoadError = null;
+    this.assetLoadRetryData = battleResponse;
+    this.mapSession = new BattleMapSession();
+    data = await this.mapSession.hydrateResponse(data);
+    const requiresExactV2Assets = data.state?.battleMapSchemaVersion === 2;
     this.battleId = data.battleId;
     this.mapSeed = data.mapSeed;
     this.battleState = data.state;
@@ -189,16 +240,15 @@ export class BattleScene extends Scene {
     // Initialize grid with asset loader for sprite rendering
     this.grid = new BattleGrid(this.game.canvas, data.mapWidth || 32, data.mapHeight || 32);
     this.grid.setAssetLoader(this.game.assetLoader);
-    // Generate the complete deterministic visual layers first, then prefer any
-    // authoritative layers supplied by the server. Previously the server path
-    // skipped variants and props entirely, making every tile variant zero.
-    this.grid.generateTerrain(this.mapSeed, this.getNodeType());
-    if (data.state?.terrain) this.grid.setTerrain(data.state.terrain);
-    if (data.state?.elevation) {
-      this.grid.setElevation(data.state.elevation, data.state.elevationFormat || 'auto');
+    if (data.state?.battleMapSchemaVersion === 2) {
+      // V2 is fully server-authored and hash-verified by BattleMapSession. Never
+      // regenerate it locally, even as a visual fallback.
+      applyBattleMapPatch(this.grid, data.state);
+    } else {
+      // V1 retains the deterministic client generation compatibility path.
+      this.grid.generateTerrain(this.mapSeed, this.getNodeType());
+      applyBattleMapPatch(this.grid, data.state);
     }
-    if (data.state?.variants) this.grid.setTileVariants(data.state.variants);
-    if (Array.isArray(data.state?.obstacles?.[0])) this.grid.setObstacles(data.state.obstacles);
 
     // Initialize animations
     this.animations = new BattleAnimations();
@@ -250,47 +300,38 @@ export class BattleScene extends Scene {
     ).values());
     console.log(`[BattleScene] Player variants to preload: [${playerCharacters.map(c => getPlayerCharacterIdentity(c).id).join(', ')}]`);
 
-    // Estimate total assets for accurate progress bar
-    const { AssetLoader } = await import('../core/AssetLoader.js');
-    const terrainCount = AssetLoader.TERRAIN_TYPES.length * AssetLoader.VARIANTS_PER_TERRAIN + 9; // +9 for walls
-    const obstacleAssets = Array.from(new Map(
-      this.grid.obstacles.flat().filter(Boolean).map(obstacle => [
-        `${obstacle.type}:${obstacle.variant}`,
-        obstacle
-      ])
-    ).values());
-    const obstacleCount = obstacleAssets.length;
-    const enemyCount = enemyVisuals.length * AssetLoader.ENEMY_ANIMATIONS.length;
-    const playerCount = playerCharacters.length * AssetLoader.CHARACTER_ANIMATIONS.length;
-    const totalAssets = terrainCount + obstacleCount + enemyCount + playerCount;
-    let loadedTotal = 0;
-
-    const makeProgressCallback = (phase) => () => {
-      loadedTotal++;
-      this.loadingScreen.updateProgress(loadedTotal, totalAssets, phase);
-    };
+    // Preserve every authored identity/selection record. AssetLoader performs
+    // any safe cache-key deduplication after recording the V2 selection key.
+    const obstacleAssets = collectBattleMapAssetManifest(
+      data.state,
+      this.grid
+    );
+    const progress = createAssetPreloadProgress(this.loadingScreen);
 
     // AWAIT preload to ensure terrain sprites are cached before rendering
     try {
       await Promise.all([
         this.game.assetLoader.preloadTerrainSet(nodeType, {
-          onProgress: makeProgressCallback('Loading terrain...')
+          onProgress: progress.track('terrain', 'Loading terrain...'),
+          requireV2Assets: requiresExactV2Assets
         }),
         this.game.assetLoader.preloadObstacles({
           obstacles: obstacleAssets,
-          onProgress: makeProgressCallback('Loading obstacles...')
+          onProgress: progress.track('map-assets', 'Loading map assets...'),
+          requireV2Assets: requiresExactV2Assets
         }),
-        ...enemyVisuals.map(identity =>
+        ...enemyVisuals.map((identity, index) =>
           this.game.assetLoader.preloadEnemies(identity.primaryBiome, [identity.visualId], {
-            onProgress: makeProgressCallback('Loading enemies...')
+            onProgress: progress.track(`enemy:${index}`, 'Loading enemies...')
           })
         ),
-        ...playerCharacters.map(character =>
+        ...playerCharacters.map((character, index) =>
           this.game.assetLoader.preloadCharacter(character, {
-            onProgress: makeProgressCallback('Loading characters...')
+            onProgress: progress.track(`character:${index}`, 'Loading characters...')
           })
         )
       ]);
+      progress.finish();
       console.log(`[BattleScene] Preloaded terrain, obstacles, ${enemyVisuals.length} enemy types, and ${playerCharacters.length} player variants for ${nodeType}`);
 
       // Reinitialize unit sprites now that assets are loaded
@@ -299,9 +340,30 @@ export class BattleScene extends Scene {
       }
     } catch (err) {
       console.warn('[BattleScene] Asset preload failed:', err.message);
-      // Continue anyway - fallback diamond rendering will work
+      if (requiresExactV2Assets) {
+        // A V2 map's authored records are authoritative. Entering combat with
+        // fallback diamonds would make blocking geometry invisible or
+        // misleading, so retain the loading state until a retry succeeds.
+        this.assetLoadError = err;
+        this.isLoadingAssets = true;
+        this.loadingScreen.updateProgress(
+          0,
+          1,
+          'Map assets failed to load. Press R or tap to retry.'
+        );
+        parchmentToast.error(
+          'Battle Map Load Failed',
+          'Required map art is unavailable. Retry after checking your connection.'
+        );
+        return false;
+      }
+
+      // V1 keeps its established permissive fallback rendering.
+      progress.finish();
     }
 
+    this.assetLoadError = null;
+    this.assetLoadRetryData = null;
     this.isLoadingAssets = false;
     this.loadingScreen.hide();
 
@@ -433,6 +495,45 @@ export class BattleScene extends Scene {
 
     // Update UI with initial state (will show after intro)
     this.updateUI();
+    return true;
+  }
+
+  /**
+   * Retry an exact V2 asset preload without ever revealing the incomplete map.
+   * @returns {Promise<boolean>} Whether the scene entered successfully
+   */
+  async retryAssetLoading() {
+    if (!this.assetLoadError
+      || !this.assetLoadRetryData
+      || this.assetLoadRetryInProgress) {
+      return false;
+    }
+
+    const retryData = this.assetLoadRetryData;
+    this.assetLoadRetryInProgress = true;
+    this.loadingScreen?.updateProgress(0, 1, 'Retrying map assets...');
+    this.exit();
+
+    try {
+      return await this.enter(retryData);
+    } catch (err) {
+      this.assetLoadError = err;
+      this.assetLoadRetryData = retryData;
+      this.isLoadingAssets = true;
+      if (!this.loadingScreen) {
+        this.loadingScreen = new BattleLoadingScreen(this.game);
+        this.loadingScreen.show();
+      }
+      this.loadingScreen.updateProgress(
+        0,
+        1,
+        'Map assets failed to load. Press R or tap to retry.'
+      );
+      console.warn('[BattleScene] Asset retry failed:', err.message);
+      return false;
+    } finally {
+      this.assetLoadRetryInProgress = false;
+    }
   }
 
   /**
@@ -2639,6 +2740,18 @@ export class BattleScene extends Scene {
     // Update loading screen if visible (even before full initialization)
     if (this.loadingScreen) {
       this.loadingScreen.update(deltaTime);
+    }
+
+    if (this.assetLoadError) {
+      const input = this.game.input;
+      if (!this.assetLoadRetryInProgress
+        && (input.isKeyPressed('KeyR')
+          || input.mouseClicked
+          || input.touchTapped)) {
+        void this.retryAssetLoading();
+      }
+      input.clearFrameState();
+      return;
     }
 
     // Safety check - don't update if not fully initialized

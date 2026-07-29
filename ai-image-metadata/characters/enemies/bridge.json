@@ -4,8 +4,8 @@
   "biome": "bridge",
   "description": "Bridge biome enemy sprite sheets",
   "biomeTraits": "weathered crossing structure near water worn traveled",
-  "totalAssets": 2,
-  "totalAnimations": 10,
+  "totalAssets": 3,
+  "totalAnimations": 15,
   "enemies": [
     {
       "id": "bridge_bandit",
@@ -128,6 +128,68 @@
       "generatedAt": "2026-01-31T21:01:03.476Z",
       "generated": true,
       "loraModel": "retro-pixel"
+    },
+    {
+      "id": "bandit_captain",
+      "name": "Bandit Captain",
+      "archetype": "humanoid",
+      "visualTraits": "fancy hat with feathers goatee confident smirk fine clothes",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
+      "animations": {
+        "idle": {
+          "id": "bridge_bandit_idle",
+          "frameCount": 8,
+          "seed": 44001,
+          "generated": true,
+          "prompt": "pixel art sprite side view 64x64, hooded bandit with leather armor and mask and daggers, idle crouch animation, crouched stance with daggers ready and eyes scanning for targets, weathered stone bridge"
+        },
+        "attack": {
+          "id": "bridge_bandit_attack",
+          "frameCount": 8,
+          "seed": 44002,
+          "generated": true,
+          "prompt": "pixel art sprite side view 64x64, hooded bandit with leather armor and mask and daggers, attack stab animation, lunging forward with quick dagger stab dirty fighting style, weathered stone bridge"
+        },
+        "hit": {
+          "id": "bridge_bandit_hit",
+          "frameCount": 8,
+          "seed": 44003,
+          "generated": true,
+          "prompt": "pixel art sprite side view 64x64, hooded bandit with leather armor and mask and daggers, hurt stumble animation, stumbling backward with hood falling and cursing in pain, weathered stone bridge"
+        },
+        "death": {
+          "id": "bridge_bandit_death",
+          "frameCount": 8,
+          "seed": 44004,
+          "generated": true,
+          "prompt": "pixel art sprite side view 64x64, hooded bandit with leather armor and mask and daggers, death collapse animation, clutching wound and falling forward dropping stolen loot, weathered stone bridge"
+        },
+        "dead": {
+          "id": "bridge_bandit_dead",
+          "frameCount": 8,
+          "seed": 44014,
+          "generated": true,
+          "prompt": "pixel art sprite side view 64x64, hooded figure leather armor daggers mask scar sneaky, dead static pose, lying defeated at final rest motionless, weathered crossing"
+        }
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {
+        "idle": true,
+        "attack": true,
+        "hit": true,
+        "death": true,
+        "dead": true
+      },
+      "generatedAt": null,
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "animationSourceId": "bridge_bandit"
     }
   ]
 }

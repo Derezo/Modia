@@ -11,6 +11,12 @@
 import { query } from '../config/database.js';
 import { getTierName } from '../../../shared/coliseum.js';
 
+function getQueryExecutor(client = null) {
+  return client && typeof client.query === 'function'
+    ? client.query.bind(client)
+    : query;
+}
+
 // Base K-factor for ELO calculations
 const K_FACTOR = 32;
 const BASE_K_FACTOR = K_FACTOR; // Alias for backwards compatibility
@@ -74,9 +80,10 @@ function applyForfeitPenalty(baseLoss) {
  * @param {string} queueType - Queue type (1v1, 3v3, 5v5)
  * @returns {Promise<Object>} Rating record
  */
-async function ensureRating(userId, queueType = '1v1') {
+async function ensureRating(userId, queueType = '1v1', { client = null } = {}) {
+  const executeQuery = getQueryExecutor(client);
   // Try to get existing rating
-  let result = await query(
+  let result = await executeQuery(
     'SELECT * FROM pvp_ratings WHERE user_id = $1 AND queue_type = $2',
     [userId, queueType]
   );
@@ -86,7 +93,7 @@ async function ensureRating(userId, queueType = '1v1') {
     const initialTier = getTierName(DEFAULT_RATING);
 
     // Create new rating record with tier
-    result = await query(
+    result = await executeQuery(
       `INSERT INTO pvp_ratings (user_id, queue_type, rating, peak_rating, tier, peak_tier)
        VALUES ($1, $2, $3, $3, $4, $4)
        ON CONFLICT (user_id, queue_type) DO NOTHING
@@ -96,7 +103,7 @@ async function ensureRating(userId, queueType = '1v1') {
 
     // If ON CONFLICT triggered, fetch the existing record
     if (result.rows.length === 0) {
-      result = await query(
+      result = await executeQuery(
         'SELECT * FROM pvp_ratings WHERE user_id = $1 AND queue_type = $2',
         [userId, queueType]
       );
@@ -112,9 +119,15 @@ async function ensureRating(userId, queueType = '1v1') {
  * @param {string} queueType - Queue type
  * @returns {Promise<Object>} Rating info or null
  */
-async function getPlayerRating(userId, queueType = '1v1') {
-  const result = await query(
-    'SELECT * FROM pvp_ratings WHERE user_id = $1 AND queue_type = $2',
+async function getPlayerRating(
+  userId,
+  queueType = '1v1',
+  { client = null, forUpdate = false } = {}
+) {
+  const executeQuery = getQueryExecutor(client);
+  const result = await executeQuery(
+    `SELECT * FROM pvp_ratings
+     WHERE user_id = $1 AND queue_type = $2${forUpdate ? ' FOR UPDATE' : ''}`,
     [userId, queueType]
   );
 
@@ -143,13 +156,22 @@ async function getAllPlayerRatings(userId) {
  * @param {boolean} isWin - Whether this was a win
  * @returns {Promise<Object>} Updated rating record
  */
-async function updatePvpRating(userId, queueType, ratingChange, isWin) {
+async function updatePvpRating(
+  userId,
+  queueType,
+  ratingChange,
+  isWin,
+  { client = null } = {}
+) {
+  const executeQuery = getQueryExecutor(client);
   // Ensure rating exists
-  await ensureRating(userId, queueType);
+  await ensureRating(userId, queueType, { client });
 
   // First, get current rating to calculate new tier
-  const currentResult = await query(
-    'SELECT rating, peak_rating FROM pvp_ratings WHERE user_id = $1 AND queue_type = $2',
+  const currentResult = await executeQuery(
+    `SELECT rating, peak_rating
+     FROM pvp_ratings
+     WHERE user_id = $1 AND queue_type = $2${client ? ' FOR UPDATE' : ''}`,
     [userId, queueType]
   );
 
@@ -164,7 +186,7 @@ async function updatePvpRating(userId, queueType, ratingChange, isWin) {
   const newTier = getTierName(newRating);
   const newPeakTier = getTierName(newPeakRating);
 
-  const result = await query(
+  const result = await executeQuery(
     `UPDATE pvp_ratings SET
        rating = $3,
        peak_rating = $4,

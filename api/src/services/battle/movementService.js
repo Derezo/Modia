@@ -5,13 +5,16 @@
 import { CLASS_MOVEMENT } from '../../config/constants.js';
 import * as traitService from '../traitService.js';
 import {
-  getReachableTiles as sharedGetReachableTiles,
-  getReachableTiles3D as sharedGetReachableTiles3D,
-  calculatePathCost as sharedCalculatePathCost,
-  calculatePathCost3D as sharedCalculatePathCost3D,
+  createTraversalView,
+  getReachableTilesForTraversal,
+  calculateTraversalPathCost,
+  canEnterTile,
   getManhattanDistance
 } from '../../../../shared/pathfinding.js';
-import { isImpassable, normalizeElevationGrid } from '../../../../shared/terrain.js';
+import {
+  discretizeElevation,
+  normalizeElevationGrid
+} from '../../../../shared/terrain.js';
 import { isBlockingObstacle } from '../../../../shared/obstacles.js';
 import { canUnitMove } from './statusEffectManager.js';
 
@@ -22,10 +25,233 @@ function getPathfindingElevation(state) {
   return normalizeElevationGrid(state.elevation, state.elevationFormat || 'auto');
 }
 
-function getLayerEntry(layer, x, y) {
-  if (!Array.isArray(layer)) return null;
-  if (Array.isArray(layer[y])) return layer[y][x] ?? null;
-  return layer.find(entry => entry?.x === x && entry?.y === y) || null;
+function getMapDimensions(state) {
+  const terrainWidth = Array.isArray(state.terrain?.[0])
+    ? state.terrain[0].length
+    : null;
+  const terrainHeight = Array.isArray(state.terrain) &&
+    Array.isArray(state.terrain[0])
+    ? state.terrain.length
+    : null;
+
+  return {
+    width: Number.isInteger(state.mapWidth) && state.mapWidth > 0
+      ? state.mapWidth
+      : terrainWidth || 32,
+    height: Number.isInteger(state.mapHeight) && state.mapHeight > 0
+      ? state.mapHeight
+      : terrainHeight || 32
+  };
+}
+
+function toRowMajorLayer(layer, width, height, {
+  emptyValue = null,
+  mapValue = value => value,
+  optional = false
+} = {}) {
+  if (optional && (!Array.isArray(layer) || layer.length === 0)) return null;
+
+  const grid = Array.from(
+    { length: height },
+    () => Array(width).fill(emptyValue)
+  );
+
+  if (!Array.isArray(layer)) return grid;
+
+  if (layer.some(Array.isArray)) {
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        grid[y][x] = mapValue(layer[y]?.[x] ?? emptyValue);
+      }
+    }
+    return grid;
+  }
+
+  for (const entry of layer) {
+    const x = entry?.x ?? entry?.tileX ?? entry?.gridX;
+    const y = entry?.y ?? entry?.tileY ?? entry?.gridY;
+    if (Number.isInteger(x) && Number.isInteger(y) &&
+        x >= 0 && y >= 0 && x < width && y < height) {
+      grid[y][x] = mapValue(entry);
+    }
+  }
+  return grid;
+}
+
+function normalizeTerrainCell(cell) {
+  if (typeof cell === 'string') return cell;
+  if (!cell || typeof cell !== 'object') return 'grass';
+  if (cell.passable === false) return 'rock';
+  return cell.material ?? cell.terrain ?? cell.type ?? 'grass';
+}
+
+function normalizeObstacleCell(cell) {
+  if (!cell || typeof cell !== 'object') return cell;
+  if (typeof cell.blocking !== 'boolean') return cell;
+  return {
+    ...cell,
+    type: cell.type ?? cell.kind,
+    passable: !cell.blocking
+  };
+}
+
+function getDirection(from, to) {
+  if (to.x === from.x && to.y === from.y - 1) return 'n';
+  if (to.x === from.x + 1 && to.y === from.y) return 'e';
+  if (to.x === from.x && to.y === from.y + 1) return 's';
+  if (to.x === from.x - 1 && to.y === from.y) return 'w';
+  return null;
+}
+
+function reverseDirection(direction) {
+  return { n: 's', e: 'w', s: 'n', w: 'e' }[direction] ?? null;
+}
+
+function toConnectionGrid(layer, width, height, elevation) {
+  if (!Array.isArray(layer) || layer.length === 0) return null;
+  if (layer.some(Array.isArray)) {
+    return toRowMajorLayer(layer, width, height, { optional: true });
+  }
+
+  const grid = Array.from({ length: height }, () => Array(width).fill(null));
+  for (const record of layer) {
+    if (!record?.from || !record?.to) continue;
+    if (![record.from.x, record.from.y, record.to.x, record.to.y]
+      .every(Number.isInteger) ||
+        record.from.x < 0 || record.from.x >= width ||
+        record.from.y < 0 || record.from.y >= height ||
+        record.to.x < 0 || record.to.x >= width ||
+        record.to.y < 0 || record.to.y >= height) {
+      continue;
+    }
+    const direction = record.direction ?? getDirection(record.from, record.to);
+    if (!direction) continue;
+
+    const fromElevation = discretizeElevation(
+      elevation?.[record.from.y]?.[record.from.x] ?? 0
+    );
+    const toElevation = discretizeElevation(
+      elevation?.[record.to.y]?.[record.to.x] ?? 0
+    );
+    const connection = {
+      ...record,
+      type: record.type ?? record.kind,
+      levels: record.levels ?? Math.max(1, Math.abs(toElevation - fromElevation))
+    };
+    grid[record.from.y][record.from.x] ||= {};
+    grid[record.from.y][record.from.x][direction] = connection;
+
+    if (record.bidirectional) {
+      const reverse = reverseDirection(direction);
+      grid[record.to.y][record.to.x] ||= {};
+      grid[record.to.y][record.to.x][reverse] = {
+        ...connection,
+        elevationDelta: Number.isFinite(record.elevationDelta)
+          ? -record.elevationDelta
+          : record.elevationDelta
+      };
+    }
+  }
+  return grid;
+}
+
+function adaptMovementPolicy(
+  movementPolicy,
+  terrainRecords,
+  obstacleRecords
+) {
+  const {
+    canTraverseTerrain,
+    canTraverseObstacle,
+    getStepCost,
+    ...basePolicy
+  } = movementPolicy;
+
+  return {
+    ...basePolicy,
+    canTraverseTerrain(context) {
+      const record = terrainRecords[context.to.y][context.to.x];
+      const authoritativeCost = Number.isFinite(record?.movementCost)
+        ? record.movementCost
+        : context.terrainCost;
+      const fallback = record && typeof record === 'object'
+        ? record.passable !== false && Number.isFinite(authoritativeCost)
+        : Number.isFinite(context.terrainCost);
+      if (!canTraverseTerrain) return fallback;
+      return canTraverseTerrain({
+        ...context,
+        terrain: record,
+        terrainCost: authoritativeCost
+      }) ?? fallback;
+    },
+    canTraverseObstacle(context) {
+      const record = obstacleRecords?.[context.to.y]?.[context.to.x] ?? null;
+      const fallback = record?.blocking === true
+        ? false
+        : !isBlockingObstacle(record);
+      if (!canTraverseObstacle) return fallback;
+      return canTraverseObstacle({ ...context, obstacle: record }) ?? fallback;
+    },
+    getStepCost(context) {
+      const terrain = terrainRecords[context.to.y][context.to.x];
+      const obstacle = obstacleRecords?.[context.to.y]?.[context.to.x] ?? null;
+      const terrainCost = Number.isFinite(terrain?.movementCost)
+        ? terrain.movementCost
+        : context.terrainCost;
+      const obstacleCost = obstacle && obstacle.blocking !== true &&
+        Number.isFinite(obstacle.movementCost)
+        ? obstacle.movementCost
+        : 0;
+      const defaultCost = terrainCost + context.elevationCost + obstacleCost;
+      if (!getStepCost) return defaultCost;
+      return getStepCost({
+        ...context,
+        terrain,
+        terrainCost,
+        obstacle,
+        obstacleCost,
+        defaultCost
+      }) ?? defaultCost;
+    }
+  };
+}
+
+/**
+ * Adapt a battle state to the authoritative runtime traversal contract.
+ * Coordinate-list layers remain accepted for legacy saves and test fixtures.
+ */
+export function createBattleTraversalView(state, movementPolicy = {}) {
+  const dimensions = getMapDimensions(state);
+  const { width, height } = dimensions;
+  const pathfindingElevation = getPathfindingElevation(state);
+  const terrainRecords = toRowMajorLayer(state.terrain, width, height, {
+    emptyValue: 'grass'
+  });
+  const obstacleRecords = toRowMajorLayer(state.obstacles, width, height, {
+    optional: true
+  });
+
+  return createTraversalView({
+    terrain: terrainRecords.map(row => row.map(normalizeTerrainCell)),
+    obstacles: obstacleRecords?.map(row => row.map(normalizeObstacleCell)) ?? null,
+    elevation: toRowMajorLayer(pathfindingElevation, width, height, {
+      emptyValue: 0,
+      optional: true
+    }),
+    elevationConnections: toConnectionGrid(
+      state.elevationConnections,
+      width,
+      height,
+      pathfindingElevation
+    ),
+    units: Array.isArray(state.units) ? state.units : [],
+    dimensions,
+    movementPolicy: adaptMovementPolicy(
+      movementPolicy,
+      terrainRecords,
+      obstacleRecords
+    )
+  });
 }
 
 /**
@@ -86,36 +312,11 @@ export function getReachableTiles(unit, state) {
   }
 
   const maxCost = getMovementRange(unit);
-  const mapWidth = state.mapWidth || 32;
-  const mapHeight = state.mapHeight || 32;
-  const pathfindingElevation = getPathfindingElevation(state);
-
-  // Use 3D pathfinding when elevation data is available
-  if (pathfindingElevation) {
-    return sharedGetReachableTiles3D(
-      unit.tileX,
-      unit.tileY,
-      null, // startZ will be looked up from elevation grid
-      maxCost,
-      state.terrain,
-      pathfindingElevation,
-      state.elevationConnections || null,
-      state.units,
-      mapWidth,
-      mapHeight
-    );
-  }
-
-  // Fall back to 2D pathfinding
-  return sharedGetReachableTiles(
-    unit.tileX,
-    unit.tileY,
-    maxCost,
-    state.terrain,
-    state.units,
-    mapWidth,
-    mapHeight
-  );
+  const traversalView = createBattleTraversalView(state);
+  return getReachableTilesForTraversal(traversalView, {
+    start: { x: unit.tileX, y: unit.tileY },
+    range: maxCost
+  });
 }
 
 /**
@@ -175,8 +376,12 @@ export function getTargetsInRange(unit, state, range, targetType) {
  * @returns {Object|null} Adjacent tile {x, y} or null if none available
  */
 export function findAdjacentTileToTarget(state, unit, targetTile) {
-  const mapWidth = state.mapWidth || 32;
-  const mapHeight = state.mapHeight || 32;
+  const traversalView = createBattleTraversalView(state, {
+    // Leap/charge landing validates the destination surface independently of
+    // the elevation crossed by the special movement.
+    canTraverseElevation: () => true
+  });
+  const { width: mapWidth, height: mapHeight } = traversalView.dimensions;
 
   // Cardinal directions first (most natural landing spots), then diagonals
   const directions = [
@@ -212,23 +417,22 @@ export function findAdjacentTileToTarget(state, unit, targetTile) {
       continue;
     }
 
-    // Check if tile is occupied by another unit
-    const isOccupied = state.units.some(u =>
-      u.hp > 0 && u.id !== unit.id &&
-      u.tileX === adjX && u.tileY === adjY
-    );
-    if (isOccupied) continue;
-
-    // Current battles use row-major terrain strings; retain support for older
-    // coordinate-object state while applying the shared passability contract.
-    const tile = getLayerEntry(state.terrain, adjX, adjY);
-    const terrainType = typeof tile === 'string' ? tile : tile?.terrain ?? tile?.type;
-    if (tile?.passable === false || (terrainType && isImpassable(terrainType))) continue;
-
-    // Obstacle layers follow the same row-major contract. Blocking semantics
-    // live in shared code so leap skills and normal pathfinding cannot diverge.
-    const obstacle = getLayerEntry(state.obstacles, adjX, adjY);
-    if (isBlockingObstacle(obstacle)) continue;
+    // canEnterTile is cardinal-step based. Use an adjacent probe solely to
+    // evaluate the landing cell; the policy above intentionally ignores the
+    // leap's elevation delta while retaining terrain, obstacle, and occupancy.
+    const probe = adjX > 0
+      ? { x: adjX - 1, y: adjY }
+      : adjX + 1 < mapWidth
+        ? { x: adjX + 1, y: adjY }
+        : adjY > 0
+          ? { x: adjX, y: adjY - 1 }
+          : { x: adjX, y: adjY + 1 };
+    if (!canEnterTile(
+      traversalView,
+      probe,
+      { x: adjX, y: adjY },
+      { start: { x: unit.tileX, y: unit.tileY } }
+    )) continue;
 
     return { x: adjX, y: adjY };
   }
@@ -321,39 +525,11 @@ export function calculatePathCost(startX, startY, targetX, targetY, state, maxCo
     return getManhattanDistance(startX, startY, targetX, targetY);
   }
 
-  const mapWidth = state.mapWidth || 32;
-  const mapHeight = state.mapHeight || 32;
-  const pathfindingElevation = getPathfindingElevation(state);
-
-  // Use 3D pathfinding when elevation data is available
-  if (pathfindingElevation) {
-    return sharedCalculatePathCost3D(
-      startX,
-      startY,
-      targetX,
-      targetY,
-      state.terrain,
-      pathfindingElevation,
-      state.elevationConnections || null,
-      state.units,
-      maxCost,
-      mapWidth,
-      mapHeight
-    );
-  }
-
-  // Fall back to 2D pathfinding
-  return sharedCalculatePathCost(
-    startX,
-    startY,
-    targetX,
-    targetY,
-    state.terrain,
-    state.units,
-    maxCost,
-    mapWidth,
-    mapHeight
-  );
+  return calculateTraversalPathCost(createBattleTraversalView(state), {
+    start: { x: startX, y: startY },
+    goal: { x: targetX, y: targetY },
+    maxCost
+  });
 }
 
 // Re-export getManhattanDistance for convenience

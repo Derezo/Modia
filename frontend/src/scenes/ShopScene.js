@@ -13,6 +13,10 @@ import { Icon } from '../components/Icon.js';
 import { ItemIcon } from '../components/ItemIcon.js';
 import { ItemDataTable } from '../components/ItemDataTable/index.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
+import {
+  formatCaravanRefreshCountdown,
+  normalizeCaravanShopData
+} from './shop/CaravanShopAdapter.js';
 
 // Local alias for cleaner access
 const P = PARCHMENT_COLORS;
@@ -111,7 +115,9 @@ export class ShopScene extends Scene {
   onBreakpointChange() {
     if (this.uiElement) {
       const selectedId = this.activeTab === 'buy'
-        ? this.selectedItem?.templateId
+        ? (this.isCaravan()
+          ? this.selectedItem?.id
+          : this.selectedItem?.templateId)
         : this.selectedItem?.instanceId;
       const prevTab = this.activeTab;
       const prevQty = this.purchaseQuantity;
@@ -126,6 +132,7 @@ export class ShopScene extends Scene {
       this.createUI();
       this.setupEventListeners();
       this.renderInventory();
+      if (this.isCaravan()) this.updateRefreshCountdown();
 
       // Restore state
       this.activeTab = prevTab;
@@ -167,9 +174,10 @@ export class ShopScene extends Scene {
       if (this.isCaravan()) {
         // Caravan uses special endpoint and doesn't support selling
         const caravanData = await this.game.api.getCaravanInventory(this.nodeId);
-        this.shopInventory = caravanData.items || [];
+        const normalizedCaravan = normalizeCaravanShopData(caravanData);
+        this.shopInventory = normalizedCaravan.items;
         this.sellableItems = []; // Caravans don't buy from players
-        this.caravanRefreshTime = caravanData.nextRefresh ? new Date(caravanData.nextRefresh) : null;
+        this.caravanRefreshTime = normalizedCaravan.nextRefresh;
 
         // Start refresh countdown
         this.startRefreshCountdown();
@@ -186,6 +194,7 @@ export class ShopScene extends Scene {
       this.renderInventory();
     } catch (err) {
       console.error('Failed to load shop data:', err);
+      if (this.isCaravan()) this.updateRefreshCountdown();
       parchmentToast.error('Shop Error', 'Failed to load shop inventory');
     }
   }
@@ -203,24 +212,8 @@ export class ShopScene extends Scene {
 
   updateRefreshCountdown() {
     const countdownEl = this.uiElement?.querySelector('#caravan-countdown');
-    if (!countdownEl || !this.caravanRefreshTime) return;
-
-    const now = new Date();
-    const diff = this.caravanRefreshTime - now;
-
-    if (diff <= 0) {
-      countdownEl.textContent = 'Refreshing soon...';
-      return;
-    }
-
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-    if (hours > 0) {
-      countdownEl.textContent = `Refreshes in ${hours}h ${minutes}m`;
-    } else {
-      countdownEl.textContent = `Refreshes in ${minutes}m`;
-    }
+    if (!countdownEl) return;
+    countdownEl.textContent = formatCaravanRefreshCountdown(this.caravanRefreshTime);
   }
 
   addStyles() {
@@ -1013,7 +1006,9 @@ export class ShopScene extends Scene {
 
   selectItem(itemId) {
     const items = this.activeTab === 'buy' ? this.shopInventory : this.sellableItems;
-    const idKey = this.activeTab === 'buy' ? 'templateId' : 'instanceId';
+    const idKey = this.activeTab === 'buy'
+      ? (this.isCaravan() ? 'id' : 'templateId')
+      : 'instanceId';
 
     this.selectedItem = items.find(i => i[idKey] === itemId);
     this.purchaseQuantity = 1;
@@ -1061,7 +1056,7 @@ export class ShopScene extends Scene {
       badgesHtml += '<span class="caravan-exclusive-badge">Exclusive</span>';
     }
     if (item.regionalSpecialty) {
-      badgesHtml += `<span class="regional-specialty-badge">${item.regionalSpecialty}</span>`;
+      badgesHtml += `<span class="regional-specialty-badge">${escapeHtml(item.regionalSpecialty)}</span>`;
     }
 
     detailEl.innerHTML = `

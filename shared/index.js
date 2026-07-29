@@ -47,6 +47,13 @@ export {
 
 // Map Generation
 export {
+  DEFAULT_LEGACY_TERRAIN_GENERATION_VERSION,
+  SUPPORTED_TERRAIN_GENERATION_VERSIONS,
+  UnsupportedTerrainGenerationVersionError,
+  dispatchBattleMapGeneration,
+  generateBattleMap,
+  generateBattleMapV2,
+  normalizeBattleMapV2Request,
   generateTerrain,
   generateTerrainOnly,
   generateSpawnPositions,
@@ -55,13 +62,40 @@ export {
   AI_SPAWN_CONFIGS
 } from './mapGeneration.js';
 
+export {
+  V2_GENERATOR_AVAILABLE,
+  V2_PRODUCTION_NODE_TYPES,
+  getV2Recipe,
+  V2_RENDER_CAPABILITY_CATALOG,
+  getV2VisualCapabilities,
+  ORGANIC_QUALITY_THRESHOLDS,
+  evaluateOrganicQuality,
+  measureOrganicQuality,
+  validateHydrologyIntegrity
+} from './mapgen/v2/index.js';
+
+// Versioned Battle Map contract
+export * from './battleMap/index.js';
+export * from './battleStateProtocol.js';
+
 // Pathfinding
 export {
   getReachableTiles,
   calculatePathCost,
   findPath,
   getManhattanDistance,
-  getAttackableTiles
+  getAttackableTiles,
+  DEFAULT_MOVEMENT_POLICY,
+  createTraversalView,
+  validateTraversalView,
+  isWithinTraversalBounds,
+  getTraversalOccupant,
+  getElevationConnection,
+  canEnterTile,
+  getStepCost,
+  getReachableTilesForTraversal,
+  calculateTraversalPathCost,
+  findTraversalPath
 } from './pathfinding.js';
 
 // Battle Math

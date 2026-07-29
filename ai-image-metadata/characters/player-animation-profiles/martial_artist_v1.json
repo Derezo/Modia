@@ -1,0 +1,78 @@
+{
+  "version": "1.1.0",
+  "id": "martial_artist_v1",
+  "class": "martial_artist",
+  "templateId": "authored-pose-atlas-v1",
+  "description": "Reusable authored-pose direction for martial artist player identities. Registry metadata and the staged portrait control identity; this profile supplies disciplined empty-hand form choreography.",
+  "style": {
+    "source": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+    "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+  },
+  "identity": {
+    "baseFacing": "three-quarters right",
+    "motionStyle": "disciplined, athletic, crisp, balanced, and technically exact, with visible chambering, hip rotation, guard recovery, and bare-fist footwork",
+    "equipmentRule": "Preserve the portrait's gi, headband, belt, wraps, jewelry, and exact accessory count. Keep both empty hands visible when the portrait is unarmed; never invent a weapon, duplicate wraps, or change belt and headband design.",
+    "magicRule": "Martial artistry is entirely physical. Do not add ki aura, elemental trails, runes, projectiles, or supernatural afterimages; a tiny contact accent may mark a real strike."
+  },
+  "promptTemplates": {
+    "reference": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative {{displayName}} identity portrait; Image 2 is style and proportion reference only. Player identity metadata: {{visualTraits}}. Create one complete head-to-toe {{displayName}} preserving Image 1's face, ancestry traits, gender presentation, hair, headband, gi, belt, wraps, palette, proportions, and accessories. Do not import identity details from Image 2. {{equipmentRule}} Translate the portrait into a compact athletic full-body silhouette. Use a {{background}} background with no floor or scenery and a square 1:1 canvas with generous padding. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered martial artist in a technically precise fighting stance facing {{baseFacing}}. {{invariants}}",
+    "animation": "Draw exactly {{frameCount}} genuinely redrawn full-body {{actionLabel}} poses of the authoritative {{displayName}} in a {{columns}}-column by {{rows}}-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: {{visualTraits}}. Required sequence: {{frameSequence}}. Motion direction: {{motionDirection}}. Overall martial artist motion is {{motionStyle}}. {{poseRequirement}} Preserve exact identity, gi, headband, belt, wraps, palette, proportions, and empty-hand continuity. {{equipmentRule}} {{magicRule}} Action-specific effects: {{effectRule}} Use a {{background}} background with generous gutters. {{invariants}}"
+  },
+  "animations": {
+    "idle": {
+      "actionLabel": "martial artist focused guard-cycle",
+      "minimumUniquePoses": 4,
+      "anchor": "source-cell",
+      "motionDirection": "A calm guard loop shifts stance height, breath, lead-hand distance, and rear-foot pressure while maintaining technical alignment.",
+      "effectRule": "No active effect; headband, gi, and belt ends respond subtly to breath.",
+      "frameDescriptions": ["precise empty-hand fighting guard", "measured inhale as guard rises", "weight shifts onto the forward leg", "lead hand tests distance while rear hand protects", "centered balanced midpoint", "controlled exhale lowering the stance", "weight shifts onto the rear foot", "precise guard flowing back to frame one"]
+    },
+    "walk": {
+      "actionLabel": "martial artist guarded footwork-cycle",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "A light alternating advance uses forefoot contacts, real knee compression, smooth passing steps, disciplined guard, and gi follow-through.",
+      "effectRule": "No magic or attack trail; cloth and headband respond to the footwork.",
+      "frameDescriptions": ["left forefoot forward contact behind raised guard", "left knee compresses with hips level", "passing pose as right knee advances", "right foot reaches while hands preserve guard", "right forefoot forward contact", "right knee compresses with balanced posture", "passing pose as left knee advances", "left foot reaches into the guarded loop"]
+    },
+    "attack": {
+      "actionLabel": "martial artist punch-kick combination",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "A lead-hand measure becomes a rear-hand punch, hip-loaded kick chamber, full turning kick, controlled landing, and immediate guard recovery.",
+      "effectRule": "One tiny physical contact accent may mark the punch or kick; no aura, trail, afterimage, or hidden limbs.",
+      "frameDescriptions": ["technical guard measuring distance", "lead hand extends while rear fist chambers", "rear-hand punch drives through rotating hips", "weight transfers as the kicking knee chambers high", "full turning-kick extension with arms counterbalancing", "controlled retraction and landing", "hands and feet rebuild the guard", "recovered precise fighting stance"]
+    },
+    "hurt": {
+      "actionLabel": "martial artist impact-and-reset",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "A clean hit breaks alignment into a flinch, maximum stagger, rolling backward step, low guard catch, technical rise, and stance reset.",
+      "effectRule": "One compact physical impact accent only; no gore, blood, aura, or full-body tint.",
+      "frameDescriptions": ["precise guard before impact", "sharp articulated flinch with forearms closing", "maximum stagger with torso turned and knees bent", "rolling backward step to absorb force", "low balanced catch behind a tight guard", "technical push upright from the legs", "feet reset to correct stance width", "recovered focused guard"]
+    },
+    "death": {
+      "actionLabel": "martial artist defeat sequence",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "verticalAnchor": "bottom",
+      "motionDirection": "A final blow breaks stance alignment, knees buckle, one hand catches the descent, the body rolls sideways, and settles fully fallen.",
+      "effectRule": "No gore, blood, magic, or rigid rotation; keep gi, headband, wraps, and limbs clearly articulated.",
+      "outputFrameMap": [0, 1, 2, 3, 4, 5, 7, 7],
+      "frameDescriptions": ["fatal impact breaks the fighting guard", "arms slacken as balance fails", "knees buckle into a low drop", "one hand catches the floor as hips turn", "body rolls into full ground contact", "gi, limbs, and headband settle low", "final fully fallen martial artist", "same final fallen pose held"]
+    },
+    "dead": {
+      "deriveFrom": {"animation": "death", "frame": 7},
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity.",
+      "frameDescriptions": ["terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held"]
+    },
+    "victory": {
+      "actionLabel": "martial artist formal victory kata",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "motionDirection": "The martial artist confirms victory, bows, executes a compact palm-and-kick kata, lands cleanly, closes both fists, and holds a formal finish.",
+      "effectRule": "No magic; motion is carried by anatomy, gi, belt, and headband follow-through.",
+      "frameDescriptions": ["calm recognition of victory", "formal forward bow with hands gathered", "rising cross-body palm block", "balanced pivot with knee chambered", "controlled high celebratory kick", "clean landing into an open stance", "fists close at the hips in formal posture", "final triumphant martial artist pose held"]
+    }
+  }
+}

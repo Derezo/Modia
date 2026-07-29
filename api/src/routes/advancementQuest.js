@@ -20,8 +20,83 @@ import * as guildmasterBattleService from '../services/guildmasterBattleService.
 import * as battleService from '../services/battleService.js';
 import battleWebsocket from '../services/battleWebsocket.js';
 import { actionLimiter, startLimiter, readLimiter } from '../middleware/battleRateLimiter.js';
+import { battleStateRepository } from '../services/battle/BattleStateRepository.js';
+import {
+  createBattleMapUpgradeRequiredPayload,
+  createNegotiatedBattleStateSnapshot
+} from '../services/messageReliability.js';
+import { assertBattleMapCapabilities } from '../../../shared/battleStateProtocol.js';
 
 const router = express.Router();
+
+export function readAdvancementBattleMapCapabilities(req) {
+  let capabilities = req.body?.battleMapCapabilities;
+  if (capabilities === undefined) capabilities = req.query?.battleMapCapabilities;
+  if (capabilities === undefined) capabilities = req.get?.('x-battle-map-capabilities');
+  if (capabilities === undefined || capabilities === null) return capabilities;
+
+  try {
+    if (typeof capabilities === 'string') capabilities = JSON.parse(capabilities);
+    assertBattleMapCapabilities(capabilities);
+    return capabilities;
+  } catch (error) {
+    if (!(error instanceof SyntaxError) && !(error instanceof TypeError)) throw error;
+    throw new AppError('Invalid battle map capabilities', 400, {
+      code: 'battle_map_capabilities_invalid'
+    });
+  }
+}
+
+function negotiateAdvancementBattleTransport(battle, clientCapabilities) {
+  let negotiated;
+  try {
+    negotiated = createNegotiatedBattleStateSnapshot(battle, clientCapabilities);
+  } catch (error) {
+    if (!(error instanceof TypeError)) throw error;
+    throw new AppError('Invalid battle map capabilities', 400, {
+      code: 'battle_map_capabilities_invalid'
+    });
+  }
+  if (!negotiated.negotiation.compatible) {
+    throw new AppError('This battle map requires a newer client', 426, {
+      ...createBattleMapUpgradeRequiredPayload(negotiated.negotiation)
+    });
+  }
+  return negotiated;
+}
+
+function throwAdvancementCapabilityError(error) {
+  if (error?.negotiation) {
+    throw new AppError('This battle map requires a newer client', 426, {
+      ...createBattleMapUpgradeRequiredPayload(error.negotiation)
+    });
+  }
+  throw error;
+}
+
+export function createAdvancementBattleTransportResponse(
+  legacyPayload,
+  battle,
+  clientCapabilities
+) {
+  const explicitlyDeclared = clientCapabilities !== undefined
+    && clientCapabilities !== null;
+  if (!explicitlyDeclared && battle.battleMapSchemaVersion === 1) {
+    return legacyPayload;
+  }
+
+  const negotiated = negotiateAdvancementBattleTransport(
+    battle,
+    clientCapabilities
+  );
+  const response = {
+    ...legacyPayload,
+    battleMapCapabilities: negotiated.negotiation,
+    snapshot: negotiated.snapshot
+  };
+  if (battle.battleMapSchemaVersion === 2) delete response.state;
+  return response;
+}
 
 /**
  * Verify character ownership middleware
@@ -164,6 +239,7 @@ router.get('/boss/:characterId', authenticate, readLimiter, asyncHandler(verifyC
 // POST /api/advancement/boss/start - Start boss trial battle
 router.post('/boss/start', authenticate, startLimiter, asyncHandler(async (req, res) => {
   const { characterId } = req.body;
+  const battleMapCapabilities = readAdvancementBattleMapCapabilities(req);
 
   if (!characterId) {
     throw new AppError('characterId is required', 400);
@@ -209,11 +285,17 @@ router.post('/boss/start', authenticate, startLimiter, asyncHandler(async (req, 
   const targetClass = eligibility.targetClass;
 
   // Generate guildmaster battle
-  const battleConfig = await guildmasterBattleService.generateGuildmasterBattle(
-    { id: characterId, level: character.level || 10 },
-    targetClass,
-    character.current_node_id
-  );
+  let battleConfig;
+  try {
+    battleConfig = await guildmasterBattleService.generateGuildmasterBattle(
+      { id: characterId, level: character.level || 10 },
+      targetClass,
+      character.current_node_id,
+      { clientCapabilities: battleMapCapabilities }
+    );
+  } catch (error) {
+    throwAdvancementCapabilityError(error);
+  }
 
   // Initialize CT and determine first actor
   battleService.initializeCT(battleConfig.initialState.units);
@@ -222,6 +304,11 @@ router.post('/boss/start', authenticate, startLimiter, asyncHandler(async (req, 
 
   // Create battle record
   const battleId = await guildmasterBattleService.createGuildmasterBattleRecord(battleConfig, req.user.userId);
+  const battleEnvelope = await battleStateRepository.loadBattleForParticipant(
+    battleId,
+    req.user.userId,
+    { requireActive: true }
+  );
 
   // Join battle WebSocket room
   battleWebsocket.joinBattle(battleId, req.user.userId);
@@ -232,17 +319,18 @@ router.post('/boss/start', authenticate, startLimiter, asyncHandler(async (req, 
     ? battleService.getAvailableActions(firstUnit, battleConfig.initialState)
     : null;
 
-  res.json({
+  res.json(createAdvancementBattleTransportResponse({
     success: true,
     message: `Boss trial against ${battleConfig.guildmaster.name} has begun!`,
     battleId,
     characterId,
     targetClass,
     mapSeed: battleConfig.mapSeed,
-    mapWidth: 32,
-    mapHeight: 32,
+    mapWidth: battleEnvelope.mapWidth,
+    mapHeight: battleEnvelope.mapHeight,
     nodeType: 'guild', // Critical: frontend needs this for terrain generation
-    state: battleConfig.initialState,
+    state: battleEnvelope.state,
+    stateRevision: battleEnvelope.stateRevision,
     guildmaster: {
       name: battleConfig.guildmaster.name,
       title: battleConfig.guildmaster.title,
@@ -250,7 +338,7 @@ router.post('/boss/start', authenticate, startLimiter, asyncHandler(async (req, 
       maxPhases: battleConfig.guildmaster.maxPhases
     },
     availableActions
-  });
+  }, battleEnvelope, battleMapCapabilities));
 }));
 
 // GET /api/advancement/history/:characterId - Get completed quests

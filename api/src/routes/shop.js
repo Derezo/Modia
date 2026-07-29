@@ -8,7 +8,7 @@ import {
   getCaravanInventoryWithStock,
   processPurchase as processCaravanPurchase
 } from '../services/caravanService.js';
-import { CARAVAN_REFRESH_INTERVAL } from '../db/templates/caravanItems.js';
+import { presentCaravanShop } from '../services/caravanShopPresenter.js';
 
 const router = express.Router();
 
@@ -168,40 +168,7 @@ router.get('/:nodeId/:shopType', authenticate, asyncHandler(async (req, res) => 
       throw new AppError('Caravan inventory not available', 404);
     }
 
-    // Format inventory for response
-    const inventory = caravanData.inventory.map(item => ({
-      itemId: item.itemId,
-      name: item.name,
-      type: item.type,
-      description: item.description,
-      basePrice: item.basePrice,
-      price: item.price, // Already includes 15% premium
-      stock: item.quantity,
-      maxStock: item.maxQuantity,
-      regional: !!item.region,
-      caravanExclusive: true,
-      effect: item.effect || null,
-      equipSlot: item.equipSlot || null,
-      statBonuses: item.statBonuses || null,
-      inStock: item.inStock,
-      spriteId: item.spriteId || item.sprite_id || null
-    }));
-
-    // Calculate time until next refresh in milliseconds
-    const now = new Date();
-    const refreshesIn = caravanData.nextRefresh
-      ? Math.max(0, caravanData.nextRefresh.getTime() - now.getTime())
-      : CARAVAN_REFRESH_INTERVAL;
-
-    return res.json({
-      isCaravan: true,
-      shopType: 'caravan',
-      inventory,
-      refreshesIn,
-      lastRefresh: caravanData.lastRefresh,
-      nodeId: nodeIdNum,
-      nodeName: caravanData.nodeName
-    });
+    return res.json(presentCaravanShop(caravanData, nodeIdNum));
   }
 
   // Standard shop handling (blacksmith, apothecary, farm)

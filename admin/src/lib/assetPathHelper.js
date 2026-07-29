@@ -6,6 +6,7 @@
 import {
   getAssetPath,
   getCharacterPath,
+  getPlayerCharacterPath,
   getObstaclePath,
   DEFAULT_SIZES,
   CHARACTER_ANIMATIONS
@@ -113,12 +114,16 @@ export function getAssetImageUrl(asset, category) {
   }
 
   // For characters, use shared/assetPaths.js getCharacterPath
-  // Players: /assets/characters/player/{class}/{class}_{animation}.webp
+  // Players: /assets/characters/player/{race}/{gender}/{class}/{id}_{animation}.webp
   // Enemies: /assets/characters/enemies/{biome}/{id}/{id}_{animation}.webp
   // All character sprites MUST have an _idle animation for preview
   if (category === 'characters') {
     const type = asset._type || 'player';
     const biome = asset._biome || asset.biome;
+    if (type !== 'enemy' && type !== 'enemies') {
+      if (!asset.race || !asset.gender || !asset.class) return null;
+      return getPlayerCharacterPath(asset, { animation: 'idle' });
+    }
     return getCharacterPath(id, {
       type: type === 'enemies' ? 'enemy' : type,
       biome,

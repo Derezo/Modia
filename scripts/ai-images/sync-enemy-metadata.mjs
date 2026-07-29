@@ -121,6 +121,27 @@ async function loadEnemyDocuments(projectRoot) {
   }));
 }
 
+async function loadAuthoredAliases(projectRoot) {
+  const aliasPath = path.join(
+    projectRoot,
+    'ai-image-metadata/characters/enemy-authored-identity-aliases.json'
+  );
+  if (!await pathExists(aliasPath)) return [];
+  const registry = await readJson(aliasPath);
+  return Array.isArray(registry.aliases) ? registry.aliases : [];
+}
+
+async function loadAuthoredIdentity(projectRoot, biome, id) {
+  const specPath = path.join(
+    projectRoot,
+    'ai-image-metadata/characters/enemy-authored-animations',
+    biome,
+    `${id}.json`
+  );
+  if (!await pathExists(specPath)) return {};
+  return (await readJson(specPath)).identity || {};
+}
+
 function buildNewBiomeDocument(biome, fallbackVersion) {
   const defaults = NEW_BIOME_DEFAULTS[biome] || {};
   const title = biome.replaceAll('_', ' ').replace(/\b\w/g, letter => letter.toUpperCase());
@@ -213,17 +234,27 @@ function updateMasterManifest(manifest, documentsByBiome) {
   const enemyCount = [...documentsByBiome.values()]
     .reduce((sum, document) => sum + document.enemies.length, 0);
   const playerVariantCount = Number(characters.playerVariantCount || 0);
-  const legacyPlayerArchetypes = Number(characters.legacyPlayerArchetypes || 0);
+  const {
+    legacyPlayerArchetypes: _legacyPlayerArchetypes,
+    authoredPlayerAnimationPilots: _authoredPlayerAnimationPilots,
+    authoredEnemyAnimationDrafts: _authoredEnemyAnimationDrafts,
+    ...canonicalCharacters
+  } = characters;
 
   return {
     ...manifest,
     categories: {
       ...manifest.categories,
       characters: {
-        ...characters,
-        assetCount: playerVariantCount + legacyPlayerArchetypes + enemyCount,
+        ...canonicalCharacters,
+        assetCount: playerVariantCount + enemyCount,
+        authoredPlayerAnimationSpecs: playerVariantCount,
+        authoredEnemyAnimationSpecs: enemyCount,
         enemyCount,
-        files: [...nonEnemyFiles, ...enemyFiles]
+        files: [
+          ...nonEnemyFiles.filter(file => !file.startsWith('characters/player-authored-animations/')),
+          ...enemyFiles
+        ]
       }
     }
   };
@@ -237,6 +268,7 @@ export async function buildEnemyMetadataSync(options = {}) {
   const projectRoot = path.resolve(options.projectRoot || DEFAULT_PROJECT_ROOT);
   const canonicalBiomes = options.canonicalBiomes || await loadCanonicalBiomes(projectRoot);
   const documents = await loadEnemyDocuments(projectRoot);
+  const authoredAliases = await loadAuthoredAliases(projectRoot);
   const publicAssetRoot = path.join(projectRoot, 'frontend/public/assets');
   const documentByBiome = new Map();
   const seenIds = new Set();
@@ -261,6 +293,32 @@ export async function buildEnemyMetadataSync(options = {}) {
         sourceIndex
       });
     }
+  }
+
+  for (const alias of authoredAliases) {
+    assertEnemyId(alias.id, 'enemy-authored-identity-aliases.json');
+    assertEnemyId(alias.animationSourceId, alias.id);
+    assertBiome(alias.biome, alias.id);
+    if (seenIds.has(alias.id)) continue;
+    const sourceEntry = entries.find(entry => entry.enemy.id === alias.animationSourceId);
+    if (!sourceEntry) {
+      throw new Error(`Missing animation source ${alias.animationSourceId} for authored enemy ${alias.id}`);
+    }
+    const identity = await loadAuthoredIdentity(projectRoot, alias.biome, alias.id);
+    const clonedEnemy = structuredClone(sourceEntry.enemy);
+    clonedEnemy.id = alias.id;
+    clonedEnemy.name = identity.name || alias.id.replaceAll('_', ' ');
+    clonedEnemy.archetype = identity.archetype || clonedEnemy.archetype;
+    clonedEnemy.visualTraits = identity.visualTraits || clonedEnemy.visualTraits;
+    clonedEnemy.animationSourceId = alias.animationSourceId;
+    seenIds.add(alias.id);
+    entries.push({
+      enemy: clonedEnemy,
+      declaredBiome: alias.biome,
+      canonicalBiome: canonicalBiomes[alias.id] || alias.biome,
+      sourceFileName: 'enemy-authored-identity-aliases.json',
+      sourceIndex: entries.length
+    });
   }
 
   const targetBiomes = orderedBiomes([

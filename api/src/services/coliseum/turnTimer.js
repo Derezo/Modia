@@ -12,9 +12,9 @@
  * @see battleService.js - Battle state updates for skipped turns
  */
 
-import { query } from '../../config/database.js';
 import * as battleService from '../battleService.js';
 import * as battleWebsocket from '../battleWebsocket.js';
+import battleStateRepository from '../battle/BattleStateRepository.js';
 import {
   recordDisconnect as recordDisconnectEvent,
   forgiveDisconnect,
@@ -140,31 +140,39 @@ async function handleTurnTimeout(battleId, playerId, isPvE = false) {
  * @param {boolean} isPvE - Whether this is a PvE battle
  */
 async function skipPlayerTurn(battleId, playerId, isPvE = false) {
-  // Get battle state and advance to next actor
-  const result = await query(
-    'SELECT battle_state FROM battles WHERE id = $1',
-    [battleId]
-  );
-
-  if (result.rows.length === 0) return;
-
-  const state = result.rows[0].battle_state;
+  let battle;
+  try {
+    battle = await battleStateRepository.loadBattle(battleId, {
+      requireActive: true
+    });
+  } catch (error) {
+    if (error?.code === 'BATTLE_NOT_FOUND' || error?.code === 'BATTLE_STATE_LIFECYCLE_ERROR') {
+      return;
+    }
+    throw error;
+  }
+  const state = JSON.parse(JSON.stringify(battle.state));
   const activeUnit = state.units.find(u => u.id === state.activeUnitId);
 
   if (activeUnit && activeUnit.ownerId === playerId) {
     // End this unit's turn
     battleService.advanceToNextActorWithCT(state);
 
-    // Save updated state
-    await query(
-      'UPDATE battles SET battle_state = $1 WHERE id = $2',
-      [JSON.stringify(state), battleId]
-    );
+    const commit = await battleStateRepository.commitBattleState({
+      battleId,
+      expectedRevision: battle.stateRevision,
+      commandType: 'coliseum_turn_timeout',
+      idempotencyKey: `coliseum-turn-timeout:${battleId}:${battle.stateRevision}:${playerId}`,
+      flatState: state
+    });
+
+    // Publish the committed revision before presentation/turn events.
+    await battleWebsocket.broadcastStateUpdate(battleId, commit.update);
 
     // Broadcast turn advanced
     const nextUnit = state.units.find(u => u.id === state.activeUnitId);
     if (nextUnit) {
-      battleWebsocket.broadcastTurnStart(battleId, {
+      await battleWebsocket.broadcastTurnStart(battleId, {
         id: nextUnit.id,
         name: nextUnit.name,
         position: { x: nextUnit.tileX, y: nextUnit.tileY }
@@ -250,18 +258,20 @@ export function handlePlayerReconnect(battleId, playerId) {
     }).catch(err => console.error('Failed to notify reconnect:', err));
 
     // Restart turn timer if it's this player's turn
-    query(
-      'SELECT battle_state FROM battles WHERE id = $1',
-      [battleId]
-    ).then(result => {
-      if (result.rows.length > 0) {
-        const state = result.rows[0].battle_state;
+    battleStateRepository.loadBattle(battleId, { requireActive: true })
+      .then(battle => {
+        const state = battle.state;
         const activeUnit = state.units.find(u => u.id === state.activeUnitId);
         if (activeUnit && activeUnit.ownerId === playerId) {
           startTurnTimer(battleId, playerId);
         }
-      }
-    });
+      })
+      .catch(error => {
+        if (error?.code !== 'BATTLE_NOT_FOUND'
+          && error?.code !== 'BATTLE_STATE_LIFECYCLE_ERROR') {
+          console.error('Failed to restore turn timer after reconnect:', error);
+        }
+      });
   }
 }
 
@@ -273,16 +283,16 @@ export function handlePlayerReconnect(battleId, playerId) {
  * @param {boolean} applyPenalty - Whether to apply rating penalty
  */
 export async function endMatchByForfeit(battleId, forfeiterId, reason, applyPenalty = true) {
-  // Get battle info
-  const result = await query(
-    'SELECT player1_id, player2_id, battle_state FROM battles WHERE id = $1',
-    [battleId]
-  );
-
-  if (result.rows.length === 0) return;
-
-  const { player1_id, player2_id } = result.rows[0];
-  const winnerId = forfeiterId === player1_id ? player2_id : player1_id;
+  let battle;
+  try {
+    battle = await battleStateRepository.loadBattle(battleId);
+  } catch (error) {
+    if (error?.code === 'BATTLE_NOT_FOUND') return;
+    throw error;
+  }
+  const winnerId = forfeiterId === battle.player1Id
+    ? battle.player2Id
+    : battle.player1Id;
   const loserId = forfeiterId;
 
   // Clean up timers

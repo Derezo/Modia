@@ -14,14 +14,24 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import sharp from 'sharp';
+import authoredEnemyAnimationCompiler from './lib/authoredEnemyAnimationCompiler.js';
 import authoredPlayerAnimationCompiler from './lib/authoredPlayerAnimationCompiler.js';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
+const { compileAuthoredEnemy } = authoredEnemyAnimationCompiler;
 const { APPROVED_STATUS } = authoredPlayerAnimationCompiler;
 export const DEFAULT_PROJECT_ROOT = path.resolve(SCRIPT_DIR, '..', '..');
 export const ITEM_SIZES = Object.freeze([32, 64, 128]);
 export const EXPECTED_ABILITY_ICON_COUNT = 164;
 export const ABILITY_ICON_OUTPUT_PATTERN = '/assets/abilities/icons/{source}/{id}.webp';
+export const REQUIRED_ENEMY_SOURCE_ANIMATIONS = Object.freeze([
+  'reference',
+  'idle',
+  'attack',
+  'hit',
+  'death'
+]);
+const SAFE_ENEMY_IDENTITY_SEGMENT = /^[a-z0-9_]+$/;
 
 const ITEM_CATEGORY_TYPES = Object.freeze({
   weapons: new Set(['weapon', 'sword', 'axe', 'staff', 'wand', 'bow', 'dagger', 'mace', 'polearm', 'fist']),
@@ -54,6 +64,43 @@ async function pathExists(filePath) {
     return true;
   } catch {
     return false;
+  }
+}
+
+async function inspectProjectSourceFile(projectRoot, relativePath) {
+  const absoluteRoot = path.resolve(projectRoot);
+  const absolutePath = path.resolve(absoluteRoot, relativePath);
+  if (!absolutePath.startsWith(`${absoluteRoot}${path.sep}`)) {
+    return { valid: false, reason: 'path escapes the project root' };
+  }
+
+  try {
+    let current = absoluteRoot;
+    for (const segment of path.relative(absoluteRoot, absolutePath).split(path.sep)) {
+      current = path.join(current, segment);
+      const stats = await fs.lstat(current);
+      if (stats.isSymbolicLink()) {
+        return {
+          valid: false,
+          reason: `path contains a symbolic link at ${projectRelative(projectRoot, current)}`
+        };
+      }
+    }
+
+    const [stats, realRoot, realPath] = await Promise.all([
+      fs.stat(absolutePath),
+      fs.realpath(absoluteRoot),
+      fs.realpath(absolutePath)
+    ]);
+    if (realPath !== realRoot && !realPath.startsWith(`${realRoot}${path.sep}`)) {
+      return { valid: false, reason: 'real path escapes the project root' };
+    }
+    if (!stats.isFile()) return { valid: false, reason: 'path is not a regular file' };
+    if (stats.size === 0) return { valid: false, reason: 'file is empty' };
+    return { valid: true };
+  } catch (error) {
+    if (error.code === 'ENOENT') return { valid: false, reason: 'file is missing' };
+    return { valid: false, reason: error.message };
   }
 }
 
@@ -367,7 +414,10 @@ async function loadRuntimeSources(projectRoot) {
   const authoredEnemySpecFiles = (await walkFiles(
     path.join(projectRoot, 'ai-image-metadata/characters/enemy-authored-animations')
   )).filter(file => file.endsWith('.json'));
-  const authoredEnemySpecs = await Promise.all(authoredEnemySpecFiles.map(readJson));
+  const authoredEnemySpecs = await Promise.all(authoredEnemySpecFiles.map(async file => ({
+    file,
+    data: await readJson(file)
+  })));
 
   const itemMetadata = [];
   for (const [category, fileName] of Object.entries(itemManifest.categoryFiles || {})) {
@@ -389,6 +439,352 @@ async function loadRuntimeSources(projectRoot) {
     itemMetadata,
     abilityRegistry,
     abilityManifest
+  };
+}
+
+function authoredEnemySpecData(entry) {
+  return entry?.data || entry || {};
+}
+
+function authoredEnemySpecFile(projectRoot, entry) {
+  if (!entry?.file) return null;
+  return projectRelative(projectRoot, entry.file);
+}
+
+function enemySourceRequirements(biome, id, spec) {
+  const sourceRoot = normalizePath(path.join(
+    'ai-image-metadata/characters/enemy-animation-sources',
+    biome,
+    id
+  ));
+  const requirements = [
+    {
+      stage: 'inputs',
+      asset: 'identity',
+      path: `${sourceRoot}/inputs/identity.png`,
+      declarations: [
+        ['inputs.identity.staged', spec.inputs?.identity?.staged],
+        ['reference.identitySource', spec.reference?.identitySource]
+      ]
+    },
+    {
+      stage: 'inputs',
+      asset: 'style',
+      path: `${sourceRoot}/inputs/style.png`,
+      declarations: [
+        ['inputs.style.staged', spec.inputs?.style?.staged],
+        ['reference.styleSource', spec.reference?.styleSource]
+      ]
+    }
+  ];
+
+  for (const animation of REQUIRED_ENEMY_SOURCE_ANIMATIONS) {
+    const config = animation === 'reference'
+      ? spec.reference
+      : spec.animations?.[animation];
+    requirements.push(
+      {
+        stage: 'chroma',
+        asset: animation,
+        path: `${sourceRoot}/chroma/${animation}.png`,
+        declarations: [[
+          animation === 'reference'
+            ? 'reference.chromaSource'
+            : `animations.${animation}.chromaSource`,
+          config?.chromaSource
+        ]]
+      },
+      {
+        // Accepted sources are intentionally stored at the identity root; the
+        // compiler's `source` fields distinguish them from chroma candidates.
+        stage: 'accepted',
+        asset: animation,
+        path: `${sourceRoot}/${animation}.png`,
+        declarations: [[
+          animation === 'reference'
+            ? 'reference.source'
+            : `animations.${animation}.source`,
+          config?.source
+        ]]
+      }
+    );
+  }
+  return requirements;
+}
+
+/**
+ * Prove that every API enemy identity is backed by one complete, approved
+ * authored-animation source set from the current pipeline.
+ */
+export async function validateEnemyAnimationProvenance(options = {}) {
+  const projectRoot = path.resolve(options.projectRoot || DEFAULT_PROJECT_ROOT);
+  const runtimeEnemyIds = [...new Set(options.runtimeEnemyIds || [])].sort();
+  const authoredEnemySpecs = options.authoredEnemySpecs || [];
+  const primaryBiomes = options.primaryBiomes || {};
+  const verifyAuthoredEnemy = options.verifyAuthoredEnemy || compileAuthoredEnemy;
+  const specsById = new Map();
+  const checks = [];
+  const issues = [];
+
+  for (const entry of authoredEnemySpecs) {
+    const spec = authoredEnemySpecData(entry);
+    if (!spec.id) continue;
+    if (!specsById.has(spec.id)) specsById.set(spec.id, []);
+    specsById.get(spec.id).push(entry);
+  }
+
+  for (const id of runtimeEnemyIds) {
+    const entries = specsById.get(id) || [];
+    const approvedEntries = entries.filter(entry =>
+      isApprovedAuthoredStatus(authoredEnemySpecData(entry).status)
+    );
+    const check = {
+      id,
+      expectedBiome: primaryBiomes[id] || null,
+      specCount: entries.length,
+      approvedSpecCount: approvedEntries.length,
+      specFiles: entries.map(entry => authoredEnemySpecFile(projectRoot, entry)).filter(Boolean).sort(),
+      complete: false,
+      missingFiles: [],
+      sourceViolations: [],
+      declarationMismatches: [],
+      compilerVerified: false,
+      compilerIssues: []
+    };
+    checks.push(check);
+
+    if (
+      !SAFE_ENEMY_IDENTITY_SEGMENT.test(id)
+      || !SAFE_ENEMY_IDENTITY_SEGMENT.test(String(check.expectedBiome || ''))
+    ) {
+      issues.push(makeIssue(
+        'error',
+        'enemy_authored_identity_unsafe',
+        'enemies',
+        `${id} cannot be verified because its identity or canonical biome is not a safe path segment`,
+        { id, expectedBiome: check.expectedBiome }
+      ));
+      continue;
+    }
+
+    if (entries.length === 0) {
+      issues.push(makeIssue(
+        'error',
+        'enemy_authored_spec_missing',
+        'enemies',
+        `${id} has no authored enemy animation specification; generate and approve it with the new enemy pipeline`,
+        { id, expectedBiome: check.expectedBiome }
+      ));
+      continue;
+    }
+
+    if (entries.length > 1) {
+      issues.push(makeIssue(
+        'error',
+        'enemy_authored_spec_duplicate',
+        'enemies',
+        `${id} has ${entries.length} authored enemy animation specifications; exactly one is required`,
+        {
+          id,
+          expectedBiome: check.expectedBiome,
+          specCount: entries.length,
+          approvedSpecCount: approvedEntries.length,
+          specFiles: check.specFiles
+        }
+      ));
+    }
+
+    if (approvedEntries.length === 0) {
+      issues.push(makeIssue(
+        'error',
+        'enemy_authored_spec_unapproved',
+        'enemies',
+        `${id} has authored animation metadata but no approved specification`,
+        {
+          id,
+          expectedBiome: check.expectedBiome,
+          statuses: entries.map(entry => authoredEnemySpecData(entry).status || null),
+          specFiles: check.specFiles
+        }
+      ));
+      continue;
+    }
+
+    if (entries.length !== 1 || approvedEntries.length !== 1) continue;
+
+    const spec = authoredEnemySpecData(approvedEntries[0]);
+    if (!check.expectedBiome || spec.biome !== check.expectedBiome) {
+      issues.push(makeIssue(
+        'error',
+        'enemy_authored_spec_biome_mismatch',
+        'enemies',
+        `${id} authored specification biome=${String(spec.biome)} but runtime canonical biome=${String(check.expectedBiome)}`,
+        {
+          id,
+          declaredBiome: spec.biome || null,
+          expectedBiome: check.expectedBiome,
+          specFile: authoredEnemySpecFile(projectRoot, approvedEntries[0])
+        }
+      ));
+      continue;
+    }
+
+    const expectedSpecFile = normalizePath(path.join(
+      'ai-image-metadata/characters/enemy-authored-animations',
+      check.expectedBiome,
+      `${id}.json`
+    ));
+    const actualSpecFile = authoredEnemySpecFile(projectRoot, approvedEntries[0]);
+    if (actualSpecFile !== expectedSpecFile) {
+      issues.push(makeIssue(
+        'error',
+        'enemy_authored_spec_path_mismatch',
+        'enemies',
+        `${id} authored specification is not at the canonical new-pipeline path`,
+        {
+          id,
+          biome: check.expectedBiome,
+          actual: actualSpecFile,
+          expected: expectedSpecFile
+        }
+      ));
+      continue;
+    }
+
+    const specInspection = await inspectProjectSourceFile(projectRoot, expectedSpecFile);
+    if (!specInspection.valid) {
+      issues.push(makeIssue(
+        'error',
+        'enemy_authored_spec_path_unsafe',
+        'enemies',
+        `${id} authored specification cannot be trusted: ${specInspection.reason}`,
+        {
+          id,
+          biome: check.expectedBiome,
+          specFile: expectedSpecFile,
+          reason: specInspection.reason
+        }
+      ));
+      continue;
+    }
+
+    const requirements = enemySourceRequirements(check.expectedBiome, id, spec);
+    for (const requirement of requirements) {
+      const inspection = await inspectProjectSourceFile(projectRoot, requirement.path);
+      if (!inspection.valid) {
+        const violation = {
+          stage: requirement.stage,
+          asset: requirement.asset,
+          path: requirement.path,
+          reason: inspection.reason
+        };
+        check.sourceViolations.push(violation);
+        if (inspection.reason === 'file is missing' || inspection.reason === 'file is empty') {
+          check.missingFiles.push({
+            stage: requirement.stage,
+            asset: requirement.asset,
+            path: requirement.path
+          });
+        }
+      }
+      for (const [field, declaredPath] of requirement.declarations) {
+        if (declaredPath === requirement.path) continue;
+        check.declarationMismatches.push({
+          stage: requirement.stage,
+          asset: requirement.asset,
+          field,
+          actual: declaredPath || null,
+          expected: requirement.path
+        });
+      }
+    }
+
+    if (check.sourceViolations.length || check.declarationMismatches.length) {
+      const problemCounts = [];
+      if (check.missingFiles.length) problemCounts.push(`${check.missingFiles.length} missing or empty file(s)`);
+      const unsafeSourceCount = check.sourceViolations.length - check.missingFiles.length;
+      if (unsafeSourceCount) problemCounts.push(`${unsafeSourceCount} unsafe or invalid source file(s)`);
+      if (check.declarationMismatches.length) problemCounts.push(`${check.declarationMismatches.length} incorrect source declaration(s)`);
+      issues.push(makeIssue(
+        'error',
+        'enemy_authored_sources_incomplete',
+        'enemies',
+        `${id} is not fully generated by the new enemy pipeline: ${problemCounts.join(' and ')}`,
+        {
+          id,
+          biome: check.expectedBiome,
+          specFile: authoredEnemySpecFile(projectRoot, approvedEntries[0]),
+          missingFiles: check.missingFiles,
+          sourceViolations: check.sourceViolations,
+          declarationMismatches: check.declarationMismatches
+        }
+      ));
+      continue;
+    }
+
+    try {
+      const compilerResult = await verifyAuthoredEnemy({
+        projectRoot,
+        id,
+        biome: check.expectedBiome,
+        check: true
+      });
+      check.compilerIssues = Array.isArray(compilerResult?.issues)
+        ? compilerResult.issues.map(issue => String(issue))
+        : [];
+      if (!compilerResult?.ok) {
+        const detail = check.compilerIssues[0] || 'compiler verification returned a failed result';
+        issues.push(makeIssue(
+          'error',
+          'enemy_authored_compiler_check_failed',
+          'enemies',
+          `${id} failed the authored enemy compiler read-only check: ${detail}`,
+          {
+            id,
+            biome: check.expectedBiome,
+            specFile: authoredEnemySpecFile(projectRoot, approvedEntries[0]),
+            compilerIssues: check.compilerIssues
+          }
+        ));
+        continue;
+      }
+      check.compilerVerified = true;
+    } catch (error) {
+      check.compilerIssues = [error instanceof Error ? error.message : String(error)];
+      issues.push(makeIssue(
+        'error',
+        'enemy_authored_compiler_check_failed',
+        'enemies',
+        `${id} could not complete the authored enemy compiler read-only check: ${check.compilerIssues[0]}`,
+        {
+          id,
+          biome: check.expectedBiome,
+          specFile: authoredEnemySpecFile(projectRoot, approvedEntries[0]),
+          compilerIssues: check.compilerIssues
+        }
+      ));
+      continue;
+    }
+
+    check.complete = true;
+  }
+
+  return {
+    checks,
+    issues: sortIssues(issues),
+    summary: {
+      runtimeIdentities: runtimeEnemyIds.length,
+      completeIdentities: checks.filter(check => check.complete).length,
+      missingSpecs: issues.filter(issue => issue.code === 'enemy_authored_spec_missing').length,
+      duplicateSpecs: issues.filter(issue => issue.code === 'enemy_authored_spec_duplicate').length,
+      unapprovedSpecs: issues.filter(issue => issue.code === 'enemy_authored_spec_unapproved').length,
+      biomeMismatches: issues.filter(issue => issue.code === 'enemy_authored_spec_biome_mismatch').length,
+      pathMismatches: issues.filter(issue => issue.code === 'enemy_authored_spec_path_mismatch').length,
+      unsafeSpecPaths: issues.filter(issue => issue.code === 'enemy_authored_spec_path_unsafe').length,
+      incompleteSources: issues.filter(issue => issue.code === 'enemy_authored_sources_incomplete').length,
+      unsafeIdentities: issues.filter(issue => issue.code === 'enemy_authored_identity_unsafe').length,
+      compilerFailures: issues.filter(issue => issue.code === 'enemy_authored_compiler_check_failed').length
+    }
   };
 }
 
@@ -869,7 +1265,9 @@ export async function createRuntimeAssetReport(options = {}) {
     enemies: {
       templates: [],
       lookups: [],
+      npcPlayerArtAliases: [],
       invalidSheets: [],
+      authoredProvenance: [],
       metadataMismatches: [],
       orphanMetadata: [],
       orphanFiles: []
@@ -1167,6 +1565,71 @@ export async function createRuntimeAssetReport(options = {}) {
   // -----------------------------------------------------------------------
   // Enemies: API templates + every spawn biome through the runtime resolver.
   // -----------------------------------------------------------------------
+  for (const [visualId, playerIdentity] of Object.entries(
+    sources.assetPaths.NPC_PLAYER_ART_IDENTITIES || {}
+  )) {
+    const aliasCheck = {
+      visualId,
+      playerIdentity: playerIdentity.id,
+      primaryBiome: sources.assetPaths.getNpcVisualIdentity(visualId).primaryBiome,
+      lookups: []
+    };
+    checks.enemies.npcPlayerArtAliases.push(aliasCheck);
+
+    if (!playerIds.has(playerIdentity.id)) {
+      issues.push(makeIssue(
+        'error',
+        'npc_player_art_identity_missing',
+        'enemies',
+        `${visualId} maps to unknown canonical player identity ${playerIdentity.id}`,
+        aliasCheck
+      ));
+      continue;
+    }
+
+    for (const spawnBiome of sources.assetPaths.ENEMY_BIOMES) {
+      for (const animation of sources.battleAssetConfig.ENEMY_ANIMATIONS) {
+        const candidates = buildEnemySpriteCandidateUrls(
+          visualId,
+          animation,
+          spawnBiome,
+          sources.battleAssetConfig
+        );
+        const resolved = [];
+        for (const url of candidates) {
+          const file = publicAssetUrlToFile(projectRoot, url);
+          if (await pathExists(file)) resolved.push(url);
+        }
+        const lookup = { spawnBiome, animation, candidates, resolved: resolved[0] || null };
+        aliasCheck.lookups.push(lookup);
+        if (resolved.length === 0) {
+          issues.push(makeIssue(
+            'error',
+            'npc_player_art_animation_unresolved',
+            'enemies',
+            `${visualId}/${spawnBiome}/${animation} cannot resolve mapped player art`,
+            { visualId, playerIdentity: playerIdentity.id, ...lookup }
+          ));
+        }
+      }
+    }
+
+    const resolvedPaths = new Set(
+      aliasCheck.lookups.filter(lookup => lookup.resolved).map(lookup => (
+        `${lookup.animation}:${lookup.resolved}`
+      ))
+    );
+    if (resolvedPaths.size !== sources.battleAssetConfig.ENEMY_ANIMATIONS.length) {
+      issues.push(makeIssue(
+        'error',
+        'npc_player_art_cross_zone_split',
+        'enemies',
+        `${visualId} does not resolve one stable canonical player sheet per animation across themes`,
+        { visualId, playerIdentity: playerIdentity.id, resolvedPaths: [...resolvedPaths].sort() }
+      ));
+    }
+  }
+
   const resolvedEnemyFiles = new Map();
   const enemyTemplateIds = new Set();
   for (const enemy of sources.enemyTemplates) {
@@ -1245,6 +1708,15 @@ export async function createRuntimeAssetReport(options = {}) {
     }
   }
 
+  const enemyProvenanceValidation = await validateEnemyAnimationProvenance({
+    projectRoot,
+    runtimeEnemyIds: [...enemyTemplateIds],
+    authoredEnemySpecs: sources.authoredEnemySpecs,
+    primaryBiomes: sources.battleAssetConfig.ENEMY_PRIMARY_BIOMES
+  });
+  checks.enemies.authoredProvenance = enemyProvenanceValidation.checks;
+  issues.push(...enemyProvenanceValidation.issues);
+
   if (contractProblems.length === 0) {
     const inspections = await mapLimit([...resolvedEnemyFiles], 6, async ([file, details]) => ({
       details,
@@ -1289,6 +1761,7 @@ export async function createRuntimeAssetReport(options = {}) {
   const enemyMetadataIds = new Set(enemyTemplateIds);
   const approvedAuthoredEnemyIds = new Set(
     sources.authoredEnemySpecs
+      .map(authoredEnemySpecData)
       .filter(spec => isApprovedAuthoredStatus(spec.status))
       .map(spec => spec.id)
   );
@@ -1712,7 +2185,12 @@ export async function createRuntimeAssetReport(options = {}) {
       },
       enemies: {
         templates: sources.enemyTemplates.length,
+        npcPlayerArtAliases: checks.enemies.npcPlayerArtAliases.length,
+        resolvedNpcPlayerArtLookups: checks.enemies.npcPlayerArtAliases
+          .flatMap(alias => alias.lookups)
+          .filter(lookup => lookup.resolved).length,
         spawnContexts: sources.enemyTemplates.reduce((sum, enemy) => sum + new Set(enemy.spawn_node_types || []).size, 0),
+        authoredProvenance: enemyProvenanceValidation.summary,
         expectedLookups: checks.enemies.lookups.length,
         resolvedLookups: resolvedEnemyLookupCount,
         uniqueResolvedSheets: resolvedEnemyFiles.size,
@@ -1782,6 +2260,8 @@ export function formatHumanReport(report, options = {}) {
     '',
     'Enemies',
     `  API templates / spawn contexts: ${summary.enemies.templates} / ${summary.enemies.spawnContexts}`,
+    `  Complete new-pipeline sources: ${summary.enemies.authoredProvenance.completeIdentities}/${summary.enemies.authoredProvenance.runtimeIdentities}`,
+    `  Guild NPC canonical player-art aliases: ${summary.enemies.npcPlayerArtAliases} (${summary.enemies.resolvedNpcPlayerArtLookups} cross-theme lookups resolved)`,
     `  Runtime-resolved lookups: ${summary.enemies.resolvedLookups}/${summary.enemies.expectedLookups} (${percent(summary.enemies.resolvedLookups, summary.enemies.expectedLookups)})`,
     `  Valid unique sheets: ${summary.enemies.validResolvedSheets}/${summary.enemies.uniqueResolvedSheets}`,
     `  Metadata mismatches: ${summary.enemies.metadataMismatches}`,

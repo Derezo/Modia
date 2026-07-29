@@ -16,6 +16,7 @@ import {
   ENEMY_BIOMES,
   ENEMY_BIOME_ALIASES,
   NPC_PRIMARY_BIOMES,
+  NPC_PLAYER_ART_IDENTITIES,
   OBSTACLE_CATEGORIES,
   ASSET_CATEGORIES,
   SIZE_PRESETS,
@@ -100,9 +101,23 @@ describe('assetPaths constants', () => {
   describe('NPC visual identity registries', () => {
     it('keeps primary homes and world-node aliases immutable', () => {
       assert.equal(Object.isFrozen(NPC_PRIMARY_BIOMES), true);
+      assert.equal(Object.isFrozen(NPC_PLAYER_ART_IDENTITIES), true);
       assert.equal(Object.isFrozen(ENEMY_BIOME_ALIASES), true);
       assert.strictEqual(NPC_PRIMARY_BIOMES.dark_knight, 'palace');
       assert.strictEqual(NPC_PRIMARY_BIOMES.skeleton_warrior, 'cave');
+      assert.strictEqual(Object.keys(NPC_PLAYER_ART_IDENTITIES).length, 16);
+      assert.deepStrictEqual(NPC_PLAYER_ART_IDENTITIES.guildmaster_wizard, {
+        id: 'human_female_wizard',
+        race: 'human',
+        gender: 'female',
+        className: 'wizard'
+      });
+      assert.deepStrictEqual(NPC_PLAYER_ART_IDENTITIES.disciple_ninja, {
+        id: 'human_other_ninja',
+        race: 'human',
+        gender: 'other',
+        className: 'ninja'
+      });
       assert.strictEqual(resolveEnemyBiomeAlias('guild'), 'castle');
       assert.strictEqual(resolveEnemyBiomeAlias('unknown-zone'), 'forest');
     });
@@ -216,7 +231,7 @@ describe('canonical NPC asset identity', () => {
       biome: 'mountain'
     }), {
       visualId: 'guildmaster_wizard',
-      primaryBiome: 'guild'
+      primaryBiome: 'castle'
     });
   });
 
@@ -230,11 +245,11 @@ describe('canonical NPC asset identity', () => {
       primaryBiome: 'palace'
     });
     assert.deepStrictEqual(getNpcSpriteBiomeCandidates('dark_knight', 'castle'), [
-      'palace', 'castle'
+      'palace'
     ]);
   });
 
-  it('uses DTO primary biome and its alias for special NPCs outside the registry', () => {
+  it('maps seeded guildmasters to canonical player art in the castle family', () => {
     const guildmaster = {
       visualIdentity: {
         visualId: 'guildmaster_wizard',
@@ -243,19 +258,36 @@ describe('canonical NPC asset identity', () => {
       biome: 'mountain'
     };
     assert.deepStrictEqual(getNpcSpriteBiomeCandidates(guildmaster, 'mountain'), [
-      'guild', 'castle', 'mountain'
+      'castle'
     ]);
-    assert.strictEqual(getNpcPortraitId(guildmaster), 'enemy_guildmaster_wizard');
+    assert.strictEqual(getNpcPortraitId(guildmaster), 'human_female_wizard');
     assert.deepStrictEqual(getNpcCharacterPathCandidates(guildmaster, {
       requestedBiome: 'mountain',
-      animations: ['dead', 'death']
+      animations: ['hit', 'dead']
     }), [
-      '/assets/characters/enemies/guild/guildmaster_wizard/guildmaster_wizard_dead.webp',
-      '/assets/characters/enemies/guild/guildmaster_wizard/guildmaster_wizard_death.webp',
-      '/assets/characters/enemies/castle/guildmaster_wizard/guildmaster_wizard_dead.webp',
-      '/assets/characters/enemies/castle/guildmaster_wizard/guildmaster_wizard_death.webp',
-      '/assets/characters/enemies/mountain/guildmaster_wizard/guildmaster_wizard_dead.webp',
-      '/assets/characters/enemies/mountain/guildmaster_wizard/guildmaster_wizard_death.webp'
+      '/assets/characters/player/human/female/wizard/human_female_wizard_hurt.webp',
+      '/assets/characters/player/human/female/wizard/human_female_wizard_dead.webp',
+      '/assets/characters/player/human/female/wizard/human_female_wizard_death.webp'
+    ]);
+  });
+
+  it('maps seeded disciples to gender-neutral canonical player art', () => {
+    assert.deepStrictEqual(getNpcVisualIdentity('disciple_alchemist'), {
+      visualId: 'disciple_alchemist',
+      primaryBiome: 'castle'
+    });
+    assert.deepStrictEqual(getNpcSpriteBiomeCandidates('disciple_alchemist', 'forest'), [
+      'castle'
+    ]);
+    assert.strictEqual(
+      getNpcPortraitId({ enemyId: 'disciple_alchemist' }),
+      'human_other_alchemist'
+    );
+    assert.deepStrictEqual(getNpcCharacterPathCandidates('disciple_alchemist', {
+      requestedBiome: 'cave',
+      animation: 'attack'
+    }), [
+      '/assets/characters/player/human/other/alchemist/human_other_alchemist_attack.webp'
     ]);
   });
 
@@ -289,14 +321,25 @@ describe('canonical NPC asset identity', () => {
 // =============================================================================
 
 describe('getCharacterPath', () => {
-  it('should generate player character path with default animation', () => {
-    const path = getCharacterPath('warrior');
-    assert.strictEqual(path, '/assets/characters/player/warrior/warrior_idle.webp');
+  const player = { race: 'Human', gender: 'Male', class: 'Warrior' };
+
+  it('should generate canonical player character path with default animation', () => {
+    const path = getCharacterPath(player);
+    assert.strictEqual(
+      path,
+      '/assets/characters/player/human/male/warrior/human_male_warrior_idle.webp'
+    );
   });
 
-  it('should generate player character path with specified animation', () => {
-    const path = getCharacterPath('mage', { animation: 'attack' });
-    assert.strictEqual(path, '/assets/characters/player/mage/mage_attack.webp');
+  it('should generate canonical player character path with specified animation', () => {
+    const path = getCharacterPath(
+      { race: 'Elf', gender: 'Female', class: 'Mage' },
+      { animation: 'attack' }
+    );
+    assert.strictEqual(
+      path,
+      '/assets/characters/player/elf/female/mage/elf_female_mage_attack.webp'
+    );
   });
 
   it('should generate enemy character path', () => {
@@ -315,8 +358,11 @@ describe('getCharacterPath', () => {
   });
 
   it('should support custom extension', () => {
-    const path = getCharacterPath('warrior', { animation: 'idle', extension: 'png' });
-    assert.strictEqual(path, '/assets/characters/player/warrior/warrior_idle.png');
+    const path = getCharacterPath(player, { animation: 'idle', extension: 'png' });
+    assert.strictEqual(
+      path,
+      '/assets/characters/player/human/male/warrior/human_male_warrior_idle.png'
+    );
   });
 
   it('should opt into portrait-matched paths when race and gender are supplied', () => {
@@ -331,6 +377,11 @@ describe('getCharacterPath', () => {
     );
   });
 
+  it('should reject class-only legacy player identities', () => {
+    assert.strictEqual(getCharacterPath('warrior'), null);
+    assert.strictEqual(getCharacterPath({ class: 'warrior' }), null);
+  });
+
   it('should throw error for enemy without biome', () => {
     assert.throws(() => {
       getCharacterPath('goblin', { type: 'enemy' });
@@ -339,7 +390,7 @@ describe('getCharacterPath', () => {
 
   it('should handle all animation types', () => {
     for (const animation of CHARACTER_ANIMATIONS) {
-      const path = getCharacterPath('warrior', { animation });
+      const path = getCharacterPath(player, { animation });
       assert.ok(path.includes(`warrior_${animation}.webp`), `Should include ${animation}`);
     }
   });
@@ -397,13 +448,12 @@ describe('portrait-matched player character paths', () => {
     });
   });
 
-  it('retains an explicit migration-only class fallback', () => {
+  it('ignores migration-era fallback flags and remains identity strict', () => {
     assert.deepStrictEqual(getPlayerCharacterPathCandidates(character, {
       animation: 'hit',
       includeLegacyFallback: true
     }), [
-      '/assets/characters/player/high_elf/other/martial_artist/high_elf_other_martial_artist_hurt.webp',
-      '/assets/characters/player/martial_artist/martial_artist_hurt.webp'
+      '/assets/characters/player/high_elf/other/martial_artist/high_elf_other_martial_artist_hurt.webp'
     ]);
   });
 
@@ -416,15 +466,17 @@ describe('portrait-matched player character paths', () => {
 });
 
 describe('getCharacterAnimationPaths', () => {
+  const player = { race: 'human', gender: 'male', class: 'warrior' };
+
   it('should return all animation paths by default', () => {
-    const paths = getCharacterAnimationPaths('warrior');
+    const paths = getCharacterAnimationPaths(player);
     assert.strictEqual(paths.length, CHARACTER_ANIMATIONS.length);
     assert.ok(paths.some(p => p.animation === 'idle'));
     assert.ok(paths.some(p => p.animation === 'dead'));
   });
 
   it('should filter by specified animations', () => {
-    const paths = getCharacterAnimationPaths('warrior', { animations: ['idle', 'attack'] });
+    const paths = getCharacterAnimationPaths(player, { animations: ['idle', 'attack'] });
     assert.strictEqual(paths.length, 2);
     assert.strictEqual(paths[0].animation, 'idle');
     assert.strictEqual(paths[1].animation, 'attack');
@@ -442,17 +494,25 @@ describe('getCharacterAnimationPaths', () => {
   });
 
   it('should return path objects with animation and path properties', () => {
-    const paths = getCharacterAnimationPaths('warrior', { animations: ['idle'] });
+    const paths = getCharacterAnimationPaths(player, { animations: ['idle'] });
     assert.strictEqual(paths.length, 1);
     assert.ok('animation' in paths[0]);
     assert.ok('path' in paths[0]);
   });
+
+  it('should reject class-only legacy player identities', () => {
+    assert.deepStrictEqual(getCharacterAnimationPaths('warrior'), []);
+  });
 });
 
 describe('getCharacterDirectory', () => {
-  it('should return player character directory', () => {
-    const dir = getCharacterDirectory('warrior');
-    assert.strictEqual(dir, '/assets/characters/player/warrior');
+  it('should return canonical player character directory', () => {
+    const dir = getCharacterDirectory({
+      race: 'human',
+      gender: 'male',
+      class: 'warrior'
+    });
+    assert.strictEqual(dir, '/assets/characters/player/human/male/warrior');
   });
 
   it('should return enemy character directory', () => {
@@ -472,12 +532,24 @@ describe('getCharacterDirectory', () => {
       '/assets/characters/player/orc/male/wizard'
     );
   });
+
+  it('should reject class-only legacy player identities', () => {
+    assert.strictEqual(getCharacterDirectory('warrior'), null);
+    assert.strictEqual(getCharacterDirectory({ class: 'warrior' }), null);
+  });
 });
 
 describe('getCharacterReferencePath', () => {
-  it('should return player reference path', () => {
-    const path = getCharacterReferencePath('warrior');
-    assert.strictEqual(path, '/assets/characters/player/warrior/warrior_reference.png');
+  it('should return canonical player reference path', () => {
+    const path = getCharacterReferencePath({
+      race: 'human',
+      gender: 'male',
+      class: 'warrior'
+    });
+    assert.strictEqual(
+      path,
+      '/assets/characters/player/human/male/warrior/human_male_warrior_reference.png'
+    );
   });
 
   it('should return enemy reference path', () => {
@@ -490,6 +562,25 @@ describe('getCharacterReferencePath', () => {
       getCharacterReferencePath('wizard', { race: 'orc', gender: 'male' }),
       '/assets/characters/player/orc/male/wizard/orc_male_wizard_reference.png'
     );
+  });
+
+  it('should support nested canonical player identities', () => {
+    assert.strictEqual(
+      getCharacterReferencePath({
+        visualIdentity: {
+          kind: 'player',
+          race: 'elf',
+          gender: 'female',
+          className: 'ninja'
+        }
+      }),
+      '/assets/characters/player/elf/female/ninja/elf_female_ninja_reference.png'
+    );
+  });
+
+  it('should reject class-only legacy player identities', () => {
+    assert.strictEqual(getCharacterReferencePath('warrior'), null);
+    assert.strictEqual(getCharacterReferencePath({ class: 'warrior' }), null);
   });
 });
 
@@ -615,9 +706,17 @@ describe('getAssetPath', () => {
   });
 
   describe('characters', () => {
-    it('should handle characters category', () => {
-      const path = getAssetPath('characters', 'warrior', { animation: 'attack' });
-      assert.strictEqual(path, '/assets/characters/player/warrior/warrior_attack.webp');
+    it('should require canonical player identities for the characters category', () => {
+      const path = getAssetPath(
+        'characters',
+        { race: 'human', gender: 'male', class: 'warrior' },
+        { animation: 'attack' }
+      );
+      assert.strictEqual(
+        path,
+        '/assets/characters/player/human/male/warrior/human_male_warrior_attack.webp'
+      );
+      assert.strictEqual(getAssetPath('characters', 'warrior'), null);
     });
   });
 
@@ -674,8 +773,16 @@ describe('getOriginalsPath', () => {
   });
 
   it('should return character reference path for characters (already PNG)', () => {
-    const path = getOriginalsPath('characters', 'warrior');
-    assert.strictEqual(path, '/assets/characters/player/warrior/warrior_reference.png');
+    const path = getOriginalsPath('characters', {
+      race: 'human',
+      gender: 'male',
+      class: 'warrior'
+    });
+    assert.strictEqual(
+      path,
+      '/assets/characters/player/human/male/warrior/human_male_warrior_reference.png'
+    );
+    assert.strictEqual(getOriginalsPath('characters', 'warrior'), null);
   });
 
   it('should return enemy reference path for enemy characters (already PNG)', () => {
@@ -717,8 +824,16 @@ describe('getOutputPath', () => {
   });
 
   it('should prepend frontend/public to character paths', () => {
-    const path = getOutputPath('characters', 'warrior', { animation: 'idle' });
-    assert.strictEqual(path, 'frontend/public/assets/characters/player/warrior/warrior_idle.webp');
+    const path = getOutputPath(
+      'characters',
+      { race: 'human', gender: 'male', class: 'warrior' },
+      { animation: 'idle' }
+    );
+    assert.strictEqual(
+      path,
+      'frontend/public/assets/characters/player/human/male/warrior/human_male_warrior_idle.webp'
+    );
+    assert.strictEqual(getOutputPath('characters', 'warrior'), null);
   });
 
   it('should prepend frontend/public to obstacle paths', () => {

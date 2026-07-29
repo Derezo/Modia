@@ -1,0 +1,657 @@
+{
+  "version": "1.0.0",
+  "template": "ai-image-metadata/characters/player-authored-animation-template.json",
+  "compilerVersion": "1.2.0",
+  "id": "human_other_sorcerer",
+  "profile": "sorcerer_v1",
+  "profileSource": "ai-image-metadata/characters/player-animation-profiles/sorcerer_v1.json",
+  "status": "approved",
+  "approvedAt": "2026-07-29T02:20:29.363Z",
+  "metadataFingerprint": "d509a8b9cbf26d079649da88423bbf38566d3d3b754cc936826ca2262a69d28a",
+  "draftProvenance": {
+    "registry": "ai-image-metadata/characters/player-variants.json",
+    "templateSha256": "7943e69db577b3a4429b47df634f931d3f4cb8e8ce9a91a06578255fbe935bbe",
+    "profileSha256": "781379a46bb752813cfe05f736129131dcc67d06497e7f8e584f2de62fbb7c91"
+  },
+  "identity": {
+    "race": "human",
+    "gender": "other",
+    "class": "sorcerer",
+    "presentation": "non-binary human sorcerer",
+    "visualTraits": "human features balanced proportions warm skin tone androgynous features non-binary dark robes crackling energy arcane tattoos powerful hood intense gaze",
+    "baseFacing": "three-quarters right",
+    "sourceMetadata": {
+      "isAdvanced": true,
+      "inheritsFrom": "sorcerer",
+      "seed": 20037
+    }
+  },
+  "inputs": {
+    "identity": {
+      "origin": "frontend/public/assets/portraits/originals/human_other_sorcerer.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/human_other_sorcerer/inputs/identity.png",
+      "authority": "face, ancestry, gender presentation, hair, eyes, complexion, costume, palette, proportions, and equipment"
+    },
+    "style": {
+      "origin": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/human_other_sorcerer/inputs/style.png",
+      "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+    }
+  },
+  "reference": {
+    "source": "ai-image-metadata/characters/player-animation-sources/human_other_sorcerer/reference.png",
+    "chromaSource": "ai-image-metadata/characters/player-animation-sources/human_other_sorcerer/chroma/reference.png",
+    "identitySource": "ai-image-metadata/characters/player-animation-sources/human_other_sorcerer/inputs/identity.png",
+    "styleSource": "ai-image-metadata/characters/player-animation-sources/human_other_sorcerer/inputs/style.png",
+    "prompt": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative Human Sorcerer (non-binary presentation) identity portrait; Image 2 is style and proportion reference only. Player identity metadata: human features balanced proportions warm skin tone androgynous features non-binary dark robes crackling energy arcane tattoos powerful hood intense gaze. Create one complete head-to-toe Human Sorcerer (non-binary presentation) preserving Image 1's face, ancestry traits, gender presentation, hair, hood, robes, tattoos, jewelry, focus, palette, proportions, and intense gaze. Do not import identity details from Image 2. Preserve the portrait's dark robes, hood, arcane tattoos, jewelry, focus, and exact item count. Never invent a staff, duplicate a focus, alter tattoo placement, or replace permanent costume details with effects. Translate the portrait into a compact volatile full-body silhouette. Use a flat #00ff00 chroma key background with no floor or scenery and a square 1:1 canvas with generous padding. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered sorcerer in a power-contained ready stance facing three-quarters right. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+  },
+  "animations": {
+    "idle": {
+      "source": "ai-image-metadata/characters/player-animation-sources/human_other_sorcerer/idle.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/human_other_sorcerer/chroma/idle.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 4,
+      "frameDescriptions": [
+        "tense ready stance with marked hands controlled",
+        "sharp inhale as shoulders and tattoos lift",
+        "weight leans forward over one clenched hand",
+        "compact energy pulse travels along established markings",
+        "centered power-contained midpoint",
+        "forceful exhale as fingers open",
+        "weight shifts rearward while robes settle",
+        "tense stance flowing back to frame one"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body sorcerer power-contained idle-cycle poses of the authoritative Human Sorcerer (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: human features balanced proportions warm skin tone androgynous features non-binary dark robes crackling energy arcane tattoos powerful hood intense gaze. Required sequence: tense ready stance with marked hands controlled; sharp inhale as shoulders and tattoos lift; weight leans forward over one clenched hand; compact energy pulse travels along established markings; centered power-contained midpoint; forceful exhale as fingers open; weight shifts rearward while robes settle; tense stance flowing back to frame one. Motion direction: A tense breathing loop shifts weight as marked hands alternately clench and relax around a tightly contained current.. Overall sorcerer motion is intense, instinctive, forceful, and barely contained, with hand-led energy control, grounded recoil, and sharp robe follow-through. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, tattoos, palette, proportions, and equipment. Preserve the portrait's dark robes, hood, arcane tattoos, jewelry, focus, and exact item count. Never invent a staff, duplicate a focus, alter tattoo placement, or replace permanent costume details with effects. All power is innate and must use the portrait's established energy and tattoo palette. Energy originates visibly from the marked body or existing focus, remains compact, and never hides hands, face, or pose mechanics. Action-specific effects: Only a faint pulse along established tattoos or focus is permitted; no free-floating spell. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "walk": {
+      "source": "ai-image-metadata/characters/player-animation-sources/human_other_sorcerer/walk.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/human_other_sorcerer/chroma/walk.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "left foot forward contact with hands guarded",
+        "left leg compressed as robes gather",
+        "passing pose with right knee advancing",
+        "right foot reaches while marked hand counter-swings",
+        "right foot forward contact",
+        "right leg compressed under the stride",
+        "passing pose with left knee advancing",
+        "left foot reaches into the charged loop"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body sorcerer charged stride poses of the authoritative Human Sorcerer (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: human features balanced proportions warm skin tone androgynous features non-binary dark robes crackling energy arcane tattoos powerful hood intense gaze. Required sequence: left foot forward contact with hands guarded; left leg compressed as robes gather; passing pose with right knee advancing; right foot reaches while marked hand counter-swings; right foot forward contact; right leg compressed under the stride; passing pose with left knee advancing; left foot reaches into the charged loop. Motion direction: A purposeful alternating stride uses real leg compression, opposite arm motion, and charged but controlled robe and tattoo accents.. Overall sorcerer motion is intense, instinctive, forceful, and barely contained, with hand-led energy control, grounded recoil, and sharp robe follow-through. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, tattoos, palette, proportions, and equipment. Preserve the portrait's dark robes, hood, arcane tattoos, jewelry, focus, and exact item count. Never invent a staff, duplicate a focus, alter tattoo placement, or replace permanent costume details with effects. All power is innate and must use the portrait's established energy and tattoo palette. Energy originates visibly from the marked body or existing focus, remains compact, and never hides hands, face, or pose mechanics. Action-specific effects: No active spell; established markings may retain a faint constant glow. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "attack": {
+      "source": "ai-image-metadata/characters/player-animation-sources/human_other_sorcerer/attack.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/human_other_sorcerer/chroma/attack.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "power-contained guard",
+        "marked hand closes as energy gathers inward",
+        "deep torso coil with attacking elbow drawn back",
+        "forward step snapping the charged arm outward",
+        "compact arcane lash at close-range contact",
+        "whole-body recoil as energy curls back",
+        "fingers clamp down on the fading current",
+        "recovered intense guard"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body sorcerer close-range arcane lash poses of the authoritative Human Sorcerer (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: human features balanced proportions warm skin tone androgynous features non-binary dark robes crackling energy arcane tattoos powerful hood intense gaze. Required sequence: power-contained guard; marked hand closes as energy gathers inward; deep torso coil with attacking elbow drawn back; forward step snapping the charged arm outward; compact arcane lash at close-range contact; whole-body recoil as energy curls back; fingers clamp down on the fading current; recovered intense guard. Motion direction: Innate power coils through the torso, loads one marked arm, snaps into a compact close-range lash, rebounds through the shoulders, and is forcibly contained.. Overall sorcerer motion is intense, instinctive, forceful, and barely contained, with hand-led energy control, grounded recoil, and sharp robe follow-through. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, tattoos, palette, proportions, and equipment. Preserve the portrait's dark robes, hood, arcane tattoos, jewelry, focus, and exact item count. Never invent a staff, duplicate a focus, alter tattoo placement, or replace permanent costume details with effects. All power is innate and must use the portrait's established energy and tattoo palette. Energy originates visibly from the marked body or existing focus, remains compact, and never hides hands, face, or pose mechanics. Action-specific effects: One short identity-colored energy lash may extend from the attacking hand at contact; no detached projectile or anatomy-obscuring explosion. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "hurt": {
+      "source": "ai-image-metadata/characters/player-animation-sources/human_other_sorcerer/hurt.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/human_other_sorcerer/chroma/hurt.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "tense guard before impact",
+        "sharp flinch with marked hands thrown apart",
+        "maximum stagger amid a few broken sparks",
+        "stumbling backward as robes whip forward",
+        "low brace with both hands drawing energy inward",
+        "forceful push upright while sparks extinguish",
+        "feet reset and fingers close",
+        "recovered power-contained guard"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body sorcerer disrupted-power recovery poses of the authoritative Human Sorcerer (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: human features balanced proportions warm skin tone androgynous features non-binary dark robes crackling energy arcane tattoos powerful hood intense gaze. Required sequence: tense guard before impact; sharp flinch with marked hands thrown apart; maximum stagger amid a few broken sparks; stumbling backward as robes whip forward; low brace with both hands drawing energy inward; forceful push upright while sparks extinguish; feet reset and fingers close; recovered power-contained guard. Motion direction: An impact disrupts control into a violent flinch, scattered energy recoil, stumbling brace, forceful containment, and wary recovery.. Overall sorcerer motion is intense, instinctive, forceful, and barely contained, with hand-led energy control, grounded recoil, and sharp robe follow-through. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, tattoos, palette, proportions, and equipment. Preserve the portrait's dark robes, hood, arcane tattoos, jewelry, focus, and exact item count. Never invent a staff, duplicate a focus, alter tattoo placement, or replace permanent costume details with effects. All power is innate and must use the portrait's established energy and tattoo palette. Energy originates visibly from the marked body or existing focus, remains compact, and never hides hands, face, or pose mechanics. Action-specific effects: A few compact disrupted sparks may leave established markings; no gore, blood, full-body tint, or large detonation. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "death": {
+      "source": "ai-image-metadata/characters/player-animation-sources/human_other_sorcerer/death.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/human_other_sorcerer/chroma/death.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "verticalAnchor": "bottom",
+      "outputFrameMap": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        7,
+        7
+      ],
+      "frameDescriptions": [
+        "fatal disruption breaks magical control",
+        "tattoo light flickers as arms slacken",
+        "knees buckle beneath the robes",
+        "one knee grounds while torso folds sideways",
+        "body reaches full ground contact",
+        "robes and limbs settle into a low fallen shape",
+        "final fully fallen sorcerer with energy extinguished",
+        "same final fallen pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body sorcerer defeat sequence poses of the authoritative Human Sorcerer (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: human features balanced proportions warm skin tone androgynous features non-binary dark robes crackling energy arcane tattoos powerful hood intense gaze. Required sequence: fatal disruption breaks magical control; tattoo light flickers as arms slacken; knees buckle beneath the robes; one knee grounds while torso folds sideways; body reaches full ground contact; robes and limbs settle into a low fallen shape; final fully fallen sorcerer with energy extinguished; same final fallen pose held. Motion direction: A final disruption extinguishes innate power, knees fail, the body folds and tips sideways, reaches full ground contact, and settles completely fallen.. Overall sorcerer motion is intense, instinctive, forceful, and barely contained, with hand-led energy control, grounded recoil, and sharp robe follow-through. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, tattoos, palette, proportions, and equipment. Preserve the portrait's dark robes, hood, arcane tattoos, jewelry, focus, and exact item count. Never invent a staff, duplicate a focus, alter tattoo placement, or replace permanent costume details with effects. All power is innate and must use the portrait's established energy and tattoo palette. Energy originates visibly from the marked body or existing focus, remains compact, and never hides hands, face, or pose mechanics. Action-specific effects: Energy fades without explosion, gore, blood, dismemberment, or rigid rotation; preserve costume and focus continuity. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "cast": {
+      "source": "ai-image-metadata/characters/player-animation-sources/human_other_sorcerer/cast.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/human_other_sorcerer/chroma/cast.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "intense ready stance",
+        "both marked hands draw inward toward the chest",
+        "arms spread as tattoo energy brightens",
+        "wide grounded stance compressing power between palms",
+        "maximum compact energy mass under visible control",
+        "forceful two-hand forward release",
+        "arms recoil as residual sparks collapse inward",
+        "composed but intense casting finish"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body sorcerer innate-power eruption poses of the authoritative Human Sorcerer (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: human features balanced proportions warm skin tone androgynous features non-binary dark robes crackling energy arcane tattoos powerful hood intense gaze. Required sequence: intense ready stance; both marked hands draw inward toward the chest; arms spread as tattoo energy brightens; wide grounded stance compressing power between palms; maximum compact energy mass under visible control; forceful two-hand forward release; arms recoil as residual sparks collapse inward; composed but intense casting finish. Motion direction: Both marked hands draw power from the body, arms spread under pressure, energy compresses between the palms, erupts forward, and recoils into controlled stillness.. Overall sorcerer motion is intense, instinctive, forceful, and barely contained, with hand-led energy control, grounded recoil, and sharp robe follow-through. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, tattoos, palette, proportions, and equipment. Preserve the portrait's dark robes, hood, arcane tattoos, jewelry, focus, and exact item count. Never invent a staff, duplicate a focus, alter tattoo placement, or replace permanent costume details with effects. All power is innate and must use the portrait's established energy and tattoo palette. Energy originates visibly from the marked body or existing focus, remains compact, and never hides hands, face, or pose mechanics. Action-specific effects: Build one compact identity-colored spell visibly between the hands or at the established focus, then release it forward without hiding anatomy. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "dead": {
+      "deriveFrom": {
+        "animation": "death",
+        "frame": 7
+      },
+      "frameDescriptions": [
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held"
+      ],
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity."
+    },
+    "victory": {
+      "source": "ai-image-metadata/characters/player-animation-sources/human_other_sorcerer/victory.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/human_other_sorcerer/chroma/victory.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "surprised recognition of victory",
+        "shoulders open into a sharp triumphant laugh",
+        "one marked hand sweeps upward",
+        "compact energy spiral follows the rising hand",
+        "proud pivot as robes and glow follow",
+        "energy compresses safely into one palm",
+        "intense victor stance presenting controlled power",
+        "final triumphant sorcerer pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body sorcerer triumphant power display poses of the authoritative Human Sorcerer (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: human features balanced proportions warm skin tone androgynous features non-binary dark robes crackling energy arcane tattoos powerful hood intense gaze. Required sequence: surprised recognition of victory; shoulders open into a sharp triumphant laugh; one marked hand sweeps upward; compact energy spiral follows the rising hand; proud pivot as robes and glow follow; energy compresses safely into one palm; intense victor stance presenting controlled power; final triumphant sorcerer pose held. Motion direction: Victory releases a sharp laugh, rising hand flourish, controlled energy spiral, proud turn, and a final pose with power compressed safely in one palm.. Overall sorcerer motion is intense, instinctive, forceful, and barely contained, with hand-led energy control, grounded recoil, and sharp robe follow-through. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, robes, tattoos, palette, proportions, and equipment. Preserve the portrait's dark robes, hood, arcane tattoos, jewelry, focus, and exact item count. Never invent a staff, duplicate a focus, alter tattoo placement, or replace permanent costume details with effects. All power is innate and must use the portrait's established energy and tattoo palette. Energy originates visibly from the marked body or existing focus, remains compact, and never hides hands, face, or pose mechanics. Action-specific effects: A compact spiral and palm-sized glow in the established palette may celebrate victory; no oversized storm. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    }
+  },
+  "pins": {
+    "templateSha256": "93943004e340d113943e06dea61fd7dfad67c20750dd4fc30d76d3be1fb7c144",
+    "profileSha256": "c5c791490828e81742002269edacdea4af5c6081410fc8c5759e1ac44683fb46",
+    "reference": {
+      "sourceSha256": "aa70d91637258462a16ce5cb5479869a235e5b1ca1fad8e47a12bcdb4b2ba9ef",
+      "sourceDimensions": "1254x1254",
+      "chromaSourceSha256": "f3f33c5f53067df89ae1e97f041528a16214b95caf7363761b3580433d48e909",
+      "chromaSourceDimensions": "1254x1254",
+      "identitySourceSha256": "b8ca74628a52a0d4010d39a19ecf86cf8402fd30a037c8e686cc0a2483469217",
+      "identitySourceDimensions": "1024x1024",
+      "styleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "styleSourceDimensions": "1254x1254",
+      "promptSha256": "e3277be7d7802cdb48ca02cbf64d1abee77b39f93ab61b90862547c8f4e3fca9",
+      "encodedSha256": "f8c327f5d8ed4455074d14c8cd43e1b623d3c2d67717e2fc3a08658e41f1b881",
+      "decodedSha256": "93d40559db4ed2567c9164b4360b19c28120fd4baf9eda302ae34936ae8e0a81"
+    },
+    "animations": {
+      "idle": {
+        "sourceSha256": "e5a8fa050e3a4b88012ecad95e454fdc99eb00b3a5eaef355b028a10ace8f4ff",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "2e19dcb2a397c4447360335103308c26ebb6dd5cc4ca6a48f7b2f91af8c15d3d",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "203e25977fc1a87e5dc6f45edf4c758c5f7353e948d151e2a73bf99cd96d3377",
+        "encodedSha256": "21bab5788541dc7729836a24b63fb75600b3854adf69bbaa4cff7c4590ebcbfc",
+        "decodedSha256": "b04b1ca68134d70e9b3fc17eaf16e51a3e097012702751a0acf524439b8264c5",
+        "frameSha256": [
+          "24b217c87d5a9d12220277fbf78dcff7a76c9ab72a2490661c39ae7346aaaf2c",
+          "7f572b3c4294c28df91993dab70fa91af720eace9fcde548162e78a14acdb941",
+          "776856fbdaf49cd270a99952183e4171ab253e4fd5696009d48a61f67db2f26e",
+          "c2b2192a538fb69931b5c551dea61cfdc92f2003f47f2d15ed301b74d82cbdd0",
+          "99070d5d273f74b36e32100a5a762f269c19999fb8103f0bd0ca301ebd72b165",
+          "2cd12ea450b8660528470d3599756c8568cd89642e9edafaf13306dd77fed024",
+          "3b8e3b57cfccec41772e229308caf0f946838af3959f21d682187a2ba88313bb",
+          "24438bc0f6a6610cae7daae2bbdbb1ca9e219f41a098e859a12bf37eaf27150a"
+        ],
+        "poseSha256": [
+          "1462d42d32c0b9a292e1b13e0e22e5cc2718c08b7559ed18b3c1f468f9725cc5",
+          "9dcc148e3fa5c3adb30afccdfc472dbfec00d506f2ef128de4c629b421a27f21",
+          "3cb6bc43c24b420c512ad17265b114542bd870af2b4cd79a98a5ddf0cdce4508",
+          "1a5095f2a712af3620859f7e8c1239e35e904bbc119922b6171116ccf925dbb3",
+          "8f0b9fe6a16e5fae89c1e9854253844c884c0dbc70de9ec11345c55c2f137fef",
+          "da342e8e0407de0faf392c2076e27c38b21c250aedf579d8962fffd336d7b3d8",
+          "2f8a30774916a55bdab43359fc0b68f7a1c957579b053543f2c5ad8f28bed8b8",
+          "f49eb07f44f63bb0ce1349efcf68e2ebe589ca0b711a91895d7c94eb913cb2d0"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.9964,
+          0.996522,
+          0.999216,
+          0.997105,
+          0.995721,
+          0.998984,
+          0.998544,
+          0.996379
+        ]
+      },
+      "walk": {
+        "sourceSha256": "232bdcdb17c0372fdedabd4d68a8ba1106e2b7686b024eb1410e7f0654281d02",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "ec4feae35ead62484077604060a793cbf369fa6de81443586efe1714f4b5ab61",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "0bc3d9105d7523007a6eefdbb087f989988c237f89b87fe1ac15f863cea0ae6d",
+        "encodedSha256": "cd5d312914c2f70381e29d80cdc341cf3b81b4b69bd4eb1f9f479bf56dcb64a3",
+        "decodedSha256": "589f70ff064ec018e2d2e32d5410e70f5800c0043bc92dbe5ccc1e14a6254bc4",
+        "frameSha256": [
+          "07cf9cfed2fd3c6d1b1336528651ca8fb90784b065a4eeb10f312082c4e086f0",
+          "c3f4aef4f39283c9d4f846fcbcd11c6a36cc516b5e479f68e5a4234946254e11",
+          "7e04719ac3fd9dea3b07cff7ca08379ec54130c32d85cd8fcc707b0f421202e9",
+          "c64e85af05e2bcf4973ca79643d85534923738fd90adcbbd909d2d536ddf35ea",
+          "44001b088cac11698e558d61d717cc7752f5dbeba73013fcfa8bcaa4d00b255f",
+          "1a9582241a6ded8fbf9f2e56cb1670deffe4330559ab4bf6ca91f28920139e8d",
+          "615cc03b50953d1491a897aea960df97e84538c0e158500e8f163fc74b26c822",
+          "f3ab4ae1650d6635fd92fdc30afd3fdf32e1a156b1f587e331ace6358b536e9e"
+        ],
+        "poseSha256": [
+          "fdefe4d246265301eeefd7e9c6f5ca8d518c09d06474de827b2eb743ca9bc2be",
+          "c035f94b69f40d8a60dae7ee4c1ecd5428c2d14b97acae2b99050d4146f942c5",
+          "461aea3a73c5967fbee00d4fbe980d9083df38342138ca75aa27d2c4c9e24de0",
+          "a34b6d0c7b9c2dffb4a0164761793e1fadd79ab265ba3ef76270e10f51e9cda6",
+          "921699df0d308b746a170dd6e21a0271e2a4e051d3c4e00f10f8f6087a582035",
+          "192386e4be8562934b44aa8722769c9e95f8461aa553d9c841e6ba9d70fc651b",
+          "638f177616737876f74da7ceb4174cb51963ea835c65680a746c0b0b0e6fbbb6",
+          "ec495b8613a544cdec0188d6df8a753fd373a766bce88038ab3b769d8c9137d4"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.998123,
+          0.99796,
+          0.999119,
+          0.997354,
+          0.998967,
+          0.999265,
+          0.997482,
+          0.998853
+        ]
+      },
+      "attack": {
+        "sourceSha256": "d7206f4d1239706742f596ed747b9944d8e6f0eab0f188b84cc6aeb5695bbd20",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "73560ff17ae5aa510120d2c28d4c1c7bda3a5ec3c4a69b70df611183be0bd349",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "ccdb242578c0c202240ec9061717f69c71e90512488c62a272024ef646d1377d",
+        "encodedSha256": "1548290396c6c387e12969eb5e2fa31c75baf99a1e4bb5c7010b6002a87821c3",
+        "decodedSha256": "7e51df8a1131d480bbeffd39f8df4f111790cd2e787ca27657666e84fe2e54b7",
+        "frameSha256": [
+          "4aee76ee0a3032bbe892155706fadfe42bce620840b1f37ca34d2c4f6f53db09",
+          "2d8f40654f99882544cf322cd6e6276ef973524113df173e5a38cff15f68c6c1",
+          "8c2966811e577068ca8491c8ceb5dadb47acc057702ab9fed4d61365a8a15450",
+          "901aa515d71f1bf65a0e7235b468cdafbb9cda85c07f397cba90dc3b6463f62e",
+          "ffb5e42629a474355908afafcec5605a7b4985f337343fc894a95cdbf947ce78",
+          "ff4814dcad06bd5773c2c3416a9262ed8852ddcc401c7832596c906f4e15dec3",
+          "5e6d0a60835b6f577c9c821e581fcd25a4b72c1acd1c072425b2d6ef22394024",
+          "08fd2041b2067596be5e64f96a38d6d2a4f4ec83865cd3a2e007bea70fff9578"
+        ],
+        "poseSha256": [
+          "ff1e36beae253f20ab038a0cdeb487a15e376689cbfbff9d7fdc057bc2b02287",
+          "90dd9da8f1e2b590c91b87ca6f6a84cbd6ebcba74c00d37ac39fd603ded0d5d0",
+          "c1ba457a78185efe8512fd6541f1a9a86ff5f7dedd8d1b2df7b9bb68d55d3477",
+          "b6acf87c52651f25fa9b0ba1dad3dcc59b13154b10fa943d62e88d86861459a1",
+          "7400164bec7b962909efc0545fe7901fdc385c91dd84b5abccf895c0d7b1a07c",
+          "03484c1755215a68b0b888d6ebcc6d120dd7e43907b083656d211822eea650a7",
+          "3cc1f2d69868cd9b50d7fab336d096c6db18aa59d066e2660eb58c64f60df27e",
+          "ca4ab5e129a587a7e227ac37fcec095f6e39fca6003e3aa521dad9a37f835ff5"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.997248,
+          1,
+          1,
+          0.993195,
+          0.999852,
+          0.996502,
+          0.999419,
+          0.997386
+        ]
+      },
+      "hurt": {
+        "sourceSha256": "b15c86d86fd7225df9de11950a8536e69bc0f67f428fc40dcfae0b2a969b987d",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "06882ebcfe5ea9917c274d44f2f27357f604a698884e4ffb5b8a27cd7f871814",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "c1fa061c073d9960c21d8b5317b54b37313bc6878fbfeed1f11993613455ba3f",
+        "encodedSha256": "517a61a2fe3a0e32d5d1e3a36fd8791dd037537a00664c488aad26275cf4db1c",
+        "decodedSha256": "0a5188b1aebdefd88bc17112dcf0e6713e8ccf4b4ff1abe6e343a7d942ac054f",
+        "frameSha256": [
+          "d6799a354496f131f06b80ef1fa2bc987a0e0b6e9cf8d6b11d0b0f6a9214adcb",
+          "f62e1778f16c918d7b4df57b6e64a03074cf66ae96f94ab960160cd325ee6620",
+          "aecabe527b40f65b514b02c51ed98b4638f0411d89e2ce7b9d7786f74ccbd42a",
+          "3eb733680335db750a21e8e67e1dadfc1962151b23875ff9405b0a243e590af1",
+          "b1268b88a434850b9569f820e115a95f94b8617ad101a50a228a12e3be547455",
+          "69d16c3420722837ee3c55326d63bbd5f704f21a3c0f68a60d21f84a5f84259f",
+          "5c781bb918b63f11a520069eec17c7cc5a13ffefd69a62e5fc43ef66bf368947",
+          "ccdbdfa5e1b83bc083998621b4defd2634c0058953b6fa7e426bf0b725b1516d"
+        ],
+        "poseSha256": [
+          "4012b35d424f1a666a5db2926f85742808ffae629c890c931e654c7b9f9ab9db",
+          "316e92afab4c900205ff62b6b4d4ef4724071451c4aec9ec6058333fbcb9e2bf",
+          "245c14c183c94ecc02365f60e3bce0f854458025af6668ca011389388b8dca68",
+          "2998242756c075f707129823d245a8d8c5d6145390897137c9de6df2cdb92942",
+          "ff37e2709d8d90645e757302d263ee893692143e1653fa9bb5672b1aaac2d355",
+          "c19072b1b032fbef97a56564f1b1aa15a43b8c5d6e839f0f514c6c96ff5d1345",
+          "219d70522e5175523a07ccba044f0abe8f51916adc76aed78b500267a307fcb7",
+          "8cb10c907e14e3db9f23fd847c4a1f5b11711f26da5eefc272adf0a1ce023dfc"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.998763,
+          0.997045,
+          0.993062,
+          0.999339,
+          1,
+          0.995383,
+          0.996811,
+          0.996591
+        ]
+      },
+      "death": {
+        "sourceSha256": "c34f0f7a687479d6d6d4ccde767b3f0ec3cec8b64765dd5709c52a94732e8733",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "7154f8b92e4418e66b2998a2e09780171fea20244cdd9d06f68a2f12e4293c84",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "e0ee975ad18a2cfbc2d9c5919d3235c583901bc941a5f7ac37b3cb60c6e44a02",
+        "encodedSha256": "b06b714b0a35ea354504850d144f2864b229d399b270dea49d514f1cbde2ffe8",
+        "decodedSha256": "6657fea4cae501a54ee5e869093d1cc196c693bc962e29c0551584a7266d990b",
+        "frameSha256": [
+          "0f8fa21dfef71463340eb28eab61efd9032743eef21431921164d56558e99293",
+          "a9f200f50cbc543defcdd531aa1204659b1a4e37dd48151e35c5426a8be14b51",
+          "a926eebbc08f6f9c76e4ccb172eff587b35d3343d7d6ab2b307275c270942478",
+          "92607d82bc3bf8df9665b33264f457619cd02d2abafec9deab9cb5c1495515ee",
+          "7aad56f382cfbb24bbf4868c0222474c0d2aa6963d46e23222881d0c8af28473",
+          "ebf8715ef18f17938eac5604d705a51d2a9ba10d0294e49dc01bdf4845bab89f",
+          "be94c16e5c4f5aba10f8880030361075632831fd1c7be5fea788699a2cf3e10c",
+          "be94c16e5c4f5aba10f8880030361075632831fd1c7be5fea788699a2cf3e10c"
+        ],
+        "poseSha256": [
+          "e96dd4b0c2da32d28b49d019a713ec91fffc700782abc5fefe96aa499ca59a28",
+          "22cd5e7fa43dd32bf1eaf048a42b1f2d26cd47e6bf2e0a8978b3186fd7985958",
+          "451e70948a6e941277fe0c225e9c5942a9d58f89ae720ec6748a52cfc79c9944",
+          "b28a4727a2f7357683084c3b1b231f745f8e4cd5d99d5edb4eda6192d99ba0ac",
+          "4d5fcc43354cae17fd5620a8a224977c1a8089276d474a1ffcb28a51ff18097b",
+          "080598fa1f2a33aaed2b693945d93ac951538804d2feacd4c187a77d06486a72",
+          "bc33aa6de10591b9d3e5346cb3dc413b71d6564f4e528815e9795580b5567a6a",
+          "bc33aa6de10591b9d3e5346cb3dc413b71d6564f4e528815e9795580b5567a6a"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.99783,
+          0.998783,
+          0.99633,
+          0.999037,
+          0.997816,
+          0.998308,
+          1,
+          1
+        ]
+      },
+      "cast": {
+        "sourceSha256": "847643980ddb865b23e4eeef8b938dd323b3d094ed9d12f8b5e22d7396d0d6fd",
+        "sourceDimensions": "1672x941",
+        "chromaSourceSha256": "b3317c92b85db6bca841065cd8e95ad4287163138d5358be506b5e7e7f6d1ea8",
+        "chromaSourceDimensions": "1672x941",
+        "promptSha256": "67d52257a90a6a05f24f13dc8d0f669569d3dcfd395e828e4ffe90f6a11ed337",
+        "encodedSha256": "9941db1165b8b221269d6ee1ead41d86ab0f8d3b19cc9057569083ad5611d93b",
+        "decodedSha256": "df2ab5b9559b146817cb50010f2e2a800c4b3d83418bdb85794695bc55c30035",
+        "frameSha256": [
+          "bb83949ddcabcd08fc1e34c69a50d835165c551da803dbec47f985ec79cb715c",
+          "6dae4a5a5b08b7bf24fa86731111da9858ff64ee100d45e2ec30131bb4fc1549",
+          "6694b4f631c866511a15aff56e7bf4e8183cb1311e6683cb8e4969c4216010bb",
+          "499e05790ed4683a16ceddcf88d0b41294f9f1369ae54ee45a8d60f6f063f88a",
+          "b660139708121410ce73b499a9d039522ce2478270a600a3b2a2149fd077853c",
+          "c4701239d541f88c0819d07ee2c827ee85c6ab7271cc2da19a0c43d4a2d31a07",
+          "1bc5450823574f18cbf72688e9d9e9be5507639642b9f6c0d169b3d6222d63be",
+          "5cc935f315983a37bcb9bee18f355ea39b535b71dfff786c5c469d018f8527f5"
+        ],
+        "poseSha256": [
+          "def9cd78c652dbf058f0925be976c3cbae5c6fabee135cebbc664447fa31971d",
+          "01215ab824a0e670a707e5c537440bb1acaa96c2aa4a59c833b4ca66b89cc07e",
+          "4ce80124227d58ac5fba2cd8f103d03a61b6363f6418ebb505e794cd131db1fc",
+          "e09e135e47bee797328d7983793e54d9ec0701b2a51abe2241daa6da448d6fbf",
+          "e26cecb7f10798450935090b0b53ada07be0ce4231617e18fcaabb9c03f1e7df",
+          "68e2eb9d98fda1c4729de89ecd25472bd4a5ddfd3360427f94ec6b740e789a14",
+          "612469cca06ac7141f2238a0e0302c3181005e185967b4831923a4dad15aac46",
+          "e9e541d24be12837e0652cdd1eed2e363aabdd967714d4f15a3fda5905e3d723"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.997517,
+          0.999682,
+          0.992999,
+          0.997462,
+          1,
+          0.996865,
+          0.993487,
+          0.997047
+        ]
+      },
+      "victory": {
+        "sourceSha256": "29cb7c6228b9e944206c5c2f14f49a5862cfd9d12801b18a9f57d1cfc7d5e905",
+        "sourceDimensions": "1717x916",
+        "chromaSourceSha256": "9b5d5556f9bbe021aa9a3c0aca9923c10a252c3e34588ffb3bfdf8ebbc254e5a",
+        "chromaSourceDimensions": "1717x916",
+        "promptSha256": "0fb71e3ca53d0d6ee2c52c4d30ee9f282370e1b2dbb7af4e6102a9a62abdac65",
+        "encodedSha256": "d33e807ef0bee7c8b8c974118cc7ec190a56194e32600e8b31a4163456c9356a",
+        "decodedSha256": "ed8d2901f51ef9b5ff0d5beac7c55462d736dc349b8381dcd7be0e407f1e0816",
+        "frameSha256": [
+          "00412f34ea7f40a7a07044501318860906ee20955361be1c09aa415706245a9d",
+          "d8fda691f92beeffdb141616fbb2aa263a11ba667c6426db00fb3e479fc5abda",
+          "62f35761fb451b69b445539d16a5f4bd52af1228d601f3b10fa6e4849dedca5a",
+          "adcb36ce30c6e9d9c9f7a46604e88d4c651d4043e28bcfcae3c6ffe7c7bab752",
+          "9a180f3cf4848c08b07dfddef1f86ed859850157d071b78452c6e3db6c0bf72a",
+          "989d20be1dbc4f7fc3a4b6fbb9a45f599c91a051a6ccfcb4d0f566a2e9645d52",
+          "cc0dbb86a77687d8470f524e47afa9cea695429888602aa5c2f4cbcc77647869",
+          "64f661350a36dfa10eed1df0fa9de3facfda228eefe60ab4772c1ad777db3930"
+        ],
+        "poseSha256": [
+          "ee276e0483e472db3a81a6d76ade87837d542088072ae18e923bd5c7137e1b92",
+          "c3103cf41ec54b18063eaa24b6336f22c6c60ebcf35a93000ad387857f55884f",
+          "b65673d4ce52ae9d154740ce6703db321c4809faef489da311e4245817405830",
+          "6f6bdba2100a635d9f92e65168fdff8e49315821270605ef2b6422532180090f",
+          "082b47357a5df2689576c38c0329d149410de6ddfcc964a311e2ee251dc110c7",
+          "430da3a73e17a1612c313decf3f4f12d119d6c9823f1c410db02a13d815b4bee",
+          "806a58afcb00c75af4bb34bcf0db22471c8016921b3d488c7c98cffcdc3ffe92",
+          "295e0b91b033a09ac9b28c2b62fac4765e4f6e6229bb1e2757341559d5285bcb"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.996422,
+          0.997528,
+          0.980251,
+          0.956671,
+          0.998676,
+          0.998673,
+          0.99627,
+          0.993729
+        ]
+      },
+      "dead": {
+        "sourceSha256": "c34f0f7a687479d6d6d4ccde767b3f0ec3cec8b64765dd5709c52a94732e8733",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "7154f8b92e4418e66b2998a2e09780171fea20244cdd9d06f68a2f12e4293c84",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "f631a7fd605211260b28b5a5bba3503e06dc1064497d1e5769d62e40e178e2b1",
+        "encodedSha256": "a452a7be5d213170f2eb9751506d17ed14765b0e5231c024c5e648d8084d4df9",
+        "decodedSha256": "577391b220f6b5eb57f3e0d3c96a50a8b83da7b01ad09ce7393ae009301264b5",
+        "frameSha256": [
+          "be94c16e5c4f5aba10f8880030361075632831fd1c7be5fea788699a2cf3e10c",
+          "be94c16e5c4f5aba10f8880030361075632831fd1c7be5fea788699a2cf3e10c",
+          "be94c16e5c4f5aba10f8880030361075632831fd1c7be5fea788699a2cf3e10c",
+          "be94c16e5c4f5aba10f8880030361075632831fd1c7be5fea788699a2cf3e10c",
+          "be94c16e5c4f5aba10f8880030361075632831fd1c7be5fea788699a2cf3e10c",
+          "be94c16e5c4f5aba10f8880030361075632831fd1c7be5fea788699a2cf3e10c",
+          "be94c16e5c4f5aba10f8880030361075632831fd1c7be5fea788699a2cf3e10c",
+          "be94c16e5c4f5aba10f8880030361075632831fd1c7be5fea788699a2cf3e10c"
+        ],
+        "poseSha256": [
+          "bc33aa6de10591b9d3e5346cb3dc413b71d6564f4e528815e9795580b5567a6a",
+          "bc33aa6de10591b9d3e5346cb3dc413b71d6564f4e528815e9795580b5567a6a",
+          "bc33aa6de10591b9d3e5346cb3dc413b71d6564f4e528815e9795580b5567a6a",
+          "bc33aa6de10591b9d3e5346cb3dc413b71d6564f4e528815e9795580b5567a6a",
+          "bc33aa6de10591b9d3e5346cb3dc413b71d6564f4e528815e9795580b5567a6a",
+          "bc33aa6de10591b9d3e5346cb3dc413b71d6564f4e528815e9795580b5567a6a",
+          "bc33aa6de10591b9d3e5346cb3dc413b71d6564f4e528815e9795580b5567a6a",
+          "bc33aa6de10591b9d3e5346cb3dc413b71d6564f4e528815e9795580b5567a6a"
+        ],
+        "sourceFrameIndexes": [
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  }
+}

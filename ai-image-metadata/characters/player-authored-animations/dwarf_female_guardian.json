@@ -1,0 +1,584 @@
+{
+  "version": "1.0.0",
+  "template": "ai-image-metadata/characters/player-authored-animation-template.json",
+  "compilerVersion": "1.2.0",
+  "id": "dwarf_female_guardian",
+  "profile": "guardian_v1",
+  "profileSource": "ai-image-metadata/characters/player-animation-profiles/guardian_v1.json",
+  "status": "approved",
+  "approvedAt": "2026-07-29T02:20:49.757Z",
+  "metadataFingerprint": "3c14e7b5d595843a74cf6bd65350ac2cd2d4874bafa5e44860e94ef2de4ece10",
+  "draftProvenance": {
+    "registry": "ai-image-metadata/characters/player-variants.json",
+    "templateSha256": "7943e69db577b3a4429b47df634f931d3f4cb8e8ce9a91a06578255fbe935bbe",
+    "profileSha256": "7f2ad29395de25c1091b39c5ffaa08d2ef2583ba07edd48fe2e8e47a7066fdbe"
+  },
+  "identity": {
+    "race": "dwarf",
+    "gender": "female",
+    "class": "guardian",
+    "presentation": "female dwarf guardian",
+    "visualTraits": "dwarf stout build thick beard braided hair sturdy female feminine features heavy armor tower shield fortified stance bulky protective plated",
+    "baseFacing": "three-quarters right",
+    "sourceMetadata": {
+      "isAdvanced": true,
+      "inheritsFrom": "guardian",
+      "seed": 22019
+    }
+  },
+  "inputs": {
+    "identity": {
+      "origin": "frontend/public/assets/portraits/originals/dwarf_female_guardian.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/dwarf_female_guardian/inputs/identity.png",
+      "authority": "face, ancestry, gender presentation, hair, eyes, complexion, costume, palette, proportions, and equipment"
+    },
+    "style": {
+      "origin": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/dwarf_female_guardian/inputs/style.png",
+      "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+    }
+  },
+  "reference": {
+    "source": "ai-image-metadata/characters/player-animation-sources/dwarf_female_guardian/reference.png",
+    "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_female_guardian/chroma/reference.png",
+    "identitySource": "ai-image-metadata/characters/player-animation-sources/dwarf_female_guardian/inputs/identity.png",
+    "styleSource": "ai-image-metadata/characters/player-animation-sources/dwarf_female_guardian/inputs/style.png",
+    "prompt": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative Dwarf Guardian (female presentation) identity portrait; Image 2 is style and proportion reference only. Player identity metadata: dwarf stout build thick beard braided hair sturdy female feminine features heavy armor tower shield fortified stance bulky protective plated. Create one complete head-to-toe Dwarf Guardian (female presentation) preserving Image 1's face, ancestry traits, gender presentation, heavy plate, tower shield, weapon, palette, proportions, and insignia. Do not import identity details from Image 2. Preserve the portrait's heavy plate, tower shield, weapon, insignia, and accessory count. Keep exactly one shield and one depicted weapon in their original hands; never duplicate, swap, discard, resize wildly, or transform them. Translate the portrait into a compact fortified silhouette. Use a flat #00ff00 chroma key background with no floor or scenery and a square 1:1 canvas with generous padding. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered guardian in a shield-planted defensive stance facing three-quarters right. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+  },
+  "animations": {
+    "idle": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_female_guardian/idle.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_female_guardian/chroma/idle.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 4,
+      "frameDescriptions": [
+        "tower shield planted in full defensive guard",
+        "measured inhale behind the shield",
+        "weight settles deeper onto the forward leg",
+        "shield angle closes over the torso",
+        "centered immovable midpoint",
+        "controlled exhale with armor settling",
+        "weight shifts onto the rear leg while coverage holds",
+        "fortified guard flowing back to frame one"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body guardian fortified idle-cycle poses of the authoritative Dwarf Guardian (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy female feminine features heavy armor tower shield fortified stance bulky protective plated. Required sequence: tower shield planted in full defensive guard; measured inhale behind the shield; weight settles deeper onto the forward leg; shield angle closes over the torso; centered immovable midpoint; controlled exhale with armor settling; weight shifts onto the rear leg while coverage holds; fortified guard flowing back to frame one. Motion direction: A patient breathing loop adjusts tower-shield coverage, stance width, and weapon readiness without exposing the torso.. Overall guardian motion is immovable, protective, economical, and heavily grounded, with shield-first weight transfer and deliberate armored recovery. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, armor, palette, proportions, shield, weapon, and insignia. Preserve the portrait's heavy plate, tower shield, weapon, insignia, and accessory count. Keep exactly one shield and one depicted weapon in their original hands; never duplicate, swap, discard, resize wildly, or transform them. Guardian defense is physical. Do not add magical barriers, runes, aura, or projectiles unless explicitly present in the portrait, and then keep any accent small and subordinate to shield mechanics. Action-specific effects: No active effect; only subtle armor, cape, and shield-grip settling. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "walk": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_female_guardian/walk.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_female_guardian/chroma/walk.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "left foot forward with tower shield leading",
+        "left leg compresses under full armor",
+        "passing pose hidden safely behind shield coverage",
+        "right foot reaches while weapon counterbalances",
+        "right foot plants behind the shield edge",
+        "right leg compresses under armored weight",
+        "passing pose as left knee advances",
+        "left foot reaches into the guarded advance"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body guardian shield-led advance poses of the authoritative Dwarf Guardian (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy female feminine features heavy armor tower shield fortified stance bulky protective plated. Required sequence: left foot forward with tower shield leading; left leg compresses under full armor; passing pose hidden safely behind shield coverage; right foot reaches while weapon counterbalances; right foot plants behind the shield edge; right leg compresses under armored weight; passing pose as left knee advances; left foot reaches into the guarded advance. Motion direction: A slow alternating armored advance maintains tower-shield coverage through contacts, compressed steps, passing poses, and weapon counterbalance.. Overall guardian motion is immovable, protective, economical, and heavily grounded, with shield-first weight transfer and deliberate armored recovery. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, armor, palette, proportions, shield, weapon, and insignia. Preserve the portrait's heavy plate, tower shield, weapon, insignia, and accessory count. Keep exactly one shield and one depicted weapon in their original hands; never duplicate, swap, discard, resize wildly, or transform them. Guardian defense is physical. Do not add magical barriers, runes, aura, or projectiles unless explicitly present in the portrait, and then keep any accent small and subordinate to shield mechanics. Action-specific effects: No active magic or strike; armor, straps, and cloth respond to each weighted step. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "attack": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_female_guardian/attack.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_female_guardian/chroma/attack.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "fortified guard measuring the target",
+        "body compresses fully behind the tower shield",
+        "rear leg coils as shield shoulder loads",
+        "planted forward drive slamming the shield edge",
+        "compact weapon counter from protected cover",
+        "heavy follow-through with shield still between body and target",
+        "weapon retracts as shield closes the opening",
+        "recovered fortified guard"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body guardian shield-bash counterattack poses of the authoritative Dwarf Guardian (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy female feminine features heavy armor tower shield fortified stance bulky protective plated. Required sequence: fortified guard measuring the target; body compresses fully behind the tower shield; rear leg coils as shield shoulder loads; planted forward drive slamming the shield edge; compact weapon counter from protected cover; heavy follow-through with shield still between body and target; weapon retracts as shield closes the opening; recovered fortified guard. Motion direction: The guardian absorbs behind the shield, coils low, drives a planted shield bash, follows with one compact weapon counter, and restores full coverage.. Overall guardian motion is immovable, protective, economical, and heavily grounded, with shield-first weight transfer and deliberate armored recovery. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, armor, palette, proportions, shield, weapon, and insignia. Preserve the portrait's heavy plate, tower shield, weapon, insignia, and accessory count. Keep exactly one shield and one depicted weapon in their original hands; never duplicate, swap, discard, resize wildly, or transform them. Guardian defense is physical. Do not add magical barriers, runes, aura, or projectiles unless explicitly present in the portrait, and then keep any accent small and subordinate to shield mechanics. Action-specific effects: A compact physical impact accent may mark the shield contact; no magical barrier, projectile, or effect obscuring the shield edge and feet. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "hurt": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_female_guardian/hurt.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_female_guardian/chroma/hurt.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "fortified guard before impact",
+        "shield jolts inward against the armor",
+        "maximum recoil twists the torso behind the shield",
+        "forced backward step with knees deeply bent",
+        "low kneeling brace behind the planted shield",
+        "shield-assisted push back upright",
+        "weapon and feet reset behind coverage",
+        "recovered fortified guard"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body guardian guard-breached recovery poses of the authoritative Dwarf Guardian (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy female feminine features heavy armor tower shield fortified stance bulky protective plated. Required sequence: fortified guard before impact; shield jolts inward against the armor; maximum recoil twists the torso behind the shield; forced backward step with knees deeply bent; low kneeling brace behind the planted shield; shield-assisted push back upright; weapon and feet reset behind coverage; recovered fortified guard. Motion direction: A crushing hit jolts the shield inward, forces a short stagger, drops the guardian to a low brace, then resolves through a shield-assisted rise.. Overall guardian motion is immovable, protective, economical, and heavily grounded, with shield-first weight transfer and deliberate armored recovery. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, armor, palette, proportions, shield, weapon, and insignia. Preserve the portrait's heavy plate, tower shield, weapon, insignia, and accessory count. Keep exactly one shield and one depicted weapon in their original hands; never duplicate, swap, discard, resize wildly, or transform them. Guardian defense is physical. Do not add magical barriers, runes, aura, or projectiles unless explicitly present in the portrait, and then keep any accent small and subordinate to shield mechanics. Action-specific effects: One compact physical impact accent only; no gore, blood, ward glow, or lost equipment. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "death": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_female_guardian/death.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_female_guardian/chroma/death.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "verticalAnchor": "bottom",
+      "outputFrameMap": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        7,
+        7
+      ],
+      "frameDescriptions": [
+        "fatal breach drives the shield inward",
+        "weapon arm slackens as stance fails",
+        "both armored knees buckle",
+        "one knee grounds beside the tipping shield",
+        "body rolls into full ground contact",
+        "low fallen armor and equipment settle",
+        "final fully fallen guardian beside the shield",
+        "same final fallen pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body guardian defeat sequence poses of the authoritative Dwarf Guardian (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy female feminine features heavy armor tower shield fortified stance bulky protective plated. Required sequence: fatal breach drives the shield inward; weapon arm slackens as stance fails; both armored knees buckle; one knee grounds beside the tipping shield; body rolls into full ground contact; low fallen armor and equipment settle; final fully fallen guardian beside the shield; same final fallen pose held. Motion direction: A final breach collapses the shield line, knees fail, armor sinks beside the planted shield, and the body reaches a fully fallen rest.. Overall guardian motion is immovable, protective, economical, and heavily grounded, with shield-first weight transfer and deliberate armored recovery. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, armor, palette, proportions, shield, weapon, and insignia. Preserve the portrait's heavy plate, tower shield, weapon, insignia, and accessory count. Keep exactly one shield and one depicted weapon in their original hands; never duplicate, swap, discard, resize wildly, or transform them. Guardian defense is physical. Do not add magical barriers, runes, aura, or projectiles unless explicitly present in the portrait, and then keep any accent small and subordinate to shield mechanics. Action-specific effects: No gore, blood, magic, or rigid rotation. Keep shield and weapon single, recognizable, and grounded with the body. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "dead": {
+      "deriveFrom": {
+        "animation": "death",
+        "frame": 7
+      },
+      "frameDescriptions": [
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held"
+      ],
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity."
+    },
+    "victory": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_female_guardian/victory.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_female_guardian/chroma/victory.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "cautious recognition that the threat is gone",
+        "torso rises above the shield rim",
+        "shield lifts into a proud presentation",
+        "heavy shield plants with a wide stance",
+        "weapon rises into a formal salute",
+        "free posture opens while the shield remains controlled",
+        "steadfast protector pose with equipment displayed",
+        "final triumphant guardian pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body guardian steadfast victory poses of the authoritative Dwarf Guardian (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy female feminine features heavy armor tower shield fortified stance bulky protective plated. Required sequence: cautious recognition that the threat is gone; torso rises above the shield rim; shield lifts into a proud presentation; heavy shield plants with a wide stance; weapon rises into a formal salute; free posture opens while the shield remains controlled; steadfast protector pose with equipment displayed; final triumphant guardian pose held. Motion direction: The guardian confirms safety, rises from cover, plants the shield with authority, salutes with the weapon, and holds an unbroken protective stance.. Overall guardian motion is immovable, protective, economical, and heavily grounded, with shield-first weight transfer and deliberate armored recovery. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, armor, palette, proportions, shield, weapon, and insignia. Preserve the portrait's heavy plate, tower shield, weapon, insignia, and accessory count. Keep exactly one shield and one depicted weapon in their original hands; never duplicate, swap, discard, resize wildly, or transform them. Guardian defense is physical. Do not add magical barriers, runes, aura, or projectiles unless explicitly present in the portrait, and then keep any accent small and subordinate to shield mechanics. Action-specific effects: No magic; a restrained metal glint may accent the formal salute. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    }
+  },
+  "pins": {
+    "templateSha256": "93943004e340d113943e06dea61fd7dfad67c20750dd4fc30d76d3be1fb7c144",
+    "profileSha256": "025ede21de9a8a626ca20e3900747f5f71de873b8190dc556de1e09c8b7bff1b",
+    "reference": {
+      "sourceSha256": "cd54b0a715356521771a4b66e1489a3b8f323be11666c8f75caca024a5ea51c4",
+      "sourceDimensions": "1254x1254",
+      "chromaSourceSha256": "98be36c6debb99675abbaaf7e6465e931fc046811500f47e272adc4cbca5281b",
+      "chromaSourceDimensions": "1254x1254",
+      "identitySourceSha256": "f2e06cddc538d8ec3bf74e5845031e4ad4414e8d1461985c134b5f4d37a64d99",
+      "identitySourceDimensions": "1024x1024",
+      "styleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "styleSourceDimensions": "1254x1254",
+      "promptSha256": "619e82b853d3ce81b8f2048711aac69046143a8c8267852a07c9c646feecb281",
+      "encodedSha256": "1ac5db4544628d4dae7bcb99cda51e90dd65ba2cb220afde2d7ab9be726e986d",
+      "decodedSha256": "1885fafd09002bd693b291880117c0276ea19b8ce514a675ecf0308fd9188f41"
+    },
+    "animations": {
+      "idle": {
+        "sourceSha256": "f9542db38d70213bdfc46b07b8fe63c56ef36c2ad467b599cda2d3d631c6ea94",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "8b8699006ac210973c09647c7122a59162ccefb5d40e8ceb6944971a55f43295",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "eea0a6d8ef0100393964cfe6838686bfa6ddc6267c99821aa168719249aadb12",
+        "encodedSha256": "45e9e62a5b4c8648e63ea973bd19d2a8096036fcf02bb9a66e8a9bdeb367a5a7",
+        "decodedSha256": "50a93b174a5b4b27709b1ae81ec2fefec3c23eb7c335008f4cd8fea9cd4d9ca5",
+        "frameSha256": [
+          "e7d7500f17a65e3d2a5df23d42a4a36764d917adb97c2f06483def0d30f79fa1",
+          "1fb5ddcfe483d2d88537dadc623cb19a79b4dc6930c458f0b0cc988e608d4fad",
+          "05f4e9fbc25f3673d6a178f83185194b99c2b019afb980df8ace9273e6694bd8",
+          "44c03cfe5e9420571fd4fc18ffc791eb4b339fd851a79cbcedf59d92acd36333",
+          "a47222505a54c5c4408d4dd7daf988d0441e07f049326523e8f4132c0af1859b",
+          "960b4a129196298eef8f8826d733c25402aca11f005ede51e116aee63c021039",
+          "b5c0f0b1a9a9b96d0d1a5343f97352f684e2d3543fc04e230909a46eb1085c69",
+          "9d6db9e07cc668db1d7f8e62c971063e12af07f329dd655f5a05117103687a1e"
+        ],
+        "poseSha256": [
+          "fdc9c2fce3d4d7d4acd6fbc45f8656212c552aa8612fb7a77d8d01d13912391e",
+          "380b374b98dcb899b8c421fb1b9bb102fcee379c4f639b3f5238092ae03c928f",
+          "7555777f1de0ce8b4571d4b3134c23be2aa75414443dae264d657a963783d75b",
+          "8994c33adf33432618ba5cad6c608b79c2050de458de8a5874e720ecead50c46",
+          "415febc1dc9aec8f1784c855a170d09df6a898b0114af59528cb2dc5c6c437d1",
+          "f562d8959f8364271556a27ccbf1d5b1709595b3b4b8507e89be6c8baa401436",
+          "048dc5e8700e66a5e2b331e79699cf4096220d7db47f2b09000b8bcd06454fa9",
+          "540eb054c62a21d125c842ac64acf402e3536a823c5fd68b6c4bd8b559918771"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "walk": {
+        "sourceSha256": "261bfa6d456f903fdfa5cc8189d8e3b2cd41a77920776ecce8d0782d4e17f0b8",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "9054f2ba42a82f201833c069ef92c12fdd7979535732f019a4fd0ad9e910b191",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "d4c529e709dc1610a9357ac2a9077e2d51fe56c2ef79b689b63ad695b3df099b",
+        "encodedSha256": "de735f4a8c284e504e1b66fa56028e5372edd730017be3af0a3bed46d65ed5c2",
+        "decodedSha256": "0cf9a5da84c94005ad9abf4e470218939df0ecab59be1059d0ca51ac9b9e2bac",
+        "frameSha256": [
+          "f3b7367ee027c49d8f78804bc7ad7206c259417e05c19b3a91d9c00b4fbc593a",
+          "7f45cee0ad322e1d9d252c2478a5e69882f38169d849d92e7381093457ee59e4",
+          "f55f80740a65d51a2f7368aa3f17643073e05733c806c78bd9da1ad228051c14",
+          "b2a8266acc81351a59476f498a8f2020627a1206634b0258b8898a1fddefd46a",
+          "ee3f9d6f7e45a9790730dd9b35c2aedeae8ba81802736f0ffb665341c5f13173",
+          "23823bee2343464e80356fc0c608ae3a56a5524b7839d47e8319f3521c08e72c",
+          "2f76c2e7155e00b2cdc3a51765543fc1c343dbea6b05343cf4ac9ba3329efd98",
+          "a4c3483a937e0d4539e1b1846684002d6cdc39fa4b44ffe2e4b44d689f0de578"
+        ],
+        "poseSha256": [
+          "46fae4b1d090be39fd8588c4c645e5b4a7b54d9bccdf452f2356795740921df0",
+          "128f4e9bca22a98d4776213e413d8fd8caf2b41a3b3d76011ab493ba565e9cb9",
+          "9678e1e7e104d10a8ec39375da7cad2235eece6e5e43aa62c97136de72d0a9b6",
+          "9da12ac4d7fd8a89d1e3374e5863a952e9adef2def252096affd6a618a5f7f67",
+          "399dcbd33875a1b1ee2a6d2203bccebcc767a94b9d9c7bd4ecce8a1786bf9dc1",
+          "0efa6e4dbc3ddd8fddae71be56c26448e5f11a31c67c8c276a1be64c55383aa9",
+          "b1fed674bc620c779c34b78eca06552509df88503b8059f60b64ca17371d79af",
+          "5277bbdb09cd0aa86989bcb5d45ba007baa336b2e9388db3128f5a995814566a"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "attack": {
+        "sourceSha256": "42ce0f5f857ccbd2e878181852c86f275fb0e7499b29bdda79168cdbf1169a29",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "27675abb60ac90732637674ca645f0ec722d9535866a532d332504cd901a6769",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "84bc135bda50d78f029bb4a0fc4a2898e7514a2cec16e224db69434ac44e2fdf",
+        "encodedSha256": "929f45cf573035ced1c30b18fc5c56bb2095ec6360c7da377e7ff07cd6fb18f0",
+        "decodedSha256": "28097162fb5a41eadf6210a38083339479f0da154161273c34c1f9d2dafe3853",
+        "frameSha256": [
+          "19ec3cd2b4d027e1c304bc5756bafeacfe57a38d2b843816d46c798f339eabde",
+          "4fa64d4280b8543d91d2d975603f2fd17ad6653fec9e2f7d171df574ecbfa751",
+          "27f06669528e377e4511f4ea8120a9df4c3da4c8572a83cccd292bde67c99550",
+          "c444ccb45243731f47c518e7866d91bcba796e2dcbb39046c07eea918df67a62",
+          "49b3475c6e787ca99a5b3e88dbbd169c1005102a8439e3a71b01865f7c35e30c",
+          "cab31426d3821eaaf88c3ec00c9801c3473a4e301d112c3b71210fed6b89d8a8",
+          "a9044846eef4016c9f5857c3facc7e4420ec6ef80b52c2775a4ecce93923f3d8",
+          "d0a9a304062e1442842bcb20518febeff9756ca49a9f8f3f2ce2ce7a3111e6af"
+        ],
+        "poseSha256": [
+          "8bc085ea1729a0521494c283b1c2c315d84d2319d0b7697c17dfcfe452892562",
+          "86b91a2161b7bdfed9782c68a87612f9ec4a3c06e629a50aef048e8210febca2",
+          "65121178febf11e984f33e811532dec1e69e144563aab02adc652318c4cdedbb",
+          "719eeb1493f9395beaa52175acc6227f9cfa1201dbd62fc1f90f62d91000b7c8",
+          "d741cfbcd356349039609772f5eb196d4e4a48ad44ddcdd1fc591d0ea572e160",
+          "4b6d8b34830cd7ac2cffa4e25b9ad790f9603598b370b8e8a383587a653a4015",
+          "01d6651a90226f79b1306869c8ad3fa8a7dfc760a5db2b3fce8cb4048e598f0f",
+          "e2198100de244e7d82db8f4d2e52f0aa09637bc40143cc82f200aeef9121196c"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          0.999688,
+          1,
+          1,
+          1
+        ]
+      },
+      "hurt": {
+        "sourceSha256": "172a74c4a271735e0b407e8352e83613fa29644867309f352c246c9cc8e62223",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "a226ffcd2c007a5f92bfc7e455ff248bf550e6e7d06b2b98880ead0357cccc34",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "a002eb8439ab1ce3cc266659ac6a888fc6dd61518c54692b41f83e6e320f2b85",
+        "encodedSha256": "e68d2bbaa5b71a55a2358fe11707046d292bd7dcb1cf9e882b256dc0abbd6794",
+        "decodedSha256": "79380aacaf0056d86e78540ea34ce1a473326ed654aeaf02feb524d2bafdb139",
+        "frameSha256": [
+          "f2e4f6fd8a4d071e4cb94033cc0c2243da5737ceb59002018a1ce676533f93a0",
+          "dec79e3973e6a56c4f65d3a17d36eada32589d02c22a3481441455022200e0cd",
+          "393a0efbcfc304a514c2598d51e2c8907fad43570389e341c9bb058e15b958ed",
+          "7f5522c67d057d12698e07b43b752ac2d6c58e9d2ab0dd22f3c7f90835fad366",
+          "94bfba66a0a447c3d084a6d1c655d7215c6dfdc1f0fbc69a1dafab6fbe9c407e",
+          "ea8119ce8f83206df47d40427e456228348d830ea6cab868abb62c81a55d7ac7",
+          "a9fcdd9061312343ff8fd32cf0e3f825a7c8f22e166301406d92044aca8ff0de",
+          "bebf840c3d9b9268ab7b7ba3cb6d2b397289149ac3db0ff51294c023d6be5578"
+        ],
+        "poseSha256": [
+          "02e9d2ce7973df27cf455f23ce10975c12f10fbb7a136145e589ec3ef2e39065",
+          "375f10fe08177ec1c4563c386654ef7310b0250f1d07ef8e36bb94cf750065ea",
+          "0fa28b1d8ffaa59c60048858eb9fde9cb00fae287c7931c8b0f77bd7bc702b66",
+          "abe024fc6099dbdc6d9ec671e2c669aed7481cd305961df0d074457d0391389e",
+          "4022ffbe817c4aeb4ae9debeca606bc43e6f5489bd48a2c473d312c0bee313ae",
+          "802d41465f0b9c17f9b4dd2d74f3377595c297ec83fa6b0fa51344153ab4b1f3",
+          "0b0b0850a045f0a02532fa9025410b717239c08a5c89a2577f499e5c5be2e0fb",
+          "fc6653a7319ca4402a95d409dd4334478b8abeab990545e5e17973fe6ec5f1d1"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "death": {
+        "sourceSha256": "31546e74fe67edd57305c049df392e53827a035a78082cf90c3e573fd7dde939",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "007c4667dfa92e1b899bfe23c0cfa50ad749f40610986fba8caaa9d660421d3d",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "eb8f63488c702ce6336e04f4589deea16bbe8ca174bc8a94e2efe7241edcb006",
+        "encodedSha256": "e078964dae3a93fce04b4b895dde81f6071a32e1437699c5e2f73fd400b869f0",
+        "decodedSha256": "223c739eee41ff7aafc034a58e54a6c7d2a9db6ddbc32a8e7305658863372cc0",
+        "frameSha256": [
+          "6c53449db2b1c8db5342de27a1811707fcac7c0dd1136a0dde588cc4f84a053d",
+          "aa8334731d55e9eefba7d0b755b2e5df7f48b316483c034247f37442e7d767de",
+          "740a1d32be7405692a831ea2527bb89c0ce72c3ab158a663adbf959003cc75d3",
+          "df00f992717d830b0e0e90ca8d3a0234a59fdc8bfde507d91afd15e08713e1cd",
+          "5ff9538315260164f81354b2f09a652dd771d6b11b5543fecaa3a494ae83ff70",
+          "ce79e4722b323c41655b27e155a8a6e5f91afe25c887163be4605aedfad91ab2",
+          "2ed83326d5af52d7d5d3baa0ff7c1684cd74d67cd74d8ad090b25680d2d4ec83",
+          "2ed83326d5af52d7d5d3baa0ff7c1684cd74d67cd74d8ad090b25680d2d4ec83"
+        ],
+        "poseSha256": [
+          "9e2b0b766a3c8fa69813ded9862ddfc2b5ba37de39e4feb982ab7a296e924749",
+          "1acdd0e3e064d9dd839196b24365548e390517c13faaa685187359420dd432be",
+          "6c1109de4a5e27a8ccf360a369377a5406a9acdc1c7f0511dd07332dd49baca6",
+          "75e5549f03e9c9704634303858c4aa962132ed995331ffed7239fb2cc47e1395",
+          "86f32c2662425dfa0ea1d24cec91b83fe64e0a792d8cc401ac68b3328a3c0b10",
+          "10356b4ff0b1d2b24a3fb157e0513a9a2a87ec937751eac085a0ee6a23afb992",
+          "868c6fdba9777cd9b54b5ad5cb21852eb65034647a2026fad783d384a9fcb305",
+          "868c6fdba9777cd9b54b5ad5cb21852eb65034647a2026fad783d384a9fcb305"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "victory": {
+        "sourceSha256": "0ca901f2fba5b4f584255b396565df90c472ac75f6bd8033316826ffb0d617ba",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "f1b01bc4b80534127cafc6bdf776d9af689fd73afc14323d198bf0060156b6bb",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "5d7cef3e6e0b98b5213255bc741fe38bb90aa8cc5828f57cdf0bef57ff5c8ce1",
+        "encodedSha256": "dff12a784d09b93508152ff5a13650e745f0a6785ff5aa70ba875bc61910a77b",
+        "decodedSha256": "075e2e3adeb01f0a8d060e4391988b0221666509e5dee6c4c01cbd078f08899b",
+        "frameSha256": [
+          "118a176a3067cb5e8ec33d9a4ca1e530a500650e18bb22e7a329e5b75697e4ea",
+          "3f8c0c373c31d3cac02b721ca62d4f5ef9c7e995102cebf67582a7b82e48ca0e",
+          "bbe49706fd854258f5d6e8391b108ec0a72e24a61bc7a010b9a593f536b4151a",
+          "c010c929f7e5e7bf90e8b71ff33602c7f5c267d9a0bff108ec0104d1405f1c1f",
+          "46ae479db31adada030f06b03358f38ad7dc5b234b7eb1327f555e64ef2bea29",
+          "0a3130c9d44b0693760bd515a7f1167aed0052e994cdf73bbe126403e59b451f",
+          "431f81ecda18e28d0d1a23d57a041355a9e3cb6e13ed32ab04b42ae2e0778c9a",
+          "40d10b752851caf5cd3770fcd7b2bea7bb39bf858c5a465d20dfb6936677ba76"
+        ],
+        "poseSha256": [
+          "bbab6dcc37ef0910995f3ae72f634b8f68e11ddbbadc7672112c6c084e024d3c",
+          "3bc14f31f21a200040d67637146d1059b9d0161a029ca35c6f7a21d6ea1b18aa",
+          "9d512459bad313586c9ebd88406ff1a08f044ce80cc06f2f8160906fd3730268",
+          "fc3f38d959f456907ad2736a1d21f77def79fc4ba84caf8dcdf3063ed5a7fa75",
+          "f05e984ac2bc076e6cdc1acf6e7315df7bcf7b620b4548e644432c1646f40517",
+          "87f4fa2b53d8887b82aee48fbdc73bebc67ceea502e0393959880c1836f6f8e5",
+          "c28768354927ad2cd6b8548935a481840eaa7ddc7b0f429adf8d7f80606d5873",
+          "9ad07bba54a571dafe5aa73a3428ce3ff66dc07441e791a8e2cfcf54ec76246c"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "dead": {
+        "sourceSha256": "31546e74fe67edd57305c049df392e53827a035a78082cf90c3e573fd7dde939",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "007c4667dfa92e1b899bfe23c0cfa50ad749f40610986fba8caaa9d660421d3d",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "f631a7fd605211260b28b5a5bba3503e06dc1064497d1e5769d62e40e178e2b1",
+        "encodedSha256": "c3e0fb7e4f1928f8c6bff358ab7f9a0c9c2aae3c6a2db49aa861fb771745acc1",
+        "decodedSha256": "4d705f29f359ca4aa41d2b4ff99b7beb3e4d3e8376177d6e0a3b9976e638bd66",
+        "frameSha256": [
+          "2ed83326d5af52d7d5d3baa0ff7c1684cd74d67cd74d8ad090b25680d2d4ec83",
+          "2ed83326d5af52d7d5d3baa0ff7c1684cd74d67cd74d8ad090b25680d2d4ec83",
+          "2ed83326d5af52d7d5d3baa0ff7c1684cd74d67cd74d8ad090b25680d2d4ec83",
+          "2ed83326d5af52d7d5d3baa0ff7c1684cd74d67cd74d8ad090b25680d2d4ec83",
+          "2ed83326d5af52d7d5d3baa0ff7c1684cd74d67cd74d8ad090b25680d2d4ec83",
+          "2ed83326d5af52d7d5d3baa0ff7c1684cd74d67cd74d8ad090b25680d2d4ec83",
+          "2ed83326d5af52d7d5d3baa0ff7c1684cd74d67cd74d8ad090b25680d2d4ec83",
+          "2ed83326d5af52d7d5d3baa0ff7c1684cd74d67cd74d8ad090b25680d2d4ec83"
+        ],
+        "poseSha256": [
+          "868c6fdba9777cd9b54b5ad5cb21852eb65034647a2026fad783d384a9fcb305",
+          "868c6fdba9777cd9b54b5ad5cb21852eb65034647a2026fad783d384a9fcb305",
+          "868c6fdba9777cd9b54b5ad5cb21852eb65034647a2026fad783d384a9fcb305",
+          "868c6fdba9777cd9b54b5ad5cb21852eb65034647a2026fad783d384a9fcb305",
+          "868c6fdba9777cd9b54b5ad5cb21852eb65034647a2026fad783d384a9fcb305",
+          "868c6fdba9777cd9b54b5ad5cb21852eb65034647a2026fad783d384a9fcb305",
+          "868c6fdba9777cd9b54b5ad5cb21852eb65034647a2026fad783d384a9fcb305",
+          "868c6fdba9777cd9b54b5ad5cb21852eb65034647a2026fad783d384a9fcb305"
+        ],
+        "sourceFrameIndexes": [
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  }
+}

@@ -128,7 +128,8 @@ Terrain tiles do not use either backend. See [ISOMETRIC_TILE_SYSTEM.md](ISOMETRI
 | `assets/nodes/` | World map node icons | 48, 96 |
 | `assets/audio/music/` | Background music tracks | - |
 | `assets/audio/sfx/` | Sound effects | - |
-| `assets/sprites/characters/` | Animated sprite sheets | 64x512 (8 frames) |
+| `assets/characters/player/{race}/{gender}/{class}/` | Authored player animation sheets | 64x512 (8 frames) |
+| `assets/characters/enemies/{canonicalBiome}/{enemy}/` | Authored enemy animation sheets | 64x512 (8 frames) |
 
 ### File Naming Conventions
 

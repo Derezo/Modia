@@ -1,0 +1,657 @@
+{
+  "version": "1.0.0",
+  "template": "ai-image-metadata/characters/player-authored-animation-template.json",
+  "compilerVersion": "1.2.0",
+  "id": "dwarf_female_plague_doctor",
+  "profile": "plague_doctor_v1",
+  "profileSource": "ai-image-metadata/characters/player-animation-profiles/plague_doctor_v1.json",
+  "status": "approved",
+  "approvedAt": "2026-07-29T02:21:09.986Z",
+  "metadataFingerprint": "ecff4d61872a0547e0d64a15688b87d22eb1e87275573e1e23fd2d870492c3db",
+  "draftProvenance": {
+    "registry": "ai-image-metadata/characters/player-variants.json",
+    "templateSha256": "7943e69db577b3a4429b47df634f931d3f4cb8e8ce9a91a06578255fbe935bbe",
+    "profileSha256": "f14647b699a215ab39e10b6c568ff8377de0559f0c566e53bf11941b89e46ecf"
+  },
+  "identity": {
+    "race": "dwarf",
+    "gender": "female",
+    "class": "plague_doctor",
+    "presentation": "female dwarf plague_doctor",
+    "visualTraits": "dwarf stout build thick beard braided hair sturdy female feminine features beaked mask dark coat plague doctor censer toxic fumes ominous mysterious",
+    "baseFacing": "three-quarters right",
+    "sourceMetadata": {
+      "isAdvanced": true,
+      "inheritsFrom": "plague_doctor",
+      "seed": 22031
+    }
+  },
+  "inputs": {
+    "identity": {
+      "origin": "frontend/public/assets/portraits/originals/dwarf_female_plague_doctor.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/dwarf_female_plague_doctor/inputs/identity.png",
+      "authority": "face, ancestry, gender presentation, hair, eyes, complexion, costume, palette, proportions, and equipment"
+    },
+    "style": {
+      "origin": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/dwarf_female_plague_doctor/inputs/style.png",
+      "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+    }
+  },
+  "reference": {
+    "source": "ai-image-metadata/characters/player-animation-sources/dwarf_female_plague_doctor/reference.png",
+    "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_female_plague_doctor/chroma/reference.png",
+    "identitySource": "ai-image-metadata/characters/player-animation-sources/dwarf_female_plague_doctor/inputs/identity.png",
+    "styleSource": "ai-image-metadata/characters/player-animation-sources/dwarf_female_plague_doctor/inputs/style.png",
+    "prompt": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative Dwarf Plague Doctor (female presentation) identity portrait; Image 2 is style and proportion reference only. Player identity metadata: dwarf stout build thick beard braided hair sturdy female feminine features beaked mask dark coat plague doctor censer toxic fumes ominous mysterious. Create one complete head-to-toe Dwarf Plague Doctor (female presentation) preserving Image 1's covered face, ancestry traits, gender presentation, beaked mask, coat, hat or hood, gloves, censer, bottles, satchel, palette, and proportions. Do not import identity details from Image 2. Preserve the portrait's beaked mask, dark coat, hat or hood, gloves, censer, bottles, satchel, and exact item count. Keep exactly one censer on its chain and one of each depicted compound; never unmask, duplicate, swap, or transform equipment. Translate the portrait into a compact ominous silhouette. Use a flat #00ff00 chroma key background with no floor or scenery and a square 1:1 canvas with generous padding. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered plague doctor in a clinical censer-ready stance facing three-quarters right. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+  },
+  "animations": {
+    "idle": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_female_plague_doctor/idle.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_female_plague_doctor/chroma/idle.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 4,
+      "frameDescriptions": [
+        "clinical stance with censer hanging under control",
+        "slow inhale as beaked mask tilts upward",
+        "weight shifts forward while chain shortens in the hand",
+        "censer completes a tiny pendulum arc",
+        "centered ominous midpoint",
+        "slow exhale as the wisp thins",
+        "weight shifts rearward while satchel settles",
+        "clinical stance flowing back to frame one"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body plague doctor clinical idle-cycle poses of the authoritative Dwarf Plague Doctor (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy female feminine features beaked mask dark coat plague doctor censer toxic fumes ominous mysterious. Required sequence: clinical stance with censer hanging under control; slow inhale as beaked mask tilts upward; weight shifts forward while chain shortens in the hand; censer completes a tiny pendulum arc; centered ominous midpoint; slow exhale as the wisp thins; weight shifts rearward while satchel settles; clinical stance flowing back to frame one. Motion direction: An unsettling breathing loop makes small beaked-mask scans, controlled censer pendulum shifts, and protected satchel checks.. Overall plague doctor motion is ominous, clinical, deliberate, and pendular, with beaked-mask focus, controlled censer arcs, protected compounds, and coat-led follow-through. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, mask, coat, palette, proportions, censer, bottles, satchel, and chain continuity. Preserve the portrait's beaked mask, dark coat, hat or hood, gloves, censer, bottles, satchel, and exact item count. Keep exactly one censer on its chain and one of each depicted compound; never unmask, duplicate, swap, or transform equipment. Effects are controlled medicinal or toxic fumes from the established censer or one handled compound, using the portrait's palette. Keep clouds compact and translucent enough to show the mask, hands, chain, and body. Action-specific effects: Only one thin contained wisp may rise from the established censer; no expanding cloud. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "walk": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_female_plague_doctor/walk.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_female_plague_doctor/chroma/walk.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "left foot forward contact as censer trails safely",
+        "left leg compresses beneath the dark coat",
+        "passing pose with right knee advancing",
+        "right foot reaches while chain reverses direction",
+        "right foot forward contact",
+        "right leg compresses under the stride",
+        "passing pose with left knee advancing",
+        "left foot reaches into the pendular loop"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body plague doctor pendular stride poses of the authoritative Dwarf Plague Doctor (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy female feminine features beaked mask dark coat plague doctor censer toxic fumes ominous mysterious. Required sequence: left foot forward contact as censer trails safely; left leg compresses beneath the dark coat; passing pose with right knee advancing; right foot reaches while chain reverses direction; right foot forward contact; right leg compresses under the stride; passing pose with left knee advancing; left foot reaches into the pendular loop. Motion direction: A measured alternating stride uses real leg compression, controlled censer counter-swing, coat movement, and close-held compounds.. Overall plague doctor motion is ominous, clinical, deliberate, and pendular, with beaked-mask focus, controlled censer arcs, protected compounds, and coat-led follow-through. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, mask, coat, palette, proportions, censer, bottles, satchel, and chain continuity. Preserve the portrait's beaked mask, dark coat, hat or hood, gloves, censer, bottles, satchel, and exact item count. Keep exactly one censer on its chain and one of each depicted compound; never unmask, duplicate, swap, or transform equipment. Effects are controlled medicinal or toxic fumes from the established censer or one handled compound, using the portrait's palette. Keep clouds compact and translucent enough to show the mask, hands, chain, and body. Action-specific effects: No active treatment or attack cloud; censer may retain one tiny vertical wisp. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "attack": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_female_plague_doctor/attack.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_female_plague_doctor/chroma/attack.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "clinical guard measuring range",
+        "gloved hand shortens the single censer chain",
+        "deep shoulder coil with rear foot planted",
+        "forward step begins the pendular sweep",
+        "single censer reaches contact through compact fumes",
+        "coat and chain follow through in a readable arc",
+        "free hand arrests the returning chain",
+        "recovered clinical guard"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body plague doctor censer sweep poses of the authoritative Dwarf Plague Doctor (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy female feminine features beaked mask dark coat plague doctor censer toxic fumes ominous mysterious. Required sequence: clinical guard measuring range; gloved hand shortens the single censer chain; deep shoulder coil with rear foot planted; forward step begins the pendular sweep; single censer reaches contact through compact fumes; coat and chain follow through in a readable arc; free hand arrests the returning chain; recovered clinical guard. Motion direction: The chain shortens, shoulders coil, a planted step drives one controlled censer sweep, compact fumes mark contact, and the pendulum is arrested safely.. Overall plague doctor motion is ominous, clinical, deliberate, and pendular, with beaked-mask focus, controlled censer arcs, protected compounds, and coat-led follow-through. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, mask, coat, palette, proportions, censer, bottles, satchel, and chain continuity. Preserve the portrait's beaked mask, dark coat, hat or hood, gloves, censer, bottles, satchel, and exact item count. Keep exactly one censer on its chain and one of each depicted compound; never unmask, duplicate, swap, or transform equipment. Effects are controlled medicinal or toxic fumes from the established censer or one handled compound, using the portrait's palette. Keep clouds compact and translucent enough to show the mask, hands, chain, and body. Action-specific effects: Use exactly one censer and one compact toxic or medicinal fume accent at contact; never duplicate the censer or hide the chain and body. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "hurt": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_female_plague_doctor/hurt.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_female_plague_doctor/chroma/hurt.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "clinical guard before impact",
+        "sharp flinch with mask and gloves intact",
+        "maximum stagger as single censer swings outward",
+        "forced backward step while chain remains gripped",
+        "low brace gathering censer and satchel close",
+        "careful rise while fumes settle",
+        "chain, feet, and compounds reset",
+        "recovered ominous stance"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body plague doctor contaminated-impact recovery poses of the authoritative Dwarf Plague Doctor (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy female feminine features beaked mask dark coat plague doctor censer toxic fumes ominous mysterious. Required sequence: clinical guard before impact; sharp flinch with mask and gloves intact; maximum stagger as single censer swings outward; forced backward step while chain remains gripped; low brace gathering censer and satchel close; careful rise while fumes settle; chain, feet, and compounds reset; recovered ominous stance. Motion direction: An impact snaps the coat and mask back, throws the censer outward on its retained chain, forces a low stagger, and resolves through careful containment.. Overall plague doctor motion is ominous, clinical, deliberate, and pendular, with beaked-mask focus, controlled censer arcs, protected compounds, and coat-led follow-through. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, mask, coat, palette, proportions, censer, bottles, satchel, and chain continuity. Preserve the portrait's beaked mask, dark coat, hat or hood, gloves, censer, bottles, satchel, and exact item count. Keep exactly one censer on its chain and one of each depicted compound; never unmask, duplicate, swap, or transform equipment. Effects are controlled medicinal or toxic fumes from the established censer or one handled compound, using the portrait's palette. Keep clouds compact and translucent enough to show the mask, hands, chain, and body. Action-specific effects: One compact impact and a few fume flecks are permitted; no gore, blood, unmasking, broken bottle, or lost censer. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "death": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_female_plague_doctor/death.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_female_plague_doctor/chroma/death.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "verticalAnchor": "bottom",
+      "outputFrameMap": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        7,
+        7
+      ],
+      "frameDescriptions": [
+        "fatal impact breaks the clinical stance",
+        "censer drops low as chain hand slackens",
+        "knees buckle beneath the dark coat",
+        "one knee grounds while beaked mask and torso tip sideways",
+        "body reaches full ground contact",
+        "coat, limbs, chain, and censer settle low",
+        "final fully fallen plague doctor with mask intact",
+        "same final fallen pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body plague doctor defeat sequence poses of the authoritative Dwarf Plague Doctor (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy female feminine features beaked mask dark coat plague doctor censer toxic fumes ominous mysterious. Required sequence: fatal impact breaks the clinical stance; censer drops low as chain hand slackens; knees buckle beneath the dark coat; one knee grounds while beaked mask and torso tip sideways; body reaches full ground contact; coat, limbs, chain, and censer settle low; final fully fallen plague doctor with mask intact; same final fallen pose held. Motion direction: A final impact stills the censer, knees fail beneath the coat, the masked body sinks and tips sideways, and all equipment settles fully fallen.. Overall plague doctor motion is ominous, clinical, deliberate, and pendular, with beaked-mask focus, controlled censer arcs, protected compounds, and coat-led follow-through. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, mask, coat, palette, proportions, censer, bottles, satchel, and chain continuity. Preserve the portrait's beaked mask, dark coat, hat or hood, gloves, censer, bottles, satchel, and exact item count. Keep exactly one censer on its chain and one of each depicted compound; never unmask, duplicate, swap, or transform equipment. Effects are controlled medicinal or toxic fumes from the established censer or one handled compound, using the portrait's palette. Keep clouds compact and translucent enough to show the mask, hands, chain, and body. Action-specific effects: Fumes fade without gore, blood, unmasking, explosion, rigid rotation, or duplicated equipment. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "cast": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_female_plague_doctor/cast.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_female_plague_doctor/chroma/cast.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "focused clinical stance",
+        "single censer steadies beneath one gloved hand",
+        "exactly one compound is selected from the satchel",
+        "compound is added while the chain remains controlled",
+        "maximum compact fume cloud gathers around the censer",
+        "guiding hand directs the translucent cloud outward",
+        "compound is secured as fumes recede",
+        "composed censer-ready finish"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body plague doctor compound fumigation poses of the authoritative Dwarf Plague Doctor (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy female feminine features beaked mask dark coat plague doctor censer toxic fumes ominous mysterious. Required sequence: focused clinical stance; single censer steadies beneath one gloved hand; exactly one compound is selected from the satchel; compound is added while the chain remains controlled; maximum compact fume cloud gathers around the censer; guiding hand directs the translucent cloud outward; compound is secured as fumes recede; composed censer-ready finish. Motion direction: The doctor stabilizes the censer, selects exactly one compound, adds it, raises the chain, guides a compact controlled cloud, then seals supplies and lowers the censer.. Overall plague doctor motion is ominous, clinical, deliberate, and pendular, with beaked-mask focus, controlled censer arcs, protected compounds, and coat-led follow-through. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, mask, coat, palette, proportions, censer, bottles, satchel, and chain continuity. Preserve the portrait's beaked mask, dark coat, hat or hood, gloves, censer, bottles, satchel, and exact item count. Keep exactly one censer on its chain and one of each depicted compound; never unmask, duplicate, swap, or transform equipment. Effects are controlled medicinal or toxic fumes from the established censer or one handled compound, using the portrait's palette. Keep clouds compact and translucent enough to show the mask, hands, chain, and body. Action-specific effects: Create one compact translucent medicinal or toxic cloud from the censer and one selected compound; never duplicate items or obscure anatomy. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "dead": {
+      "deriveFrom": {
+        "animation": "death",
+        "frame": 7
+      },
+      "frameDescriptions": [
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held"
+      ],
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity."
+    },
+    "victory": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_female_plague_doctor/victory.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_female_plague_doctor/chroma/victory.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "silent recognition of success",
+        "beaked mask studies the single censer",
+        "chain lifts into a controlled outward swing",
+        "censer completes a precise celebratory arc",
+        "exactly one compound is presented for inspection",
+        "compound returns as chain motion stops",
+        "ominous proud stance with equipment secured",
+        "final triumphant plague doctor pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body plague doctor successful-treatment flourish poses of the authoritative Dwarf Plague Doctor (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy female feminine features beaked mask dark coat plague doctor censer toxic fumes ominous mysterious. Required sequence: silent recognition of success; beaked mask studies the single censer; chain lifts into a controlled outward swing; censer completes a precise celebratory arc; exactly one compound is presented for inspection; compound returns as chain motion stops; ominous proud stance with equipment secured; final triumphant plague doctor pose held. Motion direction: The doctor confirms the result, inspects the censer, gives it a controlled celebratory swing, presents one clean compound, then reseals everything and holds.. Overall plague doctor motion is ominous, clinical, deliberate, and pendular, with beaked-mask focus, controlled censer arcs, protected compounds, and coat-led follow-through. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, mask, coat, palette, proportions, censer, bottles, satchel, and chain continuity. Preserve the portrait's beaked mask, dark coat, hat or hood, gloves, censer, bottles, satchel, and exact item count. Keep exactly one censer on its chain and one of each depicted compound; never unmask, duplicate, swap, or transform equipment. Effects are controlled medicinal or toxic fumes from the established censer or one handled compound, using the portrait's palette. Keep clouds compact and translucent enough to show the mask, hands, chain, and body. Action-specific effects: One thin celebratory fume spiral may rise from the censer; no large cloud, duplicated vial, or unmasking. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    }
+  },
+  "pins": {
+    "templateSha256": "93943004e340d113943e06dea61fd7dfad67c20750dd4fc30d76d3be1fb7c144",
+    "profileSha256": "fe344aff8edcebd6bbe7eb67efa653b60a2d81af0b7fac1142a121556a77fd57",
+    "reference": {
+      "sourceSha256": "cf66e1f7cc7a783024bf9504129dc0195e1e26e12e7a3e673472e52dd493f7b3",
+      "sourceDimensions": "1254x1254",
+      "chromaSourceSha256": "4ad1e0dbebabbfeb3523712a35f6fb2848ac8b9d24e1183391d8d80468dec1d3",
+      "chromaSourceDimensions": "1254x1254",
+      "identitySourceSha256": "5a6b6981e56697eeab9f19244934c8f758d9100fd49b2efe778845fe5b9ce0c2",
+      "identitySourceDimensions": "1024x1024",
+      "styleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "styleSourceDimensions": "1254x1254",
+      "promptSha256": "420187ba1a0b5616bd6d3e2ecbd95ef72bf1e2260c6632f118549355548ee862",
+      "encodedSha256": "49af93546dc9f543d00232f9c2a65e1e0dfa7db8f676e1eb435733dbdd267df7",
+      "decodedSha256": "afb5638b5924d52b1759a8900ace9bb10541036132f9191bdc4f56cd8f7c2ec6"
+    },
+    "animations": {
+      "idle": {
+        "sourceSha256": "e33ef8ef2c373c3635cd99edd5cd1df517713a798cde63a8422ef7c099ff4ebe",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "10f5a16b121dd98769529d74aac246ca2bbdd0a9cda20d044eeee186d61c5b48",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "5253819d530af1889ffe462a2b0036c25a9e45ceb0afd99bf0151ce33c96a139",
+        "encodedSha256": "138cf6d4cb17933011a6d07a3e27322012b143a1c83646d56ba495c42e69dcb5",
+        "decodedSha256": "a3ee2a946f8a0d9679c981dfa95d92f4633a731fd0f247ebf719a9210bc20828",
+        "frameSha256": [
+          "68569a360c6992bbf74eb661661b694e0278f83270e666a571a70a3c4de8d469",
+          "246429295176cd845db114139981a8796cdc996a91400fec64f5d32b827617be",
+          "86893eed614450e787aa91a611aca5a04b3941daf4d3647ef6ac5949fa5fbd55",
+          "b520d030db66784b6d22afc7239ff5637763b671c502ffab14ee3e2053303bb8",
+          "be47da3db3b6d71353face6ca51db83b24dd90ed9fd87d55200e555592ff399a",
+          "124910935fc327c37ec3153f900b589f009d8c4bab7cc67850189dbd71ad0c49",
+          "83456b32fca896ef3aff240cf95a1f381eedaa1b88c96a219069eb3e69475bf0",
+          "c394cb23facaf7ebe39cc853393deac115a3d82cf1a09a530a4e0606a53712a5"
+        ],
+        "poseSha256": [
+          "f01d228b2a68f0d42476dcf0c3193fd5e386f6b52c78243af8e2cfd7b4e22391",
+          "0da39d34edc6617a718d36f5ea75b57a834acb4257271d71494b0a292215868e",
+          "8e1cc742e079b0ffd8f663adbdd3265cf31b46ca785f9b65f8c0eba381872835",
+          "fc04c0b1d06e6ace98f5bda28414c20cedbcd7ce57a8d00e6532da0ee300aeaa",
+          "4fe704ebb7966c3afe8e0e319c3ede8feb1abbc95135bb5fc29cb164aaec509b",
+          "b4e5faf44a5180aead69a8ad9efcbd1059155ca11c237471e2583e10cdf1d295",
+          "09ea4f447b8d0e648f7aa29727b9a8ee91fa4b1d415647f28c3235f71962a737",
+          "d97321058a35c19900cb5a7b4b23e32b3b9e68166c170be7540f7f2b8cb6fa39"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          0.981301,
+          1,
+          1,
+          1,
+          1,
+          0.977333,
+          1
+        ]
+      },
+      "walk": {
+        "sourceSha256": "a2d88037af7b19cd81a4658ab3424f40f2453437f3221b0e81af5345145dd537",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "1948528b95cf4529157ad25a1e7fd053b002bd97fa10e20cb6afa22b9fece2a8",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "2f9c14fca30ed89e9e38ad1a5b1f037e21ad16d55438c8f0b22d5844cafb8c7a",
+        "encodedSha256": "691ee19efeee1b125ec7296df1809fa0cade14ce9faa4f9ea4439df1b7031258",
+        "decodedSha256": "3cf39aafc7cc68393a4ba828525bee8f4d07d46cc63f035ab5c74101107c3130",
+        "frameSha256": [
+          "895c05b3fefcbf1bccd10727eaccbeb6a4ff63abf01e78526dae092d07381aed",
+          "bcbe7f8b2de8652f4aa5fc27829f864d61e8bd5ed8b9347b112b770ca29ed607",
+          "458ed1d45e38c3541cbeb443d60ea4626aebcf5c3b30670d858ca712605efb54",
+          "3346cb1961fc351413707c4b085ba28235e9a680e656f1c97fe18d1abff0309b",
+          "213726b1bb6f5375687fcec42a5e94b4d9d74f25ac6d3f24bc55034a1d178dfd",
+          "308048a48006c2e77d117225eeb9f74d087cbf02c87b0352574c8a33b18539fc",
+          "6b7fc12e08d1aaa4a8b8af787bd608a5dc59afda6753030917f7cf909b591039",
+          "e8140127694b9f0c21a9682bb7fee534048b2434cf005d6d9617e7dba6e943fa"
+        ],
+        "poseSha256": [
+          "e156a2a78cf059f13600400d80488be0a2624ba0c814d0871d21d41ba854c835",
+          "b95900b4051cf321442dabc0c8e96d04649ebaf3ace54ba000af4daafa138eee",
+          "f42287c54a86f3f437da3aa824fdf6bf885907128ae32b64b9ddd46224e1fa2f",
+          "0bfc37969d569f9d4b85e79408bd2f4cea5f9e71a3a683a1cb9699343ad2dec2",
+          "3f2cb91f966c2ce091e96f0958e13a9acbc4bf12742265e06eb45b04c2fe2749",
+          "e6609236862312d62dadd34dc897262327b39678bcf7f04e3006d3b89c6590a9",
+          "b7443dda5c32a05446961c5f9b7ad4ca19475721448c7993e3339b9325784c3f",
+          "99a0051e803cf53d04302756f143b7148cd6ecb235e9317988c2283d69462a86"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.998974,
+          1,
+          0.99941,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "attack": {
+        "sourceSha256": "c23122e1ad7de638deed29de3f0d6b01868561adf41e9398c42fd505833b63d8",
+        "sourceDimensions": "1717x916",
+        "chromaSourceSha256": "a07bfdf479f4c26c2022a6d4555167b8f64b96f0a50b45a26708bb062416c601",
+        "chromaSourceDimensions": "1717x916",
+        "promptSha256": "4b170627d7970e70fad7c77d9da2cf770781009442e9f83bce47fd08706a074d",
+        "encodedSha256": "d5667464064eeac008c1e975d2e4eba1e881cc790966a39ef5932b8c33684a12",
+        "decodedSha256": "e4d6e82c504147bd95f7123f32a2835717545e7438d73727689a411cd6df3e3c",
+        "frameSha256": [
+          "aec895471fbe40e0ae2df62040032a2fd81a1fa7dc293013dc94f4bf3ba85a7f",
+          "1f2b8990752067dbfdfb534eeb2f261b92fe14afaa2f8ba8938a4092437e78d1",
+          "2567d017528ae8858450ee34179db2369d1b881ccf56abe58ebb13b0cbe4be87",
+          "db8044b20548a18b8c9b758114ea03b89d1ffae69d3796227d059931a820da5f",
+          "30dfac24e1080944894f7042de56000f867ad0157d2d12841324937bed71aa40",
+          "8fa992d1bb854c5669e1fbb2fab4beb21d6910f6874a8763514ee20f0a9bea9b",
+          "6e8aac6655a66f6cfa68cdd0466f72282d5a9e429d2d45e73714570cc0dfdcc0",
+          "6fc062ab7b4ee160c9ce7930d4aef441402376e6067421022526fbb535fd2c59"
+        ],
+        "poseSha256": [
+          "075fddac6bd09992773c61497736baa853e63caee52de2c88c2dc399593f2e16",
+          "d649a91290ff32501e10ee5e650ce3e08ec17da616739a230aa82acc05d88347",
+          "fe02c61097095b4044a274732ed95c3731fa183402debeb7e0461c6a28a22e93",
+          "cbf2de57456e0debc370e2fc793965f139046f5ff065dd93086e89573618ce46",
+          "9d4af33a45dcbe488a528304e0a9cd14efbfeb06858ae177c74443a14a1f1837",
+          "6d1d03e09bd046dd4e482089aa70142c2922890646afaf2436da38d1a514d4be",
+          "b0aff827fceea0da3ad995485f1a1c06d9b3f06257595bfe9d4088a9a98b7938",
+          "1cfcf480208bacb020d635b5dde19b75080df8a9175ed7750da680aaf44713ed"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          0.998012,
+          1,
+          0.999613,
+          1,
+          1
+        ]
+      },
+      "hurt": {
+        "sourceSha256": "2e16bfb820a2ef963afbad0b67d4a3c269017992c0502cee05476f1fa21a8e0e",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "fb82f06103986e50fa389455bc36a28c6be506e6bf82b705765e308b353d8a85",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "719c1146ef53c0431cf1bfe94a4c1530164b1177700b725bacf9bdd281a9db04",
+        "encodedSha256": "b06dabca4a8ed7194d3c87f1bd325d06d6a50b13f674dfaef14b1623394451de",
+        "decodedSha256": "c75cdbbb57e10930d6c004da4b7ef274c9c134da94f44752436f3f5fd56deac8",
+        "frameSha256": [
+          "b6b2e90e3386cfd98c4778709c02da59070c680f6bbeef91a7d06797cca8b882",
+          "25a9ba19d6718b6b3351658711fdb2d8d5eb7a81efe3d20c40526a692a424ea9",
+          "06e910198361eac4fc2395fc459c7937f2436166a9ee5669530299710e166790",
+          "119c0db0f32559168ea38bb7052e99c0f98f538362d4e318ebe5ea578797e024",
+          "285ae2174715f89045cabdcfc8856522fdcde70d0fe0bafd4f3cf34c52605bd0",
+          "82ff7769ae313b57eea39ca65f66dc3e91eef38ec40416e62919657c2db4b127",
+          "ee7c49a116a00658fe4a2c1fea8b312e4664d2224ef0a3678b808719617514a1",
+          "693571ccf18224cdc3392d37e16c5c39496d29467a3cd9cd524940944b082731"
+        ],
+        "poseSha256": [
+          "25c113a834de3582f501f7cdb86952b043c3171a1be08bc916c83133b2f92979",
+          "3686883ed1a708d53c22aad8d1d3f5a4d92cdd65f1dc0d7f74db71a3abbb2b62",
+          "6ce857d0c883bb959937431402267574a9056634645271101413a7d836fd1ca7",
+          "eb64543d3a03bda605cd7d0d865354f7a7fcbe8dc30abd13640759eaedfd1b25",
+          "466e4d4947335079a252e4152af17828005dbdd8c9d439bd03a4049fda088cfe",
+          "9bf2e1f4117f7cc02b62b3424e1db9635cf66f578658c4c811cc0df6c1a0bd32",
+          "0f073af55336c1cc61c3094f69c81a072432045a1ce005a712e62772b5abdd6b",
+          "e819382e29b7c775ca6b9fcc726c35e2337b0eb3805b2afc2d432b8be71e5676"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.99863,
+          0.993293,
+          0.992366,
+          0.995745,
+          0.998065,
+          0.994034,
+          0.997928,
+          1
+        ]
+      },
+      "death": {
+        "sourceSha256": "ad6235eedd9b092dc0a50d62d9b1f4a69a3efea0e43c6d82721f7b70489f8405",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "f36004e92edccf8131d82b36927223222f36a29cfb1b757eb0784afa396af168",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "9f061e37637e529dc68fc0b829941a3c97bf21a1aa1c98b1d40232af74b0d315",
+        "encodedSha256": "25a48e1e16ee4cf51f3490763d701e11fcd10579176066db9fbee674ad76a009",
+        "decodedSha256": "c69d2a4d9dc83f09fa48d304fd68f7810df0d1045373df677cf73497484f96e5",
+        "frameSha256": [
+          "19b2e31fdf5f501f98e634ae3024ffc70f0f21f0761866a86782930961727a04",
+          "fa2fd55f84193eff77b57008027ca8b02db9b03e02f4b7a07d2c1d8fc6235c98",
+          "d3a1b030a4a47ac3bab59153de9f7dee9cb0132cc541836106887eb57f95b6f5",
+          "c07a648fb35c73b34fce079d4979856777e511399e19ffb48d7e08a05473bdae",
+          "b385f2fd041f227553bb07191210f09622707749661e911d4410fccdb7c19339",
+          "5a08f7520112063d2831c3df370318898d339d897d1518cf77dc2740bcf55dc0",
+          "36338a86ee2935698c551cd6298141b4da069550a6b6efc7b1f403f896e87827",
+          "36338a86ee2935698c551cd6298141b4da069550a6b6efc7b1f403f896e87827"
+        ],
+        "poseSha256": [
+          "73bd19747159cf305b1cd8801c79f9406606a8f496a952be4ff60a8b58dbf88c",
+          "71e0c3954a74337242dc01418a98b26c040d8c908276bf8e3765052c088db1a6",
+          "10f459f2d4e33d3633f446e578af49a81fccd8c2e864463cbbb23f4cd283cb8e",
+          "40c68c84b7b4d98f9ec85408204c0a56c057010f082031f34c28e0d7f44a2619",
+          "d1306f72ecc19c722a78da1148d0711ac0e23d64de36de4f6f689d4a3bcfab74",
+          "7f0961e453e169b592f9e915b7a8a78a98ac8a7dce8a57294844d842c66d550f",
+          "0523c21cf00e254be8e187eeb23c5771467e4eb1c15b7766c8f75c92c3e2ecf7",
+          "0523c21cf00e254be8e187eeb23c5771467e4eb1c15b7766c8f75c92c3e2ecf7"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          0.999794,
+          1,
+          1,
+          1
+        ]
+      },
+      "cast": {
+        "sourceSha256": "e5d34822ec9ee35fde6c8ca168a75477c04cdcef030763af2fc29033a0b2a8fe",
+        "sourceDimensions": "1672x941",
+        "chromaSourceSha256": "3f39690b36e55e4287eda3d69fe86ed346989bc72bec522a77ae57c1ae72ef4a",
+        "chromaSourceDimensions": "1672x941",
+        "promptSha256": "307466918215670bcc2ca86268252ac2de807fb7e89201844c651b86cf89ac04",
+        "encodedSha256": "fbd31d971af83cb192b291341f3355b2da0b891ef0fd8267da3025b4d1505183",
+        "decodedSha256": "6dabcdb8d963368b1932730a69e4babf63fcb0b5f238bfe4d0883c6f5d3bb227",
+        "frameSha256": [
+          "2615f469d877ce991e994c5c9b976603ac3ecbc307f53d92c23126227c6ee97a",
+          "6c3a9910c0bda63918c197ee41d4cbe8a7fce35d7f7431d295aa00e37adac517",
+          "3b7883fc7154fbfaa800af12b55068663dbba4a2db1763d7a0704fdb755f50b9",
+          "4740f6297bf38c183a1a8f8528211d93b50f070555cb9b5961429f175bc0483f",
+          "71578a62fb63b8cbb584f9dfba7941e3020c1be06fe394648eb276f6a161cb87",
+          "08b1844f65dd358dc1063a3ec02a2d9093c15efb4c67d3ff4812ca07c25d0823",
+          "7f9cdc093c8bce5c3882fa004b1a2a7f6fd61243a6baa1a2bdcb6df8b6db92b6",
+          "db2f3a78579e1fb70848783bea136f67375c839b2830f33b7172c862dc51d09f"
+        ],
+        "poseSha256": [
+          "4170bc58fe80d759ee91c714aa146768ee205874a6ca50443bfe91ebaf6e908b",
+          "c04211c2aad21d43c4b70fe587c99ec984a1b1da911bc838b728da6936ba67a6",
+          "bb156b7818d4a692a266d8404a3586eb0ef210e76afdb11b5cb43e375a06ccf7",
+          "a3e631ca75c9233ebe6778254677847f348967a7a1f9760a1e96ea0a5e95219d",
+          "c2d003b2b7e923e0084e92f4c322d752de5441d266f33c2955a0655fb1f82744",
+          "b6a2e372a8f9bf11bada1105fe30d096e1e3f152c1ab59e33e737f04d3bbf445",
+          "d1a7483568a2c66fc52ff9e9b169368892247a297b87b81688fe88d4bd57a340",
+          "e273d500caa62e0c698e78818d628ca57ea481bd4e6254c0deb9b22e1a8f0f35"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.999857,
+          0.999833,
+          1,
+          0.999837,
+          0.999443,
+          1,
+          0.999771,
+          0.998303
+        ]
+      },
+      "victory": {
+        "sourceSha256": "938b71c1353ed92706a8b26c8c626d4a8bc086a6e72a0c38bfc25e11b002c87b",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "bdd8cd928bc205b0f12d45c26fb103c5fcb6dda3fc2b5943f52e5245e66c8162",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "4b3d5cf5b003665796356a8a39a2e2b246d4d7e63d6fe280921878f01aac88ab",
+        "encodedSha256": "ea925a81c00f8334c1ba1ce4f422696ca3c43762ab82d61f816b5a0135a621e7",
+        "decodedSha256": "84d75613b68144b9b8e61eb6268d099bc80fb4b926953d1e1ab28614b4910a03",
+        "frameSha256": [
+          "61f25d26e270c6524219e7d635e1d41ad31da09f85dc080522e4eab2645fbf8a",
+          "c46b25c230ea435b4db8c02c860bef45bcd4e70ab23a9e4fcce855c13001db59",
+          "085905dbdc6f7375dfa610fb1ef453349c62c165bd235f5a2065aa522041954d",
+          "f48ce8a5e94a834f3c107d6e447c61fb34ff1d0c5b8dc84aefcf065d2c587386",
+          "ecb68e4f7e90c4dea63d85a1a18be59459e406dd71aa91cc19c6eb3b9bd438a4",
+          "16797d1bc642e059c4033ff8ea642beac26f432355a38b1087ec0209a626bd2b",
+          "96f4a1c8fd3452be9a4d7ef0d7052cd3e41c23a27df159e3f1fa9d418f7d9420",
+          "5da72a8facf354727d2f1bdbcdd8eb47eb7997aff64fe404dad2c1a4452aca9d"
+        ],
+        "poseSha256": [
+          "50f8580e968012ae6e763d68745203cfac6fc4a60211fa9daf21c396a87e705f",
+          "cca272efd63a1c8f4afe861b8bbc5f3ee7f1c50788fb253cfd7b03b67f327282",
+          "fd1be05480991bc78a795e2ef0d5530f0851ace3b543c308d584ce48d3bd74ff",
+          "0a1b1ea888e97e1c0b338a3b33056682a31a4523af11a276f9a9b53997fccdb0",
+          "7023e9152bf69971983c328405f2e628304387624ab528efc28751545d087bf4",
+          "d1c6136527ad2fc7437be84c675289a173e15ac14e982d2fed5c47ba4bcc91d2",
+          "83b47146f85ef369890dd02af9063cbe71080cd185cddd89e7da5f38e647ee75",
+          "ad03bdef93166d578e61ee9291d9d8dcc4a7882f0a03b0924d44b51945dab0e4"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          0.986493,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "dead": {
+        "sourceSha256": "ad6235eedd9b092dc0a50d62d9b1f4a69a3efea0e43c6d82721f7b70489f8405",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "f36004e92edccf8131d82b36927223222f36a29cfb1b757eb0784afa396af168",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "f631a7fd605211260b28b5a5bba3503e06dc1064497d1e5769d62e40e178e2b1",
+        "encodedSha256": "c3e9eca26352b322b96627bf47ef333a26138bab23297ba597bfa242d2a36e36",
+        "decodedSha256": "c0739cfa236b7bc41be61709142f793e65a1edee6fb1ebb5b788a0dc5d7c31dd",
+        "frameSha256": [
+          "36338a86ee2935698c551cd6298141b4da069550a6b6efc7b1f403f896e87827",
+          "36338a86ee2935698c551cd6298141b4da069550a6b6efc7b1f403f896e87827",
+          "36338a86ee2935698c551cd6298141b4da069550a6b6efc7b1f403f896e87827",
+          "36338a86ee2935698c551cd6298141b4da069550a6b6efc7b1f403f896e87827",
+          "36338a86ee2935698c551cd6298141b4da069550a6b6efc7b1f403f896e87827",
+          "36338a86ee2935698c551cd6298141b4da069550a6b6efc7b1f403f896e87827",
+          "36338a86ee2935698c551cd6298141b4da069550a6b6efc7b1f403f896e87827",
+          "36338a86ee2935698c551cd6298141b4da069550a6b6efc7b1f403f896e87827"
+        ],
+        "poseSha256": [
+          "0523c21cf00e254be8e187eeb23c5771467e4eb1c15b7766c8f75c92c3e2ecf7",
+          "0523c21cf00e254be8e187eeb23c5771467e4eb1c15b7766c8f75c92c3e2ecf7",
+          "0523c21cf00e254be8e187eeb23c5771467e4eb1c15b7766c8f75c92c3e2ecf7",
+          "0523c21cf00e254be8e187eeb23c5771467e4eb1c15b7766c8f75c92c3e2ecf7",
+          "0523c21cf00e254be8e187eeb23c5771467e4eb1c15b7766c8f75c92c3e2ecf7",
+          "0523c21cf00e254be8e187eeb23c5771467e4eb1c15b7766c8f75c92c3e2ecf7",
+          "0523c21cf00e254be8e187eeb23c5771467e4eb1c15b7766c8f75c92c3e2ecf7",
+          "0523c21cf00e254be8e187eeb23c5771467e4eb1c15b7766c8f75c92c3e2ecf7"
+        ],
+        "sourceFrameIndexes": [
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  }
+}

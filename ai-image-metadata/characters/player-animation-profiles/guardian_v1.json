@@ -1,0 +1,78 @@
+{
+  "version": "1.1.0",
+  "id": "guardian_v1",
+  "class": "guardian",
+  "templateId": "authored-pose-atlas-v1",
+  "description": "Reusable authored-pose direction for guardian player identities. Registry metadata and the staged portrait control identity; this profile supplies tower-shield protection choreography.",
+  "style": {
+    "source": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+    "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+  },
+  "identity": {
+    "baseFacing": "three-quarters right",
+    "motionStyle": "immovable, protective, economical, and heavily grounded, with shield-first weight transfer and deliberate armored recovery",
+    "equipmentRule": "Preserve the portrait's heavy plate, tower shield, weapon, insignia, and accessory count. Keep exactly one shield and one depicted weapon in their original hands; never duplicate, swap, discard, resize wildly, or transform them.",
+    "magicRule": "Guardian defense is physical. Do not add magical barriers, runes, aura, or projectiles unless explicitly present in the portrait, and then keep any accent small and subordinate to shield mechanics."
+  },
+  "promptTemplates": {
+    "reference": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative {{displayName}} identity portrait; Image 2 is style and proportion reference only. Player identity metadata: {{visualTraits}}. Create one complete head-to-toe {{displayName}} preserving Image 1's face, ancestry traits, gender presentation, heavy plate, tower shield, weapon, palette, proportions, and insignia. Do not import identity details from Image 2. {{equipmentRule}} Translate the portrait into a compact fortified silhouette. Use a {{background}} background with no floor or scenery and a square 1:1 canvas with generous padding. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered guardian in a shield-planted defensive stance facing {{baseFacing}}. {{invariants}}",
+    "animation": "Draw exactly {{frameCount}} genuinely redrawn full-body {{actionLabel}} poses of the authoritative {{displayName}} in a {{columns}}-column by {{rows}}-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: {{visualTraits}}. Required sequence: {{frameSequence}}. Motion direction: {{motionDirection}}. Overall guardian motion is {{motionStyle}}. {{poseRequirement}} Preserve exact identity, armor, palette, proportions, shield, weapon, and insignia. {{equipmentRule}} {{magicRule}} Action-specific effects: {{effectRule}} Use a {{background}} background with generous gutters. {{invariants}}"
+  },
+  "animations": {
+    "idle": {
+      "actionLabel": "guardian fortified idle-cycle",
+      "minimumUniquePoses": 4,
+      "anchor": "source-cell",
+      "motionDirection": "A patient breathing loop adjusts tower-shield coverage, stance width, and weapon readiness without exposing the torso.",
+      "effectRule": "No active effect; only subtle armor, cape, and shield-grip settling.",
+      "frameDescriptions": ["tower shield planted in full defensive guard", "measured inhale behind the shield", "weight settles deeper onto the forward leg", "shield angle closes over the torso", "centered immovable midpoint", "controlled exhale with armor settling", "weight shifts onto the rear leg while coverage holds", "fortified guard flowing back to frame one"]
+    },
+    "walk": {
+      "actionLabel": "guardian shield-led advance",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "A slow alternating armored advance maintains tower-shield coverage through contacts, compressed steps, passing poses, and weapon counterbalance.",
+      "effectRule": "No active magic or strike; armor, straps, and cloth respond to each weighted step.",
+      "frameDescriptions": ["left foot forward with tower shield leading", "left leg compresses under full armor", "passing pose hidden safely behind shield coverage", "right foot reaches while weapon counterbalances", "right foot plants behind the shield edge", "right leg compresses under armored weight", "passing pose as left knee advances", "left foot reaches into the guarded advance"]
+    },
+    "attack": {
+      "actionLabel": "guardian shield-bash counterattack",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "The guardian absorbs behind the shield, coils low, drives a planted shield bash, follows with one compact weapon counter, and restores full coverage.",
+      "effectRule": "A compact physical impact accent may mark the shield contact; no magical barrier, projectile, or effect obscuring the shield edge and feet.",
+      "frameDescriptions": ["fortified guard measuring the target", "body compresses fully behind the tower shield", "rear leg coils as shield shoulder loads", "planted forward drive slamming the shield edge", "compact weapon counter from protected cover", "heavy follow-through with shield still between body and target", "weapon retracts as shield closes the opening", "recovered fortified guard"]
+    },
+    "hurt": {
+      "actionLabel": "guardian guard-breached recovery",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "A crushing hit jolts the shield inward, forces a short stagger, drops the guardian to a low brace, then resolves through a shield-assisted rise.",
+      "effectRule": "One compact physical impact accent only; no gore, blood, ward glow, or lost equipment.",
+      "frameDescriptions": ["fortified guard before impact", "shield jolts inward against the armor", "maximum recoil twists the torso behind the shield", "forced backward step with knees deeply bent", "low kneeling brace behind the planted shield", "shield-assisted push back upright", "weapon and feet reset behind coverage", "recovered fortified guard"]
+    },
+    "death": {
+      "actionLabel": "guardian defeat sequence",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "verticalAnchor": "bottom",
+      "motionDirection": "A final breach collapses the shield line, knees fail, armor sinks beside the planted shield, and the body reaches a fully fallen rest.",
+      "effectRule": "No gore, blood, magic, or rigid rotation. Keep shield and weapon single, recognizable, and grounded with the body.",
+      "outputFrameMap": [0, 1, 2, 3, 4, 5, 7, 7],
+      "frameDescriptions": ["fatal breach drives the shield inward", "weapon arm slackens as stance fails", "both armored knees buckle", "one knee grounds beside the tipping shield", "body rolls into full ground contact", "low fallen armor and equipment settle", "final fully fallen guardian beside the shield", "same final fallen pose held"]
+    },
+    "dead": {
+      "deriveFrom": {"animation": "death", "frame": 7},
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity.",
+      "frameDescriptions": ["terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held"]
+    },
+    "victory": {
+      "actionLabel": "guardian steadfast victory",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "motionDirection": "The guardian confirms safety, rises from cover, plants the shield with authority, salutes with the weapon, and holds an unbroken protective stance.",
+      "effectRule": "No magic; a restrained metal glint may accent the formal salute.",
+      "frameDescriptions": ["cautious recognition that the threat is gone", "torso rises above the shield rim", "shield lifts into a proud presentation", "heavy shield plants with a wide stance", "weapon rises into a formal salute", "free posture opens while the shield remains controlled", "steadfast protector pose with equipment displayed", "final triumphant guardian pose held"]
+    }
+  }
+}

@@ -5,10 +5,15 @@
  * which are disabled in production environments.
  */
 
-import { query, pool } from '../config/database.js';
+import { pool } from '../config/database.js';
 import { AppError } from '../middleware/errorHandler.js';
 import battleWebsocket from './battleWebsocket.js';
 import { COMBAT_NODE_TYPES } from '../config/constants.js';
+import {
+  BattleStateLifecycleError,
+  BattleStateNotFoundError,
+  battleStateRepository
+} from './battle/BattleStateRepository.js';
 
 /**
  * Instantly win a battle for debugging purposes
@@ -20,113 +25,141 @@ import { COMBAT_NODE_TYPES } from '../config/constants.js';
  * @throws {AppError} If battle not found, not active, or invalid state
  */
 export async function winBattle(battleId, userId) {
-  // Get battle with its JSONB state
-  const battleResult = await query(
-    `SELECT b.id, b.status, b.node_id, b.battle_type, b.battle_state,
-            wn.node_type, wn.name as node_name, wn.difficulty_tier
-     FROM battles b
-     LEFT JOIN world_nodes wn ON wn.id = b.node_id
-     WHERE b.id = $1`,
-    [battleId]
-  );
-
-  if (battleResult.rows.length === 0) {
-    throw new AppError('Battle not found', 404);
-  }
-
-  const battle = battleResult.rows[0];
-
-  if (battle.status !== 'active') {
-    throw new AppError(`Battle is not active (status: ${battle.status})`, 400);
-  }
-
-  // Parse battle state from JSONB
-  const state = battle.battle_state;
-  if (!state || !state.units) {
-    throw new AppError('Invalid battle state', 500);
-  }
-
-  // Set all enemy HP to 0 in the state
-  const enemies = state.units.filter(u => u.type === 'enemy');
-  const players = state.units.filter(u => u.type === 'player');
-
-  for (const enemy of enemies) {
-    enemy.hp = 0;
-  }
-
-  // Calculate simplified rewards based on enemy count and difficulty
-  const difficultyTier = battle.difficulty_tier || 1;
-  const gold = enemies.length * 20 * difficultyTier;
-  const experience = enemies.length * 30 * difficultyTier;
-
   const client = await pool.connect();
+  let committedEnvelope;
+  let committedRewards;
+  let committedUpdate;
+  let didCommit = false;
+  let enemyCount = 0;
+  let playerCount = 0;
+
   try {
     await client.query('BEGIN');
 
-    // Update battle state and status
-    const rewards = { gold, experience, items: [] };
-    await client.query(
-      `UPDATE battles
-       SET battle_state = $1,
-           status = 'victory',
-           rewards = $2,
-           ended_at = CURRENT_TIMESTAMP
-       WHERE id = $3`,
-      [JSON.stringify(state), JSON.stringify(rewards), battleId]
-    );
+    const battle = await battleStateRepository.loadBattle(battleId, {
+      client,
+      forUpdate: true
+    });
+    const state = structuredClone(battle.state);
 
-    // Award gold to user
-    await client.query(
-      'UPDATE users SET gold = gold + $1 WHERE id = $2',
-      [gold, userId]
-    );
+    if (!state || !Array.isArray(state.units)) {
+      throw new AppError('Invalid battle state', 500);
+    }
 
-    // Award XP to party characters
-    const xpPerCharacter = Math.floor(experience / Math.max(players.length, 1));
-    await client.query(
-      `UPDATE characters
-       SET experience = experience + $1
-       WHERE party_slot IS NOT NULL AND user_id = $2`,
-      [xpPerCharacter, userId]
-    );
+    const nodeResult = battle.nodeId
+      ? await client.query(
+        `SELECT node_type, name AS node_name, difficulty_tier
+         FROM world_nodes
+         WHERE id = $1`,
+        [battle.nodeId]
+      )
+      : { rows: [] };
+    const node = nodeResult.rows[0] ?? null;
+    const enemies = state.units.filter(unit => unit.type === 'enemy');
+    const players = state.units.filter(unit => unit.type === 'player');
+    enemyCount = enemies.length;
+    playerCount = players.length;
 
-    // Mark characters as not in battle
-    await client.query(
-      `UPDATE characters
-       SET in_battle = false
-       WHERE party_slot IS NOT NULL AND user_id = $1`,
-      [userId]
-    );
+    for (const enemy of enemies) {
+      enemy.hp = 0;
+    }
 
-    // Clear the combat node if applicable
-    if (battle.node_id && COMBAT_NODE_TYPES.includes(battle.node_type)) {
+    const difficultyTier = node?.difficulty_tier || 1;
+    const calculatedRewards = {
+      gold: enemies.length * 20 * difficultyTier,
+      experience: enemies.length * 30 * difficultyTier,
+      items: []
+    };
+    const rewards = battle.status === 'active'
+      ? calculatedRewards
+      : (battle.rewards ?? calculatedRewards);
+    const commitResult = await battleStateRepository.commitBattleState({
+      battleId,
+      expectedRevision: battle.stateRevision,
+      commandType: 'debug_win_battle',
+      idempotencyKey: `debug-win:${battleId}:${userId}`,
+      flatState: state,
+      lifecycle: {
+        status: 'victory',
+        winnerId: battle.winnerId,
+        rewards,
+        endedAt: battle.endedAt ?? new Date().toISOString()
+      },
+      allowedStatuses: ['active']
+    }, { client });
+
+    committedEnvelope = commitResult.envelope
+      ?? await battleStateRepository.loadBattle(battleId, { client });
+    committedRewards = committedEnvelope.rewards ?? rewards;
+    committedUpdate = commitResult.update;
+    didCommit = !commitResult.idempotent;
+
+    if (didCommit) {
+      await client.query(
+        'UPDATE users SET gold = gold + $1 WHERE id = $2',
+        [committedRewards.gold, userId]
+      );
+
+      const xpPerCharacter = Math.floor(
+        committedRewards.experience / Math.max(players.length, 1)
+      );
+      await client.query(
+        `UPDATE characters
+         SET experience = experience + $1
+         WHERE party_slot IS NOT NULL AND user_id = $2`,
+        [xpPerCharacter, userId]
+      );
+
+      await client.query(
+        `UPDATE characters
+         SET in_battle = false
+         WHERE party_slot IS NOT NULL AND user_id = $1`,
+        [userId]
+      );
+    }
+
+    if (
+      didCommit
+      && battle.nodeId
+      && COMBAT_NODE_TYPES.includes(node?.node_type)
+    ) {
       await client.query(
         `INSERT INTO user_node_clearance (user_id, node_id, battle_id)
          VALUES ($1, $2, $3)
          ON CONFLICT (user_id, node_id) DO NOTHING`,
-        [userId, battle.node_id, battleId]
+        [userId, battle.nodeId, battleId]
       );
     }
 
     await client.query('COMMIT');
 
-    // Broadcast battle end via WebSocket
-    battleWebsocket.broadcastBattleEnd(battleId, 'victory', rewards);
-
-    console.log(`[DEBUG] Battle ${battleId} won by user ${userId} via debug service`);
-
-    return {
-      gold,
-      experience,
-      items: [],
-      enemyCount: enemies.length,
-      playerCount: players.length
-    };
-
+    if (didCommit) {
+      await battleWebsocket.broadcastStateUpdate(battleId, committedUpdate);
+      await battleWebsocket.broadcastBattleEnd(battleId, 'victory', committedRewards);
+      console.log(`[DEBUG] Battle ${battleId} won by user ${userId} via debug service`);
+    }
   } catch (error) {
     await client.query('ROLLBACK');
+    if (error instanceof BattleStateNotFoundError) {
+      throw new AppError('Battle not found', 404);
+    }
+    if (error instanceof BattleStateLifecycleError) {
+      throw new AppError(
+        `Battle is not active (status: ${error.actualStatus ?? 'unknown'})`,
+        400
+      );
+    }
     throw error;
   } finally {
     client.release();
   }
+
+  return {
+    gold: committedRewards.gold,
+    experience: committedRewards.experience,
+    items: committedRewards.items ?? [],
+    enemyCount,
+    playerCount,
+    stateRevision: committedEnvelope.stateRevision
+  };
 }

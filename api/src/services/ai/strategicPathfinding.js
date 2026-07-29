@@ -6,7 +6,12 @@
  * waiting when enemies are far away.
  */
 
-import { findPath, getManhattanDistance } from '../../../../shared/pathfinding.js';
+import {
+  findTraversalPath,
+  getStepCost,
+  getManhattanDistance
+} from '../../../../shared/pathfinding.js';
+import { createBattleTraversalView } from '../battle/movementService.js';
 
 /**
  * Calculate strategic path from unit to nearest enemy
@@ -23,21 +28,35 @@ export function calculateStrategicPath(unit, state) {
   let bestPath = null;
   let bestEnemy = null;
   let bestCost = Infinity;
+  const traversalView = createBattleTraversalView(state, {
+    // Strategic planning deliberately routes to an enemy's occupied tile.
+    // Normal movement validation retains the TraversalView default (false).
+    allowOccupiedGoal: true,
+    // A unit cannot bank movement points across turns, so a single step that
+    // exceeds its per-turn budget is not a viable strategic route.
+    getStepCost: ({ defaultCost }) =>
+      defaultCost <= (unit.movement || 3) ? defaultCost : Infinity
+  });
 
   for (const enemy of enemies) {
-    const path = findPath(
-      unit.tileX, unit.tileY,
-      enemy.tileX, enemy.tileY,
-      state.terrain,
-      state.units,
-      state.mapWidth || 32,
-      state.mapHeight || 32
-    );
+    const path = findTraversalPath(traversalView, {
+      start: { x: unit.tileX, y: unit.tileY },
+      goal: { x: enemy.tileX, y: enemy.tileY }
+    });
 
-    if (path && path.length < bestCost) {
+    const pathCost = path
+      ? path.slice(1).reduce((cost, point, index) => cost + getStepCost(
+        traversalView,
+        path[index],
+        point,
+        { start: path[0], goal: path[path.length - 1] }
+      ), 0)
+      : Infinity;
+
+    if (path && pathCost < bestCost) {
       bestPath = path;
       bestEnemy = enemy;
-      bestCost = path.length;
+      bestCost = pathCost;
     }
   }
 
@@ -46,8 +65,32 @@ export function calculateStrategicPath(unit, state) {
   }
 
   const movementPerTurn = unit.movement || 3;
-  const turnsToReach = Math.ceil((bestPath.length - 1) / movementPerTurn);
-  const nextWaypointIndex = Math.min(movementPerTurn, bestPath.length - 1);
+  let turnsToReach = 0;
+  let packedTurnCost = 0;
+  let nextWaypointIndex = 0;
+  let currentTurnCost = 0;
+  for (let index = 1; index < bestPath.length; index++) {
+    const stepCost = getStepCost(
+      traversalView,
+      bestPath[index - 1],
+      bestPath[index],
+      { start: bestPath[0], goal: bestPath[bestPath.length - 1] }
+    );
+    if (packedTurnCost + stepCost > movementPerTurn) {
+      turnsToReach++;
+      packedTurnCost = 0;
+    }
+    packedTurnCost += stepCost;
+    if (currentTurnCost !== null) {
+      if (currentTurnCost + stepCost > movementPerTurn) {
+        currentTurnCost = null;
+      } else {
+        currentTurnCost += stepCost;
+        nextWaypointIndex = index;
+      }
+    }
+  }
+  if (packedTurnCost > 0) turnsToReach++;
 
   return {
     path: bestPath,

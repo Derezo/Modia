@@ -1,0 +1,14 @@
+[
+  {
+    "id": "v2-swamp-s63-32x32-pve",
+    "status": "generation-error",
+    "error": {
+      "name": "CandidateSelectionError",
+      "message": "No acceptable V2 candidate after 6 deterministic attempts"
+    },
+    "failedHardChecks": [],
+    "failedTacticalChecks": [],
+    "failedQualityChecks": [],
+    "failedGuardrails": []
+  }
+]

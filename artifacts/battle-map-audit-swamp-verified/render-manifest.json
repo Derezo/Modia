@@ -1,0 +1,500 @@
+{
+  "schema": "battle-map-audit-v2",
+  "fixtures": [
+    {
+      "id": "v2-swamp-s0-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s0-32x32-pve.json",
+      "hash": "sha256:cf325bfd9034609327bb41616a9f6e86744225c9281e61755dee9f438fadd136"
+    },
+    {
+      "id": "v2-swamp-s1-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s1-32x32-pve.json",
+      "hash": "sha256:cc6961e2c0680df986091b65188cf6bee8550851957183be70101d80ff333066"
+    },
+    {
+      "id": "v2-swamp-s2-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s2-32x32-pve.json",
+      "hash": "sha256:d2a849553620469239d8c09f2b17eac903309a71049f939ddc9a4d39f5f55214"
+    },
+    {
+      "id": "v2-swamp-s3-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s3-32x32-pve.json",
+      "hash": "sha256:162c97f11e678a1ec1f8da37fde3efe4a4c5455c7ca803e5fc95128ad375ef08"
+    },
+    {
+      "id": "v2-swamp-s4-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s4-32x32-pve.json",
+      "hash": "sha256:392270409141f4e7c4eaeb90a43de14b9a735f2e590ccd8aa15b171434f77edc"
+    },
+    {
+      "id": "v2-swamp-s5-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s5-32x32-pve.json",
+      "hash": "sha256:fe01ac5072f5c4579f099fa6cded7896b288687337b8d4a908747debca23aa59"
+    },
+    {
+      "id": "v2-swamp-s6-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s6-32x32-pve.json",
+      "hash": "sha256:84ffdcd92a5b5a95e596f37560aa90ccf8cbe73b9de1091f16718063851b4591"
+    },
+    {
+      "id": "v2-swamp-s7-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s7-32x32-pve.json",
+      "hash": "sha256:aabd6bc3cdc4971b1204a09c11b382f9580c2dab27e41b0648b5ead47826eaef"
+    },
+    {
+      "id": "v2-swamp-s8-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s8-32x32-pve.json",
+      "hash": "sha256:be6815fae75700a5af7d88a1e1fa19c33e34501ac39e3374bfd073f856e5a90c"
+    },
+    {
+      "id": "v2-swamp-s9-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s9-32x32-pve.json",
+      "hash": "sha256:bcf928d3a2b202a75c9daa3a86f5500befd20b0724eb6d0b7e58afdb1033e44a"
+    },
+    {
+      "id": "v2-swamp-s10-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s10-32x32-pve.json",
+      "hash": "sha256:8bdb9119c1db479e8d269b6177c28d0023b15886772e856bff08f9d761b2f18a"
+    },
+    {
+      "id": "v2-swamp-s11-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s11-32x32-pve.json",
+      "hash": "sha256:8ada669a5ddea4aa8f3bb047d9ba0f33c9c64c0de5a1276fc3df73e42fc9df75"
+    },
+    {
+      "id": "v2-swamp-s12-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s12-32x32-pve.json",
+      "hash": "sha256:a1c06fbd98f411ac747df1ad505d6949fee11a8f62a47a44113eac33c2f897b5"
+    },
+    {
+      "id": "v2-swamp-s13-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s13-32x32-pve.json",
+      "hash": "sha256:21daba4addf0680f3dc5580b0c6f1b64532f56933a9da81e8d0929e98822e389"
+    },
+    {
+      "id": "v2-swamp-s14-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s14-32x32-pve.json",
+      "hash": "sha256:a789fce64a718a16b69e8fa6598e6523f459e09eb4fcad590dcc01357ba1a91b"
+    },
+    {
+      "id": "v2-swamp-s15-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s15-32x32-pve.json",
+      "hash": "sha256:d1100b3ec4c594e45d3ae9dc8209552fd492d8e0d852774152310d52e4aa7347"
+    },
+    {
+      "id": "v2-swamp-s16-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s16-32x32-pve.json",
+      "hash": "sha256:577a4f1741c8e9244d7e78894d1496182a58b0102f4a88d71fb35a1c70c82151"
+    },
+    {
+      "id": "v2-swamp-s17-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s17-32x32-pve.json",
+      "hash": "sha256:8b1e59935f545c55055a357c8c507aebfea042b91df83ea684f3c460e1f1ab53"
+    },
+    {
+      "id": "v2-swamp-s18-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s18-32x32-pve.json",
+      "hash": "sha256:fbcbfe7583f6fd0b9588e46ba9bcfbd061b16204d4e1a3f260c42ea5468e2cd9"
+    },
+    {
+      "id": "v2-swamp-s19-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s19-32x32-pve.json",
+      "hash": "sha256:e194652ff77eb06896188ea3bb1fbe407d8c3873db1cf0b31c259167b995ee7d"
+    },
+    {
+      "id": "v2-swamp-s20-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s20-32x32-pve.json",
+      "hash": "sha256:3a6d657a2abb220036c4e601e8081471cd1734dde7bd48b7cca68784a3ddb046"
+    },
+    {
+      "id": "v2-swamp-s21-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s21-32x32-pve.json",
+      "hash": "sha256:c20f97159668588944a7f82094fc0d72cdd1d10c0809a030f89f16989722e958"
+    },
+    {
+      "id": "v2-swamp-s22-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s22-32x32-pve.json",
+      "hash": "sha256:26f1bc5f4ead3dc5a00821b7ba4d53074d28815355510149b1dd9ffacf2ff2e9"
+    },
+    {
+      "id": "v2-swamp-s23-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s23-32x32-pve.json",
+      "hash": "sha256:46547ae1b1d5fad44609fa855fd3b3d30912a50dd9d88610faf4d9489f113687"
+    },
+    {
+      "id": "v2-swamp-s24-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s24-32x32-pve.json",
+      "hash": "sha256:f4525cea1a3c361d1b1e93e3015c5b85b065b9f0286d2518152f48aaa8e2cc94"
+    },
+    {
+      "id": "v2-swamp-s25-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s25-32x32-pve.json",
+      "hash": "sha256:2ae65854eb0f4bac2c07b1860628633312497bc284a9569aa76df7fe3da78c85"
+    },
+    {
+      "id": "v2-swamp-s26-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s26-32x32-pve.json",
+      "hash": "sha256:d800330b4c787ff3926fba8e60ae22260c6033d4c8e7abd684891add9db60fe4"
+    },
+    {
+      "id": "v2-swamp-s27-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s27-32x32-pve.json",
+      "hash": "sha256:8ce314980ce433e5ec382ceff07a71318c70c6e789c9cf1ef8779b05408c3506"
+    },
+    {
+      "id": "v2-swamp-s28-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s28-32x32-pve.json",
+      "hash": "sha256:d86fff203672949ac7ad00a90376c9bb0f0b20d8398214490c7fdc80dabcf13e"
+    },
+    {
+      "id": "v2-swamp-s29-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s29-32x32-pve.json",
+      "hash": "sha256:13856ceaa4d725efc003bafeeb8cd7690cc6d3657bc122d5c9d59e4385c170e3"
+    },
+    {
+      "id": "v2-swamp-s30-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s30-32x32-pve.json",
+      "hash": "sha256:835345b8a908439a1e7745fb41ed663010b29d3fb3f9b73b0eadc760a38dcc56"
+    },
+    {
+      "id": "v2-swamp-s31-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s31-32x32-pve.json",
+      "hash": "sha256:f9842f9f699a7f8f91b3d987e6f6e90b0f4ea5a1dbef64ab3774c09db92132fb"
+    },
+    {
+      "id": "v2-swamp-s32-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s32-32x32-pve.json",
+      "hash": "sha256:6145c690703a9b75ba3bbcb1a3cd53849bfa1eaf5749f71c312b2c974a3282de"
+    },
+    {
+      "id": "v2-swamp-s33-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s33-32x32-pve.json",
+      "hash": "sha256:dda8d222d347f86c08cca5644a0a048eb66451ac31718b55ef11ee443e47f0e4"
+    },
+    {
+      "id": "v2-swamp-s34-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s34-32x32-pve.json",
+      "hash": "sha256:d26c5e7f56d251a7fb4b70d257d828fc6d9dc430b7cc7fa642bd08322ac5696a"
+    },
+    {
+      "id": "v2-swamp-s35-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s35-32x32-pve.json",
+      "hash": "sha256:17057f1c5a91bd5db53d317f4f807e7a70dbef1655304b1d970c9e71cd2dee2e"
+    },
+    {
+      "id": "v2-swamp-s36-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s36-32x32-pve.json",
+      "hash": "sha256:a9f16a53f9958a7983f1277428ce52ab2b530802432560509456ab89bb0d620b"
+    },
+    {
+      "id": "v2-swamp-s37-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s37-32x32-pve.json",
+      "hash": "sha256:de2b1b07211879a694a0055f906f7535fc81a1ac755cc4f70f4f5e9a1d362f28"
+    },
+    {
+      "id": "v2-swamp-s38-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s38-32x32-pve.json",
+      "hash": "sha256:000710e9918b23ec9f6706a3b30ee01d4b12bc323736cd089ec3e38cb0728f16"
+    },
+    {
+      "id": "v2-swamp-s39-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s39-32x32-pve.json",
+      "hash": "sha256:93722dc676669da2d590c684c02857f9ef2c442b484e023135433e019f4673b4"
+    },
+    {
+      "id": "v2-swamp-s40-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s40-32x32-pve.json",
+      "hash": "sha256:399676e121c182730f69c0bbafe26387aeeb0860aff93c22d04a4b36f0896540"
+    },
+    {
+      "id": "v2-swamp-s41-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s41-32x32-pve.json",
+      "hash": "sha256:cb17d731061e6dd5aecb993a94bdf3213bcb37c4a1cf6b19ef44093ae8bf5e27"
+    },
+    {
+      "id": "v2-swamp-s42-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s42-32x32-pve.json",
+      "hash": "sha256:05f9a38ab47b57d23d6c748c0fa2a7bfb64dcf918a78aab454065af49ec5f101"
+    },
+    {
+      "id": "v2-swamp-s43-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s43-32x32-pve.json",
+      "hash": "sha256:60e7170f8cde319932db7e53320d89794f8112c8789987a4c0971f91c94b4a47"
+    },
+    {
+      "id": "v2-swamp-s44-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s44-32x32-pve.json",
+      "hash": "sha256:2d33e7804fa97e3d0baa5d5fa206ea7f104b79e53dedad55415da0d363daede5"
+    },
+    {
+      "id": "v2-swamp-s45-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s45-32x32-pve.json",
+      "hash": "sha256:b17f2c9f3bf2a1794a32be3c46a9d047b43c3965559dd829bf264a951b41a665"
+    },
+    {
+      "id": "v2-swamp-s46-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s46-32x32-pve.json",
+      "hash": "sha256:1f550bbeeffa662bb7cc46e907728e7948d6cfd961c9f06f2bdebbbaf5d8ff38"
+    },
+    {
+      "id": "v2-swamp-s47-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s47-32x32-pve.json",
+      "hash": "sha256:3dab442e4f01c086452824147352e5d833ec1a89a95ad7ee391ddf0272198d18"
+    },
+    {
+      "id": "v2-swamp-s48-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s48-32x32-pve.json",
+      "hash": "sha256:6b9ba3be3fbf62a6950c8119663035da11bdb9178b83ddd3f9a4c0edb44d156c"
+    },
+    {
+      "id": "v2-swamp-s49-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s49-32x32-pve.json",
+      "hash": "sha256:3badd301f4ba91818ce6d64aca0fcbd1273c0f62cbb9fc1205dc2a756eea726e"
+    },
+    {
+      "id": "v2-swamp-s50-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s50-32x32-pve.json",
+      "hash": "sha256:a2d7ea7701700bdc3a7b0d2f28fcb2195ba50af7b804e606bb5c80174d54e694"
+    },
+    {
+      "id": "v2-swamp-s51-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s51-32x32-pve.json",
+      "hash": "sha256:0812ac4dbec1130f2503dc4b1295554e633acb6f018a29ec526a9cec4e166241"
+    },
+    {
+      "id": "v2-swamp-s52-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s52-32x32-pve.json",
+      "hash": "sha256:5d33f71f01e960481bdfcc24d129d08aeb70397241c8c15f15baf95b3aa198f7"
+    },
+    {
+      "id": "v2-swamp-s53-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s53-32x32-pve.json",
+      "hash": "sha256:3a21fb99302e89b53dc38ea8e23107eb4b446e9e3792886e26de88a16a1f01cb"
+    },
+    {
+      "id": "v2-swamp-s54-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s54-32x32-pve.json",
+      "hash": "sha256:9a0860da3de3678a6b6f2814199edf31afd528a9bcdee75c773052c798ed8022"
+    },
+    {
+      "id": "v2-swamp-s55-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s55-32x32-pve.json",
+      "hash": "sha256:c7a7c123cf66132991a917a89a789d1119802eab682a5c8baf85efb48454e98c"
+    },
+    {
+      "id": "v2-swamp-s56-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s56-32x32-pve.json",
+      "hash": "sha256:d1b7442604441addd538285fc78c500270e6caa7911e554441f9cc11b871ba07"
+    },
+    {
+      "id": "v2-swamp-s57-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s57-32x32-pve.json",
+      "hash": "sha256:afe6d4fb8c1a2d8063ad9061296f85e421928cd0053c60b3c660feab3f7e2652"
+    },
+    {
+      "id": "v2-swamp-s58-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s58-32x32-pve.json",
+      "hash": "sha256:7c908df1425db5dc65bbd9d888615d1dcb5a6ab13edd8619fd7acfd395988ba5"
+    },
+    {
+      "id": "v2-swamp-s59-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s59-32x32-pve.json",
+      "hash": "sha256:c23bd1e11ae6e89bfff4e1be431ca048efdfe65c8d5c0d0ff23e785c68ffaf2c"
+    },
+    {
+      "id": "v2-swamp-s60-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s60-32x32-pve.json",
+      "hash": "sha256:89c4a53397743b05da19d8ab190aa50b4fce0b8f451a1360e53bb6eccd094e90"
+    },
+    {
+      "id": "v2-swamp-s61-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s61-32x32-pve.json",
+      "hash": "sha256:eb3231f02b3eea98317a3b227ade515793f6a9d25f005cff44838a0e55749567"
+    },
+    {
+      "id": "v2-swamp-s62-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s62-32x32-pve.json",
+      "hash": "sha256:4134ce3aa37febbe27a57ae27615bc37e6455063abc8786248cbfd44533a85c8"
+    },
+    {
+      "id": "v2-swamp-s64-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s64-32x32-pve.json",
+      "hash": "sha256:cc3db2a4833eeda129898b23e6d9e5ab6b1c3185df525ca60e80636cd40be2bb"
+    },
+    {
+      "id": "v2-swamp-s65-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s65-32x32-pve.json",
+      "hash": "sha256:f9f3f35423e8eee8f46e1eb04db8b1939ecce16d6d801b401cfd7d3bee85c576"
+    },
+    {
+      "id": "v2-swamp-s66-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s66-32x32-pve.json",
+      "hash": "sha256:d739045965f865ffdbf8c1cbd829e0bbdee34b5c7131cd9e914bda511ee7bfe3"
+    },
+    {
+      "id": "v2-swamp-s67-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s67-32x32-pve.json",
+      "hash": "sha256:a2e8c122ceea1018c8c4da97029493aee91e754af407680fea43bc51f2680a68"
+    },
+    {
+      "id": "v2-swamp-s68-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s68-32x32-pve.json",
+      "hash": "sha256:e9d682a8691850fde8b0963303c9e411db4d0bb85a972cc3ecae7b29c5700faa"
+    },
+    {
+      "id": "v2-swamp-s69-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s69-32x32-pve.json",
+      "hash": "sha256:597962b9a067df3a37a8e21ad6e1e0d5792a7cad085327ef09d9846c67a7e0ab"
+    },
+    {
+      "id": "v2-swamp-s70-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s70-32x32-pve.json",
+      "hash": "sha256:65ec066191af49b915bc64c297000182e90e37d29db12108716b8b775a6bde11"
+    },
+    {
+      "id": "v2-swamp-s71-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s71-32x32-pve.json",
+      "hash": "sha256:e9d6c390af72c8b78cc37990b1831c83a1e4d9f131e023882d38f2934960c4cd"
+    },
+    {
+      "id": "v2-swamp-s72-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s72-32x32-pve.json",
+      "hash": "sha256:ffacf5611092cb8c8fefcdeaad6234cd7b83d14e47e6b904213c004d2a3e151d"
+    },
+    {
+      "id": "v2-swamp-s73-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s73-32x32-pve.json",
+      "hash": "sha256:67679eb6b78ccac4e75d34eda470eaed7f80833baa4485dabae365ef1c6cfdaf"
+    },
+    {
+      "id": "v2-swamp-s74-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s74-32x32-pve.json",
+      "hash": "sha256:1a679fbdd743c17fdab69c4be16e15fc77afd080373390ffd6d903dd4bd7665f"
+    },
+    {
+      "id": "v2-swamp-s75-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s75-32x32-pve.json",
+      "hash": "sha256:b0b48b95739ae9ca2cbc215a0441ac31acc03d8b6a4542300b14117d1c663a7d"
+    },
+    {
+      "id": "v2-swamp-s76-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s76-32x32-pve.json",
+      "hash": "sha256:0b90f672ca107fd3468538dc7191f3137a1fca836344087c556a8a26562498b4"
+    },
+    {
+      "id": "v2-swamp-s77-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s77-32x32-pve.json",
+      "hash": "sha256:f94ab26824e191be1752abdb35c22fd36b61009dd9648c22744e25b8002507c1"
+    },
+    {
+      "id": "v2-swamp-s78-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s78-32x32-pve.json",
+      "hash": "sha256:3cc75ed4c6d11e8ab4d134a91eb173499fe23db8d6d214ef7556a55e1fdb2273"
+    },
+    {
+      "id": "v2-swamp-s79-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s79-32x32-pve.json",
+      "hash": "sha256:d561d1e1c1ce862b7000b1c3031fdac5a8825c8bd25b626109eb521ad2bbbcae"
+    },
+    {
+      "id": "v2-swamp-s80-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s80-32x32-pve.json",
+      "hash": "sha256:aebfc7011db75a0cc52d5f1092ed73818c833182ca71a89f7103a8bca83c0756"
+    },
+    {
+      "id": "v2-swamp-s81-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s81-32x32-pve.json",
+      "hash": "sha256:102971afed5bc2ee29dda53b9a2396627f963bbe184d9b04e590ffcde3b0b471"
+    },
+    {
+      "id": "v2-swamp-s82-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s82-32x32-pve.json",
+      "hash": "sha256:fba2a1643834beff54ad503f157cee2ee738e5d7c25e10bfc99e6b900f335d60"
+    },
+    {
+      "id": "v2-swamp-s83-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s83-32x32-pve.json",
+      "hash": "sha256:e59ba97880e835eccf316208bd7c86d1780689621960e5d82dfadf76a63c8fba"
+    },
+    {
+      "id": "v2-swamp-s84-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s84-32x32-pve.json",
+      "hash": "sha256:dd6401051c19a8f481d4dab4d08987930aeb4adacf140f239c068f310c1e4b45"
+    },
+    {
+      "id": "v2-swamp-s85-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s85-32x32-pve.json",
+      "hash": "sha256:147f223f1c4dc64ab6365c78b05d90a112507ece61543310bc07596ea0cb84dc"
+    },
+    {
+      "id": "v2-swamp-s86-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s86-32x32-pve.json",
+      "hash": "sha256:2ba0138bdd999eadf1462f4020b372af59150c751ce3ef25092a3bd79496d738"
+    },
+    {
+      "id": "v2-swamp-s87-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s87-32x32-pve.json",
+      "hash": "sha256:a1581c921686dfc750998fff9aa41ad8a9db91eb194754ae499c9a3e14a22136"
+    },
+    {
+      "id": "v2-swamp-s88-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s88-32x32-pve.json",
+      "hash": "sha256:bd6fad7e3015b19aeb8d14df11e8b4fa54de509773df7d302968b3c5f22e947b"
+    },
+    {
+      "id": "v2-swamp-s89-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s89-32x32-pve.json",
+      "hash": "sha256:28b20a9b4837fa99a94f487f59b99931650e4d8dd24046a578e3251cb06a8d73"
+    },
+    {
+      "id": "v2-swamp-s90-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s90-32x32-pve.json",
+      "hash": "sha256:c24c704a917dd4ee9ed831a724c79859e9f11ee2f3562ad25295a6251a67186f"
+    },
+    {
+      "id": "v2-swamp-s91-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s91-32x32-pve.json",
+      "hash": "sha256:cbfd19020dcf0095a83d7ac3c00cf508f9a2feb8704b2615dd7136b7f3d21005"
+    },
+    {
+      "id": "v2-swamp-s92-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s92-32x32-pve.json",
+      "hash": "sha256:a041d97b0a5138eecfff80e7bfd72a3da883007087dd35ccd527d7a9c4cf883f"
+    },
+    {
+      "id": "v2-swamp-s93-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s93-32x32-pve.json",
+      "hash": "sha256:f709e38e6a6778b3d3602cf303cadf842a173d71a0d6ccc2c39b52faf082e458"
+    },
+    {
+      "id": "v2-swamp-s94-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s94-32x32-pve.json",
+      "hash": "sha256:bdfdad7802973ffa1f75c129dd7dac09319d05d5ea94dc2be3a8b508f50b2ea0"
+    },
+    {
+      "id": "v2-swamp-s95-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s95-32x32-pve.json",
+      "hash": "sha256:ef5ceff4fa66ed8183caa1306a17994a7603d8abf58abd97a4675f2dcc8cee2f"
+    },
+    {
+      "id": "v2-swamp-s96-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s96-32x32-pve.json",
+      "hash": "sha256:8153dbb84490bff9a7cde41f362e008420f4807f47055a032abb643023b013df"
+    },
+    {
+      "id": "v2-swamp-s97-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s97-32x32-pve.json",
+      "hash": "sha256:64c73255f7e1f0c94ecaf81c550d81fcd30217813bd5cdf13e3d8ffece4c2648"
+    },
+    {
+      "id": "v2-swamp-s98-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s98-32x32-pve.json",
+      "hash": "sha256:b9f6db768521ab4623c0161fbd2464f0c75170f8987fcb041a12666bf4c5d827"
+    },
+    {
+      "id": "v2-swamp-s99-32x32-pve",
+      "file": "render-fixtures/v2-swamp-s99-32x32-pve.json",
+      "hash": "sha256:ec4bd32358fcaca55bf656c6838d95d15e19357525ec2d2146f94d9dee729d8a"
+    }
+  ]
+}

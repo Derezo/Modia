@@ -38,11 +38,20 @@ const UNDERDOG_PPR_THRESHOLD = 0.20;
  * @param {number} matchResult.loserRating - Loser's rating before match
  * @param {number} matchResult.winnerPPR - Winner's Player Power Rating
  * @param {number} matchResult.loserPPR - Loser's Player Power Rating
- * @param {Object} matchResult.battleState - Final battle state
+ * @param {Object} [matchResult.battleState] - Final battle state
+ * @param {{flawless: boolean, comeback: boolean}} [matchResult.outcome] -
+ *   Precomputed terminal outcome for a durable/replayable handler
  * @param {number} matchResult.winnerNewRating - Winner's rating after match
+ * @param {Object} [options]
+ * @param {boolean} [options.throwOnAwardError=false] - Re-throw inserts so a
+ *   durable caller can retry instead of silently losing an award
  * @returns {Promise<Array>} Array of newly awarded badges
  */
-async function checkAndAwardBadges(userId, matchResult) {
+async function checkAndAwardBadges(
+  userId,
+  matchResult,
+  { throwOnAwardError = false } = {}
+) {
   const newBadges = [];
 
   // Get user's current achievements to avoid re-awarding
@@ -61,7 +70,7 @@ async function checkAndAwardBadges(userId, matchResult) {
   // Check milestone badges (win count)
   for (const [badgeKey, requiredWins] of Object.entries(WIN_THRESHOLDS)) {
     if (!existingKeys.has(badgeKey) && wins >= requiredWins) {
-      const awarded = await awardBadge(userId, badgeKey);
+      const awarded = await awardBadge(userId, badgeKey, { throwOnAwardError });
       if (awarded) {
         newBadges.push({ key: badgeKey, ...ACHIEVEMENT_BADGES[badgeKey] });
       }
@@ -72,7 +81,7 @@ async function checkAndAwardBadges(userId, matchResult) {
   const currentTier = getTierName(currentRating);
   for (const [badgeKey, requiredTier] of Object.entries(TIER_BADGES)) {
     if (!existingKeys.has(badgeKey) && isTierAtLeast(currentTier, requiredTier)) {
-      const awarded = await awardBadge(userId, badgeKey);
+      const awarded = await awardBadge(userId, badgeKey, { throwOnAwardError });
       if (awarded) {
         newBadges.push({ key: badgeKey, ...ACHIEVEMENT_BADGES[badgeKey] });
       }
@@ -82,7 +91,7 @@ async function checkAndAwardBadges(userId, matchResult) {
   // Check skill badges (match-specific feats)
   const skillBadges = checkSkillBadges(matchResult, existingKeys);
   for (const badgeKey of skillBadges) {
-    const awarded = await awardBadge(userId, badgeKey);
+    const awarded = await awardBadge(userId, badgeKey, { throwOnAwardError });
     if (awarded) {
       newBadges.push({ key: badgeKey, ...ACHIEVEMENT_BADGES[badgeKey] });
     }
@@ -104,7 +113,8 @@ function checkSkillBadges(matchResult, existingKeys) {
     loserRating = 1000,
     winnerPPR = 0,
     loserPPR = 0,
-    battleState
+    battleState,
+    outcome
   } = matchResult;
 
   // Giant Slayer: Beat opponent 200+ ELO above you
@@ -124,8 +134,8 @@ function checkSkillBadges(matchResult, existingKeys) {
   }
 
   // Check battle state for flawless and comeback badges
-  if (battleState && battleState.units) {
-    const { flawless, comeback } = analyzeBattleOutcome(battleState);
+  if (outcome || (battleState && battleState.units)) {
+    const { flawless, comeback } = outcome ?? analyzeBattleOutcome(battleState);
 
     // Flawless: Win without losing a single unit
     if (!existingKeys.has('flawless') && flawless) {
@@ -202,9 +212,15 @@ function isTierAtLeast(currentTier, requiredTier) {
  * Award a badge to a user
  * @param {number} userId - User ID
  * @param {string} badgeKey - Achievement key
+ * @param {Object} [options]
+ * @param {boolean} [options.throwOnAwardError=false]
  * @returns {Promise<boolean>} True if badge was awarded (not already owned)
  */
-async function awardBadge(userId, badgeKey) {
+async function awardBadge(
+  userId,
+  badgeKey,
+  { throwOnAwardError = false } = {}
+) {
   try {
     const result = await query(
       `INSERT INTO pvp_achievements (user_id, achievement_key)
@@ -217,6 +233,7 @@ async function awardBadge(userId, badgeKey) {
     return result.rows.length > 0;
   } catch (error) {
     console.error(`[Achievement] Failed to award badge ${badgeKey} to user ${userId}:`, error);
+    if (throwOnAwardError) throw error;
     return false;
   }
 }

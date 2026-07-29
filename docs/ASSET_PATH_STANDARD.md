@@ -183,13 +183,16 @@ Visual overlays for item rarity and augment effects with size directories.
 ### Character Sprites
 
 Player sprites use the same race/gender/class identity as their portrait card.
-Legacy class-only directories remain a temporary runtime fallback while the
-variant registry is generated. Enemy paths remain biome-scoped because runtime
-encounters resolve art from the active zone.
+Runtime lookups require that complete identity and never fall back to a
+class-only directory. Enemy paths use each registered identity's canonical
+authored biome even when that enemy appears in another encounter theme.
+Guildmasters and disciples are explicit NPC aliases to canonical authored
+player identities; they reuse those player sheets and portraits rather than
+creating untracked enemy or map-theme variants. The runtime validator checks
+every registered alias across every encounter theme.
 
 - **Player Pattern:** `/assets/characters/player/{race}/{gender}/{class}/{race}_{gender}_{class}_{action}.webp`
 - **Canonical Player Reference:** `/assets/characters/player/{race}/{gender}/{class}/{race}_{gender}_{class}_reference.png`
-- **Legacy Player Fallback:** `/assets/characters/player/{class}/{class}_{action}.webp`
 - **Enemy Pattern:** `/assets/characters/enemies/{biome}/{enemy}/{enemy}_{action}.webp`
 - **Player Actions:** `idle`, `walk`, `attack`, `hurt`, `death`, `dead`, plus class-specific `cast`/`victory`
 - **Enemy Actions:** `idle`, `attack`, `hit`, `death`, `dead`
@@ -201,7 +204,7 @@ Examples:
 /assets/characters/player/orc/female/warrior/orc_female_warrior_walk.webp
 /assets/characters/player/elf/other/martial_artist/elf_other_martial_artist_attack.webp
 /assets/characters/player/dwarf/female/chemist/dwarf_female_chemist_reference.png
-/assets/characters/enemies/cave/giant_spider/giant_spider_hit.webp
+/assets/characters/enemies/forest/giant_spider/giant_spider_hit.webp
 ```
 
 Local-diffusion player reference candidates live under `ai-images-temp/characters/identity-candidates/`, outside `frontend/public`; they are never runtime paths. A candidate becomes canonical only through the targeted, manually audited promotion flow documented in [AI_IMAGE_GENERATION.md](AI_IMAGE_GENERATION.md#diffusion-candidates-and-targeted-promotion).

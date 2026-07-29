@@ -19,6 +19,8 @@ import * as battleService from './battleService.js';
 import * as itemDropService from './itemDropService.js';
 import * as advancementQuestService from './advancementQuestService.js';
 import * as dailyQuestService from './dailyQuestService.js';
+import battleStateRepository from './battle/BattleStateRepository.js';
+import { extractBattleMutableState } from './battle/battleMapGenerationService.js';
 
 /**
  * Compute rewards data for a victorious battle.
@@ -35,12 +37,14 @@ export async function computeRewards(state, battleId) {
     players.reduce((sum, u) => sum + (u.level || 1), 0) / players.length
   ) || 1;
 
+  const battle = await battleStateRepository.loadBattle(battleId);
+
   // Get node info for rewards calculation
   const nodeResult = await query(
     `SELECT wn.id as node_id, wn.difficulty_tier, wn.node_type
      FROM world_nodes wn
-     WHERE wn.id = (SELECT node_id FROM battles WHERE id = $1)`,
-    [battleId]
+     WHERE wn.id = $1`,
+    [battle.nodeId]
   );
   const nodeId = nodeResult.rows[0]?.node_id;
   const difficultyTier = nodeResult.rows[0]?.difficulty_tier || 1;
@@ -76,53 +80,115 @@ export async function computeRewards(state, battleId) {
  * @param {number} userId - User to receive rewards
  * @param {Object} rewardsData - Output from computeRewards
  * @param {number} battleId - Battle ID
- * @returns {Promise<void>}
+ * @param {Object} options - Optional post-action state and caller transaction
+ * @returns {Promise<Object>} Authoritative stored rewards and repository result
  */
-export async function distributeRewards(userId, rewardsData, battleId) {
+export async function distributeRewards(
+  userId,
+  rewardsData,
+  battleId,
+  { finalState = null, client = null } = {}
+) {
   const { gold, experience, droppedItems, items, nodeId, nodeType, players } = rewardsData;
 
-  await withTransaction(async (client) => {
-    // Update battle record with rewards
+  const distribute = async (transactionClient) => {
     const rewardsRecord = {
       gold,
       experience,
       items
     };
-    await client.query(
-      'UPDATE battles SET rewards = $1, ended_at = NOW() WHERE id = $2',
-      [JSON.stringify(rewardsRecord), battleId]
-    );
+    const battle = await battleStateRepository.loadBattle(battleId, {
+      client: transactionClient,
+      forUpdate: true
+    });
+    if (battle.rewards !== null) {
+      return {
+        rewards: battle.rewards,
+        envelope: battle,
+        update: null,
+        idempotent: true
+      };
+    }
+
+    const command = {
+      battleId,
+      expectedRevision: battle.stateRevision,
+      commandType: 'battle_rewards',
+      idempotencyKey: `battle-rewards:${battleId}:${userId}`,
+      mutableState: finalState === null
+        ? battle.mutableState
+        : extractBattleMutableState(finalState)
+    };
+    const committed = battle.status === 'active'
+      ? await battleStateRepository.completeBattle({
+        ...command,
+        status: 'victory',
+        winnerId: userId,
+        rewards: rewardsRecord
+      }, { client: transactionClient })
+      : await battleStateRepository.commitMutableState({
+        ...command,
+        lifecycle: {
+          rewards: rewardsRecord,
+          endedAt: battle.endedAt ?? new Date().toISOString()
+        },
+        allowedStatuses: ['victory']
+      }, { client: transactionClient });
+    if (committed.idempotent) {
+      const stored = await battleStateRepository.loadBattle(battleId, {
+        client: transactionClient,
+        forUpdate: true
+      });
+      return {
+        rewards: stored.rewards,
+        envelope: stored,
+        update: null,
+        idempotent: true
+      };
+    }
 
     // Award gold to user (capped at MAX_GOLD to prevent overflow)
-    await client.query(
+    await transactionClient.query(
       'UPDATE users SET gold = LEAST(gold + $1, $2) WHERE id = $3',
       [gold, MAX_GOLD, userId]
     );
 
     // Distribute XP to battle party characters
-    const xpPerCharacter = Math.floor(experience / players.length);
-    await client.query(
+    const xpPerCharacter = Math.floor(experience / Math.max(players.length, 1));
+    await transactionClient.query(
       `UPDATE characters
-       SET experience = experience + $1
+       SET experience = experience + $1,
+           in_battle = false
        WHERE user_id = $2 AND party_slot <= $3 AND party_slot IS NOT NULL`,
       [xpPerCharacter, userId, MAX_BATTLE_PARTY_SIZE]
     );
 
     // Store dropped items in user's shared inventory
     for (const item of droppedItems) {
-      await itemDropService.storeDroppedItem(userId, item, client);
+      await itemDropService.storeDroppedItem(userId, item, transactionClient);
     }
 
     // Clear combat node on victory (allows player to pass through in future)
     if (nodeId && BATTLE_NODE_TYPES.includes(nodeType)) {
-      await client.query(
+      await transactionClient.query(
         `INSERT INTO user_node_clearance (user_id, node_id, battle_id)
          VALUES ($1, $2, $3)
          ON CONFLICT (user_id, node_id) DO NOTHING`,
         [userId, nodeId, battleId]
       );
     }
-  });
+
+    return {
+      rewards: rewardsRecord,
+      envelope: committed.envelope,
+      update: committed.update,
+      idempotent: false
+    };
+  };
+
+  return client
+    ? distribute(client)
+    : withTransaction(distribute);
 }
 
 /**
@@ -238,14 +304,10 @@ export async function clearInBattleStatus(userId) {
  * @returns {Promise<{isAdvancementBattle: boolean, challengerCharacterId: number|null}>}
  */
 export async function getAdvancementBattleInfo(battleId) {
-  const result = await query(
-    `SELECT is_advancement_battle, challenger_character_id
-     FROM battles WHERE id = $1`,
-    [battleId]
-  );
+  const battle = await battleStateRepository.loadBattle(battleId);
   return {
-    isAdvancementBattle: result.rows[0]?.is_advancement_battle || false,
-    challengerCharacterId: result.rows[0]?.challenger_character_id || null
+    isAdvancementBattle: battle.isAdvancementBattle,
+    challengerCharacterId: battle.challengerCharacterId
   };
 }
 

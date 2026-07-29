@@ -1,0 +1,584 @@
+{
+  "version": "1.0.0",
+  "template": "ai-image-metadata/characters/player-authored-animation-template.json",
+  "compilerVersion": "1.2.0",
+  "id": "dwarf_female_alchemist",
+  "profile": "alchemist_v1",
+  "profileSource": "ai-image-metadata/characters/player-animation-profiles/alchemist_v1.json",
+  "status": "approved",
+  "approvedAt": "2026-07-29T02:21:06.515Z",
+  "metadataFingerprint": "681be8942adc573aec3dc2a94f6f35eee419831e2a73084b402adc5676dd3640",
+  "draftProvenance": {
+    "registry": "ai-image-metadata/characters/player-variants.json",
+    "templateSha256": "7943e69db577b3a4429b47df634f931d3f4cb8e8ce9a91a06578255fbe935bbe",
+    "profileSha256": "9defa20c4335c063839a1c4bfa6c4a5bbc86f4eeda04d58b1a7f38c766e87053"
+  },
+  "identity": {
+    "race": "dwarf",
+    "gender": "female",
+    "class": "alchemist",
+    "presentation": "female dwarf alchemist",
+    "visualTraits": "dwarf stout build thick beard braided hair sturdy female feminine features master chemist elaborate vials bubbling potions leather apron goggles transmutation circle",
+    "baseFacing": "three-quarters right",
+    "sourceMetadata": {
+      "isAdvanced": true,
+      "inheritsFrom": "alchemist",
+      "seed": 22029
+    }
+  },
+  "inputs": {
+    "identity": {
+      "origin": "frontend/public/assets/portraits/originals/dwarf_female_alchemist.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/dwarf_female_alchemist/inputs/identity.png",
+      "authority": "face, ancestry, gender presentation, hair, eyes, complexion, costume, palette, proportions, and equipment"
+    },
+    "style": {
+      "origin": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/dwarf_female_alchemist/inputs/style.png",
+      "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+    }
+  },
+  "reference": {
+    "source": "ai-image-metadata/characters/player-animation-sources/dwarf_female_alchemist/reference.png",
+    "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_female_alchemist/chroma/reference.png",
+    "identitySource": "ai-image-metadata/characters/player-animation-sources/dwarf_female_alchemist/inputs/identity.png",
+    "styleSource": "ai-image-metadata/characters/player-animation-sources/dwarf_female_alchemist/inputs/style.png",
+    "prompt": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative Dwarf Alchemist (female presentation) identity portrait; Image 2 is style and proportion reference only. Player identity metadata: dwarf stout build thick beard braided hair sturdy female feminine features master chemist elaborate vials bubbling potions leather apron goggles transmutation circle. Create one complete head-to-toe Dwarf Alchemist (female presentation) preserving Image 1's face, ancestry traits, gender presentation, hair, goggles, apron, vials, pouches, tools, markings, palette, and proportions. Do not import identity details from Image 2. Preserve the portrait's goggles, leather apron, elaborate vials, potions, tools, pouches, transmutation markings, and exact item count. Move exactly one established vial at a time; never duplicate it between hand and holder, invent a weapon, or transform permanent gear. Translate the portrait into a compact expert-inventor silhouette. Use a flat #00ff00 chroma key background with no floor or scenery and a square 1:1 canvas with generous padding. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered alchemist in an alert formula-testing stance facing three-quarters right. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+  },
+  "animations": {
+    "idle": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_female_alchemist/idle.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_female_alchemist/chroma/idle.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 4,
+      "frameDescriptions": [
+        "alert stance with both hands protecting supplies",
+        "measured inhale while scanning the field",
+        "weight shifts forward as one hand checks a secured vial",
+        "free hand adjusts goggles without moving the vial",
+        "centered analytical midpoint",
+        "controlled exhale as both hands withdraw",
+        "weight shifts rearward while pouches settle",
+        "alert stance flowing back to frame one"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body alchemist formula-check idle-cycle poses of the authoritative Dwarf Alchemist (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy female feminine features master chemist elaborate vials bubbling potions leather apron goggles transmutation circle. Required sequence: alert stance with both hands protecting supplies; measured inhale while scanning the field; weight shifts forward as one hand checks a secured vial; free hand adjusts goggles without moving the vial; centered analytical midpoint; controlled exhale as both hands withdraw; weight shifts rearward while pouches settle; alert stance flowing back to frame one. Motion direction: An analytical breathing loop alternates supply checks, goggle adjustment, and a careful glance at one secured vial before returning it untouched.. Overall alchemist motion is expert, inventive, quick, and controlled, with exact vial handling, guarded supplies, decisive throws, and readable reaction follow-through. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, goggles, apron, palette, proportions, vials, pouches, markings, and tools. Preserve the portrait's goggles, leather apron, elaborate vials, potions, tools, pouches, transmutation markings, and exact item count. Move exactly one established vial at a time; never duplicate it between hand and holder, invent a weapon, or transform permanent gear. All effects are physical alchemy in the portrait's established chemical palette. Reactions originate from the one handled vial or established transmutation tool and remain compact; do not add arcane casting, runes unrelated to depicted equipment, or unexplained aura. Action-specific effects: No active reaction; a tiny liquid glint may remain inside one closed secured vial. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "walk": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_female_alchemist/walk.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_female_alchemist/chroma/walk.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "left foot forward contact with one hand steadying vials",
+        "left leg compresses while bottles remain upright",
+        "passing pose with right knee advancing",
+        "right foot reaches as free arm balances",
+        "right foot forward contact with supplies secured",
+        "right leg compresses beneath the apron",
+        "passing pose with left knee advancing",
+        "left foot reaches into the brisk loop"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body alchemist supplies-secured stride poses of the authoritative Dwarf Alchemist (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy female feminine features master chemist elaborate vials bubbling potions leather apron goggles transmutation circle. Required sequence: left foot forward contact with one hand steadying vials; left leg compresses while bottles remain upright; passing pose with right knee advancing; right foot reaches as free arm balances; right foot forward contact with supplies secured; right leg compresses beneath the apron; passing pose with left knee advancing; left foot reaches into the brisk loop. Motion direction: A brisk alternating walk uses real leg compression, one hand stabilizing fragile supplies, free-arm counter-motion, and controlled apron follow-through.. Overall alchemist motion is expert, inventive, quick, and controlled, with exact vial handling, guarded supplies, decisive throws, and readable reaction follow-through. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, goggles, apron, palette, proportions, vials, pouches, markings, and tools. Preserve the portrait's goggles, leather apron, elaborate vials, potions, tools, pouches, transmutation markings, and exact item count. Move exactly one established vial at a time; never duplicate it between hand and holder, invent a weapon, or transform permanent gear. All effects are physical alchemy in the portrait's established chemical palette. Reactions originate from the one handled vial or established transmutation tool and remain compact; do not add arcane casting, runes unrelated to depicted equipment, or unexplained aura. Action-specific effects: No loose flask or reaction; all vials remain closed and secured. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "attack": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_female_alchemist/attack.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_female_alchemist/chroma/attack.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "calculating stance while selecting a formula",
+        "hand reaches precisely toward one secured vial",
+        "exactly one vial is drawn with its holder now visibly empty",
+        "deep overhand windup while the free hand aims",
+        "committed step releases the single primed vial",
+        "compact chemical impact or transmutation reaction",
+        "throwing arm follows through as supplies are steadied",
+        "recovered alert stance with remaining gear secured"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body alchemist transmuting vial throw poses of the authoritative Dwarf Alchemist (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy female feminine features master chemist elaborate vials bubbling potions leather apron goggles transmutation circle. Required sequence: calculating stance while selecting a formula; hand reaches precisely toward one secured vial; exactly one vial is drawn with its holder now visibly empty; deep overhand windup while the free hand aims; committed step releases the single primed vial; compact chemical impact or transmutation reaction; throwing arm follows through as supplies are steadied; recovered alert stance with remaining gear secured. Motion direction: The alchemist identifies a formula, draws exactly one vial, primes it with an established tool or marking, makes a planted throw, observes compact impact, and secures remaining supplies.. Overall alchemist motion is expert, inventive, quick, and controlled, with exact vial handling, guarded supplies, decisive throws, and readable reaction follow-through. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, goggles, apron, palette, proportions, vials, pouches, markings, and tools. Preserve the portrait's goggles, leather apron, elaborate vials, potions, tools, pouches, transmutation markings, and exact item count. Move exactly one established vial at a time; never duplicate it between hand and holder, invent a weapon, or transform permanent gear. All effects are physical alchemy in the portrait's established chemical palette. Reactions originate from the one handled vial or established transmutation tool and remain compact; do not add arcane casting, runes unrelated to depicted equipment, or unexplained aura. Action-specific effects: Show exactly one thrown vial and one compact physical chemical reaction at impact; never show the vial held and airborne simultaneously or add spell-casting. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "hurt": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_female_alchemist/hurt.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_female_alchemist/chroma/hurt.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "alert stance before impact",
+        "sharp flinch with arms protecting goggles and chest",
+        "maximum stagger as apron and straps swing",
+        "scrambling backward step while one hand catches the vial rack",
+        "low balance catch with supplies gathered close",
+        "careful rise while checking bottles",
+        "feet reset with all gear still attached",
+        "recovered formula-testing stance"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body alchemist inventory-protecting recovery poses of the authoritative Dwarf Alchemist (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy female feminine features master chemist elaborate vials bubbling potions leather apron goggles transmutation circle. Required sequence: alert stance before impact; sharp flinch with arms protecting goggles and chest; maximum stagger as apron and straps swing; scrambling backward step while one hand catches the vial rack; low balance catch with supplies gathered close; careful rise while checking bottles; feet reset with all gear still attached; recovered formula-testing stance. Motion direction: A sudden hit triggers an articulated flinch, backward stagger, protective clutch over fragile supplies, low balance catch, inventory check, and alert recovery.. Overall alchemist motion is expert, inventive, quick, and controlled, with exact vial handling, guarded supplies, decisive throws, and readable reaction follow-through. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, goggles, apron, palette, proportions, vials, pouches, markings, and tools. Preserve the portrait's goggles, leather apron, elaborate vials, potions, tools, pouches, transmutation markings, and exact item count. Move exactly one established vial at a time; never duplicate it between hand and holder, invent a weapon, or transform permanent gear. All effects are physical alchemy in the portrait's established chemical palette. Reactions originate from the one handled vial or established transmutation tool and remain compact; do not add arcane casting, runes unrelated to depicted equipment, or unexplained aura. Action-specific effects: One compact physical impact accent only; no gore, blood, broken bottle, duplicated vial, magic, or uncontrolled cloud. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "death": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_female_alchemist/death.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_female_alchemist/chroma/death.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "verticalAnchor": "bottom",
+      "outputFrameMap": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        7,
+        7
+      ],
+      "frameDescriptions": [
+        "fatal impact breaks the alert stance",
+        "arms gather fragile supplies as balance fails",
+        "knees buckle beneath apron and gear",
+        "one hip grounds while torso tips sideways",
+        "body reaches full ground contact with equipment attached",
+        "low fallen body and supplies settle",
+        "final fully fallen alchemist with gear at rest",
+        "same final fallen pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body alchemist defeat sequence poses of the authoritative Dwarf Alchemist (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy female feminine features master chemist elaborate vials bubbling potions leather apron goggles transmutation circle. Required sequence: fatal impact breaks the alert stance; arms gather fragile supplies as balance fails; knees buckle beneath apron and gear; one hip grounds while torso tips sideways; body reaches full ground contact with equipment attached; low fallen body and supplies settle; final fully fallen alchemist with gear at rest; same final fallen pose held. Motion direction: A final impact overwhelms the alchemist, supplies draw close, knees buckle, the body lowers through a sideward collapse, and settles fully fallen.. Overall alchemist motion is expert, inventive, quick, and controlled, with exact vial handling, guarded supplies, decisive throws, and readable reaction follow-through. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, goggles, apron, palette, proportions, vials, pouches, markings, and tools. Preserve the portrait's goggles, leather apron, elaborate vials, potions, tools, pouches, transmutation markings, and exact item count. Move exactly one established vial at a time; never duplicate it between hand and holder, invent a weapon, or transform permanent gear. All effects are physical alchemy in the portrait's established chemical palette. Reactions originate from the one handled vial or established transmutation tool and remain compact; do not add arcane casting, runes unrelated to depicted equipment, or unexplained aura. Action-specific effects: No gore, blood, explosion, broken or duplicated vial, magic, or rigid rotation; keep permanent equipment attached and recognizable. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "dead": {
+      "deriveFrom": {
+        "animation": "death",
+        "frame": 7
+      },
+      "frameDescriptions": [
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held"
+      ],
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity."
+    },
+    "victory": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_female_alchemist/victory.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_female_alchemist/chroma/victory.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "surprised realization of victory",
+        "exactly one vial lifts for close inspection",
+        "goggles angle toward the selected formula",
+        "vial rises in an inspired upright gesture",
+        "tiny controlled reaction appears above the held vial",
+        "reaction fades as the vial is secured",
+        "proud inventor stance with tools displayed",
+        "final triumphant alchemist pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body alchemist breakthrough celebration poses of the authoritative Dwarf Alchemist (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy female feminine features master chemist elaborate vials bubbling potions leather apron goggles transmutation circle. Required sequence: surprised realization of victory; exactly one vial lifts for close inspection; goggles angle toward the selected formula; vial rises in an inspired upright gesture; tiny controlled reaction appears above the held vial; reaction fades as the vial is secured; proud inventor stance with tools displayed; final triumphant alchemist pose held. Motion direction: The alchemist confirms success, selects exactly one vial, inspects it, raises it with inspiration, produces a tiny controlled reaction, secures it, and holds a brilliant finish.. Overall alchemist motion is expert, inventive, quick, and controlled, with exact vial handling, guarded supplies, decisive throws, and readable reaction follow-through. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, goggles, apron, palette, proportions, vials, pouches, markings, and tools. Preserve the portrait's goggles, leather apron, elaborate vials, potions, tools, pouches, transmutation markings, and exact item count. Move exactly one established vial at a time; never duplicate it between hand and holder, invent a weapon, or transform permanent gear. All effects are physical alchemy in the portrait's established chemical palette. Reactions originate from the one handled vial or established transmutation tool and remain compact; do not add arcane casting, runes unrelated to depicted equipment, or unexplained aura. Action-specific effects: One handheld vial may produce a tiny contained fizz, puff, or sparkle; never duplicate it or create a spell. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    }
+  },
+  "pins": {
+    "templateSha256": "93943004e340d113943e06dea61fd7dfad67c20750dd4fc30d76d3be1fb7c144",
+    "profileSha256": "b67ddb0fd8768c36c725ca64eed4a541063c42a7ccdac9ac6c96b10f37bae579",
+    "reference": {
+      "sourceSha256": "2e5490bf724868307916144046f499f7b7fa3773d11bb201e1853d5f21a0835e",
+      "sourceDimensions": "1254x1254",
+      "chromaSourceSha256": "377e2b51e72d4a42a2c75fc67ac3abceb8962df0f616da76fe836433273af349",
+      "chromaSourceDimensions": "1254x1254",
+      "identitySourceSha256": "d232420128863b70b7d9001993b61e505158076ea6094f964b2d47d81a5cd9ca",
+      "identitySourceDimensions": "1024x1024",
+      "styleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "styleSourceDimensions": "1254x1254",
+      "promptSha256": "b66130e9d51376c14427d1cf2b73996978380eb37212b06188b3512916abdcf2",
+      "encodedSha256": "eb8339e0f23fb2de7f5ffeedad4a99413311c3ecebe52e97189ab9042d0df978",
+      "decodedSha256": "7adb0fd039951ea97bb35f9f9f16159138711b28f550fbb984677eed1cf3ee04"
+    },
+    "animations": {
+      "idle": {
+        "sourceSha256": "37826df9d49e976dcd777a187090ef0e65f3f7798c049cea8af268f9d180ffd3",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "a4aa3ba2804c1812be0d8f351fec1bc5b462e9315c24824b86b09212da77d9dd",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "4b5a4d23a8f19531aede9893cba717e03414a88e1d0b044661e152d870323a8b",
+        "encodedSha256": "eb5db7322f86dce504aa8d8ffdd73670944e9fef403093c047cf1ec31a609639",
+        "decodedSha256": "e49e0f610768a4aa820ac98465187db6c38b5a5ba54a8ce364e37f867c4bae3c",
+        "frameSha256": [
+          "490aa5407bb3532e704aac23fc2d2e1e35873030976e37c56416141c1c84ee5a",
+          "2bcddb58e2bfe5cd13f1258cebab31edc54b2e25a1929cdd686170d38c071343",
+          "9fc890457aa6ad94e73823b7bf1125b88f002ac2be56bdb9ca6ba6511f2bf2b6",
+          "591cdc1ec807825e6132d1cbfa5e46b5a481565496b0c3352c37ea15e6dadbd0",
+          "d829f7312c14f9ac1dc1e9449542daedccd156cde2dafb610636a74aeb0422aa",
+          "1ee430d6509dbc60324e48d900ec774ba22ee244c54619801495ed06a4cb7280",
+          "a19eb4be6e9460d404fbb276085c191b0839b11fbcd70bc0006459cf41bd145f",
+          "4eb4e1c923c7f6892a79ba3ba24cb965cd3e52e59fb2cb2814d96d4b0447e5cf"
+        ],
+        "poseSha256": [
+          "a96730521c27dd042ca573e2fa50228ec39062a0add637e9927eea70adf24f1a",
+          "06ba1b2dad230a6ff3b1258308700ee2262c256978dce622383348e2b5c7b542",
+          "854297f205ed174a980d77eee30775ca44f3d8bc37f7dc90a48a0a6286ab717b",
+          "bb6af4df47e2badc7744c2bbcdbd14bc9f9e1237d0af61f6033e3d2eba1a4bbc",
+          "6d24d7cabd9a029c2d970923eefee613214d5541135eb3559be85bad47c2b971",
+          "c1b4686e0b5e7b8aedba869e2d74f5298c96db704b4979ad78747cf8df6b12fe",
+          "4a49c238d1d8447d4f35ec348ac8763ba0e172f8c58ef482043e06aaec8ecba2",
+          "ed1f4cab71940ef17f8839e3dbf3ced6248923606beb30351b862d4b8f392ca1"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "walk": {
+        "sourceSha256": "2f2330a6f90385504152f7a8058ad7e068feea22093eec6483cf7fa6ddd071aa",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "5997a1c41d70fe1f2857ee8056f69177f11b156ba7036425c4da04c1931de03d",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "43f0f93e54d3ca49dc56ba82f3ca6bcd02bebf4a1d6f206de3c5c3f7dcd8191d",
+        "encodedSha256": "ef7a4d4be692a002b5d5130ff5bafc369d90a1777b77306fdd74a5b5b30a29c0",
+        "decodedSha256": "020b5840b838c2cde18227ff4e3b7818abc640b6b60625d29ce4b574ac3c2b72",
+        "frameSha256": [
+          "901cc32cf4046849ea3e659b45026b1565227e1d1a6761a7f7352bc403c8a835",
+          "0ef5d0a6aa5c37fa5e543520068c6a1d5f87699f85cd548c2db35a0259dc2096",
+          "e39cd58d288b91c3cd3181c1f2715382becc12ea186df33de6c4fc2bd06ef8a6",
+          "5a6ca451a804165973742b41e55766a27e2bd329eb32250c7e43d4f80e6a6af6",
+          "c604f816b7ac81a6deb8450afac4b54773fd0987a8196f51ad785d832da26523",
+          "ed57d7f89c2b7f4b5a54a92453cea1bc1d720ee6f8448ba54e841bc86f03fe55",
+          "2eeb77eb19c5006d6e34d666a2b7578374492e7242e60552ab8af51178730aa8",
+          "2afed6208d273c30fd1453369d77f748ac56499362cdea135871471f7751c92a"
+        ],
+        "poseSha256": [
+          "f5b4b8c950f0ba51e2c262f0343808dce8b6fbafee94e8723d2a8a08d0e4f776",
+          "369dce0f93368e7fdba5a3dd5039e43ab7932140730819fcd07fe450c1cb6102",
+          "07524be929405c2ee23b878c6de4bc25c1aa876897c5057de06936878525bb6d",
+          "cedce1904b5c04e9ea94a10b1781dd96c9392870e3ad43808bd86e82b66b08a0",
+          "a110a15389b5f8fa4c26c765073833cf2ba3439b482940eccf30ad91f101bfd5",
+          "b7827a987221fec873d1e48a2a47654927640ba22a67c5a25b8588b39772e010",
+          "9c8655cae7f49ce31faf593056c5c4c3a77a9c357e163445c81ec6794b730ede",
+          "848c8bb5b0d251d2ac8cb86edb8962fd7915a116a9206a2958ab10f1b87a6047"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "attack": {
+        "sourceSha256": "12a5ca293e9df0f83303d5728662cb3ea9cfd32f2befd387663e21881faa8690",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "8fc773dfb1e3a47f00c65f6b528acf062a990568e72d746aedd455109a3e0885",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "2cad6eba1476dfc74b623f57e6d8671858f5dca7354747ef7c0ea4396cab1145",
+        "encodedSha256": "8dfec76c64baa2651fec7ea93f3d73f7c1b03c5d2c3cea4f47f2de53aac6709f",
+        "decodedSha256": "e6d5d0700a64728ba0ba452e4aa0b3c3ea54fab5313af65db17bff032d41d430",
+        "frameSha256": [
+          "2a1be1d5205020cee15172ef8614502e30c00c3af27d029e368e2fed4603c9e9",
+          "5cfb980b697c32c730966a3f1683c38b2d2e28f0c78af52127987da59e95561f",
+          "b1ef64e4a1d1e5baa41940aa654828b8fff219f211bd894b34e3129a522626e0",
+          "45b41f5007da41a32394b485ced5ad47425e66b0f2cb6d7c83b6fe99785f0264",
+          "2bace7e4ee9544943612adfe8db131e7c9b13581d8b3f114746cf2ef1a8f6b20",
+          "ca1c170c7c71dd67bc1ccb62893e4b96c0b886a3e4de57b16ebb846b34ecc84f",
+          "6cba28f7ceb1c9d444f6cef8e6b9eb9ca849908025db6225dd09b5865604ff94",
+          "c58ad0d0faa01ed85c46c4ddd143867e29f2c6afa8ed0ef8cd1d26da4f6bc472"
+        ],
+        "poseSha256": [
+          "1f058b4c6b2a0132a5403384e7ab3530af74961961b529c0374702a750232a3c",
+          "e5e7d4363e4538df827605d817794f6f8792cb7c17a40ba429bf7e1befbaa051",
+          "c2605e85d97c713bf816ea0f916547adc6fd0825ff50df14386707b8c9881228",
+          "0675d771ead9342e974fd19d45051c5275c9f614f05944063761994334960c3e",
+          "bb914cba853f15053ef06d1c134465e899d526f88d66b6102998a0162115ea4a",
+          "5ab2cf8feee63f5d4faac2c2d518ca4fd53c20c82d988bc696b563810a07a421",
+          "daab84aea3c9e270247acda8a7e259b43f31ea6c986366b26545fe2de89e0ad9",
+          "bdef572122da77bf3bbc68d1cdc1db6ddad1bb9faf6855b6b2dd187c1778b94b"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          0.71124,
+          1,
+          1
+        ]
+      },
+      "hurt": {
+        "sourceSha256": "475f73706de0b80266d6b6106b10a36545969de78e389e1a2ae7c424bc61d4dc",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "e38c2afddfe456d9858e571f4b86db7cc13ff9e1079dcf634bbe1d3c31d8d30f",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "e0b28117a2c5e133a69a6c0c2d2bab53a1dc516deb176a76c742d54b2c1faded",
+        "encodedSha256": "046f7b6c84377fd07da0846bc5cb27158efb33b16b27951d9abec4e20f10c2cc",
+        "decodedSha256": "e2638af0cba1359b6ec2f1326cccd7d021f7fa928ed276b7968f4d8042dc21f5",
+        "frameSha256": [
+          "9947f865978ddb7d6a74728a431ecd570dc402b4fcd72ae0c58159a170b0d634",
+          "df8bcd627030656e02827d22696202cdd95306625d906d239538107a10dbfbf0",
+          "eadffb673a55bd68053f149ad7eb1f040e397860f51ec78204c1782ddcee128f",
+          "3e56e39f32b0296978674a7141902dd62b40ae4fe68dcfd54ce4238cd4954933",
+          "27547a0722c515ca5e68e2670074354427e502ec4beee01c0b575b646371165e",
+          "e427e5fb1b8ab195693d11ae5275d443caa264b3b5340a2674b3e6488e414866",
+          "46ac8281795f543a9dc80e5c8a0cbe3f07748f15089dd685c315ba07fdb907bb",
+          "a0d1bf3200dae53443a5dc8420f98d2c7558a6f22b80aa2bcaa0823d220e3e80"
+        ],
+        "poseSha256": [
+          "c13e2d9e3a1bb2f86ad7ec967b98ac913f8e7729e801de58e4fe11713308c99c",
+          "080a14f68bd5c471bdc4f5df72fbacea8bcc2cf76959025512cad11fa80016e5",
+          "8bcaa26366949e8d52ec6ee4cc8add33b55814a72a5cc22591e960b7c0af2513",
+          "8dc99491306fc64eaed1587cda1141fb25b4ef8d826ecd44d746a9414a7aca54",
+          "25dc302693070bbf8c0e236354b21c74ea08154cd90e6d1f5bfce18b99784822",
+          "6bc010a96ed4f27e8607104350699aff96ba79a24160e437f0ae9b5c83f1efb6",
+          "d5dd9e9d064a63acf43cfdc09e24352c0c4b874e4a762fa2d5928e5ab663f039",
+          "940046d2d3b8234410acd95edad961a839d0b01bd0a308da0e7e39c2780bfa5f"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          0.980363,
+          0.998093,
+          1,
+          1,
+          1,
+          0.997806
+        ]
+      },
+      "death": {
+        "sourceSha256": "690c8892390d3f2c4f0a7f36cb986f78bfc1b846052189fb74fbf3ba96fc19b8",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "607f417549c9906bf1bf4ba92715590839d2c6a04e206b2ecfdf2d71d715b5b0",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "4a723bb116a278407d6722199b653ee2cc04144e50a78c4b3af731e2d3a85236",
+        "encodedSha256": "48be8303089a0ea998de2699fe82b21b1208903be1c7fee71f23fce1d789e669",
+        "decodedSha256": "bea26f5e189ed0f4aac03f5011608d38b6f7c8b135e1f052041a1d9b2633dbac",
+        "frameSha256": [
+          "b32903f8d34656a1a06bf8b4af5f4ab6ae5612a00996e81ee0b5883f55df179c",
+          "fe0fb7783ba8615288d445d8ec81cbf95c8115ecd2bb78b68f4b291ec2cc7f30",
+          "6c6fa4e2683e3adf57b8d783eeea5d06ab172e7458d011cc224f6961a9702263",
+          "2b0af85ed9f266e436668854dc39c633088818373858fd22d2bd027689b31475",
+          "dec11b2f59a23dae2cc3500f08a1d7706ada6c2457d89f3bb56111e46e56b7ec",
+          "fee4407a2b667aed993a1302c371094741fceabcc80cfa6cdf94dd25849e2a31",
+          "25a8d4481344b5600dfdb0d36bf262f151669e7a1ce813f340318f96a16cf739",
+          "25a8d4481344b5600dfdb0d36bf262f151669e7a1ce813f340318f96a16cf739"
+        ],
+        "poseSha256": [
+          "44f4464ede2935a5e27577757db0a165cc39f7f7541450661dd254bfee0d1275",
+          "bd8313f6a069e11f592f6f0532ae1ed240f74f66d304a5d7d311b24cde330fe4",
+          "68a57b500923761f4457f821a1730792eca69fa26847c74ae87ec99e17df0ce7",
+          "1b8b3e3c3c9f9107af7a562dfe3b6ddba8a0e9d992813058d34eb9112700c623",
+          "4bf48011d1a3d3b19310917424c7d04326bb5fd7fa5f8d5a25d038e4d3a7f6fb",
+          "520a0f37e31b02c52f75c9c11bcb03ad7592b1a2efd417d423527512fd3fb95f",
+          "1f94babf33f5c5a1bc7fa1e8cd53d276db98aced4ae5c6ccee4e5d6c7eee156d",
+          "1f94babf33f5c5a1bc7fa1e8cd53d276db98aced4ae5c6ccee4e5d6c7eee156d"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "victory": {
+        "sourceSha256": "1565d53b98940780b442257e34afe01bcd0f3c4ff2ffde9a026ed4e93e02a8a0",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "816fda5709638108e456d282bbe0645a0baf413a54d5d32aaf930ca498dc4c23",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "07b43cc6f0ab57b25402becb004a322552e0dd4d8f33e14d6b8d41d4915635dd",
+        "encodedSha256": "7f3c031b6bfd9d7a9bb9d458672ded6dbf2b49cdd4e5c7b5136c9fbe083e0ce5",
+        "decodedSha256": "dae4fe4719eee9a9d78ef5438e15d11bb83f788f4ee26681f01f89cff19fda5b",
+        "frameSha256": [
+          "2c637c5dbf996b5e582d6eae2d504dceab8118e5a291d169ec9670da9774b609",
+          "6ca77baaa93cb274deafa72547f21a1aa381235c2496878d80b630141a130e9b",
+          "77be28fb941128bf31f3b52d42926093dbbda719e08ec5a90fa9f15001e15a68",
+          "4c332b7e78631203ed940e574131934036d24ec6041d3c82f73d2afcd9d5eff5",
+          "94c8a36f2306f90b4801a12ff21ff6d7b74db6b03609e8c12a9e6b31c3319701",
+          "b5418dd9225a0f61decaf91bb6e9a4362350790e8f702f3d7f93fc116dc06651",
+          "024d25377ddd71e226a635e480080b667adc37d5b220456868d0cfc047bd7343",
+          "e229b893e51589dc7941cf8cf9da5c512cc3ba905cae966d7448d5ed3cab657a"
+        ],
+        "poseSha256": [
+          "3e453275b1d00e1020b0514ed86c5826e133c28de737210afac799a272e06a58",
+          "b38a8ae856d378974b25e3b82231859175b136a652c5ae898a7fa46f051ec61d",
+          "36f16aee2487ee53b87c9f266a2ce517ee242d3cf91ed3b446170e21407a4446",
+          "2c4906323270c13b1bf81adee3537bb09a7fe37d702d2efc795f1b7b18bd5506",
+          "d8de3122d0b96901b825bb02b64614958d03da0482bc2c839f3e192e95b26d8e",
+          "0d81a14596ad7452af4339a8f074f57743fd1c355a5320349fa59efc19f08093",
+          "fc068e652df3c62916d77d46c222702952ef3b94cc1d5226d7e50da4bc460d73",
+          "8a4db402c4acb6df3373a0704bc4d4ad089b9afe8f5ca4668f74f702e752a8d9"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.992461,
+          1,
+          1,
+          1,
+          0.997647,
+          1,
+          1,
+          0.995311
+        ]
+      },
+      "dead": {
+        "sourceSha256": "690c8892390d3f2c4f0a7f36cb986f78bfc1b846052189fb74fbf3ba96fc19b8",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "607f417549c9906bf1bf4ba92715590839d2c6a04e206b2ecfdf2d71d715b5b0",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "f631a7fd605211260b28b5a5bba3503e06dc1064497d1e5769d62e40e178e2b1",
+        "encodedSha256": "0d7676da35041ef376178fad9083681f8e9efb408dbbecdff63ec6424f8f2131",
+        "decodedSha256": "07e2ac15356f90a04e8c568a1db0bd3c5be86d070559850088d8c1ad195a4ea3",
+        "frameSha256": [
+          "25a8d4481344b5600dfdb0d36bf262f151669e7a1ce813f340318f96a16cf739",
+          "25a8d4481344b5600dfdb0d36bf262f151669e7a1ce813f340318f96a16cf739",
+          "25a8d4481344b5600dfdb0d36bf262f151669e7a1ce813f340318f96a16cf739",
+          "25a8d4481344b5600dfdb0d36bf262f151669e7a1ce813f340318f96a16cf739",
+          "25a8d4481344b5600dfdb0d36bf262f151669e7a1ce813f340318f96a16cf739",
+          "25a8d4481344b5600dfdb0d36bf262f151669e7a1ce813f340318f96a16cf739",
+          "25a8d4481344b5600dfdb0d36bf262f151669e7a1ce813f340318f96a16cf739",
+          "25a8d4481344b5600dfdb0d36bf262f151669e7a1ce813f340318f96a16cf739"
+        ],
+        "poseSha256": [
+          "1f94babf33f5c5a1bc7fa1e8cd53d276db98aced4ae5c6ccee4e5d6c7eee156d",
+          "1f94babf33f5c5a1bc7fa1e8cd53d276db98aced4ae5c6ccee4e5d6c7eee156d",
+          "1f94babf33f5c5a1bc7fa1e8cd53d276db98aced4ae5c6ccee4e5d6c7eee156d",
+          "1f94babf33f5c5a1bc7fa1e8cd53d276db98aced4ae5c6ccee4e5d6c7eee156d",
+          "1f94babf33f5c5a1bc7fa1e8cd53d276db98aced4ae5c6ccee4e5d6c7eee156d",
+          "1f94babf33f5c5a1bc7fa1e8cd53d276db98aced4ae5c6ccee4e5d6c7eee156d",
+          "1f94babf33f5c5a1bc7fa1e8cd53d276db98aced4ae5c6ccee4e5d6c7eee156d",
+          "1f94babf33f5c5a1bc7fa1e8cd53d276db98aced4ae5c6ccee4e5d6c7eee156d"
+        ],
+        "sourceFrameIndexes": [
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  }
+}

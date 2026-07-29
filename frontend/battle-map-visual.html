@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BattleMapV2 visual harness</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", monospace;
+        background: #080b10;
+        color: #edf4ff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-width: 320px;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at 50% 12%, #1b2838 0, #0d141e 42%, #080b10 78%);
+      }
+
+      .capture {
+        width: min(100%, 1088px);
+        margin: 0 auto;
+        padding: 12px 16px 18px;
+      }
+
+      .metadata {
+        min-height: 44px;
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 0 4px 8px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 18px;
+        letter-spacing: 0.04em;
+      }
+
+      #details {
+        margin: 0;
+        color: #a9bad0;
+        font-size: 13px;
+        text-align: right;
+      }
+
+      canvas {
+        display: block;
+        width: 100%;
+        height: auto;
+        border: 1px solid #34465d;
+        border-radius: 6px;
+        background: #101822;
+        box-shadow: 0 16px 48px rgb(0 0 0 / 42%);
+      }
+
+      #error {
+        display: none;
+        margin: 16px;
+        padding: 16px;
+        border: 1px solid #dc5264;
+        background: #2a1015;
+        color: #ffd9de;
+        white-space: pre-wrap;
+      }
+
+      body[data-status="error"] #error {
+        display: block;
+      }
+    </style>
+  </head>
+  <body data-status="idle">
+    <main class="capture" aria-label="BattleMapV2 rendered review capture">
+      <header class="metadata">
+        <h1 id="title">BattleMapV2 visual harness</h1>
+        <p id="details">Waiting for render request</p>
+      </header>
+      <canvas
+        id="battle-map"
+        width="2112"
+        height="1248"
+        aria-label="Production BattleGrid rendering"
+      ></canvas>
+    </main>
+    <pre id="error" role="alert"></pre>
+    <script type="module" src="/src/dev/BattleMapVisualHarness.js"></script>
+  </body>
+</html>

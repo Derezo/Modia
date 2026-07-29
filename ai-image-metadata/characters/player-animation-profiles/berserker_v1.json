@@ -1,0 +1,78 @@
+{
+  "version": "1.1.0",
+  "id": "berserker_v1",
+  "class": "berserker",
+  "templateId": "authored-pose-atlas-v1",
+  "description": "Reusable authored-pose direction for berserker player identities. Registry metadata and the staged portrait control identity; this profile supplies ferocious dual-weapon choreography and continuity rules.",
+  "style": {
+    "source": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+    "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+  },
+  "identity": {
+    "baseFacing": "three-quarters right",
+    "motionStyle": "ferocious, explosive, top-heavy, and relentless, with deep planted lunges, broad shoulder rotation, and readable dual-weapon momentum",
+    "equipmentRule": "Preserve the portrait's savage armor, war paint, scars, hair, and exact weapon designs and count. If two axes are present, keep exactly one in each original hand; never duplicate, swap, sheath, merge, or transform them.",
+    "magicRule": "Berserker power is physical fury. Use no spells, runes, projectiles, elemental trails, or supernatural aura; restrained dust or a short impact slash may follow physical contact only."
+  },
+  "promptTemplates": {
+    "reference": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative {{displayName}} identity portrait; Image 2 is the approved full-body pixel-art style and proportion reference only. Player identity metadata: {{visualTraits}}. Create one complete head-to-toe {{displayName}} preserving Image 1's face, ancestry traits, gender presentation, hair, scars, war paint, savage armor, palette, proportions, and weapons. Do not import identity details from Image 2. {{equipmentRule}} Translate the portrait into a compact powerful full-body silhouette. Use a {{background}} background with no floor or scenery and a square 1:1 canvas with generous padding. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered berserker in a coiled aggressive guard facing {{baseFacing}}. {{invariants}}",
+    "animation": "Draw exactly {{frameCount}} genuinely redrawn full-body {{actionLabel}} poses of the authoritative {{displayName}} in a {{columns}}-column by {{rows}}-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: {{visualTraits}}. Required sequence: {{frameSequence}}. Motion direction: {{motionDirection}}. Overall berserker motion is {{motionStyle}}. {{poseRequirement}} Preserve exact identity, armor, palette, proportions, scars, war paint, and weapon count. {{equipmentRule}} {{magicRule}} Action-specific effects: {{effectRule}} Use a {{background}} background with generous gutters between complete head-to-toe poses. {{invariants}}"
+  },
+  "animations": {
+    "idle": {
+      "actionLabel": "berserker prowling idle-cycle",
+      "minimumUniquePoses": 4,
+      "anchor": "source-cell",
+      "motionDirection": "A predatory breathing loop shifts weight between a low weapon guard and an impatient forward lean while both weapons remain controlled.",
+      "effectRule": "No active attack effect; hair, straps, and weapon heads may settle with the heavy breathing.",
+      "frameDescriptions": ["low aggressive guard with both weapons spread", "deep inhale lifting shoulders and weapon heads", "weight drives onto the forward foot", "impatient forward lean with elbows flexed", "centered predatory crouch", "forceful exhale lowering shoulders", "rearward weight shift with weapons re-angled", "coiled guard flowing back to frame one"]
+    },
+    "walk": {
+      "actionLabel": "berserker weapon-heavy stalk",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "A fast heavy-footed stalk uses alternating contacts, deep compression, broad counter-swings, and controlled weapon inertia.",
+      "effectRule": "No attack trail or magic; armor, hair, straps, and weapons follow the planted steps.",
+      "frameDescriptions": ["left foot crushing forward contact", "left leg compressed under the weapon weight", "passing pose with right knee driving through", "right foot reaching as both weapons counter-swing", "right foot forceful forward contact", "right leg compressed under the armor", "passing pose with left knee driving through", "left foot reaching into the stalking loop"]
+    },
+    "attack": {
+      "actionLabel": "berserker crossing dual-weapon assault",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "A committed combination coils both weapons, drives a first diagonal chop, crosses into a second strike, follows through low, and recovers into guard.",
+      "effectRule": "Two short physical blade-swish accents may mark the separate contacts; no projectile, magic, duplicate weapon, or effect hiding the arms.",
+      "frameDescriptions": ["coiled dual-weapon guard", "rear weapon pulls high as the lead weapon measures distance", "deep crossed windup over the rear leg", "lunging first diagonal chop with hips committed", "second weapon crosses through the contact line", "low full-body follow-through with both arms separated", "weapons recoil outward while feet reset", "recovered aggressive guard"]
+    },
+    "hurt": {
+      "actionLabel": "berserker enraged impact-and-recovery",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "A hard hit breaks the attack posture into an articulated recoil, staggering step, low weapon brace, furious rise, and renewed guard.",
+      "effectRule": "One compact physical impact accent only; no blood, gore, tint, magic, or dropped or duplicated weapon.",
+      "frameDescriptions": ["aggressive guard before impact", "sharp torso flinch with both grips retained", "maximum backward twist and knee collapse", "staggering rear step with weapons spread for balance", "low crossed-weapon brace", "furious push upright through bent legs", "feet reset as weapons rise", "recovered enraged guard"]
+    },
+    "death": {
+      "actionLabel": "berserker defeat sequence",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "verticalAnchor": "bottom",
+      "motionDirection": "A final impact empties the fury, weapons sink, knees buckle, the body turns into a grounded side collapse, and all motion settles into a fully fallen pose.",
+      "effectRule": "No gore, blood, magic, or rigid rotation. Keep every weapon single and recognizable through the articulated fall.",
+      "outputFrameMap": [0, 1, 2, 3, 4, 5, 7, 7],
+      "frameDescriptions": ["fatal impact breaks the aggressive guard", "weapon arms sag as balance fails", "both knees buckle beneath the armor", "one hip grounds while the torso twists sideways", "body and weapons descend into full ground contact", "low fallen body settles with limbs articulated", "final fully fallen berserker with weapons at rest", "same final fallen pose held"]
+    },
+    "dead": {
+      "deriveFrom": {"animation": "death", "frame": 7},
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity.",
+      "frameDescriptions": ["terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held"]
+    },
+    "victory": {
+      "actionLabel": "berserker roaring victory",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "motionDirection": "The berserker recognizes victory, stamps forward, sweeps both weapons wide, throws the chest upward in a roar, crosses the weapons overhead, and holds a dominant finish.",
+      "effectRule": "No spell effect; a tiny metal glint and grounded dust at the stamp may accent the physical celebration.",
+      "frameDescriptions": ["stunned recognition of victory", "forceful forward victory stamp", "both weapons sweep outward from the hips", "chest thrown upward in a full-bodied roar", "weapons rise in separate overhead arcs", "weapon heads cross high without merging", "wide dominant stance with both weapons displayed", "final roaring triumphant pose held"]
+    }
+  }
+}

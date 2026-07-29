@@ -18,8 +18,12 @@ import { WebSocket } from 'ws';
 import {
   getNextSequence,
   sendWithAck,
+  sendWithAckAfterRecovery,
+  classifyReliableBattleMapWirePayload,
+  assertReliableBattleMapWirePayloadWithinBudget,
   handleAck,
   scheduleRetry,
+  triggerFullStateSync,
   cleanupConnection,
   cleanupUserSequence,
   cleanupBattle,
@@ -31,6 +35,17 @@ import {
   MAX_RETRIES,
   CLEANUP_INTERVAL_MS
 } from '../../services/messageReliability.js';
+import {
+  BATTLE_MAP_INITIAL_SNAPSHOT_COMPRESSED_BYTES_ENV,
+  BATTLE_MAP_INITIAL_SNAPSHOT_UNCOMPRESSED_BYTES_ENV,
+  getBattleMapOperationalMetrics,
+  resetBattleMapOperationalMetrics
+} from '../../services/battle/BattleMapOperations.js';
+import {
+  BattleStateNotFoundError,
+  battleStateRepository
+} from '../../services/battle/BattleStateRepository.js';
+import { createBattleMutableStateV1 } from '../../../../shared/battleStateProtocol.js';
 
 // ============================================================================
 // Test Utilities
@@ -62,6 +77,12 @@ function createMockWs(readyState = WebSocket.OPEN) {
 let testCounter = 0;
 function uniqueId(prefix) {
   return `${prefix}_${Date.now()}_${++testCounter}`;
+}
+
+function getPendingMessage(connectionId, battleId, seq) {
+  return [...(getPendingAcks(connectionId)?.values() || [])].find(
+    pending => String(pending.battleId) === String(battleId) && pending.seq === seq
+  );
 }
 
 // ============================================================================
@@ -247,6 +268,103 @@ describe('Message Reliability Service', () => {
   // ==========================================================================
 
   describe('sendWithAck', () => {
+    it('classifies full-state and mutable-delta battle-map messages only', () => {
+      assert.strictEqual(classifyReliableBattleMapWirePayload({
+        type: 'battle:state_update',
+        payload: { snapshot: {} }
+      }), 'initialSnapshot');
+      assert.strictEqual(classifyReliableBattleMapWirePayload({
+        type: 'battle:state_update',
+        payload: { state: {} }
+      }), 'initialSnapshot');
+      assert.strictEqual(classifyReliableBattleMapWirePayload({
+        type: 'battle:state_update',
+        payload: { reason: 'full_sync' }
+      }), 'initialSnapshot');
+      assert.strictEqual(classifyReliableBattleMapWirePayload({
+        type: 'battle:state_update',
+        payload: { update: {} }
+      }), 'mutableDelta');
+      assert.strictEqual(classifyReliableBattleMapWirePayload({
+        type: 'party:updated',
+        payload: { state: {} }
+      }), null);
+    });
+
+    it('enforces the wire budget on the final ACK-decorated envelope boundary', () => {
+      const mockWs = createMockWs();
+      const battleId = 626262;
+      const connectionId = 737373;
+      const message = {
+        type: 'battle:state_update',
+        payload: { snapshot: { units: [] }, reason: 'full_sync' }
+      };
+      const previousUncompressed =
+        process.env[BATTLE_MAP_INITIAL_SNAPSHOT_UNCOMPRESSED_BYTES_ENV];
+      const previousCompressed =
+        process.env[BATTLE_MAP_INITIAL_SNAPSHOT_COMPRESSED_BYTES_ENV];
+
+      try {
+        process.env[BATTLE_MAP_INITIAL_SNAPSHOT_UNCOMPRESSED_BYTES_ENV] = '1000000';
+        process.env[BATTLE_MAP_INITIAL_SNAPSHOT_COMPRESSED_BYTES_ENV] = '1000000';
+        const reliableMessage = {
+          ...message,
+          seq: 1,
+          ack: true,
+          battleId
+        };
+        const exactBytes =
+          assertReliableBattleMapWirePayloadWithinBudget(reliableMessage).uncompressed;
+        process.env[BATTLE_MAP_INITIAL_SNAPSHOT_UNCOMPRESSED_BYTES_ENV] =
+          String(exactBytes);
+        assert.deepStrictEqual(
+          assertReliableBattleMapWirePayloadWithinBudget({ type: 'party:updated' }),
+          null
+        );
+        assert.strictEqual(
+          sendWithAck(mockWs, message, battleId, connectionId),
+          1
+        );
+        assert.strictEqual(mockWs.send.mock.callCount(), 1);
+        assert.strictEqual(handleAck(connectionId, battleId, 1), true);
+        cleanupBattle(battleId);
+
+        process.env[BATTLE_MAP_INITIAL_SNAPSHOT_UNCOMPRESSED_BYTES_ENV] =
+          String(exactBytes - 1);
+        assert.throws(
+          () => sendWithAck(mockWs, message, battleId, connectionId),
+          error => error?.code === 'BATTLE_MAP_WIRE_PAYLOAD_TOO_LARGE'
+            && error?.kind === 'initialSnapshot'
+            && error?.sizes?.uncompressed === exactBytes
+        );
+        assert.strictEqual(getPendingCount(connectionId), 0);
+        assert.strictEqual(mockWs.send.mock.callCount(), 1);
+
+        process.env[BATTLE_MAP_INITIAL_SNAPSHOT_UNCOMPRESSED_BYTES_ENV] =
+          String(exactBytes);
+        assert.strictEqual(
+          sendWithAck(mockWs, message, battleId, connectionId),
+          1,
+          'a rejected envelope must not consume a sequence number'
+        );
+      } finally {
+        cleanupConnection(connectionId);
+        cleanupBattle(battleId);
+        if (previousUncompressed === undefined) {
+          delete process.env[BATTLE_MAP_INITIAL_SNAPSHOT_UNCOMPRESSED_BYTES_ENV];
+        } else {
+          process.env[BATTLE_MAP_INITIAL_SNAPSHOT_UNCOMPRESSED_BYTES_ENV] =
+            previousUncompressed;
+        }
+        if (previousCompressed === undefined) {
+          delete process.env[BATTLE_MAP_INITIAL_SNAPSHOT_COMPRESSED_BYTES_ENV];
+        } else {
+          process.env[BATTLE_MAP_INITIAL_SNAPSHOT_COMPRESSED_BYTES_ENV] =
+            previousCompressed;
+        }
+      }
+    });
+
     it('should store pending message for tracking', () => {
       const mockWs = createMockWs();
       const battleId = uniqueId('battle');
@@ -309,6 +427,66 @@ describe('Message Reliability Service', () => {
       // Cleanup
       cleanupConnection(connectionId);
       cleanupBattle(battleId);
+    });
+
+    it('tracks identical sequences independently across two battles on one connection', async () => {
+      const mockWs = createMockWs();
+      const battleA = uniqueId('battleA');
+      const battleB = uniqueId('battleB');
+      const connectionId = uniqueId('conn');
+
+      const seqA = sendWithAck(mockWs, { type: 'battleA:update' }, battleA, connectionId);
+      const seqB = sendWithAck(mockWs, { type: 'battleB:update' }, battleB, connectionId);
+
+      assert.strictEqual(seqA, 1);
+      assert.strictEqual(seqB, 1);
+      assert.strictEqual(getPendingCount(connectionId), 2);
+
+      mockWs.clearMessages();
+      mockWs.send.mock.resetCalls();
+      await scheduleRetry(connectionId, battleA, seqA);
+
+      assert.strictEqual(mockWs.send.mock.callCount(), 1);
+      assert.strictEqual(mockWs.getLastMessage().type, 'battleA:update');
+      assert.strictEqual(getPendingMessage(connectionId, battleA, seqA).retries, 1);
+      assert.strictEqual(getPendingMessage(connectionId, battleB, seqB).retries, 0);
+
+      assert.strictEqual(handleAck(connectionId, battleA, seqA), true);
+      assert.strictEqual(getPendingCount(connectionId), 1);
+      assert.strictEqual(handleAck(connectionId, battleB, seqB), true);
+      assert.strictEqual(getPendingCount(connectionId), 0);
+
+      cleanupBattle(battleA);
+      cleanupBattle(battleB);
+    });
+
+    it('uses one sequence space for numeric and string forms of the same battle', () => {
+      const mockWs = createMockWs();
+      const connectionId = uniqueId('conn');
+
+      const numericSeq = sendWithAck(
+        mockWs,
+        { type: 'numeric:update' },
+        818181,
+        connectionId
+      );
+      const stringSeq = sendWithAck(
+        mockWs,
+        { type: 'string:update' },
+        '818181',
+        connectionId
+      );
+
+      assert.strictEqual(numericSeq, 1);
+      assert.strictEqual(stringSeq, 2);
+      assert.strictEqual(getPendingCount(connectionId), 2);
+      assert.strictEqual(handleAck(connectionId, '818181', numericSeq), true);
+      assert.strictEqual(handleAck(connectionId, 818181, stringSeq), true);
+      assert.strictEqual(getPendingCount(connectionId), 0);
+      assert.strictEqual(getCurrentSequence('818181', connectionId), 2);
+
+      cleanupBattle(818181);
+      assert.strictEqual(getCurrentSequence('818181', connectionId), 0);
     });
 
     it('should not send if WebSocket is not OPEN', () => {
@@ -417,6 +595,30 @@ describe('Message Reliability Service', () => {
       // Cleanup
       cleanupBattle(battleId);
     });
+
+    it('records fresh-snapshot recovery only after the client ACKs it', () => {
+      resetBattleMapOperationalMetrics();
+      const mockWs = createMockWs();
+      const battleId = 424242;
+      const connectionId = uniqueId('conn');
+      const seq = sendWithAck(mockWs, {
+        type: 'battle:state_update',
+        payload: { reason: 'full_sync', stateRevision: 9 }
+      }, battleId, connectionId);
+
+      assert.strictEqual(
+        getBattleMapOperationalMetrics().counters.freshSnapshotRecoverySucceeded,
+        0
+      );
+      assert.strictEqual(handleAck(connectionId, battleId, seq), true);
+      assert.strictEqual(
+        getBattleMapOperationalMetrics().counters.freshSnapshotRecoverySucceeded,
+        1
+      );
+
+      cleanupBattle(battleId);
+      resetBattleMapOperationalMetrics();
+    });
   });
 
   // ==========================================================================
@@ -471,8 +673,8 @@ describe('Message Reliability Service', () => {
 
       assert.ok(pending instanceof Map, 'Should return a Map');
       assert.strictEqual(pending.size, 2, 'Map should have 2 entries');
-      assert.ok(pending.has(seq1), 'Should have seq1');
-      assert.ok(pending.has(seq2), 'Should have seq2');
+      assert.ok(getPendingMessage(connectionId, battleId, seq1), 'Should have seq1');
+      assert.ok(getPendingMessage(connectionId, battleId, seq2), 'Should have seq2');
 
       // Cleanup
       cleanupConnection(connectionId);
@@ -486,8 +688,7 @@ describe('Message Reliability Service', () => {
 
       const seq = sendWithAck(mockWs, { type: 'test', data: 123 }, battleId, connectionId);
 
-      const pending = getPendingAcks(connectionId);
-      const pendingMsg = pending.get(seq);
+      const pendingMsg = getPendingMessage(connectionId, battleId, seq);
 
       assert.ok(pendingMsg, 'Should have pending message');
       assert.strictEqual(pendingMsg.battleId, battleId, 'Should have correct battleId');
@@ -710,15 +911,13 @@ describe('Message Reliability Service', () => {
 
       const seq = sendWithAck(mockWs, { type: 'test' }, battleId, connectionId);
 
-      let pending = getPendingAcks(connectionId);
-      let pendingMsg = pending.get(seq);
+      let pendingMsg = getPendingMessage(connectionId, battleId, seq);
       assert.strictEqual(pendingMsg.retries, 0, 'Should start with 0 retries');
 
       // Manually trigger retry (normally done by timeout)
       scheduleRetry(connectionId, battleId, seq);
 
-      pending = getPendingAcks(connectionId);
-      pendingMsg = pending.get(seq);
+      pendingMsg = getPendingMessage(connectionId, battleId, seq);
       assert.strictEqual(pendingMsg.retries, 1, 'Should have 1 retry after scheduleRetry');
 
       // Cleanup
@@ -791,6 +990,50 @@ describe('Message Reliability Service', () => {
       // Cleanup
       cleanupBattle(battleId);
     });
+
+    it('keeps retry progress scheduled after synchronous resend failures', async () => {
+      const mockWs = createMockWs();
+      const battleId = 99998;
+      const connectionId = uniqueId('conn');
+      const seq = sendWithAck(mockWs, { type: 'test' }, battleId, connectionId);
+      mockWs.send = mock.fn(() => {
+        throw new Error('synchronous retry failure');
+      });
+      const loadBattleMock = mock.method(
+        battleStateRepository,
+        'loadBattle',
+        async () => {
+          throw new BattleStateNotFoundError(battleId);
+        }
+      );
+
+      try {
+        await scheduleRetry(connectionId, battleId, seq);
+        let pending = getPendingMessage(connectionId, battleId, seq);
+        assert.strictEqual(pending.retries, 1);
+        assert.ok(
+          pending.timeoutId,
+          'A failed resend must retain a future retry timer'
+        );
+
+        await scheduleRetry(connectionId, battleId, seq);
+        pending = getPendingMessage(connectionId, battleId, seq);
+        assert.strictEqual(pending.retries, 2);
+        assert.ok(pending.timeoutId);
+
+        await scheduleRetry(connectionId, battleId, seq);
+        assert.strictEqual(loadBattleMock.mock.callCount(), 1);
+        assert.strictEqual(
+          getPendingCount(connectionId),
+          0,
+          'Terminal recovery must clean up the exhausted pending message'
+        );
+      } finally {
+        loadBattleMock.mock.restore();
+        cleanupConnection(connectionId);
+        cleanupBattle(battleId);
+      }
+    });
   });
 
   // ==========================================================================
@@ -800,23 +1043,33 @@ describe('Message Reliability Service', () => {
   describe('Max Retries Behavior', () => {
     it('should cleanup pending after MAX_RETRIES exceeded', async () => {
       const mockWs = createMockWs();
-      // Use numeric battle ID to avoid database errors if triggerFullStateSync is called
       const battleId = 99999;
       const connectionId = uniqueId('conn');
+      const loadBattleMock = mock.method(
+        battleStateRepository,
+        'loadBattle',
+        async () => {
+          throw new BattleStateNotFoundError(battleId);
+        }
+      );
 
       const seq = sendWithAck(mockWs, { type: 'test' }, battleId, connectionId);
 
-      // Retry up to MAX_RETRIES times
-      for (let i = 0; i < MAX_RETRIES; i++) {
-        scheduleRetry(connectionId, battleId, seq);
+      try {
+        // Retry up to MAX_RETRIES times and wait for the recovery attempt to
+        // finish so it cannot leak real database work beyond this test.
+        for (let i = 0; i < MAX_RETRIES; i++) {
+          await scheduleRetry(connectionId, battleId, seq);
+        }
+
+        // After MAX_RETRIES, pending should be cleaned up
+        // (triggerFullStateSync cleans up pending for the battle)
+        assert.strictEqual(getPendingCount(connectionId), 0, 'Should cleanup after max retries');
+        assert.strictEqual(loadBattleMock.mock.callCount(), 1);
+      } finally {
+        loadBattleMock.mock.restore();
+        cleanupBattle(battleId);
       }
-
-      // After MAX_RETRIES, pending should be cleaned up
-      // (triggerFullStateSync cleans up pending for the battle)
-      assert.strictEqual(getPendingCount(connectionId), 0, 'Should cleanup after max retries');
-
-      // Cleanup
-      cleanupBattle(battleId);
     });
 
     it('should continue retrying until MAX_RETRIES is reached', () => {
@@ -834,13 +1087,119 @@ describe('Message Reliability Service', () => {
       // Should still have pending
       assert.strictEqual(getPendingCount(connectionId), 1, 'Should still have pending before max');
 
-      const pending = getPendingAcks(connectionId);
-      const pendingMsg = pending.get(seq);
+      const pendingMsg = getPendingMessage(connectionId, battleId, seq);
       assert.strictEqual(pendingMsg.retries, MAX_RETRIES - 1, `Should have ${MAX_RETRIES - 1} retries`);
 
       // Cleanup
       cleanupConnection(connectionId);
       cleanupBattle(battleId);
+    });
+
+    it('fails an unacknowledged recovery snapshot without recursive resync', async () => {
+      resetBattleMapOperationalMetrics();
+      const mockWs = createMockWs();
+      const battleId = 434343;
+      const connectionId = uniqueId('conn');
+      const seq = sendWithAck(mockWs, {
+        type: 'battle:state_update',
+        payload: { reason: 'full_sync', stateRevision: 10 }
+      }, battleId, connectionId);
+      mockWs.clearMessages();
+      mockWs.send.mock.resetCalls();
+
+      for (let index = 0; index < MAX_RETRIES; index++) {
+        await scheduleRetry(connectionId, battleId, seq);
+      }
+
+      assert.strictEqual(getPendingCount(connectionId), 0);
+      assert.strictEqual(mockWs.send.mock.callCount(), MAX_RETRIES - 1);
+      const metrics = getBattleMapOperationalMetrics();
+      assert.strictEqual(metrics.counters.freshSnapshotRecoverySucceeded, 0);
+      assert.strictEqual(metrics.counters.freshSnapshotRecoveryFailed, 1);
+
+      cleanupBattle(battleId);
+      resetBattleMapOperationalMetrics();
+    });
+
+    it('sends a deferred recovery snapshot before a newer delta', async () => {
+      const mockWs = createMockWs();
+      const battleId = 434344;
+      const connectionId = uniqueId('conn');
+      const map = {
+        battleMapSchemaVersion: 1,
+        terrainGenerationVersion: 1,
+        terrainSeed: 92,
+        mapWidth: 1,
+        mapHeight: 1,
+        terrain: [['grass']],
+        elevation: [[0]],
+        obstacles: []
+      };
+      const mutableState = createBattleMutableStateV1({
+        turn: 4,
+        units: [{ id: 'player-1', hp: 20, tileX: 0, tileY: 0 }]
+      });
+      let resolveLoad;
+      const loadBattleMock = mock.method(
+        battleStateRepository,
+        'loadBattle',
+        () => new Promise(resolve => {
+          resolveLoad = resolve;
+        })
+      );
+
+      try {
+        const recoveryPromise = triggerFullStateSync(
+          mockWs,
+          battleId,
+          connectionId
+        );
+        const deltaPromise = sendWithAckAfterRecovery(mockWs, {
+          type: 'battle:state_update',
+          payload: {
+            battleId,
+            stateRevision: 8,
+            update: { turn: 5 }
+          }
+        }, battleId, connectionId);
+
+        await Promise.resolve();
+        assert.strictEqual(
+          mockWs.sentMessages.length,
+          0,
+          'The newer delta must wait while the older snapshot is loading'
+        );
+
+        resolveLoad({
+          battleId,
+          battleMapSchemaVersion: 1,
+          terrainGenerationVersion: 1,
+          stateRevision: 7,
+          map,
+          mutableState,
+          state: { ...map, ...mutableState }
+        });
+        const [recovery, deltaSequence] = await Promise.all([
+          recoveryPromise,
+          deltaPromise
+        ]);
+
+        assert.strictEqual(recovery.success, true);
+        assert.strictEqual(deltaSequence, 2);
+        assert.strictEqual(mockWs.sentMessages.length, 2);
+        assert.strictEqual(
+          mockWs.sentMessages[0].payload.reason,
+          'full_sync'
+        );
+        assert.strictEqual(mockWs.sentMessages[0].payload.stateRevision, 7);
+        assert.strictEqual(mockWs.sentMessages[0].seq, 1);
+        assert.strictEqual(mockWs.sentMessages[1].payload.stateRevision, 8);
+        assert.strictEqual(mockWs.sentMessages[1].seq, 2);
+      } finally {
+        loadBattleMock.mock.restore();
+        cleanupConnection(connectionId);
+        cleanupBattle(battleId);
+      }
     });
   });
 

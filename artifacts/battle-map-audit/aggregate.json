@@ -1,0 +1,110 @@
+{
+  "schema": "battle-map-audit-v2",
+  "fullMatrixMapCount": 1,
+  "selectedMapCount": 1,
+  "generatedMapCount": 1,
+  "generationErrorCount": 0,
+  "hardFailureCount": 0,
+  "tacticalFailureCount": 0,
+  "qualityFailureCount": 0,
+  "guardrailFailureCount": 0,
+  "diversityFailureCount": 0,
+  "corpusGatesDeferred": false,
+  "corpusGateFailureCount": 0,
+  "requiredFailureCount": 0,
+  "exactFullHashCollisionCount": 0,
+  "exactFullHashCollisions": [],
+  "timingMs": {
+    "count": 1,
+    "min": 624.603875,
+    "p50": 624.603875,
+    "p95": 624.603875,
+    "max": 624.603875
+  },
+  "walkableRatio": {
+    "count": 1,
+    "min": 0.6845703125,
+    "p50": 0.6845703125,
+    "p95": 0.6845703125,
+    "max": 0.6845703125
+  },
+  "obstacleDensity": {
+    "count": 1,
+    "min": 0.0009765625,
+    "p50": 0.0009765625,
+    "p95": 0.0009765625,
+    "max": 0.0009765625
+  },
+  "payloadBytes": {
+    "count": 1,
+    "min": 441998,
+    "p50": 441998,
+    "p95": 441998,
+    "max": 441998
+  },
+  "connectedComponentCount": {
+    "count": 1,
+    "min": 1,
+    "p50": 1,
+    "p95": 1,
+    "max": 1
+  },
+  "diversity": {
+    "signatureVersion": "battle-map-macro-signature-v1",
+    "method": "8x8 semantic/elevation/route/water/protected-zone tokens plus topology; complete four-band same-node and exact one-token-radius cross-node indexes",
+    "thresholds": {
+      "maximumCorpusMaps": 20000,
+      "maximumMapDimension": 64,
+      "maximumMapBytes": 4194304,
+      "maximumGenerationMs": 10000,
+      "naturalIsolatedSemanticTileRate": 0.01,
+      "adjacentNonCliffElevationStepPassRate": 0.95,
+      "sameNodeNearSimilarity": 0.97,
+      "crossNodeNearSimilarity": 0.98,
+      "profile": {
+        "natural": {
+          "maximumExactMacroCollisionRate": 0.02,
+          "maximumNearDuplicateRate": 0.05
+        },
+        "subterranean": {
+          "maximumExactMacroCollisionRate": 0.04,
+          "maximumNearDuplicateRate": 0.08
+        },
+        "constructed": {
+          "maximumExactMacroCollisionRate": 0.05,
+          "maximumNearDuplicateRate": 0.1
+        },
+        "arena": {
+          "maximumExactMacroCollisionRate": 0.1,
+          "maximumNearDuplicateRate": 0.2
+        },
+        "legacy": {
+          "maximumExactMacroCollisionRate": 1,
+          "maximumNearDuplicateRate": 1
+        }
+      }
+    },
+    "profileFailureCount": 0,
+    "profiles": [
+      {
+        "profile": "v2:mountain:32x32:pve",
+        "family": "natural",
+        "mapCount": 1,
+        "distinctMacroSignatureCount": 1,
+        "exactMacroCollisionRate": 0,
+        "nearDuplicateRate": 0,
+        "thresholds": {
+          "maximumExactMacroCollisionRate": 0.02,
+          "maximumNearDuplicateRate": 0.05
+        },
+        "passed": true,
+        "exactCollisions": [],
+        "nearPairs": []
+      }
+    ],
+    "crossNodeExactCollisionCount": 0,
+    "crossNodeExactCollisions": [],
+    "crossNodeNearDuplicateCount": 0,
+    "crossNodeNearPairs": []
+  }
+}

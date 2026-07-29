@@ -14,21 +14,20 @@
  * @see statistics.js - Match snapshots and stats
  */
 
-import { query, pool } from '../../config/database.js';
+import { query, withTransaction } from '../../config/database.js';
 import * as battleService from '../battleService.js';
-import * as dailyQuestService from '../dailyQuestService.js';
 import * as battleWebsocket from '../battleWebsocket.js';
 import { MAX_BATTLE_PARTY_SIZE } from '../../config/constants.js';
 import { calculateBattlePartyPower } from '../characterValuationService.js';
 import {
   calculateRatingChange,
-  updatePvpRating,
   getPlayerRating,
   ensureRating,
+  updatePvpRating,
   applyForfeitPenalty
 } from '../ratingService.js';
 import { getUserBadges, getPriorityBadges, getTier, getNextTierProgress } from '../../../../shared/coliseum.js';
-import { checkAndAwardBadges, getBatchUserAchievements } from '../achievementService.js';
+import { getBatchUserAchievements } from '../achievementService.js';
 import {
   activeMatches,
   matchReadyTimers,
@@ -45,8 +44,26 @@ import { validateFormationPayload } from '../battle/formationValidation.js';
 import { broadcastQueueUpdate } from './queueBroadcaster.js';
 import { captureTeamSnapshots, calculateMatchStats, calculateEnhancedMatchStats, getPlayerRank } from './statistics.js';
 import { setCompleteMatchFn, cancelTurnTimer, startTurnTimer } from './turnTimer.js';
-import { generateTerrain } from '../../../../shared/mapGeneration.js';
 import { withBattleVisualIdentity } from '../battle/visualIdentityService.js';
+import battleStateRepository from '../battle/BattleStateRepository.js';
+import { battleTerminalOutbox } from '../battle/BattleTerminalOutbox.js';
+import {
+  BATTLE_TERMINAL_COLISEUM_BADGES_EVENT_TYPE,
+  BATTLE_TERMINAL_PROGRESSION_EVENT_TYPE,
+  buildColiseumBadgePayload,
+  buildColiseumTerminalProgressionPayload
+} from '../battle/BattleTerminalEffects.js';
+import {
+  extractBattleMutableState,
+  generateBattleMap,
+  isBattleMapV2EnabledForMode,
+  selectBattleMapGenerationVersion
+} from '../battle/battleMapGenerationService.js';
+import { deriveEncounterTerrainSeed } from '../battle/encounterService.js';
+import {
+  createNegotiatedBattleStateSnapshot,
+  sendWithAck
+} from '../messageReliability.js';
 
 // Register completeMatch with turnTimer to break circular dependency
 setCompleteMatchFn(completeMatch);
@@ -61,6 +78,7 @@ setCompleteMatchFn(completeMatch);
 export async function createMatch(queueType, player1, player2) {
   // Create match with PPR info
   const matchId = matchIdCounter.value++;
+  const createdAt = Date.now();
   const match = {
     id: matchId,
     queueType,
@@ -69,6 +87,7 @@ export async function createMatch(queueType, player1, player2) {
       username: player1.username,
       partyLevel: player1.partyLevel,
       ppr: player1.ppr,
+      battleMapCapabilities: player1.battleMapCapabilities ?? null,
       ready: false
     },
     player2: {
@@ -76,11 +95,12 @@ export async function createMatch(queueType, player1, player2) {
       username: player2.username,
       partyLevel: player2.partyLevel,
       ppr: player2.ppr,
+      battleMapCapabilities: player2.battleMapCapabilities ?? null,
       ready: false
     },
     status: 'pending',
-    createdAt: Date.now(),
-    readyDeadline: Date.now() + 10000 // 10 seconds to ready up
+    createdAt,
+    readyDeadline: createdAt + 10000 // 10 seconds to ready up
   };
 
   activeMatches.set(matchId, match);
@@ -673,12 +693,24 @@ async function startMatchWithFormations(matchId) {
       return;
     }
 
-    // Generate map seed
-    const mapSeed = Math.floor(Math.random() * 2147483647);
-
-    // Generate terrain with elevation for server-side movement validation
-    // This ensures server pathfinding matches client terrain exactly
-    const mapData = generateTerrain(mapSeed, 'arena', 32, 32, { elevation: true });
+    const serverAllowsV2 = isBattleMapV2EnabledForMode('pvp_coliseum');
+    const player1Version = selectBattleMapGenerationVersion({
+      mode: 'pvp_coliseum',
+      allowV2: serverAllowsV2,
+      clientCapabilities: match.player1.battleMapCapabilities
+    });
+    const player2Version = selectBattleMapGenerationVersion({
+      mode: 'pvp_coliseum',
+      allowV2: serverAllowsV2,
+      clientCapabilities: match.player2.battleMapCapabilities
+    });
+    const useV2 = player1Version === 2 && player2Version === 2;
+    const terrainGenerationVersion = useV2 ? 2 : 1;
+    const mapSeed = deriveEncounterTerrainSeed(
+      match.createdAt + match.id,
+      'arena',
+      terrainGenerationVersion
+    );
 
     // Build initial battle state
     const initialState = {
@@ -690,13 +722,6 @@ async function startMatchWithFormations(matchId) {
       player1Id: match.player1.userId,
       player2Id: match.player2.userId,
       units: [],
-      terrain: mapData.terrain,
-      elevation: mapData.elevation,
-      elevationFormat: mapData.elevationFormat,
-      obstacles: mapData.obstacles,
-      variants: mapData.variants,
-      mapWidth: 32,
-      mapHeight: 32,
       consumables: [],
       log: [{ type: 'battle_start', message: 'PvP Battle begins!', timestamp: Date.now() }]
     };
@@ -809,29 +834,60 @@ async function startMatchWithFormations(matchId) {
     // Generate turn predictions
     initialState.turnPredictions = battleService.predictTurnOrder(initialState, 10);
 
-    // Create battle record in database
-    const battleResult = await query(
-      `INSERT INTO battles (battle_type, status, battle_state, map_seed, map_width, map_height, player1_id, player2_id)
-       VALUES ('pvp_coliseum', 'active', $1, $2, 32, 32, $3, $4)
-       RETURNING id`,
-      [JSON.stringify(initialState), mapSeed, match.player1.userId, match.player2.userId]
-    );
+    const generatedMap = await generateBattleMap({
+      terrainSeed: mapSeed,
+      nodeType: 'arena',
+      mapWidth: 32,
+      mapHeight: 32,
+      mode: 'pvp_coliseum',
+      playerCount: player1Party.length,
+      enemyCount: player2Party.length,
+      enemyCapacity: player2Party.length,
+      existingUnits: initialState.units,
+      initialMutableState: initialState,
+      allowV2: useV2,
+      clientCapabilities: useV2
+        ? match.player1.battleMapCapabilities
+        : null
+    });
+    const creationIdempotencyKey = [
+      'coliseum',
+      match.queueType,
+      match.id,
+      match.createdAt,
+      match.player1.userId,
+      match.player2.userId
+    ].join(':');
+    const created = await withTransaction(async client => {
+      const result = await battleStateRepository.createBattle({
+        battleType: 'pvp_coliseum',
+        status: 'active',
+        player1Id: match.player1.userId,
+        player2Id: match.player2.userId,
+        creationIdempotencyKey,
+        finalMap: generatedMap.finalMap,
+        legacyFlatState: generatedMap.legacyFlatState,
+        initialMutableState: generatedMap.mutableState
+      }, { client });
 
-    const battleId = battleResult.rows[0].id;
+      // Mark characters as in battle in the same transaction as battle creation.
+      await Promise.all([
+        client.query(
+          `UPDATE characters SET in_battle = true
+           WHERE user_id = $1 AND party_slot <= $2 AND party_slot IS NOT NULL`,
+          [match.player1.userId, MAX_BATTLE_PARTY_SIZE]
+        ),
+        client.query(
+          `UPDATE characters SET in_battle = true
+           WHERE user_id = $1 AND party_slot <= $2 AND party_slot IS NOT NULL`,
+          [match.player2.userId, MAX_BATTLE_PARTY_SIZE]
+        )
+      ]);
+      return result;
+    });
 
-    // Mark characters as in battle for both players
-    await Promise.all([
-      query(
-        `UPDATE characters SET in_battle = true
-         WHERE user_id = $1 AND party_slot <= $2 AND party_slot IS NOT NULL`,
-        [match.player1.userId, MAX_BATTLE_PARTY_SIZE]
-      ),
-      query(
-        `UPDATE characters SET in_battle = true
-         WHERE user_id = $1 AND party_slot <= $2 AND party_slot IS NOT NULL`,
-        [match.player2.userId, MAX_BATTLE_PARTY_SIZE]
-      )
-    ]);
+    const battleId = created.battleId;
+    const persistedState = created.envelope.state;
 
     // Join both players to battle WebSocket room
     await battleWebsocket.joinBattle(battleId, match.player1.userId);
@@ -840,38 +896,63 @@ async function startMatchWithFormations(matchId) {
     match.status = 'started';
     match.battleId = battleId;
 
-    // Notify both players with battle info
+    // Notify each player with a capability-negotiated, revisioned snapshot.
+    // V2 maps can be delivered by reference when that exact hash is cached.
     const ws = await getWebsocket();
-    const battlePayload = {
-      matchId,
-      status: 'started',
-      battleType: 'pvp',
-      battleId,
-      mapSeed,
-      nodeType: 'arena',
-      state: initialState
+    const sendStarted = (player, opponent) => {
+      const { negotiation, snapshot } = createNegotiatedBattleStateSnapshot(
+        created.envelope,
+        player.battleMapCapabilities
+      );
+      if (!negotiation.compatible) {
+        throw new Error(
+          `Persisted Coliseum map is incompatible with user ${player.userId}`
+        );
+      }
+      const payload = {
+        matchId,
+        status: 'started',
+        battleType: 'pvp_coliseum',
+        battleId,
+        mapSeed,
+        nodeType: 'arena',
+        stateRevision: created.envelope.stateRevision,
+        battleMapSchemaVersion: created.envelope.battleMapSchemaVersion,
+        terrainGenerationVersion: created.envelope.terrainGenerationVersion,
+        battleMapCapabilities: negotiation,
+        snapshot,
+        opponentUsername: opponent.username
+      };
+      // Undeclared legacy V1 clients retain their old state field.
+      if (
+        player.battleMapCapabilities === null
+        && created.envelope.battleMapSchemaVersion === 1
+      ) {
+        payload.state = persistedState;
+      }
+      const connection = ws.connections?.get(player.userId);
+      if (connection?.readyState === 1) {
+        sendWithAck(
+          connection,
+          { type: 'coliseum:match_started', payload },
+          battleId,
+          player.userId
+        );
+      } else {
+        ws.sendToUser(player.userId, {
+          type: 'coliseum:match_started',
+          payload
+        });
+      }
     };
 
-    ws.sendToUser(match.player1.userId, {
-      type: 'coliseum:match_started',
-      payload: {
-        ...battlePayload,
-        opponentUsername: match.player2.username
-      }
-    });
-
-    ws.sendToUser(match.player2.userId, {
-      type: 'coliseum:match_started',
-      payload: {
-        ...battlePayload,
-        opponentUsername: match.player1.username
-      }
-    });
+    sendStarted(match.player1, match.player2);
+    sendStarted(match.player2, match.player1);
 
     console.log(`PvP Battle ${battleId} started: ${match.player1.username} vs ${match.player2.username}`);
 
     // Start turn timer for first player's turn
-    const firstUnit = initialState.units.find(u => u.id === initialState.activeUnitId);
+    const firstUnit = persistedState.units.find(u => u.id === persistedState.activeUnitId);
     if (firstUnit && firstUnit.type === 'player' && firstUnit.ownerId) {
       startTurnTimer(battleId, firstUnit.ownerId, false); // false = PvP, can forfeit
     }
@@ -934,117 +1015,246 @@ export async function cancelMatch(matchId, reason) {
  * @param {number} loserId - Loser user ID
  * @param {string} reason - Victory reason: 'victory', 'surrender', 'timeout_forfeit', 'disconnect_forfeit'
  * @param {boolean} applyPenalty - Whether to apply forfeit penalty (default true for forfeits)
+ * @param {Object} options - Atomic terminal-command options
  */
-export async function completeMatch(battleId, winnerId, loserId, reason = 'victory', applyPenalty = true) {
+export async function completeMatch(
+  battleId,
+  winnerId,
+  loserId,
+  reason = 'victory',
+  applyPenalty = true,
+  {
+    finalState = null,
+    expectedRevision = null,
+    consumedInventoryId = null,
+    actingUserId = null,
+    publish = true
+  } = {}
+) {
+  let battleEnvelope;
   try {
-    // Get match info
-    const matchResult = await query(
-      'SELECT id, battle_state FROM battles WHERE id = $1',
-      [battleId]
-    );
+    battleEnvelope = await battleStateRepository.loadBattle(battleId);
+  } catch (error) {
+    if (error?.code !== 'BATTLE_NOT_FOUND') throw error;
+    console.error(`[Coliseum] Battle ${battleId} not found for match completion`);
+    return { idempotent: true, missing: true, commit: null };
+  }
 
-    if (matchResult.rows.length === 0) {
-      console.error(`[Coliseum] Battle ${battleId} not found for match completion`);
-      return;
-    }
+  const priorCompletion = await query(
+    `SELECT id, queue_type, winner_user_id, loser_user_id,
+            winner_rating_change, loser_rating_change
+     FROM coliseum_matches
+     WHERE battle_id = $1
+     LIMIT 1`,
+    [battleId]
+  );
+  if (priorCompletion.rows.length > 0) {
+    return {
+      idempotent: true,
+      commit: null,
+      matchResult: priorCompletion.rows[0]
+    };
+  }
 
-    // Find the match in activeMatches
-    let queueType = '1v1';
-    let match = null;
-    activeMatches.forEach((m, _matchId) => {
-      if (m.battleId === battleId) {
-        match = m;
-        queueType = m.queueType;
-      }
-    });
+  if (battleEnvelope.battleType !== 'pvp_coliseum') {
+    const error = new Error(`Battle ${battleId} is not a Coliseum battle`);
+    error.code = 'COLISEUM_BATTLE_TYPE_MISMATCH';
+    throw error;
+  }
+  const participantIds = new Set([
+    String(battleEnvelope.player1Id),
+    String(battleEnvelope.player2Id)
+  ]);
+  if (!participantIds.has(String(winnerId))
+    || !participantIds.has(String(loserId))
+    || String(winnerId) === String(loserId)) {
+    const error = new Error(`Winner and loser do not match battle ${battleId}`);
+    error.code = 'COLISEUM_PARTICIPANT_MISMATCH';
+    throw error;
+  }
 
-    // Capture team snapshots
-    const snapshot = await captureTeamSnapshots(winnerId, loserId);
-
-    // Calculate match stats
-    const stats = await calculateMatchStats(battleId);
-
-    // Get current ratings
-    const [winnerRating, loserRating] = await Promise.all([
-      getPlayerRating(winnerId, queueType),
-      getPlayerRating(loserId, queueType)
-    ]);
-
-    // Ensure ratings exist
+  let match = null;
+  activeMatches.forEach(candidate => {
+    if (candidate.battleId === battleId) match = candidate;
+  });
+  const encodedQueueType = battleEnvelope.creationIdempotencyKey
+    ?.match(/^coliseum:([^:]+):/)?.[1];
+  const queueType = match?.queueType || encodedQueueType || '1v1';
+  const [snapshot, stats, enhancedStats, winnerOldRank, loserOldRank] =
     await Promise.all([
-      ensureRating(winnerId, queueType),
-      ensureRating(loserId, queueType)
-    ]);
-
-    const winnerCurrentRating = winnerRating?.rating || 1000;
-    const loserCurrentRating = loserRating?.rating || 1000;
-
-    // Snapshot pre-match ranks
-    const [winnerOldRank, loserOldRank] = await Promise.all([
+      captureTeamSnapshots(winnerId, loserId),
+      calculateMatchStats(battleId),
+      calculateEnhancedMatchStats(battleId),
       getPlayerRank(winnerId, queueType),
       getPlayerRank(loserId, queueType)
     ]);
+  const winnerPPR = match?.player1?.userId === winnerId
+    ? match.player1.ppr
+    : (match?.player2?.ppr || await calculateBattlePartyPower(winnerId));
+  const loserPPR = match?.player1?.userId === loserId
+    ? match.player1.ppr
+    : (match?.player2?.ppr || await calculateBattlePartyPower(loserId));
+  const enhancedStatsToStore = {
+    ...stats,
+    unitStats: enhancedStats?.unitStats || [],
+    battleSummary: enhancedStats?.battleSummary || null,
+    totalDamage:
+      enhancedStats?.unitStats?.reduce((sum, unit) => sum + (unit.damageDealt || 0), 0) || 0,
+    totalHealing:
+      enhancedStats?.unitStats?.reduce((sum, unit) => sum + (unit.healingDone || 0), 0) || 0,
+    totalKills:
+      enhancedStats?.unitStats?.reduce((sum, unit) => sum + (unit.kills || 0), 0) || 0,
+    turnCount: enhancedStats?.battleSummary?.totalTurns || stats?.totalTurns || 0
+  };
+  const isForfeit = [
+    'surrender',
+    'timeout_forfeit',
+    'disconnect_forfeit'
+  ].includes(reason);
 
-    // Calculate old tiers
-    const winnerOldTier = getTier(winnerCurrentRating);
-    const loserOldTier = getTier(loserCurrentRating);
+  const transactionResult = await withTransaction(async client => {
+    const lockedBattle = await battleStateRepository.loadBattle(battleId, {
+      client,
+      forUpdate: true
+    });
+    const existingResult = await client.query(
+      `SELECT id, queue_type, winner_user_id, loser_user_id,
+              winner_rating_change, loser_rating_change
+       FROM coliseum_matches
+       WHERE battle_id = $1
+       LIMIT 1`,
+      [battleId]
+    );
+    if (existingResult.rows.length > 0) {
+      return {
+        idempotent: true,
+        commit: null,
+        matchResult: existingResult.rows[0]
+      };
+    }
+    if (lockedBattle.status !== 'active') {
+      const error = new Error(
+        `Battle ${battleId} is already ${lockedBattle.status} with winner ${lockedBattle.winnerId}`
+      );
+      error.code = 'COLISEUM_BATTLE_ALREADY_TERMINAL';
+      throw error;
+    }
+    if (expectedRevision !== null
+      && lockedBattle.stateRevision !== expectedRevision) {
+      const error = new Error(
+        `Battle ${battleId} revision ${lockedBattle.stateRevision} does not match ${expectedRevision}`
+      );
+      error.code = 'BATTLE_STATE_CONFLICT';
+      error.expectedRevision = expectedRevision;
+      error.actualRevision = lockedBattle.stateRevision;
+      throw error;
+    }
 
-    // Get PPR values from match or calculate
-    const winnerPPR = match?.player1?.userId === winnerId
-      ? match.player1.ppr
-      : (match?.player2?.ppr || await calculateBattlePartyPower(winnerId));
-    const loserPPR = match?.player1?.userId === loserId
-      ? match.player1.ppr
-      : (match?.player2?.ppr || await calculateBattlePartyPower(loserId));
-
-    // Calculate rating changes
+    const orderedUserIds = [winnerId, loserId]
+      .sort((left, right) => Number(left) - Number(right));
+    for (const userId of orderedUserIds) {
+      await ensureRating(userId, queueType, { client });
+    }
+    const ratingsByUser = new Map();
+    for (const userId of orderedUserIds) {
+      ratingsByUser.set(
+        String(userId),
+        await getPlayerRating(userId, queueType, {
+          client,
+          forUpdate: true
+        })
+      );
+    }
+    const winnerCurrentRating =
+      ratingsByUser.get(String(winnerId))?.rating ?? 1000;
+    const loserCurrentRating =
+      ratingsByUser.get(String(loserId))?.rating ?? 1000;
     const ratingChange = calculateRatingChange(
       winnerCurrentRating,
       loserCurrentRating,
       winnerPPR,
       loserPPR
     );
-
-    // Apply forfeit penalty if applicable
-    const isForfeit = reason === 'surrender' || reason === 'timeout_forfeit' || reason === 'disconnect_forfeit';
     if (isForfeit && applyPenalty) {
       ratingChange.loserLoss = applyForfeitPenalty(ratingChange.loserLoss);
     }
 
-    // Update ratings
-    await Promise.all([
-      updatePvpRating(winnerId, queueType, ratingChange.winnerGain, true),
-      updatePvpRating(loserId, queueType, -ratingChange.loserLoss, false)
-    ]);
+    const ratingCommands = [
+      {
+        userId: winnerId,
+        change: ratingChange.winnerGain,
+        isWin: true
+      },
+      {
+        userId: loserId,
+        change: -ratingChange.loserLoss,
+        isWin: false
+      }
+    ].sort((left, right) => Number(left.userId) - Number(right.userId));
+    const updatedRatings = new Map();
+    for (const command of ratingCommands) {
+      updatedRatings.set(
+        String(command.userId),
+        await updatePvpRating(
+          command.userId,
+          queueType,
+          command.change,
+          command.isWin,
+          { client }
+        )
+      );
+    }
 
-    // Snapshot post-match ranks
-    const [winnerNewRank, loserNewRank] = await Promise.all([
-      getPlayerRank(winnerId, queueType),
-      getPlayerRank(loserId, queueType)
-    ]);
+    const commit = await battleStateRepository.completeBattle({
+      battleId,
+      expectedRevision: lockedBattle.stateRevision,
+      commandType: 'coliseum_match_complete',
+      idempotencyKey: `coliseum-match-complete:${battleId}`,
+      mutableState: finalState
+        ? extractBattleMutableState(finalState)
+        : lockedBattle.mutableState,
+      status: 'victory',
+      winnerId
+    }, { client });
+    if (commit.idempotent) {
+      const error = new Error(
+        `Battle ${battleId} has a terminal command without a Coliseum result`
+      );
+      error.code = 'COLISEUM_INCOMPLETE_TERMINAL_TRANSACTION';
+      throw error;
+    }
 
-    // Calculate new tiers
-    const winnerNewRating = winnerCurrentRating + ratingChange.winnerGain;
-    const loserNewRating = Math.max(0, loserCurrentRating - ratingChange.loserLoss);
-    const winnerNewTier = getTier(winnerNewRating);
-    const loserNewTier = getTier(loserNewRating);
+    if (consumedInventoryId !== null && consumedInventoryId !== undefined) {
+      if (actingUserId === null || actingUserId === undefined) {
+        throw new TypeError('actingUserId is required when consuming an item');
+      }
+      const inventoryResult = await client.query(
+        `SELECT quantity
+         FROM character_items
+         WHERE id = $1 AND user_id = $2
+         FOR UPDATE`,
+        [consumedInventoryId, actingUserId]
+      );
+      if (inventoryResult.rows.length === 0
+        || inventoryResult.rows[0].quantity < 1) {
+        const error = new Error('Consumable inventory changed - please retry');
+        error.code = 'BATTLE_CONSUMABLE_CONFLICT';
+        throw error;
+      }
+      if (inventoryResult.rows[0].quantity > 1) {
+        await client.query(
+          'UPDATE character_items SET quantity = quantity - 1 WHERE id = $1',
+          [consumedInventoryId]
+        );
+      } else {
+        await client.query(
+          'DELETE FROM character_items WHERE id = $1',
+          [consumedInventoryId]
+        );
+      }
+    }
 
-    // Calculate enhanced stats
-    const enhancedStats = await calculateEnhancedMatchStats(battleId);
-
-    // Aggregate enhanced stats for storage
-    const enhancedStatsToStore = {
-      ...stats,
-      unitStats: enhancedStats?.unitStats || [],
-      battleSummary: enhancedStats?.battleSummary || null,
-      totalDamage: enhancedStats?.unitStats?.reduce((sum, u) => sum + (u.damageDealt || 0), 0) || 0,
-      totalHealing: enhancedStats?.unitStats?.reduce((sum, u) => sum + (u.healingDone || 0), 0) || 0,
-      totalKills: enhancedStats?.unitStats?.reduce((sum, u) => sum + (u.kills || 0), 0) || 0,
-      turnCount: enhancedStats?.battleSummary?.totalTurns || stats?.totalTurns || 0
-    };
-
-    // Record match in database
-    await query(
+    await client.query(
       `INSERT INTO coliseum_matches
          (battle_id, queue_type, winner_user_id, loser_user_id,
           winner_rating_change, loser_rating_change,
@@ -1062,154 +1272,204 @@ export async function completeMatch(battleId, winnerId, loserId, reason = 'victo
         JSON.stringify(enhancedStatsToStore)
       ]
     );
-
-    // Update battle status (use 'victory' as battles table uses battle_status enum)
-    await query(
-      'UPDATE battles SET status = \'victory\', winner_id = $2 WHERE id = $1',
-      [battleId, winnerId]
+    await client.query(
+      `UPDATE characters
+       SET in_battle = false
+       WHERE user_id = ANY($1::int[]) AND party_slot <= $2`,
+      [[winnerId, loserId], MAX_BATTLE_PARTY_SIZE]
     );
-
-    // Reset in_battle flag for BOTH players' characters
-    // This is critical - without this, characters remain stuck unable to use shops, travel, etc.
-    await Promise.all([
-      query(
-        `UPDATE characters SET in_battle = false
-         WHERE user_id = $1 AND party_slot <= $2`,
-        [winnerId, MAX_BATTLE_PARTY_SIZE]
-      ),
-      query(
-        `UPDATE characters SET in_battle = false
-         WHERE user_id = $1 AND party_slot <= $2`,
-        [loserId, MAX_BATTLE_PARTY_SIZE]
-      )
-    ]);
-
-    // Clean up active match
-    if (match) {
-      activeMatches.forEach((m, matchId) => {
-        if (m.battleId === battleId) {
-          activeMatches.delete(matchId);
-        }
-      });
+    const winnerCharacterResult = await client.query(
+      `SELECT id
+       FROM characters
+       WHERE user_id = $1 AND party_slot = 1
+       LIMIT 1`,
+      [winnerId]
+    );
+    const winnerCharacterId = winnerCharacterResult.rows[0]?.id;
+    if (!winnerCharacterId) {
+      throw new Error(
+        `Cannot enqueue terminal progression for Coliseum battle ${battleId}: `
+        + `winner ${winnerId} has no party leader`
+      );
     }
-
-    // Clean up turn timer
-    cancelTurnTimer(battleId);
-
-    // Broadcast battle:end so frontend can show victory/defeat screen
-    // Get player1_id, player2_id from battles table to determine winning team
-    const battlePlayersResult = await query(
-      'SELECT player1_id, player2_id FROM battles WHERE id = $1',
-      [battleId]
-    );
-    const battlePlayers = battlePlayersResult.rows[0];
-    const player1Id = battlePlayers?.player1_id || winnerId;
-    const player2Id = battlePlayers?.player2_id || loserId;
-    const winningTeamId = winnerId === player1Id ? 1 : 2;
-
-    const pvpInfo = {
-      player1Id,
-      player2Id,
-      winningTeamId
-    };
-
-    // Map surrender/forfeit reasons to appropriate battle end status
-    const battleStatus = reason === 'surrender' ? 'surrender' : 'victory';
-    await battleWebsocket.broadcastBattleEnd(battleId, battleStatus, null, pvpInfo);
-
-    // Notify both players of match result
-    const ws = await getWebsocket();
-    const resultPayload = {
+    await battleTerminalOutbox.enqueue(client, {
       battleId,
-      winnerId,
-      loserId,
-      reason,
-      winnerRatingChange: ratingChange.winnerGain,
-      loserRatingChange: -ratingChange.loserLoss,
-      winnerNewRating: winnerCurrentRating + ratingChange.winnerGain,
-      loserNewRating: Math.max(0, loserCurrentRating - ratingChange.loserLoss)
-    };
-
-    ws.sendToUser(winnerId, {
-      type: 'coliseum:match_result',
-      payload: {
-        ...resultPayload,
-        isWinner: true,
-        unitStats: enhancedStats?.unitStats || null,
-        battleSummary: enhancedStats?.battleSummary || null,
-        pvpResult: {
-          oldRating: winnerCurrentRating,
-          newRating: winnerNewRating,
-          ratingChange: ratingChange.winnerGain,
-          oldTier: winnerOldTier.name,
-          newTier: winnerNewTier.name,
-          tierChanged: winnerOldTier.name !== winnerNewTier.name,
-          oldRank: winnerOldRank.rank,
-          newRank: winnerNewRank.rank,
-          pointsToNextTier: getNextTierProgress(winnerNewRating)?.pointsNeeded || null,
-          surrenderPenalty: false
-        }
-      }
-    });
-
-    ws.sendToUser(loserId, {
-      type: 'coliseum:match_result',
-      payload: {
-        ...resultPayload,
-        isWinner: false,
-        unitStats: enhancedStats?.unitStats || null,
-        battleSummary: enhancedStats?.battleSummary || null,
-        pvpResult: {
-          oldRating: loserCurrentRating,
-          newRating: loserNewRating,
-          ratingChange: -ratingChange.loserLoss,
-          oldTier: loserOldTier.name,
-          newTier: loserNewTier.name,
-          tierChanged: loserOldTier.name !== loserNewTier.name,
-          oldRank: loserOldRank.rank,
-          newRank: loserNewRank.rank,
-          pointsToNextTier: getNextTierProgress(loserNewRating)?.pointsNeeded || null,
-          surrenderPenalty: isForfeit && applyPenalty
-        }
-      }
-    });
-
-    // Daily/Weekly quest progress hooks (fire-and-forget pattern)
-    // Track coliseum win for winner
-    pool.query('SELECT id FROM characters WHERE user_id = $1 AND party_slot = 1', [winnerId])
-      .then(charResult => {
-        const characterId = charResult.rows[0]?.id;
-        if (characterId) {
-          dailyQuestService.updateProgress(characterId, 'coliseum_wins', 1, {
-            queueType
-          }).catch(err => console.warn('[Quest] coliseum_wins progress failed:', err.message));
-        }
+      eventType: BATTLE_TERMINAL_PROGRESSION_EVENT_TYPE,
+      payload: buildColiseumTerminalProgressionPayload({
+        winnerCharacterId,
+        queueType
       })
-      .catch(err => console.warn('[Quest] Failed to get characterId for coliseum:', err.message));
+    });
+    await battleTerminalOutbox.enqueue(client, {
+      battleId,
+      eventType: BATTLE_TERMINAL_COLISEUM_BADGES_EVENT_TYPE,
+      payload: buildColiseumBadgePayload({
+        winnerId,
+        winnerRating: winnerCurrentRating,
+        loserRating: loserCurrentRating,
+        winnerPPR,
+        loserPPR,
+        winnerNewRating: updatedRatings.get(String(winnerId)).rating,
+        finalState: commit.envelope.state
+      })
+    });
 
-    // Check and award achievement badges (fire-and-forget pattern)
-    const battleState = matchResult.rows[0]?.battle_state;
-    checkAndAwardBadges(winnerId, {
-      winnerRating: winnerCurrentRating,
-      loserRating: loserCurrentRating,
-      winnerPPR,
-      loserPPR,
-      battleState,
-      winnerNewRating: winnerCurrentRating + ratingChange.winnerGain
-    }).then(newBadges => {
-      if (newBadges.length > 0) {
-        console.log(`[Coliseum] Awarded badges to ${winnerId}:`, newBadges.map(b => b.key).join(', '));
-        // Notify winner of new badges
-        ws.sendToUser(winnerId, {
-          type: 'coliseum:badges_earned',
-          payload: { badges: newBadges }
-        });
+    return {
+      idempotent: false,
+      commit,
+      ratingChange,
+      winnerCurrentRating,
+      loserCurrentRating,
+      winnerRating: updatedRatings.get(String(winnerId)),
+      loserRating: updatedRatings.get(String(loserId))
+    };
+  });
+
+  if (transactionResult.idempotent) return transactionResult;
+
+  const {
+    commit,
+    ratingChange,
+    winnerCurrentRating,
+    loserCurrentRating,
+    winnerRating,
+    loserRating
+  } = transactionResult;
+  const winnerNewRating = winnerRating.rating;
+  const loserNewRating = loserRating.rating;
+  const winnerOldTier = getTier(winnerCurrentRating);
+  const loserOldTier = getTier(loserCurrentRating);
+  const winnerNewTier = getTier(winnerNewRating);
+  const loserNewTier = getTier(loserNewRating);
+  const [winnerNewRank, loserNewRank] = await Promise.all([
+    getPlayerRank(winnerId, queueType),
+    getPlayerRank(loserId, queueType)
+  ]);
+
+  activeMatches.forEach((candidate, matchId) => {
+    if (candidate.battleId === battleId) activeMatches.delete(matchId);
+  });
+  cancelTurnTimer(battleId);
+
+  const player1Id = commit.envelope.player1Id ?? winnerId;
+  const player2Id = commit.envelope.player2Id ?? loserId;
+  const pvpInfo = {
+    player1Id,
+    player2Id,
+    winningTeamId: String(winnerId) === String(player1Id) ? 1 : 2
+  };
+  if (publish) {
+    await battleWebsocket.broadcastStateUpdate(battleId, commit.update);
+    const battleStatus = reason === 'surrender' ? 'surrender' : 'victory';
+    await battleWebsocket.broadcastBattleEnd(
+      battleId,
+      battleStatus,
+      null,
+      pvpInfo
+    );
+  }
+
+  const resultPayload = {
+    battleId,
+    winnerId,
+    loserId,
+    reason,
+    winnerRatingChange: ratingChange.winnerGain,
+    loserRatingChange: -ratingChange.loserLoss,
+    winnerNewRating,
+    loserNewRating
+  };
+  const presentationEvents = [
+    {
+      userId: winnerId,
+      message: {
+        type: 'coliseum:match_result',
+        payload: {
+          ...resultPayload,
+          isWinner: true,
+          unitStats: enhancedStats?.unitStats || null,
+          battleSummary: enhancedStats?.battleSummary || null,
+          pvpResult: {
+            oldRating: winnerCurrentRating,
+            newRating: winnerNewRating,
+            ratingChange: ratingChange.winnerGain,
+            oldTier: winnerOldTier.name,
+            newTier: winnerNewTier.name,
+            tierChanged: winnerOldTier.name !== winnerNewTier.name,
+            oldRank: winnerOldRank?.rank ?? null,
+            newRank: winnerNewRank?.rank ?? null,
+            pointsToNextTier:
+              getNextTierProgress(winnerNewRating)?.pointsNeeded ?? null,
+            surrenderPenalty: false
+          }
+        }
       }
-    }).catch(err => console.warn('[Coliseum] Badge check failed:', err.message));
+    },
+    {
+      userId: loserId,
+      message: {
+        type: 'coliseum:match_result',
+        payload: {
+          ...resultPayload,
+          isWinner: false,
+          unitStats: enhancedStats?.unitStats || null,
+          battleSummary: enhancedStats?.battleSummary || null,
+          pvpResult: {
+            oldRating: loserCurrentRating,
+            newRating: loserNewRating,
+            ratingChange: -ratingChange.loserLoss,
+            oldTier: loserOldTier.name,
+            newTier: loserNewTier.name,
+            tierChanged: loserOldTier.name !== loserNewTier.name,
+            oldRank: loserOldRank?.rank ?? null,
+            newRank: loserNewRank?.rank ?? null,
+            pointsToNextTier:
+              getNextTierProgress(loserNewRating)?.pointsNeeded ?? null,
+            surrenderPenalty: isForfeit && applyPenalty
+          }
+        }
+      }
+    }
+  ];
+  if (publish) {
+    await publishColiseumMatchResultEvents(presentationEvents);
+  }
 
-    console.log(`[Coliseum] Match completed: Battle ${battleId}, Winner: ${winnerId} (+${ratingChange.winnerGain}), Loser: ${loserId} (-${ratingChange.loserLoss}), Reason: ${reason}`);
+  console.log(
+    `[Coliseum] Match completed: Battle ${battleId}, Winner: ${winnerId} `
+    + `(+${ratingChange.winnerGain}), Loser: ${loserId} `
+    + `(-${ratingChange.loserLoss}), Reason: ${reason}`
+  );
+  return {
+    ...transactionResult,
+    pvpInfo,
+    queueType,
+    winnerNewRank,
+    loserNewRank,
+    presentationEvents
+  };
+}
 
-  } catch (error) {
-    console.error('[Coliseum] Failed to complete match:', error);
+/**
+ * Publish non-authoritative Coliseum result panels after the caller has
+ * emitted the authoritative state revision and terminal lifecycle event.
+ */
+export async function publishColiseumMatchResultEvents(events) {
+  if (!Array.isArray(events)) {
+    throw new TypeError('Coliseum presentation events must be an array');
+  }
+  if (events.length === 0) return;
+
+  const ws = await getWebsocket();
+  for (const event of events) {
+    const userId = Number(event?.userId);
+    if (!event
+      || !Number.isSafeInteger(userId)
+      || userId < 1
+      || !event.message
+      || typeof event.message !== 'object') {
+      throw new TypeError('Invalid Coliseum presentation event');
+    }
+    ws.sendToUser(userId, event.message);
   }
 }

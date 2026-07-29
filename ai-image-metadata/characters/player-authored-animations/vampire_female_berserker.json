@@ -1,0 +1,584 @@
+{
+  "version": "1.0.0",
+  "template": "ai-image-metadata/characters/player-authored-animation-template.json",
+  "compilerVersion": "1.2.0",
+  "id": "vampire_female_berserker",
+  "profile": "berserker_v1",
+  "profileSource": "ai-image-metadata/characters/player-animation-profiles/berserker_v1.json",
+  "status": "approved",
+  "approvedAt": "2026-07-29T02:58:17.658Z",
+  "metadataFingerprint": "fb9d7a849511db9a90b253b911916c505fce56732d9ecf1b50945841afc2a203",
+  "draftProvenance": {
+    "registry": "ai-image-metadata/characters/player-variants.json",
+    "templateSha256": "7943e69db577b3a4429b47df634f931d3f4cb8e8ce9a91a06578255fbe935bbe",
+    "profileSha256": "cc84d10fbec414ab2e73d166b23f5687109336422dd0d3cc11b12f0ea7ef547a"
+  },
+  "identity": {
+    "race": "vampire",
+    "gender": "female",
+    "class": "berserker",
+    "presentation": "female vampire berserker",
+    "visualTraits": "vampire pale skin red eyes fangs aristocratic elegant female feminine features savage warrior spiked armor dual axes wild hair war paint scarred",
+    "baseFacing": "three-quarters right",
+    "sourceMetadata": {
+      "isAdvanced": true,
+      "inheritsFrom": "berserker",
+      "seed": 23017
+    }
+  },
+  "inputs": {
+    "identity": {
+      "origin": "frontend/public/assets/portraits/originals/vampire_female_berserker.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/vampire_female_berserker/inputs/identity.png",
+      "authority": "face, ancestry, gender presentation, hair, eyes, complexion, costume, palette, proportions, and equipment"
+    },
+    "style": {
+      "origin": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/vampire_female_berserker/inputs/style.png",
+      "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+    }
+  },
+  "reference": {
+    "source": "ai-image-metadata/characters/player-animation-sources/vampire_female_berserker/reference.png",
+    "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_female_berserker/chroma/reference.png",
+    "identitySource": "ai-image-metadata/characters/player-animation-sources/vampire_female_berserker/inputs/identity.png",
+    "styleSource": "ai-image-metadata/characters/player-animation-sources/vampire_female_berserker/inputs/style.png",
+    "prompt": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative Vampire Berserker (female presentation) identity portrait; Image 2 is the approved full-body pixel-art style and proportion reference only. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant female feminine features savage warrior spiked armor dual axes wild hair war paint scarred. Create one complete head-to-toe Vampire Berserker (female presentation) preserving Image 1's face, ancestry traits, gender presentation, hair, scars, war paint, savage armor, palette, proportions, and weapons. Do not import identity details from Image 2. Preserve the portrait's savage armor, war paint, scars, hair, and exact weapon designs and count. If two axes are present, keep exactly one in each original hand; never duplicate, swap, sheath, merge, or transform them. Translate the portrait into a compact powerful full-body silhouette. Use a flat #00ff00 chroma key background with no floor or scenery and a square 1:1 canvas with generous padding. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered berserker in a coiled aggressive guard facing three-quarters right. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+  },
+  "animations": {
+    "idle": {
+      "source": "ai-image-metadata/characters/player-animation-sources/vampire_female_berserker/idle.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_female_berserker/chroma/idle.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 4,
+      "frameDescriptions": [
+        "low aggressive guard with both weapons spread",
+        "deep inhale lifting shoulders and weapon heads",
+        "weight drives onto the forward foot",
+        "impatient forward lean with elbows flexed",
+        "centered predatory crouch",
+        "forceful exhale lowering shoulders",
+        "rearward weight shift with weapons re-angled",
+        "coiled guard flowing back to frame one"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body berserker prowling idle-cycle poses of the authoritative Vampire Berserker (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant female feminine features savage warrior spiked armor dual axes wild hair war paint scarred. Required sequence: low aggressive guard with both weapons spread; deep inhale lifting shoulders and weapon heads; weight drives onto the forward foot; impatient forward lean with elbows flexed; centered predatory crouch; forceful exhale lowering shoulders; rearward weight shift with weapons re-angled; coiled guard flowing back to frame one. Motion direction: A predatory breathing loop shifts weight between a low weapon guard and an impatient forward lean while both weapons remain controlled.. Overall berserker motion is ferocious, explosive, top-heavy, and relentless, with deep planted lunges, broad shoulder rotation, and readable dual-weapon momentum. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, armor, palette, proportions, scars, war paint, and weapon count. Preserve the portrait's savage armor, war paint, scars, hair, and exact weapon designs and count. If two axes are present, keep exactly one in each original hand; never duplicate, swap, sheath, merge, or transform them. Berserker power is physical fury. Use no spells, runes, projectiles, elemental trails, or supernatural aura; restrained dust or a short impact slash may follow physical contact only. Action-specific effects: No active attack effect; hair, straps, and weapon heads may settle with the heavy breathing. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "walk": {
+      "source": "ai-image-metadata/characters/player-animation-sources/vampire_female_berserker/walk.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_female_berserker/chroma/walk.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "left foot crushing forward contact",
+        "left leg compressed under the weapon weight",
+        "passing pose with right knee driving through",
+        "right foot reaching as both weapons counter-swing",
+        "right foot forceful forward contact",
+        "right leg compressed under the armor",
+        "passing pose with left knee driving through",
+        "left foot reaching into the stalking loop"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body berserker weapon-heavy stalk poses of the authoritative Vampire Berserker (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant female feminine features savage warrior spiked armor dual axes wild hair war paint scarred. Required sequence: left foot crushing forward contact; left leg compressed under the weapon weight; passing pose with right knee driving through; right foot reaching as both weapons counter-swing; right foot forceful forward contact; right leg compressed under the armor; passing pose with left knee driving through; left foot reaching into the stalking loop. Motion direction: A fast heavy-footed stalk uses alternating contacts, deep compression, broad counter-swings, and controlled weapon inertia.. Overall berserker motion is ferocious, explosive, top-heavy, and relentless, with deep planted lunges, broad shoulder rotation, and readable dual-weapon momentum. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, armor, palette, proportions, scars, war paint, and weapon count. Preserve the portrait's savage armor, war paint, scars, hair, and exact weapon designs and count. If two axes are present, keep exactly one in each original hand; never duplicate, swap, sheath, merge, or transform them. Berserker power is physical fury. Use no spells, runes, projectiles, elemental trails, or supernatural aura; restrained dust or a short impact slash may follow physical contact only. Action-specific effects: No attack trail or magic; armor, hair, straps, and weapons follow the planted steps. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "attack": {
+      "source": "ai-image-metadata/characters/player-animation-sources/vampire_female_berserker/attack.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_female_berserker/chroma/attack.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "coiled dual-weapon guard",
+        "rear weapon pulls high as the lead weapon measures distance",
+        "deep crossed windup over the rear leg",
+        "lunging first diagonal chop with hips committed",
+        "second weapon crosses through the contact line",
+        "low full-body follow-through with both arms separated",
+        "weapons recoil outward while feet reset",
+        "recovered aggressive guard"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body berserker crossing dual-weapon assault poses of the authoritative Vampire Berserker (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant female feminine features savage warrior spiked armor dual axes wild hair war paint scarred. Required sequence: coiled dual-weapon guard; rear weapon pulls high as the lead weapon measures distance; deep crossed windup over the rear leg; lunging first diagonal chop with hips committed; second weapon crosses through the contact line; low full-body follow-through with both arms separated; weapons recoil outward while feet reset; recovered aggressive guard. Motion direction: A committed combination coils both weapons, drives a first diagonal chop, crosses into a second strike, follows through low, and recovers into guard.. Overall berserker motion is ferocious, explosive, top-heavy, and relentless, with deep planted lunges, broad shoulder rotation, and readable dual-weapon momentum. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, armor, palette, proportions, scars, war paint, and weapon count. Preserve the portrait's savage armor, war paint, scars, hair, and exact weapon designs and count. If two axes are present, keep exactly one in each original hand; never duplicate, swap, sheath, merge, or transform them. Berserker power is physical fury. Use no spells, runes, projectiles, elemental trails, or supernatural aura; restrained dust or a short impact slash may follow physical contact only. Action-specific effects: Two short physical blade-swish accents may mark the separate contacts; no projectile, magic, duplicate weapon, or effect hiding the arms. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "hurt": {
+      "source": "ai-image-metadata/characters/player-animation-sources/vampire_female_berserker/hurt.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_female_berserker/chroma/hurt.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "aggressive guard before impact",
+        "sharp torso flinch with both grips retained",
+        "maximum backward twist and knee collapse",
+        "staggering rear step with weapons spread for balance",
+        "low crossed-weapon brace",
+        "furious push upright through bent legs",
+        "feet reset as weapons rise",
+        "recovered enraged guard"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body berserker enraged impact-and-recovery poses of the authoritative Vampire Berserker (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant female feminine features savage warrior spiked armor dual axes wild hair war paint scarred. Required sequence: aggressive guard before impact; sharp torso flinch with both grips retained; maximum backward twist and knee collapse; staggering rear step with weapons spread for balance; low crossed-weapon brace; furious push upright through bent legs; feet reset as weapons rise; recovered enraged guard. Motion direction: A hard hit breaks the attack posture into an articulated recoil, staggering step, low weapon brace, furious rise, and renewed guard.. Overall berserker motion is ferocious, explosive, top-heavy, and relentless, with deep planted lunges, broad shoulder rotation, and readable dual-weapon momentum. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, armor, palette, proportions, scars, war paint, and weapon count. Preserve the portrait's savage armor, war paint, scars, hair, and exact weapon designs and count. If two axes are present, keep exactly one in each original hand; never duplicate, swap, sheath, merge, or transform them. Berserker power is physical fury. Use no spells, runes, projectiles, elemental trails, or supernatural aura; restrained dust or a short impact slash may follow physical contact only. Action-specific effects: One compact physical impact accent only; no blood, gore, tint, magic, or dropped or duplicated weapon. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "death": {
+      "source": "ai-image-metadata/characters/player-animation-sources/vampire_female_berserker/death.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_female_berserker/chroma/death.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "verticalAnchor": "bottom",
+      "outputFrameMap": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        7,
+        7
+      ],
+      "frameDescriptions": [
+        "fatal impact breaks the aggressive guard",
+        "weapon arms sag as balance fails",
+        "both knees buckle beneath the armor",
+        "one hip grounds while the torso twists sideways",
+        "body and weapons descend into full ground contact",
+        "low fallen body settles with limbs articulated",
+        "final fully fallen berserker with weapons at rest",
+        "same final fallen pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body berserker defeat sequence poses of the authoritative Vampire Berserker (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant female feminine features savage warrior spiked armor dual axes wild hair war paint scarred. Required sequence: fatal impact breaks the aggressive guard; weapon arms sag as balance fails; both knees buckle beneath the armor; one hip grounds while the torso twists sideways; body and weapons descend into full ground contact; low fallen body settles with limbs articulated; final fully fallen berserker with weapons at rest; same final fallen pose held. Motion direction: A final impact empties the fury, weapons sink, knees buckle, the body turns into a grounded side collapse, and all motion settles into a fully fallen pose.. Overall berserker motion is ferocious, explosive, top-heavy, and relentless, with deep planted lunges, broad shoulder rotation, and readable dual-weapon momentum. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, armor, palette, proportions, scars, war paint, and weapon count. Preserve the portrait's savage armor, war paint, scars, hair, and exact weapon designs and count. If two axes are present, keep exactly one in each original hand; never duplicate, swap, sheath, merge, or transform them. Berserker power is physical fury. Use no spells, runes, projectiles, elemental trails, or supernatural aura; restrained dust or a short impact slash may follow physical contact only. Action-specific effects: No gore, blood, magic, or rigid rotation. Keep every weapon single and recognizable through the articulated fall. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "dead": {
+      "deriveFrom": {
+        "animation": "death",
+        "frame": 7
+      },
+      "frameDescriptions": [
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held"
+      ],
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity."
+    },
+    "victory": {
+      "source": "ai-image-metadata/characters/player-animation-sources/vampire_female_berserker/victory.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_female_berserker/chroma/victory.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "stunned recognition of victory",
+        "forceful forward victory stamp",
+        "both weapons sweep outward from the hips",
+        "chest thrown upward in a full-bodied roar",
+        "weapons rise in separate overhead arcs",
+        "weapon heads cross high without merging",
+        "wide dominant stance with both weapons displayed",
+        "final roaring triumphant pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body berserker roaring victory poses of the authoritative Vampire Berserker (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant female feminine features savage warrior spiked armor dual axes wild hair war paint scarred. Required sequence: stunned recognition of victory; forceful forward victory stamp; both weapons sweep outward from the hips; chest thrown upward in a full-bodied roar; weapons rise in separate overhead arcs; weapon heads cross high without merging; wide dominant stance with both weapons displayed; final roaring triumphant pose held. Motion direction: The berserker recognizes victory, stamps forward, sweeps both weapons wide, throws the chest upward in a roar, crosses the weapons overhead, and holds a dominant finish.. Overall berserker motion is ferocious, explosive, top-heavy, and relentless, with deep planted lunges, broad shoulder rotation, and readable dual-weapon momentum. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, armor, palette, proportions, scars, war paint, and weapon count. Preserve the portrait's savage armor, war paint, scars, hair, and exact weapon designs and count. If two axes are present, keep exactly one in each original hand; never duplicate, swap, sheath, merge, or transform them. Berserker power is physical fury. Use no spells, runes, projectiles, elemental trails, or supernatural aura; restrained dust or a short impact slash may follow physical contact only. Action-specific effects: No spell effect; a tiny metal glint and grounded dust at the stamp may accent the physical celebration. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    }
+  },
+  "pins": {
+    "templateSha256": "93943004e340d113943e06dea61fd7dfad67c20750dd4fc30d76d3be1fb7c144",
+    "profileSha256": "e6e4f25cdd01e2688dce3b18373249849cdec3b3f71a6202bdf020c5924c303d",
+    "reference": {
+      "sourceSha256": "2be2a7844edf42848f0d56c7fd30dde63731c90759868f7483fa7dc5e71e00a0",
+      "sourceDimensions": "1254x1254",
+      "chromaSourceSha256": "bcf6b712cfe546dfcc1bfe9d5bb04a7082c1d5d5c3f2a36d87a49125f25bf9d0",
+      "chromaSourceDimensions": "1254x1254",
+      "identitySourceSha256": "c7ff4f6fdd5b7c6ced234aeb58666bc115924380756d5421ffd383b92292b80d",
+      "identitySourceDimensions": "1024x1024",
+      "styleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "styleSourceDimensions": "1254x1254",
+      "promptSha256": "c01ae81e0d5e838b38af22484bdc2d1b4eeb78dd3f98f59ac71ae3116e436bac",
+      "encodedSha256": "6bcdce8b2e95fb7d3bb2e40f01eee9835d6d56d1e802c4be7ecd51fc13be2a8b",
+      "decodedSha256": "fb0ae7450839e11a9cc08fb949fdd71eed2d4641aac85faba73f110c89f94f93"
+    },
+    "animations": {
+      "idle": {
+        "sourceSha256": "3a6a64a7453fb8fdb4620749bd1d572184a3051204ed843daa44bf84ac6fd330",
+        "sourceDimensions": "1720x914",
+        "chromaSourceSha256": "ee94cd6c4241ae69fe619ea62855c872fa2ddaa5c9708542e4bf17398a9e09d1",
+        "chromaSourceDimensions": "1720x914",
+        "promptSha256": "0ed6282f6e3fccfbea75a594c1a0650f571d75ec9f3366f5f572eb0e901aadbd",
+        "encodedSha256": "55075fca1bc1480637f8b80c22c2ef362cecb2ddf797b5e1e4000b015bd5e6ac",
+        "decodedSha256": "defa63d2ce6165541a3b7adee673d69a112d62494c827fbb08d1bba3676ae504",
+        "frameSha256": [
+          "6b3c05278e8ff382bc25ef9cdd97bddf7cad6f9202f0d5674f0198830ccbb33f",
+          "11af52e54c90fa1d665bad3c44927ad8906b44ef13c208792b9c68f7319ace31",
+          "6a87582bac137f394766e1694ab6d65d60691e24ded4bb7cbabbbf9195f894d5",
+          "8e89eadebc593125d07b8373d9fbcd877e1dd65f0699b3840f7ac3727ccb8818",
+          "779fc08217f06df80c0d1c1529a5b26bce58cbf9113e393b85e66b9067a507f0",
+          "593fa6639cc96b288abe1ea573b6cd344f1b54bc63ca6755b4ab21049a4e6e6e",
+          "3ca4c178df53790c6d6beee9e4be16e333d966dd4abbb25c094ec8decda49266",
+          "f062ba74957b150c62ae5a5ad901c6ffd0ac13ffafd5c89011b0a15197d60039"
+        ],
+        "poseSha256": [
+          "120db14819fde7a9a80efe6d560396998ad25b41da63497af87e38244120d39e",
+          "f013d9678ccec016f7a986b97baf8bcf4af3df2753a8103825de888b9b60835d",
+          "ad2ad8255ed3357bc12193e15db3e95b28453e95ffb7b7f83871fc6bf23232fe",
+          "6ab2065477209cfcb1a70737e7e7bc6fd81ef7e8a96cee6bf061939c2eb3e650",
+          "40aa2c17727ac2ead60ccef4cf6903571615683dde09a22eb3db8dec9002e626",
+          "0eabb288b58aaf7ace193b7d58bc3ddbe89fdd4386facdc10c1e3e149b91b0ca",
+          "d2f58f0f8c4918ab9a9e0399a3102aa5ba5b1bf044f84a01d43458c1b1c0d28f",
+          "5e378caf102d81701de279cd23021a864f6a5fa5641fc0917d5695f749e4a623"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "walk": {
+        "sourceSha256": "284ba8ccb1dc84c228f0819f794bd548ea17cba854908a22972bb1ad65b9c5b6",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "029816f54860112bf51b9b17e25f56220c919bb8c581db88799a4357fc442443",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "b5fabdd0556da34169d7f9cad1d3efbb0a67e352af6fd690aa24ad86ad2e0f41",
+        "encodedSha256": "6788c4b14275b4a85442af206c4e293fbdcaeaae138b37c8c143b79ad6e5fc5c",
+        "decodedSha256": "c40d788fa175ca9a554d58aba55e4f2540033ba9f8cc4f5a4740a8c9dfc295f4",
+        "frameSha256": [
+          "faf4add95484f38d83e32a8d0cd47c9dee83a83fdc53ceae22e335d1ce5075bf",
+          "34e788f887a9b003a5d747b5114790987ab0059ba55accf34e69c172fa63c94d",
+          "5352f0d716f2cc085ca6e63a84bf679ad27be2d884232299c7231bc3b4904ec3",
+          "1041ad1f5d1de90a987fc17a928d46885022923e4a239d9893094466278b4cef",
+          "abbd65ef66ec1b3b98e58607b04a9f636b44a585a7ae42c917c3abeec11b4273",
+          "a165d6b5027871e9e05266821d526b04c78c8f7f6f3a466a3ad457b6e933caac",
+          "c50ee0347540744861ca15a63de316e4a67e5174efe86e2a3d4bc2411e9c568f",
+          "1dfd8dfc6921dfff9fd1c94058aa23ddd3ab8bd29ea228d8b06557d6241f1adc"
+        ],
+        "poseSha256": [
+          "2a80ff1720af1526422b007377a5b64700cb80b70734800ad5b2a7f6f2f91023",
+          "e5cd9d8bc8aa52283603654dcbf602f0fe884c70f962c07f35ecec1aeaa7debe",
+          "13daa4f521c6766cb7b12f508e476c555562bdd232592433d92f2d7591d65651",
+          "abcfcb6d1cc4107d66caa40fede75c095cc1e98f240ef4c2f53271ab30a29e28",
+          "01629d22fbda84d8bad28d684b3555e00cb883d8d54b4cb3f2173e0f12583b75",
+          "89ac41488017c159f297a6137b58f02d833cdf520dc473a7a62c69a4b473bc7d",
+          "6e29331029e8789f3d96768d3dc5b7ff8a510fe26c7a2c015d9f867732a66ecf",
+          "66f97b071017a944cb9e323bb8c38810d39a9eaab3c8d1c4ebea3b08519cb80d"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.998125,
+          1,
+          1,
+          1,
+          0.997754,
+          1,
+          1,
+          1
+        ]
+      },
+      "attack": {
+        "sourceSha256": "43e39183b384fde9f58d8eeb464dbab8bd2fa4ea2a5efae15dcb13684c9d21dc",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "7016ffdef31a54e3eddf49ae53fb77f6af5e1a14317d79d2f1bd53dd50264de0",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "c558546782f26a8b098afb15f24c493fdc0113ad94f01d7e0f0abe9ed8c92033",
+        "encodedSha256": "0c235ae21fabcbccf67f7dedf5586dddf593ccd97e24f907c02fecd0a3bd2d82",
+        "decodedSha256": "a86101c2974222101c808ede6a64d28a620ceea8b848b511f7401cbfdd8430fd",
+        "frameSha256": [
+          "8149a9a4c658d0e41593237a9f8510704ec79d2023e32a8ed86389d21f604bea",
+          "b70337662965971352f417748719356d66b567116509fa678a19f601bd1887c4",
+          "d5d7f0e88fad976ce1548262b76d89e0ab58ef919c62263a0b427e3e2dd406b5",
+          "b86802265f48d2cfed8f8663604db996d56983db4013cb47a493118daa29b0db",
+          "d11870414588e48b418fd9936b58f554675f8f50d0b09c1f13e21d8d9981a98a",
+          "39b631fbd99ec35cc51ecbb4983eddb0143e64d6ebac7a1e691ae2da36b35b21",
+          "65817b413585df0ab0b204eca7867294ecce84e846fbd42e5211b5642f08f7f3",
+          "be4ed323bd8f5e46b09e25316ebdb62f6a52d4e60e4d37c0fc51ce37a48d76da"
+        ],
+        "poseSha256": [
+          "412757a25850063786c847874fc36d14365eb17f1db62dbb39d3f7258a5663fe",
+          "85d290426305d880368b187183fcd68c2b83bde81d3f019c9522c2cb89ed8e6b",
+          "f34b008f714f59355a33da57c29ebc8385fee73331a34e7f20c8975ef7df30b4",
+          "66c676826a3ac73ab34a202e7424dd49452745ecb0bee1a803015f680903424b",
+          "4ac059955ef87d668eea90c40f7f088756bf8424af9e94ff613ad793bfa92967",
+          "c532deb509b557514a17dd002df462417a0e3be2cd441f3c95a0be50c9714e9b",
+          "39cd464095d777f5190d42daa1b2f0d3ac3d418b70dd4ba48057c96c16e901a8",
+          "51577064950e950564fce482b879d60fa565f561f6f6b55625efe406f586d592"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          0.998713,
+          1,
+          1,
+          1
+        ]
+      },
+      "hurt": {
+        "sourceSha256": "a3fd4f1799917b5d09a93bf6f9f6ad7f22582f500cf55a22e00866e27bce043e",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "74f139800c825cf80875bc8b7675dfcd25d66e658f45fbf8bfffd54cb3e8e13b",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "39fb6f498a801dd539d9d1c607f81f12014b3a3930f39e21a4b538f75ca13314",
+        "encodedSha256": "d5ef79705eeac310135eb0bf9eefbef323936dc0db1dfd3fa3c2d6d5953cda18",
+        "decodedSha256": "39e1d4e33a3a9bd3884e3160c75b47c3ebd462981e6799c19a13fbe8335ea94d",
+        "frameSha256": [
+          "e2d040a06e8190c60b06e38096f662e2c3d2130706561facad8aac0f9a70f5e7",
+          "0ff5c0353449534bc3ce12648bb22ed84ec304658f092b4392f2418951a6cede",
+          "381a07e21b8cc1eb0d02b34406d95c7e0545d51913944ea17f226420145ac4ff",
+          "56efe67a55c08c60804d1d4f98d087a62f67b812f05c68e4e33ed69ddee2a151",
+          "ade8f99631e42c07c6e100af7969dccbcf84d2de92ab4691930d2b5097a0cbbf",
+          "a4d7ca381515f844dc096582728b1318deed0bb946087fe597d5a8c306c3d356",
+          "6792a6533617392b35dd33af41204c184722055b6f96e1199b2ff471e1955fce",
+          "ddca38a33b3b30ca7c32123af62643da5ca86ad4bb865038c0507f259e9e3c8e"
+        ],
+        "poseSha256": [
+          "f9cff87ccc4fd5988f4801670181a3f8223027bbdb0e4fa4a16a89b57fb5317c",
+          "114889a5e54c5f7193a860f9231c159b1cd841bf56fe2ec96f83be0c782a3d1f",
+          "260532c0f4a3809dc6069af020fd93efc90b83195c4fd2c6d7b0104ec9f8b9d0",
+          "bd16a82eb005b1761e32b292d8886d745e09ee6889465788b41e52308b3aa8cb",
+          "727cc6e84a286fceefb368b0226b4fb8ae9dac599fb9b47958829a6767c52b2c",
+          "24074e01e790a19197037ff5610dbd00afc5cb44f691ce665df1fb95d1250e2e",
+          "be123f8921127f364b5bf5f5bc94cb2ae76835fe7ebb729198518947c55b89ee",
+          "5ae070f8600f550d052bf85ab8efd4e590d87345d62996f66841f8fa447d76f0"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.999544,
+          0.982902,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "death": {
+        "sourceSha256": "de39d74d478ff3903873a04076c27ef32a634124a7daa71fedf4dae6e3f9e19b",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "09e7b6f8a277b52f6cff474b1549c3263099b462360d2b488bb3648a80dc2ab3",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "ca3a937afbc18717408a6f9d4e7b6ee58c3b063504679e826dc3acb61668f5c3",
+        "encodedSha256": "f63bef0736ce1b4d775f7856a4257605a77d911db5a474d0a5f9eba84566a7d8",
+        "decodedSha256": "5b879ae887865e1646a4e0dbaa131becf5eed6bd45d820360fc9bc3df56e1338",
+        "frameSha256": [
+          "ee7586246980fd004f7a8666f4fd6e9114dbcfee0600309536558728a2936fcf",
+          "0646038a3c8aab3f164e165f6dee031fd1b72291154bd62a54f8e6c1a7b2cbef",
+          "be4adba9cc117fc07a584469326a3a6b235afd3ce938e29db1f0fc380f6d236a",
+          "81fc6be9b2b5f5138321a7e921761dd9d4c1fbe2a47b437d8fc6e5fe500831c4",
+          "4ef782a70ef1defd170c89e8552f1f674b16576bb91e5dab6afcf1256f94d90b",
+          "4320c805492ab53797cba244897c277cbaeeb42b0e29f9e556870bbebce9a06b",
+          "c51a33b6cb1538aa0b8f1024f128edee477669361cb4b943a098414190111a11",
+          "c51a33b6cb1538aa0b8f1024f128edee477669361cb4b943a098414190111a11"
+        ],
+        "poseSha256": [
+          "8b966fa78339e20d6620f9c6c6cd66636dd66869f475df44ba24439aa1b2f886",
+          "8735172dfe6756139c12bddf713f578eddf94cbe345e506ed2e6bad5c2bfdb19",
+          "028c177174e52c09173307463c3756cbed57290998d375f95150df8cbb91b3f6",
+          "4f4e38b7576739609a047b68af65dfc2d97804343e2afcc351b2fbc27a402729",
+          "e0e48a1f8f12af10b1dbfe69e8c4f17af1505726cae41b5100985890cadb685b",
+          "4d616d2cd9feaeb59e138b951a2f55826b3c855518ff0f318563773e035db2aa",
+          "0f201bcf67062502fb35b921d729b808999ea947e7249973548e62490263b446",
+          "0f201bcf67062502fb35b921d729b808999ea947e7249973548e62490263b446"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "victory": {
+        "sourceSha256": "afe3244ff35faa75d7ad44e92e571c85423fae1446a4ab51a8570d923d5e337e",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "ecb232cd5a44ae13771f94a2b4f80abeb82a2a1af056dad6f47aa2fef087ba1e",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "79d9b850199a84b98925c09dd64217356697cb2f188641e29191ecc44cdac385",
+        "encodedSha256": "35c0ae2155bad452f4c69711ab340eb10d9c963e58f21886681bd1778719af87",
+        "decodedSha256": "755471404d35257641dfa8b38c2a6a0c43ded7a41ab57c2e3e5fb6dadf01109b",
+        "frameSha256": [
+          "18e7b10b6618db5fa5a0580dd56728aaa8e3805637d09e3540620ab62eaa36aa",
+          "8403d440b4526b3e8caf4b835e6e7f12b307fb46ed1ddbbca511f21d3b098091",
+          "cbfa23e0450c458eb6be1ded9b3cf60bae4f5a30c8ea91544a1d29749ac1303e",
+          "3bfeb1b8c7ffa726f907677d9c776f64ce8f7868933e7b30b338c331057b20a2",
+          "a293f1a7b112640c9fd50ed9a4d6529de284d156671cb1a858ce8e0adb0ae7e4",
+          "821ec635a5a5b69304ac51d34d778b0d8bf3fbe2f978fc4bceaaf53abbdd1bcf",
+          "3f311e476ae086e16c31414e7a270d2f1c8d847a35174d4735cd4f9a58ae7e57",
+          "66168293dc76d4146aef93a340c01aba740e035455e16060046c86ebb6a99e06"
+        ],
+        "poseSha256": [
+          "ceea98813497d163c3864d9a5edd2be5adfe88b298d761b80a714bcf0731d6e1",
+          "562c385118ec96b3fc37b9cd575d1f946de618e440ad29f708ca726eb1995ac0",
+          "842c1ec6e76f75f86e5ab53b26502b6fc066ce81b2b6f9bdc89b6dd37db07898",
+          "d02c0c8745a28fe4f673f67f7b683436cf9ca4869c92fde3c6730f518f74727f",
+          "b8f006a8cc7a76c01a398d54a75565e30ac81e8ad0a59989039d5d03dca1d154",
+          "db345acd80bc8f28ddc03cafdac19cdcaeb31fc6f8111fdc112b269d4dfb095b",
+          "ba50f326ef000b854809919526e4ad2c43d3907f5a2c4b08226c6b0786a3fd56",
+          "6aca3abb5c0a555de3c5342a4ce9cddd36256030393e65d1c01d037badc3c195"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.996985,
+          0.99504,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "dead": {
+        "sourceSha256": "de39d74d478ff3903873a04076c27ef32a634124a7daa71fedf4dae6e3f9e19b",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "09e7b6f8a277b52f6cff474b1549c3263099b462360d2b488bb3648a80dc2ab3",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "f631a7fd605211260b28b5a5bba3503e06dc1064497d1e5769d62e40e178e2b1",
+        "encodedSha256": "16c2992e3c614faaf1e1f7397297ba016bbe675cc47edca63f04d95b9ad3258a",
+        "decodedSha256": "46af7c07cf265417e7f2a9f25eb3cf539b985ca492f30096911bcd06f8dd2e1a",
+        "frameSha256": [
+          "c51a33b6cb1538aa0b8f1024f128edee477669361cb4b943a098414190111a11",
+          "c51a33b6cb1538aa0b8f1024f128edee477669361cb4b943a098414190111a11",
+          "c51a33b6cb1538aa0b8f1024f128edee477669361cb4b943a098414190111a11",
+          "c51a33b6cb1538aa0b8f1024f128edee477669361cb4b943a098414190111a11",
+          "c51a33b6cb1538aa0b8f1024f128edee477669361cb4b943a098414190111a11",
+          "c51a33b6cb1538aa0b8f1024f128edee477669361cb4b943a098414190111a11",
+          "c51a33b6cb1538aa0b8f1024f128edee477669361cb4b943a098414190111a11",
+          "c51a33b6cb1538aa0b8f1024f128edee477669361cb4b943a098414190111a11"
+        ],
+        "poseSha256": [
+          "0f201bcf67062502fb35b921d729b808999ea947e7249973548e62490263b446",
+          "0f201bcf67062502fb35b921d729b808999ea947e7249973548e62490263b446",
+          "0f201bcf67062502fb35b921d729b808999ea947e7249973548e62490263b446",
+          "0f201bcf67062502fb35b921d729b808999ea947e7249973548e62490263b446",
+          "0f201bcf67062502fb35b921d729b808999ea947e7249973548e62490263b446",
+          "0f201bcf67062502fb35b921d729b808999ea947e7249973548e62490263b446",
+          "0f201bcf67062502fb35b921d729b808999ea947e7249973548e62490263b446",
+          "0f201bcf67062502fb35b921d729b808999ea947e7249973548e62490263b446"
+        ],
+        "sourceFrameIndexes": [
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  }
+}

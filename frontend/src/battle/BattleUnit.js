@@ -439,6 +439,14 @@ export class BattleUnit {
    * Start moving to a new grid position
    */
   moveTo(gridX, gridY) {
+    // A revisioned state update and the matching action/event can both carry
+    // the same authoritative destination. Do not restart an in-flight walk
+    // from its already-updated logical position: that produces a zero-length
+    // second move which completes on the next frame and visually teleports.
+    if (this.isMoving && this.gridX === gridX && this.gridY === gridY) {
+      return false;
+    }
+
     // Store previous position for direction calculation
     this.prevGridX = this.gridX;
     this.prevGridY = this.gridY;
@@ -470,6 +478,7 @@ export class BattleUnit {
     // Update direction based on movement
     this.updateDirectionFromMovement();
     this.setAnimationState('walk');
+    return true;
   }
 
   /**

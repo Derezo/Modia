@@ -8,6 +8,8 @@ import { authenticate } from '../middleware/auth.js';
 import { createLimiter } from '../middleware/rateLimiterFactory.js';
 import { getTier, getUserBadges, getPriorityBadges } from '../../../shared/coliseum.js';
 import { getUserAchievements, getBatchUserAchievements } from '../services/achievementService.js';
+import { battleStateRepository } from '../services/battle/BattleStateRepository.js';
+import { handleSurrender } from '../services/coliseumService.js';
 
 const router = express.Router();
 
@@ -20,6 +22,25 @@ const queuesLimiter = createLimiter({
   maxRequests: 30,
   windowMs: 60000
 });
+
+export async function processColiseumSurrender(
+  battleId,
+  userId,
+  {
+    repository = battleStateRepository,
+    surrender = handleSurrender
+  } = {}
+) {
+  const battle = await repository.loadBattleForParticipant(battleId, userId);
+  if (battle.battleType !== 'pvp_coliseum') {
+    return { outcome: 'not_found' };
+  }
+  if (battle.status !== 'active') {
+    return { outcome: 'already_completed' };
+  }
+  await surrender(battleId, userId);
+  return { outcome: 'processed' };
+}
 
 /**
  * GET /api/coliseum/queues
@@ -284,39 +305,43 @@ router.get('/matches/:matchId', async (req, res) => {
  */
 router.post('/surrender', async (req, res) => {
   try {
-    const { battleId } = req.body;
-    const userId = req.user.id;
+    const numericBattleId = Number(req.body?.battleId);
+    const userId = req.user.userId ?? req.user.id;
 
-    if (!battleId) {
+    if (!Number.isSafeInteger(numericBattleId) || numericBattleId <= 0) {
       return res.status(400).json({ error: 'Battle ID is required' });
     }
 
-    // Verify user is in this battle
-    const battleResult = await query(
-      `SELECT b.id, b.battle_type, b.status, b.player1_id, b.player2_id
-       FROM battles b
-       WHERE b.id = $1
-         AND b.status = 'active'
-         AND b.battle_type = 'pvp'
-         AND (b.player1_id = $2 OR b.player2_id = $2)`,
-      [battleId, userId]
-    );
-
-    if (battleResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Active PvP battle not found' });
+    let result;
+    try {
+      result = await processColiseumSurrender(
+        numericBattleId,
+        userId
+      );
+    } catch (error) {
+      if (error?.code === 'BATTLE_NOT_FOUND') {
+        return res.status(404).json({ error: 'Coliseum battle not found' });
+      }
+      throw error;
     }
 
-    const battle = battleResult.rows[0];
-    const _winnerId = battle.player1_id === userId ? battle.player2_id : battle.player1_id;
+    if (result.outcome === 'not_found') {
+      return res.status(404).json({ error: 'Coliseum battle not found' });
+    }
 
-    // Import coliseum service to handle surrender
-    const _coliseumService = await import('../services/coliseumService.js');
+    // Treat a retry after a successful (or concurrently completed) surrender
+    // as success without reapplying ratings or match side effects.
+    if (result.outcome === 'already_completed') {
+      return res.json({
+        success: true,
+        alreadyCompleted: true,
+        message: 'Coliseum match is already complete.'
+      });
+    }
 
-    // The actual surrender handling would be done via WebSocket
-    // This endpoint is for fallback/confirmation
     res.json({
       success: true,
-      message: 'Surrender request sent. Use WebSocket for real-time updates.'
+      message: 'Surrender processed.'
     });
   } catch (err) {
     console.error('Error processing surrender:', err);

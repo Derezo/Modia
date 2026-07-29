@@ -117,7 +117,10 @@ test('repository character manifest resolves optional staged-candidate diffusion
     sd15Config: {}
   };
 
-  assert.equal(characterManifest.generationDefaults.mode, 'deterministic_compilers');
+  assert.equal(
+    characterManifest.generationDefaults.mode,
+    'deterministic_compilers_with_reviewed_authored_sources'
+  );
   assert.equal(characterManifest.generationDefaults.stagedCandidate.optional, true);
   assert.deepEqual(resolveCharacterGenerationConfig(variant, {}, characterManifest), {
     mode: 'sd15',

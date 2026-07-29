@@ -26,8 +26,17 @@ import {
   getTerrainColor,
   discretizeElevation,
   getElevationName,
-  inferElevationFormat
+  inferElevationFormat,
+  normalizeElevationGrid
 } from '@modia/shared/terrain';
+import {
+  canEnterTile,
+  createTraversalView as createSharedTraversalView
+} from '@modia/shared/traversal';
+import { isBlockingObstacle } from '@modia/shared/obstacles';
+import {
+  getV2VisualCapabilities
+} from '@modia/shared/mapgen/v2/renderCapabilities';
 import { resolveSpriteBiome } from '../core/BattleAssetConfig.js';
 
 // Stacking tile rendering constants
@@ -37,7 +46,291 @@ const TILE_WIDTH = 64;
 const TILE_HEIGHT = 32;
 const TILE_SPRITE_SIZE = 64;
 const MAP_EDGE_SKIRT = 4;
+const DIRECTION_NAMES = Object.freeze({
+  n: 'north',
+  e: 'east',
+  s: 'south',
+  w: 'west'
+});
+const V2_CONNECTION_RENDER_KINDS = Object.freeze({
+  ramp: 'slope',
+  slope: 'slope',
+  long_ramp: 'slope',
+  stairs: 'stairs',
+  multi_stairs: 'stairs'
+});
+const VISUAL_ANCHOR_ORDER = Object.freeze({
+  exposed_face: 0,
+  below_prop: 1,
+  tile_top: 2,
+  above_connection: 3
+});
 // Note: Elevation limits (-3 to +8) are defined in shared/terrain.js as ELEVATION_LEVELS
+
+function isCompleteGrid(grid, width, height) {
+  return Array.isArray(grid) &&
+    grid.length === height &&
+    grid.every(row => Array.isArray(row) && row.length === width);
+}
+
+function createFilledGrid(width, height, value) {
+  return Array.from({ length: height }, () => Array(width).fill(value));
+}
+
+function toRowMajorLayer(layer, width, height, emptyValue = null) {
+  const grid = createFilledGrid(width, height, emptyValue);
+  if (!Array.isArray(layer)) return grid;
+
+  if (layer.some(Array.isArray)) {
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        grid[y][x] = layer[y]?.[x] ?? emptyValue;
+      }
+    }
+    return grid;
+  }
+
+  for (const entry of layer) {
+    const x = entry?.x ?? entry?.tileX ?? entry?.gridX;
+    const y = entry?.y ?? entry?.tileY ?? entry?.gridY;
+    if (Number.isInteger(x) && Number.isInteger(y) &&
+        x >= 0 && y >= 0 && x < width && y < height) {
+      grid[y][x] = entry;
+    }
+  }
+  return grid;
+}
+
+function visualRecordCompare(left, right) {
+  return (left?.stratum ?? VISUAL_ANCHOR_ORDER[left?.anchor] ?? 0) -
+      (right?.stratum ?? VISUAL_ANCHOR_ORDER[right?.anchor] ?? 0) ||
+    (left?.precedence ?? 0) - (right?.precedence ?? 0) ||
+    String(left?.kind ?? '').localeCompare(String(right?.kind ?? '')) ||
+    String(left?.id ?? '').localeCompare(String(right?.id ?? ''));
+}
+
+function toVisualRecordGrid(layer, width, height) {
+  const grid = createFilledGrid(width, height, null)
+    .map(row => row.map(() => []));
+  if (!Array.isArray(layer)) return grid;
+
+  if (layer.some(Array.isArray)) {
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const value = layer[y]?.[x];
+        const records = Array.isArray(value)
+          ? value
+          : value && typeof value === 'object'
+            ? [value]
+            : [];
+        grid[y][x] = [...records].sort(visualRecordCompare);
+      }
+    }
+    return grid;
+  }
+
+  for (const record of layer) {
+    const x = record?.x ?? record?.tileX ?? record?.gridX;
+    const y = record?.y ?? record?.tileY ?? record?.gridY;
+    if (Number.isInteger(x) && Number.isInteger(y) &&
+        x >= 0 && y >= 0 && x < width && y < height) {
+      grid[y][x].push(record);
+    }
+  }
+  for (const row of grid) {
+    for (const records of row) records.sort(visualRecordCompare);
+  }
+  return grid;
+}
+
+function toVariantGrid(layer, width, height) {
+  if (!Array.isArray(layer)) return createFilledGrid(width, height, 0);
+  if (layer.some(Array.isArray)) {
+    return toRowMajorLayer(layer, width, height, 0).map(row =>
+      row.map(value => Number.isSafeInteger(value?.variantIndex)
+        ? value.variantIndex
+        : Number.isSafeInteger(value)
+          ? value
+          : 0)
+    );
+  }
+
+  const grid = createFilledGrid(width, height, 0);
+  for (const record of layer) {
+    const x = record?.x;
+    const y = record?.y;
+    if (Number.isInteger(x) && Number.isInteger(y) &&
+        x >= 0 && y >= 0 && x < width && y < height &&
+        Number.isSafeInteger(record?.variantIndex)) {
+      grid[y][x] = record.variantIndex;
+    }
+  }
+  return grid;
+}
+
+function normalizeTerrainCell(cell) {
+  if (typeof cell === 'string') return cell;
+  if (!cell || typeof cell !== 'object') return 'grass';
+  if (cell.passable === false) return 'rock';
+  return cell.material ?? cell.terrain ?? cell.type ?? 'grass';
+}
+
+function normalizeObstacleCell(cell) {
+  if (!cell || typeof cell !== 'object') return cell;
+  if (typeof cell.blocking !== 'boolean') return cell;
+  return {
+    ...cell,
+    type: cell.type ?? cell.kind,
+    passable: !cell.blocking
+  };
+}
+
+function getConnectionDirection(from, to) {
+  if (to.x === from.x && to.y === from.y - 1) return 'n';
+  if (to.x === from.x + 1 && to.y === from.y) return 'e';
+  if (to.x === from.x && to.y === from.y + 1) return 's';
+  if (to.x === from.x - 1 && to.y === from.y) return 'w';
+  return null;
+}
+
+function reverseConnectionDirection(direction) {
+  return { n: 's', e: 'w', s: 'n', w: 'e' }[direction] ?? null;
+}
+
+/**
+ * V2 slope art is anchored on the low endpoint and names the direction from
+ * low to high. Persisted connections may be authored from either endpoint, so
+ * canonicalize their visual origin without changing the traversal record.
+ */
+function getV2ConnectionRenderPlacement(connection) {
+  const endpointDirection = connection.direction ??
+    getConnectionDirection(connection.from, connection.to);
+  if (!endpointDirection) return null;
+  if ((connection.elevationDelta ?? 0) < 0) {
+    return {
+      from: connection.to,
+      direction: reverseConnectionDirection(endpointDirection)
+    };
+  }
+  return {
+    from: connection.from,
+    direction: endpointDirection
+  };
+}
+
+function toConnectionGrid(layer, width, height, elevation) {
+  if (!Array.isArray(layer) || layer.length === 0) return null;
+  if (layer.some(Array.isArray)) {
+    return toRowMajorLayer(layer, width, height);
+  }
+
+  const grid = createFilledGrid(width, height, null);
+  for (const record of layer) {
+    if (!record?.from || !record?.to) continue;
+    if (![record.from.x, record.from.y, record.to.x, record.to.y]
+      .every(Number.isInteger) ||
+        record.from.x < 0 || record.from.x >= width ||
+        record.from.y < 0 || record.from.y >= height ||
+        record.to.x < 0 || record.to.x >= width ||
+        record.to.y < 0 || record.to.y >= height) {
+      continue;
+    }
+
+    const direction = record.direction ??
+      getConnectionDirection(record.from, record.to);
+    if (!direction) continue;
+
+    const fromElevation = discretizeElevation(
+      elevation?.[record.from.y]?.[record.from.x] ?? 0
+    );
+    const toElevation = discretizeElevation(
+      elevation?.[record.to.y]?.[record.to.x] ?? 0
+    );
+    const connection = {
+      ...record,
+      type: record.type ?? record.kind,
+      levels: record.levels ?? Math.max(
+        1,
+        Math.abs(toElevation - fromElevation)
+      )
+    };
+    grid[record.from.y][record.from.x] ||= {};
+    grid[record.from.y][record.from.x][direction] = connection;
+
+    if (record.bidirectional) {
+      const reverse = reverseConnectionDirection(direction);
+      grid[record.to.y][record.to.x] ||= {};
+      grid[record.to.y][record.to.x][reverse] = {
+        ...connection,
+        elevationDelta: Number.isFinite(record.elevationDelta)
+          ? -record.elevationDelta
+          : record.elevationDelta
+      };
+    }
+  }
+  return grid;
+}
+
+function adaptMovementPolicy(
+  movementPolicy,
+  terrainRecords,
+  obstacleRecords
+) {
+  const {
+    canTraverseTerrain,
+    canTraverseObstacle,
+    getStepCost,
+    ...basePolicy
+  } = movementPolicy;
+
+  return {
+    ...basePolicy,
+    canTraverseTerrain(context) {
+      const record = terrainRecords[context.to.y][context.to.x];
+      const terrainCost = Number.isFinite(record?.movementCost)
+        ? record.movementCost
+        : context.terrainCost;
+      const fallback = record && typeof record === 'object'
+        ? record.passable !== false && Number.isFinite(terrainCost)
+        : Number.isFinite(context.terrainCost);
+      if (!canTraverseTerrain) return fallback;
+      return canTraverseTerrain({
+        ...context,
+        terrain: record,
+        terrainCost
+      }) ?? fallback;
+    },
+    canTraverseObstacle(context) {
+      const record = obstacleRecords?.[context.to.y]?.[context.to.x] ?? null;
+      const fallback = record?.blocking === true
+        ? false
+        : !isBlockingObstacle(record);
+      if (!canTraverseObstacle) return fallback;
+      return canTraverseObstacle({ ...context, obstacle: record }) ?? fallback;
+    },
+    getStepCost(context) {
+      const terrain = terrainRecords[context.to.y][context.to.x];
+      const obstacle = obstacleRecords?.[context.to.y]?.[context.to.x] ?? null;
+      const terrainCost = Number.isFinite(terrain?.movementCost)
+        ? terrain.movementCost
+        : context.terrainCost;
+      const obstacleCost = obstacle && obstacle.blocking !== true &&
+        Number.isFinite(obstacle.movementCost)
+        ? obstacle.movementCost
+        : 0;
+      const defaultCost = terrainCost + context.elevationCost + obstacleCost;
+      if (!getStepCost) return defaultCost;
+      return getStepCost({
+        ...context,
+        terrain,
+        terrainCost,
+        obstacle,
+        obstacleCost,
+        defaultCost
+      }) ?? defaultCost;
+    }
+  };
+}
 
 export class BattleGrid {
   constructor(canvas, width = 32, height = 32) {
@@ -62,13 +355,16 @@ export class BattleGrid {
 
     // Terrain data (generated from seed)
     this.terrain = [];
+    this.terrainTraversalData = [];
 
     // Obstacle layer data
     this.obstacles = [];
+    this.obstacleTraversalData = [];
 
     // Elevation data (0 = ground level, 1-3 = elevated, -1 = pit)
     this.elevation = [];
     this.elevationFormat = 'normalized';
+    this.elevationConnections = [];
 
     // Asset loader reference (set externally)
     this.assetLoader = null;
@@ -78,6 +374,13 @@ export class BattleGrid {
 
     // Tile variant mapping for visual variety (seeded per-tile)
     this.tileVariants = [];
+    this.semanticVariants = false;
+    this.v2RenderPalette = null;
+
+    // Persisted, non-authoritative visual layers. These are indexed by tile
+    // once at hydration time so render order does not depend on input order.
+    this.transitions = [];
+    this.decorations = [];
 
     // Intent highlight state (for enemy visualization)
     this.intentHighlights = new Map();  // key -> { color, endTime, pulsePhase }
@@ -97,6 +400,8 @@ export class BattleGrid {
    */
   generateTerrain(seed, nodeType = 'forest') {
     this.nodeType = nodeType;
+    this.semanticVariants = false;
+    this.v2RenderPalette = null;
 
     // Use shared generateTerrain for deterministic map generation
     // Request elevation data for 3D rendering
@@ -104,8 +409,8 @@ export class BattleGrid {
       elevation: true
     });
 
-    this.terrain = mapData.terrain;
-    this.obstacles = mapData.obstacles;
+    this.setTerrain(mapData.terrain);
+    this.setObstacles(mapData.obstacles);
     this.tileVariants = mapData.variants;
 
     // Store elevation data if provided
@@ -119,6 +424,9 @@ export class BattleGrid {
       );
       this.elevationFormat = 'discrete';
     }
+    this.elevationConnections = Array.isArray(mapData.elevationConnections)
+      ? mapData.elevationConnections
+      : [];
   }
 
   /**
@@ -140,20 +448,121 @@ export class BattleGrid {
    */
   setTerrain(terrainGrid) {
     if (terrainGrid && Array.isArray(terrainGrid)) {
-      this.terrain = terrainGrid;
+      this.terrainTraversalData = terrainGrid;
+      this.terrain = toRowMajorLayer(
+        terrainGrid,
+        this.width,
+        this.height,
+        'grass'
+      ).map(row => row.map(normalizeTerrainCell));
     }
   }
 
   setTileVariants(variantGrid) {
     if (variantGrid && Array.isArray(variantGrid)) {
-      this.tileVariants = variantGrid;
+      this.semanticVariants = !variantGrid.some(Array.isArray);
+      this.v2RenderPalette = this.semanticVariants
+        ? getV2VisualCapabilities(this.nodeType).palette
+        : null;
+      this.tileVariants = toVariantGrid(
+        variantGrid,
+        this.width,
+        this.height
+      );
+    }
+  }
+
+  setTransitions(transitions) {
+    if (Array.isArray(transitions)) {
+      this.transitions = toVisualRecordGrid(
+        transitions,
+        this.width,
+        this.height
+      );
+    }
+  }
+
+  setDecorations(decorations) {
+    if (Array.isArray(decorations)) {
+      this.decorations = toVisualRecordGrid(
+        decorations,
+        this.width,
+        this.height
+      );
     }
   }
 
   setObstacles(obstacleGrid) {
     if (obstacleGrid && Array.isArray(obstacleGrid)) {
-      this.obstacles = obstacleGrid;
+      this.obstacleTraversalData = obstacleGrid;
+      this.obstacles = toRowMajorLayer(
+        obstacleGrid,
+        this.width,
+        this.height
+      ).map(row => row.map(normalizeObstacleCell));
     }
+  }
+
+  setElevationConnections(connectionGrid) {
+    if (connectionGrid && Array.isArray(connectionGrid)) {
+      this.elevationConnections = connectionGrid;
+    }
+  }
+
+  getTransitions(x, y) {
+    if (!this.isInBounds(x, y)) return [];
+    return this.transitions[y]?.[x] ?? [];
+  }
+
+  getDecorations(x, y) {
+    if (!this.isInBounds(x, y)) return [];
+    return this.decorations[y]?.[x] ?? [];
+  }
+
+  /**
+   * Build the authoritative traversal view consumed by client pathfinding.
+   */
+  createTraversalView(units = [], movementPolicy = {}) {
+    const terrainRecords = toRowMajorLayer(
+      this.terrainTraversalData,
+      this.width,
+      this.height,
+      'grass'
+    );
+    const obstacleRecords = Array.isArray(this.obstacleTraversalData)
+      ? toRowMajorLayer(
+        this.obstacleTraversalData,
+        this.width,
+        this.height
+      )
+      : null;
+    const terrain = terrainRecords.map(row => row.map(normalizeTerrainCell));
+    const obstacles = obstacleRecords?.map(
+      row => row.map(normalizeObstacleCell)
+    ) ?? null;
+    const elevation = isCompleteGrid(this.elevation, this.width, this.height)
+      ? normalizeElevationGrid(this.elevation, this.elevationFormat)
+      : null;
+    const elevationConnections = toConnectionGrid(
+      this.elevationConnections,
+      this.width,
+      this.height,
+      elevation
+    );
+
+    return createSharedTraversalView({
+      terrain,
+      obstacles,
+      elevation,
+      elevationConnections,
+      units,
+      dimensions: { width: this.width, height: this.height },
+      movementPolicy: adaptMovementPolicy(
+        movementPolicy,
+        terrainRecords,
+        obstacleRecords
+      )
+    });
   }
 
   /**
@@ -334,10 +743,42 @@ export class BattleGrid {
   /**
    * Check if a tile is walkable
    */
-  isWalkable(x, y) {
+  isWalkable(x, y, { from = null, units = [], movementPolicy = {} } = {}) {
     if (!this.isInBounds(x, y)) return false;
-    const terrain = this.getTerrain(x, y);
-    return !isImpassable(terrain);
+
+    if (!from) {
+      // Surface walkability is direction-independent. Actual movement paths
+      // provide `from` and retain the normal elevation rules.
+      const probe = [
+        { x: x - 1, y },
+        { x: x + 1, y },
+        { x, y: y - 1 },
+        { x, y: y + 1 }
+      ].find(point => this.isInBounds(point.x, point.y));
+      if (!probe) {
+        const terrain = this.getTerrain(x, y);
+        const obstacle = this.obstacles[y]?.[x] ?? null;
+        return !isImpassable(terrain) && !isBlockingObstacle(obstacle);
+      }
+      const surfacePolicy = {
+        ...movementPolicy,
+        canTraverseElevation: movementPolicy.canTraverseElevation ??
+          (() => true)
+      };
+      return canEnterTile(
+        this.createTraversalView(units, surfacePolicy),
+        probe,
+        { x, y },
+        { start: probe }
+      );
+    }
+
+    return canEnterTile(
+      this.createTraversalView(units, movementPolicy),
+      from,
+      { x, y },
+      { start: from }
+    );
   }
 
   /**
@@ -466,12 +907,60 @@ export class BattleGrid {
     return this.tileVariants[gridY]?.[gridX] || 0;
   }
 
+  /**
+   * Return the canonical persisted connection records whose visual origin is
+   * this tile. V2 uses flat records; legacy connection grids remain accepted.
+   */
+  getElevationConnectionsForRender(gridX, gridY) {
+    if (!Array.isArray(this.elevationConnections)) return [];
+    if (!this.elevationConnections.some(Array.isArray)) {
+      return this.elevationConnections
+        .map(record => ({
+          record,
+          placement: getV2ConnectionRenderPlacement(record)
+        }))
+        .filter(({ placement }) =>
+          placement?.from?.x === gridX &&
+          placement?.from?.y === gridY
+        )
+        .sort((left, right) =>
+          String(left.record.id ?? '').localeCompare(
+            String(right.record.id ?? '')
+          )
+        )
+        .map(({ record, placement }) => ({
+          ...record,
+          renderDirection: placement.direction
+        }));
+    }
+
+    const cell = this.elevationConnections[gridY]?.[gridX];
+    if (!cell || typeof cell !== 'object') return [];
+    return Object.entries(cell)
+      .filter(([direction, connection]) =>
+        Object.hasOwn(DIRECTION_NAMES, direction) && connection
+      )
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([direction, connection]) => ({
+        ...connection,
+        direction,
+        from: { x: gridX, y: gridY }
+      }));
+  }
+
 
   /**
    * Render a simple terrain diamond (for top surface fallback)
    */
-  renderTerrainDiamond(ctx, screenX, screenY, terrain, drawOutline = true) {
-    const baseColor = this.getTerrainColor(terrain);
+  renderTerrainDiamond(
+    ctx,
+    screenX,
+    screenY,
+    terrain,
+    drawOutline = true,
+    colorOverride = null
+  ) {
+    const baseColor = colorOverride ?? this.getTerrainColor(terrain);
 
     ctx.beginPath();
     ctx.moveTo(screenX, screenY - this.tileHeight / 2);
@@ -633,6 +1122,10 @@ export class BattleGrid {
    * @returns {string} Biome directory name
    */
   getSpriteBiome() {
+    if (this.semanticVariants) {
+      return this.v2RenderPalette ??
+        getV2VisualCapabilities(this.nodeType).palette;
+    }
     return resolveSpriteBiome(this.nodeType);
   }
 
@@ -660,7 +1153,16 @@ export class BattleGrid {
   renderObstacleAt(ctx, screenX, screenY, obstacle, alpha = 1) {
     if (!obstacle) return;
 
-    const sprite = this.assetLoader?.getObstacle(obstacle.variant, obstacle.type);
+    const exactV2Asset = this.semanticVariants && obstacle.assetKey;
+    const sprite = exactV2Asset
+      ? this.assetLoader?.getBattleMapV2Asset?.(
+        obstacle.assetKey,
+        {
+          selectionKey: obstacle.id,
+          expectedPalette: this.getSpriteBiome()
+        }
+      )
+      : this.assetLoader?.getObstacle(obstacle.variant, obstacle.type);
 
     if (sprite) {
       // Generated obstacle sources can be 1024px. Always render against a
@@ -681,7 +1183,7 @@ export class BattleGrid {
         drawHeight
       );
       ctx.restore();
-    } else {
+    } else if (!exactV2Asset) {
       ctx.save();
       ctx.globalAlpha *= alpha;
       // Fallback: Draw a simple shape for impassable obstacles
@@ -938,11 +1440,68 @@ export class BattleGrid {
       // Render only the portions of the two camera-facing sides that are
       // actually exposed relative to their neighbors.
       this.renderUnifiedWalls(ctx, screenX, screenY, gridX, gridY, elevation, terrain, biome);
+      this.renderSemanticTransitions(
+        ctx,
+        screenX,
+        screenY,
+        gridX,
+        gridY,
+        'exposed_face'
+      );
+      this.renderDecorations(
+        ctx,
+        screenX,
+        screenY,
+        gridX,
+        gridY,
+        'exposed_face'
+      );
       this.renderUnifiedFloor(ctx, screenX, screenY, terrain, biome, variant);
     } else {
       // Pit tiles: render floor with inset shadow
       this.renderUnifiedPit(ctx, screenX, screenY, terrain, biome, variant, elevation);
     }
+
+    this.renderSemanticTransitions(
+      ctx,
+      screenX,
+      screenY,
+      gridX,
+      gridY,
+      ['below_prop', 'tile_top']
+    );
+    this.renderDecorations(
+      ctx,
+      screenX,
+      screenY,
+      gridX,
+      gridY,
+      ['below_prop', 'tile_top']
+    );
+    this.renderElevationConnections(
+      ctx,
+      screenX,
+      screenY,
+      gridX,
+      gridY,
+      biome
+    );
+    this.renderSemanticTransitions(
+      ctx,
+      screenX,
+      screenY,
+      gridX,
+      gridY,
+      'above_connection'
+    );
+    this.renderDecorations(
+      ctx,
+      screenX,
+      screenY,
+      gridX,
+      gridY,
+      'above_connection'
+    );
 
     ctx.restore();
 
@@ -964,7 +1523,11 @@ export class BattleGrid {
    * @param {string} biome - Biome type
    */
   renderUnifiedWalls(ctx, screenX, screenY, gridX, gridY, elevation, terrain, biome) {
-    const wallTexture = this.assetLoader?.getWallTexture(biome, terrain);
+    const wallTexture = this.semanticVariants
+      ? this.assetLoader?.getBattleMapV2Asset?.(
+        `${biome}:face:stone`
+      )
+      : this.assetLoader?.getWallTexture(biome, terrain);
     const halfWidth = this.tileWidth / 2;
     const halfHeight = this.tileHeight / 2;
     const southWestInBounds = this.isInBounds(gridX, gridY + 1);
@@ -1065,14 +1628,83 @@ export class BattleGrid {
    * @param {number} variant - Tile variant index
    */
   renderUnifiedFloor(ctx, screenX, screenY, terrain, biome, variant) {
-    // Try to get floor tile sprite (base variant, no elevation embedded)
-    const sprite = this.assetLoader?.getTile(terrain, biome, variant);
+    // BattleMapV2 variants opt into exact palette/material resolution. V1
+    // keeps the existing permissive biome fallback for compatibility.
+    const sprite = this.semanticVariants
+      ? this.assetLoader?.getBattleMapV2Asset?.(
+        `${biome}:floor:${terrain}`,
+        { variantIndex: variant }
+      )
+      : this.assetLoader?.getTile(terrain, biome, variant);
 
     // A solid underlay prevents sub-pixel cracks when the camera or browser
     // applies fractional zoom. It also gives graceful output during loading.
-    this.renderTerrainDiamond(ctx, screenX, screenY, terrain, false);
+    this.renderTerrainDiamond(
+      ctx,
+      screenX,
+      screenY,
+      terrain,
+      false,
+      sprite?.type === 'code-native' ? sprite.color : null
+    );
 
-    if (sprite) {
+    if (sprite && sprite.type !== 'code-native') {
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(
+        sprite,
+        screenX - this.spriteSize / 2,
+        screenY - this.spriteSize / 2,
+        this.spriteSize,
+        this.spriteSize
+      );
+    } else if (sprite?.type === 'code-native') {
+      this.renderCodeNativeSurface(
+        ctx,
+        screenX,
+        screenY,
+        variant,
+        sprite
+      );
+    }
+  }
+
+  /**
+   * Draw persisted ramps/stairs after the floor and before connection overlays.
+   * V2 connection art is exact: the loader must return the requested authored
+   * direction/kind rather than substituting another biome or elevation.
+   */
+  renderElevationConnections(
+    ctx,
+    screenX,
+    screenY,
+    gridX,
+    gridY,
+    biome
+  ) {
+    const isV2 = !this.elevationConnections.some(Array.isArray);
+    for (const connection of this.getElevationConnectionsForRender(gridX, gridY)) {
+      const shortDirection = connection.renderDirection ??
+        connection.direction ??
+        getConnectionDirection(connection.from, connection.to);
+      const direction = DIRECTION_NAMES[shortDirection] ?? shortDirection;
+      if (!direction) continue;
+      const persistedKind = connection.kind ?? connection.type;
+      const kind = isV2
+        ? V2_CONNECTION_RENDER_KINDS[persistedKind]
+        : ['stairs', 'multi_stairs'].includes(persistedKind)
+          ? 'stairs'
+          : 'slope';
+      // Ledges and cliffs are exposed-face semantics, not traversable ramps.
+      if (!kind) continue;
+      const assetVariant = connection.assetVariant ??
+        (kind === 'stairs' ? 2 : 1);
+      const sprite = this.assetLoader?.getSlopeSprite(
+        biome,
+        direction,
+        assetVariant,
+        { kind, exact: isV2 }
+      );
+      if (!sprite) continue;
       ctx.imageSmoothingEnabled = true;
       ctx.drawImage(
         sprite,
@@ -1082,6 +1714,187 @@ export class BattleGrid {
         this.spriteSize
       );
     }
+  }
+
+  renderSemanticTransitions(
+    ctx,
+    screenX,
+    screenY,
+    gridX,
+    gridY,
+    anchors
+  ) {
+    const accepted = new Set(Array.isArray(anchors) ? anchors : [anchors]);
+    for (const record of this.getTransitions(gridX, gridY)) {
+      if (!accepted.has(record.anchor)) continue;
+      const descriptor = this.assetLoader?.getBattleMapV2Asset?.(
+        record.assetKey,
+        { expectedPalette: this.getSpriteBiome() }
+      );
+      if (!descriptor) continue;
+      if (descriptor.type === 'code-native') {
+        this.renderCodeNativeTransition(ctx, screenX, screenY, record, descriptor);
+      } else {
+        ctx.drawImage(
+          descriptor,
+          screenX - this.spriteSize / 2,
+          screenY - this.spriteSize / 2,
+          this.spriteSize,
+          this.spriteSize
+        );
+      }
+    }
+  }
+
+  renderDecorations(
+    ctx,
+    screenX,
+    screenY,
+    gridX,
+    gridY,
+    anchors = null
+  ) {
+    const accepted = anchors === null
+      ? null
+      : new Set(Array.isArray(anchors) ? anchors : [anchors]);
+    for (const record of this.getDecorations(gridX, gridY)) {
+      if (accepted && !accepted.has(record.anchor)) continue;
+      const descriptor = this.assetLoader?.getBattleMapV2Asset?.(
+        record.assetKey,
+        {
+          variantIndex: record.variantIndex,
+          expectedPalette: this.getSpriteBiome()
+        }
+      );
+      if (!descriptor) continue;
+      if (descriptor.type === 'code-native') {
+        this.renderCodeNativeDecoration(ctx, screenX, screenY, record, descriptor);
+      } else {
+        ctx.drawImage(
+          descriptor,
+          screenX - this.spriteSize / 2,
+          screenY - this.spriteSize / 2,
+          this.spriteSize,
+          this.spriteSize
+        );
+      }
+    }
+  }
+
+  renderCodeNativeSurface(ctx, screenX, screenY, variant, descriptor) {
+    if (!descriptor.accentColor) return;
+    const seed = (variant ?? 0) * 13 + 7;
+    ctx.save();
+    ctx.globalAlpha *= 0.28;
+    ctx.fillStyle = descriptor.accentColor;
+    for (let index = 0; index < 4; index++) {
+      const offsetX = ((seed + index * 17) % 35) - 17;
+      const maxY = Math.max(
+        2,
+        Math.floor(
+          (this.tileHeight / 2 - 2) *
+          (1 - Math.abs(offsetX) / (this.tileWidth / 2))
+        )
+      );
+      const offsetY = ((seed + index * 11) % (maxY * 2 + 1)) - maxY;
+      ctx.beginPath();
+      ctx.arc(screenX + offsetX, screenY + offsetY, 1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  renderCodeNativeTransition(ctx, screenX, screenY, record, descriptor) {
+    const vertices = {
+      n: [screenX, screenY - this.tileHeight / 2],
+      e: [screenX + this.tileWidth / 2, screenY],
+      s: [screenX, screenY + this.tileHeight / 2],
+      w: [screenX - this.tileWidth / 2, screenY]
+    };
+    const edges = {
+      n: [vertices.n, vertices.e],
+      e: [vertices.e, vertices.s],
+      s: [vertices.s, vertices.w],
+      w: [vertices.w, vertices.n]
+    };
+    const bits = { n: 1, e: 2, s: 4, w: 8 };
+    ctx.save();
+    ctx.strokeStyle = descriptor.color;
+    ctx.lineWidth = descriptor.lineWidth;
+    ctx.globalAlpha *= descriptor.alpha;
+    ctx.lineCap = 'round';
+    if (record.anchor === 'exposed_face') {
+      const currentElevation = this.getElevation(record.x, record.y);
+      const faceDirections = {
+        e: {
+          edge: [vertices.e, vertices.s],
+          neighbor: { x: record.x + 1, y: record.y }
+        },
+        s: {
+          edge: [vertices.s, vertices.w],
+          neighbor: { x: record.x, y: record.y + 1 }
+        }
+      };
+      for (const direction of ['e', 's']) {
+        if ((record.directionMask & bits[direction]) === 0) continue;
+        const face = faceDirections[direction];
+        const neighborElevation = this.isInBounds(
+          face.neighbor.x,
+          face.neighbor.y
+        )
+          ? this.getElevation(face.neighbor.x, face.neighbor.y)
+          : Math.min(0, currentElevation);
+        const exposure = Math.max(
+          0,
+          currentElevation - neighborElevation
+        ) * WALL_HEIGHT_PER_LEVEL;
+        if (exposure <= 0) continue;
+        // Keep the semantic stroke inside the visible wall face so the floor
+        // rendered next cannot cover it.
+        const faceOffset = Math.max(
+          2,
+          Math.min(exposure - 1, Math.round(exposure * 0.55))
+        );
+        const [from, to] = face.edge;
+        ctx.beginPath();
+        ctx.moveTo(from[0], from[1] + faceOffset);
+        ctx.lineTo(to[0], to[1] + faceOffset);
+        ctx.stroke();
+      }
+      ctx.restore();
+      return;
+    }
+    for (const direction of ['n', 'e', 's', 'w']) {
+      if ((record.directionMask & bits[direction]) === 0) continue;
+      const [from, to] = edges[direction];
+      ctx.beginPath();
+      ctx.moveTo(from[0], from[1]);
+      ctx.lineTo(to[0], to[1]);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  renderCodeNativeDecoration(ctx, screenX, screenY, record, descriptor) {
+    const seed = (record.variantIndex ?? 0) + record.x * 17 + record.y * 31;
+    const offsetX = (seed % 9) - 4;
+    const offsetY = (Math.floor(seed / 3) % 5) - 1;
+    ctx.save();
+    ctx.globalAlpha *= descriptor.alpha;
+    ctx.fillStyle = descriptor.color;
+    ctx.strokeStyle = descriptor.accentColor;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(
+      screenX + offsetX,
+      screenY + offsetY,
+      descriptor.radius,
+      0,
+      Math.PI * 2
+    );
+    ctx.fill();
+    if (descriptor.accentColor) ctx.stroke();
+    ctx.restore();
   }
 
   /**
@@ -1250,9 +2063,16 @@ export class BattleGrid {
   destroy() {
     this.clearIntentHighlights();
     this.terrain = null;
+    this.terrainTraversalData = null;
     this.elevation = null;
+    this.elevationConnections = null;
     this.tileVariants = null;
+    this.semanticVariants = false;
+    this.v2RenderPalette = null;
+    this.transitions = null;
+    this.decorations = null;
     this.obstacles = null;
+    this.obstacleTraversalData = null;
     this.occlusionCache.clear();
     this.occlusionCache = null;
   }

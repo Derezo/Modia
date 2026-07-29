@@ -355,17 +355,19 @@ describe('websocket/index.js', () => {
   describe('Connection ID Tracking', () => {
     // Tests for the connection ID validation feature added to prevent stale connection issues
 
-    test('should export activeConnectionIds Map', () => {
-      // The activeConnectionIds Map tracks userId -> current valid connectionId
-      assert.ok(websocket.activeConnectionIds instanceof Map,
-        'activeConnectionIds should be exported as a Map');
+    test('should keep active connection IDs encapsulated', () => {
+      // Session-generation state must only be mutated by the authentication
+      // and disconnect handlers in websocket/index.js.
+      assert.strictEqual(
+        Object.hasOwn(websocket, 'activeConnectionIds'),
+        false,
+        'activeConnectionIds should not be part of the public module API'
+      );
     });
 
-    test('activeConnectionIds should be initially empty', () => {
-      // At test start, no connections should be tracked
-      // Note: Other tests may leave state, so we just verify it's a Map
-      assert.ok(typeof websocket.activeConnectionIds.size === 'number',
-        'activeConnectionIds should have a size property');
+    test('should continue exposing only the public connection registry', () => {
+      assert.ok(websocket.connections instanceof Map,
+        'connections should remain available to health and service adapters');
     });
 
     test('should track connectionId in auth flow documentation', () => {

@@ -30,6 +30,18 @@ const {
   getActionWaitDuration,
   getActorAnimationDurationMs
 } = await import('../BattleWebSocketManager.js');
+const { parchmentToast } =
+  await import('../../ui/parchment/ParchmentToast.js');
+const { BattleMapSession, clearBattleMapSessionCache } =
+  await import('../BattleMapSession.js');
+const {
+  createMinimalBattleMapV2FinalFixture
+} = await import('../../../../shared/battleMap/index.js');
+const {
+  createBattleMutableStateUpdateV1,
+  createBattleMutableStateV1,
+  createBattleStateSnapshotV1
+} = await import('../../../../shared/battleStateProtocol.js');
 
 function createUnit(id, { hp = 100, maxHp = 100, mp = 20, maxMp = 100, teamId = 1 } = {}) {
   const calls = { hit: 0, death: 0, reconciled: 0, thinking: [] };
@@ -375,11 +387,16 @@ describe('BattleWebSocketManager authoritative battle end recovery', () => {
     const { manager } = createHarness([player]);
     const sent = [];
     manager.scene.battleId = 42;
-    manager.scene.game.socket = { send(...args) { sent.push(args); } };
+    manager.scene.game.socket = {
+      requestBattleSync(...args) { sent.push(args); }
+    };
 
     manager.requestFullStateSync();
 
-    assert.deepEqual(sent, [['battle:request_sync', { battleId: 42 }]]);
+    assert.equal(sent.length, 1);
+    assert.equal(sent[0][0], 42);
+    assert.deepEqual(sent[0][1].supportedBattleMapSchemaVersions, [1, 2]);
+    assert.deepEqual(sent[0][1].supportedMutableStateProtocolVersions, [1]);
   });
 
   it('allows a terminal outcome to be requeued after reconnect state clearing', () => {
@@ -397,5 +414,126 @@ describe('BattleWebSocketManager authoritative battle end recovery', () => {
     assert.equal(manager.battleEndPending, false);
     assert.equal(manager.queueAuthoritativeBattleEnd('defeat'), true);
     assert.deepEqual(manager.turnEventQueue.map(event => event.type), ['battle_end']);
+  });
+});
+
+describe('BattleWebSocketManager revisioned state updates', () => {
+  it('applies an ordered update once and recovers from gaps and map mismatches', async () => {
+    clearBattleMapSessionCache();
+    const map = await createMinimalBattleMapV2FinalFixture();
+    const mutable = overrides => createBattleMutableStateV1({
+      units: [{ id: 'player', hp: 20, tileX: 0, tileY: 0 }],
+      ...overrides
+    });
+    const session = new BattleMapSession();
+    await session.acceptSnapshot(createBattleStateSnapshotV1({
+      battleId: 88,
+      stateRevision: 2,
+      battleMap: map,
+      mutableState: mutable({ turn: 1 })
+    }));
+
+    const unit = createUnit('player', { hp: 20 });
+    const { manager, scene } = createHarness([unit]);
+    const synced = [];
+    const syncRequests = [];
+    scene.battleId = 88;
+    scene.mapSession = session;
+    scene.battleState = session.state;
+    scene.syncUnitsWithState = units => synced.push(units);
+    scene.grid = {
+      setTerrain() {},
+      setElevation() {},
+      setTileVariants() {},
+      setObstacles() {},
+      setElevationConnections() {},
+      setTransitions() {},
+      setDecorations() {}
+    };
+    scene.game.socket = {
+      requestBattleSync(...args) { syncRequests.push(args); }
+    };
+
+    const update = createBattleMutableStateUpdateV1({
+      battleId: 88,
+      battleMapSchemaVersion: 2,
+      terrainGenerationVersion: 2,
+      fullHash: map.diagnostics.hashes.fullHash,
+      baseStateRevision: 2,
+      stateRevision: 3,
+      mutableState: mutable({ turn: 2 })
+    });
+
+    assert.equal((await manager.handleRemoteStateUpdate({ battleId: 88, update })).status, 'applied');
+    assert.equal(manager.battleState.turn, 2);
+    assert.equal(synced.length, 1);
+    assert.equal((await manager.handleRemoteStateUpdate({ battleId: 88, update })).status, 'duplicate');
+    assert.equal(synced.length, 1);
+
+    const gap = createBattleMutableStateUpdateV1({
+      battleId: 88,
+      battleMapSchemaVersion: 2,
+      terrainGenerationVersion: 2,
+      fullHash: map.diagnostics.hashes.fullHash,
+      baseStateRevision: 4,
+      stateRevision: 5,
+      mutableState: mutable({ turn: 3 })
+    });
+    const result = await manager.handleRemoteStateUpdate({ battleId: 88, update: gap });
+
+    assert.equal(result.reason, 'revision_gap');
+    assert.equal(syncRequests.length, 1);
+    assert.equal(syncRequests[0][0], 88);
+    assert.equal(syncRequests[0][1].cachedMaps.length, 1);
+    assert.equal(manager.battleState.turn, 2);
+
+    const wrongMap = createBattleMutableStateUpdateV1({
+      battleId: 88,
+      battleMapSchemaVersion: 2,
+      terrainGenerationVersion: 2,
+      fullHash: `sha256:${'f'.repeat(64)}`,
+      baseStateRevision: 3,
+      stateRevision: 4,
+      mutableState: mutable({ turn: 4 })
+    });
+    const mismatchResult = await manager.handleRemoteStateUpdate({
+      battleId: 88,
+      update: wrongMap
+    });
+
+    assert.equal(mismatchResult.reason, 'map_reference_mismatch');
+    assert.equal(syncRequests.length, 2);
+    assert.equal(syncRequests[1][1].cachedMaps.length, 0);
+    assert.equal(manager.battleState.turn, 2);
+  });
+
+  it('sends BattleMap capabilities on the rejoin HTTP request', async (t) => {
+    clearBattleMapSessionCache();
+    const { manager, scene } = createHarness([]);
+    let request = null;
+    scene.battleId = 91;
+    scene.mapSession = new BattleMapSession();
+    scene.game.api = {
+      async get(path, options) {
+        request = { path, options };
+        return { success: false };
+      }
+    };
+
+    const previousInfo = parchmentToast.info;
+    parchmentToast.info = () => {};
+    t.after(() => {
+      parchmentToast.info = previousInfo;
+    });
+
+    assert.equal(await manager.attemptRejoin(), false);
+    assert.equal(request.path, '/battle/91/rejoin');
+    const capabilities = JSON.parse(
+      request.options.headers['x-battle-map-capabilities']
+    );
+    assert.deepEqual(capabilities.supportedBattleMapSchemaVersions, [1, 2]);
+    assert.deepEqual(capabilities.supportedHashVersions, ['sha256-cjson-v1']);
+    assert.deepEqual(capabilities.supportedMutableStateProtocolVersions, [1]);
+    assert.deepEqual(capabilities.cachedMaps, []);
   });
 });

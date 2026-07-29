@@ -85,6 +85,6 @@ export function getEnemySpritePathCandidates(enemyId, animation = 'idle', reques
 export function getEnemySpriteAnimationCandidates(animation = 'idle') {
   const normalizedAnimation = String(animation || 'idle').trim().toLowerCase();
   return normalizedAnimation === 'dead'
-    ? ['death', 'dead']
+    ? ['dead', 'death']
     : [normalizedAnimation];
 }

@@ -12,10 +12,8 @@
  * - Unit collision
  */
 import {
-  getReachableTiles,
-  getReachableTiles3D,
-  findPath,
-  findPath3D,
+  getReachableTilesForTraversal,
+  findTraversalPath,
   getAttackableTiles,
   getManhattanDistance
 } from '@modia/shared/pathfinding';
@@ -104,39 +102,10 @@ export class BattlePathfinding {
       return [];
     }
 
-    // Convert Map to array format expected by shared module
-    const unitsArray = this._getUnitsArray();
-
-    // Use 3D pathfinding when elevation data is available
-    if (this.grid.elevation && this.grid.elevation.length > 0) {
-      const elevation = prepareElevationForPathfinding(
-        this.grid.elevation,
-        this.grid.elevationFormat
-      );
-      return getReachableTiles3D(
-        startX,
-        startY,
-        null, // startZ will be looked up from elevation grid
-        effectiveRange,
-        this.grid.terrain,
-        elevation,
-        null, // connections parameter (unused)
-        unitsArray,
-        this.grid.width,
-        this.grid.height
-      );
-    }
-
-    // Fall back to 2D pathfinding
-    return getReachableTiles(
-      startX,
-      startY,
-      effectiveRange,
-      this.grid.terrain,
-      unitsArray,
-      this.grid.width,
-      this.grid.height
-    );
+    return getReachableTilesForTraversal(this._createTraversalView(), {
+      start: { x: startX, y: startY },
+      range: effectiveRange
+    });
   }
 
   /**
@@ -249,40 +218,10 @@ export class BattlePathfinding {
    * @returns {Array|null} Array of { x, y, z? } waypoints, or null if no path
    */
   findPath(startX, startY, endX, endY) {
-    // Convert Map to array format expected by shared module
-    const unitsArray = this._getUnitsArray();
-
-    // Use 3D pathfinding when elevation data is available
-    if (this.grid.elevation && this.grid.elevation.length > 0) {
-      const elevation = prepareElevationForPathfinding(
-        this.grid.elevation,
-        this.grid.elevationFormat
-      );
-      return findPath3D(
-        startX,
-        startY,
-        endX,
-        endY,
-        this.grid.terrain,
-        elevation,
-        null, // connections parameter (unused)
-        unitsArray,
-        this.grid.width,
-        this.grid.height
-      );
-    }
-
-    // Fall back to 2D pathfinding
-    return findPath(
-      startX,
-      startY,
-      endX,
-      endY,
-      this.grid.terrain,
-      unitsArray,
-      this.grid.width,
-      this.grid.height
-    );
+    return findTraversalPath(this._createTraversalView(), {
+      start: { x: startX, y: startY },
+      goal: { x: endX, y: endY }
+    });
   }
 
   /**
@@ -456,5 +395,16 @@ export class BattlePathfinding {
       });
     }
     return unitsArray;
+  }
+
+  /**
+   * Build the same object-shaped traversal input used by the server.
+   * @private
+   */
+  _createTraversalView(movementPolicy = {}) {
+    return this.grid.createTraversalView(
+      this._getUnitsArray(),
+      movementPolicy
+    );
   }
 }

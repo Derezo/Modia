@@ -1,0 +1,584 @@
+{
+  "version": "1.0.0",
+  "template": "ai-image-metadata/characters/player-authored-animation-template.json",
+  "compilerVersion": "1.2.0",
+  "id": "dwarf_male_warlord",
+  "profile": "warlord_v1",
+  "profileSource": "ai-image-metadata/characters/player-animation-profiles/warlord_v1.json",
+  "status": "approved",
+  "approvedAt": "2026-07-29T02:21:17.192Z",
+  "metadataFingerprint": "47c2d2137356d39515f447cac6f69679e803ba0aaf1309f12b0eb194348b30bf",
+  "draftProvenance": {
+    "registry": "ai-image-metadata/characters/player-variants.json",
+    "templateSha256": "7943e69db577b3a4429b47df634f931d3f4cb8e8ce9a91a06578255fbe935bbe",
+    "profileSha256": "522d6e189025fe7e01b03f6841140d9dfaa67dab2de5ecb57f6e9d7ad85d3f6e"
+  },
+  "identity": {
+    "race": "dwarf",
+    "gender": "male",
+    "class": "warlord",
+    "presentation": "male dwarf warlord",
+    "visualTraits": "dwarf stout build thick beard braided hair sturdy male masculine features commanding officer ornate armor banner flag tactical decorated veteran",
+    "baseFacing": "three-quarters right",
+    "sourceMetadata": {
+      "isAdvanced": true,
+      "inheritsFrom": "warlord",
+      "seed": 22004
+    }
+  },
+  "inputs": {
+    "identity": {
+      "origin": "frontend/public/assets/portraits/originals/dwarf_male_warlord.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/dwarf_male_warlord/inputs/identity.png",
+      "authority": "face, ancestry, gender presentation, hair, eyes, complexion, costume, palette, proportions, and equipment"
+    },
+    "style": {
+      "origin": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/dwarf_male_warlord/inputs/style.png",
+      "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+    }
+  },
+  "reference": {
+    "source": "ai-image-metadata/characters/player-animation-sources/dwarf_male_warlord/reference.png",
+    "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_male_warlord/chroma/reference.png",
+    "identitySource": "ai-image-metadata/characters/player-animation-sources/dwarf_male_warlord/inputs/identity.png",
+    "styleSource": "ai-image-metadata/characters/player-animation-sources/dwarf_male_warlord/inputs/style.png",
+    "prompt": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative Dwarf Warlord (male presentation) identity portrait; Image 2 is style and proportion reference only. Player identity metadata: dwarf stout build thick beard braided hair sturdy male masculine features commanding officer ornate armor banner flag tactical decorated veteran. Create one complete head-to-toe Dwarf Warlord (male presentation) preserving Image 1's face, ancestry traits, gender presentation, ornate armor, command insignia, banner, weapon, cape, palette, and proportions. Do not import identity details from Image 2. Preserve the portrait's ornate armor, command insignia, banner or standard, weapon, cape, and exact item count. Keep each item in its original hand or mount; never duplicate, swap, discard, or transform it. Translate the portrait into a compact authoritative silhouette. Use a flat #00ff00 chroma key background with no floor or scenery and a square 1:1 canvas with generous padding. The complete silhouette including banner finial, crossbar, cloth, cape, weapon tip, and boots must occupy no more than 70% of the canvas width and height, leaving at least 15% empty background on every edge. Scale the warlord and compact standard down substantially; never crop or crowd any equipment. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered warlord in a commanding field stance facing three-quarters right. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+  },
+  "animations": {
+    "idle": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_male_warlord/idle.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_male_warlord/chroma/idle.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 4,
+      "frameDescriptions": [
+        "command stance with banner and weapon controlled",
+        "measured inhale while surveying the far field",
+        "weight shifts forward as the weapon indicates a sector",
+        "banner hand firms against a light cloth response",
+        "centered commanding midpoint",
+        "controlled exhale as the weapon lowers slightly",
+        "weight shifts rearward while scanning the opposite flank",
+        "command stance flowing back to frame one"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body warlord surveying idle-cycle poses of the authoritative Dwarf Warlord (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy male masculine features commanding officer ornate armor banner flag tactical decorated veteran. Required sequence: command stance with banner and weapon controlled; measured inhale while surveying the far field; weight shifts forward as the weapon indicates a sector; banner hand firms against a light cloth response; centered commanding midpoint; controlled exhale as the weapon lowers slightly; weight shifts rearward while scanning the opposite flank; command stance flowing back to frame one. Motion direction: A vigilant command loop alternates battlefield scans, banner control, and measured weight shifts while the weapon remains ready.. Overall warlord motion is commanding, disciplined, expansive, and battle-tested, with deliberate signals, authoritative footwork, and controlled banner and weapon inertia. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, armor, insignia, palette, proportions, banner, cape, and weapon. Preserve the portrait's ornate armor, command insignia, banner or standard, weapon, cape, and exact item count. Keep each item in its original hand or mount; never duplicate, swap, discard, or transform it. Leadership effects are physical signals rather than spells. Do not add runes, aura, projectiles, or magical troops; restrained dust, cloth motion, or a metal glint may support the action. Action-specific effects: No active attack or magic; banner cloth, cape, and armor settle subtly. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "walk": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_male_warlord/walk.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_male_warlord/chroma/walk.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "left foot forward contact beneath the raised standard",
+        "left leg compressed under decorated armor",
+        "passing pose with weapon balancing the banner",
+        "right foot reaches as cloth trails behind",
+        "right foot forward in a decisive plant",
+        "right leg compresses while the standard stays upright",
+        "passing pose with left knee advancing",
+        "left foot reaches into the command march"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body warlord standard-bearing march poses of the authoritative Dwarf Warlord (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy male masculine features commanding officer ornate armor banner flag tactical decorated veteran. Required sequence: left foot forward contact beneath the raised standard; left leg compressed under decorated armor; passing pose with weapon balancing the banner; right foot reaches as cloth trails behind; right foot forward in a decisive plant; right leg compresses while the standard stays upright; passing pose with left knee advancing; left foot reaches into the command march. Motion direction: An authoritative alternating march uses crisp contacts, armor compression, weapon counter-motion, and delayed banner and cape follow-through.. Overall warlord motion is commanding, disciplined, expansive, and battle-tested, with deliberate signals, authoritative footwork, and controlled banner and weapon inertia. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, armor, insignia, palette, proportions, banner, cape, and weapon. Preserve the portrait's ornate armor, command insignia, banner or standard, weapon, cape, and exact item count. Keep each item in its original hand or mount; never duplicate, swap, discard, or transform it. Leadership effects are physical signals rather than spells. Do not add runes, aura, projectiles, or magical troops; restrained dust, cloth motion, or a metal glint may support the action. Action-specific effects: No attack effect or magic; banner, cape, straps, and armor respond to the marching cadence. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "attack": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_male_warlord/attack.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_male_warlord/chroma/attack.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "commanding guard while assessing the target",
+        "weapon points a crisp advance signal",
+        "deep windup while the standard arm counterbalances",
+        "committed forward step beginning the strike",
+        "decisive weapon contact with torso fully rotated",
+        "broad follow-through as banner cloth snaps behind",
+        "weapon retracts while posture regains authority",
+        "recovered command guard"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body warlord command-and-strike assault poses of the authoritative Dwarf Warlord (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy male masculine features commanding officer ornate armor banner flag tactical decorated veteran. Required sequence: commanding guard while assessing the target; weapon points a crisp advance signal; deep windup while the standard arm counterbalances; committed forward step beginning the strike; decisive weapon contact with torso fully rotated; broad follow-through as banner cloth snaps behind; weapon retracts while posture regains authority; recovered command guard. Motion direction: A sharp command gesture becomes a planted weapon windup, decisive forward strike, authoritative follow-through, and immediate battlefield-ready recovery.. Overall warlord motion is commanding, disciplined, expansive, and battle-tested, with deliberate signals, authoritative footwork, and controlled banner and weapon inertia. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, armor, insignia, palette, proportions, banner, cape, and weapon. Preserve the portrait's ornate armor, command insignia, banner or standard, weapon, cape, and exact item count. Keep each item in its original hand or mount; never duplicate, swap, discard, or transform it. Leadership effects are physical signals rather than spells. Do not add runes, aura, projectiles, or magical troops; restrained dust, cloth motion, or a metal glint may support the action. Action-specific effects: A short physical weapon-swish accent may mark contact; no magical soldiers, projectile, or effect obscuring hands, weapon, or standard. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "hurt": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_male_warlord/hurt.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_male_warlord/chroma/hurt.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "command guard before impact",
+        "sharp flinch with banner and weapon retained",
+        "maximum stagger as cape and banner swing wide",
+        "forced backward step with torso recoiling",
+        "low balance catch using the standard shaft or planted stance",
+        "defiant rise with chin and weapon lifting",
+        "feet and banner reset into alignment",
+        "recovered commanding guard"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body warlord staggered-command recovery poses of the authoritative Dwarf Warlord (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy male masculine features commanding officer ornate armor banner flag tactical decorated veteran. Required sequence: command guard before impact; sharp flinch with banner and weapon retained; maximum stagger as cape and banner swing wide; forced backward step with torso recoiling; low balance catch using the standard shaft or planted stance; defiant rise with chin and weapon lifting; feet and banner reset into alignment; recovered commanding guard. Motion direction: An impact disrupts command posture into a hard stagger, banner-assisted balance catch, defiant rise, and renewed control.. Overall warlord motion is commanding, disciplined, expansive, and battle-tested, with deliberate signals, authoritative footwork, and controlled banner and weapon inertia. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, armor, insignia, palette, proportions, banner, cape, and weapon. Preserve the portrait's ornate armor, command insignia, banner or standard, weapon, cape, and exact item count. Keep each item in its original hand or mount; never duplicate, swap, discard, or transform it. Leadership effects are physical signals rather than spells. Do not add runes, aura, projectiles, or magical troops; restrained dust, cloth motion, or a metal glint may support the action. Action-specific effects: One compact physical impact accent only; no gore, blood, magic, dropped standard, or duplicated equipment. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "death": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_male_warlord/death.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_male_warlord/chroma/death.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "verticalAnchor": "bottom",
+      "outputFrameMap": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        7,
+        7
+      ],
+      "frameDescriptions": [
+        "fatal impact breaks the command stance",
+        "weapon lowers and standard tilts as balance fails",
+        "both knees buckle beneath the armor",
+        "one knee grounds while the body turns sideways",
+        "body and standard reach full ground contact",
+        "cape, banner cloth, and limbs settle low",
+        "final fully fallen warlord with equipment at rest",
+        "same final fallen pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body warlord defeat sequence poses of the authoritative Dwarf Warlord (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy male masculine features commanding officer ornate armor banner flag tactical decorated veteran. Required sequence: fatal impact breaks the command stance; weapon lowers and standard tilts as balance fails; both knees buckle beneath the armor; one knee grounds while the body turns sideways; body and standard reach full ground contact; cape, banner cloth, and limbs settle low; final fully fallen warlord with equipment at rest; same final fallen pose held. Motion direction: A final hit silences the command, standard lowers, knees fail, the decorated body collapses sideways, and equipment settles into a fully fallen pose.. Overall warlord motion is commanding, disciplined, expansive, and battle-tested, with deliberate signals, authoritative footwork, and controlled banner and weapon inertia. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, armor, insignia, palette, proportions, banner, cape, and weapon. Preserve the portrait's ornate armor, command insignia, banner or standard, weapon, cape, and exact item count. Keep each item in its original hand or mount; never duplicate, swap, discard, or transform it. Leadership effects are physical signals rather than spells. Do not add runes, aura, projectiles, or magical troops; restrained dust, cloth motion, or a metal glint may support the action. Action-specific effects: No gore, blood, magic, or rigid rotation. Keep the standard, weapon, and insignia recognizable and singular throughout. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "dead": {
+      "deriveFrom": {
+        "animation": "death",
+        "frame": 7
+      },
+      "frameDescriptions": [
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held"
+      ],
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity."
+    },
+    "victory": {
+      "source": "ai-image-metadata/characters/player-animation-sources/dwarf_male_warlord/victory.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/dwarf_male_warlord/chroma/victory.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "measured recognition of victory",
+        "weapon gives a crisp field-secure signal",
+        "standard swings forward under control",
+        "standard plants beside a wide stance",
+        "weapon rises high in formal salute",
+        "cape and banner open around the upright posture",
+        "commanding victor pose with insignia displayed",
+        "final triumphant warlord pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body warlord battlefield triumph poses of the authoritative Dwarf Warlord (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: dwarf stout build thick beard braided hair sturdy male masculine features commanding officer ornate armor banner flag tactical decorated veteran. Required sequence: measured recognition of victory; weapon gives a crisp field-secure signal; standard swings forward under control; standard plants beside a wide stance; weapon rises high in formal salute; cape and banner open around the upright posture; commanding victor pose with insignia displayed; final triumphant warlord pose held. Motion direction: The warlord confirms victory, signals the field secure, plants the standard, raises the weapon, opens into a decorated heroic stance, and holds command.. Overall warlord motion is commanding, disciplined, expansive, and battle-tested, with deliberate signals, authoritative footwork, and controlled banner and weapon inertia. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, armor, insignia, palette, proportions, banner, cape, and weapon. Preserve the portrait's ornate armor, command insignia, banner or standard, weapon, cape, and exact item count. Keep each item in its original hand or mount; never duplicate, swap, discard, or transform it. Leadership effects are physical signals rather than spells. Do not add runes, aura, projectiles, or magical troops; restrained dust, cloth motion, or a metal glint may support the action. Action-specific effects: No spell effect; banner motion and a small metal glint may carry the physical salute. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    }
+  },
+  "pins": {
+    "templateSha256": "93943004e340d113943e06dea61fd7dfad67c20750dd4fc30d76d3be1fb7c144",
+    "profileSha256": "6641a5936eaba7d1804ac82f4a4c585302011e63bb36d2de06c7efbb5a0fd978",
+    "reference": {
+      "sourceSha256": "80e2554c208dee379459209fa396bc13f37019b74d9653cf8c078e951e6f6794",
+      "sourceDimensions": "1254x1254",
+      "chromaSourceSha256": "f9bd629b3e4e86f44163dfab83b1bc5ae21b343bb13a8a5e7e35655a049c3a70",
+      "chromaSourceDimensions": "1254x1254",
+      "identitySourceSha256": "46adf235585634bf0f4f396cd85450cffb8040666570b0ca5e5b0cff6a77a830",
+      "identitySourceDimensions": "1024x1024",
+      "styleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "styleSourceDimensions": "1254x1254",
+      "promptSha256": "dd710dd8bd67de95557dc7cd08dfd5c53795a05769de23cff1cbfc6791477a22",
+      "encodedSha256": "81415d0d1697acc38177d0c7c3118c286cb2a5b05bc3a01ddf1bc19e59f938a9",
+      "decodedSha256": "116aa663efe08e73d28c4a43c47c884c3f08e321acaf390fb31f9e6c27158fb2"
+    },
+    "animations": {
+      "idle": {
+        "sourceSha256": "90f5f660a91daaf19b9749e54c2b708f76cd53f78e4103eccdb601a211c37283",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "abc910421b6b16e36729c975e3db978043b3f9a871ade1c84adaa1cd92459c46",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "f36f1c4439350b800d2acbefc18f469a60409e2fb1798a91abe63265cf671af0",
+        "encodedSha256": "8625d89bfb2f090f97e5ce7e8b3fbb2f278003035198bcb796e05d73e0ff97df",
+        "decodedSha256": "914161896b91edd4aa1fca154f578bb7dda4e0ba40ce3a219182d440db5dce6f",
+        "frameSha256": [
+          "8bafe041329b29272960ffdbcd946db3db8ab9e0e8c2a38f5cead21e15472571",
+          "0568c73c9028c54c26fd5a984d593321741414871c45cc14fd2607f38af0dc26",
+          "15eab0c7b2eb080960366aef4a20b0e5fd6464851821a1b3abc7d193511a1845",
+          "d45fb6d2b8ab3ea9d273b0fdf83b41667d66551a2fb88f1b3ce174176dca0231",
+          "f0a2156840b4f0b0785065a79efa53e550f70427341219a3ff44795c4689aba6",
+          "124f6975f744e18f7e3a17b50048ad3dabbf92c4dceab0666e58c077a8720e11",
+          "4ebb401850ddef3ea645497ce7281b6c295ca4cc4219d41016d67d0cc049b61f",
+          "a1407a6fbb8637bcfecaf0c3e209f63a7adef07731a12dc5843a67ece056f757"
+        ],
+        "poseSha256": [
+          "0fb9114b2a60207b7b6b2e806de8467ed5ac7ead0c39f84826db4b5e75970e89",
+          "9d70d5a96823b35d37721bedb885b2287c2fbbe6ea2eec04a3d1a306fc6ab8fc",
+          "b9b3997e584db4ffe5c20af9ce915f61caa97f9503e58cbdaa2617bf5110c5a8",
+          "ed221de92ce076d54b1890b34ade407a4fea709728d729d82e78eff905894a7c",
+          "e0ca2a59de579b4d6718843666a6ca7f35d1057d3cff40221b66ae34db0eb05f",
+          "410b45b8fe853a7337c0c269e89a164c415e3f255523e52f0a843d4bdc70152e",
+          "9f3b48a5f533ea307a8093c46c90cf2d84bddc468fccbd198a930532f9773dcb",
+          "fa0799a60229acb84ce634c4d7af99a801299389a0013697dfa8ab54d28a0b76"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "walk": {
+        "sourceSha256": "6b7ec734bd071c49ccdab2357f7c65d0ed246c4d0ae6e57a712f93ce769df751",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "de09f54a8334b07198a1d29f3e2ec89884cdd4bdbc97486e1ec8f87163fc3cbd",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "a0b1ae34fab0cf52f46d3cd55ddddb4f4b0f0d902b33f00ae0f153ee5110269a",
+        "encodedSha256": "880aa0195de3831a2cea8de7a4431c207b74cc258b82a30d4cb8dde51f72eca8",
+        "decodedSha256": "d313e14fe0ce1b7a8a6d470290ed5784e1a0fd2e37da7a592e3d70d1e0bd8f4c",
+        "frameSha256": [
+          "0930338a64b6f1321ad52bbec9b159b9eba4b5bb9f54126b929c62886f894460",
+          "4aa881c0fd5d727b14783d30df38d2e70788b6e118c670c5f7f5756f3b560cf0",
+          "7df1981b8021c96d32754e64a8527331374e71098f9baf16f91b952e32ce7024",
+          "22fd258074290484714daed89eb06ee469b391f922299bd5e7e117b38ffe0165",
+          "7eb0bb7fe66d79f893f7fd9195e5ed40c2aaca55649c4b1ca7a37cb31ff46737",
+          "75973ab81e4958acb0badf32d4d026ff6e3bfdf44afc1812df9806c692936d4b",
+          "00aff8da3dd0cb9654ce318c068a86cbf7c6b699b87b41ad575b902738fecc55",
+          "9662bfc0443ed47181857923146d05fb10f72fcac09d7522bf5475176e5a4668"
+        ],
+        "poseSha256": [
+          "952a005dc66a36758157f74d8830875cc6f1edae38136ef75bb80ec6b79c2d3e",
+          "4db78ac8903748e92987d1a486d09e1799bd77a2cac36e43083ecea1617280da",
+          "1d8a7adc1e0c4d0cf110f45d84a44b9185221cc2de6a77a489328438f41aa847",
+          "32144121d9c835196616a3d0ba3f1561c3709482306e78299be488a89f77b5f6",
+          "1c218766d0e9c8eebeafd00600b22451034d63ee01e300b93b65e7fa3e6b7196",
+          "3425941f76d42702a450b60f16cf56d1b5f794c779969fdfaf3e40ac9e555518",
+          "5d381e2605434a16b1a07f7cf8dcaabd596c4c1c49b663258d2e523f5c4cfc1b",
+          "d9a615cc4aed1b0cddac98e2910dd145f31c69a6703a641573349d11f163a838"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "attack": {
+        "sourceSha256": "6550119194cfa36bf774b92ac284ce0248c121813f2ed3062bbe7c44a13da3be",
+        "sourceDimensions": "1717x916",
+        "chromaSourceSha256": "09d10af4aadc5b6a0fec8c80cb3eec73504cba84be20046aac2b845cbce90a72",
+        "chromaSourceDimensions": "1717x916",
+        "promptSha256": "98d731f3bb6cb09a61de9e6447684594e036ddf222642518d9fda5dc804b2ee6",
+        "encodedSha256": "bb19e4ebae9872ef39dec009d3221bcf6fb8ee419219d8f6a5510a3d7663d004",
+        "decodedSha256": "db2442b2d3b0823111dbeb898b78cd67d7d4a361aeead9f2122cb9d99a653c0c",
+        "frameSha256": [
+          "4435d8b7c048a37a78963d4176a811f6fd8ed4b4fa6ec0dddd90df2206719b2c",
+          "485f7e111203f453ea2598032feeacb56a24a0369621a114d34fbd36a4d805ea",
+          "aa3a17d7a1084bc4a22cc379daaebfaf085d08682be58c89cb808b9ade0fb4da",
+          "45fdd6e202d6522a0d81196cf4206b351a0aff01852791081a0f984a1192d229",
+          "a8e702cdbd843f1d5e14d28f9c869c0f0858ddecf3e20981694c0c3952aa353f",
+          "d0ee85a6eb7e597b7675b5c83831648bd345ae3350f96ea7d48c967b930de3b3",
+          "14a2d6efabf3fa42dac147b71ce9e8529c101d6c595018282bdad142ed79434e",
+          "49f0097e5b5a571f8f9642ee67459f9069c904de76f5a1e32fbcc41f801c61f4"
+        ],
+        "poseSha256": [
+          "7b47aed4b7c9ca9759ace15025a8a71a0ebf09ef1a9e5457c65f61eb7c9e9df2",
+          "22c2ea24bcc63ebba408b75b537659286c5f8cb6f035774c436a2113dd9b5472",
+          "4da4796616b4e34fe3a44e39f37bfd489b33cb61b4bde9e631fd81d93e5d8e38",
+          "17a20272be92a28072a835280f001464b57e537f9a31f1921b30a8edcf09cf7f",
+          "69dc2e491d6999584aea6f6c264e72558b469612f7405e98dd3b954344ba9bbb",
+          "45a2574e5c1323c61c07f1a046b379a9b643c457f5d9cb418b5481213c045b55",
+          "4699ccdcf571be8dcfe65910d4abe4d3b4fc824dd89d627ad401a778dabb7a94",
+          "fde80730ba61c047d737d6de9f0318784a5cbdcdec381d26ee09dcb711f5c4db"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          0.999625,
+          1,
+          1,
+          1
+        ]
+      },
+      "hurt": {
+        "sourceSha256": "8e23505de26960c96a7dd633feb810263c009fa876a903afae5d99037e9b6bf2",
+        "sourceDimensions": "1672x941",
+        "chromaSourceSha256": "8f003a29b8c8b26ece4cf58a2b9b27d8140d1c72d3c2ad7cacf115fb98c87c2d",
+        "chromaSourceDimensions": "1672x941",
+        "promptSha256": "48a33f20b6834cc5c3d4fe179693eed5d4ea00b571494a6c9b5b5fbd599789dd",
+        "encodedSha256": "a89ecc9d4366ac29bc4907d85328941f1da39d23c0dac56de918c90f2c2ecdc2",
+        "decodedSha256": "c32629482e0853c96a210ceb247310eff1e582e374d09ba7cdfe8c7eaeffcd95",
+        "frameSha256": [
+          "653841042bedcf4121c776817abee09f54b2eac58a9b36c75a9f718d455dc66f",
+          "a346e9204a3daffd087f0608119f705b36649c013b5d5216ee1d06f9ee94ca87",
+          "af1ed6ea2e432b21bd155a9760f5b9f56a14ce0fd45a9b50332483c74aeeb53b",
+          "0d0250daa3fc3be2f6ded24cb766c5c6a327c487b0c89bf9ed10a3f01c7dca03",
+          "fa69cde54c65fc77004af1b2e1509d0bea174162368b0ee9ec4b9a7f590b1e24",
+          "60920d96f4c2d0b1cb0108ea822c7cb536ea25f22de6a93c3be54122f5ff74d4",
+          "3da96b441a8cb8dd29e82fd9941c440764f95abb024346f9f38e5435c76192d6",
+          "3bce6eb593ea2a5f7f51eb99cb7f980203ca4c89ca023a1c438cc15e6c35e6ad"
+        ],
+        "poseSha256": [
+          "20a9e1829e7d25fdc21920b6d313f6423ce5bc339f0ff80a17680f2226a2a662",
+          "e211d3560dd3632553da86522ea8a7ec047ce87e06d519acb271535d8c22e9b6",
+          "6f87746399582341ab7a6fffcb0665f7d70658ad182fab9e1f9ddd5ab071c238",
+          "34a3a563190b3776a624c5f8be7e17e500c11bacbeae1b5cbf949e7d26b5306e",
+          "996b542c17bbe3adca5f85c795fe0dd3b0ea7de0cc43e5c95729e342e988409e",
+          "528592b1bfe81417273cc997f75ca0c104674b7295c17de5320a7b1db74bddb1",
+          "97b251901c1c25192c19237e656bfd188bba79bcc3f6de14db079910492d0c97",
+          "b55a9416458ee83cea2de79dbfd69db4269f3167ace97822c5961f5bfd895b33"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "death": {
+        "sourceSha256": "cd2820618a9b1091c77643f94bb13cd7cc6708bd681edab5908f479ac3a90617",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "fd96cc19a5a92f9517dc73d09c697f116bd7864e04e07e865c9fc528dc974c43",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "be924a5103b745d3763698ffeef30430dbbbdde7f810763859203deb8900ad66",
+        "encodedSha256": "4b390a4928bf33c46a1216e80bbedd9b804c7ffcac2317684f31f8667849f593",
+        "decodedSha256": "e92c3ce7923cb675ccb4aa50f77ebdbe460de41770990c2fd76dd6628b552ae5",
+        "frameSha256": [
+          "52ccc51b47ec7e2e352f2411cb45e6bdecf28f32da34e47bd8ba601417ffc01c",
+          "caa41d3f6010eda00fda70e1335736a2c06b751d5fbed676a90d9ec218d2f98f",
+          "4a8e6c417c36a1671049378a6397c744354eb3a4c3877c42a71bde8d830070f0",
+          "0a6d6181d5d7708da795911b34df0709fa02a0a933ef0bf0a8b9ac7947a0a1a5",
+          "2cface2d35fdc68a3f6440edd1875f94f8252fe25c8f300c5e9eb2572cb61558",
+          "f3b0e0c39bb04e61b63a466a220f426796485c3bb82debf48b62640659f9fc71",
+          "aae71f2c636ec233189228a32f9f0926794f7afdfd3cec8f4a8c1ce9ad4085e1",
+          "aae71f2c636ec233189228a32f9f0926794f7afdfd3cec8f4a8c1ce9ad4085e1"
+        ],
+        "poseSha256": [
+          "9af43deadef9ad8b83825c4007f05b230efe4e414ca0ed4abd89cdc06a70e772",
+          "23513fdd648f0a68c75e8522208c0c8c385209132b0be405029c81cd7c69da8d",
+          "3a79eb1b1ff8e8c1a18c284bb3928619dc41ac76920b406d22e0cccb613e8969",
+          "1b56961f1cdc730739aa01ce891a4e93892649a1d8a6941bfa1420c336fbc2f2",
+          "b79f6cdbebd96430779b29436097818c8a1102f7e121d894748721997fb125f9",
+          "dec92be5ea3624e46e3f610e1a7c754d16610ed4df9efae8fac1f3c6e39ea4e4",
+          "6d997c18f5e74ead5e93d396f8a4b3e103070378f2c6d64fb3b849ef89726b40",
+          "6d997c18f5e74ead5e93d396f8a4b3e103070378f2c6d64fb3b849ef89726b40"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "victory": {
+        "sourceSha256": "7fd94a49ccabdfd05cd38f738a258b444f51ac719a33f7ab41b6c302ff70e5b2",
+        "sourceDimensions": "1717x916",
+        "chromaSourceSha256": "3389bf0250c075f371544ffba3e366ebabd560114ecc3abdc072a27f532e8d17",
+        "chromaSourceDimensions": "1717x916",
+        "promptSha256": "41179e939495c65f947a60956ea17c9f40aba512061f150fbac857a8b76c0cf8",
+        "encodedSha256": "a9db9b3da86df075e60d7645ebe599e1c6b91d12792b143a2ae6c07171cad06a",
+        "decodedSha256": "4fdfe15c64ca32e13636b0bcc300ab22a2c34542526130896f90208be5e10c57",
+        "frameSha256": [
+          "2d8c86fe67da50730ff717d01cb0ab5648130713431f7f461c4337685f566080",
+          "0fabdf2f2ea318e795ee5c572ab13e2bbd683d5bb0a2be9bb2a59b13a6c532df",
+          "d4ddac6d591c00b17d148b42dab7dffd168aa0ff8f9b520522ee8c9a5f0d0d9c",
+          "55e55175a8587ecdad46d3a680495d2613f92fc6ca22ba1487fce78902faf165",
+          "bbfe74b1ad50497d31e549a319144969a58591113ad72d7964198cefccbd2661",
+          "c3056a591e2a494fa9dd0dcba4b2bd9863d09837ba821fb44412b9b88cb8c8f2",
+          "51dece08e41cc75014c865c548012e36428f44f9762acf7a4b6422d17c95e222",
+          "f4e2c31e593bd723c77d0de184c95682ab2b52c271a8a42493e349ff41090c48"
+        ],
+        "poseSha256": [
+          "ddd2645e3c283935b5e76721ea53f5e2e2f5894679b4e43f3f875ef11254b67a",
+          "2cfe0b398e0e29e8c7d12f9f4562e1d9b8b4aeb7a51a7ecfaf7125e802db42bc",
+          "6c095f4d4be94fa7f181aa440035e617f31daf588875a7b0d1ccfb5d1b2322d6",
+          "a45ca34f3d60682e73911cb0a38a83b61b3876339b961e43bf728f05930687a0",
+          "220ab07a97c1b198d19ba3294796f02b9398a2fd1c27e1e2b4707cb505e41ce1",
+          "c569bd09f00a69d326c015b71c5537cc6aa2b4c3eeb0eb0bc8a043afad2d57ce",
+          "2f6bf35db494dc29f5bed0e36439ed583307edb0fc08f1ef51f730bfbab9b3a6",
+          "329607bef9e947850e1c949424e7fd43f3508137464ff679e8d18c4697256f8c"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "dead": {
+        "sourceSha256": "cd2820618a9b1091c77643f94bb13cd7cc6708bd681edab5908f479ac3a90617",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "fd96cc19a5a92f9517dc73d09c697f116bd7864e04e07e865c9fc528dc974c43",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "f631a7fd605211260b28b5a5bba3503e06dc1064497d1e5769d62e40e178e2b1",
+        "encodedSha256": "62f230ebc128700f2b261c25cf662edf861dbf48f492ee61e6a6224520a4d6e8",
+        "decodedSha256": "3e782b476230c2ae7bceebbc8b4c086b5c8bc296933515e04194112b32d80e29",
+        "frameSha256": [
+          "aae71f2c636ec233189228a32f9f0926794f7afdfd3cec8f4a8c1ce9ad4085e1",
+          "aae71f2c636ec233189228a32f9f0926794f7afdfd3cec8f4a8c1ce9ad4085e1",
+          "aae71f2c636ec233189228a32f9f0926794f7afdfd3cec8f4a8c1ce9ad4085e1",
+          "aae71f2c636ec233189228a32f9f0926794f7afdfd3cec8f4a8c1ce9ad4085e1",
+          "aae71f2c636ec233189228a32f9f0926794f7afdfd3cec8f4a8c1ce9ad4085e1",
+          "aae71f2c636ec233189228a32f9f0926794f7afdfd3cec8f4a8c1ce9ad4085e1",
+          "aae71f2c636ec233189228a32f9f0926794f7afdfd3cec8f4a8c1ce9ad4085e1",
+          "aae71f2c636ec233189228a32f9f0926794f7afdfd3cec8f4a8c1ce9ad4085e1"
+        ],
+        "poseSha256": [
+          "6d997c18f5e74ead5e93d396f8a4b3e103070378f2c6d64fb3b849ef89726b40",
+          "6d997c18f5e74ead5e93d396f8a4b3e103070378f2c6d64fb3b849ef89726b40",
+          "6d997c18f5e74ead5e93d396f8a4b3e103070378f2c6d64fb3b849ef89726b40",
+          "6d997c18f5e74ead5e93d396f8a4b3e103070378f2c6d64fb3b849ef89726b40",
+          "6d997c18f5e74ead5e93d396f8a4b3e103070378f2c6d64fb3b849ef89726b40",
+          "6d997c18f5e74ead5e93d396f8a4b3e103070378f2c6d64fb3b849ef89726b40",
+          "6d997c18f5e74ead5e93d396f8a4b3e103070378f2c6d64fb3b849ef89726b40",
+          "6d997c18f5e74ead5e93d396f8a4b3e103070378f2c6d64fb3b849ef89726b40"
+        ],
+        "sourceFrameIndexes": [
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  }
+}

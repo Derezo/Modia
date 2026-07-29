@@ -12,7 +12,7 @@
  * @see ../../../../shared/mapGeneration.js - Terrain generation algorithms
  */
 
-import { generateTerrain } from '../../../../shared/mapGeneration.js';
+import { dispatchBattleMapGeneration } from '../../../../shared/mapGeneration.js';
 
 /**
  * Modulus for legacy random map seed generation.
@@ -96,11 +96,24 @@ export function deriveEncounterTerrainSeed(
  * @param {string} nodeType - Node type (forest, cave, mountain, etc.)
  * @param {number} [width=32] - Map width in tiles
  * @param {number} [height=32] - Map height in tiles
+ * @param {number} [terrainGenerationVersion=1] - Explicit generator version
  * @returns {{terrain: number[][], elevation: number[][]|null, mapSeed: number, mapWidth: number, mapHeight: number}}
  */
-export function generateBattleTerrain(mapSeed, nodeType, width = DEFAULT_MAP_WIDTH, height = DEFAULT_MAP_HEIGHT) {
-  // Generate terrain with elevation using shared module
-  const mapData = generateTerrain(mapSeed, nodeType, width, height, { elevation: true });
+export function generateBattleTerrain(
+  mapSeed,
+  nodeType,
+  width = DEFAULT_MAP_WIDTH,
+  height = DEFAULT_MAP_HEIGHT,
+  terrainGenerationVersion = TERRAIN_GENERATION_VERSION
+) {
+  const mapData = dispatchBattleMapGeneration({
+    terrainGenerationVersion,
+    terrainSeed: mapSeed,
+    nodeType,
+    mapWidth: width,
+    mapHeight: height,
+    options: { elevation: true }
+  });
   const terrain = mapData.terrain;
 
   // Validate elevation data before returning
@@ -153,7 +166,13 @@ export function generateEncounterTerrain(
     const mapSeed = deriveEncounterTerrainSeed(localSeed, nodeType, terrainGenerationVersion);
 
     return {
-      ...generateBattleTerrain(mapSeed, nodeType, contractWidth, contractHeight),
+      ...generateBattleTerrain(
+        mapSeed,
+        nodeType,
+        contractWidth,
+        contractHeight,
+        terrainGenerationVersion
+      ),
       terrainGenerationVersion
     };
   }

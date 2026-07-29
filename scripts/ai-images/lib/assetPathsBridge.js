@@ -84,57 +84,61 @@ function getOutputDir(category) {
  * @param {string} category - Asset category
  * @param {string} id - Asset identifier
  * @param {Object} [options] - Options passed to getOriginalsPath (subcategory, etc.)
- * @returns {Promise<string>} Absolute filesystem path to the originals file
+ * @returns {Promise<string|null>} Absolute filesystem path, or null for an incomplete player identity
  */
 async function getOriginalsFilePath(category, id, options = {}) {
   const assetPaths = await getAssetPathsModule();
   // getOriginalsPath returns a URL-style path like /assets/portraits/originals/foo.png
   // We need the filesystem path: {projectRoot}/frontend/public/assets/...
   const urlPath = assetPaths.getOriginalsPath(category, id, options);
+  if (urlPath === null) return null;
   return path.join(getProjectRoot(), 'frontend/public', urlPath);
 }
 
 /**
  * Get absolute filesystem path for a character sprite sheet (async)
- * @param {string} id - Character identifier (class for players, id for enemies)
+ * @param {Object|string} id - Canonical player identity object, or enemy identifier
  * @param {Object} [options] - Options
  * @param {string} [options.type='player'] - Character type ('player' or 'enemy')
  * @param {string} [options.biome] - Biome (required for enemies)
  * @param {string} [options.animation='idle'] - Animation type
  * @param {string} [options.extension='png'] - File extension (PNG for generation output)
- * @returns {Promise<string>} Absolute filesystem path
+ * @returns {Promise<string|null>} Absolute filesystem path, or null for an incomplete player identity
  */
 async function getCharacterOutputPath(id, options = {}) {
   const assetPaths = await getAssetPathsModule();
   const urlPath = assetPaths.getCharacterPath(id, { ...options, extension: options.extension || 'png' });
+  if (urlPath === null) return null;
   return path.join(getProjectRoot(), 'frontend/public', urlPath);
 }
 
 /**
  * Get absolute filesystem path for a character reference image (async)
- * @param {string} id - Character identifier
+ * @param {Object|string} id - Canonical player identity object, or enemy identifier
  * @param {Object} [options] - Options
  * @param {string} [options.type='player'] - Character type
  * @param {string} [options.biome] - Biome (required for enemies)
- * @returns {Promise<string>} Absolute filesystem path to reference image
+ * @returns {Promise<string|null>} Absolute filesystem path, or null for an incomplete player identity
  */
 async function getCharacterReferencePath(id, options = {}) {
   const assetPaths = await getAssetPathsModule();
   const urlPath = assetPaths.getCharacterReferencePath(id, options);
+  if (urlPath === null) return null;
   return path.join(getProjectRoot(), 'frontend/public', urlPath);
 }
 
 /**
  * Get absolute filesystem path for a character directory (async)
- * @param {string} id - Character identifier
+ * @param {Object|string} id - Canonical player identity object, or enemy identifier
  * @param {Object} [options] - Options
  * @param {string} [options.type='player'] - Character type
  * @param {string} [options.biome] - Biome (required for enemies)
- * @returns {Promise<string>} Absolute filesystem path to character directory
+ * @returns {Promise<string|null>} Absolute filesystem path, or null for an incomplete player identity
  */
 async function getCharacterDirectoryPath(id, options = {}) {
   const assetPaths = await getAssetPathsModule();
   const urlPath = assetPaths.getCharacterDirectory(id, options);
+  if (urlPath === null) return null;
   return path.join(getProjectRoot(), 'frontend/public', urlPath);
 }
 

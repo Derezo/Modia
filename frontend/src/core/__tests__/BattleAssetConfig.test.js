@@ -53,23 +53,45 @@ describe('battle runtime asset configuration', () => {
     });
   });
 
-  it('orders canonical, requested, and aliased enemy biome candidates without duplicates', () => {
+  it('locks registered enemies to canonical authored sprite directories', () => {
     assert.deepEqual(getEnemySpriteBiomeCandidates('gray_wolf', 'mountain'), [
-      'forest', 'mountain'
+      'forest'
     ]);
     assert.deepEqual(getEnemySpriteBiomeCandidates('dark_knight', 'castle'), [
-      'palace', 'castle'
+      'palace'
     ]);
     assert.deepEqual(getEnemySpriteBiomeCandidates('goblin_warrior', 'forest'), [
       'forest'
     ]);
+    assert.deepEqual(getEnemySpritePathCandidates('forest_slime', 'idle', 'cave'), [
+      '/assets/characters/enemies/forest/forest_slime/forest_slime_idle.webp'
+    ]);
+    assert.deepEqual(getEnemySpritePathCandidates('giant_spider', 'attack', 'mountain'), [
+      '/assets/characters/enemies/forest/giant_spider/giant_spider_attack.webp'
+    ]);
+  });
+
+  it('retains requested-biome aliases only for unregistered migration identities', () => {
     assert.deepEqual(getEnemySpriteBiomeCandidates('future_guildmaster', 'guild'), [
       'guild', 'castle'
     ]);
   });
 
-  it('falls back from a missing dead pose to the final death frame sheet', () => {
-    assert.deepEqual(getEnemySpriteAnimationCandidates('dead'), ['death', 'dead']);
+  it('routes seeded guild NPCs to canonical player artwork without enemy fallbacks', () => {
+    assert.deepEqual(getEnemySpriteBiomeCandidates('guildmaster_wizard', 'guild'), [
+      'castle'
+    ]);
+    assert.deepEqual(getEnemySpritePathCandidates('guildmaster_wizard', 'hit', 'guild'), [
+      '/assets/characters/player/human/female/wizard/human_female_wizard_hurt.webp'
+    ]);
+    assert.deepEqual(getEnemySpritePathCandidates('disciple_sorcerer', 'dead', 'mountain'), [
+      '/assets/characters/player/human/other/sorcerer/human_other_sorcerer_dead.webp',
+      '/assets/characters/player/human/other/sorcerer/human_other_sorcerer_death.webp'
+    ]);
+  });
+
+  it('falls back from a missing dead pose to the completed death strip', () => {
+    assert.deepEqual(getEnemySpriteAnimationCandidates('dead'), ['dead', 'death']);
     assert.deepEqual(getEnemySpriteAnimationCandidates('attack'), ['attack']);
   });
 

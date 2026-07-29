@@ -8,7 +8,7 @@
  */
 
 import battleWebsocket from './battleWebsocket.js';
-import { query } from '../config/database.js';
+import { battleStateRepository } from './battle/BattleStateRepository.js';
 import { getBattleStatusString } from './battle/index.js';
 import { startTurnTimer } from './coliseumService.js';
 import { getAvailableActions } from './battle/actionProcessor.js';
@@ -41,9 +41,23 @@ const TIMING = {
  * @param {Object} state - Current battle state
  * @param {Object} aiService - AI service for enemy decisions
  * @param {Object} battleService - Battle service for action processing
+ * @param {number} expectedRevision - Revision of the supplied battle state
  * @returns {Promise<Object>} Updated state and battle status
  */
-async function processEnemyTurnsAsync(battleId, state, aiService, battleService) {
+async function processEnemyTurnsAsync(
+  battleId,
+  state,
+  aiService,
+  battleService,
+  expectedRevision
+) {
+  if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0) {
+    throw new TypeError('expectedRevision must be a non-negative safe integer');
+  }
+
+  state = structuredClone(state);
+  let stateRevision = expectedRevision;
+  let lastCommittedUpdate = null;
   const enemyActions = [];
   let battleStatus = { status: 'active', winningTeamId: null };
   let iterations = 0;
@@ -111,7 +125,14 @@ async function processEnemyTurnsAsync(battleId, state, aiService, battleService)
     battleService.advanceToNextActorWithCT(state);
 
     // Update state in database
-    await updateBattleState(battleId, state);
+    const commitResult = await updateBattleState(battleId, state, stateRevision, {
+      commandType: 'enemy_turn_advance',
+      idempotencyKey: `enemy-turn:${battleId}:${stateRevision}`
+    });
+    stateRevision = commitResult.stateRevision;
+    lastCommittedUpdate = commitResult.update;
+    state = structuredClone(commitResult.envelope.state);
+    await battleWebsocket.broadcastStateUpdate(battleId, commitResult.update);
 
     // Small buffer before next turn
     await delay(TIMING.TURN_END_BUFFER);
@@ -126,6 +147,8 @@ async function processEnemyTurnsAsync(battleId, state, aiService, battleService)
   // Also return winningTeamId for PvP battles
   return {
     state,
+    stateRevision,
+    committedUpdate: lastCommittedUpdate,
     battleStatus: battleStatusString,
     battleEndResult: battleStatus, // Full result object with winningTeamId
     enemyActions
@@ -547,12 +570,33 @@ function getPathToTarget(unit, targetTile, _state) {
  * Update battle state in database
  * @param {number} battleId - Battle ID
  * @param {Object} state - Updated state
+ * @param {number} expectedRevision - Revision the update is based on
+ * @param {Object} options - Repository command metadata
+ * @returns {Promise<Object>} Repository commit result with a fresh envelope
  */
-async function updateBattleState(battleId, state) {
-  await query(
-    'UPDATE battles SET battle_state = $1 WHERE id = $2',
-    [JSON.stringify(state), battleId]
-  );
+async function updateBattleState(
+  battleId,
+  state,
+  expectedRevision,
+  {
+    commandType = 'enemy_turn_advance',
+    idempotencyKey = `${commandType}:${battleId}:${expectedRevision}`
+  } = {}
+) {
+  const result = await battleStateRepository.commitBattleState({
+    battleId,
+    expectedRevision,
+    commandType,
+    idempotencyKey,
+    flatState: state,
+    allowedStatuses: ['active']
+  });
+  const envelope = result.envelope ?? await battleStateRepository.loadBattle(battleId);
+
+  return {
+    ...result,
+    envelope
+  };
 }
 
 /**

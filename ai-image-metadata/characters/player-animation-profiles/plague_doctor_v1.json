@@ -1,0 +1,86 @@
+{
+  "version": "1.1.0",
+  "id": "plague_doctor_v1",
+  "class": "plague_doctor",
+  "templateId": "authored-pose-atlas-v1",
+  "description": "Reusable authored-pose direction for plague doctor player identities. Registry metadata and the staged portrait control identity; this profile supplies censer-and-compound choreography.",
+  "style": {
+    "source": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+    "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+  },
+  "identity": {
+    "baseFacing": "three-quarters right",
+    "motionStyle": "ominous, clinical, deliberate, and pendular, with beaked-mask focus, controlled censer arcs, protected compounds, and coat-led follow-through",
+    "equipmentRule": "Preserve the portrait's beaked mask, dark coat, hat or hood, gloves, censer, bottles, satchel, and exact item count. Keep exactly one censer on its chain and one of each depicted compound; never unmask, duplicate, swap, or transform equipment.",
+    "magicRule": "Effects are controlled medicinal or toxic fumes from the established censer or one handled compound, using the portrait's palette. Keep clouds compact and translucent enough to show the mask, hands, chain, and body."
+  },
+  "promptTemplates": {
+    "reference": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative {{displayName}} identity portrait; Image 2 is style and proportion reference only. Player identity metadata: {{visualTraits}}. Create one complete head-to-toe {{displayName}} preserving Image 1's covered face, ancestry traits, gender presentation, beaked mask, coat, hat or hood, gloves, censer, bottles, satchel, palette, and proportions. Do not import identity details from Image 2. {{equipmentRule}} Translate the portrait into a compact ominous silhouette. Use a {{background}} background with no floor or scenery and a square 1:1 canvas with generous padding. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered plague doctor in a clinical censer-ready stance facing {{baseFacing}}. {{invariants}}",
+    "animation": "Draw exactly {{frameCount}} genuinely redrawn full-body {{actionLabel}} poses of the authoritative {{displayName}} in a {{columns}}-column by {{rows}}-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: {{visualTraits}}. Required sequence: {{frameSequence}}. Motion direction: {{motionDirection}}. Overall plague doctor motion is {{motionStyle}}. {{poseRequirement}} Preserve exact identity, mask, coat, palette, proportions, censer, bottles, satchel, and chain continuity. {{equipmentRule}} {{magicRule}} Action-specific effects: {{effectRule}} Use a {{background}} background with generous gutters. {{invariants}}"
+  },
+  "animations": {
+    "idle": {
+      "actionLabel": "plague doctor clinical idle-cycle",
+      "minimumUniquePoses": 4,
+      "anchor": "source-cell",
+      "motionDirection": "An unsettling breathing loop makes small beaked-mask scans, controlled censer pendulum shifts, and protected satchel checks.",
+      "effectRule": "Only one thin contained wisp may rise from the established censer; no expanding cloud.",
+      "frameDescriptions": ["clinical stance with censer hanging under control", "slow inhale as beaked mask tilts upward", "weight shifts forward while chain shortens in the hand", "censer completes a tiny pendulum arc", "centered ominous midpoint", "slow exhale as the wisp thins", "weight shifts rearward while satchel settles", "clinical stance flowing back to frame one"]
+    },
+    "walk": {
+      "actionLabel": "plague doctor pendular stride",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "A measured alternating stride uses real leg compression, controlled censer counter-swing, coat movement, and close-held compounds.",
+      "effectRule": "No active treatment or attack cloud; censer may retain one tiny vertical wisp.",
+      "frameDescriptions": ["left foot forward contact as censer trails safely", "left leg compresses beneath the dark coat", "passing pose with right knee advancing", "right foot reaches while chain reverses direction", "right foot forward contact", "right leg compresses under the stride", "passing pose with left knee advancing", "left foot reaches into the pendular loop"]
+    },
+    "attack": {
+      "actionLabel": "plague doctor censer sweep",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "The chain shortens, shoulders coil, a planted step drives one controlled censer sweep, compact fumes mark contact, and the pendulum is arrested safely.",
+      "effectRule": "Use exactly one censer and one compact toxic or medicinal fume accent at contact; never duplicate the censer or hide the chain and body.",
+      "frameDescriptions": ["clinical guard measuring range", "gloved hand shortens the single censer chain", "deep shoulder coil with rear foot planted", "forward step begins the pendular sweep", "single censer reaches contact through compact fumes", "coat and chain follow through in a readable arc", "free hand arrests the returning chain", "recovered clinical guard"]
+    },
+    "hurt": {
+      "actionLabel": "plague doctor contaminated-impact recovery",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "An impact snaps the coat and mask back, throws the censer outward on its retained chain, forces a low stagger, and resolves through careful containment.",
+      "effectRule": "One compact impact and a few fume flecks are permitted; no gore, blood, unmasking, broken bottle, or lost censer.",
+      "frameDescriptions": ["clinical guard before impact", "sharp flinch with mask and gloves intact", "maximum stagger as single censer swings outward", "forced backward step while chain remains gripped", "low brace gathering censer and satchel close", "careful rise while fumes settle", "chain, feet, and compounds reset", "recovered ominous stance"]
+    },
+    "death": {
+      "actionLabel": "plague doctor defeat sequence",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "verticalAnchor": "bottom",
+      "motionDirection": "A final impact stills the censer, knees fail beneath the coat, the masked body sinks and tips sideways, and all equipment settles fully fallen.",
+      "effectRule": "Fumes fade without gore, blood, unmasking, explosion, rigid rotation, or duplicated equipment.",
+      "outputFrameMap": [0, 1, 2, 3, 4, 5, 7, 7],
+      "frameDescriptions": ["fatal impact breaks the clinical stance", "censer drops low as chain hand slackens", "knees buckle beneath the dark coat", "one knee grounds while beaked mask and torso tip sideways", "body reaches full ground contact", "coat, limbs, chain, and censer settle low", "final fully fallen plague doctor with mask intact", "same final fallen pose held"]
+    },
+    "cast": {
+      "actionLabel": "plague doctor compound fumigation",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "motionDirection": "The doctor stabilizes the censer, selects exactly one compound, adds it, raises the chain, guides a compact controlled cloud, then seals supplies and lowers the censer.",
+      "effectRule": "Create one compact translucent medicinal or toxic cloud from the censer and one selected compound; never duplicate items or obscure anatomy.",
+      "frameDescriptions": ["focused clinical stance", "single censer steadies beneath one gloved hand", "exactly one compound is selected from the satchel", "compound is added while the chain remains controlled", "maximum compact fume cloud gathers around the censer", "guiding hand directs the translucent cloud outward", "compound is secured as fumes recede", "composed censer-ready finish"]
+    },
+    "dead": {
+      "deriveFrom": {"animation": "death", "frame": 7},
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity.",
+      "frameDescriptions": ["terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held"]
+    },
+    "victory": {
+      "actionLabel": "plague doctor successful-treatment flourish",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "motionDirection": "The doctor confirms the result, inspects the censer, gives it a controlled celebratory swing, presents one clean compound, then reseals everything and holds.",
+      "effectRule": "One thin celebratory fume spiral may rise from the censer; no large cloud, duplicated vial, or unmasking.",
+      "frameDescriptions": ["silent recognition of success", "beaked mask studies the single censer", "chain lifts into a controlled outward swing", "censer completes a precise celebratory arc", "exactly one compound is presented for inspection", "compound returns as chain motion stops", "ominous proud stance with equipment secured", "final triumphant plague doctor pose held"]
+    }
+  }
+}

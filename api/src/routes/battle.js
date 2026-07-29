@@ -1,4 +1,5 @@
 import express from 'express';
+import { randomUUID } from 'node:crypto';
 import { query, withTransaction } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
@@ -11,13 +12,35 @@ import * as enemyService from '../services/enemyService.js';
 import battleWebsocket from '../services/battleWebsocket.js';
 import { createPlayerBattleUnit } from '../services/battleUnitFactory.js';
 import { validateFormationPayload } from '../services/battle/formationValidation.js';
-import { TERRAIN_GENERATION_VERSION } from '../services/battle/encounterService.js';
+import { deriveEncounterTerrainSeed } from '../services/battle/encounterService.js';
+import {
+  CURRENT_BATTLE_MAP_VERSION,
+  generateBattleMap,
+  selectBattleMapGenerationVersion
+} from '../services/battle/battleMapGenerationService.js';
 import * as traitService from '../services/traitService.js';
 import * as bossService from '../services/bossService.js';
 import * as battleTurnManager from '../services/battleTurnManager.js';
 import { getParticipantBattleStatus } from '../services/battleOutcomeService.js';
 import * as zodiacAbilityService from '../services/zodiacAbilityService.js';
-import { completeMatch as completeColiseumMatch, cancelTurnTimer } from '../services/coliseumService.js';
+import {
+  cancelTurnTimer,
+  completeMatch as completeColiseumMatch,
+  publishColiseumMatchResultEvents
+} from '../services/coliseumService.js';
+import { battleStateRepository } from '../services/battle/BattleStateRepository.js';
+import { battleTerminalOutbox } from '../services/battle/BattleTerminalOutbox.js';
+import {
+  BATTLE_TERMINAL_PROGRESSION_EVENT_TYPE,
+  buildPveTerminalProgressionPayload
+} from '../services/battle/BattleTerminalEffects.js';
+import {
+  createBattleMapUpgradeRequiredPayload,
+  createNegotiatedBattleStateSnapshot
+} from '../services/messageReliability.js';
+import {
+  assertBattleMapCapabilities
+} from '../../../shared/battleStateProtocol.js';
 import {
   validateActionSequence,
   resetActionSequence,
@@ -28,6 +51,184 @@ import {
 const router = express.Router();
 
 startCleanupTimer();
+
+export function readBattleMapCapabilities(req) {
+  let capabilities = req.body?.battleMapCapabilities;
+  if (capabilities === undefined) capabilities = req.query?.battleMapCapabilities;
+  if (capabilities === undefined) capabilities = req.get?.('x-battle-map-capabilities');
+  if (capabilities === undefined || capabilities === null) {
+    return capabilities;
+  }
+  try {
+    if (typeof capabilities === 'string') capabilities = JSON.parse(capabilities);
+    assertBattleMapCapabilities(capabilities);
+    return capabilities;
+  } catch (error) {
+    if (!(error instanceof SyntaxError) && !(error instanceof TypeError)) throw error;
+    throw new AppError('Invalid battle map capabilities', 400, {
+      code: 'battle_map_capabilities_invalid'
+    });
+  }
+}
+
+function throwCapabilityError(error) {
+  if (error instanceof AppError) throw error;
+  if (error?.negotiation) {
+    throw new AppError('This battle map requires a newer client', 426, {
+      ...createBattleMapUpgradeRequiredPayload(error.negotiation)
+    });
+  }
+  // Capability declarations are parsed and structurally validated by
+  // readBattleMapCapabilities before negotiation. Do not translate arbitrary
+  // TypeErrors from map generation, state projection, or persistence into a
+  // misleading client capability error.
+  throw error;
+}
+
+const BATTLE_START_REQUEST_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/;
+
+function createBattleCreationKey(requestId, userId, nodeId) {
+  const normalizedRequestId = requestId ?? randomUUID();
+  if (typeof normalizedRequestId !== 'string'
+    || !BATTLE_START_REQUEST_ID_PATTERN.test(normalizedRequestId)) {
+    throw new AppError(
+      'battleStartRequestId must be 8-128 URL-safe characters',
+      400,
+      { code: 'battle_start_request_id_invalid' }
+    );
+  }
+  return `pve:${userId}:${nodeId}:${normalizedRequestId}`;
+}
+
+function requireCompatibleBattleMap(negotiation) {
+  if (negotiation.compatible) return;
+  throw new AppError('This battle map requires a newer client', 426, {
+    ...createBattleMapUpgradeRequiredPayload(negotiation)
+  });
+}
+
+export function negotiateBattleTransport(battle, clientCapabilities) {
+  try {
+    const negotiated = createNegotiatedBattleStateSnapshot(battle, clientCapabilities);
+    requireCompatibleBattleMap(negotiated.negotiation);
+    return negotiated;
+  } catch (error) {
+    throwCapabilityError(error);
+  }
+}
+
+export function createBattleTransportResponse(
+  legacyPayload,
+  battle,
+  clientCapabilities,
+  negotiated = negotiateBattleTransport(battle, clientCapabilities)
+) {
+  const explicitlyDeclared = clientCapabilities !== undefined && clientCapabilities !== null;
+  if (!explicitlyDeclared && battle.battleMapSchemaVersion === 1) {
+    return legacyPayload;
+  }
+
+  const response = {
+    ...legacyPayload,
+    battleMapCapabilities: negotiated.negotiation,
+    snapshot: negotiated.snapshot
+  };
+  if (battle.battleMapSchemaVersion === 2) {
+    delete response.state;
+  }
+  return response;
+}
+
+async function loadBattleNodeMetadata(nodeId) {
+  if (nodeId === null || nodeId === undefined) {
+    return { nodeType: null, nodeName: null };
+  }
+  const result = await query(
+    'SELECT node_type, name FROM world_nodes WHERE id = $1',
+    [nodeId]
+  );
+  return {
+    nodeType: result.rows[0]?.node_type ?? null,
+    nodeName: result.rows[0]?.name ?? null
+  };
+}
+
+async function loadOpponentUsername(battle, userId) {
+  const opponentId = String(battle.player1Id) === String(userId)
+    ? battle.player2Id
+    : battle.player1Id;
+  if (opponentId === null || opponentId === undefined) return null;
+  const result = await query(
+    'SELECT username FROM users WHERE id = $1',
+    [opponentId]
+  );
+  return result.rows[0]?.username ?? null;
+}
+
+async function loadParticipantBattleOr404(battleId, userId, options = {}) {
+  try {
+    return await battleStateRepository.loadBattleForParticipant(
+      battleId,
+      userId,
+      options
+    );
+  } catch (error) {
+    if (error?.code === 'BATTLE_NOT_FOUND') {
+      throw new AppError('Battle not found or you do not have access', 404);
+    }
+    throw error;
+  }
+}
+
+async function consumeBattleInventoryItem(client, inventoryId, userId) {
+  if (inventoryId === null || inventoryId === undefined) return;
+  const itemCheck = await client.query(
+    `SELECT quantity
+     FROM character_items
+     WHERE id = $1 AND user_id = $2
+     FOR UPDATE`,
+    [inventoryId, userId]
+  );
+  if (itemCheck.rows.length === 0 || itemCheck.rows[0].quantity < 1) {
+    throw new AppError('Consumable inventory changed - please retry', 409, {
+      code: 'battle_consumable_conflict'
+    });
+  }
+  if (itemCheck.rows[0].quantity > 1) {
+    await client.query(
+      'UPDATE character_items SET quantity = quantity - 1 WHERE id = $1',
+      [inventoryId]
+    );
+  } else {
+    await client.query(
+      'DELETE FROM character_items WHERE id = $1',
+      [inventoryId]
+    );
+  }
+}
+
+async function commitBattleActionState(command, {
+  userId,
+  consumedInventoryId = null,
+  bossState = null
+} = {}) {
+  return withTransaction(async client => {
+    const committed = await battleStateRepository.commitBattleState(
+      command,
+      { client }
+    );
+    if (committed.idempotent) return committed;
+
+    await consumeBattleInventoryItem(client, consumedInventoryId, userId);
+    if (bossState) {
+      await bossService.saveBossEncounter(
+        { ...bossState, battleId: command.battleId },
+        { client }
+      );
+    }
+    return committed;
+  });
+}
 
 // ============================================================================
 // BATTLE END HELPER (for async processing)
@@ -44,113 +245,252 @@ startCleanupTimer();
  * @param {Object} battleEndResult - Result from checkBattleEnd() with winningTeamId
  * @returns {Object} Rewards data if victory
  */
-async function handleBattleEnd(battleId, status, state, userId, battleEndResult = null) {
-  // Update characters to no longer be in battle
-  await battleRewardService.clearInBattleStatus(userId);
-
+async function handleBattleEnd(
+  battleId,
+  status,
+  state,
+  userId,
+  battleEndResult = null,
+  {
+    expectedRevision,
+    consumedInventoryId = null,
+    commandIdentity = `terminal:${battleId}:${expectedRevision}`,
+    publish = true
+  } = {}
+) {
   let rewards = null;
+  let committedUpdate = null;
+  let committedState = state;
+  let committedStateRevision = expectedRevision;
+  let presentationEvents = [];
 
-  // Calculate and distribute rewards for victory
-  if (status === 'victory') {
-    // Compute rewards (gold, XP, items)
-    const rewardsData = await battleRewardService.computeRewards(state, battleId);
-
-    // Distribute rewards in a transaction
-    await battleRewardService.distributeRewards(userId, rewardsData, battleId);
-
-    // Get party leader for quest progress
-    const partyLeaderId = await battleRewardService.getPartyLeaderId(userId);
-
-    // Update quest progress (non-transactional)
-    if (partyLeaderId) {
-      const { isAdvancementBattle, challengerCharacterId } =
-        await battleRewardService.getAdvancementBattleInfo(battleId);
-
-      const advancementResult = await battleRewardService.updateQuestProgress(
-        partyLeaderId,
-        rewardsData,
-        battleId,
-        isAdvancementBattle,
-        challengerCharacterId
-      );
-
-      rewards = {
-        gold: rewardsData.gold,
-        experience: rewardsData.experience,
-        items: rewardsData.items,
-        advancementComplete: advancementResult
-      };
-    } else {
-      rewards = {
-        gold: rewardsData.gold,
-        experience: rewardsData.experience,
-        items: rewardsData.items
-      };
-    }
-  }
-
-  // Broadcast battle end via WebSocket
-  // For PvP battles, include player IDs and winning team so each player gets their perspective
-  const isPvP = state.battleType === 'pvp' && state.player1Id && state.player2Id;
+  // For PvP battles, include player IDs and winning team so each player gets
+  // their perspective. The persisted lifecycle has one canonical winner.
+  const isPvP = (
+    state.battleType === 'pvp' || state.battleType === 'pvp_coliseum'
+  ) && state.player1Id && state.player2Id;
   const pvpInfo = isPvP && battleEndResult?.winningTeamId ? {
     player1Id: state.player1Id,
     player2Id: state.player2Id,
     winningTeamId: battleEndResult.winningTeamId
   } : null;
 
-  if (isPvP) {
-    console.log(`[Battle] PvP battle end - battleId=${battleId}, winningTeamId=${battleEndResult?.winningTeamId}, player1=${state.player1Id}, player2=${state.player2Id}`);
+  if (isPvP && !battleEndResult?.winningTeamId) {
+    throw new AppError('PvP battle ended without a winning team', 409, {
+      code: 'battle_winner_missing'
+    });
   }
 
-  await battleWebsocket.broadcastBattleEnd(battleId, status, rewards, pvpInfo);
-
-  // Record Coliseum match results and update ratings/leaderboards
-  if (isPvP && battleEndResult?.winningTeamId) {
-    try {
-      // Check if this is a Coliseum battle
-      const battleTypeResult = await query(
-        'SELECT battle_type FROM battles WHERE id = $1',
-        [battleId]
-      );
-      const battleType = battleTypeResult.rows[0]?.battle_type;
-
-      if (battleType === 'pvp_coliseum') {
-        // Validate player IDs exist before recording match
-        if (!state.player1Id || !state.player2Id) {
-          console.error('[Battle] Missing player IDs for Coliseum match:', {
-            battleId,
-            player1Id: state.player1Id,
-            player2Id: state.player2Id
-          });
-        } else {
-          const winnerId = battleEndResult.winningTeamId === 1 ? state.player1Id : state.player2Id;
-          const loserId = battleEndResult.winningTeamId === 1 ? state.player2Id : state.player1Id;
-
-          console.log(`[Battle] Recording Coliseum match - battleId=${battleId}, winnerId=${winnerId}, loserId=${loserId}`);
-          await completeColiseumMatch(battleId, winnerId, loserId, 'victory', false);
-        }
+  if (state.battleType === 'pvp_coliseum') {
+    const winnerId = battleEndResult.winningTeamId === 1
+      ? state.player1Id
+      : state.player2Id;
+    const loserId = battleEndResult.winningTeamId === 1
+      ? state.player2Id
+      : state.player1Id;
+    const completion = await completeColiseumMatch(
+      battleId,
+      winnerId,
+      loserId,
+      'victory',
+      false,
+      {
+        finalState: state,
+        expectedRevision,
+        consumedInventoryId,
+        actingUserId: userId,
+        publish
       }
-    } catch (err) {
-      // Log but don't fail the battle end - match recording is non-critical
-      console.error('[Battle] Failed to record Coliseum match:', err);
+    );
+    committedUpdate = completion?.commit?.update ?? null;
+    committedState = completion?.commit?.envelope?.state ?? state;
+    committedStateRevision =
+      completion?.commit?.envelope?.stateRevision ?? expectedRevision;
+    presentationEvents = completion?.presentationEvents ?? [];
+  } else if (!isPvP && status === 'victory') {
+    // Drop rolling occurs before the transaction, but only the reward record
+    // returned by the transaction is ever sent to clients. An ambiguous retry
+    // therefore replays the stored outcome instead of a newly rolled response.
+    const rewardsData = await battleRewardService.computeRewards(state, battleId);
+    const completion = await withTransaction(async client => {
+      const distributed = await battleRewardService.distributeRewards(
+        userId,
+        rewardsData,
+        battleId,
+        { finalState: state, client }
+      );
+      if (!distributed.idempotent) {
+        await consumeBattleInventoryItem(client, consumedInventoryId, userId);
+        await bossService.cleanupBossEncounter(battleId, { client });
+        const leaderResult = await client.query(
+          `SELECT id
+           FROM characters
+           WHERE user_id = $1 AND party_slot = 1
+           LIMIT 1`,
+          [userId]
+        );
+        const partyLeaderId = leaderResult.rows[0]?.id;
+        if (!partyLeaderId) {
+          throw new Error(
+            `Cannot enqueue terminal progression for battle ${battleId}: `
+            + `user ${userId} has no party leader`
+          );
+        }
+        await battleTerminalOutbox.enqueue(client, {
+          battleId,
+          eventType: BATTLE_TERMINAL_PROGRESSION_EVENT_TYPE,
+          payload: buildPveTerminalProgressionPayload({
+            battleId,
+            partyLeaderId,
+            rewardsData,
+            isAdvancementBattle:
+              distributed.envelope?.isAdvancementBattle ?? false,
+            challengerCharacterId:
+              distributed.envelope?.challengerCharacterId ?? null
+          })
+        });
+      }
+      return distributed;
+    });
+    committedUpdate = completion.update;
+    committedState = completion.envelope?.state ?? state;
+    committedStateRevision =
+      completion.envelope?.stateRevision ?? expectedRevision;
+    rewards = completion.rewards;
+  } else {
+    const terminalStatus = isPvP ? 'victory' : status;
+    const winnerId = isPvP
+      ? (battleEndResult.winningTeamId === 1 ? state.player1Id : state.player2Id)
+      : null;
+    const completion = await withTransaction(async client => {
+      const committed = await battleStateRepository.commitBattleState({
+        battleId,
+        expectedRevision,
+        commandType: 'battle_complete',
+        idempotencyKey: commandIdentity,
+        flatState: state,
+        lifecycle: {
+          status: terminalStatus,
+          winnerId,
+          endedAt: new Date().toISOString()
+        },
+        allowedStatuses: ['active']
+      }, { client });
+      if (!committed.idempotent) {
+        await consumeBattleInventoryItem(client, consumedInventoryId, userId);
+        const participantIds = isPvP
+          ? [state.player1Id, state.player2Id]
+          : [userId];
+        await client.query(
+          `UPDATE characters SET in_battle = false
+           WHERE user_id = ANY($1::int[]) AND party_slot <= $2`,
+          [participantIds, MAX_BATTLE_PARTY_SIZE]
+        );
+        await bossService.cleanupBossEncounter(battleId, { client });
+      }
+      return committed;
+    });
+    committedUpdate = completion.update;
+    committedState = completion.envelope?.state ?? state;
+    committedStateRevision =
+      completion.envelope?.stateRevision ?? expectedRevision;
+  }
+
+  // Authoritative deltas and lifecycle events are emitted only after every
+  // database side effect above commits.
+  if (publish && state.battleType !== 'pvp_coliseum') {
+    if (committedUpdate) {
+      await battleWebsocket.broadcastStateUpdate(battleId, committedUpdate);
     }
+    await battleWebsocket.broadcastBattleEnd(battleId, status, rewards, pvpInfo);
   }
 
-  // Leave battle room (for all users in battle)
-  const participants = battleWebsocket.getBattleParticipants(battleId);
-  for (const participantId of participants) {
-    battleWebsocket.leaveBattle(battleId, participantId);
+  if (publish) {
+    const participants = battleWebsocket.getBattleParticipants(battleId);
+    for (const participantId of participants) {
+      battleWebsocket.leaveBattle(battleId, participantId);
+    }
+    cleanupBattleSequences(battleId);
   }
 
-  // Clean up boss encounter records
-  bossService.cleanupBossEncounter(battleId).catch(err => {
-    console.error('[Battle] Failed to cleanup boss encounter:', err);
-  });
+  return {
+    rewards,
+    state: committedState,
+    stateRevision: committedStateRevision,
+    committedUpdate,
+    pvpInfo,
+    presentationEvents
+  };
+}
 
-  // Clean up action sequence tracking for this battle
-  cleanupBattleSequences(battleId);
+/**
+ * Consume the revisioned enemy-turn result and complete terminal state through
+ * the repository before publishing lifecycle side effects.
+ */
+async function handleProcessedEnemyTurns(
+  battleId,
+  enemyTurnResult,
+  userId
+) {
+  let {
+    state,
+    stateRevision,
+    committedUpdate,
+    battleStatus,
+    battleEndResult
+  } = enemyTurnResult;
 
-  return rewards;
+  if (
+    committedUpdate
+    && committedUpdate.stateRevision !== stateRevision
+  ) {
+    throw new TypeError('Enemy turn update revision does not match committed state');
+  }
+
+  if (battleStatus !== 'active') {
+    const completed = await handleBattleEnd(
+      battleId,
+      battleStatus,
+      state,
+      userId,
+      battleEndResult,
+      {
+        expectedRevision: stateRevision,
+        commandIdentity:
+          `enemy-turn-complete:${battleId}:${stateRevision}:${battleStatus}`
+      }
+    );
+    state = completed.state;
+    stateRevision = completed.stateRevision;
+    committedUpdate = completed.committedUpdate;
+  } else {
+    const activeCommit = await battleTurnManager.updateBattleState(
+      battleId,
+      state,
+      stateRevision,
+      {
+        commandType: 'enemy_turn_settle',
+        idempotencyKey: `enemy-turn-settle:${battleId}:${stateRevision}`
+      }
+    );
+    state = activeCommit.envelope.state;
+    stateRevision = activeCommit.envelope.stateRevision;
+    if (!activeCommit.idempotent) {
+      committedUpdate = activeCommit.update;
+      await battleWebsocket.broadcastStateUpdate(battleId, committedUpdate);
+    } else {
+      committedUpdate = null;
+    }
+    battleTurnManager.notifyPlayerTurn(battleId, state);
+  }
+
+  return {
+    state,
+    stateRevision,
+    committedUpdate,
+    battleStatus,
+    battleEndResult
+  };
 }
 
 // ============================================================================
@@ -170,7 +510,8 @@ router.get('/preview/:nodeId', authenticate, readLimiter, asyncHandler(async (re
 // POST /api/battle/start - Start PvE battle at current node
 router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) => {
   // Get optional formation from request
-  const { formation } = req.body || {};
+  const { formation, battleStartRequestId } = req.body || {};
+  const battleMapCapabilities = readBattleMapCapabilities(req);
 
   // Get user's battle party with equipment stat bonuses
   const partyResult = await query(
@@ -253,39 +594,36 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
 
   // Check if already in battle - if so, return existing battle data for rejoin
   if (party.some(c => c.in_battle)) {
-    // Look for existing active battle
-    const existingBattle = await query(
-      `SELECT b.id, b.battle_type, b.battle_state, b.map_seed, b.map_width, b.map_height,
-              wn.node_type, wn.name as node_name
-       FROM battles b
-       JOIN world_nodes wn ON b.node_id = wn.id
-       WHERE b.player1_id = $1 AND b.status = 'active'
-       ORDER BY b.started_at DESC
-       LIMIT 1`,
-      [req.user.userId]
+    const battleEnvelope = await battleStateRepository.findActiveBattleForPlayer(
+      req.user.userId
     );
 
-    if (existingBattle.rows.length > 0) {
+    if (battleEnvelope) {
       // Return existing battle for rejoin
-      const battle = existingBattle.rows[0];
+      const nodeMetadata = await loadBattleNodeMetadata(battleEnvelope.nodeId);
+      const negotiated = negotiateBattleTransport(
+        battleEnvelope,
+        battleMapCapabilities
+      );
 
       // A restored BattleScene starts its client-side action counter at zero.
       // Treat this response as a new action-sequence session, just like the
       // explicit /rejoin endpoint, so the first action is not rejected as a
       // duplicate of an action submitted before the scene was restored.
-      resetActionSequence(battle.id, req.user.userId);
+      resetActionSequence(battleEnvelope.id, req.user.userId);
 
-      return res.json({
-        battleId: battle.id,
-        battleType: battle.battle_type,
-        mapSeed: battle.map_seed,
-        mapWidth: battle.map_width,
-        mapHeight: battle.map_height,
-        nodeType: battle.node_type,
-        nodeName: battle.node_name,
-        state: battleService.withBattleStateVisualIdentities(battle.battle_state),
+      return res.json(createBattleTransportResponse({
+        battleId: battleEnvelope.id,
+        battleType: battleEnvelope.battleType,
+        mapSeed: battleEnvelope.mapSeed,
+        mapWidth: battleEnvelope.mapWidth,
+        mapHeight: battleEnvelope.mapHeight,
+        nodeType: nodeMetadata.nodeType,
+        nodeName: nodeMetadata.nodeName,
+        state: battleService.withBattleStateVisualIdentities(battleEnvelope.state),
+        stateRevision: battleEnvelope.stateRevision,
         rejoined: true
-      });
+      }, battleEnvelope, battleMapCapabilities, negotiated));
     }
 
     // Corrupted state: in_battle=true but no active battle found - reset and continue
@@ -304,7 +642,7 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
 
   // Get node info
   const nodeResult = await query(
-    'SELECT node_type, difficulty_tier, local_seed FROM world_nodes WHERE id = $1',
+    'SELECT node_type, name, difficulty_tier, local_seed FROM world_nodes WHERE id = $1',
     [currentNodeId]
   );
 
@@ -319,22 +657,20 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
     throw new AppError('Cannot battle at this location', 400);
   }
 
-  // Generate battle terrain using encounter service
-  const {
-    terrain,
-    elevation,
-    elevationFormat,
-    obstacles,
-    variants,
-    mapSeed,
-    mapWidth,
-    mapHeight,
-    terrainGenerationVersion
-  } = battleService.generateEncounterTerrain({
-    nodeType: node.node_type,
-    localSeed: node.local_seed,
-    terrainGenerationVersion: TERRAIN_GENERATION_VERSION
-  });
+  let selectedGenerationVersion;
+  try {
+    selectedGenerationVersion = selectBattleMapGenerationVersion({
+      mode: 'pve',
+      clientCapabilities: battleMapCapabilities
+    });
+  } catch (error) {
+    throwCapabilityError(error);
+  }
+  const mapSeed = deriveEncounterTerrainSeed(
+    node.local_seed,
+    node.node_type,
+    selectedGenerationVersion
+  );
 
   // Load character traits for all party members
   const characterTraits = await traitService.loadCharacterTraits(characterIds);
@@ -349,7 +685,12 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
   );
   const userSettings = settingsResult.rows[0]?.settings || {};
   const debugOptions = {
-    logAIDecisions: userSettings?.developer?.enabled && userSettings?.developer?.battle?.logAIDecisions
+    // BattleMutableStateV1 is canonical JSON. Optional settings must collapse
+    // to a real boolean instead of leaking `undefined` into the wire state.
+    logAIDecisions: Boolean(
+      userSettings?.developer?.enabled
+      && userSettings?.developer?.battle?.logAIDecisions
+    )
   };
 
   // Create initial battle state
@@ -358,15 +699,6 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
     phase: 'active',
     activeUnitIndex: 0,
     activeUnitId: null,
-    mapWidth,
-    mapHeight,
-    terrainSeed: mapSeed,
-    terrainGenerationVersion,
-    terrain, // Store terrain for server-side movement validation
-    elevation, // Store elevation for 3D pathfinding and rendering
-    elevationFormat,
-    obstacles, // Canonical visual/gameplay obstacle grid
-    variants, // Deterministic floor variation grid
     debugOptions, // User's debug settings for AI logging etc.
     units: party.map((char, idx) => {
       // Use formation position if provided, otherwise default layout
@@ -443,9 +775,8 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
   initialState.bossStates = {};
   for (const enemy of enemies) {
     if (bossService.isBoss(enemy)) {
-      // We don't have battleId yet, so we'll use a temporary ID
-      // The actual battle ID will be assigned after insert
-      const bossState = bossService.initializeBossState(enemy, 0);
+      // The durable battle ID is attached when the battle row is created.
+      const bossState = bossService.initializeBossState(enemy, null);
       if (bossState) {
         initialState.bossStates[enemy.id] = bossState;
         enemy.isBoss = true;
@@ -465,56 +796,113 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
   // Generate turn predictions
   initialState.turnPredictions = battleService.predictTurnOrder(initialState, 10);
 
-  // Create battle record
-  const battleResult = await query(
-    `INSERT INTO battles (battle_type, status, node_id, battle_state, map_seed, map_width, map_height, player1_id)
-     VALUES ('pve', 'active', $1, $2, $3, $4, $5, $6)
-     RETURNING id`,
-    [currentNodeId, JSON.stringify(initialState), mapSeed, mapWidth, mapHeight, req.user.userId]
-  );
-
-  const battleId = battleResult.rows[0].id;
-
-  // Update boss encounter records with actual battle ID
-  if (Object.keys(initialState.bossStates).length > 0) {
-    for (const [_unitId, bossState] of Object.entries(initialState.bossStates)) {
-      bossState.battleId = battleId;
-      bossService.saveBossEncounter(bossState).catch(err => {
-        console.error('[Battle] Failed to save boss encounter:', err);
-      });
-    }
+  let generatedBattle;
+  try {
+    generatedBattle = await generateBattleMap({
+      terrainSeed: mapSeed,
+      nodeType: node.node_type,
+      mode: 'pve',
+      playerCount: initialState.units.filter(unit => unit.type === 'player').length,
+      enemyCount: enemies.length,
+      enemyCapacity: Math.max(1, enemies.length),
+      enemyStrategy: 'formation',
+      existingUnits: [],
+      initialMutableState: initialState,
+      allowV2: selectedGenerationVersion === CURRENT_BATTLE_MAP_VERSION,
+      clientCapabilities: battleMapCapabilities
+    });
+  } catch (error) {
+    throwCapabilityError(error);
   }
 
-  // Mark characters as in battle
-  await query(
-    `UPDATE characters SET in_battle = true
-     WHERE user_id = $1 AND party_slot <= $2 AND party_slot IS NOT NULL`,
-    [req.user.userId, MAX_BATTLE_PARTY_SIZE]
+  const creationIdempotencyKey = createBattleCreationKey(
+    battleStartRequestId,
+    req.user.userId,
+    currentNodeId
   );
+  const creation = await withTransaction(async client => {
+    // Serialize battle creation for a party. This closes the race where two
+    // concurrent start requests both observed in_battle=false.
+    await client.query(
+      `SELECT id
+       FROM characters
+       WHERE user_id = $1 AND party_slot <= $2 AND party_slot IS NOT NULL
+       ORDER BY id
+       FOR UPDATE`,
+      [req.user.userId, MAX_BATTLE_PARTY_SIZE]
+    );
+
+    const concurrentlyCreated = await battleStateRepository.findActiveBattleForPlayer(
+      req.user.userId,
+      { client }
+    );
+    if (concurrentlyCreated) {
+      return {
+        created: false,
+        idempotent: true,
+        raced: true,
+        envelope: concurrentlyCreated
+      };
+    }
+
+    const result = await battleStateRepository.createBattle({
+      battleType: 'pve',
+      status: 'active',
+      nodeId: currentNodeId,
+      player1Id: req.user.userId,
+      creationIdempotencyKey,
+      finalMap: generatedBattle.finalMap,
+      legacyFlatState: generatedBattle.legacyFlatState,
+      initialMutableState: generatedBattle.mutableState
+    }, { client });
+
+    await client.query(
+      `UPDATE characters SET in_battle = true
+       WHERE user_id = $1 AND party_slot <= $2 AND party_slot IS NOT NULL`,
+      [req.user.userId, MAX_BATTLE_PARTY_SIZE]
+    );
+    if (result.created) {
+      for (const bossState of Object.values(generatedBattle.mutableState.bossStates ?? {})) {
+        await bossService.saveBossEncounter(
+          { ...bossState, battleId: result.battleId },
+          { client }
+        );
+      }
+    }
+    return result;
+  });
+
+  const battleEnvelope = creation.envelope;
+  const battleId = battleEnvelope.id;
+  const stateRevision = battleEnvelope.stateRevision;
+  const battleState = battleService.withBattleStateVisualIdentities(
+    battleEnvelope.state
+  );
+  const responseNode = battleEnvelope.nodeId === currentNodeId
+    ? { nodeType: node.node_type, nodeName: node.name }
+    : await loadBattleNodeMetadata(battleEnvelope.nodeId);
 
   // Join battle WebSocket room
   battleWebsocket.joinBattle(battleId, req.user.userId);
 
   // Check if the first actor is an enemy - if so, process their turns asynchronously
-  const firstActor = initialState.units.find(u => u.id === initialState.activeUnitId);
-  if (firstActor && firstActor.type === 'enemy') {
+  const firstActor = battleState.units.find(u => u.id === battleState.activeUnitId);
+  if (creation.created && firstActor && firstActor.type === 'enemy') {
     // Async enemy turn processing - starts after response is sent via WebSocket
     setImmediate(async () => {
       try {
-        const { state: updatedState, battleStatus, battleEndResult } =
-          await battleTurnManager.processEnemyTurnsAsync(battleId, initialState, aiService, battleService);
-
-        // Update final state
-        await query(
-          'UPDATE battles SET battle_state = $1, status = $2 WHERE id = $3',
-          [JSON.stringify(updatedState), battleStatus, battleId]
+        const enemyTurnResult = await battleTurnManager.processEnemyTurnsAsync(
+          battleId,
+          battleState,
+          aiService,
+          battleService,
+          stateRevision
         );
-
-        if (battleStatus !== 'active') {
-          await handleBattleEnd(battleId, battleStatus, updatedState, req.user.userId, battleEndResult);
-        } else {
-          battleTurnManager.notifyPlayerTurn(battleId, updatedState);
-        }
+        await handleProcessedEnemyTurns(
+          battleId,
+          enemyTurnResult,
+          req.user.userId
+        );
       } catch (error) {
         console.error('Initial enemy turn processing error:', error);
       }
@@ -522,46 +910,45 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
   }
 
   // Get available actions for the first player unit (if their turn)
-  const firstPlayerUnit = initialState.units.find(u => u.id === initialState.activeUnitId && u.type === 'player');
+  const firstPlayerUnit = battleState.units.find(
+    u => u.id === battleState.activeUnitId && u.type === 'player'
+  );
   const availableActions = firstPlayerUnit
-    ? battleService.getAvailableActions(firstPlayerUnit, initialState)
+    ? battleService.getAvailableActions(firstPlayerUnit, battleState)
     : null;
 
-  res.status(201).json({
+  res.status(creation.created ? 201 : 200).json(createBattleTransportResponse({
     battleId,
-    mapSeed,
-    mapWidth,
-    mapHeight,
-    nodeType: node.node_type, // Critical: frontend needs this for terrain generation
-    state: initialState,
-    availableActions
-  });
+    battleType: battleEnvelope.battleType,
+    mapSeed: battleEnvelope.mapSeed,
+    mapWidth: battleEnvelope.mapWidth,
+    mapHeight: battleEnvelope.mapHeight,
+    nodeType: responseNode.nodeType,
+    nodeName: responseNode.nodeName,
+    state: battleState,
+    stateRevision,
+    availableActions,
+    rejoined: !creation.created
+  }, battleEnvelope, battleMapCapabilities));
 }));
 
 // GET /api/battle/current - Get current battle state
 router.get('/current', authenticate, readLimiter, asyncHandler(async (req, res) => {
-  // Check for active battle where user is player1, player2, or in battle_players (for PvP/coop)
-  // Use LEFT JOIN because PvP battles (coliseum) have NULL node_id
-  const result = await query(
-    `SELECT b.id, b.battle_type, b.battle_state, b.map_seed, b.map_width, b.map_height,
-            wn.node_type, wn.name as node_name
-     FROM battles b
-     LEFT JOIN world_nodes wn ON b.node_id = wn.id
-     WHERE b.status = 'active'
-       AND (b.player1_id = $1 OR b.player2_id = $1 OR
-            EXISTS (SELECT 1 FROM battle_players bp WHERE bp.battle_id = b.id AND bp.user_id = $1))
-     ORDER BY b.started_at DESC
-     LIMIT 1`,
-    [req.user.userId]
+  const battleEnvelope = await battleStateRepository.findActiveBattleForPlayer(
+    req.user.userId
   );
-
-  if (result.rows.length === 0) {
+  if (!battleEnvelope) {
     throw new AppError('No active battle', 404);
   }
 
-  const battle = result.rows[0];
-  const state = battleService.withBattleStateVisualIdentities(battle.battle_state);
-  const battleId = battle.id;
+  const nodeMetadata = await loadBattleNodeMetadata(battleEnvelope.nodeId);
+  const battleMapCapabilities = readBattleMapCapabilities(req);
+  const negotiated = negotiateBattleTransport(
+    battleEnvelope,
+    battleMapCapabilities
+  );
+  const state = battleService.withBattleStateVisualIdentities(battleEnvelope.state);
+  const battleId = battleEnvelope.id;
 
   // /current is the full-page refresh/login recovery path. The frontend
   // creates a fresh BattleWebSocketManager for the returned battle and its
@@ -570,21 +957,15 @@ router.get('/current', authenticate, readLimiter, asyncHandler(async (req, res) 
   resetActionSequence(battleId, req.user.userId);
 
   // Detect PvP battles and get opponent username
-  const isPvP = battle.battle_type === 'pvp' || battle.battle_type === 'pvp_coliseum';
+  const isPvP = battleEnvelope.battleType === 'pvp'
+    || battleEnvelope.battleType === 'pvp_coliseum';
   let opponentUsername = null;
 
   if (isPvP) {
-    // Get opponent's username for PvP battles
-    const opponentResult = await query(
-      `SELECT u.id, u.username FROM battles b
-       JOIN users u ON (
-         CASE WHEN b.player1_id = $2 THEN b.player2_id = u.id
-              ELSE b.player1_id = u.id END
-       )
-       WHERE b.id = $1`,
-      [battleId, req.user.userId]
+    opponentUsername = await loadOpponentUsername(
+      battleEnvelope,
+      req.user.userId
     );
-    opponentUsername = opponentResult.rows[0]?.username || null;
   }
 
   // Join battle WebSocket room for updates
@@ -608,20 +989,18 @@ router.get('/current', authenticate, readLimiter, asyncHandler(async (req, res) 
     console.log('[Battle] Resuming enemy turn processing for battle', battleId, '- active unit:', activeUnit.name);
     setImmediate(async () => {
       try {
-        const { state: updatedState, battleStatus, battleEndResult } =
-          await battleTurnManager.processEnemyTurnsAsync(battleId, state, aiService, battleService);
-
-        // Update final state
-        await query(
-          'UPDATE battles SET battle_state = $1, status = $2 WHERE id = $3',
-          [JSON.stringify(updatedState), battleStatus, battleId]
+        const enemyTurnResult = await battleTurnManager.processEnemyTurnsAsync(
+          battleId,
+          state,
+          aiService,
+          battleService,
+          battleEnvelope.stateRevision
         );
-
-        if (battleStatus !== 'active') {
-          await handleBattleEnd(battleId, battleStatus, updatedState, req.user.userId, battleEndResult);
-        } else {
-          battleTurnManager.notifyPlayerTurn(battleId, updatedState);
-        }
+        await handleProcessedEnemyTurns(
+          battleId,
+          enemyTurnResult,
+          req.user.userId
+        );
       } catch (error) {
         console.error('Resume enemy turn processing error:', error);
       }
@@ -634,20 +1013,21 @@ router.get('/current', authenticate, readLimiter, asyncHandler(async (req, res) 
     ? battleService.getAvailableActions(activePlayerUnit, state)
     : null;
 
-  res.json({
+  res.json(createBattleTransportResponse({
     battleId: battleId,
-    battleType: battle.battle_type,
-    mapSeed: battle.map_seed,
-    mapWidth: battle.map_width,
-    mapHeight: battle.map_height,
-    nodeType: (battle.battle_type === 'pvp' || battle.battle_type === 'pvp_coliseum') ? 'arena' : battle.node_type,
-    nodeName: battle.node_name,
+    battleType: battleEnvelope.battleType,
+    mapSeed: battleEnvelope.mapSeed,
+    mapWidth: battleEnvelope.mapWidth,
+    mapHeight: battleEnvelope.mapHeight,
+    nodeType: isPvP ? 'arena' : nodeMetadata.nodeType,
+    nodeName: nodeMetadata.nodeName,
     state: state,
+    stateRevision: battleEnvelope.stateRevision,
     availableActions,
     // PvP-specific fields for reconnection
     isPvP,
     opponentUsername
-  });
+  }, battleEnvelope, battleMapCapabilities, negotiated));
 }));
 
 // GET /api/battle/:battleId/rejoin - Rejoin an active battle after disconnect
@@ -655,28 +1035,19 @@ router.get('/:battleId/rejoin', authenticate, rejoinLimiter, asyncHandler(async 
   const { battleId } = req.params;
   const battleReconnection = await import('../services/battleReconnection.js');
 
-  // Verify player has access to this battle
-  // Use LEFT JOIN for world_nodes since PvP battles have NULL node_id
-  const result = await query(
-    `SELECT b.id, b.battle_type, b.battle_state, b.status, b.map_seed, b.map_width, b.map_height,
-            wn.node_type, wn.name as node_name
-     FROM battles b
-     LEFT JOIN world_nodes wn ON b.node_id = wn.id
-     WHERE b.id = $1
-       AND (b.player1_id = $2 OR b.player2_id = $2 OR
-            EXISTS (SELECT 1 FROM battle_players bp WHERE bp.battle_id = b.id AND bp.user_id = $2))`,
-    [battleId, req.user.userId]
+  const battleEnvelope = await loadParticipantBattleOr404(
+    battleId,
+    req.user.userId,
+    {
+      requireActive: true
+    }
   );
-
-  if (result.rows.length === 0) {
-    throw new AppError('Battle not found or you do not have access', 404);
-  }
-
-  const battle = result.rows[0];
-
-  if (battle.status !== 'active') {
-    throw new AppError('Battle is no longer active', 400);
-  }
+  const nodeMetadata = await loadBattleNodeMetadata(battleEnvelope.nodeId);
+  const battleMapCapabilities = readBattleMapCapabilities(req);
+  const negotiated = negotiateBattleTransport(
+    battleEnvelope,
+    battleMapCapabilities
+  );
 
   // Get username for reconnection notification
   const userResult = await query(
@@ -700,31 +1071,41 @@ router.get('/:battleId/rejoin', authenticate, rejoinLimiter, asyncHandler(async 
   const disconnectedPlayers = battleReconnection.getDisconnectedPlayers(parseInt(battleId));
 
   // Get available actions for active player unit
-  const battleState = battleService.withBattleStateVisualIdentities(battle.battle_state);
+  const battleState = battleService.withBattleStateVisualIdentities(battleEnvelope.state);
   const activePlayerUnit = battleState.units?.find(u => u.id === battleState.activeUnitId && u.type === 'player');
   const availableActions = activePlayerUnit
     ? battleService.getAvailableActions(activePlayerUnit, battleState)
     : null;
 
-  res.json({
+  res.json(createBattleTransportResponse({
     success: true,
-    battleId: battle.id,
-    battleType: battle.battle_type,
-    mapSeed: battle.map_seed,
-    mapWidth: battle.map_width,
-    mapHeight: battle.map_height,
-    nodeType: (battle.battle_type === 'pvp' || battle.battle_type === 'pvp_coliseum') ? 'arena' : battle.node_type,
-    nodeName: battle.node_name,
+    battleId: battleEnvelope.id,
+    battleType: battleEnvelope.battleType,
+    mapSeed: battleEnvelope.mapSeed,
+    mapWidth: battleEnvelope.mapWidth,
+    mapHeight: battleEnvelope.mapHeight,
+    nodeType: (
+      battleEnvelope.battleType === 'pvp'
+      || battleEnvelope.battleType === 'pvp_coliseum'
+    ) ? 'arena' : nodeMetadata.nodeType,
+    nodeName: nodeMetadata.nodeName,
     state: battleState,
+    stateRevision: battleEnvelope.stateRevision,
     gracePeriod: reconnectResult?.gracePeriod || 0,
     disconnectedPlayers,
     availableActions
-  });
+  }, battleEnvelope, battleMapCapabilities, negotiated));
 }));
 
 // POST /api/battle/action - Submit battle action
 router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res) => {
   const { battleId, actionType, unitId, targetTile, skillId, actionSequence } = req.body;
+
+  if (battleId === undefined || battleId === null || battleId === '') {
+    throw new AppError('Battle ID is required', 400, {
+      code: 'battle_id_required'
+    });
+  }
 
   // Validate action sequence — reject stale or duplicate submissions
   const sequenceValidation = validateActionSequence(battleId, req.user.userId, actionSequence);
@@ -732,19 +1113,14 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
     throw new AppError('Battle state has changed - please retry', 409);
   }
 
-  // Get battle - allow both player1 AND player2 to submit actions (for PvP)
-  const battleResult = await query(
-    `SELECT id, battle_state, player1_id, player2_id FROM battles
-     WHERE id = $1 AND (player1_id = $2 OR player2_id = $2) AND status = 'active'`,
-    [battleId, req.user.userId]
+  const battle = await loadParticipantBattleOr404(
+    battleId,
+    req.user.userId,
+    { requireActive: true }
   );
-
-  if (battleResult.rows.length === 0) {
-    throw new AppError('Battle not found or not active', 404);
-  }
-
-  const battle = battleResult.rows[0];
-  const state = battleService.withBattleStateVisualIdentities(battle.battle_state);
+  let state = structuredClone(
+    battleService.withBattleStateVisualIdentities(battle.state)
+  );
 
   // Migration: ensure all units have CT field (for existing battles)
   for (const unit of state.units) {
@@ -774,9 +1150,6 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
     throw new AppError('You do not control this unit', 403);
   }
 
-  // Cancel turn timer since player submitted a valid action (for multiplayer battles)
-  cancelTurnTimer(battleId);
-
   // Capture old position BEFORE processAction modifies the unit (for movement broadcast)
   const oldPosition = { x: activeUnit.tileX, y: activeUnit.tileY };
 
@@ -791,6 +1164,9 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
       availableActions: result.availableActions
     });
   }
+
+  let phaseTransitionNotification = null;
+  let changedBossState = null;
 
   // Check for boss phase transitions after damage dealt
   if (result.damage && result.targetType === 'enemy' && state.bossStates) {
@@ -807,13 +1183,12 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
         // Update boss display info
         targetBoss.currentPhase = state.bossStates[targetBoss.id].currentPhase;
         targetBoss.phaseName = phaseTransition.phaseName;
-
-        // Broadcast phase transition via WebSocket
-        battleWebsocket.broadcastPhaseTransition(battleId, {
+        changedBossState = state.bossStates[targetBoss.id];
+        phaseTransitionNotification = {
           bossId: targetBoss.id,
           bossName: targetBoss.name,
           ...phaseTransition
-        });
+        };
       }
     }
   }
@@ -825,96 +1200,129 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
   // Track if turn continues (two-action system: move + act)
   const turnContinues = !result.turnEnded && battleStatus === 'active';
 
-  if (result.turnEnded && battleStatus === 'active') {
-    // Turn is complete - advance to next actor using CT system
-    battleService.advanceToNextActorWithCT(state);
+  let committedPlayerState = null;
+  let committedRevision = null;
+  let completion = null;
 
-    // Save state first, then spawn async processing
-    await query(
-      'UPDATE battles SET battle_state = $1 WHERE id = $2',
-      [JSON.stringify(state), battleId]
+  if (battleStatus === 'active') {
+    if (result.turnEnded) {
+      battleService.advanceToNextActorWithCT(state);
+    }
+    state.turnPredictions = battleService.predictTurnOrder(state, 10);
+
+    const actionCommit = await commitBattleActionState({
+      battleId,
+      expectedRevision: battle.stateRevision,
+      commandType: result.turnEnded ? 'player_turn_advance' : 'player_action',
+      idempotencyKey:
+        `${result.turnEnded ? 'player-turn' : 'player-action'}:`
+        + `${battleId}:${battle.stateRevision}:${req.user.userId}:${actionSequence}`,
+      flatState: state,
+      lifecycle: { status: 'active' },
+      allowedStatuses: ['active']
+    }, {
+      userId: req.user.userId,
+      consumedInventoryId: result.consumedInventoryId,
+      bossState: changedBossState
+    });
+    if (actionCommit.idempotent) {
+      throw new AppError('Battle state has changed - please retry', 409);
+    }
+    state = structuredClone(actionCommit.envelope.state);
+    committedPlayerState = state;
+    committedRevision = actionCommit.envelope.stateRevision;
+
+    // Timers and all presentation events observe only the committed successor.
+    cancelTurnTimer(battleId);
+    await battleWebsocket.broadcastStateUpdate(battleId, actionCommit.update);
+  } else {
+    state.turnPredictions = battleService.predictTurnOrder(state, 10);
+    completion = await handleBattleEnd(
+      battleId,
+      battleStatus,
+      state,
+      req.user.userId,
+      battleEndResult,
+      {
+        expectedRevision: battle.stateRevision,
+        consumedInventoryId: result.consumedInventoryId,
+        commandIdentity:
+          `player-complete:${battleId}:${battle.stateRevision}:`
+          + `${req.user.userId}:${actionSequence}`,
+        publish: false
+      }
     );
+    state = structuredClone(completion.state);
+    result.rewards = completion.rewards;
+    cancelTurnTimer(battleId);
+    if (completion.committedUpdate) {
+      await battleWebsocket.broadcastStateUpdate(
+        battleId,
+        completion.committedUpdate
+      );
+    }
+  }
 
-    // Process enemy turns asynchronously (don't await)
+  if (phaseTransitionNotification) {
+    await battleWebsocket.broadcastPhaseTransition(
+      battleId,
+      phaseTransitionNotification
+    );
+  }
+
+  // Animation events follow the authoritative revision so rollback never
+  // publishes an action that did not happen.
+  if (actionType === 'move' && result.moved) {
+    const newPosition = { x: activeUnit.tileX, y: activeUnit.tileY };
+    await battleWebsocket.broadcastUnitMoved(
+      battleId,
+      unitId,
+      oldPosition,
+      newPosition,
+      req.user.userId
+    );
+  }
+  await battleWebsocket.broadcastActionExecuted(
+    battleId,
+    unitId,
+    actionType,
+    result,
+    req.user.userId
+  );
+
+  if (completion) {
+    await battleWebsocket.broadcastBattleEnd(
+      battleId,
+      battleStatus,
+      completion.rewards,
+      completion.pvpInfo
+    );
+    await publishColiseumMatchResultEvents(completion.presentationEvents);
+    const participants = battleWebsocket.getBattleParticipants(battleId);
+    for (const participantId of participants) {
+      await battleWebsocket.leaveBattle(battleId, participantId);
+    }
+    cleanupBattleSequences(battleId);
+  } else if (result.turnEnded) {
+    // Process enemy turns asynchronously from the exact committed revision.
     setImmediate(async () => {
       try {
-        const { state: updatedState, battleStatus: finalStatus, battleEndResult } =
-          await battleTurnManager.processEnemyTurnsAsync(battleId, state, aiService, battleService);
-
-        // Update final state and status
-        await query(
-          'UPDATE battles SET battle_state = $1, status = $2 WHERE id = $3',
-          [JSON.stringify(updatedState), finalStatus, battleId]
+        const enemyTurnResult = await battleTurnManager.processEnemyTurnsAsync(
+          battleId,
+          committedPlayerState,
+          aiService,
+          battleService,
+          committedRevision
         );
-
-        // Handle battle end
-        if (finalStatus !== 'active') {
-          await handleBattleEnd(battleId, finalStatus, updatedState, req.user.userId, battleEndResult);
-        } else {
-          // Notify next player it's their turn
-          battleTurnManager.notifyPlayerTurn(battleId, updatedState);
-        }
+        await handleProcessedEnemyTurns(
+          battleId,
+          enemyTurnResult,
+          req.user.userId
+        );
       } catch (error) {
         console.error('Async enemy turn processing error:', error);
       }
     });
-  }
-
-  // Update turn predictions
-  state.turnPredictions = battleService.predictTurnOrder(state, 10);
-
-  // Update battle state if turn didn't end (async processing already saved state when turn ended)
-  if (!result.turnEnded) {
-    await query(
-      'UPDATE battles SET battle_state = $1, status = $2 WHERE id = $3',
-      [JSON.stringify(state), battleStatus, battleId]
-    );
-  }
-
-  // Consume item from inventory if an item was used (with FOR UPDATE to prevent race conditions)
-  if (result.consumedInventoryId) {
-    await withTransaction(async (client) => {
-      // Lock the row to prevent race condition with rapid item usage
-      const itemCheck = await client.query(
-        'SELECT quantity FROM character_items WHERE id = $1 FOR UPDATE',
-        [result.consumedInventoryId]
-      );
-      if (itemCheck.rows.length > 0) {
-        if (itemCheck.rows[0].quantity > 1) {
-          await client.query(
-            'UPDATE character_items SET quantity = quantity - 1 WHERE id = $1',
-            [result.consumedInventoryId]
-          );
-        } else {
-          await client.query(
-            'DELETE FROM character_items WHERE id = $1',
-            [result.consumedInventoryId]
-          );
-        }
-      }
-    });
-  }
-
-  // Broadcast unit movement if player moved (so opponents see movement animation)
-  // This uses the same event as enemy moves for consistent handling
-  if (actionType === 'move' && result.moved) {
-    const newPosition = { x: activeUnit.tileX, y: activeUnit.tileY };
-    battleWebsocket.broadcastUnitMoved(battleId, unitId, oldPosition, newPosition, req.user.userId);
-  }
-
-  // Broadcast action executed via WebSocket
-  battleWebsocket.broadcastActionExecuted(battleId, unitId, actionType, result, req.user.userId);
-
-  // Handle battle end if player's action ended the battle
-  // (Enemy turn processing handles its own battle ends via async manager)
-  if (battleStatus !== 'active') {
-    // Save final battle state and status BEFORE handling rewards
-    // This ensures the battle is marked as ended even if the client disconnects
-    await query(
-      'UPDATE battles SET battle_state = $1, status = $2 WHERE id = $3',
-      [JSON.stringify(state), battleStatus, battleId]
-    );
-    result.rewards = await handleBattleEnd(battleId, battleStatus, state, req.user.userId, battleEndResult);
   }
 
   res.json({
@@ -931,18 +1339,15 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
 router.get('/rewards/:battleId', authenticate, rewardsLimiter, asyncHandler(async (req, res) => {
   const { battleId } = req.params;
 
-  // Allow both player1 AND player2 to get rewards (for PvP)
-  const result = await query(
-    `SELECT rewards, player1_id, player2_id FROM battles
-     WHERE id = $1 AND (player1_id = $2 OR player2_id = $2) AND status = 'victory'`,
-    [battleId, req.user.userId]
+  const battle = await loadParticipantBattleOr404(
+    battleId,
+    req.user.userId
   );
-
-  if (result.rows.length === 0) {
+  if (battle.status !== 'victory') {
     throw new AppError('Battle not found or not a victory', 404);
   }
 
-  res.json({ rewards: result.rows[0].rewards });
+  res.json({ rewards: battle.rewards });
 }));
 
 // GET /api/battle/:id/state - Lightweight battle state for defensive polling
@@ -953,47 +1358,22 @@ router.get('/:id/state', authenticate, stateLimiter, asyncHandler(async (req, re
     throw new AppError('Invalid battle ID', 400);
   }
 
-  // Get battle and verify participation
-  const result = await query(
-    `SELECT b.id, b.battle_state, b.status, b.battle_type,
-            b.player1_id, b.player2_id, b.winner_id, b.rewards
-     FROM battles b
-     WHERE b.id = $1`,
-    [battleId]
+  const battle = await loadParticipantBattleOr404(
+    battleId,
+    req.user.userId
   );
-
-  if (result.rows.length === 0) {
-    throw new AppError('Battle not found', 404);
-  }
-
-  const battle = result.rows[0];
-  const battleState = battle.battle_state;
-
-  // Verify user is a participant (player1, player2, or in battle_players table for co-op)
-  const isPlayer1 = battle.player1_id === req.user.userId;
-  const isPlayer2 = battle.player2_id === req.user.userId;
-
-  if (!isPlayer1 && !isPlayer2) {
-    // Check battle_players table for co-op battles
-    const participantCheck = await query(
-      'SELECT 1 FROM battle_players WHERE battle_id = $1 AND user_id = $2',
-      [battleId, req.user.userId]
-    );
-    if (participantCheck.rows.length === 0) {
-      throw new AppError('Not a battle participant', 403);
-    }
-  }
+  const battleState = battle.state;
 
   const storedStatus = battle.status || 'active';
-  const isHeadToHead = battle.battle_type === 'pvp' ||
-    battle.battle_type === 'pvp_coliseum' ||
+  const isHeadToHead = battle.battleType === 'pvp' ||
+    battle.battleType === 'pvp_coliseum' ||
     battleState.battleType === 'pvp';
   const participantStatus = getParticipantBattleStatus({
     status: storedStatus,
     userId: req.user.userId,
-    player1Id: battle.player1_id,
-    player2Id: battle.player2_id,
-    winnerId: battle.winner_id,
+    player1Id: battle.player1Id,
+    player2Id: battle.player2Id,
+    winnerId: battle.winnerId,
     isHeadToHead
   });
 
@@ -1054,25 +1434,20 @@ function generateETag(state) {
  */
 router.post('/:battleId/zodiac-ability', authenticate, actionLimiter, asyncHandler(async (req, res) => {
   const battleId = parseInt(req.params.battleId, 10);
-  const { characterId, abilityKey, targetUnitId } = req.body;
+  const { characterId, abilityKey, targetUnitId, actionSequence = 0 } = req.body;
 
   if (!characterId || !abilityKey) {
     throw new AppError('characterId and abilityKey are required', 400);
   }
 
-  // Get battle and verify player is a participant
-  const battleResult = await query(
-    `SELECT id, battle_state, player1_id, player2_id FROM battles
-     WHERE id = $1 AND (player1_id = $2 OR player2_id = $2) AND status = 'active'`,
-    [battleId, req.user.userId]
+  const battle = await loadParticipantBattleOr404(
+    battleId,
+    req.user.userId,
+    { requireActive: true }
   );
-
-  if (battleResult.rows.length === 0) {
-    throw new AppError('Battle not found or not active', 404);
-  }
-
-  const battle = battleResult.rows[0];
-  const state = battleService.withBattleStateVisualIdentities(battle.battle_state);
+  const state = structuredClone(
+    battleService.withBattleStateVisualIdentities(battle.state)
+  );
 
   // Find the source unit
   const sourceUnit = state.units.find(u =>
@@ -1103,14 +1478,23 @@ router.post('/:battleId/zodiac-ability', authenticate, actionLimiter, asyncHandl
     throw new AppError(result.error || 'Failed to use zodiac ability', 400);
   }
 
-  // Update battle state
-  await query(
-    'UPDATE battles SET battle_state = $1 WHERE id = $2',
-    [JSON.stringify(state), battleId]
-  );
+  const committed = await battleStateRepository.commitBattleState({
+    battleId,
+    expectedRevision: battle.stateRevision,
+    commandType: 'zodiac_ability',
+    idempotencyKey:
+      `zodiac:${battleId}:${req.user.userId}:${characterId}:${abilityKey}:${actionSequence}`,
+    flatState: state,
+    allowedStatuses: ['active']
+  });
+  if (committed.idempotent) {
+    throw new AppError('Battle state has changed - please retry', 409);
+  }
+  const committedState = committed.envelope.state;
+  await battleWebsocket.broadcastStateUpdate(battleId, committed.update);
 
   // Broadcast the ability use via WebSocket
-  battleWebsocket.broadcastActionExecuted(battleId, sourceUnit.id, 'zodiac_ability', {
+  await battleWebsocket.broadcastActionExecuted(battleId, sourceUnit.id, 'zodiac_ability', {
     ...result,
     unitId: sourceUnit.id,
     unitName: sourceUnit.name,
@@ -1125,7 +1509,8 @@ router.post('/:battleId/zodiac-ability', authenticate, actionLimiter, asyncHandl
     abilityUsed: true,
     abilityKey,
     abilityName: result.abilityName,
-    state
+    state: committedState,
+    stateRevision: committed.envelope.stateRevision
   });
 }));
 
@@ -1137,18 +1522,12 @@ router.get('/:battleId/zodiac-abilities/:characterId', authenticate, readLimiter
   const battleId = parseInt(req.params.battleId, 10);
   const characterId = parseInt(req.params.characterId, 10);
 
-  // Get battle and verify player is a participant
-  const battleResult = await query(
-    `SELECT id, battle_state FROM battles
-     WHERE id = $1 AND (player1_id = $2 OR player2_id = $2) AND status = 'active'`,
-    [battleId, req.user.userId]
+  const battle = await loadParticipantBattleOr404(
+    battleId,
+    req.user.userId,
+    { requireActive: true }
   );
-
-  if (battleResult.rows.length === 0) {
-    throw new AppError('Battle not found or not active', 404);
-  }
-
-  const state = battleResult.rows[0].battle_state;
+  const state = battle.state;
 
   // Find the unit
   const unit = state.units.find(u =>

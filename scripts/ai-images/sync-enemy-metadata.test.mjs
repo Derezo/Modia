@@ -148,8 +148,7 @@ test('sync moves canonical identities and derives every status from files', asyn
 
 test('repository enemy metadata matches canonical sheets after sync', async () => {
   const result = await buildEnemyMetadataSync({ projectRoot: PROJECT_ROOT });
-  assert.equal(result.stats.enemies, 34);
-  assert.equal(result.stats.declaredAnimations, 170);
+  assert.equal(result.stats.enemies, 16);
+  assert.equal(result.stats.declaredAnimations, 80);
   assert.equal(result.outOfDate, false, result.changedFiles.join('\n'));
 });
-

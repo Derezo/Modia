@@ -1,0 +1,86 @@
+{
+  "version": "1.1.0",
+  "id": "medic_v1",
+  "class": "medic",
+  "templateId": "authored-pose-atlas-v1",
+  "description": "Reusable authored-pose direction for medic player identities. Registry metadata and the staged portrait control identity; this profile supplies field-treatment and support choreography.",
+  "style": {
+    "source": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+    "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+  },
+  "identity": {
+    "baseFacing": "three-quarters right",
+    "motionStyle": "caring, decisive, efficient, and field-ready, with protected medical supplies, quick triage gestures, and readable tool handling",
+    "equipmentRule": "Preserve the portrait's coat, medical bag, satchel, bandages, bottles, tools, insignia, and exact item count. Move exactly one established treatment item at a time; never duplicate supplies, invent a weapon, or alter medical markings.",
+    "magicRule": "Healing uses the portrait's established medical or restorative palette and originates from a depicted tool, bandage, bottle, or open treatment hand. Keep effects compact and clinical; do not add unrelated arcane runes or offensive elemental magic."
+  },
+  "promptTemplates": {
+    "reference": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative {{displayName}} identity portrait; Image 2 is style and proportion reference only. Player identity metadata: {{visualTraits}}. Create one complete head-to-toe {{displayName}} preserving Image 1's face, ancestry traits, gender presentation, hair, coat, bag, satchel, bandages, bottles, tools, insignia, palette, and proportions. Do not import identity details from Image 2. {{equipmentRule}} Translate the portrait into a compact field-ready healer silhouette. Use a {{background}} background with no floor or scenery and a square 1:1 canvas with generous padding. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered medic in an attentive triage stance facing {{baseFacing}}. {{invariants}}",
+    "animation": "Draw exactly {{frameCount}} genuinely redrawn full-body {{actionLabel}} poses of the authoritative {{displayName}} in a {{columns}}-column by {{rows}}-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: {{visualTraits}}. Required sequence: {{frameSequence}}. Motion direction: {{motionDirection}}. Overall medic motion is {{motionStyle}}. {{poseRequirement}} Preserve exact identity, coat, bag, satchel, palette, proportions, insignia, and supply count. {{equipmentRule}} {{magicRule}} Action-specific effects: {{effectRule}} Use a {{background}} background with generous gutters. {{invariants}}"
+  },
+  "animations": {
+    "idle": {
+      "actionLabel": "medic attentive triage idle-cycle",
+      "minimumUniquePoses": 4,
+      "anchor": "source-cell",
+      "motionDirection": "An alert loop alternates breathing, battlefield scans, bag checks, and a ready open hand while all supplies remain secured.",
+      "effectRule": "No active treatment effect; a tiny clean glint may appear on one closed instrument.",
+      "frameDescriptions": ["attentive stance with one hand guarding the medical bag", "measured inhale while scanning for casualties", "weight shifts forward as free hand opens", "quick check of a secured bandage or tool", "centered triage midpoint", "controlled exhale as the item remains secured", "weight shifts rearward while satchel settles", "attentive stance flowing back to frame one"]
+    },
+    "walk": {
+      "actionLabel": "medic urgent field stride",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "A brisk alternating stride uses real leg compression, one hand stabilizing the bag, free-arm counter-motion, and coat and satchel follow-through.",
+      "effectRule": "No active healing; all supplies remain attached, closed, and singular.",
+      "frameDescriptions": ["left foot forward contact with bag stabilized", "left leg compresses under the urgent step", "passing pose with right knee advancing", "right foot reaches as free arm counter-swings", "right foot forward contact with satchel controlled", "right leg compresses beneath the coat", "passing pose with left knee advancing", "left foot reaches into the urgent loop"]
+    },
+    "attack": {
+      "actionLabel": "medic defensive instrument strike",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "The medic protects the bag, draws exactly one established defensive instrument or bottle, makes a short disabling strike or toss, and immediately secures supplies.",
+      "effectRule": "Use exactly one portrait-established instrument or bottle with one compact physical impact; no duplicated item, gore, or offensive spell.",
+      "frameDescriptions": ["attentive guard protecting the medical bag", "free hand reaches for one established defensive item", "exactly one item clears its holder", "short planted windup with bag held behind", "compact disabling strike or toss at contact", "controlled follow-through keeping distance", "item returns or hand withdraws as supplies are secured", "recovered attentive guard"]
+    },
+    "hurt": {
+      "actionLabel": "medic supplies-protecting recovery",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "An impact causes a sharp flinch, backward stagger, protective clutch over the medical bag, low balance catch, self-check, and determined recovery.",
+      "effectRule": "One compact impact accent only; no gore, blood, broken supplies, duplicated item, or large healing flash.",
+      "frameDescriptions": ["attentive stance before impact", "sharp flinch with forearms protecting chest and bag", "maximum stagger as coat and satchel swing", "forced backward step while bag is clutched close", "low balance catch on deeply bent knees", "careful rise with a rapid self-check", "feet reset and supplies settle", "recovered determined stance"]
+    },
+    "death": {
+      "actionLabel": "medic defeat sequence",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "verticalAnchor": "bottom",
+      "motionDirection": "A final impact overwhelms the medic, bag draws close, knees buckle, the body lowers into a sideward collapse, and settles fully fallen.",
+      "effectRule": "No gore, blood, broken or duplicated supplies, magic burst, or rigid rotation; preserve coat, bag, and insignia.",
+      "outputFrameMap": [0, 1, 2, 3, 4, 5, 7, 7],
+      "frameDescriptions": ["fatal impact breaks the triage stance", "arms gather the medical bag as balance fails", "knees buckle beneath the coat", "one hip grounds while torso tips sideways", "body reaches full ground contact with bag attached", "coat, limbs, and satchel settle low", "final fully fallen medic with supplies at rest", "same final fallen pose held"]
+    },
+    "cast": {
+      "actionLabel": "medic restorative treatment sequence",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "motionDirection": "The medic opens the bag, selects exactly one treatment item, kneels or braces, applies it with both hands, releases a compact restorative pulse, then reseals the kit.",
+      "effectRule": "One compact restorative glow may originate from the selected bandage, bottle, tool, or treatment hand; no duplicated supply or anatomy-obscuring aura.",
+      "frameDescriptions": ["focused triage stance", "medical bag opens under one steadying hand", "exactly one treatment item is selected", "low stable treatment posture with both hands engaged", "maximum compact restorative effect at the treatment point", "careful application completes as the glow recedes", "item returns and bag closes", "composed field-ready finish"]
+    },
+    "dead": {
+      "deriveFrom": {"animation": "death", "frame": 7},
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity.",
+      "frameDescriptions": ["terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held"]
+    },
+    "victory": {
+      "actionLabel": "medic all-clear celebration",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "motionDirection": "The medic confirms the field is safe, checks the kit, closes it, gives an all-clear signal, makes a relieved hop or shoulder release, and holds a proud caring finish.",
+      "effectRule": "No spell effect; a tiny clean instrument glint may accent the secured kit.",
+      "frameDescriptions": ["careful recognition that the field is safe", "quick final check inside the medical bag", "bag closes with all supplies secured", "free hand gives a clear all-safe signal", "relieved light hop or full shoulder release", "coat and satchel settle on landing", "proud field-healer stance", "final triumphant medic pose held"]
+    }
+  }
+}

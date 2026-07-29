@@ -1,0 +1,86 @@
+{
+  "version": "1.1.0",
+  "id": "oracle_v1",
+  "class": "oracle",
+  "templateId": "authored-pose-atlas-v1",
+  "description": "Reusable authored-pose direction for oracle player identities. Registry metadata and the staged portrait control identity; this profile supplies prophetic rune choreography.",
+  "style": {
+    "source": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+    "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+  },
+  "identity": {
+    "baseFacing": "three-quarters right",
+    "motionStyle": "serene, uncanny, economical, and prophetic, with blindfold-safe head movement, precise palm signs, and slowly resolving rune paths",
+    "equipmentRule": "Preserve the portrait's blindfold, ornate robes, jewelry, focus, and exact floating-rune count and design. Never reveal covered eyes, duplicate runes, add a staff, or transform permanent adornments.",
+    "magicRule": "Prophetic effects use only the portrait's established rune shapes and ethereal palette. Runes remain compact, count-consistent, and spatially separate from the face, hands, and silhouette."
+  },
+  "promptTemplates": {
+    "reference": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative {{displayName}} identity portrait; Image 2 is style and proportion reference only. Player identity metadata: {{visualTraits}}. Create one complete head-to-toe {{displayName}} preserving Image 1's face covering, ancestry traits, gender presentation, hair, blindfold, robes, jewelry, runes, palette, proportions, and equipment. Do not import identity details from Image 2. {{equipmentRule}} Translate the portrait into a compact ethereal silhouette. Use a {{background}} background with no floor or scenery and a square 1:1 canvas with generous padding. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered oracle in a serene listening stance facing {{baseFacing}}. {{invariants}}",
+    "animation": "Draw exactly {{frameCount}} genuinely redrawn full-body {{actionLabel}} poses of the authoritative {{displayName}} in a {{columns}}-column by {{rows}}-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: {{visualTraits}}. Required sequence: {{frameSequence}}. Motion direction: {{motionDirection}}. Overall oracle motion is {{motionStyle}}. {{poseRequirement}} Preserve exact identity, blindfold, robes, runes, palette, proportions, and equipment. {{equipmentRule}} {{magicRule}} Action-specific effects: {{effectRule}} Use a {{background}} background with generous gutters. {{invariants}}"
+  },
+  "animations": {
+    "idle": {
+      "actionLabel": "oracle listening idle-cycle",
+      "minimumUniquePoses": 4,
+      "anchor": "source-cell",
+      "motionDirection": "A serene breathing loop turns the covered face toward distant possibilities while hands and existing runes make small mirrored adjustments.",
+      "effectRule": "Existing runes may drift through a tiny loop without changing count; no vision burst.",
+      "frameDescriptions": ["serene listening stance with blindfold unchanged", "gentle inhale as existing runes rise", "covered face turns slightly toward one possibility", "one palm opens beneath a single rune", "centered prophetic midpoint", "soft exhale as the palm closes", "covered face turns toward the opposite possibility", "serene stance flowing back to frame one"]
+    },
+    "walk": {
+      "actionLabel": "oracle guided walk",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "A confident alternating walk uses careful contacts, robe compression, open guiding hands, and count-consistent rune follow-through.",
+      "effectRule": "No active prophecy; existing runes remain close and retain exact count.",
+      "frameDescriptions": ["left foot forward contact with one guiding palm open", "left leg compresses beneath the robes", "passing pose with right knee advancing", "right foot reaches as runes trail close", "right foot forward contact", "right leg compresses under the stride", "passing pose with left knee advancing", "left foot reaches into the guided loop"]
+    },
+    "attack": {
+      "actionLabel": "oracle foreseen counterstrike",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "The oracle senses the opening, turns aside, gathers one existing rune to the palm, steps into a compact predictive pulse, and returns to serenity.",
+      "effectRule": "One existing rune may emit a short pulse at close range; do not duplicate it, reveal the eyes, or create a large projectile.",
+      "frameDescriptions": ["serene guard sensing the target", "covered face turns before the strike arrives", "one existing rune settles above the open palm", "side-step aligns the body with the predicted opening", "compact palm-and-rune pulse at contact", "robes and hand follow through along the short path", "rune returns to its original arrangement", "recovered listening guard"]
+    },
+    "hurt": {
+      "actionLabel": "oracle vision-broken recovery",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "An unforeseen impact breaks serenity into a flinch, scattered rune recoil, stumbling low catch, deliberate reorientation, and restored listening.",
+      "effectRule": "Existing runes may scatter slightly without changing count; no gore, blood, blindfold removal, or full-body flash.",
+      "frameDescriptions": ["serene guard before impact", "sharp flinch with hands lifting defensively", "maximum stagger as existing runes spread", "stumbling backward beneath swinging robes", "low balance catch with one palm grounded or lowered", "deliberate rise while runes return", "feet and palms reset", "recovered listening stance"]
+    },
+    "death": {
+      "actionLabel": "oracle defeat sequence",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "verticalAnchor": "bottom",
+      "motionDirection": "The vision dims, runes descend, knees fold, the oracle lowers through a quiet kneel, tips sideways, and settles fully fallen.",
+      "effectRule": "Runes fade without changing count, revealing the eyes, gore, blood, explosion, or rigid rotation.",
+      "outputFrameMap": [0, 1, 2, 3, 4, 5, 7, 7],
+      "frameDescriptions": ["fatal impact silences the vision", "runes dim as both hands lower", "knees fold beneath the ornate robes", "one knee grounds in a quiet bowed pose", "body tips into full ground contact", "robes, limbs, and runes settle low", "final fully fallen oracle with blindfold intact", "same final fallen pose held"]
+    },
+    "cast": {
+      "actionLabel": "oracle prophetic revelation",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "motionDirection": "The oracle listens inward, spreads both palms, arranges existing runes into a compact pattern, resolves one luminous omen, releases its guidance, and closes the vision.",
+      "effectRule": "Arrange only the existing runes into one compact omen in the established palette; never reveal eyes or cover the body with light.",
+      "frameDescriptions": ["silent listening stance", "both palms open at different heights", "existing runes move into a deliberate pattern", "robes settle into a wide grounded prophetic pose", "maximum compact omen resolved between the hands", "one hand sends a restrained guidance pulse outward", "runes return as palms close", "serene prophetic finish"]
+    },
+    "dead": {
+      "deriveFrom": {"animation": "death", "frame": 7},
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity.",
+      "frameDescriptions": ["terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held"]
+    },
+    "victory": {
+      "actionLabel": "oracle fulfilled-prophecy celebration",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "motionDirection": "The oracle recognizes the fulfilled omen, opens both palms, guides existing runes into a gentle crown, turns serenely, and holds quiet triumph.",
+      "effectRule": "Existing runes may form one compact crown-like arc without changing count or exposing the eyes.",
+      "frameDescriptions": ["quiet recognition that the omen is fulfilled", "one palm lifts in acknowledgment", "second palm opens as existing runes rise", "runes form a compact crown-like arc", "serene pivot beneath the hovering pattern", "palms lower as runes return", "composed victor stance with blindfold intact", "final triumphant oracle pose held"]
+    }
+  }
+}

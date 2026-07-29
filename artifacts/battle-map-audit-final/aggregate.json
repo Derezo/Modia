@@ -1,0 +1,356 @@
+{
+  "schema": "battle-map-audit-v2",
+  "fullMatrixMapCount": 1600,
+  "selectedMapCount": 1600,
+  "generatedMapCount": 1600,
+  "generationErrorCount": 0,
+  "hardFailureCount": 0,
+  "tacticalFailureCount": 0,
+  "qualityFailureCount": 0,
+  "guardrailFailureCount": 0,
+  "diversityFailureCount": 0,
+  "corpusGatesDeferred": false,
+  "corpusGateFailureCount": 0,
+  "requiredFailureCount": 0,
+  "exactFullHashCollisionCount": 0,
+  "exactFullHashCollisions": [],
+  "timingMs": {
+    "count": 1600,
+    "min": 297.7506089999806,
+    "p50": 600.4703880000161,
+    "p95": 1043.412193999975,
+    "max": 1471.562833000091
+  },
+  "walkableRatio": {
+    "count": 1600,
+    "min": 0.484375,
+    "p50": 1,
+    "p95": 1,
+    "max": 1
+  },
+  "obstacleDensity": {
+    "count": 1600,
+    "min": 0,
+    "p50": 0.0146484375,
+    "p95": 0.060546875,
+    "max": 0.064453125
+  },
+  "payloadBytes": {
+    "count": 1600,
+    "min": 281137,
+    "p50": 375842,
+    "p95": 483269,
+    "max": 561985
+  },
+  "connectedComponentCount": {
+    "count": 1600,
+    "min": 1,
+    "p50": 1,
+    "p95": 2,
+    "max": 4
+  },
+  "diversity": {
+    "signatureVersion": "battle-map-macro-signature-v1",
+    "method": "8x8 semantic/elevation/route/water/protected-zone tokens plus topology; complete four-band same-node and exact one-token-radius cross-node indexes",
+    "thresholds": {
+      "maximumCorpusMaps": 20000,
+      "maximumMapDimension": 64,
+      "maximumMapBytes": 4194304,
+      "maximumGenerationMs": 10000,
+      "naturalIsolatedSemanticTileRate": 0.01,
+      "adjacentNonCliffElevationStepPassRate": 0.95,
+      "sameNodeNearSimilarity": 0.97,
+      "crossNodeNearSimilarity": 0.98,
+      "profile": {
+        "natural": {
+          "maximumExactMacroCollisionRate": 0.02,
+          "maximumNearDuplicateRate": 0.05
+        },
+        "subterranean": {
+          "maximumExactMacroCollisionRate": 0.04,
+          "maximumNearDuplicateRate": 0.08
+        },
+        "constructed": {
+          "maximumExactMacroCollisionRate": 0.05,
+          "maximumNearDuplicateRate": 0.1
+        },
+        "arena": {
+          "maximumExactMacroCollisionRate": 0.1,
+          "maximumNearDuplicateRate": 0.2
+        },
+        "legacy": {
+          "maximumExactMacroCollisionRate": 1,
+          "maximumNearDuplicateRate": 1
+        }
+      }
+    },
+    "profileFailureCount": 0,
+    "profiles": [
+      {
+        "profile": "v2:arena:32x32:pve",
+        "family": "arena",
+        "mapCount": 100,
+        "distinctMacroSignatureCount": 100,
+        "exactMacroCollisionRate": 0,
+        "nearDuplicateRate": 0.05,
+        "thresholds": {
+          "maximumExactMacroCollisionRate": 0.1,
+          "maximumNearDuplicateRate": 0.2
+        },
+        "passed": true,
+        "exactCollisions": [],
+        "nearPairs": [
+          {
+            "left": "v2-arena-s0-32x32-pve",
+            "right": "v2-arena-s91-32x32-pve",
+            "similarity": 0.971875
+          },
+          {
+            "left": "v2-arena-s39-32x32-pve",
+            "right": "v2-arena-s11-32x32-pve",
+            "similarity": 0.971875
+          },
+          {
+            "left": "v2-arena-s70-32x32-pve",
+            "right": "v2-arena-s0-32x32-pve",
+            "similarity": 0.971875
+          },
+          {
+            "left": "v2-arena-s70-32x32-pve",
+            "right": "v2-arena-s91-32x32-pve",
+            "similarity": 0.971875
+          }
+        ]
+      },
+      {
+        "profile": "v2:bridge:32x32:pve",
+        "family": "constructed",
+        "mapCount": 100,
+        "distinctMacroSignatureCount": 100,
+        "exactMacroCollisionRate": 0,
+        "nearDuplicateRate": 0,
+        "thresholds": {
+          "maximumExactMacroCollisionRate": 0.05,
+          "maximumNearDuplicateRate": 0.1
+        },
+        "passed": true,
+        "exactCollisions": [],
+        "nearPairs": []
+      },
+      {
+        "profile": "v2:castle:32x32:pve",
+        "family": "constructed",
+        "mapCount": 100,
+        "distinctMacroSignatureCount": 100,
+        "exactMacroCollisionRate": 0,
+        "nearDuplicateRate": 0,
+        "thresholds": {
+          "maximumExactMacroCollisionRate": 0.05,
+          "maximumNearDuplicateRate": 0.1
+        },
+        "passed": true,
+        "exactCollisions": [],
+        "nearPairs": []
+      },
+      {
+        "profile": "v2:cave:32x32:pve",
+        "family": "subterranean",
+        "mapCount": 100,
+        "distinctMacroSignatureCount": 100,
+        "exactMacroCollisionRate": 0,
+        "nearDuplicateRate": 0,
+        "thresholds": {
+          "maximumExactMacroCollisionRate": 0.04,
+          "maximumNearDuplicateRate": 0.08
+        },
+        "passed": true,
+        "exactCollisions": [],
+        "nearPairs": []
+      },
+      {
+        "profile": "v2:dungeon:32x32:pve",
+        "family": "constructed",
+        "mapCount": 100,
+        "distinctMacroSignatureCount": 100,
+        "exactMacroCollisionRate": 0,
+        "nearDuplicateRate": 0,
+        "thresholds": {
+          "maximumExactMacroCollisionRate": 0.05,
+          "maximumNearDuplicateRate": 0.1
+        },
+        "passed": true,
+        "exactCollisions": [],
+        "nearPairs": []
+      },
+      {
+        "profile": "v2:dwarven_mine:32x32:pve",
+        "family": "subterranean",
+        "mapCount": 100,
+        "distinctMacroSignatureCount": 100,
+        "exactMacroCollisionRate": 0,
+        "nearDuplicateRate": 0,
+        "thresholds": {
+          "maximumExactMacroCollisionRate": 0.04,
+          "maximumNearDuplicateRate": 0.08
+        },
+        "passed": true,
+        "exactCollisions": [],
+        "nearPairs": []
+      },
+      {
+        "profile": "v2:elven_grove:32x32:pve",
+        "family": "natural",
+        "mapCount": 100,
+        "distinctMacroSignatureCount": 100,
+        "exactMacroCollisionRate": 0,
+        "nearDuplicateRate": 0,
+        "thresholds": {
+          "maximumExactMacroCollisionRate": 0.02,
+          "maximumNearDuplicateRate": 0.05
+        },
+        "passed": true,
+        "exactCollisions": [],
+        "nearPairs": []
+      },
+      {
+        "profile": "v2:forest:32x32:pve",
+        "family": "natural",
+        "mapCount": 100,
+        "distinctMacroSignatureCount": 100,
+        "exactMacroCollisionRate": 0,
+        "nearDuplicateRate": 0,
+        "thresholds": {
+          "maximumExactMacroCollisionRate": 0.02,
+          "maximumNearDuplicateRate": 0.05
+        },
+        "passed": true,
+        "exactCollisions": [],
+        "nearPairs": []
+      },
+      {
+        "profile": "v2:guild:32x32:pve",
+        "family": "arena",
+        "mapCount": 100,
+        "distinctMacroSignatureCount": 100,
+        "exactMacroCollisionRate": 0,
+        "nearDuplicateRate": 0,
+        "thresholds": {
+          "maximumExactMacroCollisionRate": 0.1,
+          "maximumNearDuplicateRate": 0.2
+        },
+        "passed": true,
+        "exactCollisions": [],
+        "nearPairs": []
+      },
+      {
+        "profile": "v2:human_ruins:32x32:pve",
+        "family": "constructed",
+        "mapCount": 100,
+        "distinctMacroSignatureCount": 100,
+        "exactMacroCollisionRate": 0,
+        "nearDuplicateRate": 0,
+        "thresholds": {
+          "maximumExactMacroCollisionRate": 0.05,
+          "maximumNearDuplicateRate": 0.1
+        },
+        "passed": true,
+        "exactCollisions": [],
+        "nearPairs": []
+      },
+      {
+        "profile": "v2:mountain:32x32:pve",
+        "family": "natural",
+        "mapCount": 100,
+        "distinctMacroSignatureCount": 100,
+        "exactMacroCollisionRate": 0,
+        "nearDuplicateRate": 0,
+        "thresholds": {
+          "maximumExactMacroCollisionRate": 0.02,
+          "maximumNearDuplicateRate": 0.05
+        },
+        "passed": true,
+        "exactCollisions": [],
+        "nearPairs": []
+      },
+      {
+        "profile": "v2:orcish_warcamp:32x32:pve",
+        "family": "constructed",
+        "mapCount": 100,
+        "distinctMacroSignatureCount": 100,
+        "exactMacroCollisionRate": 0,
+        "nearDuplicateRate": 0,
+        "thresholds": {
+          "maximumExactMacroCollisionRate": 0.05,
+          "maximumNearDuplicateRate": 0.1
+        },
+        "passed": true,
+        "exactCollisions": [],
+        "nearPairs": []
+      },
+      {
+        "profile": "v2:plains:32x32:pve",
+        "family": "natural",
+        "mapCount": 100,
+        "distinctMacroSignatureCount": 100,
+        "exactMacroCollisionRate": 0,
+        "nearDuplicateRate": 0,
+        "thresholds": {
+          "maximumExactMacroCollisionRate": 0.02,
+          "maximumNearDuplicateRate": 0.05
+        },
+        "passed": true,
+        "exactCollisions": [],
+        "nearPairs": []
+      },
+      {
+        "profile": "v2:swamp:32x32:pve",
+        "family": "natural",
+        "mapCount": 100,
+        "distinctMacroSignatureCount": 100,
+        "exactMacroCollisionRate": 0,
+        "nearDuplicateRate": 0,
+        "thresholds": {
+          "maximumExactMacroCollisionRate": 0.02,
+          "maximumNearDuplicateRate": 0.05
+        },
+        "passed": true,
+        "exactCollisions": [],
+        "nearPairs": []
+      },
+      {
+        "profile": "v2:vampiric_crypt:32x32:pve",
+        "family": "constructed",
+        "mapCount": 100,
+        "distinctMacroSignatureCount": 100,
+        "exactMacroCollisionRate": 0,
+        "nearDuplicateRate": 0,
+        "thresholds": {
+          "maximumExactMacroCollisionRate": 0.05,
+          "maximumNearDuplicateRate": 0.1
+        },
+        "passed": true,
+        "exactCollisions": [],
+        "nearPairs": []
+      },
+      {
+        "profile": "v2:volcano:32x32:pve",
+        "family": "natural",
+        "mapCount": 100,
+        "distinctMacroSignatureCount": 100,
+        "exactMacroCollisionRate": 0,
+        "nearDuplicateRate": 0,
+        "thresholds": {
+          "maximumExactMacroCollisionRate": 0.02,
+          "maximumNearDuplicateRate": 0.05
+        },
+        "passed": true,
+        "exactCollisions": [],
+        "nearPairs": []
+      }
+    ],
+    "crossNodeExactCollisionCount": 0,
+    "crossNodeExactCollisions": [],
+    "crossNodeNearDuplicateCount": 0,
+    "crossNodeNearPairs": []
+  }
+}

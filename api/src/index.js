@@ -48,12 +48,15 @@ import adminRoutes from './routes/admin.js';
 import adminAudioRoutes from './routes/adminAudio.js';
 import feedbackRoutes from './routes/feedback.js';
 import garrisonRoutes from './routes/garrison.js';
+import battleMapOperationsRoutes from './routes/battleMapOperations.js';
 
 // Scheduled services
 import { startRefreshScheduler } from './services/shopRefreshService.js';
 import { startExpirationScheduler } from './services/orderExpirationService.js';
 import { startCleanupScheduler as startQuestCleanupScheduler } from './services/dailyQuestService.js';
 import { startGarrisonRefreshScheduler } from './services/garrisonRefreshService.js';
+import { registerBattleTerminalEffectHandlers } from './services/battle/BattleTerminalEffects.js';
+import { battleTerminalOutboxWorker } from './services/battle/BattleTerminalOutboxWorker.js';
 
 // Trait effects system
 import { initializeTraitEffects } from './services/traits/index.js';
@@ -169,6 +172,7 @@ app.use('/api/admin/audio', adminAudioRoutes);  // More specific - must come fir
 app.use('/api/admin', adminRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/garrison', garrisonRoutes);
+app.use('/api/operations/battle-maps', battleMapOperationsRoutes);
 
 // 404 handler for API routes - must come before error handler
 // Returns JSON instead of Express's default HTML response
@@ -187,6 +191,9 @@ setupWebSocket(server);
 // Initialize trait effects system
 initializeTraitEffects();
 
+// Register durable terminal handlers before the startup drain can claim work.
+registerBattleTerminalEffectHandlers();
+
 // Start server
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
@@ -198,12 +205,17 @@ server.listen(PORT, () => {
   startExpirationScheduler();
   startQuestCleanupScheduler();
   startGarrisonRefreshScheduler();
+  battleTerminalOutboxWorker.start();
 
   // Initialize generation queues (check for orphaned items)
   const imageInit = adminGenerationService.initializeQueue();
   console.log('[Startup] Image queue:', imageInit);
   const audioInit = adminAudioGenerationService.initializeQueue();
   console.log('[Startup] Audio queue:', audioInit);
+});
+
+server.once('close', () => {
+  battleTerminalOutboxWorker.stop();
 });
 
 export { app, server };

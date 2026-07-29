@@ -93,4 +93,8 @@ npm run ai:test:authored-enemy-animations
 npm run ai:check:authored-enemy-animations
 ```
 
-The older `ai:generate:characters:enemies`, repair, and stabilization commands remain migration tools for existing sheets. New or deliberately re-authored enemies should use this Codex CLI workflow so accepted sources and deterministic provenance are tracked.
+`ai:generate:characters:enemies` is a convenience alias for
+`ai:generate:authored-enemy-candidates`. Repair and stabilization commands
+remain migration tools for existing sheets. New or deliberately re-authored
+enemies must use this authored workflow so accepted sources and deterministic
+provenance are tracked.

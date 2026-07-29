@@ -1,0 +1,584 @@
+{
+  "version": "1.0.0",
+  "template": "ai-image-metadata/characters/player-authored-animation-template.json",
+  "compilerVersion": "1.2.0",
+  "id": "orc_female_martial_artist",
+  "profile": "martial_artist_v1",
+  "profileSource": "ai-image-metadata/characters/player-animation-profiles/martial_artist_v1.json",
+  "status": "approved",
+  "approvedAt": "2026-07-29T02:28:24.511Z",
+  "metadataFingerprint": "b747a27e43be5c41fe0f16358121ba54509fb69c359247c8c02896c78510f504",
+  "draftProvenance": {
+    "registry": "ai-image-metadata/characters/player-variants.json",
+    "templateSha256": "7943e69db577b3a4429b47df634f931d3f4cb8e8ce9a91a06578255fbe935bbe",
+    "profileSha256": "3b0bb5b660a59fd55f26a54710a9a358109b3f0b29aaa8e3f826499d770f1116"
+  },
+  "identity": {
+    "race": "orc",
+    "gender": "female",
+    "class": "martial_artist",
+    "presentation": "female orc martial_artist",
+    "visualTraits": "orc green skin tusks muscular tribal markings fierce female feminine features gi uniform headband focused stance bare fists athletic powerful",
+    "baseFacing": "three-quarters right",
+    "sourceMetadata": {
+      "isAdvanced": true,
+      "inheritsFrom": "martial_artist",
+      "seed": 24026
+    }
+  },
+  "inputs": {
+    "identity": {
+      "origin": "frontend/public/assets/portraits/originals/orc_female_martial_artist.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/orc_female_martial_artist/inputs/identity.png",
+      "authority": "face, ancestry, gender presentation, hair, eyes, complexion, costume, palette, proportions, and equipment"
+    },
+    "style": {
+      "origin": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/orc_female_martial_artist/inputs/style.png",
+      "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+    }
+  },
+  "reference": {
+    "source": "ai-image-metadata/characters/player-animation-sources/orc_female_martial_artist/reference.png",
+    "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_female_martial_artist/chroma/reference.png",
+    "identitySource": "ai-image-metadata/characters/player-animation-sources/orc_female_martial_artist/inputs/identity.png",
+    "styleSource": "ai-image-metadata/characters/player-animation-sources/orc_female_martial_artist/inputs/style.png",
+    "prompt": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative Orc Martial Artist (female presentation) identity portrait; Image 2 is style and proportion reference only. Player identity metadata: orc green skin tusks muscular tribal markings fierce female feminine features gi uniform headband focused stance bare fists athletic powerful. Create one complete head-to-toe Orc Martial Artist (female presentation) preserving Image 1's face, ancestry traits, gender presentation, hair, headband, gi, belt, wraps, palette, proportions, and accessories. Do not import identity details from Image 2. Preserve the portrait's gi, headband, belt, wraps, jewelry, and exact accessory count. Keep both empty hands visible when the portrait is unarmed; never invent a weapon, duplicate wraps, or change belt and headband design. Translate the portrait into a compact athletic full-body silhouette. Use a flat #00ff00 chroma key background with no floor or scenery and a square 1:1 canvas with generous padding. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered martial artist in a technically precise fighting stance facing three-quarters right. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+  },
+  "animations": {
+    "idle": {
+      "source": "ai-image-metadata/characters/player-animation-sources/orc_female_martial_artist/idle.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_female_martial_artist/chroma/idle.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 4,
+      "frameDescriptions": [
+        "precise empty-hand fighting guard",
+        "measured inhale as guard rises",
+        "weight shifts onto the forward leg",
+        "lead hand tests distance while rear hand protects",
+        "centered balanced midpoint",
+        "controlled exhale lowering the stance",
+        "weight shifts onto the rear foot",
+        "precise guard flowing back to frame one"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body martial artist focused guard-cycle poses of the authoritative Orc Martial Artist (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: orc green skin tusks muscular tribal markings fierce female feminine features gi uniform headband focused stance bare fists athletic powerful. Required sequence: precise empty-hand fighting guard; measured inhale as guard rises; weight shifts onto the forward leg; lead hand tests distance while rear hand protects; centered balanced midpoint; controlled exhale lowering the stance; weight shifts onto the rear foot; precise guard flowing back to frame one. Motion direction: A calm guard loop shifts stance height, breath, lead-hand distance, and rear-foot pressure while maintaining technical alignment.. Overall martial artist motion is disciplined, athletic, crisp, balanced, and technically exact, with visible chambering, hip rotation, guard recovery, and bare-fist footwork. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, gi, headband, belt, wraps, palette, proportions, and empty-hand continuity. Preserve the portrait's gi, headband, belt, wraps, jewelry, and exact accessory count. Keep both empty hands visible when the portrait is unarmed; never invent a weapon, duplicate wraps, or change belt and headband design. Martial artistry is entirely physical. Do not add ki aura, elemental trails, runes, projectiles, or supernatural afterimages; a tiny contact accent may mark a real strike. Action-specific effects: No active effect; headband, gi, and belt ends respond subtly to breath. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "walk": {
+      "source": "ai-image-metadata/characters/player-animation-sources/orc_female_martial_artist/walk.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_female_martial_artist/chroma/walk.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "left forefoot forward contact behind raised guard",
+        "left knee compresses with hips level",
+        "passing pose as right knee advances",
+        "right foot reaches while hands preserve guard",
+        "right forefoot forward contact",
+        "right knee compresses with balanced posture",
+        "passing pose as left knee advances",
+        "left foot reaches into the guarded loop"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body martial artist guarded footwork-cycle poses of the authoritative Orc Martial Artist (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: orc green skin tusks muscular tribal markings fierce female feminine features gi uniform headband focused stance bare fists athletic powerful. Required sequence: left forefoot forward contact behind raised guard; left knee compresses with hips level; passing pose as right knee advances; right foot reaches while hands preserve guard; right forefoot forward contact; right knee compresses with balanced posture; passing pose as left knee advances; left foot reaches into the guarded loop. Motion direction: A light alternating advance uses forefoot contacts, real knee compression, smooth passing steps, disciplined guard, and gi follow-through.. Overall martial artist motion is disciplined, athletic, crisp, balanced, and technically exact, with visible chambering, hip rotation, guard recovery, and bare-fist footwork. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, gi, headband, belt, wraps, palette, proportions, and empty-hand continuity. Preserve the portrait's gi, headband, belt, wraps, jewelry, and exact accessory count. Keep both empty hands visible when the portrait is unarmed; never invent a weapon, duplicate wraps, or change belt and headband design. Martial artistry is entirely physical. Do not add ki aura, elemental trails, runes, projectiles, or supernatural afterimages; a tiny contact accent may mark a real strike. Action-specific effects: No magic or attack trail; cloth and headband respond to the footwork. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "attack": {
+      "source": "ai-image-metadata/characters/player-animation-sources/orc_female_martial_artist/attack.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_female_martial_artist/chroma/attack.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "technical guard measuring distance",
+        "lead hand extends while rear fist chambers",
+        "rear-hand punch drives through rotating hips",
+        "weight transfers as the kicking knee chambers high",
+        "full turning-kick extension with arms counterbalancing",
+        "controlled retraction and landing",
+        "hands and feet rebuild the guard",
+        "recovered precise fighting stance"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body martial artist punch-kick combination poses of the authoritative Orc Martial Artist (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: orc green skin tusks muscular tribal markings fierce female feminine features gi uniform headband focused stance bare fists athletic powerful. Required sequence: technical guard measuring distance; lead hand extends while rear fist chambers; rear-hand punch drives through rotating hips; weight transfers as the kicking knee chambers high; full turning-kick extension with arms counterbalancing; controlled retraction and landing; hands and feet rebuild the guard; recovered precise fighting stance. Motion direction: A lead-hand measure becomes a rear-hand punch, hip-loaded kick chamber, full turning kick, controlled landing, and immediate guard recovery.. Overall martial artist motion is disciplined, athletic, crisp, balanced, and technically exact, with visible chambering, hip rotation, guard recovery, and bare-fist footwork. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, gi, headband, belt, wraps, palette, proportions, and empty-hand continuity. Preserve the portrait's gi, headband, belt, wraps, jewelry, and exact accessory count. Keep both empty hands visible when the portrait is unarmed; never invent a weapon, duplicate wraps, or change belt and headband design. Martial artistry is entirely physical. Do not add ki aura, elemental trails, runes, projectiles, or supernatural afterimages; a tiny contact accent may mark a real strike. Action-specific effects: One tiny physical contact accent may mark the punch or kick; no aura, trail, afterimage, or hidden limbs. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "hurt": {
+      "source": "ai-image-metadata/characters/player-animation-sources/orc_female_martial_artist/hurt.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_female_martial_artist/chroma/hurt.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "precise guard before impact",
+        "sharp articulated flinch with forearms closing",
+        "maximum stagger with torso turned and knees bent",
+        "rolling backward step to absorb force",
+        "low balanced catch behind a tight guard",
+        "technical push upright from the legs",
+        "feet reset to correct stance width",
+        "recovered focused guard"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body martial artist impact-and-reset poses of the authoritative Orc Martial Artist (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: orc green skin tusks muscular tribal markings fierce female feminine features gi uniform headband focused stance bare fists athletic powerful. Required sequence: precise guard before impact; sharp articulated flinch with forearms closing; maximum stagger with torso turned and knees bent; rolling backward step to absorb force; low balanced catch behind a tight guard; technical push upright from the legs; feet reset to correct stance width; recovered focused guard. Motion direction: A clean hit breaks alignment into a flinch, maximum stagger, rolling backward step, low guard catch, technical rise, and stance reset.. Overall martial artist motion is disciplined, athletic, crisp, balanced, and technically exact, with visible chambering, hip rotation, guard recovery, and bare-fist footwork. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, gi, headband, belt, wraps, palette, proportions, and empty-hand continuity. Preserve the portrait's gi, headband, belt, wraps, jewelry, and exact accessory count. Keep both empty hands visible when the portrait is unarmed; never invent a weapon, duplicate wraps, or change belt and headband design. Martial artistry is entirely physical. Do not add ki aura, elemental trails, runes, projectiles, or supernatural afterimages; a tiny contact accent may mark a real strike. Action-specific effects: One compact physical impact accent only; no gore, blood, aura, or full-body tint. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "death": {
+      "source": "ai-image-metadata/characters/player-animation-sources/orc_female_martial_artist/death.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_female_martial_artist/chroma/death.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "verticalAnchor": "bottom",
+      "outputFrameMap": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        7,
+        7
+      ],
+      "frameDescriptions": [
+        "fatal impact breaks the fighting guard",
+        "arms slacken as balance fails",
+        "knees buckle into a low drop",
+        "one hand catches the floor as hips turn",
+        "body rolls into full ground contact",
+        "gi, limbs, and headband settle low",
+        "final fully fallen martial artist",
+        "same final fallen pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body martial artist defeat sequence poses of the authoritative Orc Martial Artist (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: orc green skin tusks muscular tribal markings fierce female feminine features gi uniform headband focused stance bare fists athletic powerful. Required sequence: fatal impact breaks the fighting guard; arms slacken as balance fails; knees buckle into a low drop; one hand catches the floor as hips turn; body rolls into full ground contact; gi, limbs, and headband settle low; final fully fallen martial artist; same final fallen pose held. Motion direction: A final blow breaks stance alignment, knees buckle, one hand catches the descent, the body rolls sideways, and settles fully fallen.. Overall martial artist motion is disciplined, athletic, crisp, balanced, and technically exact, with visible chambering, hip rotation, guard recovery, and bare-fist footwork. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, gi, headband, belt, wraps, palette, proportions, and empty-hand continuity. Preserve the portrait's gi, headband, belt, wraps, jewelry, and exact accessory count. Keep both empty hands visible when the portrait is unarmed; never invent a weapon, duplicate wraps, or change belt and headband design. Martial artistry is entirely physical. Do not add ki aura, elemental trails, runes, projectiles, or supernatural afterimages; a tiny contact accent may mark a real strike. Action-specific effects: No gore, blood, magic, or rigid rotation; keep gi, headband, wraps, and limbs clearly articulated. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "dead": {
+      "deriveFrom": {
+        "animation": "death",
+        "frame": 7
+      },
+      "frameDescriptions": [
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held"
+      ],
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity."
+    },
+    "victory": {
+      "source": "ai-image-metadata/characters/player-animation-sources/orc_female_martial_artist/victory.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_female_martial_artist/chroma/victory.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "calm recognition of victory",
+        "formal forward bow with hands gathered",
+        "rising cross-body palm block",
+        "balanced pivot with knee chambered",
+        "controlled high celebratory kick",
+        "clean landing into an open stance",
+        "fists close at the hips in formal posture",
+        "final triumphant martial artist pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body martial artist formal victory kata poses of the authoritative Orc Martial Artist (female presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: orc green skin tusks muscular tribal markings fierce female feminine features gi uniform headband focused stance bare fists athletic powerful. Required sequence: calm recognition of victory; formal forward bow with hands gathered; rising cross-body palm block; balanced pivot with knee chambered; controlled high celebratory kick; clean landing into an open stance; fists close at the hips in formal posture; final triumphant martial artist pose held. Motion direction: The martial artist confirms victory, bows, executes a compact palm-and-kick kata, lands cleanly, closes both fists, and holds a formal finish.. Overall martial artist motion is disciplined, athletic, crisp, balanced, and technically exact, with visible chambering, hip rotation, guard recovery, and bare-fist footwork. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, gi, headband, belt, wraps, palette, proportions, and empty-hand continuity. Preserve the portrait's gi, headband, belt, wraps, jewelry, and exact accessory count. Keep both empty hands visible when the portrait is unarmed; never invent a weapon, duplicate wraps, or change belt and headband design. Martial artistry is entirely physical. Do not add ki aura, elemental trails, runes, projectiles, or supernatural afterimages; a tiny contact accent may mark a real strike. Action-specific effects: No magic; motion is carried by anatomy, gi, belt, and headband follow-through. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    }
+  },
+  "pins": {
+    "templateSha256": "93943004e340d113943e06dea61fd7dfad67c20750dd4fc30d76d3be1fb7c144",
+    "profileSha256": "340ab025f89403b8d92edd7f82cae24de1e34fa51b0d91077473fc08814aad5d",
+    "reference": {
+      "sourceSha256": "5d30448a1f2808b66634d421ca2c249fe3496cc1d187930249289bfa3f914c6e",
+      "sourceDimensions": "1254x1254",
+      "chromaSourceSha256": "9e54aa73faba83d9a697b0a447dc410abf0a775655e783d031b8a1b8d85eb237",
+      "chromaSourceDimensions": "1254x1254",
+      "identitySourceSha256": "744f6dc6f19b05a831fef23edd5c7ee7a2a219fd1b560dfcf219f48815502884",
+      "identitySourceDimensions": "1024x1024",
+      "styleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "styleSourceDimensions": "1254x1254",
+      "promptSha256": "4e89312d4980b841f9a2cd29eb41ad4602e6e04789b5b4d4ddc18be266e74ac8",
+      "encodedSha256": "28ab37955d858c9f0001e72b6caf49f35fc5be4c3991f253fd0f525f515ff280",
+      "decodedSha256": "da4df4f57593c427f23dc90725c77d38215392f0e3a4a84bd0d7cf111762e08c"
+    },
+    "animations": {
+      "idle": {
+        "sourceSha256": "c11fdc216253d23227faae2f1ce489142782adb3b0e01eae391404c202afe363",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "85b083b944349e242c94e2bf0407c54fc9e1d0d9b4b76fe935e3e6295d83e3e7",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "bc2269800b30a2deff82ff6d71d466d462d52b9cb93f36e547a6ab15a126cc6c",
+        "encodedSha256": "25b0e14f540a74fab49210a19c3ad849fb730de1c896a21171574be0fa687c30",
+        "decodedSha256": "379299cc9f6a58bcb60462191100ae2b549a9b1265c779eee8f9fdab22428182",
+        "frameSha256": [
+          "6169abd015ebfc3140cbc07863ac19e9dad1d3dce44f29c82a9586149da73844",
+          "3048b4a39d06b908b8a54a1343f5cd4444479f82dd60b7b4d884fe1e73c01ea2",
+          "97a3033f8488a67575ec665d2898166e947ee229cadf85c6bee4fd11bfac883d",
+          "04e6b8fe56c23e604984250975caddda3afe52c75cac4ed6362b5b171f394b2e",
+          "85712612915a694fbd0cc9774b9106a05e0942f49e7a2671675554d94eb4cec6",
+          "d87b8010b865811675fd4f98ffe8d8c2dc93978c9505d08b7263a30fab60ad7a",
+          "73d0562194c9eae9b305bae44b5d95b8c644aebb8cbe718cc2d1013e7112cac1",
+          "72465960640a6258d7460b41eb9fdb4001c644779f41a1007b7717d68bccbc2c"
+        ],
+        "poseSha256": [
+          "032e452cd41d7a9e6fa8be7042fa50a0a9a0886435475f6dafcac24b73214e5b",
+          "7a6ea196d82a990df1404c106216d6039889f31d4cc21dd5e7e2d958f0218a6a",
+          "e5582d17183787dc7fb4d0af56785fb29465e361d247abe84d1886d477a60f1e",
+          "ce229b85ac887b93061e3b4bd239fa6c23bef7ea67e7d735bab221b28345c6c3",
+          "fe68a18b4d4a884ec7d42b87bca9d59d316d0ffe36f60809009f957bf274d0e1",
+          "0f8824964bf01d629f25a1437ce935bd43bb956c863343b0f51f065ded955af2",
+          "b232d15b172119e0f115321bf3590e4907ec4d515bd2a883a918fc9a0cd7e6bf",
+          "b16f804af17932a4d7df7f3228f2781167571cb603a92c8a3207e85e4efcc4ae"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "walk": {
+        "sourceSha256": "f87abc9ee73d4374ea6324e0ae254c8e3498053c85b91aa8a70d428a832dfa92",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "1d6520f59d9e2f9e127de80f78623d0dc46e498d3cfbd24f1311c10491a3216b",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "51e820443cf45adba1654c421808ec6550d1597911618d0fd7e47905366089d8",
+        "encodedSha256": "5c0bdc884bd23de2d86c10e63c4bc827448e21d70e95c48eeffec3368457c991",
+        "decodedSha256": "05bacbb452aa91cea5f2e167ebdf3cb7bde7f6da88517d078a3f689f220d6fab",
+        "frameSha256": [
+          "757d423e787a3ed2ef015b83c12d960943867b43a3aef0f2ffdd04a149902018",
+          "2b4db7712b9e43a240171a34f646d7b2239f7198feb65007bd6481ba349a084b",
+          "4573ba84b0ff7cf65def65fab0e59bc10134e1ad540b1b292237e1ae64f7a6eb",
+          "e5e5263cc079d49dd2b750cc0e2972dcbc4ab84616f4adbfaaaea44a1b3f269b",
+          "640f0a293ed1a3a5a48eb4cf431b7513e74b3c5829999ab8e67adf4d89c38d74",
+          "98b78db4697eed4bd94e8c5c31c2998c4cae02417faf0744da5c190aba2864f1",
+          "7146626a0ba6fcfc179c0b562e1f54bef8c1a6e36d3ad8ed7fa752d2ae4a8d68",
+          "918bf012b1d75eb54735c3c69c10b8723cabecfa58a7690f823f73995648a1ea"
+        ],
+        "poseSha256": [
+          "1814cedc6852f3de2321b0001a98ed59a7437cc554472c8c7974b4c53fb60b7e",
+          "54fcfa715065b62d6d75ee6deee00cdee983286cc20793536231e9c2b2be4666",
+          "c7521aa970f30a8bc6fc0bef3fd5c878e99bd1f3df89cc693e712a9f56730dec",
+          "0e15dc872e695a13dde42ccc318c2361ec1f9023884038aea8ce2990ff8ed91e",
+          "4727461911b6c93ad7b6495c98304ef0e59a0f8b8b1d9b2185102e6b79e761d3",
+          "8d9e79d74fcc3812902c53d2614a4cdfd3977335604adf5aeeab21ae152a613b",
+          "a7b6f98e4bd87ca83447c134c4f31472ef2c863320ecc16e28c65077ba97350b",
+          "a7986e5024011cd6e4012ef3836a0fb4e260db5c8e3c0870e176bfaf55fcd65e"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "attack": {
+        "sourceSha256": "477ec4872fa3600307f5eb0130b2df61d3e2eb68a4e601207d7ccb29ba250d04",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "1d3fb8818d28796f0b76f636e66d3ed9cf03016e07507e038ae52b01adb8db70",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "4b01d175ea9f9b529ebe6f93478422da2e51cba9d231d2ca0e4347b18eb17d63",
+        "encodedSha256": "efc394424ecadaa6b03d144a8c73a9b723108b4aa5f56914b7a32a1c6b8a4d4c",
+        "decodedSha256": "f2cfb577a260efb5cdd152f5389d03717839f9443b543ce7a8755f321b50676d",
+        "frameSha256": [
+          "646b67fac8fb11281448094df2d3761ece7d1555e3b08637c0bbcf613732e711",
+          "0b42ce748f514d4f045a4a29a0ba765e850188f59853c3e0a66c39ef8daa7866",
+          "0225b25a499f2dc8c8bdf869c66f09e19597c4806bc219867e2f08a667141cdf",
+          "8a01b67e8982524207bbe2c4b79d33af2c9e994d072dd02f50cd385192e9f42d",
+          "801700116e0692ea34aedd445af55868510eaba0ed87ebc375dd21ba4cfc3037",
+          "472c71d38e64bf194ef9b9bde5b412b02a44f44509092f824ee74ab5b4df06fd",
+          "bda6f97add68cf2b3ec4c5233dfea203ac4fdc16641ffbc781a52ba289d4eddb",
+          "7794fdca4df6e335510ce19b0326e9402504be9a68018031520fa7baf6873a38"
+        ],
+        "poseSha256": [
+          "d0b47b6ec7ae006bbe04282e40b353de920ae77253eca908de5689271cb11290",
+          "61574e6eea58f37ba849f25dbf974a5dbb4e4bcd0f564af8be626ee7c8b49871",
+          "4edf9999ae57d248d6350782d64685443f49f33d77c6039098a93de43af73232",
+          "dbba02d76e8e658d68a0ea2705742612c5f2e171b59f13f33b6a4c7e3b5254bd",
+          "447cbdd9ccf7ed8ff873113d3a331ca2d1c33576fa65320ab86ad6e60fa856f2",
+          "2fc37c2fe58c8867014c75d2cf6168943007c0bf4709e919d67697b563051903",
+          "8d16020861c373d129b6b40a59d74df6017476d4addc575f7317e1903da11f99",
+          "600e0610853b1f6051555ddd78235ac91588ce4604cf1bb729ab1a61a6ad7e10"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "hurt": {
+        "sourceSha256": "397294f60f7a40c4f10bb520a5e7d451473d09940f38be972aa7ce232d3aeb92",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "3e1fe6000648587d44982387203625c2f26c5c26f7f62ac764b97591cb9e2500",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "e131b748a5e8d798862febbccbf539e0fe09198a4f0b6ad55495705c4a017ec0",
+        "encodedSha256": "070903853c44285a176d823eba100b5a647cfa4f69c71efe9f14f7562ae68c42",
+        "decodedSha256": "deb76ac0ff9289bd8a00754c4372dd5fbf3e48d56ce40c7fd76d54d2b290eba3",
+        "frameSha256": [
+          "eed2964564ad0655028afdbfe58f3a0d248c3461ae43c4cec4948d0ba92230d8",
+          "c629443bec7d673a98b7aae0849d418405c4f24d3eb9ffb8a8333cdd1daa89f2",
+          "ee9c938227129f4c75e3282ee7146f1b254ae01ca687fdd25312b5241c748c2f",
+          "1c7c9802857e79e2ea86c806312e2085f29b1a83da31273987e03d1f0ab81a7b",
+          "15251159f4428a431289837020c6712d6fa729eb00e5ad4b90632e5f10333e92",
+          "87011e22a872a5f36850769fea55d050f12a6b5ae1771b9d488b42d21a408b82",
+          "e431ab653d404acc6949fa5d3380bd615871a6f98e9b7ead010be5840f4309b6",
+          "0a4448faf8959e114ebbd02a893f48a9c66d93d9893e484a2660323919a5a9c8"
+        ],
+        "poseSha256": [
+          "9fab7c497d8fffa984bcdb8d8103e17658cc5dd2f8a0424b0bf824ee8b705c3e",
+          "69c40b1cd540f2e5aa690e4a9ba5c985b99a85d54b8ca275906552857658ac5a",
+          "6455f88db9f64fa4deba6987f6ffd5417d7cf7515e188af107f9844ae445b683",
+          "2d97443e2337118a48fafec228b9fe193fa38d5f75dc71a53f8bca73f58f7ad7",
+          "273072f67c220770078be1263134edd7c5aa3e3bffab295b488e8cb57a4f759c",
+          "7f7263ff0ee50d006e3426f68a5eb38c7c74fd95d95e025b1810a206586239dd",
+          "f5170ffbfed58e38920d49b90c194fb65612295b4c2e51a39c0b29081b1c1c80",
+          "8cb334fe62b6731f23ad3297b52a2ae1a5f24efe9d72c5ac3a733517c8fc76db"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "death": {
+        "sourceSha256": "91829c865dcaef60a20170edf63d6b22feff5228a56549dd537887931870a2ee",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "6a2adb5232bef427377cfdff964f563402487f2243baaa186edfe341ccf39e0f",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "faa8b7eeccd850819604c99341a2881d834f6ae0e7a7d33aa2c857de8b5e224b",
+        "encodedSha256": "76df737c07dd98dd213a069071d8edfaadf68b7d0acddebaceb9877d9eeac9e8",
+        "decodedSha256": "6ebd2e0dd219047f7ff687aa626488adcddd121f7d1b9bf951ff44b2b9d2f956",
+        "frameSha256": [
+          "873b72187e8a8c09f03cb1485ac345f979d536c67b386b8449a8109425161217",
+          "80f729a769566f857c8db1cafc2a48de4fa8b5b79d2da3105ffe68de47c779ad",
+          "7badc2a612fef609376fb28107ae289c9504cdc9705a76b4590ca965dc209d8e",
+          "2eadc179e2c3e6398c5857726a0aee844c05633bf9290c94c047e6a84d3bc745",
+          "5b977908a024bfa7120ffa2f3c09eee20cd0b1fcfcb601d2730363a998ea4fb9",
+          "cbb789b5279d09a835c6f20f9e74a031514f61319fc5b6b03b52900d6397d412",
+          "87c40207d3bbb8d5ba8a71b8ec81f72f5757b05b469606e5a582dbb7563cdc0b",
+          "87c40207d3bbb8d5ba8a71b8ec81f72f5757b05b469606e5a582dbb7563cdc0b"
+        ],
+        "poseSha256": [
+          "a0051a5aea003a508563222ec9eaa4628eeb166345de9918b5a2e9e0811eb23c",
+          "2c83e0eb3a68939ca3810a4cf5e93e70634fee7138ebab35317c089348abaeb5",
+          "7fc68ea35ce4b2f67a96962c74639deaf0cc1258218e9279e5489c4e0ee177df",
+          "03fa53f0213fd7aad5d631a05a05c80266efa6b579573475776c5a064d3437d9",
+          "692ae7fa7594bf4a1fba459b627aab5bd6fa9a1b75a8a47dd912f5cd3ca33234",
+          "54d920d34c5a49a04dc1383ca8eb18233c4850569bd72e87badf5ea2319eeff9",
+          "87e68cb3df542411625638975aa445d839fb5d08d7ab3e8cc608c1aed8a78b0f",
+          "87e68cb3df542411625638975aa445d839fb5d08d7ab3e8cc608c1aed8a78b0f"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "victory": {
+        "sourceSha256": "04ac633dbd03cc59f1000cb71b89f865dbfdfbf1fe803d384b8ccab0b67f214e",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "81ee7361e9434d7444ac52089e56fbf08d10bbde4ce752640ba988a80754ff5f",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "08a10ecd7fa93edf7426927c41f4139be417e76915a8686068c74a9cd207cf47",
+        "encodedSha256": "a252c2b6ac4bd22a2121ea570e1c232539f81fd8d3a327ba8abf8420735f61fa",
+        "decodedSha256": "1a6a811a926802e9bf86b69d80f6cb19f7b66b0995d0d25848269989d07f212c",
+        "frameSha256": [
+          "6daf61ba6112ce80aa57d6042780d74cf040db02e8e17cdf6043d92d15422e93",
+          "721871f896cb9976cfd8400ff32e5833dc38aed85a395bdd24db4a338252f10c",
+          "0bdd46ffb05bbaab7489b1fe7ccc926a8e1ba71236ab8747711ee65e2d304654",
+          "3868f45fe442965001199a3c122b6155fd3cb7a20f8486588e645bdeb52c40da",
+          "b24d189a72880ec3faefb1442a5e040a268f2ed7bd847ef04851a11fc0e855d0",
+          "66a19969f66d8ec5d7013f421b059a6d0ffa177754f1d8158ef5bf8e4d72668b",
+          "aaf98783847aef77d37bc71f45f1a24580c72efda94bed3a6092840231a4dcb1",
+          "8a9e541af8fc8818cf4f24e44e1fac7a1ffe7cbca61fab336fc609db7b7cda60"
+        ],
+        "poseSha256": [
+          "fcc462bfb00749a405307a099ffdee34fdff19a5317ea488480f3759542b791f",
+          "8a4a0fd82d40e3af5643d399e4c8a2b13e02912ba56df5c0d7d1f2559a62619e",
+          "39af87e9d43ee579969ed1ca72c8c956f99261c2c5330af755b8db02c2e6ff5c",
+          "a5c0ac05cad38c2d94cee3187da6e34fc9b51888c8c32e578b053fa797ac0105",
+          "72b14cb52b9ec5e47a67d1fa809a739bd82f61e0da97b4b5735384c397e4114c",
+          "50ea81cbe59835253f2ded5f451e589f2e14692e2b5e1b9fa6262200ca32c439",
+          "d4e7cc54935c85e85d7e6a0f29d482643aa2a169f93a549ebc5c4122d8567bfb",
+          "3c76744bc3a0b2941b6b483d8fcd593729422268919591e58d3c289017673314"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "dead": {
+        "sourceSha256": "91829c865dcaef60a20170edf63d6b22feff5228a56549dd537887931870a2ee",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "6a2adb5232bef427377cfdff964f563402487f2243baaa186edfe341ccf39e0f",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "f631a7fd605211260b28b5a5bba3503e06dc1064497d1e5769d62e40e178e2b1",
+        "encodedSha256": "fdd5c160765257541e37058b293bd85c57a6b2e5c4053963e43790a72f1235ae",
+        "decodedSha256": "2df596a0bec9d152478e79ac209aff7a47edd662e45e88fed3f59250c010b5b1",
+        "frameSha256": [
+          "87c40207d3bbb8d5ba8a71b8ec81f72f5757b05b469606e5a582dbb7563cdc0b",
+          "87c40207d3bbb8d5ba8a71b8ec81f72f5757b05b469606e5a582dbb7563cdc0b",
+          "87c40207d3bbb8d5ba8a71b8ec81f72f5757b05b469606e5a582dbb7563cdc0b",
+          "87c40207d3bbb8d5ba8a71b8ec81f72f5757b05b469606e5a582dbb7563cdc0b",
+          "87c40207d3bbb8d5ba8a71b8ec81f72f5757b05b469606e5a582dbb7563cdc0b",
+          "87c40207d3bbb8d5ba8a71b8ec81f72f5757b05b469606e5a582dbb7563cdc0b",
+          "87c40207d3bbb8d5ba8a71b8ec81f72f5757b05b469606e5a582dbb7563cdc0b",
+          "87c40207d3bbb8d5ba8a71b8ec81f72f5757b05b469606e5a582dbb7563cdc0b"
+        ],
+        "poseSha256": [
+          "87e68cb3df542411625638975aa445d839fb5d08d7ab3e8cc608c1aed8a78b0f",
+          "87e68cb3df542411625638975aa445d839fb5d08d7ab3e8cc608c1aed8a78b0f",
+          "87e68cb3df542411625638975aa445d839fb5d08d7ab3e8cc608c1aed8a78b0f",
+          "87e68cb3df542411625638975aa445d839fb5d08d7ab3e8cc608c1aed8a78b0f",
+          "87e68cb3df542411625638975aa445d839fb5d08d7ab3e8cc608c1aed8a78b0f",
+          "87e68cb3df542411625638975aa445d839fb5d08d7ab3e8cc608c1aed8a78b0f",
+          "87e68cb3df542411625638975aa445d839fb5d08d7ab3e8cc608c1aed8a78b0f",
+          "87e68cb3df542411625638975aa445d839fb5d08d7ab3e8cc608c1aed8a78b0f"
+        ],
+        "sourceFrameIndexes": [
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  }
+}

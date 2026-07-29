@@ -140,6 +140,234 @@ jobs:
       - name: Build frontend
         run: npm run build -w frontend
 
+  battle-map-v1-compatibility:
+    name: Battle-map V1 compatibility
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test battle-map audit CLI and metrics
+        run: npm run battle-maps:audit:test
+
+      - name: Audit bounded V1 compatibility corpus
+        run: >-
+          npm run battle-maps:audit --
+          --versions=1
+          --node-types=forest,cave,mountain,bridge,castle,dungeon,swamp,volcano,plains,arena,guild,elven_grove,dwarven_mine,vampiric_crypt,orcish_warcamp,human_ruins
+          --seeds=0,997
+          --sizes=16x24,32x32
+          --modes=pve
+          --failure-limit=50
+          --output-dir=artifacts/battle-map-audit-v1-compat
+
+      - name: Upload V1 compatibility report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: battle-map-audit-v1-compat
+          path: artifacts/battle-map-audit-v1-compat
+          if-no-files-found: error
+          retention-days: 14
+
+  battle-map-v2-audit:
+    name: Battle-map V2 audit (PR shard ${{ matrix.shard }})
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit V2 recipe diversity corpus
+        id: core_audit
+        continue-on-error: true
+        run: >-
+          npm run battle-maps:audit --
+          --versions=2
+          --node-types=forest,cave,mountain,bridge,castle,dungeon,swamp,volcano,plains,arena,guild,elven_grove,dwarven_mine,vampiric_crypt,orcish_warcamp,human_ruins
+          --seed-range=0:99
+          --sizes=32x32
+          --modes=pve
+          --shard-index=${{ matrix.shard }}
+          --shard-count=8
+          --defer-corpus-gates
+          --failure-limit=100
+          --output-dir=artifacts/battle-map-audit-pr-core-${{ matrix.shard }}
+
+      - name: Audit V2 sizes and modes
+        id: profile_audit
+        continue-on-error: true
+        run: >-
+          npm run battle-maps:audit --
+          --versions=2
+          --node-types=forest,cave,mountain,bridge,castle,dungeon,swamp,volcano,plains,arena,guild,elven_grove,dwarven_mine,vampiric_crypt,orcish_warcamp,human_ruins
+          --seeds=0,997
+          --sizes=10x10,16x24,24x32,48x40
+          --modes=pve,guild,pve_coop
+          --shard-index=${{ matrix.shard }}
+          --shard-count=8
+          --defer-corpus-gates
+          --failure-limit=100
+          --output-dir=artifacts/battle-map-audit-pr-profiles-${{ matrix.shard }}
+
+      - name: Audit V2 competitive modes
+        id: competitive_audit
+        continue-on-error: true
+        run: >-
+          npm run battle-maps:audit --
+          --versions=2
+          --node-types=arena,guild
+          --seeds=0,997
+          --sizes=11x16,32x32
+          --modes=pvp,pvp_coliseum
+          --shard-index=${{ matrix.shard }}
+          --shard-count=8
+          --defer-corpus-gates
+          --failure-limit=100
+          --output-dir=artifacts/battle-map-audit-pr-competitive-${{ matrix.shard }}
+
+      - name: Generate deterministic review gallery
+        id: gallery_audit
+        if: always() && matrix.shard == 0
+        continue-on-error: true
+        run: >-
+          npm run battle-maps:audit --
+          --versions=2
+          --node-types=forest,cave,mountain,bridge,castle,dungeon,swamp,volcano,plains,arena,guild,elven_grove,dwarven_mine,vampiric_crypt,orcish_warcamp,human_ruins
+          --seeds=0
+          --sizes=32x32
+          --modes=pve
+          --emit-gallery
+          --output-dir=artifacts/battle-map-audit-pr-gallery
+
+      - name: Enforce V2 audit gates
+        if: always()
+        env:
+          CORE_OUTCOME: ${{ steps.core_audit.outcome }}
+          PROFILE_OUTCOME: ${{ steps.profile_audit.outcome }}
+          COMPETITIVE_OUTCOME: ${{ steps.competitive_audit.outcome }}
+          GALLERY_OUTCOME: ${{ steps.gallery_audit.outcome }}
+          SHARD: ${{ matrix.shard }}
+        run: |
+          test "$CORE_OUTCOME" = success
+          test "$PROFILE_OUTCOME" = success
+          test "$COMPETITIVE_OUTCOME" = success
+          if [ "$SHARD" = 0 ]; then test "$GALLERY_OUTCOME" = success; fi
+
+      - name: Upload V2 audit reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: battle-map-audit-pr-v2-shard-${{ matrix.shard }}
+          path: artifacts/battle-map-audit-pr-*
+          if-no-files-found: error
+          retention-days: 14
+
+  battle-map-v2-aggregate:
+    name: Battle-map V2 aggregate diversity gate
+    needs: battle-map-v2-audit
+    if: always() && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download every V2 audit shard
+        uses: actions/download-artifact@v4
+        with:
+          pattern: battle-map-audit-pr-v2-shard-*
+          path: artifacts/downloaded-pr-v2
+
+      - name: Re-evaluate complete PR corpora
+        run: >-
+          npm run battle-maps:audit --
+          --merge-input-dir=artifacts/downloaded-pr-v2
+          --output-dir=artifacts/battle-map-audit-pr-v2-merged
+          --failure-limit=200
+
+      - name: Upload merged V2 audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: battle-map-audit-pr-v2-merged
+          path: artifacts/battle-map-audit-pr-v2-merged
+          if-no-files-found: error
+          retention-days: 14
+
+  battle-map-v2-visual-gallery:
+    name: Battle-map V2 browser-rendered gallery
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Render fixed and holdout V2 gallery
+        run: npm run battle-maps:visual-gallery
+
+      - name: Upload browser-rendered V2 gallery
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: battle-map-v2-visual-gallery
+          path: |
+            artifacts/battle-map-visual-gallery
+            artifacts/battle-map-visual-test-results
+          if-no-files-found: error
+          retention-days: 14
+
   extended-corpus:
     name: Extended worldgen corpus (1-5000)
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
@@ -173,5 +401,138 @@ jobs:
         with:
           name: worldgen-corpus-1-5000
           path: worldgen-corpus-1-5000.json
+          if-no-files-found: error
+          retention-days: 30
+
+  nightly-battle-map-v2-audit:
+    name: Nightly battle-map V2 audit (shard ${{ matrix.shard }})
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit bounded 16,000-map V2 diversity corpus
+        id: core_audit
+        continue-on-error: true
+        run: >-
+          npm run battle-maps:audit --
+          --versions=2
+          --node-types=forest,cave,mountain,bridge,castle,dungeon,swamp,volcano,plains,arena,guild,elven_grove,dwarven_mine,vampiric_crypt,orcish_warcamp,human_ruins
+          --seed-range=0:999
+          --sizes=32x32
+          --modes=pve
+          --shard-index=${{ matrix.shard }}
+          --shard-count=16
+          --defer-corpus-gates
+          --failure-limit=200
+          --output-dir=artifacts/battle-map-audit-nightly-core-${{ matrix.shard }}
+
+      - name: Audit nightly V2 size and mode profiles
+        id: profile_audit
+        continue-on-error: true
+        run: >-
+          npm run battle-maps:audit --
+          --versions=2
+          --node-types=forest,cave,mountain,bridge,castle,dungeon,swamp,volcano,plains,arena,guild,elven_grove,dwarven_mine,vampiric_crypt,orcish_warcamp,human_ruins
+          --seeds=0,97,997
+          --sizes=10x10,16x24,24x32,48x40
+          --modes=pve,guild,pve_coop
+          --shard-index=${{ matrix.shard }}
+          --shard-count=16
+          --defer-corpus-gates
+          --failure-limit=200
+          --output-dir=artifacts/battle-map-audit-nightly-profiles-${{ matrix.shard }}
+
+      - name: Audit nightly V2 competitive profiles
+        id: competitive_audit
+        continue-on-error: true
+        run: >-
+          npm run battle-maps:audit --
+          --versions=2
+          --node-types=arena,guild
+          --seeds=0,97,997
+          --sizes=11x16,32x32
+          --modes=pvp,pvp_coliseum
+          --shard-index=${{ matrix.shard }}
+          --shard-count=16
+          --defer-corpus-gates
+          --failure-limit=200
+          --output-dir=artifacts/battle-map-audit-nightly-competitive-${{ matrix.shard }}
+
+      - name: Enforce nightly V2 audit gates
+        if: always()
+        env:
+          CORE_OUTCOME: ${{ steps.core_audit.outcome }}
+          PROFILE_OUTCOME: ${{ steps.profile_audit.outcome }}
+          COMPETITIVE_OUTCOME: ${{ steps.competitive_audit.outcome }}
+        run: |
+          test "$CORE_OUTCOME" = success
+          test "$PROFILE_OUTCOME" = success
+          test "$COMPETITIVE_OUTCOME" = success
+
+      - name: Upload nightly V2 audit reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: battle-map-audit-nightly-v2-shard-${{ matrix.shard }}
+          path: artifacts/battle-map-audit-nightly-*
+          if-no-files-found: error
+          retention-days: 30
+
+  nightly-battle-map-v2-aggregate:
+    name: Nightly battle-map V2 aggregate diversity gate
+    needs: nightly-battle-map-v2-audit
+    if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download every nightly V2 audit shard
+        uses: actions/download-artifact@v4
+        with:
+          pattern: battle-map-audit-nightly-v2-shard-*
+          path: artifacts/downloaded-nightly-v2
+
+      - name: Re-evaluate complete nightly corpora
+        run: >-
+          npm run battle-maps:audit --
+          --merge-input-dir=artifacts/downloaded-nightly-v2
+          --output-dir=artifacts/battle-map-audit-nightly-v2-merged
+          --failure-limit=500
+
+      - name: Upload merged nightly V2 audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: battle-map-audit-nightly-v2-merged
+          path: artifacts/battle-map-audit-nightly-v2-merged
           if-no-files-found: error
           retention-days: 30

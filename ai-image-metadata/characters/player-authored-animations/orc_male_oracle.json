@@ -1,0 +1,657 @@
+{
+  "version": "1.0.0",
+  "template": "ai-image-metadata/characters/player-authored-animation-template.json",
+  "compilerVersion": "1.2.0",
+  "id": "orc_male_oracle",
+  "profile": "oracle_v1",
+  "profileSource": "ai-image-metadata/characters/player-animation-profiles/oracle_v1.json",
+  "status": "approved",
+  "approvedAt": "2026-07-29T02:27:57.678Z",
+  "metadataFingerprint": "a1f81ff7ed9c7a232c9e6d1c3a88efcfe25a42ed280133fbe5d5240b15f9947f",
+  "draftProvenance": {
+    "registry": "ai-image-metadata/characters/player-variants.json",
+    "templateSha256": "7943e69db577b3a4429b47df634f931d3f4cb8e8ce9a91a06578255fbe935bbe",
+    "profileSha256": "60ef3505310a99ae836b721a8a7f054727479b09010e94b95f5f7cc34ebdf9c1"
+  },
+  "identity": {
+    "race": "orc",
+    "gender": "male",
+    "class": "oracle",
+    "presentation": "male orc oracle",
+    "visualTraits": "orc green skin tusks muscular tribal markings fierce male masculine features mystic seer blindfold ornate robes floating runes prophetic ethereal",
+    "baseFacing": "three-quarters right",
+    "sourceMetadata": {
+      "isAdvanced": true,
+      "inheritsFrom": "oracle",
+      "seed": 24008
+    }
+  },
+  "inputs": {
+    "identity": {
+      "origin": "frontend/public/assets/portraits/originals/orc_male_oracle.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/orc_male_oracle/inputs/identity.png",
+      "authority": "face, ancestry, gender presentation, hair, eyes, complexion, costume, palette, proportions, and equipment"
+    },
+    "style": {
+      "origin": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/orc_male_oracle/inputs/style.png",
+      "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+    }
+  },
+  "reference": {
+    "source": "ai-image-metadata/characters/player-animation-sources/orc_male_oracle/reference.png",
+    "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_male_oracle/chroma/reference.png",
+    "identitySource": "ai-image-metadata/characters/player-animation-sources/orc_male_oracle/inputs/identity.png",
+    "styleSource": "ai-image-metadata/characters/player-animation-sources/orc_male_oracle/inputs/style.png",
+    "prompt": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative Orc Oracle (male presentation) identity portrait; Image 2 is style and proportion reference only. Player identity metadata: orc green skin tusks muscular tribal markings fierce male masculine features mystic seer blindfold ornate robes floating runes prophetic ethereal. Create one complete head-to-toe Orc Oracle (male presentation) preserving Image 1's face covering, ancestry traits, gender presentation, hair, blindfold, robes, jewelry, runes, palette, proportions, and equipment. Do not import identity details from Image 2. Preserve the portrait's blindfold, ornate robes, jewelry, focus, and exact floating-rune count and design. Never reveal covered eyes, duplicate runes, add a staff, or transform permanent adornments. Translate the portrait into a compact ethereal silhouette. Use a flat #00ff00 chroma key background with no floor or scenery and a square 1:1 canvas with generous padding. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered oracle in a serene listening stance facing three-quarters right. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+  },
+  "animations": {
+    "idle": {
+      "source": "ai-image-metadata/characters/player-animation-sources/orc_male_oracle/idle.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_male_oracle/chroma/idle.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 4,
+      "frameDescriptions": [
+        "serene listening stance with blindfold unchanged",
+        "gentle inhale as existing runes rise",
+        "covered face turns slightly toward one possibility",
+        "one palm opens beneath a single rune",
+        "centered prophetic midpoint",
+        "soft exhale as the palm closes",
+        "covered face turns toward the opposite possibility",
+        "serene stance flowing back to frame one"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body oracle listening idle-cycle poses of the authoritative Orc Oracle (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: orc green skin tusks muscular tribal markings fierce male masculine features mystic seer blindfold ornate robes floating runes prophetic ethereal. Required sequence: serene listening stance with blindfold unchanged; gentle inhale as existing runes rise; covered face turns slightly toward one possibility; one palm opens beneath a single rune; centered prophetic midpoint; soft exhale as the palm closes; covered face turns toward the opposite possibility; serene stance flowing back to frame one. Motion direction: A serene breathing loop turns the covered face toward distant possibilities while hands and existing runes make small mirrored adjustments.. Overall oracle motion is serene, uncanny, economical, and prophetic, with blindfold-safe head movement, precise palm signs, and slowly resolving rune paths. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, blindfold, robes, runes, palette, proportions, and equipment. Preserve the portrait's blindfold, ornate robes, jewelry, focus, and exact floating-rune count and design. Never reveal covered eyes, duplicate runes, add a staff, or transform permanent adornments. Prophetic effects use only the portrait's established rune shapes and ethereal palette. Runes remain compact, count-consistent, and spatially separate from the face, hands, and silhouette. Action-specific effects: Existing runes may drift through a tiny loop without changing count; no vision burst. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "walk": {
+      "source": "ai-image-metadata/characters/player-animation-sources/orc_male_oracle/walk.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_male_oracle/chroma/walk.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "left foot forward contact with one guiding palm open",
+        "left leg compresses beneath the robes",
+        "passing pose with right knee advancing",
+        "right foot reaches as runes trail close",
+        "right foot forward contact",
+        "right leg compresses under the stride",
+        "passing pose with left knee advancing",
+        "left foot reaches into the guided loop"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body oracle guided walk poses of the authoritative Orc Oracle (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: orc green skin tusks muscular tribal markings fierce male masculine features mystic seer blindfold ornate robes floating runes prophetic ethereal. Required sequence: left foot forward contact with one guiding palm open; left leg compresses beneath the robes; passing pose with right knee advancing; right foot reaches as runes trail close; right foot forward contact; right leg compresses under the stride; passing pose with left knee advancing; left foot reaches into the guided loop. Motion direction: A confident alternating walk uses careful contacts, robe compression, open guiding hands, and count-consistent rune follow-through.. Overall oracle motion is serene, uncanny, economical, and prophetic, with blindfold-safe head movement, precise palm signs, and slowly resolving rune paths. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, blindfold, robes, runes, palette, proportions, and equipment. Preserve the portrait's blindfold, ornate robes, jewelry, focus, and exact floating-rune count and design. Never reveal covered eyes, duplicate runes, add a staff, or transform permanent adornments. Prophetic effects use only the portrait's established rune shapes and ethereal palette. Runes remain compact, count-consistent, and spatially separate from the face, hands, and silhouette. Action-specific effects: No active prophecy; existing runes remain close and retain exact count. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "attack": {
+      "source": "ai-image-metadata/characters/player-animation-sources/orc_male_oracle/attack.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_male_oracle/chroma/attack.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "serene guard sensing the target",
+        "covered face turns before the strike arrives",
+        "one existing rune settles above the open palm",
+        "side-step aligns the body with the predicted opening",
+        "compact palm-and-rune pulse at contact",
+        "robes and hand follow through along the short path",
+        "rune returns to its original arrangement",
+        "recovered listening guard"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body oracle foreseen counterstrike poses of the authoritative Orc Oracle (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: orc green skin tusks muscular tribal markings fierce male masculine features mystic seer blindfold ornate robes floating runes prophetic ethereal. Required sequence: serene guard sensing the target; covered face turns before the strike arrives; one existing rune settles above the open palm; side-step aligns the body with the predicted opening; compact palm-and-rune pulse at contact; robes and hand follow through along the short path; rune returns to its original arrangement; recovered listening guard. Motion direction: The oracle senses the opening, turns aside, gathers one existing rune to the palm, steps into a compact predictive pulse, and returns to serenity.. Overall oracle motion is serene, uncanny, economical, and prophetic, with blindfold-safe head movement, precise palm signs, and slowly resolving rune paths. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, blindfold, robes, runes, palette, proportions, and equipment. Preserve the portrait's blindfold, ornate robes, jewelry, focus, and exact floating-rune count and design. Never reveal covered eyes, duplicate runes, add a staff, or transform permanent adornments. Prophetic effects use only the portrait's established rune shapes and ethereal palette. Runes remain compact, count-consistent, and spatially separate from the face, hands, and silhouette. Action-specific effects: One existing rune may emit a short pulse at close range; do not duplicate it, reveal the eyes, or create a large projectile. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "hurt": {
+      "source": "ai-image-metadata/characters/player-animation-sources/orc_male_oracle/hurt.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_male_oracle/chroma/hurt.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "serene guard before impact",
+        "sharp flinch with hands lifting defensively",
+        "maximum stagger as existing runes spread",
+        "stumbling backward beneath swinging robes",
+        "low balance catch with one palm grounded or lowered",
+        "deliberate rise while runes return",
+        "feet and palms reset",
+        "recovered listening stance"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body oracle vision-broken recovery poses of the authoritative Orc Oracle (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: orc green skin tusks muscular tribal markings fierce male masculine features mystic seer blindfold ornate robes floating runes prophetic ethereal. Required sequence: serene guard before impact; sharp flinch with hands lifting defensively; maximum stagger as existing runes spread; stumbling backward beneath swinging robes; low balance catch with one palm grounded or lowered; deliberate rise while runes return; feet and palms reset; recovered listening stance. Motion direction: An unforeseen impact breaks serenity into a flinch, scattered rune recoil, stumbling low catch, deliberate reorientation, and restored listening.. Overall oracle motion is serene, uncanny, economical, and prophetic, with blindfold-safe head movement, precise palm signs, and slowly resolving rune paths. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, blindfold, robes, runes, palette, proportions, and equipment. Preserve the portrait's blindfold, ornate robes, jewelry, focus, and exact floating-rune count and design. Never reveal covered eyes, duplicate runes, add a staff, or transform permanent adornments. Prophetic effects use only the portrait's established rune shapes and ethereal palette. Runes remain compact, count-consistent, and spatially separate from the face, hands, and silhouette. Action-specific effects: Existing runes may scatter slightly without changing count; no gore, blood, blindfold removal, or full-body flash. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "death": {
+      "source": "ai-image-metadata/characters/player-animation-sources/orc_male_oracle/death.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_male_oracle/chroma/death.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "verticalAnchor": "bottom",
+      "outputFrameMap": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        7,
+        7
+      ],
+      "frameDescriptions": [
+        "fatal impact silences the vision",
+        "runes dim as both hands lower",
+        "knees fold beneath the ornate robes",
+        "one knee grounds in a quiet bowed pose",
+        "body tips into full ground contact",
+        "robes, limbs, and runes settle low",
+        "final fully fallen oracle with blindfold intact",
+        "same final fallen pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body oracle defeat sequence poses of the authoritative Orc Oracle (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: orc green skin tusks muscular tribal markings fierce male masculine features mystic seer blindfold ornate robes floating runes prophetic ethereal. Required sequence: fatal impact silences the vision; runes dim as both hands lower; knees fold beneath the ornate robes; one knee grounds in a quiet bowed pose; body tips into full ground contact; robes, limbs, and runes settle low; final fully fallen oracle with blindfold intact; same final fallen pose held. Motion direction: The vision dims, runes descend, knees fold, the oracle lowers through a quiet kneel, tips sideways, and settles fully fallen.. Overall oracle motion is serene, uncanny, economical, and prophetic, with blindfold-safe head movement, precise palm signs, and slowly resolving rune paths. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, blindfold, robes, runes, palette, proportions, and equipment. Preserve the portrait's blindfold, ornate robes, jewelry, focus, and exact floating-rune count and design. Never reveal covered eyes, duplicate runes, add a staff, or transform permanent adornments. Prophetic effects use only the portrait's established rune shapes and ethereal palette. Runes remain compact, count-consistent, and spatially separate from the face, hands, and silhouette. Action-specific effects: Runes fade without changing count, revealing the eyes, gore, blood, explosion, or rigid rotation. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "cast": {
+      "source": "ai-image-metadata/characters/player-animation-sources/orc_male_oracle/cast.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_male_oracle/chroma/cast.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "silent listening stance",
+        "both palms open at different heights",
+        "existing runes move into a deliberate pattern",
+        "robes settle into a wide grounded prophetic pose",
+        "maximum compact omen resolved between the hands",
+        "one hand sends a restrained guidance pulse outward",
+        "runes return as palms close",
+        "serene prophetic finish"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body oracle prophetic revelation poses of the authoritative Orc Oracle (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: orc green skin tusks muscular tribal markings fierce male masculine features mystic seer blindfold ornate robes floating runes prophetic ethereal. Required sequence: silent listening stance; both palms open at different heights; existing runes move into a deliberate pattern; robes settle into a wide grounded prophetic pose; maximum compact omen resolved between the hands; one hand sends a restrained guidance pulse outward; runes return as palms close; serene prophetic finish. Motion direction: The oracle listens inward, spreads both palms, arranges existing runes into a compact pattern, resolves one luminous omen, releases its guidance, and closes the vision.. Overall oracle motion is serene, uncanny, economical, and prophetic, with blindfold-safe head movement, precise palm signs, and slowly resolving rune paths. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, blindfold, robes, runes, palette, proportions, and equipment. Preserve the portrait's blindfold, ornate robes, jewelry, focus, and exact floating-rune count and design. Never reveal covered eyes, duplicate runes, add a staff, or transform permanent adornments. Prophetic effects use only the portrait's established rune shapes and ethereal palette. Runes remain compact, count-consistent, and spatially separate from the face, hands, and silhouette. Action-specific effects: Arrange only the existing runes into one compact omen in the established palette; never reveal eyes or cover the body with light. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "dead": {
+      "deriveFrom": {
+        "animation": "death",
+        "frame": 7
+      },
+      "frameDescriptions": [
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held"
+      ],
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity."
+    },
+    "victory": {
+      "source": "ai-image-metadata/characters/player-animation-sources/orc_male_oracle/victory.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_male_oracle/chroma/victory.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "quiet recognition that the omen is fulfilled",
+        "one palm lifts in acknowledgment",
+        "second palm opens as existing runes rise",
+        "runes form a compact crown-like arc",
+        "serene pivot beneath the hovering pattern",
+        "palms lower as runes return",
+        "composed victor stance with blindfold intact",
+        "final triumphant oracle pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body oracle fulfilled-prophecy celebration poses of the authoritative Orc Oracle (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: orc green skin tusks muscular tribal markings fierce male masculine features mystic seer blindfold ornate robes floating runes prophetic ethereal. Required sequence: quiet recognition that the omen is fulfilled; one palm lifts in acknowledgment; second palm opens as existing runes rise; runes form a compact crown-like arc; serene pivot beneath the hovering pattern; palms lower as runes return; composed victor stance with blindfold intact; final triumphant oracle pose held. Motion direction: The oracle recognizes the fulfilled omen, opens both palms, guides existing runes into a gentle crown, turns serenely, and holds quiet triumph.. Overall oracle motion is serene, uncanny, economical, and prophetic, with blindfold-safe head movement, precise palm signs, and slowly resolving rune paths. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, blindfold, robes, runes, palette, proportions, and equipment. Preserve the portrait's blindfold, ornate robes, jewelry, focus, and exact floating-rune count and design. Never reveal covered eyes, duplicate runes, add a staff, or transform permanent adornments. Prophetic effects use only the portrait's established rune shapes and ethereal palette. Runes remain compact, count-consistent, and spatially separate from the face, hands, and silhouette. Action-specific effects: Existing runes may form one compact crown-like arc without changing count or exposing the eyes. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    }
+  },
+  "pins": {
+    "templateSha256": "93943004e340d113943e06dea61fd7dfad67c20750dd4fc30d76d3be1fb7c144",
+    "profileSha256": "ed0393e4e71dba96fc7f97e410cd9d1148e76fd059b060c3b3901832e10b644e",
+    "reference": {
+      "sourceSha256": "6c74444424d159a36d86db059929fc176d515d9fb0facf02a52bb089aba565ae",
+      "sourceDimensions": "1254x1254",
+      "chromaSourceSha256": "98e35bb4e4544a19d2c5c4dff084879980c34235ef096bc132639b4aa3a3c058",
+      "chromaSourceDimensions": "1254x1254",
+      "identitySourceSha256": "2b4f42de43e20f27a969c2d2e239ea62d2792abe90ac7203480508b8fbe5acb8",
+      "identitySourceDimensions": "1024x1024",
+      "styleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "styleSourceDimensions": "1254x1254",
+      "promptSha256": "92ee251b36d56c745181c0d5119cd806bc6ccdb215b8cc6c582ccb75f73385f0",
+      "encodedSha256": "924769a318807c2b61f8db85456c4d9ab97b689d262a74b87971c574e16c1206",
+      "decodedSha256": "6300784ad1c735a01bf27e485e29e032ebbcdafc39dde32d73b970933a84ab2d"
+    },
+    "animations": {
+      "idle": {
+        "sourceSha256": "7905178829b74d834c35cceb2691fa1829d6000d5aabfe0b39683cecdaea3728",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "30ec96a3cc5075d635ab938be4720316e685a9cd5832ece703597e921a8863f6",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "54254a14d7fe9c8b0707672fc3e4597d5f17fb178ec987d8c9f417a8161d0d8a",
+        "encodedSha256": "dd7de32900bf583809a423322eabfb520cf9fb38a76a1eecd945ee8bc725e51b",
+        "decodedSha256": "ebaaae4e90344426624de8d08f07d9f59093d5c9cc0e0066ec8e7a2300f66872",
+        "frameSha256": [
+          "da3785de5c2dc9baf5916f8b4bf120ff25ba72662474849f055beb6434a91fa3",
+          "abaeab74199753f501179f49ce087ea29042a01292758c391c1100ef3e59f4e0",
+          "93daa3a66bfbaa5a52cc75bc0906e6771331cb33acfdb8e75d7246000ffb56a4",
+          "f5cd95631c6d2d9581adf9395a0cc51f724f5cc88771caf8ecd18384e4933ecc",
+          "81eeb12695079ef051c8388fcc14a09989677f93de71ff4f36d07f4fafd290b5",
+          "a98d77ec46801d5e6a92ea62542a6b4057c23b69b0e2f919d92a47c2949e6c53",
+          "dc2cb089dc042f6ef9f97f96a8bf50d4e4b567ac075e6fb50aaa41d0da852ac6",
+          "c74868b68a9c1cf8215a99233b0a48588286696f9cf6981d932a6dc055dcb625"
+        ],
+        "poseSha256": [
+          "10edeadc1b7d54c36a9c8833f7767be7b77fc22d3e9a8b8bc2252385ccedadd1",
+          "92c109da9cdc5dad704dccbcc7295f40c120ffbdb1a8e1a057cc5e9ce1389a94",
+          "ea28c52ac6f32f8b05d3d2a46e5b32b39a57682604a46830809460394c143b2c",
+          "18bbd9bd36a453566e20be766ad69bb17bc32ecbee33fd600a5028fe16481a40",
+          "f1e530191038d4f82b801d938c04b2b78336b9920422e6591f6e556ec5d9c037",
+          "e187535ee1f4476c1fe00f55916f75f9b8c8a88aa46d16fca759a5eba2a8cc70",
+          "c30e452cbb64adaaf0eb68eb2cfea671484789552dad4c51ebdc9b38fed2d21b",
+          "620849615c5af8e9ea967d3cd708b1a595280e1d74ae0f079ca8fd0841568aad"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.935268,
+          0.933754,
+          0.940512,
+          0.95318,
+          0.943781,
+          0.940357,
+          0.937361,
+          0.936916
+        ]
+      },
+      "walk": {
+        "sourceSha256": "2a484f1c969c61034ba1a87af1a5ce5f403f348c67abea99e9f0dee430f4254a",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "a315aa65b4c6d7cdebed026cf617cdc91f4d8a33e41b2dbe7675c4e669a4e8af",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "94ec373bf1035d56ad22e84424c303ca24b18777fc410632049ee76d892d4c67",
+        "encodedSha256": "87026db97a523d2b5fec8bbc5c5b59a28444eec0bab76d5089d7976b7a6cc292",
+        "decodedSha256": "c7cf555ddca71769bf06a056f1849c83778db51993f40a0f0b8c40bba5945601",
+        "frameSha256": [
+          "6e5f9e4a52781a8fe68a2ac4518ecdf9a5ac9fc3f2ed1668008336ea2dc9d0bd",
+          "4fcfe4a93ccd8d7348133ac006785b1c64ecd6509b73ea2a189272ba8439ebce",
+          "5375c6807732c509577c891884cd86577d7e35ec71e2da07435c14b4b9d3c547",
+          "c15459dcb158ae665be476baacb59256cf20c637b62791f787de7eead4c23fb5",
+          "2afdc8ce3d93e89ab55eb81ac8f7ba3f798ce712dba26b950507de0c6125a18a",
+          "c81986a9cfa34a3044917db48524cc6ad73c3f850bebd9ef57244a2bc1fa70d9",
+          "0c4935d0c0aea4fa2f112234a9d2d2944dd36280e905ff6ed1df13d424ef4215",
+          "b1081af1c40782e2836f3909343f8466db737aadaf2367b7587ff2c2bd9ab096"
+        ],
+        "poseSha256": [
+          "d64a08b3cf704a813336448f076bb6b61d8d8eff774cb068f37cfbe068101e3d",
+          "c8b76f0e20559000a59488f299067fbfd6f996910e8a4b56c53df83f184c7a49",
+          "c500287cdc3a27bbeaa3817bc5342d05e3a2fd5010993bf7b26099a4263b868d",
+          "bce56fd50810c5ed06d80a75d20c992d12b5b49f15e559f3255194ff04c2a5fd",
+          "04a4c9c0e7b7201362d00f68d3ed08da026e435e15e40e0f4bb0ae6c6bd6da3c",
+          "fe53cb2d8128961e6ac7156d0ae60c467da2087989f8fc46c5a89d9b61769b7d",
+          "0259acbd905ef15c3d8634ecfe924b8b27680b6e7dfa189d63f2e5cd4dffc2d4",
+          "08ae21ae806fe01eab16a470bafb3103dc4d7420e6d3fdf28cd3357536b223bd"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.945927,
+          0.939088,
+          0.940648,
+          0.942302,
+          0.943612,
+          0.940052,
+          0.94921,
+          0.946662
+        ]
+      },
+      "attack": {
+        "sourceSha256": "58751d4cb28672ebca70716bbc619a83e988498c96ee12a7aa40296beb7489a4",
+        "sourceDimensions": "1672x941",
+        "chromaSourceSha256": "923968060964f8ac82d381f210f75de394da974540bad041bc4a45e202dd636c",
+        "chromaSourceDimensions": "1672x941",
+        "promptSha256": "7a274d0bb700dfd8d2874429da164365da80c9485544d35605a7f57868d2feee",
+        "encodedSha256": "368cb3de0430dc3b3da83baae79ad890d8dbecce3e1acbc97ce27122caee74c3",
+        "decodedSha256": "fbea1a56dd71b05b64bff94e3783539d7dcceaf5f37a33a2b90c2b9f0724c212",
+        "frameSha256": [
+          "e659eca8d79c611cde4f32164d32e8f815756e089d5182e02a79126548457b63",
+          "9e95a2f753191f21c427cdc35be0d340576ca4a4646575ebb03fe5bc06624703",
+          "7860e05af1d9fb782478bba2ec85493a05b5b90088852c5379901e0f3dccab1b",
+          "0b00d0ede2eda81d555a7568017de13769d4553ff33a0b1878913243cbcc68bd",
+          "1bcf2a4d28a0d817f09b71110732ce006f824cd066cc8b0377e4316905a212e6",
+          "652578fcf2aa6bfa97f686f37c4fde0086c81930240ca9a4db94f875ceffe935",
+          "59b07915afeb965520309e357f691a8059005cfdc3a222b5e1218d5ecf878f64",
+          "788b0a510611da86c3d06071fdfc7d35f04745ffdf8b0b3440727a0ee69b7629"
+        ],
+        "poseSha256": [
+          "5e7988c02d71e92c4358990e1586589ae75844e1c9239f718d8d94d8a5c6938e",
+          "e9839cf13bc36276ea453bd6a2121bddcc21f3d20d5cf187eaafbb62a65aaa3b",
+          "dc4074e8e22d7efbeb80307375e47933e0b6a779b48f4b31426a7b01e9b046d6",
+          "38921f01dec4c74dfd0c7ad696e6f2e26ea6a3d624c5c28c1b3cb7eeea054b1d",
+          "6cf710b53d7bd59f3d9d7b021002653fb13b46dc85caa4d22da1da2d717a7c5a",
+          "6fc13f4fc897d3173d58b2c739998cf1876851884a1526e0507ee5dfbfcbf9c1",
+          "5e08cbf4ec93b6169f8d4b83e36528e0c3d6dabedbd2aac43c47148b3a01ae9c",
+          "f16c89134f59538c08de87f68c4a82ba33eb9f623bd8442648793de4fc5d37d7"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.933165,
+          0.954049,
+          0.947241,
+          0.942423,
+          0.953551,
+          0.947421,
+          0.935456,
+          0.945967
+        ]
+      },
+      "hurt": {
+        "sourceSha256": "74cac7186a69a7ef42cdf128e1aa351c4d550b2ddb793cf8585101c1a4e865ce",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "0d6c8922a42178376fd61835fad32358e9df16d11ad183946add22b6dde3f8aa",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "0f40cd76268e96e7728e02975a81347e426b12293d4c974b0ead7917dded3b6c",
+        "encodedSha256": "13cc028346c2645eec3535670b446dc731c24f48ba9c3afae17f5044ea0d61f2",
+        "decodedSha256": "c10a3bb88805eb96cf67739d261c947c591a038506d0de3be3f96899e32c7411",
+        "frameSha256": [
+          "bac4e8cf82c253ba470b392e093fae318dd0950040b5d300ca439034bd17869c",
+          "836ce72be4c90c321f9064a112343aa2f65fb69f17648d18bf614cf5e413139d",
+          "9d68ec8d87e04d2ef8dae1bdd90214c1b6da6a615e365ce0c04264108944b8bc",
+          "93f3fff9301067e88f54f766a010941f4deb0ddedacc5de94f49cd151b78329d",
+          "ef67998860e0403cdf1cb8f4eb231c9297968e1c6ad021f5067783e064456461",
+          "7c0d87e3e857cc9d80b88e5384913b97484f62bf495c22f102a613146ecf726a",
+          "9c88831178e994ebcf19fad714e5f67c6dcaad8f91b0fd432b1f320d8f784e76",
+          "0ca5c42c01c962b8ca69f84e4e0bd472647f107d4037321f88149ca5de90caa5"
+        ],
+        "poseSha256": [
+          "dbb2081fe39546c6541ac6de82597acd3fb376092a470c738415945ac608deae",
+          "1210da7b4c4897bbc1d4f4c9122b2b73441a6e3769a6a41633efe3bd80a339a5",
+          "93bdcd043e8384f006063a687001e2355de3173698ac6cee3ec62b013ace32f1",
+          "94d0fd849d0f9e21bcc7f4ac85456da460dd38b72f6c64dfb585e1bf764a8e02",
+          "469892215edd5cd2bc2f4a71bbb09afa9128c444e7cf9284ee824e1fcee9f2d9",
+          "bad2caf655c9e5d5b65b98b3fe7d1b8c7746ec86728b5f50ea864442c0f011e9",
+          "6dfd3199af811d461b4d38b61b2195c0fea1ebd55a99c62fb76c55ecf08efa3d",
+          "a1bb167eb33fc89bb334d41fe5a4f25f84dd0ac53ae8aeaac746a075489a04b0"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.937051,
+          0.970512,
+          0.954497,
+          0.955597,
+          0.943092,
+          0.949048,
+          0.937522,
+          0.933458
+        ]
+      },
+      "death": {
+        "sourceSha256": "adda82cc9bddfbe71db412f17dff193f7a21b6c8358c93ffccbf79e9b500168a",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "e17af32fd07077c12379b0c69016b9285d78f3fb091b710a339a8b2f4ac8b495",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "3657aa61ed74ca505d76bbf4d9d8051b61fd6d22137a58e3d007432505d7cc3f",
+        "encodedSha256": "d86ca3d9eb30c3e55d32cd43ddc93420bf663db6331fde9af8c6e9f6eb607672",
+        "decodedSha256": "7268be544c9f19f38f0f622f44a4a096fa1f086ac129f94c8dd7ef089aefe5a1",
+        "frameSha256": [
+          "7970154c99476735f0bd6f969bc56cfdfcca4a90ac3854f28309ff914a74f1f8",
+          "5022418bdc4786b29f218fd375b47c46c6c0292987baf652c472a792679a699a",
+          "c57ac7feb10aa4ae2f8c372c8c26be37261b89976eecbb32eb2163d3c3c2f90d",
+          "b4c39714faab7c29347f6d0008c741409332fbc8508ac50686c59af2e7aa5e9c",
+          "2b2a64bccf976c9d2aa5a3c8e876d8106a65ceac339f35491c3056343892d8df",
+          "80d946b4be8ca76fab5ec249fc57cead179d1865b14c098139ad222eb2dc7c9e",
+          "8261d1a90e6af5b1c3713ae08c90016b5c05b0427f483281402e3f3b0bdf439a",
+          "8261d1a90e6af5b1c3713ae08c90016b5c05b0427f483281402e3f3b0bdf439a"
+        ],
+        "poseSha256": [
+          "6f95e677f6bb842c2e4320833fcaa46ae2f8d60539adaf7094bb3b9bfd1b90b3",
+          "9f45715cf8c2299888f56d8ecbddb53bcb411c768e241ed7c191babcff8080de",
+          "a28580197dd785fb021f1d393c2551599999b601315ac2f1b779970426b5c1ef",
+          "efc402ea67a1cd4473130c2f6bd3138f5f97b59055e274de3dba4c1eaeeddf7f",
+          "942e936da78ab38b4dfc7876228a35398d356a824300e5b08dc4fbd2b6512dae",
+          "8e663318144f84e85b45cb6432d0638d64d077fa59829157ccd456b159a1f25d",
+          "5b406cf7864bb56c5f78589111df8c55f461549a18a9580ad97bd447ac760c98",
+          "5b406cf7864bb56c5f78589111df8c55f461549a18a9580ad97bd447ac760c98"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.939137,
+          0.938334,
+          0.946808,
+          0.948587,
+          0.953877,
+          0.962243,
+          0.979069,
+          0.979069
+        ]
+      },
+      "cast": {
+        "sourceSha256": "f49ef8ec385a1d47da4f821632b2c70e1a4b8851ecf9c2ba317eee50605ca270",
+        "sourceDimensions": "1672x941",
+        "chromaSourceSha256": "461f4b665e4759782547ef39acdd5aee07f9941cd42cdb242297f845bb1ec622",
+        "chromaSourceDimensions": "1672x941",
+        "promptSha256": "7f76526665a52f433f18a3949fb25cd2ac5743ecc39780d89793e51455c869b4",
+        "encodedSha256": "da3fccaf5755374dfaa1cd3cc9c995e9de04934961c33a09a5ecf788401d0253",
+        "decodedSha256": "169abbfa6648ad0328c4e530ef90e9c0d20a548cd159a87fc16147b75bbaf218",
+        "frameSha256": [
+          "23a6874b9f12fe8716183ee321a633b47d05ce1f9e655d4bec9f524e0ea010a5",
+          "8f9700dae7a30ed619f420b44226a354deea0d38d81fc9f6bc1f0f8914bd2a87",
+          "3c0e314a6a53cf3c6af41efb0c5a82730c6c2e2403208d30ab9ab6cc8df7a43b",
+          "7915402b2fb15169fce45e73892da605165c2dc53084458237f82ff28c711827",
+          "d5dc942747e0e954717b9dcd327cfb870865c5d1e9ac5ce46482466a10d5b138",
+          "a1ccfc199f0122ff3306accb53c4f139fc290ea996b0b3ca7b93af1b33aa1457",
+          "877998a8bb981f783518bc821094be62acd2c8ec6cbc74cbac7c99625dcf67ef",
+          "d345066c8b7e27e0cc55ade903b84a8b3b10215fa0c876fd98ba2e5246c3967f"
+        ],
+        "poseSha256": [
+          "378d5e01776d8bbc30dc39d8405c536dd2dae03079f9cc9efcc892d1525a6051",
+          "9b9d153adc6e5fec8702888f90a7370e626a3debdbb053b846101feb35fc63b6",
+          "5ac69fc8bac43409d5c03c5fbbadedc6a7569e3a939879fcc5b712433752d76c",
+          "a3c44701710f752567258bc4f6a1a85db995e5cba19191b802a9202b90835022",
+          "d31b0ec0500354554eda7adf7897edb550ff6be6b16586bfd4b67fbb7e3bb8d6",
+          "30b277df9631d23e294d3fc5a6a07d9263ee20c4e511bda85d1e763560ea6ff5",
+          "d11f2ae78ad705351117ff0a51a9a058c87adcd2ad3e8b14c5bc295d6d36e1d8",
+          "a78ce31765ea3156e55425cca596d55e52ee5ddd6c5435e579c74583d38fe76a"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.934322,
+          0.964491,
+          0.890011,
+          0.953099,
+          0.941932,
+          0.946583,
+          0.927042,
+          0.938152
+        ]
+      },
+      "victory": {
+        "sourceSha256": "909712670a1f645caa35ff9652af5b1b247e470e292317955bed1564b79740d6",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "348e419363da111e8f76d66c8100da7efb35d348839e429e09db87b7d2f1c6fc",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "8c20adfdd17551c8871e21a43eef9856247306db0e8c6ffa2c10081555ca4d1b",
+        "encodedSha256": "8a56d5310d8b2e764ffa3e7628e482ddec102ae3ded8b4fd0ef466ec15900349",
+        "decodedSha256": "69fbe3c0c4c6d5d230d51538d1803e8f48badfbf0f0d6372f3b5b83925202cfd",
+        "frameSha256": [
+          "1ca8396b76639026f6813545fdd7c5890d359a7f43331180a747c729ebf7b117",
+          "686338b6a8dae2b330d7584ba14a0cb0b4877864be5a0fd57dfdf57e70abbed8",
+          "73187af8fb9b8a079dd0a27404b581fcbdc0118ec3b5e9ddba25dfabb8f3cd07",
+          "70eefc1e559004fa4f5fa8d8c43c63afb751cbcc9923f2b54bf603f029cd0b3c",
+          "31b3113ccdb8158077d95e6b8979be29343095bea064e388fe03245f41644a15",
+          "41eb94c141df5a8ac1f625d30b3f57079d1582671b3c597fa911a0d1d4a9516f",
+          "65a737af5aeba6bb9b3ad11a667c9a9b13b4537d4069c92c5a7196d8b1bc461b",
+          "0e22d8eba217cacd8be90d0a0da0d82a23dcc7f60e2dbec91d628f6eaa4c8a7e"
+        ],
+        "poseSha256": [
+          "97d0f4456810867c7fd168284d943022747c042735418c3b05e65d2deb2e1b7a",
+          "8b953bbc8b5daf43e321eba420d9d3fc0423936c391f0cea9ad4e9c4ab896af0",
+          "1220df9509f4b73309f4b77986d3d8bdd8368ebca568321d09c8b6284776485f",
+          "c78ce5e2163e894f12b4718f75d173313b30167f66ee7e89319ebd96f70cf5ef",
+          "103ca3f6d8568ddc6d6f36282bd2088b53173d72ce188b20ba7f4876bc076d77",
+          "f0c7bdcb2ecd795807eaab307a7f2fc7b755634f164d63834ccd8c5063a22388",
+          "8b22705ef5b1c647c48e6abb00a544275235f250cf63844631f2eef0e0686fb7",
+          "ffc7e5dfdc7b6b6850a7df6930313a0f909f79f2d7868d4a7301b7d5b7917715"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.923121,
+          0.94958,
+          0.953386,
+          0.921057,
+          0.961544,
+          1,
+          1,
+          0.96149
+        ]
+      },
+      "dead": {
+        "sourceSha256": "adda82cc9bddfbe71db412f17dff193f7a21b6c8358c93ffccbf79e9b500168a",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "e17af32fd07077c12379b0c69016b9285d78f3fb091b710a339a8b2f4ac8b495",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "f631a7fd605211260b28b5a5bba3503e06dc1064497d1e5769d62e40e178e2b1",
+        "encodedSha256": "d3825366fba55bff77593e9d701be745b3f29dbacefe55fab342bd3f127e4ff5",
+        "decodedSha256": "cd043887349b2cbc8403bb1ba64a28e0ef2497b8d8c474ddc4637ec3719decfa",
+        "frameSha256": [
+          "8261d1a90e6af5b1c3713ae08c90016b5c05b0427f483281402e3f3b0bdf439a",
+          "8261d1a90e6af5b1c3713ae08c90016b5c05b0427f483281402e3f3b0bdf439a",
+          "8261d1a90e6af5b1c3713ae08c90016b5c05b0427f483281402e3f3b0bdf439a",
+          "8261d1a90e6af5b1c3713ae08c90016b5c05b0427f483281402e3f3b0bdf439a",
+          "8261d1a90e6af5b1c3713ae08c90016b5c05b0427f483281402e3f3b0bdf439a",
+          "8261d1a90e6af5b1c3713ae08c90016b5c05b0427f483281402e3f3b0bdf439a",
+          "8261d1a90e6af5b1c3713ae08c90016b5c05b0427f483281402e3f3b0bdf439a",
+          "8261d1a90e6af5b1c3713ae08c90016b5c05b0427f483281402e3f3b0bdf439a"
+        ],
+        "poseSha256": [
+          "5b406cf7864bb56c5f78589111df8c55f461549a18a9580ad97bd447ac760c98",
+          "5b406cf7864bb56c5f78589111df8c55f461549a18a9580ad97bd447ac760c98",
+          "5b406cf7864bb56c5f78589111df8c55f461549a18a9580ad97bd447ac760c98",
+          "5b406cf7864bb56c5f78589111df8c55f461549a18a9580ad97bd447ac760c98",
+          "5b406cf7864bb56c5f78589111df8c55f461549a18a9580ad97bd447ac760c98",
+          "5b406cf7864bb56c5f78589111df8c55f461549a18a9580ad97bd447ac760c98",
+          "5b406cf7864bb56c5f78589111df8c55f461549a18a9580ad97bd447ac760c98",
+          "5b406cf7864bb56c5f78589111df8c55f461549a18a9580ad97bd447ac760c98"
+        ],
+        "sourceFrameIndexes": [
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.979069,
+          0.979069,
+          0.979069,
+          0.979069,
+          0.979069,
+          0.979069,
+          0.979069,
+          0.979069
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,86 @@
+{
+  "version": "1.1.0",
+  "id": "ascetic_v1",
+  "class": "ascetic",
+  "templateId": "authored-pose-atlas-v1",
+  "description": "Reusable authored-pose direction for ascetic player identities. Registry metadata and the staged portrait control identity; this profile supplies serene prayer-and-ki choreography.",
+  "style": {
+    "source": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+    "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+  },
+  "identity": {
+    "baseFacing": "three-quarters right",
+    "motionStyle": "serene, weightless, centered, and deliberate, with prayer-led gestures, soft landings, controlled levitation, and precise palm mechanics",
+    "equipmentRule": "Preserve the portrait's simple robes, prayer beads, wraps, jewelry, and exact accessory count. Keep beads continuous and singular, hands readable, and never invent a staff, duplicate charms, or change the robe design.",
+    "magicRule": "Use only the portrait's established subtle aura palette. Ki remains a compact halo, palm glow, or short pulse rooted visibly in breath and gesture; never obscure anatomy or turn into an elemental projectile."
+  },
+  "promptTemplates": {
+    "reference": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative {{displayName}} identity portrait; Image 2 is style and proportion reference only. Player identity metadata: {{visualTraits}}. Create one complete head-to-toe {{displayName}} preserving Image 1's face, ancestry traits, gender presentation, hair, simple robes, prayer beads, wraps, aura palette, proportions, and accessories. Do not import identity details from Image 2. {{equipmentRule}} Translate the portrait into a compact serene silhouette. Use a {{background}} background with no floor or scenery and a square 1:1 canvas with generous padding. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered ascetic in a calm prayer guard facing {{baseFacing}}. {{invariants}}",
+    "animation": "Draw exactly {{frameCount}} genuinely redrawn full-body {{actionLabel}} poses of the authoritative {{displayName}} in a {{columns}}-column by {{rows}}-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: {{visualTraits}}. Required sequence: {{frameSequence}}. Motion direction: {{motionDirection}}. Overall ascetic motion is {{motionStyle}}. {{poseRequirement}} Preserve exact identity, robes, beads, wraps, aura palette, proportions, and accessories. {{equipmentRule}} {{magicRule}} Action-specific effects: {{effectRule}} Use a {{background}} background with generous gutters. {{invariants}}"
+  },
+  "animations": {
+    "idle": {
+      "actionLabel": "ascetic meditative idle-cycle",
+      "minimumUniquePoses": 4,
+      "anchor": "source-cell",
+      "motionDirection": "A slow breathing loop moves through prayer hands, subtle levitation or heel lift, centered weight shifts, and a seamless return.",
+      "effectRule": "Only a faint compact aura or bead glint in the established palette is permitted.",
+      "frameDescriptions": ["calm prayer guard with beads resting naturally", "deep inhale as palms draw closer", "heels lighten or body rises by a tiny controlled amount", "weight centers beneath a faint contained aura", "serene meditative midpoint", "long exhale as shoulders descend", "heels settle or weight shifts gently rearward", "calm prayer guard flowing back to frame one"]
+    },
+    "walk": {
+      "actionLabel": "ascetic floating step-cycle",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "A quiet alternating walk uses light contacts, real knee compression, centered palms, robe drift, and bead follow-through.",
+      "effectRule": "No active spell; a faint grounded aura may remain close to the feet.",
+      "frameDescriptions": ["left foot light forward contact with palms centered", "left knee compresses beneath simple robes", "passing pose with right knee floating forward", "right foot reaches close to the ground", "right foot light forward contact", "right knee compresses under centered posture", "passing pose with left knee floating forward", "left foot reaches into the serene loop"]
+    },
+    "attack": {
+      "actionLabel": "ascetic focused-palm strike",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "Prayer hands separate, hips coil over a rooted rear foot, one palm drives through a short step, compact ki contacts, and both hands return to center.",
+      "effectRule": "One palm-sized ki accent may appear exactly at contact; no detached projectile, elemental trail, or body-obscuring aura.",
+      "frameDescriptions": ["centered prayer guard", "palms separate as weight roots rearward", "deep torso coil with striking palm chambered", "short forward step sends the open palm outward", "compact ki contact with fingers and elbow readable", "soft follow-through as aura collapses inward", "rear palm guides the striking hand back", "recovered centered guard"]
+    },
+    "hurt": {
+      "actionLabel": "ascetic disrupted-center recovery",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "An impact breaks calm into a flinch, aura disruption, backward floating step, low prayer brace, centered rise, and restored composure.",
+      "effectRule": "A few compact aura fragments may disperse; no gore, blood, full-body flash, or broken beads.",
+      "frameDescriptions": ["calm guard before impact", "sharp flinch with palms opening defensively", "maximum stagger as faint aura fragments scatter", "backward step with robes and beads swinging", "low centered brace with palms gathered", "controlled rise through a long exhale", "feet and prayer hands reset", "recovered serene guard"]
+    },
+    "death": {
+      "actionLabel": "ascetic defeat sequence",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "verticalAnchor": "bottom",
+      "motionDirection": "The aura dims, levitation ends, knees fold into a quiet seated drop, torso tips sideways, and the body settles fully fallen.",
+      "effectRule": "Aura fades without gore, blood, explosion, rigid rotation, or broken or duplicated prayer beads.",
+      "outputFrameMap": [0, 1, 2, 3, 4, 5, 7, 7],
+      "frameDescriptions": ["fatal impact breaks the centered guard", "aura dims as prayer hands separate", "knees fold into a quiet low drop", "one hip grounds while torso leans sideways", "body reaches full ground contact", "robes, beads, and limbs settle low", "final fully fallen ascetic with aura extinguished", "same final fallen pose held"]
+    },
+    "cast": {
+      "actionLabel": "ascetic enlightened meditation",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "motionDirection": "Prayer hands center the breath, body lifts subtly, palms open around a compact aura, energy gathers at the heart, pulses outward, and returns to stillness.",
+      "effectRule": "Use one compact portrait-colored aura or short non-elemental pulse centered on the body; keep face, hands, beads, and robes visible.",
+      "frameDescriptions": ["still prayer stance", "palms join as breath gathers", "body lifts subtly above grounded toes or lightens visibly", "palms open around a compact centered aura", "maximum contained enlightenment glow at the heart", "controlled short pulse expands from the prayer posture", "aura recedes as feet and palms settle", "serene enlightened finish"]
+    },
+    "dead": {
+      "deriveFrom": {"animation": "death", "frame": 7},
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity.",
+      "frameDescriptions": ["terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held"]
+    },
+    "victory": {
+      "actionLabel": "ascetic peaceful victory rite",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "motionDirection": "The ascetic recognizes victory, bows, rises into a balanced levitating prayer, opens the palms in gratitude, and settles into quiet triumph.",
+      "effectRule": "A faint compact aura may brighten around the prayer pose; no large halo or elemental effect.",
+      "frameDescriptions": ["quiet recognition of victory", "deep respectful bow with palms joined", "body rises as prayer hands lift", "brief balanced levitation with robes and beads controlled", "palms open outward in gratitude", "soft landing or grounding through bent knees", "serene upright victor pose", "final triumphant ascetic pose held"]
+    }
+  }
+}

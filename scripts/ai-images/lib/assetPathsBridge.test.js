@@ -235,14 +235,21 @@ describe('assetPathsBridge', () => {
 
   describe('getCharacterOutputPath', () => {
     it('returns absolute path for player character', async () => {
-      const result = await getCharacterOutputPath('warrior', { type: 'player', animation: 'idle' });
+      const result = await getCharacterOutputPath(
+        { race: 'human', gender: 'male', class: 'warrior' },
+        { type: 'player', animation: 'idle' }
+      );
       assert.ok(path.isAbsolute(result));
-      assert.ok(result.includes('characters/player/warrior'));
-      assert.ok(result.endsWith('warrior_idle.png'));
+      assert.ok(result.includes('characters/player/human/male/warrior'));
+      assert.ok(result.endsWith('human_male_warrior_idle.png'));
     });
 
     it('uses png extension by default for generation output', async () => {
-      const result = await getCharacterOutputPath('warrior');
+      const result = await getCharacterOutputPath({
+        race: 'human',
+        gender: 'male',
+        class: 'warrior'
+      });
       assert.ok(result.endsWith('.png'));
     });
 
@@ -258,17 +265,29 @@ describe('assetPathsBridge', () => {
     });
 
     it('defaults to idle animation', async () => {
-      const result = await getCharacterOutputPath('warrior');
-      assert.ok(result.includes('warrior_idle'));
+      const result = await getCharacterOutputPath({
+        race: 'human',
+        gender: 'male',
+        class: 'warrior'
+      });
+      assert.ok(result.includes('human_male_warrior_idle'));
+    });
+
+    it('returns null for class-only legacy player identities', async () => {
+      assert.strictEqual(await getCharacterOutputPath('warrior'), null);
     });
   });
 
   describe('getCharacterReferencePath', () => {
     it('returns absolute path for player reference image', async () => {
-      const result = await getCharacterReferencePath('warrior');
+      const result = await getCharacterReferencePath({
+        race: 'human',
+        gender: 'male',
+        class: 'warrior'
+      });
       assert.ok(path.isAbsolute(result));
-      assert.ok(result.includes('characters/player/warrior'));
-      assert.ok(result.endsWith('warrior_reference.png'));
+      assert.ok(result.includes('characters/player/human/male/warrior'));
+      assert.ok(result.endsWith('human_male_warrior_reference.png'));
     });
 
     it('returns absolute path for enemy reference image', async () => {
@@ -280,13 +299,21 @@ describe('assetPathsBridge', () => {
       assert.ok(result.includes('characters/enemies/forest/goblin_warrior'));
       assert.ok(result.endsWith('goblin_warrior_reference.png'));
     });
+
+    it('returns null for class-only legacy player identities', async () => {
+      assert.strictEqual(await getCharacterReferencePath('warrior'), null);
+    });
   });
 
   describe('getCharacterDirectoryPath', () => {
     it('returns absolute path for player character directory', async () => {
-      const result = await getCharacterDirectoryPath('warrior');
+      const result = await getCharacterDirectoryPath({
+        race: 'human',
+        gender: 'male',
+        class: 'warrior'
+      });
       assert.ok(path.isAbsolute(result));
-      assert.ok(result.endsWith(path.join('characters', 'player', 'warrior')));
+      assert.ok(result.endsWith(path.join('characters', 'player', 'human', 'male', 'warrior')));
     });
 
     it('returns absolute path for enemy character directory', async () => {
@@ -296,6 +323,10 @@ describe('assetPathsBridge', () => {
       });
       assert.ok(path.isAbsolute(result));
       assert.ok(result.includes('characters/enemies/forest/goblin_warrior'));
+    });
+
+    it('returns null for class-only legacy player identities', async () => {
+      assert.strictEqual(await getCharacterDirectoryPath('warrior'), null);
     });
   });
 

@@ -1,0 +1,657 @@
+{
+  "version": "1.0.0",
+  "template": "ai-image-metadata/characters/player-authored-animation-template.json",
+  "compilerVersion": "1.2.0",
+  "id": "vampire_other_paladin",
+  "profile": "paladin_v1",
+  "profileSource": "ai-image-metadata/characters/player-animation-profiles/paladin_v1.json",
+  "status": "approved",
+  "approvedAt": "2026-07-29T02:54:48.094Z",
+  "metadataFingerprint": "0a3ed55d0d88980fbfac1d5fd342006b59f8fa305008fcead9ccc61f0eb11b39",
+  "draftProvenance": {
+    "registry": "ai-image-metadata/characters/player-variants.json",
+    "templateSha256": "7943e69db577b3a4429b47df634f931d3f4cb8e8ce9a91a06578255fbe935bbe",
+    "profileSha256": "ca6a04532ff138c5a1cf3d9c6039a454dbe228e456177f266bc4a508cd860c50"
+  },
+  "identity": {
+    "race": "vampire",
+    "gender": "other",
+    "class": "paladin",
+    "presentation": "non-binary vampire paladin",
+    "visualTraits": "vampire pale skin red eyes fangs aristocratic elegant androgynous features non-binary holy knight gleaming plate armor glowing sword divine aura cape",
+    "baseFacing": "three-quarters right",
+    "sourceMetadata": {
+      "isAdvanced": true,
+      "inheritsFrom": "paladin",
+      "seed": 23034
+    }
+  },
+  "inputs": {
+    "identity": {
+      "origin": "frontend/public/assets/portraits/originals/vampire_other_paladin.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/vampire_other_paladin/inputs/identity.png",
+      "authority": "face, ancestry, gender presentation, hair, eyes, complexion, costume, palette, proportions, and equipment"
+    },
+    "style": {
+      "origin": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/vampire_other_paladin/inputs/style.png",
+      "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+    }
+  },
+  "reference": {
+    "source": "ai-image-metadata/characters/player-animation-sources/vampire_other_paladin/reference.png",
+    "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_other_paladin/chroma/reference.png",
+    "identitySource": "ai-image-metadata/characters/player-animation-sources/vampire_other_paladin/inputs/identity.png",
+    "styleSource": "ai-image-metadata/characters/player-animation-sources/vampire_other_paladin/inputs/style.png",
+    "prompt": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative Vampire Paladin (non-binary presentation) identity portrait; Image 2 is style and proportion reference only. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant androgynous features non-binary holy knight gleaming plate armor glowing sword divine aura cape. Create one complete head-to-toe Vampire Paladin (non-binary presentation) preserving Image 1's face, ancestry traits, gender presentation, plate armor, cape, holy insignia, sword, shield or focus, palette, and proportions. Do not import identity details from Image 2. Preserve the portrait's gleaming plate, cape, holy insignia, sword, shield or focus, and exact item count. Keep every item in its original hand and never duplicate, swap, sheath, discard, or transform it. Translate the portrait into a compact noble silhouette. Use a flat #00ff00 chroma key background with no floor or scenery and a square 1:1 canvas with generous padding. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered paladin in a resolute consecrated guard facing three-quarters right. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+  },
+  "animations": {
+    "idle": {
+      "source": "ai-image-metadata/characters/player-animation-sources/vampire_other_paladin/idle.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_other_paladin/chroma/idle.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 4,
+      "frameDescriptions": [
+        "resolute guard with holy equipment controlled",
+        "measured inhale raising the armored chest",
+        "weight shifts forward behind the guard",
+        "brief glance toward the established insignia",
+        "centered consecrated midpoint",
+        "controlled exhale with cape and armor settling",
+        "weight shifts rearward as the weapon angle changes",
+        "resolute guard flowing back to frame one"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body paladin consecrated idle-cycle poses of the authoritative Vampire Paladin (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant androgynous features non-binary holy knight gleaming plate armor glowing sword divine aura cape. Required sequence: resolute guard with holy equipment controlled; measured inhale raising the armored chest; weight shifts forward behind the guard; brief glance toward the established insignia; centered consecrated midpoint; controlled exhale with cape and armor settling; weight shifts rearward as the weapon angle changes; resolute guard flowing back to frame one. Motion direction: A calm armored breathing loop maintains noble guard, scans the field, and briefly acknowledges the holy insignia before returning.. Overall paladin motion is noble, resolute, weighted, and luminous, with disciplined plate-armored footwork, ceremonial control, and readable sword-led devotion. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, plate armor, cape, insignia, palette, proportions, and equipment. Preserve the portrait's gleaming plate, cape, holy insignia, sword, shield or focus, and exact item count. Keep every item in its original hand and never duplicate, swap, sheath, discard, or transform it. Divine light must use the portrait's established holy palette and originate from the depicted sword, insignia, shield, or prayer hand. Keep halos, rays, and ward accents compact so anatomy and equipment remain readable. Action-specific effects: Only a faint contained holy glint on an established insignia or weapon is permitted. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "walk": {
+      "source": "ai-image-metadata/characters/player-animation-sources/vampire_other_paladin/walk.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_other_paladin/chroma/walk.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "left foot forward contact in noble guard",
+        "left leg compresses beneath plate armor",
+        "passing pose with weapon and free arm balanced",
+        "right foot reaches as cape trails",
+        "right foot plants with disciplined weight",
+        "right leg compresses beneath the armor",
+        "passing pose with left knee advancing",
+        "left foot reaches into the march"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body paladin radiant armored march poses of the authoritative Vampire Paladin (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant androgynous features non-binary holy knight gleaming plate armor glowing sword divine aura cape. Required sequence: left foot forward contact in noble guard; left leg compresses beneath plate armor; passing pose with weapon and free arm balanced; right foot reaches as cape trails; right foot plants with disciplined weight; right leg compresses beneath the armor; passing pose with left knee advancing; left foot reaches into the march. Motion direction: A disciplined alternating march uses firm contacts, real plate compression, controlled equipment counter-motion, and cape follow-through.. Overall paladin motion is noble, resolute, weighted, and luminous, with disciplined plate-armored footwork, ceremonial control, and readable sword-led devotion. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, plate armor, cape, insignia, palette, proportions, and equipment. Preserve the portrait's gleaming plate, cape, holy insignia, sword, shield or focus, and exact item count. Keep every item in its original hand and never duplicate, swap, sheath, discard, or transform it. Divine light must use the portrait's established holy palette and originate from the depicted sword, insignia, shield, or prayer hand. Keep halos, rays, and ward accents compact so anatomy and equipment remain readable. Action-specific effects: No active spell; any established equipment glow remains faint and fixed to its source. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "attack": {
+      "source": "ai-image-metadata/characters/player-animation-sources/vampire_other_paladin/attack.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_other_paladin/chroma/attack.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "consecrated guard measuring the target",
+        "free arm or shield closes while sword draws back",
+        "deep prayer-steady windup over the rear leg",
+        "committed forward step beginning the slash",
+        "radiant sword contact with full torso rotation",
+        "noble follow-through as cape and light trail settle",
+        "weapon recoils while full guard reforms",
+        "recovered consecrated guard"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body paladin radiant sword strike poses of the authoritative Vampire Paladin (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant androgynous features non-binary holy knight gleaming plate armor glowing sword divine aura cape. Required sequence: consecrated guard measuring the target; free arm or shield closes while sword draws back; deep prayer-steady windup over the rear leg; committed forward step beginning the slash; radiant sword contact with full torso rotation; noble follow-through as cape and light trail settle; weapon recoils while full guard reforms; recovered consecrated guard. Motion direction: A guarded anticipation becomes a prayer-steady windup, planted radiant slash, decisive contact, cape-led follow-through, and restored noble guard.. Overall paladin motion is noble, resolute, weighted, and luminous, with disciplined plate-armored footwork, ceremonial control, and readable sword-led devotion. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, plate armor, cape, insignia, palette, proportions, and equipment. Preserve the portrait's gleaming plate, cape, holy insignia, sword, shield or focus, and exact item count. Keep every item in its original hand and never duplicate, swap, sheath, discard, or transform it. Divine light must use the portrait's established holy palette and originate from the depicted sword, insignia, shield, or prayer hand. Keep halos, rays, and ward accents compact so anatomy and equipment remain readable. Action-specific effects: A short identity-colored holy edge accent may follow the sword only at contact; no projectile or oversized beam. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "hurt": {
+      "source": "ai-image-metadata/characters/player-animation-sources/vampire_other_paladin/hurt.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_other_paladin/chroma/hurt.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "resolute guard before impact",
+        "sharp flinch with equipment held tight",
+        "maximum stagger as cape swings wide",
+        "forced backward step on deeply bent knees",
+        "low brace with insignia or weapon close",
+        "faithful push upright through the armor",
+        "feet and equipment reset into guard",
+        "recovered resolute stance"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body paladin faith-braced recovery poses of the authoritative Vampire Paladin (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant androgynous features non-binary holy knight gleaming plate armor glowing sword divine aura cape. Required sequence: resolute guard before impact; sharp flinch with equipment held tight; maximum stagger as cape swings wide; forced backward step on deeply bent knees; low brace with insignia or weapon close; faithful push upright through the armor; feet and equipment reset into guard; recovered resolute stance. Motion direction: An impact breaks the guard into a heavy stagger, low devotional brace, armored rise, and resolute recovery.. Overall paladin motion is noble, resolute, weighted, and luminous, with disciplined plate-armored footwork, ceremonial control, and readable sword-led devotion. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, plate armor, cape, insignia, palette, proportions, and equipment. Preserve the portrait's gleaming plate, cape, holy insignia, sword, shield or focus, and exact item count. Keep every item in its original hand and never duplicate, swap, sheath, discard, or transform it. Divine light must use the portrait's established holy palette and originate from the depicted sword, insignia, shield, or prayer hand. Keep halos, rays, and ward accents compact so anatomy and equipment remain readable. Action-specific effects: One compact impact and a few disrupted holy sparks are permitted; no gore, blood, full-body ward, or lost equipment. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "death": {
+      "source": "ai-image-metadata/characters/player-animation-sources/vampire_other_paladin/death.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_other_paladin/chroma/death.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "verticalAnchor": "bottom",
+      "outputFrameMap": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        7,
+        7
+      ],
+      "frameDescriptions": [
+        "fatal impact breaks the consecrated guard",
+        "holy accent dims as equipment lowers",
+        "both knees buckle into a devotional drop",
+        "one knee grounds while torso tips sideways",
+        "armored body reaches full ground contact",
+        "cape, limbs, and equipment settle low",
+        "final fully fallen paladin with light extinguished",
+        "same final fallen pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body paladin defeat sequence poses of the authoritative Vampire Paladin (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant androgynous features non-binary holy knight gleaming plate armor glowing sword divine aura cape. Required sequence: fatal impact breaks the consecrated guard; holy accent dims as equipment lowers; both knees buckle into a devotional drop; one knee grounds while torso tips sideways; armored body reaches full ground contact; cape, limbs, and equipment settle low; final fully fallen paladin with light extinguished; same final fallen pose held. Motion direction: A final impact dims the light, knees buckle under plate, the body lowers through a devotional kneel, collapses sideways, and settles fully fallen.. Overall paladin motion is noble, resolute, weighted, and luminous, with disciplined plate-armored footwork, ceremonial control, and readable sword-led devotion. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, plate armor, cape, insignia, palette, proportions, and equipment. Preserve the portrait's gleaming plate, cape, holy insignia, sword, shield or focus, and exact item count. Keep every item in its original hand and never duplicate, swap, sheath, discard, or transform it. Divine light must use the portrait's established holy palette and originate from the depicted sword, insignia, shield, or prayer hand. Keep halos, rays, and ward accents compact so anatomy and equipment remain readable. Action-specific effects: Holy light fades without gore, blood, dismemberment, or rigid rotation. Keep every item singular and recognizable. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "cast": {
+      "source": "ai-image-metadata/characters/player-animation-sources/vampire_other_paladin/cast.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_other_paladin/chroma/cast.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "reverent ready stance",
+        "weapon or shield plants as the free hand gathers inward",
+        "insignia lifts and begins a contained glow",
+        "wide stable stance with prayer hand raised",
+        "maximum compact blessing gathered around the established focus",
+        "controlled outward release of the holy pulse",
+        "light recedes as equipment returns",
+        "composed consecrated finish"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body paladin divine invocation poses of the authoritative Vampire Paladin (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant androgynous features non-binary holy knight gleaming plate armor glowing sword divine aura cape. Required sequence: reverent ready stance; weapon or shield plants as the free hand gathers inward; insignia lifts and begins a contained glow; wide stable stance with prayer hand raised; maximum compact blessing gathered around the established focus; controlled outward release of the holy pulse; light recedes as equipment returns; composed consecrated finish. Motion direction: The paladin plants in prayer, raises the established holy focus, gathers compact light at the insignia, opens the free hand, releases a protective blessing, and returns to guard.. Overall paladin motion is noble, resolute, weighted, and luminous, with disciplined plate-armored footwork, ceremonial control, and readable sword-led devotion. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, plate armor, cape, insignia, palette, proportions, and equipment. Preserve the portrait's gleaming plate, cape, holy insignia, sword, shield or focus, and exact item count. Keep every item in its original hand and never duplicate, swap, sheath, discard, or transform it. Divine light must use the portrait's established holy palette and originate from the depicted sword, insignia, shield, or prayer hand. Keep halos, rays, and ward accents compact so anatomy and equipment remain readable. Action-specific effects: Use one compact holy aura or short blessing pulse in the portrait's palette, sourced visibly from the insignia, weapon, shield, or prayer hand; never hide the body. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "dead": {
+      "deriveFrom": {
+        "animation": "death",
+        "frame": 7
+      },
+      "frameDescriptions": [
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held"
+      ],
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity."
+    },
+    "victory": {
+      "source": "ai-image-metadata/characters/player-animation-sources/vampire_other_paladin/victory.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/vampire_other_paladin/chroma/victory.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "solemn recognition of victory",
+        "brief respectful bow behind controlled equipment",
+        "torso rises as the holy weapon lifts",
+        "weapon raised in a radiant salute",
+        "free hand or shield opens in blessing",
+        "cape settles around a broad noble stance",
+        "luminous protector pose with insignia displayed",
+        "final triumphant paladin pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body paladin radiant victory salute poses of the authoritative Vampire Paladin (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: vampire pale skin red eyes fangs aristocratic elegant androgynous features non-binary holy knight gleaming plate armor glowing sword divine aura cape. Required sequence: solemn recognition of victory; brief respectful bow behind controlled equipment; torso rises as the holy weapon lifts; weapon raised in a radiant salute; free hand or shield opens in blessing; cape settles around a broad noble stance; luminous protector pose with insignia displayed; final triumphant paladin pose held. Motion direction: The paladin acknowledges victory, bows briefly, raises the holy weapon, opens into a luminous shield-or-prayer salute, and holds a noble finish.. Overall paladin motion is noble, resolute, weighted, and luminous, with disciplined plate-armored footwork, ceremonial control, and readable sword-led devotion. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, plate armor, cape, insignia, palette, proportions, and equipment. Preserve the portrait's gleaming plate, cape, holy insignia, sword, shield or focus, and exact item count. Keep every item in its original hand and never duplicate, swap, sheath, discard, or transform it. Divine light must use the portrait's established holy palette and originate from the depicted sword, insignia, shield, or prayer hand. Keep halos, rays, and ward accents compact so anatomy and equipment remain readable. Action-specific effects: A compact holy glint or restrained halo may crown the final salute without obscuring the face or equipment. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    }
+  },
+  "pins": {
+    "templateSha256": "93943004e340d113943e06dea61fd7dfad67c20750dd4fc30d76d3be1fb7c144",
+    "profileSha256": "0e1b93768920e31199c20eec84c74309f2e1b0e09d271c4a6b255a41e049e35e",
+    "reference": {
+      "sourceSha256": "35ee988f1430068d1014f26bb78fd410ebae27129351cc4d412c67eef727d2b0",
+      "sourceDimensions": "1254x1254",
+      "chromaSourceSha256": "15cb0d35e4b8d08c95c82fe7022b43366ef61043602e604b39a511e05d461893",
+      "chromaSourceDimensions": "1254x1254",
+      "identitySourceSha256": "8867fad68d76b0f7c94ba4248716f9379969ef75a5df68bb38e883aa3e3b9041",
+      "identitySourceDimensions": "1024x1024",
+      "styleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "styleSourceDimensions": "1254x1254",
+      "promptSha256": "2426dd51bf39b3fa803c6106a3cf7f62aabb0a3b8b53e219979bb018dd5d10a4",
+      "encodedSha256": "18ab74c1f2024292443d52c93b1c3e22c0f6ee98d76b28373b257c7bb412d4b3",
+      "decodedSha256": "70ad6726c7b02cfcd3cec66fd21c3fcde710d0ea2970e7e966c6859367c1f585"
+    },
+    "animations": {
+      "idle": {
+        "sourceSha256": "3fe61ff3410cd994c12236793dac580d91e4359a43ae6ebda86fa116ab22531d",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "f1a23cbb80239c055a0beb9a63d71467e67fdd2070e0e5824dc9e8c3d525fbc7",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "17340f735ef9646262d3f1f2f18c17bb305cf9ef6ec14f2d6173df24d78086b0",
+        "encodedSha256": "50bdc2379b1c5b64db4fa174b71850f5846a35fb0822d628e70026e8728d424d",
+        "decodedSha256": "d38d2acac37e79318e256a166e1e07cb1a820ee05317424a0c9a1c3a6e18cb45",
+        "frameSha256": [
+          "1c7adb32a7b736bddf04a59b8a6eb4cb013bfbfa4c5c6d506ec8452d9489d21b",
+          "bd05f0fbf05ac5c7d266e2d308bad47cb865a6ebaa741547003978be685ab91b",
+          "0e0500ef00b7afa9ecccd32d8309824b93a3a54118d82dadc90999090118062d",
+          "1cd69e959f2f1ddfecb38e80f61f1f7a382c72f38a8bf3a6976f6da3c479d9a9",
+          "83cf8a903821375908dfe114d6add90c96bc42145f35057b4348ca34ebf6dcd3",
+          "0361b2c6b2fd0681f6e4f2382ec4d42783a75834472fa0b66dd0c154d043704c",
+          "d9f70de7cfdc08bc53ff491da0e818c63cec7a89b4c021667f14d44c449dd313",
+          "6345e128e80f4c306bca5c8c7aa89d0c230ff528530e0bf731e7766a63fa126d"
+        ],
+        "poseSha256": [
+          "184ca1ee28aabc4e67b8b10cf37a2535121464a8cf3a9f7b4978a0ad7444440a",
+          "e67757426c515ce889d5d3b4743246c293c1306bfcab2d6a60db4810554fa1af",
+          "fa363d19e5f652ab4725ee183baf061d1eebfe7a50225c2553f6cd1bee0cdc0b",
+          "f4ba5af43cdcd8448dd69bf1529fc0442bd0c95375c03d8deb8de1fc16c7a33b",
+          "ceed04633e0a82e590c5b1e03bbf3a6c277d4417cb85e57a14b1267ae57ad5d0",
+          "4f6d0f1f0100beef505abf068fd1bb365b0a60ab5e5192b6f8d6d20d2fd07a45",
+          "47c759bbc10cb1ff7784fcb9bb6b05117468d248402cedbc74e6a920912ddd39",
+          "402b717d987f064182f8aa65d230f74a0b5838022fe1e6cc1e9efca3ba1dd871"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "walk": {
+        "sourceSha256": "8d7c643a4069d9b61703dde5bb7add8e7760b329d2d78af123de9a84491c212c",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "c56ebb25bba9ba249f3a2a1b51505c3d6bcb7e06b3b6011ed88f6982f86e09cf",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "5d74752292914264d55035500fea12bc7ab06fba3f6a99af2420eb1481deb5fa",
+        "encodedSha256": "47d952beeaf2ea494c49e296253ead694252c5ec5ed4a57e165f8214939927b3",
+        "decodedSha256": "d6965580c43b2d713f7523d3bbf4bfd4df0375e18a9794b87e53fb6308b3c60e",
+        "frameSha256": [
+          "f3c1473b17064f8a6726f9fda30c84f97d8b7d24b198e0098f1044706c6ab758",
+          "b67f9121cc979ade2b83ba6b1ef3a24b28647af3bfa628be799e5b8709082bd6",
+          "d229338e5a3c21a30f7a559d09d449b4d219a47044adb172048ae8958875ceed",
+          "128a5817979e38ca59a1dcbc94dbbcbb54a8e3c0a6ba68ed5bf15f7a2a930aa5",
+          "25c6305f19424978a706f3d1c1b023f13c3e92aa730c394f26d24062d9867080",
+          "4841c0a9f6c66e90b9cecd769fcf60780c43792e7dcafe8cfdb6127bb0162b2b",
+          "b367467c424c553a54178865dcf93075db05738f0648ac254e6918a222d7e142",
+          "2fe1f4e7b80d587d5ac2b2c103346b5e8a44d5d0c3cc8217e3bc08d571695479"
+        ],
+        "poseSha256": [
+          "698b3ac2f8dc802e00d231a33279bdda075d9dc519af1e7b01a916a273cab64c",
+          "9c158010dcb1267cb591ca9c5035e65686ba91c1cd7f1f7b1b46f1f3ba1e05b9",
+          "fe0300d1cb60bcc9ac5a237c981cd29477a954261c4302468a3268850e99e1bd",
+          "fa0f8203d1a356979ca32a3fe40dbbf284978dd63911e0b6466deae043bd846e",
+          "152ecbba2617a269d8a37275fd4ea547c290871d0edbff3e2bf955ff711667ae",
+          "7c84c150b121dc5c25270fbe9d4c8faccf3576db73bb211a3c6e90578e5f9203",
+          "838c544af6c046ff6da0fdf023a8b5e4e3b0882b92554979d6c78e17c94e1836",
+          "04bdcaa8e57f160da8a601f47da6a203b38a799856e0f7abc21574caf90f85ae"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          0.997923,
+          0.998742,
+          0.997957,
+          0.999635,
+          0.999708,
+          0.998189,
+          1
+        ]
+      },
+      "attack": {
+        "sourceSha256": "acd3458934651308e86a9a846b595a170645829fdf63459cd44cd4fbcc6858a6",
+        "sourceDimensions": "1717x916",
+        "chromaSourceSha256": "7f62aba2464bd41bc7fb63323d3adde636c106d01b81af7c7a4e11745d2d7802",
+        "chromaSourceDimensions": "1717x916",
+        "promptSha256": "342e73daea046fe24534bb1056a05bb7174a78993e7c73033aed0552bbd5a5b3",
+        "encodedSha256": "4a3fe7f20b0185610342a34766ce4a386431a27082ba487d18631e96d1d0f1e8",
+        "decodedSha256": "741ddb47ecfa9641b99a992855a8c14e3eef83499ba2c5fd3bf8f556ad36448c",
+        "frameSha256": [
+          "dcc571ce9c7e337b55583c31482ebad4082f6da1706591288491594a678f2e3a",
+          "0036ee6776a97a1dfb0586c963fdfc0f816b3b9458abfcda0dd3fa3e73596c3f",
+          "6f78b5fbcef77cdc3881dcc08e1e3392c0ffbd9f8ae6eb2a522119447205f7df",
+          "f5d16352c7a33d2dd0b016019bb67d1bcdf4198cc053e691a33e1c619c5bd8bd",
+          "2f3912a7bf2515fe798d6ffcfd922c658811e1be760856f101342488a5b8a61d",
+          "6f85bfbddeb10c4140487de8954d6766bb7d2a610b955a5c3c55f7e948d3f609",
+          "f1108746a94fa160d1eb72c8e8d891238398d90e59468ee9bdd267aad59bf922",
+          "834a3f56a39b1a8c59b32f584367fd01c5c690b5342e7b1dc86d1ec987e4faf9"
+        ],
+        "poseSha256": [
+          "c32f34b90fd90417446bc4ec6b935a91d8d08d230fdd78ba1fc05868bc4144ce",
+          "f35a815ae43524f8d339d351cfda59491e5e316959f63950fd90189dfa4abde8",
+          "cf7bae46455b0c7682b6be52879f5b5e72ec38d44308a8ad3f1cb7e88f9f9398",
+          "3e9eb362d26d405baddbf9704b7b35101cdfabf6ff96f6d4dba22b22a10a36c7",
+          "3b7434585e08548762ff2406c5930ac8e8d8c9cda1ef32c663bf1ca6f8c06154",
+          "eae883e96951ed9fd1e80bfade75303c9925118dfa2ab516526fdd39dc3bc9ed",
+          "700190a74cf2fdab5960388c6c7b0c47474f2a9d8a4dd164ac69bb440c4df01d",
+          "bed36853a52a28b3ab5bee895de0f4fa86c6941457438bab6e859e06b95a5ed0"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.999743,
+          0.999813,
+          0.988927,
+          0.999709,
+          0.994823,
+          0.998607,
+          0.999521,
+          0.999586
+        ]
+      },
+      "hurt": {
+        "sourceSha256": "06521dfbf0a0121be720c89b231467b5d6b201dfc71338de350441260e53818f",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "08378e11999805264ceda0d74d8357aa41af96f75a32d756877accc159356f80",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "3b64b81a5b98e4dd94dcd3fbf134cdfb41fab76ea187fd3dfef0d2e1eaea2806",
+        "encodedSha256": "160682a8bbf45160497f2a572f11be3035f2f4bde1d70ea2f2660ab33594c1f7",
+        "decodedSha256": "df74ef71c83d43d8696beb4df37fbe3131db81f1eb797af81bc289a73101add2",
+        "frameSha256": [
+          "a393376e39a2267256d56d3d5e8d81bc54fd76ea7ac96c2712c9d7ce4dffada9",
+          "ea33c2cf361497830e5aab46db2a53837d094280a2f272f12e630d4f273972e9",
+          "de301dfb94b71b2374d4ad4693a49d7f547698067f3ee2fc31782dd42e9cf30a",
+          "12a82ef97d5b08c282f73e35792cd8383098e385884795ac923495e9ff661742",
+          "0eab62541f67dcc2109decf49c18eb117928cc12eeb1615d4456ce985e088762",
+          "0773108bd703201eb2f9e569eaf1e2b6274a7b3463601df3541bc44ea0567247",
+          "ff50ddf9a55de11bceb9a7f862b09b818119b314194a178e67d1d8d93e6976ad",
+          "f8f5194c6f875261ae3baa68c7c02443f465d458d447b58d7d5ac2ae420ad06a"
+        ],
+        "poseSha256": [
+          "5c98d8bf23ea1f1f7268718e09f8b6ec73e2ecc7240eabf392ae4784c59a1d9c",
+          "fa25f52d3bfec872550da9c82c1e175c6d50bfb22fb8e387ba61ed1acd52dbec",
+          "d35104e86cb7fa26e3300f81c11e3bc6b929c69417bfe41652fd30a08f135a6b",
+          "4a99ad7a88aa354eb147e2283336e60f6da945537df48eb3086ba6057d8f78c9",
+          "51445c103f76dbe250555beeff8dc796c7ac5d37558629d0014d989a7e567c9a",
+          "74115f8a2bbb351bc287783713ff1292fe3c82f46f642403337f28fb8c4d3c36",
+          "dfda45b4c901839b7dc645f014dfe26aaf1299ac14d926a6e004495c7e9765ff",
+          "bb17573d800e6919a802171469eace2cb519392fa461444cb8792cca9302f687"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          0.994644,
+          0.996597,
+          0.992924,
+          0.985228,
+          0.98278,
+          1,
+          1
+        ]
+      },
+      "death": {
+        "sourceSha256": "c90e2d779181df6d644acd0256eab83f15796737b7843e4096b85c3f039f5fb0",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "a183b51cdda25d5c6173befcbbded3434ca7150708818b679537239b1bdf48b4",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "86d387eedd9aae6b3de30c3801979f7f2c70dcf394e30352d0b674d5d1c04890",
+        "encodedSha256": "c999a7c17145bfaade8492dcd55237b0146e0ecd16e857db10cf9d5dea1a8ec0",
+        "decodedSha256": "50d1234b5ec0688c0c820f9b2438669fab50af0e073bbf4b8a4bcc96a0f968d6",
+        "frameSha256": [
+          "f1c88178d22effa114443f763cfbfb7633df6dd3c4e5c93f01707f7d2b8806da",
+          "1cdd79191386f8516c44d601cd68b84b8e04772a269e6a3ff9ea2e7835ed051b",
+          "2d508b0022bc33d6ee0214769e60a69906032b9358ef159f3a7c9f25f034f0f2",
+          "65a99ec09a52c9b3e615d926b238fce8ed44be403ecf6520ae2eca39da648d85",
+          "1308fd90bf86c9e05a1c70a435f1bce5766f1d9fbb01cc48fcf9860bced90b72",
+          "acdd2682643d7259b15a9cd4cae5f9656665f3dd2c2298531cd5e054b89b0155",
+          "1bcb6b1912f38014faa29ac3383dd391fd321872ef4670c372dbf598057e9ce3",
+          "1bcb6b1912f38014faa29ac3383dd391fd321872ef4670c372dbf598057e9ce3"
+        ],
+        "poseSha256": [
+          "5d1c065ab16ebe6c412a58b2da2b857984cd6460bc8ab6100c5d3d710a8a19ff",
+          "5fc169e7c269cd24b6fb15e490ea1c1fca31507e3551e5d842e9064cb4da7954",
+          "02a36b691a844af9f5f02df2238486c3356ab3ab55ce82c8c94b7b4559fa206e",
+          "e9fb21495615753fb2c603ea5bf161e8dc0458e67450564ece5e90d96c671a87",
+          "4720db36a08b5cf150b31d4a84300c8eeb5716435783e5172e1b679932be8027",
+          "001560fae21d3b4a73d6ef52d30a9adddfbd122c676dd3c0df64413ef352c812",
+          "5d89c79767ae44ffbe4f1b737a03ed82b34a5016e4cb9e5ef04e88badb79a6d4",
+          "5d89c79767ae44ffbe4f1b737a03ed82b34a5016e4cb9e5ef04e88badb79a6d4"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "cast": {
+        "sourceSha256": "df1db8812f697d4aa7e04eff32da3cf37c1fe61d0eb8e3e976d1492af885a456",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "8cc9901fd52207f4b80d757582acf0216002397c04d08623e669f10151379a3f",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "0fc832d29555bafe6a571cb35eec1672fb02b3156dd2b750a06d7aef235203ee",
+        "encodedSha256": "75e5364375460240f9d27b000bd022482f50026a6d8e4bf1a5dffaf945ef0af2",
+        "decodedSha256": "6081b4c36da4eaa007363b56a1aad4d06d9f7148d5c8561b0c5e1ed678e56c5a",
+        "frameSha256": [
+          "e1935e5999711ed63e4119652031f5d2f998ad70e7e337c7095cac7b1ed369ff",
+          "55c34050308b282d6a8b54cefd8aad4fc1ce5fa5928ec2d31528a49938bb1b7d",
+          "508ee1a04668fdad9d4664c80d3a9945c68df8bd873fc139edd57a2c70e17227",
+          "caa82ee739f976eab377ba1cf3c86a6ec4d74b94f5774d3a9ec268b3c515b0ea",
+          "0b2eee29d83b1d515d80baa3cf18fbf84d329b994a8be6b9aace0974847d6c75",
+          "f44c79172d242dab5ece0a9a8994fcfbf6069b2f7564067d6f8a317e7d5ba977",
+          "147bd102c9998aa3ce7677e12a548fe3952df1d7e4eeb3dceaf77cb72b7bfe3d",
+          "603525a6fda2dafec2977b39409fb76b10a7ae90e7fbc340af1cc094161e5554"
+        ],
+        "poseSha256": [
+          "1cebe59e4b1a7796bdb847db40355ca41f4b2359cf1c9a057b5c18d345bfbbfe",
+          "70ecbf1d513b1883433823ba9a28235318c7e50acd475cca2b410e83205b02c4",
+          "943a9753f97687750175ea68b63be1ae273cd2d2b8b6196f3dd1e3fe866a33b9",
+          "6b37b7335f34c67c1f0e78b34db7cd86854c5f554ff23c1c7906f200d7d6e8d9",
+          "359266948f1b82861669419a052348cba3f0ed998bd253033e4016f078ffad13",
+          "6936f4c8c85c72672a56ba72a1580f1bbee99eca888df5a8b4aef74b5c3b7340",
+          "468df5d54411b3a052722f703e9c9609c1ae2bb47f6c3e2727555b6e8b8e4419",
+          "ed1e3561f543ae5a72b1df4f27ac0e05640af4cab660d175c8d5cbcad69d2483"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          0.997204,
+          0.997507,
+          0.999103,
+          1
+        ]
+      },
+      "victory": {
+        "sourceSha256": "9a86446c3dccdba9500d0fc7e03cec1ab46f4772ce4a517b323a60eb774a1499",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "4e6e1a9890743366c6d211785609f5eb78729c422efe0cbb3456cc7dc539431b",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "7dea9b9f4ff1b7689d5f6c3b545ebfc207f2a91dcdbf24a152fb02ba2b64b63f",
+        "encodedSha256": "e6c7899f189d9ed92c7d9f0a6f1cb08b9714b733e99cbdec84e80c3a373cfa12",
+        "decodedSha256": "60c54c9ea133a7366bcada6e8cbdf39eda1ad78f4e99fd591a43a39540f73c8f",
+        "frameSha256": [
+          "5997e7a6a6579dd76adebcf51a12676e2315043e3a2c158d5f731de495b6de38",
+          "665480f137a25935c9e010e3753fc3921160523b342553207560cfb5673757f7",
+          "34f6bf8785a34899a7070c777544c625909cb8a014e94687eb6247b4f996ff29",
+          "af84d27107effa1e87b57b6881e7e0c8fbe03ee987c6c62392e91e1bc827a429",
+          "2c9112518868da2f1f5499ce836d48487455102a471d50f32399e910b7253a8e",
+          "0c190a2a5b654350a2e47a5cba250c6e2f7da32d719a19549ee46445f13c714c",
+          "3ef3fdaa456486a07af7ecb1fd09ab01b3a018aaf913b6b472b95e069f80976c",
+          "e0c73452035401295b987b2f094d48f897b8d1e7826fe2829cc8c84d8a37e2a3"
+        ],
+        "poseSha256": [
+          "62517c17edd442fa2ad9a3ad2dc505fa71b2858ead5a29af6d1b13b6f86308d2",
+          "e81bccece82defbca2cc71e972dc5a3a1f1c44bacfbc40ad6942898b748d08c2",
+          "a610e17a93b481afc7a6627da4d9f81d375dfe2fc90d63497fd17f131b43d2c3",
+          "9dc3d03a90f2a0cf51832933613e29d42a25d3e787147bf9a32d94e0f6bcd076",
+          "debab249ac17a9462cf2274a4a5d66086a1f12af1b9a4b35f01224f81ce2f1da",
+          "62ab492dc51c7bb6791b0337746633308aa9b08001293a3d4fa3acdce9d18669",
+          "d8381042b35d794e7093f6be123d82968a9b3ce8f10d6fb7430c86ade249c0c6",
+          "0e330c155beeffa1c61c68fd4e9562a232d86a3f8441b38c3ccfda4cdb8341c3"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          0.997024,
+          0.999409,
+          1,
+          0.998065,
+          1
+        ]
+      },
+      "dead": {
+        "sourceSha256": "c90e2d779181df6d644acd0256eab83f15796737b7843e4096b85c3f039f5fb0",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "a183b51cdda25d5c6173befcbbded3434ca7150708818b679537239b1bdf48b4",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "f631a7fd605211260b28b5a5bba3503e06dc1064497d1e5769d62e40e178e2b1",
+        "encodedSha256": "93a4da00391e50d193e39674c958c5d46bdb8d3e3d4ae15098db2ed7487a780f",
+        "decodedSha256": "ed28b63eb5fbd153718baba20b6c4a801cc2d13961b70b58ae2bc6281679a06b",
+        "frameSha256": [
+          "1bcb6b1912f38014faa29ac3383dd391fd321872ef4670c372dbf598057e9ce3",
+          "1bcb6b1912f38014faa29ac3383dd391fd321872ef4670c372dbf598057e9ce3",
+          "1bcb6b1912f38014faa29ac3383dd391fd321872ef4670c372dbf598057e9ce3",
+          "1bcb6b1912f38014faa29ac3383dd391fd321872ef4670c372dbf598057e9ce3",
+          "1bcb6b1912f38014faa29ac3383dd391fd321872ef4670c372dbf598057e9ce3",
+          "1bcb6b1912f38014faa29ac3383dd391fd321872ef4670c372dbf598057e9ce3",
+          "1bcb6b1912f38014faa29ac3383dd391fd321872ef4670c372dbf598057e9ce3",
+          "1bcb6b1912f38014faa29ac3383dd391fd321872ef4670c372dbf598057e9ce3"
+        ],
+        "poseSha256": [
+          "5d89c79767ae44ffbe4f1b737a03ed82b34a5016e4cb9e5ef04e88badb79a6d4",
+          "5d89c79767ae44ffbe4f1b737a03ed82b34a5016e4cb9e5ef04e88badb79a6d4",
+          "5d89c79767ae44ffbe4f1b737a03ed82b34a5016e4cb9e5ef04e88badb79a6d4",
+          "5d89c79767ae44ffbe4f1b737a03ed82b34a5016e4cb9e5ef04e88badb79a6d4",
+          "5d89c79767ae44ffbe4f1b737a03ed82b34a5016e4cb9e5ef04e88badb79a6d4",
+          "5d89c79767ae44ffbe4f1b737a03ed82b34a5016e4cb9e5ef04e88badb79a6d4",
+          "5d89c79767ae44ffbe4f1b737a03ed82b34a5016e4cb9e5ef04e88badb79a6d4",
+          "5d89c79767ae44ffbe4f1b737a03ed82b34a5016e4cb9e5ef04e88badb79a6d4"
+        ],
+        "sourceFrameIndexes": [
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  }
+}

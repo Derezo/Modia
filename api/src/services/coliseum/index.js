@@ -47,6 +47,7 @@ import {
   playerReady,
   cancelMatch,
   completeMatch,
+  publishColiseumMatchResultEvents,
   submitFormation,
   applyQueueBan,
   checkQueueBan
@@ -104,6 +105,7 @@ export {
   playerReady,
   cancelMatch,
   completeMatch,
+  publishColiseumMatchResultEvents,
   submitFormation,
   applyQueueBan,
   checkQueueBan,

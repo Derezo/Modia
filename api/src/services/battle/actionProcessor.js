@@ -153,6 +153,41 @@ function processMoveAction(state, unit, targetTile) {
 
   if (!targetTile) return result;
 
+  if (!Number.isInteger(targetTile.x) || !Number.isInteger(targetTile.y)) {
+    result.error = 'Target tile coordinates must be finite integers';
+    return result;
+  }
+
+  const terrainWidth = Array.isArray(state.terrain?.[0])
+    ? state.terrain[0].length
+    : null;
+  const terrainHeight = Array.isArray(state.terrain) &&
+    Array.isArray(state.terrain[0])
+    ? state.terrain.length
+    : null;
+  const mapWidth = Number.isInteger(state.mapWidth) && state.mapWidth > 0
+    ? state.mapWidth
+    : terrainWidth || 32;
+  const mapHeight = Number.isInteger(state.mapHeight) && state.mapHeight > 0
+    ? state.mapHeight
+    : terrainHeight || 32;
+
+  // Validate target tile before passing coordinates into traversal.
+  if (targetTile.x < 0 || targetTile.y < 0 ||
+      targetTile.x >= mapWidth || targetTile.y >= mapHeight) {
+    result.error = 'Target tile is outside map bounds';
+    return result;
+  }
+
+  // Traversal treats every unit position, including defeated units, as blocked.
+  const occupyingUnit = state.units.find(u =>
+    u.id !== unit.id && u.tileX === targetTile.x && u.tileY === targetTile.y
+  );
+  if (occupyingUnit) {
+    result.error = 'Target tile is occupied';
+    return result;
+  }
+
   // SECURITY: Validate movement range server-side (anti-cheat)
   const movementRange = getMovementRange(unit);
   const moveCost = calculatePathCost(
@@ -163,22 +198,6 @@ function processMoveAction(state, unit, targetTile) {
 
   if (moveCost > movementRange || moveCost === Infinity) {
     result.error = `Target out of movement range (max: ${movementRange}, cost: ${moveCost === Infinity ? 'unreachable' : moveCost})`;
-    return result;
-  }
-
-  // Validate target tile is within map bounds
-  if (targetTile.x < 0 || targetTile.y < 0 ||
-      targetTile.x >= (state.mapWidth || 32) || targetTile.y >= (state.mapHeight || 32)) {
-    result.error = 'Target tile is outside map bounds';
-    return result;
-  }
-
-  // Check if target tile is occupied by another unit
-  const occupyingUnit = state.units.find(u =>
-    u.id !== unit.id && u.hp > 0 && u.tileX === targetTile.x && u.tileY === targetTile.y
-  );
-  if (occupyingUnit) {
-    result.error = 'Target tile is occupied';
     return result;
   }
 

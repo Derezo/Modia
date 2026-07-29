@@ -72,8 +72,10 @@ async function cleanupTestUser(userId) {
       // Clean up character-related data
       await query('DELETE FROM character_skills WHERE character_id = ANY($1)', [charIds]);
       await query('DELETE FROM character_traits WHERE character_id = ANY($1)', [charIds]);
-      await query('DELETE FROM inventory_items WHERE character_id = ANY($1)', [charIds]);
-      await query('DELETE FROM equipped_items WHERE character_id = ANY($1)', [charIds]);
+      await query(
+        'DELETE FROM character_items WHERE character_id = ANY($1) OR user_id = $2',
+        [charIds, userId]
+      );
       await query('DELETE FROM party_members WHERE character_id = ANY($1)', [charIds]);
     }
 

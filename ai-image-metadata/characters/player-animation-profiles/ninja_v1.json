@@ -1,0 +1,78 @@
+{
+  "version": "1.1.0",
+  "id": "ninja_v1",
+  "class": "ninja",
+  "templateId": "authored-pose-atlas-v1",
+  "description": "Reusable authored-pose direction for ninja player identities. Registry metadata and the staged portrait control identity; this profile supplies stealth weapon choreography.",
+  "style": {
+    "source": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+    "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+  },
+  "identity": {
+    "baseFacing": "three-quarters right",
+    "motionStyle": "silent, low, abrupt, agile, and economical, with precise foot placement, concealed preparation, and crisp attack recovery",
+    "equipmentRule": "Preserve the portrait's mask, dark cloth layers, wraps, pouches, kunai, shuriken, blades, and exact item count. Move only one established weapon into action at a time; never duplicate, swap hands, unmask, or invent gear.",
+    "magicRule": "Ninja techniques are physical stealth. Do not add shadow clones, teleportation, aura, runes, or elemental magic; a tiny dust puff or short weapon glint may support real movement."
+  },
+  "promptTemplates": {
+    "reference": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative {{displayName}} identity portrait; Image 2 is style and proportion reference only. Player identity metadata: {{visualTraits}}. Create one complete head-to-toe {{displayName}} preserving Image 1's covered face, ancestry traits, gender presentation, mask, cloth layers, wraps, pouches, weapons, palette, and proportions. Do not import identity details from Image 2. {{equipmentRule}} Translate the portrait into a compact stealth-ready silhouette. Use a {{background}} background with no floor or scenery and a square 1:1 canvas with generous padding. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered ninja in a low alert crouch facing {{baseFacing}}. {{invariants}}",
+    "animation": "Draw exactly {{frameCount}} genuinely redrawn full-body {{actionLabel}} poses of the authoritative {{displayName}} in a {{columns}}-column by {{rows}}-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: {{visualTraits}}. Required sequence: {{frameSequence}}. Motion direction: {{motionDirection}}. Overall ninja motion is {{motionStyle}}. {{poseRequirement}} Preserve exact identity, mask, cloth, wraps, palette, proportions, pouches, and weapon count. {{equipmentRule}} {{magicRule}} Action-specific effects: {{effectRule}} Use a {{background}} background with generous gutters. {{invariants}}"
+  },
+  "animations": {
+    "idle": {
+      "actionLabel": "ninja concealed idle-cycle",
+      "minimumUniquePoses": 4,
+      "anchor": "source-cell",
+      "motionDirection": "A low silent loop alternates controlled breath, shoulder checks, and minute hand shifts near established weapons.",
+      "effectRule": "No smoke or attack effect; cloth tails and wraps settle minimally.",
+      "frameDescriptions": ["low alert crouch with hands ready", "silent inhale with shoulders barely rising", "weight shifts onto the forward toes", "quick side glance while one hand nears a pouch", "centered concealed midpoint", "controlled exhale lowering the silhouette", "weight shifts rearward with hands rebalanced", "low crouch flowing back to frame one"]
+    },
+    "walk": {
+      "actionLabel": "ninja silent step-cycle",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "A low forefoot walk uses alternating contacts, deep knee compression, quiet passing poses, close arm motion, and controlled cloth follow-through.",
+      "effectRule": "No smoke, clone, or magic; one tiny grounded dust accent may appear at a planted step.",
+      "frameDescriptions": ["left forefoot makes quiet forward contact", "left knee compresses into a low silhouette", "passing pose with right knee tucked forward", "right foot reaches close to the ground", "right forefoot makes quiet contact", "right knee compresses into the crouch", "passing pose with left knee tucked forward", "left foot reaches into the silent loop"]
+    },
+    "attack": {
+      "actionLabel": "ninja draw-and-slash ambush",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "A concealed hand draw becomes a low lateral step, fast close-range slash, compact reverse follow-through, and immediate re-concealment.",
+      "effectRule": "Show exactly one established handheld weapon and one short physical swish at contact; no duplicate weapon, clone, or projectile.",
+      "frameDescriptions": ["concealed crouch sighting the opening", "one hand reaches for exactly one established weapon", "weapon clears its holder during a deep lateral coil", "low stepping slash crosses the target line", "compact contact with attacking arm fully readable", "reverse follow-through keeps the body low", "weapon retracts toward its original holder", "recovered concealed crouch"]
+    },
+    "hurt": {
+      "actionLabel": "ninja exposed-impact recovery",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "A sudden hit exposes the crouch into a sharp twist, tumbling step, three-point catch, guarded rise, and renewed concealment.",
+      "effectRule": "One compact physical impact accent only; no gore, blood, smoke disappearance, unmasking, or dropped weapons.",
+      "frameDescriptions": ["concealed crouch before impact", "sharp torso twist with forearms guarding", "maximum stagger as one leg swings wide", "forced tumbling step backward", "low three-point balance catch", "guarded rise from bent knees", "feet and hands reset near equipment", "recovered concealed crouch"]
+    },
+    "death": {
+      "actionLabel": "ninja defeat sequence",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "verticalAnchor": "bottom",
+      "motionDirection": "A final hit breaks the crouch, legs fail, the ninja catches low, rolls into a side collapse, and settles fully fallen with mask and gear intact.",
+      "effectRule": "No gore, blood, smoke disappearance, clone, or rigid rotation; keep mask and equipment recognizable.",
+      "outputFrameMap": [0, 1, 2, 3, 4, 5, 7, 7],
+      "frameDescriptions": ["fatal impact breaks the low guard", "arms spread as balance fails", "knees buckle into a deep crouch", "one hand touches down while hips roll sideways", "body reaches full ground contact", "cloth, limbs, and gear settle low", "final fully fallen ninja with mask intact", "same final fallen pose held"]
+    },
+    "dead": {
+      "deriveFrom": {"animation": "death", "frame": 7},
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity.",
+      "frameDescriptions": ["terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held"]
+    },
+    "victory": {
+      "actionLabel": "ninja disciplined victory",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "motionDirection": "The ninja confirms victory, rises from concealment, performs a tight weapon flourish, returns the weapon to its holder, gives a restrained hand sign, and holds.",
+      "effectRule": "One established weapon may catch a tiny glint; no smoke, clone, aura, or added weapon.",
+      "frameDescriptions": ["cautious recognition of victory", "low posture rises under control", "exactly one weapon draws into a tight flourish", "fast wrist turn presents the weapon clearly", "weapon returns to its original holder", "restrained hand sign from a balanced stance", "silent victorious posture with all gear secured", "final triumphant ninja pose held"]
+    }
+  }
+}

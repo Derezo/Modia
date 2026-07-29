@@ -104,6 +104,31 @@ test('identity-reference inspection rejects a broad colored backdrop below the c
   }
 });
 
+test('identity-reference inspection accepts a short wide character prop', async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'modia-identity-ref-wide-prop-'));
+  try {
+    const filePath = path.join(directory, 'reference.png');
+    const subject = Buffer.from(
+      '<svg width="440" height="400" xmlns="http://www.w3.org/2000/svg">' +
+      '<rect x="170" width="100" height="400" rx="30" fill="#315fa8"/>' +
+      '<rect y="170" width="440" height="28" rx="10" fill="#8b5a2b"/></svg>'
+    );
+    await sharp({
+      create: {
+        width: 512,
+        height: 512,
+        channels: 4,
+        background: { r: 0, g: 0, b: 0, alpha: 0 }
+      }
+    }).composite([{ input: subject, left: 36, top: 56 }]).png().toFile(filePath);
+
+    const inspection = await inspectIdentityReference(filePath);
+    assert.equal(inspection.valid, true);
+  } finally {
+    await fs.rm(directory, { recursive: true, force: true });
+  }
+});
+
 test('identity-reference inspection rejects multiple large disconnected subjects', async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'modia-identity-ref-multiple-'));
   try {

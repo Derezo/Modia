@@ -36,7 +36,13 @@ import {
 
 import { api } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
-import { DEFAULT_SIZES, SIZE_PRESETS, getCharacterPath, CHARACTER_ANIMATIONS } from '@shared/assetPaths.js';
+import {
+  DEFAULT_SIZES,
+  SIZE_PRESETS,
+  getCharacterPath,
+  getPlayerCharacterPath,
+  CHARACTER_ANIMATIONS
+} from '@shared/assetPaths.js';
 import { getAssetSubcategory, getAssetExtraOptions, getAssetUrls } from '../lib/assetPathHelper.js';
 import SpritePreview from './SpritePreview.jsx';
 import FrameDescriptionEditor from './FrameDescriptionEditor.jsx';
@@ -1092,18 +1098,30 @@ export default function AssetDetail({
 
   /**
    * Get animation sprite URL for preview
-   * Uses shared/assetPaths.js getCharacterPath for canonical path construction
+   * Uses the identity-aware player path or canonical enemy path.
    */
   const getAnimationUrl = useCallback((anim) => {
     if (!characterId) return null;
     const type = asset?._type || 'player';
+    if (type !== 'enemy' && type !== 'enemies') {
+      if (!asset?.race || !asset?.gender || !asset?.class) return null;
+      return getPlayerCharacterPath(asset, { animation: anim });
+    }
     const biome = asset?._biome || asset?.biome;
     return getCharacterPath(characterId, {
       type: type === 'enemies' ? 'enemy' : type,
       biome,
       animation: anim
     });
-  }, [characterId, asset?._type, asset?._biome, asset?.biome]);
+  }, [
+    characterId,
+    asset?._type,
+    asset?._biome,
+    asset?.biome,
+    asset?.race,
+    asset?.gender,
+    asset?.class
+  ]);
 
   // Get image URLs with fallback support (memoized for performance)
   const imageUrls = useMemo(() =>

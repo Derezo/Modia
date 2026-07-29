@@ -19,13 +19,15 @@
  */
 
 import { debugLog } from '../utils/debugLogger.js';
+import { getBattleMapCapabilities } from '../battle/BattleMapSession.js';
 
 export class MessageReliabilityManager {
   /**
    * @param {Function} sendFn - Function to send WebSocket messages
    */
-  constructor(sendFn) {
+  constructor(sendFn, { getBattleMapCapabilities: capabilityProvider = getBattleMapCapabilities } = {}) {
     this.send = sendFn;
+    this.getBattleMapCapabilities = capabilityProvider;
     this.processedSeqs = new Map(); // battleId -> Set<seq>
     this.lastSeq = new Map();       // battleId -> lastProcessedSeq
     this.maxStoredSeqs = 100;       // Rolling window size
@@ -192,7 +194,8 @@ export class MessageReliabilityManager {
     console.log(`[Reliability] Requesting resync for battle=${battleId}`);
     this.send({
       type: 'battle:request_sync',
-      battleId
+      battleId,
+      battleMapCapabilities: this.getBattleMapCapabilities()
     });
   }
 

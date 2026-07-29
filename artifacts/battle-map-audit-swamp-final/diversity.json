@@ -1,0 +1,75 @@
+{
+  "signatureVersion": "battle-map-macro-signature-v1",
+  "method": "8x8 semantic/elevation/route/water/protected-zone tokens plus topology; complete four-band same-node and exact one-token-radius cross-node indexes",
+  "thresholds": {
+    "maximumCorpusMaps": 20000,
+    "maximumMapDimension": 64,
+    "maximumMapBytes": 4194304,
+    "maximumGenerationMs": 10000,
+    "naturalIsolatedSemanticTileRate": 0.01,
+    "adjacentNonCliffElevationStepPassRate": 0.95,
+    "sameNodeNearSimilarity": 0.97,
+    "crossNodeNearSimilarity": 0.98,
+    "organicRouteDistribution": {
+      "minimumProfileMapCount": 20,
+      "minimumTurnOpportunities": 4,
+      "maximumStraightRouteRate": 0.1
+    },
+    "profile": {
+      "natural": {
+        "maximumExactMacroCollisionRate": 0.02,
+        "maximumNearDuplicateRate": 0.05
+      },
+      "subterranean": {
+        "maximumExactMacroCollisionRate": 0.04,
+        "maximumNearDuplicateRate": 0.08
+      },
+      "constructed": {
+        "maximumExactMacroCollisionRate": 0.05,
+        "maximumNearDuplicateRate": 0.1
+      },
+      "arena": {
+        "maximumExactMacroCollisionRate": 0.1,
+        "maximumNearDuplicateRate": 0.2
+      },
+      "legacy": {
+        "maximumExactMacroCollisionRate": 1,
+        "maximumNearDuplicateRate": 1
+      }
+    }
+  },
+  "profileFailureCount": 0,
+  "profiles": [
+    {
+      "profile": "v2:swamp:32x32:pve",
+      "family": "natural",
+      "mapCount": 100,
+      "distinctMacroSignatureCount": 100,
+      "exactMacroCollisionRate": 0,
+      "nearDuplicateRate": 0,
+      "thresholds": {
+        "maximumExactMacroCollisionRate": 0.02,
+        "maximumNearDuplicateRate": 0.05
+      },
+      "passed": true,
+      "organicRouteDistribution": {
+        "eligibleMapCount": 100,
+        "straightRouteMapCount": 5,
+        "straightRouteRate": 0.05,
+        "enforced": true,
+        "threshold": {
+          "minimumProfileMapCount": 20,
+          "minimumTurnOpportunities": 4,
+          "maximumStraightRouteRate": 0.1
+        },
+        "passed": true
+      },
+      "exactCollisions": [],
+      "nearPairs": []
+    }
+  ],
+  "crossNodeExactCollisionCount": 0,
+  "crossNodeExactCollisions": [],
+  "crossNodeNearDuplicateCount": 0,
+  "crossNodeNearPairs": []
+}

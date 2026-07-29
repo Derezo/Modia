@@ -12,7 +12,14 @@ import {
   getManhattanDistance,
   getAttackableTiles,
   hasValidPath,
-  analyzeMapConnectivity
+  analyzeMapConnectivity,
+  createTraversalView,
+  validateTraversalView,
+  canEnterTile,
+  getStepCost,
+  getReachableTilesForTraversal,
+  calculateTraversalPathCost,
+  findTraversalPath
 } from './pathfinding.js';
 
 // Helper to create a simple terrain grid
@@ -31,6 +38,199 @@ function setTerrain(grid, positions, terrain) {
   }
   return grid;
 }
+
+function createView({
+  width = 3,
+  height = 3,
+  terrain = createGrid(width, height),
+  obstacles = Array.from({ length: height }, () => Array(width).fill(null)),
+  elevation = Array.from({ length: height }, () => Array(width).fill(0.33)),
+  elevationConnections = Array.from(
+    { length: height },
+    () => Array(width).fill(null)
+  ),
+  units = [],
+  movementPolicy = {}
+} = {}) {
+  return createTraversalView({
+    terrain,
+    obstacles,
+    elevation,
+    elevationConnections,
+    units,
+    dimensions: { width, height },
+    movementPolicy
+  });
+}
+
+describe('TraversalView object API', () => {
+  it('validates all row-major layers against the declared dimensions', () => {
+    const view = createView();
+    assert.strictEqual(validateTraversalView(view).dimensions.width, 3);
+
+    assert.throws(
+      () => createTraversalView({
+        terrain: createGrid(2, 1),
+        dimensions: { width: 2, height: 2 }
+      }),
+      /terrain must be a row-major grid with 2 rows/
+    );
+  });
+
+  it('blocks ordinary movement through passable:false obstacles', () => {
+    const obstacles = Array.from({ length: 3 }, () => Array(3).fill(null));
+    obstacles[1][2] = { type: 'pillar', passable: false };
+    const view = createView({ obstacles });
+
+    assert.strictEqual(
+      canEnterTile(view, { x: 1, y: 1 }, { x: 2, y: 1 }),
+      false
+    );
+    assert.strictEqual(
+      getStepCost(view, { x: 1, y: 1 }, { x: 2, y: 1 }),
+      Infinity
+    );
+    assert.strictEqual(
+      getReachableTilesForTraversal(view, {
+        start: { x: 1, y: 1 },
+        range: 1
+      }).some(tile => tile.x === 2 && tile.y === 1),
+      false
+    );
+  });
+
+  it('traverses passable:true obstacles at the underlying terrain cost', () => {
+    const terrain = createGrid(3, 3);
+    terrain[1][2] = 'forest';
+    const obstacles = Array.from({ length: 3 }, () => Array(3).fill(null));
+    obstacles[1][2] = { type: 'brush', passable: true };
+    const view = createView({ terrain, obstacles });
+
+    assert.strictEqual(
+      canEnterTile(view, { x: 1, y: 1 }, { x: 2, y: 1 }),
+      true
+    );
+    assert.strictEqual(
+      getStepCost(view, { x: 1, y: 1 }, { x: 2, y: 1 }),
+      2
+    );
+  });
+
+  it('uses V2 semantic terrain passability and movement costs', () => {
+    const terrain = createGrid(3, 3);
+    terrain[1][1] = {
+      material: 'stone',
+      movementCost: 1.75,
+      passable: true,
+      regionId: 'region:test'
+    };
+    terrain[1][2] = {
+      material: 'grass',
+      movementCost: 0,
+      passable: false,
+      regionId: 'region:test'
+    };
+    const view = createView({ terrain });
+
+    assert.strictEqual(
+      getStepCost(view, { x: 0, y: 1 }, { x: 1, y: 1 }),
+      1.75
+    );
+    assert.strictEqual(
+      canEnterTile(view, { x: 1, y: 1 }, { x: 2, y: 1 }),
+      false
+    );
+  });
+
+  it('does not accept decorations as a collision layer', () => {
+    const view = createTraversalView({
+      terrain: createGrid(2, 1),
+      obstacles: [[null, null]],
+      elevation: [[0.33, 0.33]],
+      elevationConnections: [[null, null]],
+      units: [],
+      dimensions: { width: 2, height: 1 },
+      movementPolicy: {},
+      decorations: [[null, { type: 'flowers', passable: false }]]
+    });
+
+    assert.strictEqual('decorations' in view, false);
+    assert.strictEqual(
+      canEnterTile(view, { x: 0, y: 0 }, { x: 1, y: 0 }),
+      true
+    );
+  });
+
+  it('blocks occupied tiles and applies one goal-occupied policy to cost and path', () => {
+    const units = [{ tileX: 2, tileY: 1, hp: 100 }];
+    const blockedView = createView({ units });
+    const allowedView = createView({
+      units,
+      movementPolicy: { allowOccupiedGoal: true }
+    });
+    const request = {
+      start: { x: 1, y: 1 },
+      goal: { x: 2, y: 1 }
+    };
+
+    assert.strictEqual(calculateTraversalPathCost(blockedView, request), Infinity);
+    assert.strictEqual(findTraversalPath(blockedView, request), null);
+    assert.strictEqual(calculateTraversalPathCost(allowedView, request), 1);
+    assert.deepStrictEqual(findTraversalPath(allowedView, request), [
+      { x: 1, y: 1, z: 0 },
+      { x: 2, y: 1, z: 0 }
+    ]);
+  });
+
+  it('uses the same directional elevation connection cost in every object API', () => {
+    const elevation = [[0.33, 0.66]];
+    const elevationConnections = [[
+      { e: { type: 'long_ramp', levels: 2 } },
+      { w: { type: 'long_ramp', levels: 2 } }
+    ]];
+    const view = createView({
+      width: 2,
+      height: 1,
+      elevation,
+      elevationConnections
+    });
+    const start = { x: 0, y: 0 };
+    const goal = { x: 1, y: 0 };
+
+    assert.strictEqual(canEnterTile(view, start, goal, { goal }), true);
+    assert.strictEqual(getStepCost(view, start, goal, { goal }), 2);
+    assert.deepStrictEqual(
+      getReachableTilesForTraversal(view, { start, range: 2 }),
+      [{ x: 1, y: 0, z: 2, cost: 2 }]
+    );
+    assert.strictEqual(
+      calculateTraversalPathCost(view, { start, goal, maxCost: 2 }),
+      2
+    );
+    assert.deepStrictEqual(findTraversalPath(view, { start, goal }), [
+      { x: 0, y: 0, z: 0 },
+      { x: 1, y: 0, z: 2 }
+    ]);
+  });
+
+  it('supports explicit ability policies without local obstacle exceptions', () => {
+    const obstacles = [[null, { type: 'rocks', passable: false }]];
+    const view = createView({
+      width: 2,
+      height: 1,
+      obstacles,
+      movementPolicy: {
+        canTraverseObstacle: () => true,
+        getStepCost: ({ defaultCost }) => defaultCost + 1
+      }
+    });
+
+    assert.strictEqual(
+      getStepCost(view, { x: 0, y: 0 }, { x: 1, y: 0 }),
+      2
+    );
+  });
+});
 
 describe('getManhattanDistance', () => {
   it('should return 0 for same position', () => {

@@ -497,7 +497,7 @@
       "sd15Config": {
         "controlnetWeight": 0.7,
         "ipadapterWeight": 0.7,
-        "referenceImage": "/assets/characters/player/warrior/warrior_reference.png",
+        "referenceImage": "/assets/characters/player/human/male/warrior/human_male_warrior_reference.png",
         "referenceGeneratedAt": "2026-02-02T18:29:25.950Z",
         "referenceLoraModel": "cps2-pixel-art",
         "animationLoraModel": "cps2-pixel-art"
@@ -554,7 +554,7 @@
       "sd15Config": {
         "controlnetWeight": null,
         "ipadapterWeight": null,
-        "referenceImage": "/assets/characters/player/wizard/wizard_reference.png",
+        "referenceImage": "/assets/characters/player/human/male/wizard/human_male_wizard_reference.png",
         "referenceGeneratedAt": "2026-02-02T05:52:43.704Z"
       }
     },
@@ -583,7 +583,7 @@
       "sd15Config": {
         "controlnetWeight": null,
         "ipadapterWeight": null,
-        "referenceImage": "/assets/characters/player/monk/monk_reference.png",
+        "referenceImage": "/assets/characters/player/human/male/monk/human_male_monk_reference.png",
         "referenceGeneratedAt": "2026-02-02T06:05:03.473Z"
       },
       "needsRegeneration": false,
@@ -623,7 +623,7 @@
       "sd15Config": {
         "controlnetWeight": null,
         "ipadapterWeight": null,
-        "referenceImage": "/assets/characters/player/chemist/chemist_reference.png",
+        "referenceImage": "/assets/characters/player/human/male/chemist/human_male_chemist_reference.png",
         "referenceGeneratedAt": "2026-02-02T08:51:06.258Z"
       },
       "needsRegeneration": false,
@@ -668,7 +668,7 @@
       "sd15Config": {
         "controlnetWeight": null,
         "ipadapterWeight": null,
-        "referenceImage": "/assets/characters/player/berserker/berserker_reference.png",
+        "referenceImage": "/assets/characters/player/human/male/berserker/human_male_berserker_reference.png",
         "referenceGeneratedAt": "2026-02-02T18:11:18.985Z",
         "referenceLoraModel": "cps2-pixel-art",
         "animationLoraModel": "cps2-pixel-art"
@@ -717,7 +717,7 @@
       "sd15Config": {
         "controlnetWeight": null,
         "ipadapterWeight": null,
-        "referenceImage": "/assets/characters/player/paladin/paladin_reference.png",
+        "referenceImage": "/assets/characters/player/human/male/paladin/human_male_paladin_reference.png",
         "referenceGeneratedAt": "2026-02-02T21:20:41.583Z",
         "referenceLoraModel": "retro-game-art",
         "animationLoraModel": "retro-game-art"
@@ -760,7 +760,7 @@
       "sd15Config": {
         "controlnetWeight": null,
         "ipadapterWeight": null,
-        "referenceImage": "/assets/characters/player/guardian/guardian_reference.png",
+        "referenceImage": "/assets/characters/player/human/male/guardian/human_male_guardian_reference.png",
         "referenceGeneratedAt": "2026-02-03T06:28:26.383Z"
       },
       "needsRegeneration": false,
@@ -794,7 +794,7 @@
       "sd15Config": {
         "controlnetWeight": null,
         "ipadapterWeight": null,
-        "referenceImage": "/assets/characters/player/warlord/warlord_reference.png",
+        "referenceImage": "/assets/characters/player/human/male/warlord/human_male_warlord_reference.png",
         "referenceGeneratedAt": "2026-02-01T22:10:54.954Z",
         "referenceLoraModel": "cps2-pixel-art",
         "animationLoraModel": "cps2-pixel-art"
@@ -837,7 +837,7 @@
       "sd15Config": {
         "controlnetWeight": null,
         "ipadapterWeight": null,
-        "referenceImage": "/assets/characters/player/sorcerer/sorcerer_reference.png",
+        "referenceImage": "/assets/characters/player/human/male/sorcerer/human_male_sorcerer_reference.png",
         "referenceGeneratedAt": "2026-02-02T02:31:46.636Z"
       },
       "needsRegeneration": false,
@@ -873,7 +873,7 @@
       "sd15Config": {
         "controlnetWeight": null,
         "ipadapterWeight": null,
-        "referenceImage": "/assets/characters/player/summoner/summoner_reference.png",
+        "referenceImage": "/assets/characters/player/human/male/summoner/human_male_summoner_reference.png",
         "referenceGeneratedAt": "2026-02-02T02:38:07.287Z"
       },
       "needsRegeneration": false,
@@ -914,7 +914,7 @@
       "sd15Config": {
         "controlnetWeight": null,
         "ipadapterWeight": null,
-        "referenceImage": "/assets/characters/player/conjurer/conjurer_reference.png",
+        "referenceImage": "/assets/characters/player/human/male/conjurer/human_male_conjurer_reference.png",
         "referenceGeneratedAt": "2026-02-02T02:44:44.816Z"
       },
       "needsRegeneration": false,

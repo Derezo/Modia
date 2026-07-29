@@ -159,7 +159,6 @@
       "asset": "/assets/characters/player/human/male/warrior/human_male_warrior_reference.png",
       "sha256": "3ad9972a646e70f21331c495dd9f0b4774531d1e124b602c427c278a199ac3c9",
       "identitySource": "/assets/portraits/originals/human_male_warrior.png",
-      "legacyStyleSource": "/assets/characters/player/warrior/warrior_reference.png",
       "generationMode": "openai-built-in-imagegen",
       "preservationPolicy": "Accepted golden baseline. Bulk deterministic compilers and diffusion staging preserve it; replacement requires a targeted --force plus a new manual semantic audit and updated hashes.",
       "backgroundRemoval": {

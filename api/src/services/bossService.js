@@ -48,20 +48,18 @@ function initializeBossState(enemy, battleId) {
     }
   };
 
-  // Store boss state in database for persistence
-  saveBossEncounter(state).catch(err => {
-    console.error('[BossService] Failed to save boss encounter:', err);
-  });
-
   return state;
 }
 
 /**
  * Save boss encounter to database
  * @param {Object} state - Boss state
+ * @param {Object} options - Persistence options
+ * @param {Object|null} options.client - Optional transaction client
  */
-async function saveBossEncounter(state) {
-  await pool.query(`
+async function saveBossEncounter(state, { client = null } = {}) {
+  const executor = client ?? pool;
+  await executor.query(`
     INSERT INTO boss_encounters (battle_id, enemy_template_id, unit_id, current_phase, max_phases)
     VALUES ($1, $2, $3, $4, $5)
     ON CONFLICT (battle_id, unit_id) DO UPDATE SET
@@ -190,11 +188,6 @@ function applyPhaseTransition(boss, transition, bossState, _battleState) {
     }
   }
 
-  // Save updated state
-  saveBossEncounter(bossState).catch(err => {
-    console.error('[BossService] Failed to update boss encounter:', err);
-  });
-
   console.log(`[BossService] ${boss.name} transitioned to ${transition.phaseName}`);
 
   return effects;
@@ -316,13 +309,12 @@ function applyAuraDamage(boss, battleState) {
 /**
  * Clean up boss encounter when battle ends
  * @param {number} battleId - Battle ID
+ * @param {Object} options - Persistence options
+ * @param {Object|null} options.client - Optional transaction client
  */
-async function cleanupBossEncounter(battleId) {
-  try {
-    await pool.query('DELETE FROM boss_encounters WHERE battle_id = $1', [battleId]);
-  } catch (err) {
-    console.error('[BossService] Failed to cleanup boss encounter:', err);
-  }
+async function cleanupBossEncounter(battleId, { client = null } = {}) {
+  const executor = client ?? pool;
+  await executor.query('DELETE FROM boss_encounters WHERE battle_id = $1', [battleId]);
 }
 
 /**

@@ -284,8 +284,35 @@ function formatQuest(row) {
  * @param {Object} metadata - Additional filter data (enemy_types, node_types, region, etc.)
  */
 export async function updateProgress(characterId, objectiveType, amount = 1, metadata = {}) {
+  return updateProgressWithClient(
+    { query },
+    characterId,
+    objectiveType,
+    amount,
+    metadata,
+    { notify: true }
+  );
+}
+
+/**
+ * Transaction-aware progress update used by durable terminal effects.
+ * The caller owns the client lifecycle. Notifications can be disabled so no
+ * non-transactional work is published before the transaction commits.
+ */
+export async function updateProgressWithClient(
+  client,
+  characterId,
+  objectiveType,
+  amount = 1,
+  metadata = {},
+  { notify = false } = {}
+) {
+  if (!client || typeof client.query !== 'function') {
+    throw new TypeError('updateProgressWithClient requires a pg client');
+  }
+
   // Get active quests matching the objective type
-  const questsResult = await query(
+  const questsResult = await client.query(
     `SELECT cdq.id, cdq.current_progress, cdq.target_progress, cdq.is_completed,
             cdq.quest_template_id, cdq.period, cdq.period_start,
             dqt.objective_requirements
@@ -294,7 +321,8 @@ export async function updateProgress(characterId, objectiveType, amount = 1, met
      WHERE cdq.character_id = $1
        AND dqt.objective_type = $2
        AND cdq.is_completed = FALSE
-       AND cdq.period_end > NOW()`,
+       AND cdq.period_end > NOW()
+     FOR UPDATE OF cdq`,
     [characterId, objectiveType]
   );
 
@@ -308,7 +336,7 @@ export async function updateProgress(characterId, objectiveType, amount = 1, met
     const completed = newProgress >= quest.target_progress;
 
     // Update progress
-    await query(
+    await client.query(
       `UPDATE character_daily_quests
        SET current_progress = $1,
            is_completed = $2,
@@ -319,16 +347,25 @@ export async function updateProgress(characterId, objectiveType, amount = 1, met
 
     // If completed, try to claim First Blood and send notification
     if (completed && !quest.is_completed) {
-      const firstBlood = await tryClaimFirstBlood(quest.quest_template_id, characterId, quest.period, quest.period_start);
+      const firstBlood = await tryClaimFirstBlood(
+        client,
+        quest.quest_template_id,
+        characterId,
+        quest.period,
+        quest.period_start
+      );
 
       // Check for Completion Bonus (all daily quests done)
       if (quest.period === 'daily') {
-        await checkCompletionBonus(characterId);
+        await checkCompletionBonus(client, characterId);
       }
 
-      // Send WebSocket notification (fire-and-forget)
-      sendQuestCompletedNotification(characterId, quest.id, firstBlood)
-        .catch(err => console.warn('[Quest] WS notification failed:', err.message));
+      if (notify) {
+        // Preserve the existing non-terminal behavior. Durable terminal
+        // processing suppresses this because it cannot share the DB transaction.
+        sendQuestCompletedNotification(characterId, quest.id, firstBlood)
+          .catch(err => console.warn('[Quest] WS notification failed:', err.message));
+      }
     }
   }
 }
@@ -608,38 +645,31 @@ export async function claimAllRewards(characterId) {
  * Try to claim First Blood for a quest
  * Uses partial unique index to ensure only one winner
  */
-async function tryClaimFirstBlood(templateId, characterId, period, periodStart) {
-  try {
-    // Try to insert First Blood record (will fail if someone already has it)
-    const result = await query(
-      `INSERT INTO daily_quest_history
-       (character_id, quest_template_id, period, rewards_granted, period_start, completed_at, first_blood)
-       VALUES ($1, $2, $3, '{}', $4, NOW(), TRUE)
-       ON CONFLICT DO NOTHING
-       RETURNING id`,
-      [characterId, templateId, period, periodStart]
-    );
+async function tryClaimFirstBlood(client, templateId, characterId, period, periodStart) {
+  const result = await client.query(
+    `INSERT INTO daily_quest_history
+     (character_id, quest_template_id, period, rewards_granted, period_start, completed_at, first_blood)
+     VALUES ($1, $2, $3, '{}', $4, NOW(), TRUE)
+     ON CONFLICT DO NOTHING
+     RETURNING id`,
+    [characterId, templateId, period, periodStart]
+  );
 
-    return result.rows.length > 0;
-  } catch (err) {
-    // Unique constraint violation means someone else got it
-    console.log(`[Quest] First Blood already claimed for template ${templateId}`);
-    return false;
-  }
+  return result.rows.length > 0;
 }
 
 /**
  * Check if character qualifies for Completion Bonus
  */
-async function checkCompletionBonus(characterId) {
-  const result = await query(
+async function checkCompletionBonus(client, characterId) {
+  const result = await client.query(
     'SELECT has_completed_all_daily_quests($1) as completed',
     [characterId]
   );
 
   if (result.rows[0].completed) {
     // Update Perfect Week progress
-    await query('SELECT update_perfect_week_progress($1)', [characterId]);
+    await client.query('SELECT update_perfect_week_progress($1)', [characterId]);
   }
 
   return result.rows[0].completed;

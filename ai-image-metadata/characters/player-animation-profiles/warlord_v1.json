@@ -1,0 +1,78 @@
+{
+  "version": "1.1.0",
+  "id": "warlord_v1",
+  "class": "warlord",
+  "templateId": "authored-pose-atlas-v1",
+  "description": "Reusable authored-pose direction for warlord player identities. Registry metadata and the staged portrait control identity; this profile supplies commanding banner-and-weapon choreography.",
+  "style": {
+    "source": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+    "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+  },
+  "identity": {
+    "baseFacing": "three-quarters right",
+    "motionStyle": "commanding, disciplined, expansive, and battle-tested, with deliberate signals, authoritative footwork, and controlled banner and weapon inertia",
+    "equipmentRule": "Preserve the portrait's ornate armor, command insignia, banner or standard, weapon, cape, and exact item count. Keep each item in its original hand or mount; never duplicate, swap, discard, or transform it.",
+    "magicRule": "Leadership effects are physical signals rather than spells. Do not add runes, aura, projectiles, or magical troops; restrained dust, cloth motion, or a metal glint may support the action."
+  },
+  "promptTemplates": {
+    "reference": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative {{displayName}} identity portrait; Image 2 is style and proportion reference only. Player identity metadata: {{visualTraits}}. Create one complete head-to-toe {{displayName}} preserving Image 1's face, ancestry traits, gender presentation, ornate armor, command insignia, banner, weapon, cape, palette, and proportions. Do not import identity details from Image 2. {{equipmentRule}} Translate the portrait into a compact authoritative silhouette. Use a {{background}} background with no floor or scenery and a square 1:1 canvas with generous padding. The complete silhouette including banner finial, crossbar, cloth, cape, weapon tip, and boots must occupy no more than 70% of the canvas width and height, leaving at least 15% empty background on every edge. Scale the warlord and compact standard down substantially; never crop or crowd any equipment. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered warlord in a commanding field stance facing {{baseFacing}}. {{invariants}}",
+    "animation": "Draw exactly {{frameCount}} genuinely redrawn full-body {{actionLabel}} poses of the authoritative {{displayName}} in a {{columns}}-column by {{rows}}-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: {{visualTraits}}. Required sequence: {{frameSequence}}. Motion direction: {{motionDirection}}. Overall warlord motion is {{motionStyle}}. {{poseRequirement}} Preserve exact identity, armor, insignia, palette, proportions, banner, cape, and weapon. {{equipmentRule}} {{magicRule}} Action-specific effects: {{effectRule}} Use a {{background}} background with generous gutters. {{invariants}}"
+  },
+  "animations": {
+    "idle": {
+      "actionLabel": "warlord surveying idle-cycle",
+      "minimumUniquePoses": 4,
+      "anchor": "source-cell",
+      "motionDirection": "A vigilant command loop alternates battlefield scans, banner control, and measured weight shifts while the weapon remains ready.",
+      "effectRule": "No active attack or magic; banner cloth, cape, and armor settle subtly.",
+      "frameDescriptions": ["command stance with banner and weapon controlled", "measured inhale while surveying the far field", "weight shifts forward as the weapon indicates a sector", "banner hand firms against a light cloth response", "centered commanding midpoint", "controlled exhale as the weapon lowers slightly", "weight shifts rearward while scanning the opposite flank", "command stance flowing back to frame one"]
+    },
+    "walk": {
+      "actionLabel": "warlord standard-bearing march",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "An authoritative alternating march uses crisp contacts, armor compression, weapon counter-motion, and delayed banner and cape follow-through.",
+      "effectRule": "No attack effect or magic; banner, cape, straps, and armor respond to the marching cadence.",
+      "frameDescriptions": ["left foot forward contact beneath the raised standard", "left leg compressed under decorated armor", "passing pose with weapon balancing the banner", "right foot reaches as cloth trails behind", "right foot forward in a decisive plant", "right leg compresses while the standard stays upright", "passing pose with left knee advancing", "left foot reaches into the command march"]
+    },
+    "attack": {
+      "actionLabel": "warlord command-and-strike assault",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "A sharp command gesture becomes a planted weapon windup, decisive forward strike, authoritative follow-through, and immediate battlefield-ready recovery.",
+      "effectRule": "A short physical weapon-swish accent may mark contact; no magical soldiers, projectile, or effect obscuring hands, weapon, or standard.",
+      "frameDescriptions": ["commanding guard while assessing the target", "weapon points a crisp advance signal", "deep windup while the standard arm counterbalances", "committed forward step beginning the strike", "decisive weapon contact with torso fully rotated", "broad follow-through as banner cloth snaps behind", "weapon retracts while posture regains authority", "recovered command guard"]
+    },
+    "hurt": {
+      "actionLabel": "warlord staggered-command recovery",
+      "minimumUniquePoses": 6,
+      "anchor": "source-cell",
+      "motionDirection": "An impact disrupts command posture into a hard stagger, banner-assisted balance catch, defiant rise, and renewed control.",
+      "effectRule": "One compact physical impact accent only; no gore, blood, magic, dropped standard, or duplicated equipment.",
+      "frameDescriptions": ["command guard before impact", "sharp flinch with banner and weapon retained", "maximum stagger as cape and banner swing wide", "forced backward step with torso recoiling", "low balance catch using the standard shaft or planted stance", "defiant rise with chin and weapon lifting", "feet and banner reset into alignment", "recovered commanding guard"]
+    },
+    "death": {
+      "actionLabel": "warlord defeat sequence",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "verticalAnchor": "bottom",
+      "motionDirection": "A final hit silences the command, standard lowers, knees fail, the decorated body collapses sideways, and equipment settles into a fully fallen pose.",
+      "effectRule": "No gore, blood, magic, or rigid rotation. Keep the standard, weapon, and insignia recognizable and singular throughout.",
+      "outputFrameMap": [0, 1, 2, 3, 4, 5, 7, 7],
+      "frameDescriptions": ["fatal impact breaks the command stance", "weapon lowers and standard tilts as balance fails", "both knees buckle beneath the armor", "one knee grounds while the body turns sideways", "body and standard reach full ground contact", "cape, banner cloth, and limbs settle low", "final fully fallen warlord with equipment at rest", "same final fallen pose held"]
+    },
+    "dead": {
+      "deriveFrom": {"animation": "death", "frame": 7},
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity.",
+      "frameDescriptions": ["terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held", "terminal fallen pose held"]
+    },
+    "victory": {
+      "actionLabel": "warlord battlefield triumph",
+      "minimumUniquePoses": 7,
+      "anchor": "source-cell",
+      "motionDirection": "The warlord confirms victory, signals the field secure, plants the standard, raises the weapon, opens into a decorated heroic stance, and holds command.",
+      "effectRule": "No spell effect; banner motion and a small metal glint may carry the physical salute.",
+      "frameDescriptions": ["measured recognition of victory", "weapon gives a crisp field-secure signal", "standard swings forward under control", "standard plants beside a wide stance", "weapon rises high in formal salute", "cape and banner open around the upright posture", "commanding victor pose with insignia displayed", "final triumphant warlord pose held"]
+    }
+  }
+}

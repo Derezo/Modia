@@ -604,6 +604,291 @@ describe('messageHandlers - Module Structure', () => {
     assert.strictEqual(ws.sentMessages[0].payload.message, 'Access denied to battle sync');
   });
 
+  it('ACK-tracks and retries an authorized full sync snapshot', async () => {
+    const battleId = 456790;
+    const userId = 987655;
+    const ws = new MockWebSocketClient(userId, 'participant');
+    const [
+      { handleBattleSyncRequest },
+      { addUserToRoom, removeUserFromRoom },
+      { battleStateRepository },
+      reliability,
+      { createBattleMutableStateV1 }
+    ] = await Promise.all([
+      import('../../../websocket/messageHandlers.js'),
+      import('../../../websocket/roomManager.js'),
+      import('../../../services/battle/BattleStateRepository.js'),
+      import('../../../services/messageReliability.js'),
+      import('../../../../../shared/battleStateProtocol.js')
+    ]);
+    const map = {
+      battleMapSchemaVersion: 1,
+      terrainGenerationVersion: 1,
+      terrainSeed: 91,
+      mapWidth: 1,
+      mapHeight: 1,
+      terrain: [['grass']],
+      elevation: [[0]],
+      obstacles: []
+    };
+    const mutableState = createBattleMutableStateV1({
+      turn: 2,
+      units: [{ id: 'player-1', hp: 20, tileX: 0, tileY: 0 }]
+    });
+    mock.method(battleStateRepository, 'loadBattle', async () => ({
+      battleId,
+      battleMapSchemaVersion: 1,
+      terrainGenerationVersion: 1,
+      stateRevision: 7,
+      map,
+      mutableState,
+      state: { ...map, ...mutableState }
+    }));
+    addUserToRoom(`battle:${battleId}`, userId);
+
+    try {
+      await handleBattleSyncRequest(ws, userId, {
+        battleId,
+        reason: 'revision_gap'
+      });
+
+      assert.strictEqual(ws.sentMessages.length, 1);
+      const snapshot = ws.sentMessages[0];
+      assert.strictEqual(snapshot.type, 'battle:state_update');
+      assert.strictEqual(snapshot.ack, true);
+      assert.strictEqual(snapshot.seq, 1);
+      assert.strictEqual(snapshot.battleId, battleId);
+      assert.strictEqual(snapshot.payload.reason, 'full_sync');
+      assert.strictEqual(reliability.getPendingCount(userId), 1);
+
+      ws.clearMessages();
+      await reliability.scheduleRetry(userId, battleId, snapshot.seq);
+      assert.strictEqual(ws.sentMessages.length, 1);
+      assert.deepStrictEqual(ws.sentMessages[0], snapshot);
+
+      assert.strictEqual(
+        reliability.handleAck(userId, battleId, snapshot.seq),
+        true
+      );
+      assert.strictEqual(reliability.getPendingCount(userId), 0);
+    } finally {
+      removeUserFromRoom(`battle:${battleId}`, userId);
+      reliability.cleanupConnection(userId);
+      reliability.cleanupBattle(battleId);
+    }
+  });
+
+  it('clears cached capabilities when the same socket explicitly resyncs without them', async () => {
+    const battleId = 456791;
+    const userId = 987656;
+    const ws = new MockWebSocketClient(userId, 'participant');
+    const [
+      { handleBattleSyncRequest },
+      { addUserToRoom, removeUserFromRoom },
+      { battleStateRepository },
+      reliability,
+      { createBattleMutableStateV1 }
+    ] = await Promise.all([
+      import('../../../websocket/messageHandlers.js'),
+      import('../../../websocket/roomManager.js'),
+      import('../../../services/battle/BattleStateRepository.js'),
+      import('../../../services/messageReliability.js'),
+      import('../../../../../shared/battleStateProtocol.js')
+    ]);
+    const map = {
+      battleMapSchemaVersion: 1,
+      terrainGenerationVersion: 1,
+      terrainSeed: 93,
+      mapWidth: 1,
+      mapHeight: 1,
+      terrain: [['grass']],
+      elevation: [[0]],
+      obstacles: []
+    };
+    const mutableState = createBattleMutableStateV1({
+      turn: 2,
+      units: [{ id: 'player-1', hp: 20, tileX: 0, tileY: 0 }]
+    });
+    const capabilities = {
+      supportedBattleMapSchemaVersions: [1, 2],
+      supportedHashVersions: ['sha256-canonical-json-v1'],
+      supportedMutableStateProtocolVersions: [1],
+      cachedMaps: []
+    };
+    const loadBattleMock = mock.method(
+      battleStateRepository,
+      'loadBattle',
+      async () => ({
+        battleId,
+        battleMapSchemaVersion: 1,
+        terrainGenerationVersion: 1,
+        stateRevision: 7,
+        map,
+        mutableState,
+        state: { ...map, ...mutableState }
+      })
+    );
+    addUserToRoom(`battle:${battleId}`, userId);
+
+    try {
+      await handleBattleSyncRequest(ws, userId, {
+        battleId,
+        reason: 'manual',
+        battleMapCapabilities: capabilities
+      });
+      assert.deepStrictEqual(
+        reliability.getRegisteredBattleMapCapabilities(ws, battleId),
+        capabilities
+      );
+      assert.ok(ws.sentMessages[0].payload.battleMapCapabilities);
+      reliability.handleAck(
+        userId,
+        battleId,
+        ws.sentMessages[0].seq
+      );
+
+      ws.clearMessages();
+      await handleBattleSyncRequest(ws, userId, {
+        battleId,
+        reason: 'manual'
+      });
+
+      assert.strictEqual(
+        reliability.getRegisteredBattleMapCapabilities(ws, battleId),
+        undefined
+      );
+      assert.strictEqual(
+        ws.sentMessages[0].payload.battleMapCapabilities,
+        undefined,
+        'A same-socket legacy resync must not inherit prior V2 capabilities'
+      );
+      reliability.handleAck(
+        userId,
+        battleId,
+        ws.sentMessages[0].seq
+      );
+
+      reliability.registerBattleMapCapabilities(ws, battleId, capabilities);
+      ws.clearMessages();
+      await handleBattleSyncRequest(ws, userId, {
+        battleId,
+        reason: 'manual',
+        battleMapCapabilities: null
+      });
+
+      assert.strictEqual(
+        reliability.getRegisteredBattleMapCapabilities(ws, battleId),
+        undefined,
+        'An explicit null declaration must also clear prior capabilities'
+      );
+      assert.strictEqual(
+        ws.sentMessages[0].payload.battleMapCapabilities,
+        undefined
+      );
+      reliability.handleAck(
+        userId,
+        battleId,
+        ws.sentMessages[0].seq
+      );
+    } finally {
+      loadBattleMock.mock.restore();
+      removeUserFromRoom(`battle:${battleId}`, userId);
+      reliability.cleanupConnection(userId);
+      reliability.cleanupBattle(battleId);
+    }
+  });
+
+  it('clears cached capabilities on a same-socket legacy rejoin', async () => {
+    const battleId = 456792;
+    const userId = 987657;
+    const ws = new MockWebSocketClient(userId, 'participant');
+    const [
+      { handleJoinBattle },
+      { removeUserFromRoom },
+      { pool },
+      { battleStateRepository },
+      reliability,
+      { createBattleMutableStateV1 }
+    ] = await Promise.all([
+      import('../../../websocket/messageHandlers.js'),
+      import('../../../websocket/roomManager.js'),
+      import('../../../config/database.js'),
+      import('../../../services/battle/BattleStateRepository.js'),
+      import('../../../services/messageReliability.js'),
+      import('../../../../../shared/battleStateProtocol.js')
+    ]);
+    const map = {
+      battleMapSchemaVersion: 1,
+      terrainGenerationVersion: 1,
+      terrainSeed: 94,
+      mapWidth: 1,
+      mapHeight: 1,
+      terrain: [['grass']],
+      elevation: [[0]],
+      obstacles: []
+    };
+    const mutableState = createBattleMutableStateV1({
+      turn: 2,
+      units: [{ id: 'player-1', hp: 20, tileX: 0, tileY: 0 }]
+    });
+    const capabilities = {
+      supportedBattleMapSchemaVersions: [1, 2],
+      supportedHashVersions: ['sha256-canonical-json-v1'],
+      supportedMutableStateProtocolVersions: [1],
+      cachedMaps: []
+    };
+    const queryMock = mock.method(pool, 'query', async () => ({
+      rows: [{ id: battleId }],
+      rowCount: 1
+    }));
+    const loadBattleMock = mock.method(
+      battleStateRepository,
+      'loadBattle',
+      async () => ({
+        battleId,
+        battleMapSchemaVersion: 1,
+        terrainGenerationVersion: 1,
+        stateRevision: 7,
+        map,
+        mutableState,
+        state: { ...map, ...mutableState }
+      })
+    );
+
+    try {
+      await handleJoinBattle(ws, userId, {
+        battleId,
+        battleMapCapabilities: capabilities
+      });
+      assert.deepStrictEqual(
+        reliability.getRegisteredBattleMapCapabilities(ws, battleId),
+        capabilities
+      );
+      assert.ok(ws.sentMessages[0].payload.battleMapCapabilities);
+
+      ws.clearMessages();
+      await handleJoinBattle(ws, userId, { battleId });
+
+      assert.strictEqual(
+        reliability.getRegisteredBattleMapCapabilities(ws, battleId),
+        undefined
+      );
+      assert.strictEqual(ws.sentMessages[0].type, 'battle_room_joined');
+      assert.strictEqual(
+        ws.sentMessages[0].payload.battleMapCapabilities,
+        undefined
+      );
+      assert.strictEqual(queryMock.mock.callCount(), 2);
+      assert.strictEqual(loadBattleMock.mock.callCount(), 2);
+    } finally {
+      queryMock.mock.restore();
+      loadBattleMock.mock.restore();
+      removeUserFromRoom(`battle:${battleId}`, userId);
+      reliability.cleanupConnection(userId);
+      reliability.cleanupBattle(battleId);
+    }
+  });
+
   it('should export handleMarketplaceSubscribe', async () => {
     const handlers = await import('../../../websocket/messageHandlers.js');
     assert.strictEqual(typeof handlers.handleMarketplaceSubscribe, 'function');
@@ -653,7 +938,13 @@ describe('messageHandlers - Additional Handler Coverage', () => {
       const payload = {
         queueType: '1v1',
         partyLevel: 10,
-        partySize: 1
+        partySize: 1,
+        battleMapCapabilities: {
+          supportedBattleMapSchemaVersions: [1, 2],
+          supportedHashVersions: ['sha256-canonical-json-v1'],
+          supportedMutableStateProtocolVersions: [1],
+          cachedMaps: []
+        }
       };
 
       await testHandleColiseumQueueJoin(ws, userId, 'testuser', payload, {
@@ -662,7 +953,14 @@ describe('messageHandlers - Additional Handler Coverage', () => {
 
       assert.strictEqual(mockColiseumService.joinQueue.mock.callCount(), 1);
       const call = mockColiseumService.joinQueue.mock.calls[0];
-      assert.deepStrictEqual(call.arguments, ['1v1', 1, 'testuser', 10, 1]);
+      assert.deepStrictEqual(call.arguments, [
+        '1v1',
+        1,
+        'testuser',
+        10,
+        1,
+        payload.battleMapCapabilities
+      ]);
       assert.strictEqual(ws.sentMessages.length, 0); // No error sent
     });
 
@@ -709,7 +1007,7 @@ describe('messageHandlers - Additional Handler Coverage', () => {
       });
 
       const call = mockColiseumService.joinQueue.mock.calls[0];
-      assert.deepStrictEqual(call.arguments, ['1v1', 1, 'testuser', 1, 1]);
+      assert.deepStrictEqual(call.arguments, ['1v1', 1, 'testuser', 1, 1, null]);
     });
   });
 
@@ -974,13 +1272,14 @@ async function testHandleColiseumQueueJoin(ws, userId, username, payload, option
 
   if (!userId) return;
   try {
-    const { queueType, partyLevel, partySize } = payload;
+    const { queueType, partyLevel, partySize, battleMapCapabilities } = payload;
     const result = await coliseumService.joinQueue(
       queueType || '1v1',
       userId,
       username,
       partyLevel || 1,
-      partySize || 1
+      partySize || 1,
+      battleMapCapabilities ?? null
     );
     if (!result.success) {
       ws.send(JSON.stringify({

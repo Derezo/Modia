@@ -1,0 +1,584 @@
+{
+  "version": "1.0.0",
+  "template": "ai-image-metadata/characters/player-authored-animation-template.json",
+  "compilerVersion": "1.2.0",
+  "id": "human_male_brawler",
+  "profile": "brawler_v1",
+  "profileSource": "ai-image-metadata/characters/player-animation-profiles/brawler_v1.json",
+  "status": "approved",
+  "approvedAt": "2026-07-28T23:18:50.731Z",
+  "metadataFingerprint": "f21699d5100c99684c536d34cd49e92a4b4e3e73ca2fd6496b31f4b7d0103b25",
+  "draftProvenance": {
+    "registry": "ai-image-metadata/characters/player-variants.json",
+    "templateSha256": "7943e69db577b3a4429b47df634f931d3f4cb8e8ce9a91a06578255fbe935bbe",
+    "profileSha256": "ec7d5be1c0842218d8a08f9c8d1d4eaf0b21d4b2290df31e10736306ecbb3f50"
+  },
+  "identity": {
+    "race": "human",
+    "gender": "male",
+    "class": "brawler",
+    "presentation": "male human brawler",
+    "visualTraits": "human features balanced proportions warm skin tone male masculine features street fighter spiked knuckles tough rugged scarred bandaged tank top",
+    "baseFacing": "three-quarters right",
+    "sourceMetadata": {
+      "isAdvanced": true,
+      "inheritsFrom": "brawler",
+      "seed": 20011
+    }
+  },
+  "inputs": {
+    "identity": {
+      "origin": "frontend/public/assets/portraits/originals/human_male_brawler.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/human_male_brawler/inputs/identity.png",
+      "authority": "face, ancestry, gender presentation, hair, eyes, complexion, costume, palette, proportions, and equipment"
+    },
+    "style": {
+      "origin": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/human_male_brawler/inputs/style.png",
+      "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+    }
+  },
+  "reference": {
+    "source": "ai-image-metadata/characters/player-animation-sources/human_male_brawler/reference.png",
+    "chromaSource": "ai-image-metadata/characters/player-animation-sources/human_male_brawler/chroma/reference.png",
+    "identitySource": "ai-image-metadata/characters/player-animation-sources/human_male_brawler/inputs/identity.png",
+    "styleSource": "ai-image-metadata/characters/player-animation-sources/human_male_brawler/inputs/style.png",
+    "prompt": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative Human Brawler (male presentation) identity portrait; Image 2 is style and proportion reference only. Player identity metadata: human features balanced proportions warm skin tone male masculine features street fighter spiked knuckles tough rugged scarred bandaged tank top. Create one complete head-to-toe Human Brawler (male presentation) preserving Image 1's face, ancestry traits, gender presentation, hair, scars, bandages, rugged clothing, knuckle gear, palette, proportions, and accessories. Do not import identity details from Image 2. Preserve the portrait's rugged clothing, bandages, scars, spiked knuckles or gloves, belt, and exact accessory count. Keep fist gear on the correct hands and never duplicate spikes, invent a weapon, or heal or relocate scars. Translate the portrait into a compact hard-bitten silhouette. Use a flat #00ff00 chroma key background with no floor or scenery and a square 1:1 canvas with generous padding. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered brawler in a tight bare-knuckle guard facing three-quarters right. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+  },
+  "animations": {
+    "idle": {
+      "source": "ai-image-metadata/characters/player-animation-sources/human_male_brawler/idle.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/human_male_brawler/chroma/idle.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 4,
+      "frameDescriptions": [
+        "tight bare-knuckle guard with chin tucked",
+        "heavy inhale as shoulders roll upward",
+        "weight shifts onto the forward foot",
+        "lead fist makes a short challenging feint",
+        "centered stubborn midpoint",
+        "forceful exhale as shoulders drop",
+        "weight rocks onto the rear foot",
+        "tight guard flowing back to frame one"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body brawler rolling-guard idle-cycle poses of the authoritative Human Brawler (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: human features balanced proportions warm skin tone male masculine features street fighter spiked knuckles tough rugged scarred bandaged tank top. Required sequence: tight bare-knuckle guard with chin tucked; heavy inhale as shoulders roll upward; weight shifts onto the forward foot; lead fist makes a short challenging feint; centered stubborn midpoint; forceful exhale as shoulders drop; weight rocks onto the rear foot; tight guard flowing back to frame one. Motion direction: A restless boxing loop rolls shoulders, shifts planted weight, adjusts the chin guard, and invites the opponent forward.. Overall brawler motion is rough, compact, stubborn, and heavy-handed, with rolling shoulders, planted hooks, guarded chin, and scrappy recovery. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, scars, bandages, clothing, palette, proportions, and fist gear. Preserve the portrait's rugged clothing, bandages, scars, spiked knuckles or gloves, belt, and exact accessory count. Keep fist gear on the correct hands and never duplicate spikes, invent a weapon, or heal or relocate scars. Brawling is physical. Do not add aura, elemental trails, runes, projectiles, shockwaves, or supernatural afterimages; only small dust and contact accents are allowed. Action-specific effects: No active effect; bandages, shirt, and loose straps settle with the breathing. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "walk": {
+      "source": "ai-image-metadata/characters/player-animation-sources/human_male_brawler/walk.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/human_male_brawler/chroma/walk.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "left foot pressure-step contact behind tight fists",
+        "left knee compresses as shoulders roll",
+        "passing shuffle with right knee advancing",
+        "right foot reaches without crossing stance",
+        "right foot pressure-step contact",
+        "right knee compresses beneath the guard",
+        "passing shuffle with left knee advancing",
+        "left foot reaches into the pressure loop"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body brawler pressure-step cycle poses of the authoritative Human Brawler (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: human features balanced proportions warm skin tone male masculine features street fighter spiked knuckles tough rugged scarred bandaged tank top. Required sequence: left foot pressure-step contact behind tight fists; left knee compresses as shoulders roll; passing shuffle with right knee advancing; right foot reaches without crossing stance; right foot pressure-step contact; right knee compresses beneath the guard; passing shuffle with left knee advancing; left foot reaches into the pressure loop. Motion direction: A forward-pressure alternating shuffle uses forefoot contacts, bent knees, close guard, shoulder sway, and rugged clothing follow-through.. Overall brawler motion is rough, compact, stubborn, and heavy-handed, with rolling shoulders, planted hooks, guarded chin, and scrappy recovery. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, scars, bandages, clothing, palette, proportions, and fist gear. Preserve the portrait's rugged clothing, bandages, scars, spiked knuckles or gloves, belt, and exact accessory count. Keep fist gear on the correct hands and never duplicate spikes, invent a weapon, or heal or relocate scars. Brawling is physical. Do not add aura, elemental trails, runes, projectiles, shockwaves, or supernatural afterimages; only small dust and contact accents are allowed. Action-specific effects: No attack effect or magic; a tiny grounded dust mark may accent a hard plant. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "attack": {
+      "source": "ai-image-metadata/characters/player-animation-sources/human_male_brawler/attack.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/human_male_brawler/chroma/attack.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "tight guard measuring close range",
+        "lead fist snaps a short feint",
+        "knees dip as rear fist loads beside the ribs",
+        "planted body hook drives through hip rotation",
+        "rising second punch crosses the contact line",
+        "shoulders roll through compact follow-through",
+        "both fists retract to protect the chin",
+        "recovered stubborn guard"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body brawler body-hook combination poses of the authoritative Human Brawler (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: human features balanced proportions warm skin tone male masculine features street fighter spiked knuckles tough rugged scarred bandaged tank top. Required sequence: tight guard measuring close range; lead fist snaps a short feint; knees dip as rear fist loads beside the ribs; planted body hook drives through hip rotation; rising second punch crosses the contact line; shoulders roll through compact follow-through; both fists retract to protect the chin; recovered stubborn guard. Motion direction: A short feint draws the guard, hips drop into a body hook, shoulders rotate through a rising second punch, and the brawler rolls back into cover.. Overall brawler motion is rough, compact, stubborn, and heavy-handed, with rolling shoulders, planted hooks, guarded chin, and scrappy recovery. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, scars, bandages, clothing, palette, proportions, and fist gear. Preserve the portrait's rugged clothing, bandages, scars, spiked knuckles or gloves, belt, and exact accessory count. Keep fist gear on the correct hands and never duplicate spikes, invent a weapon, or heal or relocate scars. Brawling is physical. Do not add aura, elemental trails, runes, projectiles, shockwaves, or supernatural afterimages; only small dust and contact accents are allowed. Action-specific effects: One tiny physical contact accent per readable punch is permitted; no shockwave, aura, or effect hiding fists and hips. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "hurt": {
+      "source": "ai-image-metadata/characters/player-animation-sources/human_male_brawler/hurt.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/human_male_brawler/chroma/hurt.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "tight guard before impact",
+        "sharp head-and-shoulder snap with fists separating",
+        "maximum stagger with torso arched and knees bent",
+        "stumbling backward step",
+        "one-hand low catch with opposite fist guarding",
+        "stubborn push upright through planted legs",
+        "chin tucks and fists reset",
+        "recovered rolling guard"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body brawler rocked-but-standing recovery poses of the authoritative Human Brawler (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: human features balanced proportions warm skin tone male masculine features street fighter spiked knuckles tough rugged scarred bandaged tank top. Required sequence: tight guard before impact; sharp head-and-shoulder snap with fists separating; maximum stagger with torso arched and knees bent; stumbling backward step; one-hand low catch with opposite fist guarding; stubborn push upright through planted legs; chin tucks and fists reset; recovered rolling guard. Motion direction: A heavy hit snaps the head and torso, forces a stumbling step, drops the brawler to one hand, then resolves through a stubborn rise and guard reset.. Overall brawler motion is rough, compact, stubborn, and heavy-handed, with rolling shoulders, planted hooks, guarded chin, and scrappy recovery. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, scars, bandages, clothing, palette, proportions, and fist gear. Preserve the portrait's rugged clothing, bandages, scars, spiked knuckles or gloves, belt, and exact accessory count. Keep fist gear on the correct hands and never duplicate spikes, invent a weapon, or heal or relocate scars. Brawling is physical. Do not add aura, elemental trails, runes, projectiles, shockwaves, or supernatural afterimages; only small dust and contact accents are allowed. Action-specific effects: One compact physical impact accent only; no gore, blood spray, magic, or altered scars. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "death": {
+      "source": "ai-image-metadata/characters/player-animation-sources/human_male_brawler/death.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/human_male_brawler/chroma/death.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "verticalAnchor": "bottom",
+      "outputFrameMap": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        7,
+        7
+      ],
+      "frameDescriptions": [
+        "fatal impact breaks the tight guard",
+        "fists fall as torso reels",
+        "both knees buckle into a low drop",
+        "one fist touches down while hips roll",
+        "body lands in full ground contact",
+        "rugged clothing, limbs, and gear settle",
+        "final fully fallen brawler",
+        "same final fallen pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body brawler defeat sequence poses of the authoritative Human Brawler (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: human features balanced proportions warm skin tone male masculine features street fighter spiked knuckles tough rugged scarred bandaged tank top. Required sequence: fatal impact breaks the tight guard; fists fall as torso reels; both knees buckle into a low drop; one fist touches down while hips roll; body lands in full ground contact; rugged clothing, limbs, and gear settle; final fully fallen brawler; same final fallen pose held. Motion direction: A final blow breaks the guard, knees give way, one fist catches low, the body rolls heavily sideways, and settles fully fallen.. Overall brawler motion is rough, compact, stubborn, and heavy-handed, with rolling shoulders, planted hooks, guarded chin, and scrappy recovery. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, scars, bandages, clothing, palette, proportions, and fist gear. Preserve the portrait's rugged clothing, bandages, scars, spiked knuckles or gloves, belt, and exact accessory count. Keep fist gear on the correct hands and never duplicate spikes, invent a weapon, or heal or relocate scars. Brawling is physical. Do not add aura, elemental trails, runes, projectiles, shockwaves, or supernatural afterimages; only small dust and contact accents are allowed. Action-specific effects: No gore, blood, magic, or rigid rotation; keep knuckle gear, bandages, and limbs recognizable. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "dead": {
+      "deriveFrom": {
+        "animation": "death",
+        "frame": 7
+      },
+      "frameDescriptions": [
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held"
+      ],
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity."
+    },
+    "victory": {
+      "source": "ai-image-metadata/characters/player-animation-sources/human_male_brawler/victory.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/human_male_brawler/chroma/victory.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "wary recognition that the fight is won",
+        "one wrapped fist pounds into the opposite palm",
+        "quick celebratory lead shadow punch",
+        "compact rear-hand shadow hook",
+        "shoulders roll back with a rough grin or proud posture",
+        "both fists rise overhead",
+        "wide cocky victor stance",
+        "final triumphant brawler pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body brawler hard-won celebration poses of the authoritative Human Brawler (male presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: human features balanced proportions warm skin tone male masculine features street fighter spiked knuckles tough rugged scarred bandaged tank top. Required sequence: wary recognition that the fight is won; one wrapped fist pounds into the opposite palm; quick celebratory lead shadow punch; compact rear-hand shadow hook; shoulders roll back with a rough grin or proud posture; both fists rise overhead; wide cocky victor stance; final triumphant brawler pose held. Motion direction: The brawler checks the opponent, pounds one fist into the opposite palm, throws two shadow punches, raises both fists, and holds a cocky finish.. Overall brawler motion is rough, compact, stubborn, and heavy-handed, with rolling shoulders, planted hooks, guarded chin, and scrappy recovery. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, scars, bandages, clothing, palette, proportions, and fist gear. Preserve the portrait's rugged clothing, bandages, scars, spiked knuckles or gloves, belt, and exact accessory count. Keep fist gear on the correct hands and never duplicate spikes, invent a weapon, or heal or relocate scars. Brawling is physical. Do not add aura, elemental trails, runes, projectiles, shockwaves, or supernatural afterimages; only small dust and contact accents are allowed. Action-specific effects: No magic; a tiny knuckle glint and clothing follow-through may accent the physical celebration. Use a flat #00ff00 chroma key background with generous gutters. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    }
+  },
+  "pins": {
+    "templateSha256": "93943004e340d113943e06dea61fd7dfad67c20750dd4fc30d76d3be1fb7c144",
+    "profileSha256": "50775fe43bb07dc2cea3d86d6335fddd536c0f039c41977bbf6fe0ffac048a8c",
+    "reference": {
+      "sourceSha256": "6e360452aac1b828317a6e66c08fcd1f5dec97d968e3b832b5b95f9bdea93ca7",
+      "sourceDimensions": "1254x1254",
+      "chromaSourceSha256": "430ed251da5b413327f32cf8f4889fd610ef2abd4404e4df19e0313f25d70cc4",
+      "chromaSourceDimensions": "1254x1254",
+      "identitySourceSha256": "fb3f1be1fd6bf49c1b1e9e4272cae0d83962379c9fbe5a880479fe3d436ee70c",
+      "identitySourceDimensions": "1024x1024",
+      "styleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "styleSourceDimensions": "1254x1254",
+      "promptSha256": "9b9da0a7cad1733a7e078daebf9049437f8283337668bfd347576ca52703ee51",
+      "encodedSha256": "73ffcbf8ec4ba3c09ab2ed5f1f92fc0d9bd8001caf9d9dd37ab368d20131765b",
+      "decodedSha256": "879a77e64a60291e38b56f8a5f4fd7ca5d071f5bae464722e238ff04b7694273"
+    },
+    "animations": {
+      "idle": {
+        "sourceSha256": "525c833b2fce4e6f9a30561d4b8beef3727edd16260a388fcd9f38f45842a0fe",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "74cc7b26c74c8305c6da1f852dc8c6a1f6479748b2d4cc1934fa37f500f81a41",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "22bf61e7e49b65ed319053b7d52fe6b3184095815499473cbb2204273c05075b",
+        "encodedSha256": "6931433417597abbbbf06010e04210434484c1c5ad469866b89d0440d67b3ff6",
+        "decodedSha256": "f1145a1890be9be9a670b7f230f841f156874791395f3b29b21516d757152fce",
+        "frameSha256": [
+          "2b043711bbaa34a403149a0130d5870ee7985e08610f6d23415abf39149f7b58",
+          "f0e01b3b3c873fbf4039b9800cc2c361954002479454bb39adcc3c370a43357d",
+          "fa9e06fa9db12c2d5457e89eb74890c7a7518ae6104cd286fee2c065e7b776af",
+          "aeb16937b971f34911bd629b23d00aa218f841a140ff426b8b8730cee5888832",
+          "1a5830d83fcd2dfb95b58fa0a2d08d9731339a686ef94dc0791cc7e77b2858d4",
+          "2c922861c259bc0437fcc3b979a43396557ecd9bcbc030b9ba42109af21d213c",
+          "f5ec19dfbf6e92383ee31276924e8e9101f6a3f54d7446d47ece40dc6f0a5ca3",
+          "8130b02977dd973fa7e20e89c090a63347130a6521ef6f56bdbcb65ed93a309f"
+        ],
+        "poseSha256": [
+          "faac455dbdd1f3e2bef9287426b52828cf57ee064a7c3ae39cdd05c8139f785d",
+          "6117fe07940b90e87a0557a2037569c3fd45733f7c0a0201941f05699f6582ad",
+          "aee2d962aa22726e7dfea345700e69050a8177a51f95018f7595dd0d9b64aa9c",
+          "0d7609b404dea7ad179a1101fe788f5bdd5cebf0b8ed445661c98427b17253fd",
+          "27946c45c19d010abefeae511a15af6f9b4535cd61f807764ae4c9c484b08107",
+          "14d8c00145007888c8666fb7150dc90b1c188a1d8e8b4d0ab1958c5145ceb792",
+          "c6452ca5d5bd53c3df1562ccdba8a3c407693a42a50f97c7c79d728b61adaf8d",
+          "50a7d15f757cb9f47f4853ce210677397dd0fe0ee065dba636971805fc49d669"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "walk": {
+        "sourceSha256": "6e14d8da1079ec7a3baefe1c43118a318d07d40b76201aa243fe50563bd03df9",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "cf54120c7365e83b1f825f623cd50481b87cc35178b48c063b12cfffe25366d1",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "e7bddcfd88a2697fa09609986113673a3db67143f67bbea43292572d59e686f4",
+        "encodedSha256": "b1ab707e9d5090c2e0af826a47d92576f1a468ecbc2463ff288d9e8ba8ef7e7f",
+        "decodedSha256": "47ee24a243121cb43d47a8c15f18bea481316d53c0eb625344cd0ff4895e16ab",
+        "frameSha256": [
+          "738aaaed9e044e84fa57d3e6e921f5147e7cf6aa724119ccfad8fa5b168eb6d5",
+          "eabab16bf0858e4394b83b31874420aeda4225c604f6b4761673ead8298cf2fb",
+          "ab8020883dab4538c37466f979201e44f1f8bf0135f609b0f0915cdb47c99967",
+          "65b4f6a1d4836c835437ebb06c8d5b89433539b57c5bf65310cf950a52e118c4",
+          "41600f7ceba6ff141e49b1eeaade4cda4d8c55dfed1f811528e6be3ea30c1626",
+          "ce184cb0544f1f683400242e3e405065fa813ea69dc77ccee0b86e635eb865a3",
+          "f87cd869b635d06882c44ac8db3fb984e92e9f6880d2abc7f58073aae782008b",
+          "5f6947606341dd632fe5164d31f1825671d71ed8556966cadad694afed88b001"
+        ],
+        "poseSha256": [
+          "e5251c5aae93ec71682e7d3408c167d732fad91d85532af3b440f2fe509899f8",
+          "574464555c2ca8c0a98e4dfb8d6c07e6c532ba7de4e8fb88aafc0a6ae3eed20d",
+          "b6fbc99d95f52e48d8f64902207bb915da441b30be1266ec6ae3c7575aa33601",
+          "7d33518333903b024e366055a099bdb4241f5cb4a9573bcfa399e5eabc987f49",
+          "c1d7142a03be259e25ad554a75c6ef5a0b4ba9b7ab033bd7f3fecffd34c11878",
+          "9a1aade2f29e93085af6e0db289af567368ea708f638160f1ee43590d1c119f6",
+          "f3bbdd22b34f36767c0f0f274977b4d08a98298eb44c45b37651748852392516",
+          "4d95f2d4691ab327fbdd00366ff6d95c4e1139ce995291fa914bae7c6bf2160e"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.996551,
+          1,
+          0.999408,
+          0.999301,
+          1,
+          1,
+          0.99594,
+          1
+        ]
+      },
+      "attack": {
+        "sourceSha256": "c974212ed89948078a79971e72872038e5789b6416248797c0da84cbdc6da5cc",
+        "sourceDimensions": "1717x916",
+        "chromaSourceSha256": "1801ac06c133c28a120560482bfe25c6ed04e3b7e92f8e98b697fb2f6a0435dc",
+        "chromaSourceDimensions": "1717x916",
+        "promptSha256": "2ba0e50b34923e96353badd39726b4e4e76c0afec0bcfb8d01797c876d042036",
+        "encodedSha256": "793df5a9ef9de03019468d492f9f1387fbbd058024c0c65323db4188574661a3",
+        "decodedSha256": "575174664673703c28727dd1b782c2a234da3cbcc1234da566c0437457e9123e",
+        "frameSha256": [
+          "8933232ca8b5ffe670300b5c4a1e52715fe686913b1792592aa63015fd84e9dd",
+          "1c117083a3481f368cadc52912850d712062de87bf24481c810eaf0629df9728",
+          "0f454c290f36b3e7881e95b2d806d8fe579b4ed23793f56968dbcc4913268de8",
+          "e79483046e06a4d56bed32c5a2ca7c36aab808b3effa8e88378a6d4821aff6b8",
+          "6b8a91f66e830d9f9dc3b0b083add47b86c6a74cc5437da4dc004f58e49ebdca",
+          "2c5a3248764fd81ca944ba4b1e1fa089fb33e60bb11109802f128d7aae1b32b5",
+          "99e84dcdda1b5034e85f73b6780ea41bfe9c270a4e4277ff1ea4e7740ea32702",
+          "6eb8d1a373e3a51d1c17be6aa7b49ba8a027f0445d931c1a42337f21f28add53"
+        ],
+        "poseSha256": [
+          "627b46bc5abec820f1de119125aa6e20c48b81c873e8afc7d224e715f957fe96",
+          "0bf11b4d73c7d8c51f3b9987658c311bde443f9f6b0af0ca6f67d54d2b1f5e84",
+          "9edfa693a5c12b59a89c980283389e5cacd052ff0b46dc63c629554f0a6afe4f",
+          "6c600dd91c4186d03b0a7cb97bab90e6557f83442ecc161763ddbf9b7c970173",
+          "139cca038be36afdc590cfbd954f40d17adfa274eaa42687e764556182d5065b",
+          "60dca32a4ec5a158a22870b16e9b1e13fa10ce24d8ba681723569b45ecc8376d",
+          "b84a5d95eca760db79afa912502b9f6470451bc2329f00928d5c3f5b67e2230f",
+          "b10bc19684993742bf0c5ba966431db0d19680485cac5968a4b067dfcaa6b5c4"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          0.997767,
+          0.992418,
+          1,
+          1,
+          1
+        ]
+      },
+      "hurt": {
+        "sourceSha256": "9b87207d948a90244d275dfe264b038f9482344633d7455a7c0084b685929888",
+        "sourceDimensions": "1717x916",
+        "chromaSourceSha256": "a12bca97ac53d0a5911632887888236eb8bb4e6cdcd2a85ac2c0953da7bc138d",
+        "chromaSourceDimensions": "1717x916",
+        "promptSha256": "facf68f8da3f778bd03de022bb03580ca00edb45e10519b3bcef69b7e16dc9e0",
+        "encodedSha256": "569901140921fbe1dd392522a6a5d5964d7706f89983594f87960a98bb0fec30",
+        "decodedSha256": "bce52453acbdb1446b562bf985f56588a9936020e7618decb29b6e15d0b13e99",
+        "frameSha256": [
+          "c8bb0928cdc92cc567a9b38d5f1a194197d0377de4c4e46a583db04a667c200a",
+          "2b99e61543155c78c8eb015b5709326e4a7b07b6257e6123e236b13f9a6d8379",
+          "32cfa7ef08091ae6e2a5bafc07574d14460b8b3d0ba35c8e52ca116e9da8937c",
+          "aa30ca2f5cda353906763fc1e6b209ca90be461b3ebfb7c172aff1640930dc0d",
+          "aa6f58b008cffbe5bbbea31af91c2bc11e5302f0803f2d330d6a9201d1fb527d",
+          "d31bdaac15b4b6537aef0c60b352d6dacfaf62a21ad95177d7793ae101fdb401",
+          "99bd0e57b3db5b137be25687c53a13d9ac9d04604845d2216a983e7bbf073364",
+          "5bf43f71c28336fede769bb057158bd803e36c6ce3ee0b95720e17138a8039b7"
+        ],
+        "poseSha256": [
+          "1d89fbacb396db773bb452f179ebf2dc5156f4aea14cbefcf5db093192ea6308",
+          "9dffd5ca5908cec79f3b11f05a80bf11b8f970f88e6791f71e536f0a3e27f8ec",
+          "94d28a945e28b95ab249706c8439ed579099d743acd43cdaafa9e163b6b433fe",
+          "0d6c69f69758a155d9d06dedaa2ba644fbde866429e9b2b921f87e9e7accbbb6",
+          "a24b9dd6467d63e2ad82ebf7f51975ad13055e45d7fbb305bc2ab7925fc39d42",
+          "d72d2f91b5ce35147d39f0c49093bcf07294a773e4d885690f527226c403695a",
+          "0f849e7ad0068bdf68ab6b031c69a0a77f4da723049b77a81ff65699fd23724f",
+          "bc9acf9a069d7ec426f639f4f784309f09c141358804d1b385f4578983178bab"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          0.999222,
+          1,
+          0.963943,
+          0.993031,
+          0.984695,
+          1,
+          1
+        ]
+      },
+      "death": {
+        "sourceSha256": "a385e65cbd9e89c2814d21be672cfc8a4df0ce6e5e1007437bf9a6adca6174f6",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "d7b44dee43d955a0302ddb0d7eca6643ce9d360b7693d09cca416d98328d0165",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "261dc40f1b4d41d6b851d2978b4cca69b2fd9af06dcaceedbbda633637562fdb",
+        "encodedSha256": "f9d2e040ba96897f0d9ae6935552955b5a75d4941cde5d8f68cc592ac3ecd24c",
+        "decodedSha256": "9661df3005c1e984b1d4cce93196d2d96a0e584aa6f8a1a31add45ea53ecc4ed",
+        "frameSha256": [
+          "72c260443cb61bd11f11aaed169c95404b181fdb437e08072dc03976a606ef84",
+          "fa4ca3de9cf5584ad18c2d062d1131de09a6816745fc987e2e7ae53c30aae9dd",
+          "0e5b636d35de7ae1dc73082f77a9605a66413d514031c419f25f4eafb37059c7",
+          "1a065e7c20dfd53dbc4da3f4caebd00468245749a63b37df04dcdf5673f15821",
+          "4ab4577ea8622d6c0e9b312f0757fbf12a13f1eaf89fd749276eeffee9be1131",
+          "a34df3882fd00ed53da8097d0e79fe279e345f698f356515c105c63fa1802878",
+          "f13d57ce4298739d9a7b265e68a03869021a73a7f0846748f4b00594a951597c",
+          "f13d57ce4298739d9a7b265e68a03869021a73a7f0846748f4b00594a951597c"
+        ],
+        "poseSha256": [
+          "0ac8c26a4a886a20b1d4ad06c4e49408c5704ec40d80dcc3e6bf688259bc0fcb",
+          "b943f02a0c87b1c3c309fad33516b76a4cdd685606f214893e2b62baee22170a",
+          "89e087b1294139f1d440367073679775668f46895a68bfb14be3a108921e035e",
+          "e6d5fb63786192f40f31f3394215a4b3f68d0d89b6041334823e009f4dc1de88",
+          "1375a3c9b03315f7ce085d2b9747fee81c3edbb59528f2427e049f8853a34c08",
+          "3e0708f33dec1e05a4016e591e83d6652e16f9611ec1c1c7b04165103ce7a7d9",
+          "43e056fad414dabbefdaf7b2a08887e107884ac102eb068b5511cbfe4a4e3429",
+          "43e056fad414dabbefdaf7b2a08887e107884ac102eb068b5511cbfe4a4e3429"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          0.993729,
+          0.983878,
+          0.988449,
+          0.988449
+        ]
+      },
+      "victory": {
+        "sourceSha256": "8ed17c561dbdb14fa629108183735fa314dc42efb2498a0a64b57e5dc6a22bf2",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "88ce12a10254100630754fd79bafca40d84235a38a01664c59c16cb548984c2f",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "848d253a5a96b29787783b09cf85daa48d812cec404a1f7c615c5c64e54d0e16",
+        "encodedSha256": "708948e00b5924f86d0cb4a05af305c2500faf76a70875d399896334f5eb6328",
+        "decodedSha256": "f59d7ed126150c7bf45f6ee0e308cfb37802248d43285376c4f56e883106a9c7",
+        "frameSha256": [
+          "519625131c74898c44444389a3482781beb7bae4fc6953036e1339b52bc9292b",
+          "5b59be428c809e1280289b144526725f0701ef8c605e3c455e24f805f6120917",
+          "4f8bf8fc9ce7827ecda7b899b3d4b3e1b523136325b642776740274e74eafcb0",
+          "4b6f497a29af74fcc0ab9485711ce84a3e05df5dadbcc718d381d283925ffa73",
+          "6f1a0eb06b4d5ee74c31ea7acc654d9a1ec25adf2002370f5a90b541e27a039a",
+          "e113fb44ad03ff74b5cc8bab9c6bffaddcd4acbd09df2e771dbca5a166fc8530",
+          "d2c473a826dfe0660414e23ed3adae8c51582aa9259afe6d8b3ef0afce7320c8",
+          "9a8db133f6247868cb06942d4ad4a1f81918a6f9f3ba35561bb4af29020fd961"
+        ],
+        "poseSha256": [
+          "51ad72d1287d7ba19bf60c0615777891928c2c57ae52f215ca28eeb5d538fe43",
+          "39745c6b354255da0d8af0a8fda1111f029ac9edb7a095e628cb0b7bc7a305aa",
+          "831a9b10d800ef55d5dbc58498ca15048e3f054740c4df7140f7f21bc4cf2b42",
+          "f6a9e3008a84cb88a8477c6fbd5c79577feede3b97a88f937181a2654f95aa85",
+          "93ba9bcc10d59f444b1962dcb989f2763a783d791c2f6629772fbe81e9e33936",
+          "8d1bf8509a84753accb1d4890c1971b6a45dd1742130f6389fb7dc9eb1002474",
+          "88b4161dfc950af0bd059a08ddd90068450f03affa1d41a698a67ccdbd064846",
+          "c13dde73f90a2fc153be8ee524f7fbb07d1dfbec925c277dccbd39e889ac1fee"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          0.997952,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "dead": {
+        "sourceSha256": "a385e65cbd9e89c2814d21be672cfc8a4df0ce6e5e1007437bf9a6adca6174f6",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "d7b44dee43d955a0302ddb0d7eca6643ce9d360b7693d09cca416d98328d0165",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "f631a7fd605211260b28b5a5bba3503e06dc1064497d1e5769d62e40e178e2b1",
+        "encodedSha256": "75e87a183793a51604d61ab6834d2eb6b82a784479612f2975e71981a492bec4",
+        "decodedSha256": "2e50432ae22ca0877becfc104037587043cb28f9bcd2b26c7c10da433d86a44f",
+        "frameSha256": [
+          "f13d57ce4298739d9a7b265e68a03869021a73a7f0846748f4b00594a951597c",
+          "f13d57ce4298739d9a7b265e68a03869021a73a7f0846748f4b00594a951597c",
+          "f13d57ce4298739d9a7b265e68a03869021a73a7f0846748f4b00594a951597c",
+          "f13d57ce4298739d9a7b265e68a03869021a73a7f0846748f4b00594a951597c",
+          "f13d57ce4298739d9a7b265e68a03869021a73a7f0846748f4b00594a951597c",
+          "f13d57ce4298739d9a7b265e68a03869021a73a7f0846748f4b00594a951597c",
+          "f13d57ce4298739d9a7b265e68a03869021a73a7f0846748f4b00594a951597c",
+          "f13d57ce4298739d9a7b265e68a03869021a73a7f0846748f4b00594a951597c"
+        ],
+        "poseSha256": [
+          "43e056fad414dabbefdaf7b2a08887e107884ac102eb068b5511cbfe4a4e3429",
+          "43e056fad414dabbefdaf7b2a08887e107884ac102eb068b5511cbfe4a4e3429",
+          "43e056fad414dabbefdaf7b2a08887e107884ac102eb068b5511cbfe4a4e3429",
+          "43e056fad414dabbefdaf7b2a08887e107884ac102eb068b5511cbfe4a4e3429",
+          "43e056fad414dabbefdaf7b2a08887e107884ac102eb068b5511cbfe4a4e3429",
+          "43e056fad414dabbefdaf7b2a08887e107884ac102eb068b5511cbfe4a4e3429",
+          "43e056fad414dabbefdaf7b2a08887e107884ac102eb068b5511cbfe4a4e3429",
+          "43e056fad414dabbefdaf7b2a08887e107884ac102eb068b5511cbfe4a4e3429"
+        ],
+        "sourceFrameIndexes": [
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.988449,
+          0.988449,
+          0.988449,
+          0.988449,
+          0.988449,
+          0.988449,
+          0.988449,
+          0.988449
+        ]
+      }
+    }
+  }
+}

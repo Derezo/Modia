@@ -40,12 +40,12 @@ describe('battle resume action-sequence contract', () => {
       "router.get('/current'"
     );
     const existingBattleResume = startRoute.slice(
-      startRoute.indexOf('if (existingBattle.rows.length > 0)')
+      startRoute.indexOf('if (party.some(c => c.in_battle))')
     );
 
     assert.match(
       existingBattleResume,
-      /resetActionSequence\(battle\.id, req\.user\.userId\)/,
+      /resetActionSequence\(battleEnvelope\.id, req\.user\.userId\)/,
       '/battle/start must reset the counter before returning an existing active battle'
     );
   });

@@ -47,23 +47,39 @@ describe('applyBattleMapPatch', () => {
       setTerrain(value) { calls.push(['terrain', value]); },
       setElevation(value, format) { calls.push(['elevation', value, format]); },
       setTileVariants(value) { calls.push(['variants', value]); },
-      setObstacles(value) { calls.push(['obstacles', value]); }
+      setObstacles(value) { calls.push(['obstacles', value]); },
+      setElevationConnections(value) { calls.push(['connections', value]); },
+      setTransitions(value) { calls.push(['transitions', value]); },
+      setDecorations(value) { calls.push(['decorations', value]); }
     };
     const patch = {
+      nodeType: 'mountain',
       terrain: [['stone']],
       elevation: [[0.54]],
       elevationFormat: 'normalized',
       variants: [[3]],
-      obstacles: [[null]]
+      obstacles: [{ id: 'tree', x: 0, y: 0, kind: 'tree', blocking: true }],
+      elevationConnections: [{
+        id: 'ramp',
+        from: { x: 0, y: 0 },
+        to: { x: 1, y: 0 },
+        kind: 'ramp'
+      }],
+      transitions: [{ id: 'snow-edge', x: 0, y: 0 }],
+      decorations: [{ id: 'snow-drift', x: 0, y: 0 }]
     };
 
     applyBattleMapPatch(grid, patch);
 
+    assert.equal(grid.nodeType, 'mountain');
     assert.deepEqual(calls, [
       ['terrain', patch.terrain],
       ['elevation', patch.elevation, 'normalized'],
       ['variants', patch.variants],
-      ['obstacles', patch.obstacles]
+      ['obstacles', patch.obstacles],
+      ['connections', patch.elevationConnections],
+      ['transitions', patch.transitions],
+      ['decorations', patch.decorations]
     ]);
   });
 });

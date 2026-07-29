@@ -777,30 +777,60 @@ describe('processAction - Move Action', () => {
 
   it('should reject move to occupied tile', () => {
     const unit = createMoveTestUnit();
-    const blocker = { id: 'blocker', tileX: 6, tileY: 5, hp: 50 };
+    const blocker = { id: 'blocker', tileX: 6, tileY: 5, hp: 0 };
     const state = createMoveTestState({ units: [unit, blocker] });
 
     const result = processAction(state, unit, 'move', { x: 6, y: 5 });
 
-    assert.ok(result.error);
-    assert.ok(result.error.includes('occupied'));
+    assert.strictEqual(result.error, 'Target tile is occupied');
   });
 
-  it('should reject move outside map bounds or unreachable', () => {
+  it('should reject move outside map bounds before traversal', () => {
     const unit = createMoveTestUnit({ tileX: 0, tileY: 0 });
     const state = createMoveTestState({ units: [unit] });
 
     const result = processAction(state, unit, 'move', { x: -1, y: 0 });
 
-    // Path cost check happens before bounds check, so negative coords
-    // may hit "unreachable" before "outside map bounds"
-    assert.ok(result.error);
-    assert.ok(
-      result.error.includes('outside map bounds') ||
-      result.error.includes('unreachable') ||
-      result.error.includes('out of movement range'),
-      `Unexpected error: ${result.error}`
-    );
+    assert.strictEqual(result.error, 'Target tile is outside map bounds');
+  });
+
+  it('should use terrain dimensions for bounds when explicit dimensions are absent', () => {
+    const unit = createMoveTestUnit({ tileX: 0, tileY: 0 });
+    const state = createMoveTestState({
+      units: [unit],
+      mapWidth: undefined,
+      mapHeight: undefined,
+      terrain: [
+        [0, 0],
+        [0, 0]
+      ]
+    });
+
+    const result = processAction(state, unit, 'move', { x: 2, y: 0 });
+
+    assert.strictEqual(result.error, 'Target tile is outside map bounds');
+  });
+
+  it('should reject malformed move coordinates before traversal', () => {
+    const malformedTargets = [
+      { x: Number.NaN, y: 5 },
+      { x: 6, y: Number.POSITIVE_INFINITY },
+      { x: 6.5, y: 5 },
+      { x: '6', y: 5 },
+      { y: 5 }
+    ];
+
+    for (const targetTile of malformedTargets) {
+      const unit = createMoveTestUnit();
+      const state = createMoveTestState({ units: [unit] });
+      const result = processAction(state, unit, 'move', targetTile);
+
+      assert.strictEqual(
+        result.error,
+        'Target tile coordinates must be finite integers',
+        `Unexpected error for target ${JSON.stringify(targetTile)}`
+      );
+    }
   });
 
   it('should handle null targetTile gracefully', () => {

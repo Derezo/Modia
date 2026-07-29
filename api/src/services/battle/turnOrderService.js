@@ -146,20 +146,27 @@ export function predictTurnOrder(state, count = 10) {
 
     const actor = ready[0];
     const visualIdentity = createBattleVisualIdentity(actor);
-    predictions.push({
+    const prediction = {
       id: actor.id,
-      name: actor.name,
       type: actor.type,
-      class: actor.class,
-      visualIdentity,
-      // Portrait/icon path fields
-      visualId: visualIdentity.kind === 'npc' ? visualIdentity.visualId : undefined,
-      enemyId: visualIdentity.kind === 'npc' ? visualIdentity.visualId : actor.enemyId,
-      spriteId: visualIdentity.kind === 'npc' ? visualIdentity.visualId : actor.spriteId,
-      primaryBiome: visualIdentity.kind === 'npc' ? visualIdentity.primaryBiome : undefined,
-      race: actor.race,        // Player race
-      gender: actor.gender     // Player gender
-    });
+      visualIdentity
+    };
+    if (actor.name !== undefined) prediction.name = actor.name;
+    if (actor.class !== undefined) prediction.class = actor.class;
+    if (visualIdentity.kind === 'npc') {
+      prediction.visualId = visualIdentity.visualId;
+      prediction.enemyId = visualIdentity.visualId;
+      prediction.spriteId = visualIdentity.visualId;
+      prediction.primaryBiome = visualIdentity.primaryBiome;
+    } else {
+      // Optional legacy aliases must be omitted instead of serialized as
+      // `undefined`; BattleMutableStateV1 is a canonical JSON protocol.
+      if (actor.enemyId !== undefined) prediction.enemyId = actor.enemyId;
+      if (actor.spriteId !== undefined) prediction.spriteId = actor.spriteId;
+      if (actor.race !== undefined) prediction.race = actor.race;
+      if (actor.gender !== undefined) prediction.gender = actor.gender;
+    }
+    predictions.push(prediction);
 
     // Consume CT in simulation
     simCT[actor.id] -= CT_THRESHOLD;

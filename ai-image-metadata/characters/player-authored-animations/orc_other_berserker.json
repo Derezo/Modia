@@ -1,0 +1,584 @@
+{
+  "version": "1.0.0",
+  "template": "ai-image-metadata/characters/player-authored-animation-template.json",
+  "compilerVersion": "1.2.0",
+  "id": "orc_other_berserker",
+  "profile": "berserker_v1",
+  "profileSource": "ai-image-metadata/characters/player-animation-profiles/berserker_v1.json",
+  "status": "approved",
+  "approvedAt": "2026-07-29T03:06:11.775Z",
+  "metadataFingerprint": "1b119ce78acb7405a76aecd736bfc9d77908b023902da1b3df30bc1de4dc5895",
+  "draftProvenance": {
+    "registry": "ai-image-metadata/characters/player-variants.json",
+    "templateSha256": "7943e69db577b3a4429b47df634f931d3f4cb8e8ce9a91a06578255fbe935bbe",
+    "profileSha256": "cc84d10fbec414ab2e73d166b23f5687109336422dd0d3cc11b12f0ea7ef547a"
+  },
+  "identity": {
+    "race": "orc",
+    "gender": "other",
+    "class": "berserker",
+    "presentation": "non-binary orc berserker",
+    "visualTraits": "orc green skin tusks muscular tribal markings fierce androgynous features non-binary savage warrior spiked armor dual axes wild hair war paint scarred",
+    "baseFacing": "three-quarters right",
+    "sourceMetadata": {
+      "isAdvanced": true,
+      "inheritsFrom": "berserker",
+      "seed": 24033
+    }
+  },
+  "inputs": {
+    "identity": {
+      "origin": "frontend/public/assets/portraits/originals/orc_other_berserker.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/orc_other_berserker/inputs/identity.png",
+      "authority": "face, ancestry, gender presentation, hair, eyes, complexion, costume, palette, proportions, and equipment"
+    },
+    "style": {
+      "origin": "ai-image-metadata/characters/player-animation-sources/elf_other_wizard/reference.png",
+      "staged": "ai-image-metadata/characters/player-animation-sources/orc_other_berserker/inputs/style.png",
+      "authority": "Pixel density, outline language, compact tactical proportions, lighting, and material rendering only. The style image must never override the selected identity portrait or player metadata."
+    }
+  },
+  "reference": {
+    "source": "ai-image-metadata/characters/player-animation-sources/orc_other_berserker/reference.png",
+    "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_other_berserker/chroma/reference.png",
+    "identitySource": "ai-image-metadata/characters/player-animation-sources/orc_other_berserker/inputs/identity.png",
+    "styleSource": "ai-image-metadata/characters/player-animation-sources/orc_other_berserker/inputs/style.png",
+    "prompt": "Use case: stylized-concept. Asset type: canonical full-body game character reference for a 16-bit fantasy tactical RPG. Image 1 is the authoritative Orc Berserker (non-binary presentation) identity portrait; Image 2 is the approved full-body pixel-art style and proportion reference only. Player identity metadata: orc green skin tusks muscular tribal markings fierce androgynous features non-binary savage warrior spiked armor dual axes wild hair war paint scarred. Create one complete head-to-toe Orc Berserker (non-binary presentation) preserving Image 1's face, ancestry traits, gender presentation, hair, scars, war paint, savage armor, palette, proportions, and weapons. Do not import identity details from Image 2. Preserve the portrait's savage armor, war paint, scars, hair, and exact weapon designs and count. If two axes are present, keep exactly one in each original hand; never duplicate, swap, sheath, merge, or transform them. Translate the portrait into a compact powerful full-body silhouette. Use a flat #00ff00 chroma key background with no floor or scenery and a square 1:1 canvas with generous padding. Polished hand-authored 16-bit pixel art with crisp pixel clusters, bold dark outlines, restrained warm top-left highlights, and muted watercolor-and-parchment ramps. One centered berserker in a coiled aggressive guard facing three-quarters right. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+  },
+  "animations": {
+    "idle": {
+      "source": "ai-image-metadata/characters/player-animation-sources/orc_other_berserker/idle.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_other_berserker/chroma/idle.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 4,
+      "frameDescriptions": [
+        "low aggressive guard with both weapons spread",
+        "deep inhale lifting shoulders and weapon heads",
+        "weight drives onto the forward foot",
+        "impatient forward lean with elbows flexed",
+        "centered predatory crouch",
+        "forceful exhale lowering shoulders",
+        "rearward weight shift with weapons re-angled",
+        "coiled guard flowing back to frame one"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body berserker prowling idle-cycle poses of the authoritative Orc Berserker (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: orc green skin tusks muscular tribal markings fierce androgynous features non-binary savage warrior spiked armor dual axes wild hair war paint scarred. Required sequence: low aggressive guard with both weapons spread; deep inhale lifting shoulders and weapon heads; weight drives onto the forward foot; impatient forward lean with elbows flexed; centered predatory crouch; forceful exhale lowering shoulders; rearward weight shift with weapons re-angled; coiled guard flowing back to frame one. Motion direction: A predatory breathing loop shifts weight between a low weapon guard and an impatient forward lean while both weapons remain controlled.. Overall berserker motion is ferocious, explosive, top-heavy, and relentless, with deep planted lunges, broad shoulder rotation, and readable dual-weapon momentum. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, armor, palette, proportions, scars, war paint, and weapon count. Preserve the portrait's savage armor, war paint, scars, hair, and exact weapon designs and count. If two axes are present, keep exactly one in each original hand; never duplicate, swap, sheath, merge, or transform them. Berserker power is physical fury. Use no spells, runes, projectiles, elemental trails, or supernatural aura; restrained dust or a short impact slash may follow physical contact only. Action-specific effects: No active attack effect; hair, straps, and weapon heads may settle with the heavy breathing. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "walk": {
+      "source": "ai-image-metadata/characters/player-animation-sources/orc_other_berserker/walk.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_other_berserker/chroma/walk.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "left foot crushing forward contact",
+        "left leg compressed under the weapon weight",
+        "passing pose with right knee driving through",
+        "right foot reaching as both weapons counter-swing",
+        "right foot forceful forward contact",
+        "right leg compressed under the armor",
+        "passing pose with left knee driving through",
+        "left foot reaching into the stalking loop"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body berserker weapon-heavy stalk poses of the authoritative Orc Berserker (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: orc green skin tusks muscular tribal markings fierce androgynous features non-binary savage warrior spiked armor dual axes wild hair war paint scarred. Required sequence: left foot crushing forward contact; left leg compressed under the weapon weight; passing pose with right knee driving through; right foot reaching as both weapons counter-swing; right foot forceful forward contact; right leg compressed under the armor; passing pose with left knee driving through; left foot reaching into the stalking loop. Motion direction: A fast heavy-footed stalk uses alternating contacts, deep compression, broad counter-swings, and controlled weapon inertia.. Overall berserker motion is ferocious, explosive, top-heavy, and relentless, with deep planted lunges, broad shoulder rotation, and readable dual-weapon momentum. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, armor, palette, proportions, scars, war paint, and weapon count. Preserve the portrait's savage armor, war paint, scars, hair, and exact weapon designs and count. If two axes are present, keep exactly one in each original hand; never duplicate, swap, sheath, merge, or transform them. Berserker power is physical fury. Use no spells, runes, projectiles, elemental trails, or supernatural aura; restrained dust or a short impact slash may follow physical contact only. Action-specific effects: No attack trail or magic; armor, hair, straps, and weapons follow the planted steps. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "attack": {
+      "source": "ai-image-metadata/characters/player-animation-sources/orc_other_berserker/attack.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_other_berserker/chroma/attack.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "coiled dual-weapon guard",
+        "rear weapon pulls high as the lead weapon measures distance",
+        "deep crossed windup over the rear leg",
+        "lunging first diagonal chop with hips committed",
+        "second weapon crosses through the contact line",
+        "low full-body follow-through with both arms separated",
+        "weapons recoil outward while feet reset",
+        "recovered aggressive guard"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body berserker crossing dual-weapon assault poses of the authoritative Orc Berserker (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: orc green skin tusks muscular tribal markings fierce androgynous features non-binary savage warrior spiked armor dual axes wild hair war paint scarred. Required sequence: coiled dual-weapon guard; rear weapon pulls high as the lead weapon measures distance; deep crossed windup over the rear leg; lunging first diagonal chop with hips committed; second weapon crosses through the contact line; low full-body follow-through with both arms separated; weapons recoil outward while feet reset; recovered aggressive guard. Motion direction: A committed combination coils both weapons, drives a first diagonal chop, crosses into a second strike, follows through low, and recovers into guard.. Overall berserker motion is ferocious, explosive, top-heavy, and relentless, with deep planted lunges, broad shoulder rotation, and readable dual-weapon momentum. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, armor, palette, proportions, scars, war paint, and weapon count. Preserve the portrait's savage armor, war paint, scars, hair, and exact weapon designs and count. If two axes are present, keep exactly one in each original hand; never duplicate, swap, sheath, merge, or transform them. Berserker power is physical fury. Use no spells, runes, projectiles, elemental trails, or supernatural aura; restrained dust or a short impact slash may follow physical contact only. Action-specific effects: Two short physical blade-swish accents may mark the separate contacts; no projectile, magic, duplicate weapon, or effect hiding the arms. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "hurt": {
+      "source": "ai-image-metadata/characters/player-animation-sources/orc_other_berserker/hurt.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_other_berserker/chroma/hurt.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 6,
+      "frameDescriptions": [
+        "aggressive guard before impact",
+        "sharp torso flinch with both grips retained",
+        "maximum backward twist and knee collapse",
+        "staggering rear step with weapons spread for balance",
+        "low crossed-weapon brace",
+        "furious push upright through bent legs",
+        "feet reset as weapons rise",
+        "recovered enraged guard"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body berserker enraged impact-and-recovery poses of the authoritative Orc Berserker (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: orc green skin tusks muscular tribal markings fierce androgynous features non-binary savage warrior spiked armor dual axes wild hair war paint scarred. Required sequence: aggressive guard before impact; sharp torso flinch with both grips retained; maximum backward twist and knee collapse; staggering rear step with weapons spread for balance; low crossed-weapon brace; furious push upright through bent legs; feet reset as weapons rise; recovered enraged guard. Motion direction: A hard hit breaks the attack posture into an articulated recoil, staggering step, low weapon brace, furious rise, and renewed guard.. Overall berserker motion is ferocious, explosive, top-heavy, and relentless, with deep planted lunges, broad shoulder rotation, and readable dual-weapon momentum. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, armor, palette, proportions, scars, war paint, and weapon count. Preserve the portrait's savage armor, war paint, scars, hair, and exact weapon designs and count. If two axes are present, keep exactly one in each original hand; never duplicate, swap, sheath, merge, or transform them. Berserker power is physical fury. Use no spells, runes, projectiles, elemental trails, or supernatural aura; restrained dust or a short impact slash may follow physical contact only. Action-specific effects: One compact physical impact accent only; no blood, gore, tint, magic, or dropped or duplicated weapon. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "death": {
+      "source": "ai-image-metadata/characters/player-animation-sources/orc_other_berserker/death.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_other_berserker/chroma/death.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "verticalAnchor": "bottom",
+      "outputFrameMap": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        7,
+        7
+      ],
+      "frameDescriptions": [
+        "fatal impact breaks the aggressive guard",
+        "weapon arms sag as balance fails",
+        "both knees buckle beneath the armor",
+        "one hip grounds while the torso twists sideways",
+        "body and weapons descend into full ground contact",
+        "low fallen body settles with limbs articulated",
+        "final fully fallen berserker with weapons at rest",
+        "same final fallen pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body berserker defeat sequence poses of the authoritative Orc Berserker (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: orc green skin tusks muscular tribal markings fierce androgynous features non-binary savage warrior spiked armor dual axes wild hair war paint scarred. Required sequence: fatal impact breaks the aggressive guard; weapon arms sag as balance fails; both knees buckle beneath the armor; one hip grounds while the torso twists sideways; body and weapons descend into full ground contact; low fallen body settles with limbs articulated; final fully fallen berserker with weapons at rest; same final fallen pose held. Motion direction: A final impact empties the fury, weapons sink, knees buckle, the body turns into a grounded side collapse, and all motion settles into a fully fallen pose.. Overall berserker motion is ferocious, explosive, top-heavy, and relentless, with deep planted lunges, broad shoulder rotation, and readable dual-weapon momentum. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, armor, palette, proportions, scars, war paint, and weapon count. Preserve the portrait's savage armor, war paint, scars, hair, and exact weapon designs and count. If two axes are present, keep exactly one in each original hand; never duplicate, swap, sheath, merge, or transform them. Berserker power is physical fury. Use no spells, runes, projectiles, elemental trails, or supernatural aura; restrained dust or a short impact slash may follow physical contact only. Action-specific effects: No gore, blood, magic, or rigid rotation. Keep every weapon single and recognizable through the articulated fall. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    },
+    "dead": {
+      "deriveFrom": {
+        "animation": "death",
+        "frame": 7
+      },
+      "frameDescriptions": [
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held",
+        "terminal fallen pose held"
+      ],
+      "prompt": "Deterministically repeat the accepted terminal death frame eight times; do not generate a second corpse identity."
+    },
+    "victory": {
+      "source": "ai-image-metadata/characters/player-animation-sources/orc_other_berserker/victory.png",
+      "chromaSource": "ai-image-metadata/characters/player-animation-sources/orc_other_berserker/chroma/victory.png",
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "minimumComponentPixels": 12,
+        "minimumSubjectPixels": 64,
+        "minimumDominantRatio": 0.35
+      },
+      "anchor": "source-cell",
+      "minimumUniquePoses": 7,
+      "frameDescriptions": [
+        "stunned recognition of victory",
+        "forceful forward victory stamp",
+        "both weapons sweep outward from the hips",
+        "chest thrown upward in a full-bodied roar",
+        "weapons rise in separate overhead arcs",
+        "weapon heads cross high without merging",
+        "wide dominant stance with both weapons displayed",
+        "final roaring triumphant pose held"
+      ],
+      "prompt": "Draw exactly 8 genuinely redrawn full-body berserker roaring victory poses of the authoritative Orc Berserker (non-binary presentation) in a 4-column by 2-row atlas, ordered top row left-to-right then bottom row left-to-right. Player identity metadata: orc green skin tusks muscular tribal markings fierce androgynous features non-binary savage warrior spiked armor dual axes wild hair war paint scarred. Required sequence: stunned recognition of victory; forceful forward victory stamp; both weapons sweep outward from the hips; chest thrown upward in a full-bodied roar; weapons rise in separate overhead arcs; weapon heads cross high without merging; wide dominant stance with both weapons displayed; final roaring triumphant pose held. Motion direction: The berserker recognizes victory, stamps forward, sweeps both weapons wide, throws the chest upward in a roar, crosses the weapons overhead, and holds a dominant finish.. Overall berserker motion is ferocious, explosive, top-heavy, and relentless, with deep planted lunges, broad shoulder rotation, and readable dual-weapon momentum. Each atlas must redraw anatomy, limbs, hands, equipment, hair, and cloth for the requested action; rigid translation, rotation, skew, tint, or scale does not count as animation. Preserve exact identity, armor, palette, proportions, scars, war paint, and weapon count. Preserve the portrait's savage armor, war paint, scars, hair, and exact weapon designs and count. If two axes are present, keep exactly one in each original hand; never duplicate, swap, sheath, merge, or transform them. Berserker power is physical fury. Use no spells, runes, projectiles, elemental trails, or supernatural aura; restrained dust or a short impact slash may follow physical contact only. Action-specific effects: No spell effect; a tiny metal glint and grounded dust at the stamp may accent the physical celebration. Use a flat #00ff00 chroma key background with generous gutters between complete head-to-toe poses. No violation of this invariant: one character identity in every frame. No violation of this invariant: one and only one copy of each declared equipment item. No violation of this invariant: complete head-to-toe anatomy. No violation of this invariant: consistent costume, palette, proportions, and pixel density. No violation of this invariant: no labels, text, watermark, scenery, floor, cast shadow, or grid borders."
+    }
+  },
+  "pins": {
+    "templateSha256": "93943004e340d113943e06dea61fd7dfad67c20750dd4fc30d76d3be1fb7c144",
+    "profileSha256": "e6e4f25cdd01e2688dce3b18373249849cdec3b3f71a6202bdf020c5924c303d",
+    "reference": {
+      "sourceSha256": "a876779bbd04b78387e496a95cf974cb1d9dc5e473322f1e6b69156bc96c5f2f",
+      "sourceDimensions": "1254x1254",
+      "chromaSourceSha256": "025c561777a4b7bd80031b45500e34af865459908c7f1f7c7156f15922f17c7b",
+      "chromaSourceDimensions": "1254x1254",
+      "identitySourceSha256": "a4922db47d2898b15146debc30845ab72d245bc4c301c78ae1e1d99237b11a34",
+      "identitySourceDimensions": "1024x1024",
+      "styleSourceSha256": "47a4ce9f52b241e700bc8fa990f9aea9e0e5ae582b947d5c2d423e0b57c7e283",
+      "styleSourceDimensions": "1254x1254",
+      "promptSha256": "e7b763144a6952a7325ca89ec51ec3bb7d8ad975845bfae0619fa067734ed283",
+      "encodedSha256": "f9dae83b327bf094c47409787eba88cf129090c526bc88c92a0b79700e9dbd3f",
+      "decodedSha256": "5a826be7a430a675748fd64a3b13bc38a809b264ea1cc14a725e7fe13a7146db"
+    },
+    "animations": {
+      "idle": {
+        "sourceSha256": "8365094b0200b9506f5cee383865fc7b08330d87d1aa0b69c448241a67604be2",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "85b606b2890326d0b28f9015e403d696881cc390de6337979fa6e0c79f419997",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "3e587e4b5a96b2c702d53024a1848e184019b13149831ea4aaa159c80680a149",
+        "encodedSha256": "67fc85f2cdc4e830e5895f72c766b35b1ca56c2b0a270757c2ac60cb87667c40",
+        "decodedSha256": "4bfa008638bf1e0c6585502df72f7ec201dc57c7ba0be88b776d911eb2dea815",
+        "frameSha256": [
+          "87c6fb7a7eae78e7f3452313d68cb8a9994440828dde57449f3bc75998d29eb1",
+          "b6feaf20bd5eece69ce47519f33efd5349559ca3cdfe9ae84c703e20f679ca5d",
+          "03f13078b3319aa27681b7fee5f985a40f0482ecb247df0082e2b414c64acf59",
+          "ae93bc897533530eda1e7958c1abf8b98198c56e22739b98282a35f9ebdef03a",
+          "e7d6671082b3945f6a6b8d1b6c1a46e55fda9243426e6466f946f4653f89da9b",
+          "14437aae15c8587842a062903bf0da4908e089884d257059136d26f3f9fd8768",
+          "eaac5d3c01fb0d5b525330932647d133aa824eb2910255549d393e16b4e1da7d",
+          "1deea553ce26a06bda8a218945349dba861367a7dccb45ca60834593456edffb"
+        ],
+        "poseSha256": [
+          "89d9c9c2dde38b0feec8c5286f44db9055b983099aeb97093a41ff433fc6465a",
+          "aa8b789b6e1a8cbfb5ff19e21ca80ff42d16e70e182575a8f926ec819184fecc",
+          "33329e67fd383c1e00475ac50ac57630f95dbfa389f3f96877402b08ba5e37c4",
+          "7968dc0f6a87c83b6de55ef8a41781117934a567432c1b884c0e2e510f367239",
+          "54f110be5026da79c018409eec3db90cb3f666610a2806c7e26f566eb5253425",
+          "885ad256906901bd56cb5cb95f0449b2364aa39b737ac392f78ef656ea6d3027",
+          "bd995c81b10bd92c24aada34cfcd32495b126269a60ecfc75b67a4561c44ec18",
+          "fb61bc948967246eb0eb2ddc5e2059676b3d4976be72e6f53e64215ab2498dda"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "walk": {
+        "sourceSha256": "3323c28ca581141753dbf23147eb7a796fafc7f6157f8ef1c3f0d9b6bd2c47c3",
+        "sourceDimensions": "1717x916",
+        "chromaSourceSha256": "759cbbbb953f992c27980b6f84a83b5b1dc4623e35a26c091429f9997a6426aa",
+        "chromaSourceDimensions": "1717x916",
+        "promptSha256": "f1443055bbd7b3b2ff1fa09de0b9e5b4073afa0f42dc45b0a09e8a62a5d92aa4",
+        "encodedSha256": "cfa8d05a0d9c86954a8de7d856178df9a6cd68edf094965cb8eb5508b9e4b460",
+        "decodedSha256": "0bec3bf89e07595a18b6bff1e86aa3400d8e50826679ed07a93713a577205f92",
+        "frameSha256": [
+          "1274bcfe443195cf52a7dcb5053327ffb6a046285b009e3608fda7e0497fe0b2",
+          "1c35def29d9c51c276124f09373747d8ebc3ee78c1e420ef921c59ee4c837536",
+          "3fc9dc625f0f1d8f45421d67171881045940574900d02c560c6c51b458fa7d6a",
+          "267038997af49d8a65e66730a080f49ac2c94a441e6cfc809131e29de5bc295f",
+          "102e02da2939d0516b1a9cb2411a74da0ab4fc9038d6671cff62edd03fa31838",
+          "5f29c884452d6dc84d40f8c0d7e17c5ec041a8d2d2d19ed484488a5d76102335",
+          "ddc7d71200636361282c54164da2d14e0f5386c65bef70aca9aea8aab051be3d",
+          "e64b9d3e2e493ac156521641090a03257fc2feb2fa6b573529a438c970d25b43"
+        ],
+        "poseSha256": [
+          "b7968cd4ba65404a9fb563d470b8488f22b89da92aaf5a86739ca5be1ca6613a",
+          "d02c66df7c2ade8b158a24a14ca8e74223dcc0f87926590ca3e96af86ca06afa",
+          "5476da1f4c24e26a28976ebc8baa0ef3384109a103f50eb408d9c85d098c5043",
+          "2c17bbd14245b4c510361c26f32fe877b29a84f05363cc20e7ea032ab990e776",
+          "e3c05267308a449be9d7b762fd62faec897a26097f037617299e92a800876f88",
+          "e0a2b8cc359436bfe30c4b2e038afe5542d3c63e1099e4af0d2ce71edffe219f",
+          "349139cf55b08484957f44644cfdd2d01be8ac4a525c360bf57f31d40c475c1d",
+          "d7ce94413263fac08b30805e1bf1f8eb07e3d22d488866cc7f54571f84d4587e"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          0.99727,
+          1,
+          1,
+          1,
+          0.996664,
+          1,
+          1,
+          1
+        ]
+      },
+      "attack": {
+        "sourceSha256": "658834c18a27d98e19c5d4c316369a89939c772b84ef2db5a93c92614d2e826c",
+        "sourceDimensions": "1536x1024",
+        "chromaSourceSha256": "0208ca8bf786812b7ce77d74de22de94e67c05c004412e36cb975570c5ef8f87",
+        "chromaSourceDimensions": "1536x1024",
+        "promptSha256": "7fa8bb0b3a66b1f4d751e1aea50d8c571905f99bfea1f8dbfadcc60e54d59e74",
+        "encodedSha256": "7b7b0f30ea524687acb7da2b8cc42b8d1fd5dab3a13c086c7a3a6abc1e0f20fb",
+        "decodedSha256": "05d931462dac1d0abb1cd23eb704bd7b7785b2b680a59f7e1872ab66c3aec5b9",
+        "frameSha256": [
+          "a9343bc315b243a1131dc75efdbb0774523ad1cc494171b62057b816b47f204e",
+          "0499278ac983dd3c5b2ce7b2cd8d7df2b430216e596b52c830f942309b1e9629",
+          "3396746f9a54a50ab26b6f67616bac4eda5d944fff19eaad57ef0aa7b4903e4e",
+          "e180e4fae01ebfeea4bcbc1fc4b5b0e7e9a3bec8cf966c6835a5c100e351cf4e",
+          "5353a022f24676050a1b5a7d89d457ee9bc35a4c57a0c807c0d770365c741d17",
+          "e9e93c1b02155ccaca4300aef58fcf2eb4b6bdc3ecd44b696fc8ebabd4714146",
+          "da41f42661f9839ebb5d1f6f3c8aaed26af1e3bcf27cc273190c4f6cc1428015",
+          "88abe2ccabd036e4fa53ecc632665470fd0dddd98e194467716fa770988d2b2f"
+        ],
+        "poseSha256": [
+          "8983179d471a0809238761dbb7740914db5ef04b2e28c3408ca8adf5334d1c16",
+          "c25a88e165b7a41245ab3a30f894f730a791941f44e8ac3b852bf554c0075cae",
+          "24952baddf6acb262a0e9ebd37aabe03572cd667a9c558db1bbe75bf2b6c819e",
+          "39a487fc2ce2dea2624e001d2c1e299579669c5cecd1df8acd48fadd38a915ff",
+          "6b94c997950af0b18ea54428a6925c9b1a33d5a89aa5231c03b2fbb11e6578f9",
+          "c992f4f13624fa3fef0480d41cee05d704e032e31de7953cede257008fdd55c8",
+          "fc8dd8fa1bf37d45b08496aa6d6cad54aab71a1aa59bdbcee492f0e8cd9a55e9",
+          "0949a850e667a2c35f085b29cd40aaf98b58d7519360511d84cae0345916f3d7"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          0.997348,
+          0.985835,
+          1,
+          1,
+          1
+        ]
+      },
+      "hurt": {
+        "sourceSha256": "cfe5efb8732dc500898497215f76fee8d0d1d108557a14c612cb1d8a2e726152",
+        "sourceDimensions": "1672x941",
+        "chromaSourceSha256": "c584200173f5485e81e565c7b372648f4daa17b3546407c2d7b2aba2c3586d94",
+        "chromaSourceDimensions": "1672x941",
+        "promptSha256": "01ec4acf2b6b815512d93e4f2098186fe8242db14165295a899b47689d3e9419",
+        "encodedSha256": "5907709797c654bade25b39c11ad455b445c4693618d10f8677730138c452978",
+        "decodedSha256": "f7cd86284e7a6e39da7728ba9e7773e054ea198d70b0e01247d81c4c4d923e24",
+        "frameSha256": [
+          "89ab16681686b9f014094a8e3ab59e9f0c3db7959bad4a4031ecd08fa528b175",
+          "620131d940c974b5dee5cfe8341aff34ad637ee8fa71176192b345739fd0a915",
+          "8f191568049c0de8bdcb830abe72ef0ec23026ed5fc40cc87cd3dd9d88426d7d",
+          "16fef9e71ac63e9fc43e6d831563a2d06ad218ec8afda647e1ee411b2e079911",
+          "6f669681d6b25c70bc554df41f35df658630a7a45fb6e5730aa343f7a2cda808",
+          "3f2841b1c308eb6d957e2aecdb9e165f8a696ed80340447e4e46f676f5bfeec2",
+          "eea1409e01fc4983f85aca0cc845028fa9bcc056de9fda4a51b5f376da92de5b",
+          "f70905b3b2743d839759bf476cd0f2b51239831c7edfe7b720f250a967df4cd8"
+        ],
+        "poseSha256": [
+          "a2cb13d55e3601dbd2fda141c570cd640fbd6f63161e299fbbced9acfb92b3a0",
+          "61e36958e227cc3697c065c9f6194e5a8204faeaf2725442f39503a39eebfee8",
+          "f282c3efcae5a67c28e3880795c9cb7d67c90fb5ec821184d0bdbb04324cd66f",
+          "a37b4ff0ef3cef284075ee5de6ab6760a5ba316271b4d663944d572c4e663c8b",
+          "a321a0b58fd2cbbcb91e630e4d3d86377ec89f50ab217138d16225879fc6eaac",
+          "91919f0921af90aff72bcf900c6ca6a7cd8d7340220cf229e1aa9eff0e3aa8e1",
+          "e8a8ff5c2e3025e231cd3e8eccbd15b3d10fa43bffb91828c87ab669fb90548f",
+          "c763f9be96dc250104292a40b189050e3f9eab50a561af61c0133383f13b25c1"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          0.996976,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "death": {
+        "sourceSha256": "e6ff045320691dbc74a316b71d87b47b8238a899016f93a2447daf20d8ace6fa",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "a75cae0498788f07ad57dc790a35f73e186b10eb997f08bf07a6c2fe119b6f0a",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "32f66894f6dc1e447e56a9c9a07b54586b48bb959a25156a771aa8e0dbf22bfc",
+        "encodedSha256": "54aa50d059c691a98e0f9c1f6fb4f5190986d70633d93fd71bc1db7d314cd87f",
+        "decodedSha256": "b2ce2db9a1c6b716e03a69117bb7c1e700d779e4cbc017b4da7721830fb3b2fd",
+        "frameSha256": [
+          "c60b674c0e23da0c340dca51b471576eb10e35ef6c6e85d0b0b3a812e1de790b",
+          "867cb26277e51e28d02e8ddf98c35cf8c664666246ae09712cb05c5be6fa38e6",
+          "a8c0e366dfdfd9b8f866aef1fd29fa6730a02936d2d48ef209ac37de179e216c",
+          "9786586634d339e02346348ecace3e8d2b18a502750a96b3203e6419327f8719",
+          "aecdc80af7f8aac3d364f8d27cd0eb1036a68a9ae90114d62923b05d2f176fee",
+          "2ed8da3d42d14078840fe22cc9a8976c998dc2475c10f4f832b250aecab08c6c",
+          "03158218406c11f1533d7c3f16044c7439323df28752b11755c3918d0a53371f",
+          "03158218406c11f1533d7c3f16044c7439323df28752b11755c3918d0a53371f"
+        ],
+        "poseSha256": [
+          "37a8916fcf985b8494749015a2d317e0b80a6a4065bf70d0c939df4637b28696",
+          "94f30f8ad72966444751db96a70dce42d6ceafa33c475e0139b4f638b07a93e0",
+          "35042a8116f5265412a13fc76e1dc98052f03a9dcaf8e646fb5faa4d8af42f9f",
+          "0f9c7b16a6ffaf1c8a9c61553c1466d55b417baa8941cbf0b6f1c6891bd24c4f",
+          "f8be5850d87205b42bec3d6ef86d82a9c476e8c627702479eff0016e7dd499e4",
+          "f409ef273072b7ca02f8a967397f5005aafb9962683ffb54954f94a3a3c38ac4",
+          "8ff40239eb157c9d28d4a9f3d5c1df4edaf4eb31c484284af4e8aa93c1bff932",
+          "8ff40239eb157c9d28d4a9f3d5c1df4edaf4eb31c484284af4e8aa93c1bff932"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "victory": {
+        "sourceSha256": "5ef16edcbee261c7cb995bea638387618f751bf8e0c64ff13b419a2a8c56094f",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "f65c6476b992a1d348281bf08f9ad19865115647a624a08139abb6e86bd8a7b3",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "4237c367f7773e89eeefd7ea5439e414736053f6bb118872953ed2076d08160b",
+        "encodedSha256": "b2b3d344e9bb97d7ceddfd02dfb497d01758d69efae7db233cc41df09669fc83",
+        "decodedSha256": "82eda5611778623800597dac2e3ffdcf45e23ab6a60d8b9bfe05490152306ce5",
+        "frameSha256": [
+          "785f0a8aa0a01475708b40b43742bb43c9e758fc4e683d722a7be58430d247b0",
+          "dcf676a34ad828a829c952b33e743de769e641ea944d0f6682a485b6480a662b",
+          "2dcb07906903892ce1937af34935d1b54a1ad8dfb4c7370cb3903f842aaae57d",
+          "48cea65d5d60d62c38ff169cdc0a6b54ecce2ca9cf4326427c40410a48e7fb95",
+          "5428bcb5f8a282974610053556d2bc9084801d01cfd08512e085ecd1cce77c65",
+          "4a5bc8e99982b2cefdd59a625ef382637d3d08c92c7042b0bfe41a7732e4f6d6",
+          "c956235d5ba18b15723515384fdf3dee973a3487326301971678444fbfd3d6fb",
+          "9be99cbbbd526d6d6f6530297bad499f3bc24c505ae24bcc2c089619faee128b"
+        ],
+        "poseSha256": [
+          "294eab7c41e35dbe5c5ec261fb4c84c84f3875e92188e0c6aec158cde66c7a2b",
+          "d550ae93a441d42caad20962c8d35d9494956aafd2e22c84b63345d28272cf54",
+          "d9743cf17e850045422a7c1179d523c55e62e0ce8f6fc95b8e1445f542d07f73",
+          "ba4db2626935d9228f4d6cf217281ec7cf5a535a555f0433ec3b8ec87d6d2775",
+          "31b2aee308874e735903806480cb1ba3f6cb782acfbe50c44c6ec1146e573b5d",
+          "79a7c7b0aea81bd0c9ffd2deb333580d4d1208b0dc92707e4988c3f3568cd8ca",
+          "095ef31bb44dee0ed53720a3b88658e858fc04d023e5180a3d5e25dab8de95a4",
+          "913f86b2d4d730d3d058c759bffd8c2735ca945edc8f53eaefe3e195ddd593a3"
+        ],
+        "sourceFrameIndexes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          0.996342,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "dead": {
+        "sourceSha256": "e6ff045320691dbc74a316b71d87b47b8238a899016f93a2447daf20d8ace6fa",
+        "sourceDimensions": "1774x887",
+        "chromaSourceSha256": "a75cae0498788f07ad57dc790a35f73e186b10eb997f08bf07a6c2fe119b6f0a",
+        "chromaSourceDimensions": "1774x887",
+        "promptSha256": "f631a7fd605211260b28b5a5bba3503e06dc1064497d1e5769d62e40e178e2b1",
+        "encodedSha256": "e8686f5092059163fa7cd1056de91725e1ed892ba1b0eca69e5b1f6aed4a3a2d",
+        "decodedSha256": "21fd4816fe035d124a1c320b02db499a67a85e90926f8b26b2f1b85ffbe10d9b",
+        "frameSha256": [
+          "03158218406c11f1533d7c3f16044c7439323df28752b11755c3918d0a53371f",
+          "03158218406c11f1533d7c3f16044c7439323df28752b11755c3918d0a53371f",
+          "03158218406c11f1533d7c3f16044c7439323df28752b11755c3918d0a53371f",
+          "03158218406c11f1533d7c3f16044c7439323df28752b11755c3918d0a53371f",
+          "03158218406c11f1533d7c3f16044c7439323df28752b11755c3918d0a53371f",
+          "03158218406c11f1533d7c3f16044c7439323df28752b11755c3918d0a53371f",
+          "03158218406c11f1533d7c3f16044c7439323df28752b11755c3918d0a53371f",
+          "03158218406c11f1533d7c3f16044c7439323df28752b11755c3918d0a53371f"
+        ],
+        "poseSha256": [
+          "8ff40239eb157c9d28d4a9f3d5c1df4edaf4eb31c484284af4e8aa93c1bff932",
+          "8ff40239eb157c9d28d4a9f3d5c1df4edaf4eb31c484284af4e8aa93c1bff932",
+          "8ff40239eb157c9d28d4a9f3d5c1df4edaf4eb31c484284af4e8aa93c1bff932",
+          "8ff40239eb157c9d28d4a9f3d5c1df4edaf4eb31c484284af4e8aa93c1bff932",
+          "8ff40239eb157c9d28d4a9f3d5c1df4edaf4eb31c484284af4e8aa93c1bff932",
+          "8ff40239eb157c9d28d4a9f3d5c1df4edaf4eb31c484284af4e8aa93c1bff932",
+          "8ff40239eb157c9d28d4a9f3d5c1df4edaf4eb31c484284af4e8aa93c1bff932",
+          "8ff40239eb157c9d28d4a9f3d5c1df4edaf4eb31c484284af4e8aa93c1bff932"
+        ],
+        "sourceFrameIndexes": [
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7
+        ],
+        "sourceDominantRatios": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  }
+}

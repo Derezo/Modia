@@ -15,6 +15,22 @@ import {
   ELEVATION_RULES
 } from './terrain.js';
 
+// Object-based runtime traversal contract. Positional exports below remain as
+// compatibility APIs for existing call sites.
+export {
+  DEFAULT_MOVEMENT_POLICY,
+  createTraversalView,
+  validateTraversalView,
+  isWithinTraversalBounds,
+  getTraversalOccupant,
+  getElevationConnection,
+  canEnterTile,
+  getStepCost,
+  getReachableTilesForTraversal,
+  calculateTraversalPathCost,
+  findTraversalPath
+} from './traversal.js';
+
 /**
  * Get all tiles reachable within a movement range using Dijkstra's algorithm
  * Accounts for terrain movement costs
