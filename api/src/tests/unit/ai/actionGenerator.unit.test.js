@@ -52,6 +52,824 @@ describe('ActionGenerator', () => {
     });
   });
 
+  describe('skill action generation', { skip: !canImport }, () => {
+    it('excludes a pure self heal at full HP and includes it when injured', () => {
+      const heal = createMockSkill({
+        id: 'regenerate',
+        power: 0,
+        range: 0,
+        healPercent: 25,
+        targetSelf: true
+      });
+      const state = createMockBattleState([], [{
+        id: 'healer',
+        tileX: 5,
+        tileY: 5,
+        hp: 200,
+        maxHp: 200,
+        mp: 50,
+        skills: [heal]
+      }]);
+      const healer = state.units[0];
+
+      let actions = actionGenerator.generateAllActions(healer, state);
+      assert.strictEqual(
+        actions.some(action => action.type === 'skill' && action.skillId === heal.id),
+        false
+      );
+
+      healer.hp = 100;
+      actions = actionGenerator.generateAllActions(healer, state);
+      assert.ok(actions.some(action =>
+        action.type === 'skill' &&
+        action.skillId === heal.id &&
+        action.targetId === healer.id
+      ));
+    });
+
+    it('does not treat a positive power field on a heal as offensive damage', () => {
+      const heal = createMockSkill({
+        id: 'legacy_heal',
+        power: 100,
+        range: 0,
+        healPercent: 25,
+        damageType: 'heal',
+        targetSelf: true
+      });
+      const state = createMockBattleState([], [{
+        id: 'healer',
+        tileX: 5,
+        tileY: 5,
+        hp: 200,
+        maxHp: 200,
+        mp: 50,
+        skills: [heal]
+      }]);
+
+      const actions = actionGenerator.generateAllActions(state.units[0], state);
+
+      assert.strictEqual(
+        actions.some(action => action.type === 'skill' && action.skillId === heal.id),
+        false
+      );
+    });
+
+    it('normalizes a DB-shaped pure self heal before usefulness filtering', () => {
+      const repair = {
+        id: 'construct_repair',
+        name: 'Repair',
+        type: 'active',
+        power: 0,
+        range: 0,
+        mpCost: 20,
+        damageType: 'heal'
+      };
+      const state = createMockBattleState([], [{
+        id: 'construct',
+        tileX: 5,
+        tileY: 5,
+        hp: 200,
+        maxHp: 200,
+        mp: 50,
+        skills: [repair]
+      }]);
+      const construct = state.units[0];
+      const getRepairActions = () => actionGenerator.generateAllActions(construct, state)
+        .filter(action =>
+          action.type === 'skill' && action.skillId === repair.id
+        );
+
+      assert.deepStrictEqual(getRepairActions(), []);
+
+      construct.hp = 120;
+      const [repairAction] = getRepairActions();
+      assert.ok(repairAction);
+      assert.strictEqual(repairAction.targetId, construct.id);
+      assert.strictEqual(repairAction.skill.healPercent, 20);
+      assert.strictEqual(repairAction.skill.targetSelf, true);
+    });
+
+    it('excludes full-health ally heal targets and includes injured allies', () => {
+      const heal = createMockSkill({
+        id: 'heal_ally',
+        power: 0,
+        range: 3,
+        healPercent: 25,
+        targetAlly: true
+      });
+      const state = createMockBattleState([], [
+        {
+          id: 'healer',
+          tileX: 5,
+          tileY: 5,
+          hp: 200,
+          maxHp: 200,
+          mp: 50,
+          skills: [heal]
+        },
+        {
+          id: 'ally',
+          tileX: 6,
+          tileY: 5,
+          hp: 200,
+          maxHp: 200
+        }
+      ]);
+      const [healer, ally] = state.units;
+
+      let healActions = actionGenerator.generateAllActions(healer, state)
+        .filter(action => action.type === 'skill' && action.skillId === heal.id);
+      assert.deepStrictEqual(healActions, []);
+
+      ally.hp = 80;
+      healActions = actionGenerator.generateAllActions(healer, state)
+        .filter(action => action.type === 'skill' && action.skillId === heal.id);
+      assert.deepStrictEqual(healActions.map(action => action.targetId), [ally.id]);
+    });
+
+    it('targets only injured teammates for a DB-shaped Heal Ally', () => {
+      const heal = {
+        id: 'humanoid_heal_ally',
+        name: 'Heal Ally',
+        type: 'active',
+        power: 0,
+        range: 4,
+        mpCost: 12,
+        damageType: 'heal'
+      };
+      const state = createMockBattleState(
+        [{
+          id: 'opponent',
+          teamId: 1,
+          tileX: 6,
+          tileY: 5,
+          hp: 50,
+          maxHp: 200
+        }],
+        [
+          {
+            id: 'healer',
+            teamId: 2,
+            tileX: 5,
+            tileY: 5,
+            hp: 200,
+            maxHp: 200,
+            mp: 50,
+            skills: [heal]
+          },
+          {
+            id: 'injured-ally',
+            teamId: 2,
+            tileX: 7,
+            tileY: 5,
+            hp: 80,
+            maxHp: 200
+          },
+          {
+            id: 'full-ally',
+            teamId: 2,
+            tileX: 8,
+            tileY: 5,
+            hp: 200,
+            maxHp: 200
+          }
+        ]
+      );
+      const healer = state.units.find(unit => unit.id === 'healer');
+      const healActions = actionGenerator.generateAllActions(healer, state)
+        .filter(action => action.type === 'skill' && action.skillId === heal.id);
+
+      assert.deepStrictEqual(
+        healActions.map(action => action.targetId),
+        ['injured-ally']
+      );
+      assert.strictEqual(healActions[0].skill.healPercent, 25);
+      assert.strictEqual(healActions[0].skill.targetAlly, true);
+    });
+
+    it('emits one caster-centered group heal only when an ally is injured', () => {
+      const groupHeal = createMockSkill({
+        id: 'healing_wind',
+        power: 0,
+        range: 0,
+        healPercent: 25,
+        targetAllAllies: true
+      });
+      const state = createMockBattleState([], [
+        {
+          id: 'healer',
+          teamId: 7,
+          tileX: 5,
+          tileY: 5,
+          hp: 200,
+          maxHp: 200,
+          mp: 50,
+          skills: [groupHeal]
+        },
+        {
+          id: 'ally',
+          teamId: 7,
+          tileX: 12,
+          tileY: 5,
+          hp: 200,
+          maxHp: 200
+        },
+        {
+          id: 'other-team',
+          teamId: 8,
+          tileX: 6,
+          tileY: 5,
+          hp: 50,
+          maxHp: 200
+        }
+      ]);
+      const healer = state.units.find(unit => unit.id === 'healer');
+      const ally = state.units.find(unit => unit.id === 'ally');
+
+      let groupActions = actionGenerator.generateAllActions(healer, state)
+        .filter(action => action.type === 'skill' && action.skillId === groupHeal.id);
+      assert.deepStrictEqual(groupActions, []);
+
+      ally.hp = 80;
+      groupActions = actionGenerator.generateAllActions(healer, state)
+        .filter(action => action.type === 'skill' && action.skillId === groupHeal.id);
+      assert.strictEqual(groupActions.length, 1);
+      assert.strictEqual(groupActions[0].targetId, healer.id);
+    });
+
+    it('checks positive-range group buffs only against allies in range', () => {
+      const howl = createMockSkill({
+        id: 'howl',
+        power: 0,
+        range: 4,
+        selfBuff: 'pack_bonus',
+        targetAllAllies: true
+      });
+      const state = createMockBattleState([], [
+        {
+          id: 'caster',
+          tileX: 5,
+          tileY: 5,
+          mp: 50,
+          statusEffects: [{ type: 'pack_bonus' }],
+          skills: [howl]
+        },
+        {
+          id: 'ally',
+          tileX: 12,
+          tileY: 5
+        }
+      ]);
+      const caster = state.units.find(unit => unit.id === 'caster');
+      const ally = state.units.find(unit => unit.id === 'ally');
+
+      let howlActions = actionGenerator.generateAllActions(caster, state)
+        .filter(action => action.type === 'skill' && action.skillId === howl.id);
+      assert.deepStrictEqual(howlActions, []);
+
+      ally.tileX = 9;
+      howlActions = actionGenerator.generateAllActions(caster, state)
+        .filter(action => action.type === 'skill' && action.skillId === howl.id);
+      assert.strictEqual(howlActions.length, 1);
+      assert.strictEqual(howlActions[0].targetId, caster.id);
+    });
+
+    it('keeps offensive range-zero AoE skills caster-centered', () => {
+      const nova = createMockSkill({
+        id: 'fire_nova',
+        power: 120,
+        range: 0,
+        aoeRadius: 1,
+        damageType: 'fire'
+      });
+      const state = createMockBattleState(
+        [{ id: 'target', tileX: 6, tileY: 5 }],
+        [{
+          id: 'caster',
+          tileX: 5,
+          tileY: 5,
+          mp: 50,
+          skills: [nova]
+        }]
+      );
+      const caster = state.units.find(unit => unit.id === 'caster');
+
+      const novaAction = actionGenerator.generateAllActions(caster, state)
+        .find(action => action.type === 'skill' && action.skillId === nova.id);
+
+      assert.ok(novaAction);
+      assert.strictEqual(novaAction.targetId, undefined);
+      assert.deepStrictEqual(novaAction.target, { x: 5, y: 5 });
+      assert.deepStrictEqual(novaAction.aoeCenter, { x: 5, y: 5 });
+    });
+
+    it('normalizes DB-shaped Howl and skips it when all affected allies have attack up', () => {
+      const howl = {
+        id: 'beast_howl',
+        name: 'Howl',
+        type: 'active',
+        power: 0,
+        range: 0,
+        mpCost: 5,
+        damageType: 'support',
+        effect: 'attack_up',
+        effectChance: 1,
+        aoeRadius: 2
+      };
+      const state = createMockBattleState(
+        [{
+          id: 'opponent',
+          tileX: 6,
+          tileY: 5,
+          statusEffects: []
+        }],
+        [
+          {
+            id: 'caster',
+            tileX: 5,
+            tileY: 5,
+            statusEffects: [{ type: 'attack_up' }],
+            skills: [howl]
+          },
+          {
+            id: 'nearby-ally',
+            tileX: 5,
+            tileY: 6,
+            statusEffects: [{ type: 'attack_up' }]
+          },
+          {
+            id: 'distant-ally',
+            tileX: 10,
+            tileY: 5,
+            statusEffects: []
+          }
+        ]
+      );
+      const caster = state.units.find(unit => unit.id === 'caster');
+      const nearbyAlly = state.units.find(unit => unit.id === 'nearby-ally');
+      const getHowlAction = () => actionGenerator.generateAllActions(caster, state)
+        .find(action => action.type === 'skill' && action.skillId === howl.id);
+
+      assert.strictEqual(getHowlAction(), undefined);
+
+      nearbyAlly.statusEffects = [];
+      const howlAction = getHowlAction();
+      assert.ok(howlAction);
+      assert.deepStrictEqual(howlAction.skill.selfBuff, {
+        type: 'attack_up',
+        attack: 1.2
+      });
+      assert.strictEqual(howlAction.skill.buffDuration, 3);
+      assert.strictEqual(howlAction.skill.effect, 'attack_up');
+      assert.deepStrictEqual(howlAction.aoeCenter, { x: 5, y: 5 });
+    });
+
+    it('normalizes DB-shaped self and ally buffs before target filtering', () => {
+      const ironDefense = {
+        id: 'construct_iron_defense',
+        name: 'Iron Defense',
+        type: 'active',
+        power: 0,
+        range: 0,
+        mpCost: 10,
+        damageType: 'buff',
+        effect: 'defense_up'
+      };
+      const magicShield = {
+        id: 'humanoid_magic_shield',
+        name: 'Magic Shield',
+        type: 'active',
+        power: 0,
+        range: 3,
+        mpCost: 15,
+        damageType: 'buff',
+        effect: 'magic_shield'
+      };
+      const state = createMockBattleState(
+        [{
+          id: 'opponent',
+          teamId: 1,
+          tileX: 6,
+          tileY: 5,
+          statusEffects: []
+        }],
+        [
+          {
+            id: 'caster',
+            teamId: 2,
+            tileX: 5,
+            tileY: 5,
+            mp: 50,
+            statusEffects: [
+              { type: 'defense_up' },
+              { type: 'magic_shield' }
+            ],
+            skills: [ironDefense, magicShield]
+          },
+          {
+            id: 'ally',
+            teamId: 2,
+            tileX: 7,
+            tileY: 5,
+            statusEffects: []
+          }
+        ]
+      );
+      const caster = state.units.find(unit => unit.id === 'caster');
+
+      let skillActions = actionGenerator.generateAllActions(caster, state)
+        .filter(action => action.type === 'skill');
+
+      assert.strictEqual(
+        skillActions.some(action => action.skillId === ironDefense.id),
+        false
+      );
+      assert.deepStrictEqual(
+        skillActions
+          .filter(action => action.skillId === magicShield.id)
+          .map(action => action.targetId),
+        ['ally']
+      );
+
+      caster.statusEffects = [{ type: 'magic_shield' }];
+      skillActions = actionGenerator.generateAllActions(caster, state)
+        .filter(action => action.type === 'skill');
+      const selfBuffAction = skillActions.find(action =>
+        action.skillId === ironDefense.id
+      );
+      assert.ok(selfBuffAction);
+      assert.strictEqual(selfBuffAction.targetId, caster.id);
+      assert.deepStrictEqual(selfBuffAction.skill.selfBuff, {
+        type: 'defense_up',
+        defense: 1.3
+      });
+      assert.strictEqual(selfBuffAction.skill.buffDuration, 3);
+      assert.strictEqual(selfBuffAction.skill.targetSelf, true);
+    });
+
+    it('does not generate inert legacy Fortress or free Dark Pact actions', () => {
+      const unsupportedBuffs = [
+        {
+          id: 'construct_fortress',
+          name: 'Fortress',
+          type: 'active',
+          power: 0,
+          range: 0,
+          mpCost: 15,
+          damageType: 'buff',
+          effect: 'immovable'
+        },
+        {
+          id: 'demon_dark_pact',
+          name: 'Dark Pact',
+          type: 'active',
+          power: 0,
+          range: 0,
+          mpCost: 0,
+          damageType: 'buff',
+          effect: 'attack_up',
+          effectDuration: 5
+        }
+      ];
+      const state = createMockBattleState([], [{
+        id: 'caster',
+        tileX: 5,
+        tileY: 5,
+        hp: 100,
+        maxHp: 100,
+        mp: 50,
+        statusEffects: [],
+        skills: unsupportedBuffs
+      }]);
+
+      const skillActions = actionGenerator.generateAllActions(state.units[0], state)
+        .filter(action => action.type === 'skill');
+
+      assert.deepStrictEqual(skillActions, []);
+    });
+
+    it('records the center of a targeted offensive AoE separately', () => {
+      const burst = createMockSkill({
+        id: 'burst',
+        power: 120,
+        range: 3,
+        aoeRadius: 1
+      });
+      const state = createMockBattleState(
+        [{ id: 'target', tileX: 6, tileY: 5 }],
+        [{ id: 'caster', tileX: 5, tileY: 5, mp: 50, skills: [burst] }]
+      );
+      const caster = state.units.find(unit => unit.id === 'caster');
+
+      const burstAction = actionGenerator.generateAllActions(caster, state)
+        .find(action => action.type === 'skill' && action.skillId === burst.id);
+
+      assert.strictEqual(burstAction.targetId, 'target');
+      assert.deepStrictEqual(burstAction.aoeCenter, { x: 6, y: 5 });
+    });
+
+    it('skips redundant pure buffs but retains buffs with unusual utility', () => {
+      const rage = createMockSkill({
+        id: 'rage',
+        power: 0,
+        range: 0,
+        selfBuff: 'rage',
+        targetSelf: true
+      });
+      const darkPact = createMockSkill({
+        id: 'dark_pact',
+        power: 0,
+        range: 0,
+        selfBuff: 'rage',
+        selfDamagePercent: 20,
+        targetSelf: true
+      });
+      const state = createMockBattleState([], [{
+        id: 'caster',
+        tileX: 5,
+        tileY: 5,
+        mp: 50,
+        statusEffects: [{ type: 'rage' }],
+        skills: [rage, darkPact]
+      }]);
+      const caster = state.units[0];
+      const skillIds = actionGenerator.generateAllActions(caster, state)
+        .filter(action => action.type === 'skill')
+        .map(action => action.skillId);
+
+      assert.strictEqual(skillIds.includes(rage.id), false);
+      assert.strictEqual(skillIds.includes(darkPact.id), true);
+    });
+
+    it('skips mixed HP/MP recovery only when both resources are full', () => {
+      const recovery = createMockSkill({
+        id: 'photosynthesis',
+        power: 0,
+        range: 0,
+        mpCost: 0,
+        healPercent: 10,
+        mpRestore: 10,
+        targetSelf: true
+      });
+      const state = createMockBattleState([], [{
+        id: 'caster',
+        tileX: 5,
+        tileY: 5,
+        hp: 200,
+        maxHp: 200,
+        mp: 100,
+        maxMp: 100,
+        skills: [recovery]
+      }]);
+      const caster = state.units[0];
+      const hasRecoveryAction = () => actionGenerator.generateAllActions(caster, state)
+        .some(action => action.type === 'skill' && action.skillId === recovery.id);
+
+      assert.strictEqual(hasRecoveryAction(), false);
+
+      caster.mp = 60;
+      assert.strictEqual(hasRecoveryAction(), true);
+
+      caster.mp = 100;
+      caster.hp = 150;
+      assert.strictEqual(hasRecoveryAction(), true);
+    });
+
+    it('uses a heal-and-cleanse skill only for missing HP or a removable status', () => {
+      const recovery = createMockSkill({
+        id: 'inner_peace',
+        power: 0,
+        range: 0,
+        mpCost: 20,
+        healPercent: 20,
+        cleanse: true,
+        targetSelf: true
+      });
+      const state = createMockBattleState([], [{
+        id: 'caster',
+        tileX: 5,
+        tileY: 5,
+        hp: 200,
+        maxHp: 200,
+        mp: 100,
+        maxMp: 100,
+        statusEffects: [],
+        skills: [recovery]
+      }]);
+      const caster = state.units[0];
+      const hasRecoveryAction = () => actionGenerator.generateAllActions(caster, state)
+        .some(action => action.type === 'skill' && action.skillId === recovery.id);
+
+      assert.strictEqual(hasRecoveryAction(), false);
+
+      caster.statusEffects = ['poison'];
+      assert.strictEqual(hasRecoveryAction(), true);
+
+      caster.statusEffects = [{ type: 'haste' }];
+      assert.strictEqual(hasRecoveryAction(), false);
+    });
+
+    it('does not cleanse concrete legacy buffs from a full-health target', () => {
+      const recovery = createMockSkill({
+        id: 'inner_peace',
+        power: 0,
+        range: 0,
+        mpCost: 20,
+        healPercent: 20,
+        cleanse: true,
+        targetSelf: true
+      });
+      const state = createMockBattleState([], [{
+        id: 'caster',
+        tileX: 5,
+        tileY: 5,
+        hp: 200,
+        maxHp: 200,
+        mp: 100,
+        maxMp: 100,
+        skills: [recovery]
+      }]);
+      const caster = state.units[0];
+
+      for (const statusEffect of [
+        { type: 'attack_up' },
+        { type: 'defense_up' },
+        { type: 'magic_shield' },
+        'berserk',
+        { type: 'frenzy' },
+        'final_stand',
+        { type: 'shadow_arts' },
+        'pack_bonus',
+        { type: 'regenerate' },
+        'unmovable',
+        { type: 'fire_resist' },
+        { type: 'test_rally_buff', modifiers: { defense: 1.25 } }
+      ]) {
+        caster.statusEffects = [statusEffect];
+        const hasRecoveryAction = actionGenerator.generateAllActions(caster, state)
+          .some(action => action.type === 'skill' && action.skillId === recovery.id);
+
+        const effectType = typeof statusEffect === 'string'
+          ? statusEffect
+          : statusEffect.type;
+        assert.strictEqual(hasRecoveryAction, false, effectType);
+      }
+    });
+
+    it('recognizes an object-form buff as redundant', () => {
+      const ward = createMockSkill({
+        id: 'stone_ward',
+        power: 0,
+        range: 0,
+        selfBuff: { defensePercent: 25 },
+        targetSelf: true
+      });
+      const state = createMockBattleState([], [{
+        id: 'caster',
+        tileX: 5,
+        tileY: 5,
+        mp: 50,
+        statusEffects: [{ type: 'stone_ward_buff' }],
+        skills: [ward]
+      }]);
+
+      const skillIds = actionGenerator.generateAllActions(state.units[0], state)
+        .filter(action => action.type === 'skill')
+        .map(action => action.skillId);
+
+      assert.strictEqual(skillIds.includes(ward.id), false);
+    });
+  });
+
+  describe('item action generation', { skip: !canImport }, () => {
+    it('generates one heal_both action when either resource is missing', () => {
+      const elixir = {
+        itemId: 'elixir',
+        quantity: 1,
+        effectType: 'heal_both',
+        effectValue: 40
+      };
+      const state = createMockBattleState([], [
+        {
+          id: 'actor',
+          tileX: 5,
+          tileY: 5,
+          consumables: [elixir]
+        },
+        {
+          id: 'ally',
+          tileX: 6,
+          tileY: 5,
+          hp: 200,
+          maxHp: 200,
+          mp: 10,
+          maxMp: 50
+        }
+      ]);
+      const [actor, ally] = state.units;
+      const getElixirActions = () => actionGenerator.generateAllActions(actor, state)
+        .filter(action => action.type === 'item' && action.itemId === elixir.itemId);
+
+      let actions = getElixirActions();
+      assert.strictEqual(actions.length, 1);
+      assert.strictEqual(actions[0].targetId, ally.id);
+
+      ally.hp = 100;
+      actions = getElixirActions();
+      assert.strictEqual(actions.length, 1);
+      assert.strictEqual(actions[0].targetId, ally.id);
+
+      ally.hp = ally.maxHp;
+      ally.mp = ally.maxMp;
+      assert.deepStrictEqual(getElixirActions(), []);
+    });
+  });
+
+  describe('generateMoveActionSequences()', { skip: !canImport }, () => {
+    it('generates both orderings for attacks, skills, and items', () => {
+      const fortify = createMockSkill({
+        id: 'fortify',
+        power: 0,
+        range: 0,
+        selfBuff: 'fortify',
+        targetSelf: true
+      });
+      const state = createMockBattleState(
+        [{ id: 'target', tileX: 6, tileY: 5 }],
+        [{
+          id: 'actor',
+          tileX: 5,
+          tileY: 5,
+          hp: 100,
+          maxHp: 200,
+          attackRange: 1,
+          movement: 3,
+          skills: [fortify],
+          consumables: [{
+            itemId: 'potion',
+            quantity: 1,
+            effectType: 'heal_hp',
+            effectValue: 50
+          }]
+        }]
+      );
+      const actor = state.units.find(unit => unit.id === 'actor');
+      const target = state.units.find(unit => unit.id === 'target');
+      const sequences = actionGenerator.generateMoveActionSequences(actor, state);
+
+      for (const actionType of ['attack', 'skill', 'item']) {
+        assert.ok(sequences.some(sequence =>
+          sequence.length === 2 &&
+          sequence[0].type === 'move' &&
+          sequence[1].type === actionType
+        ), `expected a move then ${actionType} sequence`);
+
+        assert.ok(sequences.some(sequence =>
+          sequence.length === 2 &&
+          sequence[0].type === actionType &&
+          sequence[1].type === 'move'
+        ), `expected an ${actionType} then move sequence`);
+      }
+
+      assert.ok(sequences.some(sequence =>
+        sequence.length === 1 &&
+        sequence[0].type === 'attack' &&
+        sequence[0].targetId === target.id
+      ), 'expected an attack without moving');
+    });
+
+    it('recomputes movement after a deterministic self-haste action', () => {
+      const haste = createMockSkill({
+        id: 'haste_potion',
+        power: 0,
+        range: 3,
+        targetAlly: true,
+        effect: 'haste',
+        effectChance: 1,
+        effectDuration: 3
+      });
+      const state = createMockBattleState([], [{
+        id: 'actor',
+        tileX: 5,
+        tileY: 5,
+        mp: 50,
+        skills: [haste]
+      }]);
+      const actor = state.units[0];
+      const sequences = actionGenerator.generateMoveActionSequences(actor, state);
+
+      assert.ok(sequences.some(sequence =>
+        sequence.length === 2 &&
+        sequence[0].type === 'skill' &&
+        sequence[0].skillId === haste.id &&
+        sequence[0].targetId === actor.id &&
+        sequence[1].type === 'move' &&
+        sequence[1].position.x === actor.tileX + 4 &&
+        sequence[1].position.y === actor.tileY
+      ), 'expected self-haste then an expanded-range move');
+    });
+  });
+
   describe('pruneActions()', { skip: !canImport }, () => {
     const pruneActions = () => actionGenerator.pruneActions;
 
@@ -373,6 +1191,61 @@ describe('ActionGenerator', () => {
       }));
       const threats = findImmediateThreats()(unit, state);
       assert.strictEqual(threats.length, 0);
+    });
+
+    it('uses explicit teams and ignores allies with a different unit type', () => {
+      const state = createMockBattleState(
+        [],
+        [{ teamId: 10, tileX: 5, tileY: 5 }]
+      );
+      const unit = state.units[0];
+      state.units.push(
+        createMockUnit({
+          id: 'same_type_opponent',
+          type: 'enemy',
+          teamId: 20,
+          tileX: 6,
+          tileY: 5
+        }),
+        createMockUnit({
+          id: 'different_type_ally',
+          type: 'player',
+          teamId: 10,
+          tileX: 5,
+          tileY: 6
+        })
+      );
+
+      const threats = findImmediateThreats()(unit, state);
+      assert.deepStrictEqual(threats.map(threat => threat.id), ['same_type_opponent']);
+    });
+
+    it('ignores opponents that already acted and spent movement', () => {
+      const state = createMockBattleState(
+        [{ tileX: 5, tileY: 5 }],
+        []
+      );
+      const unit = state.units[0];
+      state.units.push(
+        createMockUnit({
+          id: 'acted',
+          type: 'enemy',
+          tileX: 6,
+          tileY: 5,
+          actUsed: true
+        }),
+        createMockUnit({
+          id: 'movement_spent',
+          type: 'enemy',
+          tileX: 9,
+          tileY: 5,
+          attackRange: 1,
+          movement: 3,
+          moveUsed: true
+        })
+      );
+
+      assert.deepStrictEqual(findImmediateThreats()(unit, state), []);
     });
   });
 

@@ -26,14 +26,6 @@ import { isDevModeEnabled } from '../utils/debugLogger.js';
 
 const STYLE_ID = 'node-action-menu-styles';
 
-// Guild action labels for guild hall buttons
-const GUILD_ACTION_LABELS = {
-  warrior: 'Training Grounds',
-  mage: 'Arcane Tower',
-  rogue: 'Shadow Den',
-  cleric: 'Sacred Shrine'
-};
-
 export class NodeActionMenu {
   /**
    * @param {Object} options
@@ -395,10 +387,10 @@ export class NodeActionMenu {
       // Garrison comes early since it's a key castle-specific feature
       const essentialFeatures = [
         'garrison', 'blacksmith', 'marketplace', 'tavern', 'apothecary',
-        'coliseum', 'farm', 'guild_hall', 'guild_advancement', 'courtyard', 'caravan', 'explore_ruins', 'fishing',
+        'coliseum', 'farm', 'guild_hall', 'training_ground', 'guild_advancement', 'courtyard', 'caravan', 'explore_ruins', 'fishing',
         'fast_travel', 'stamina_restore'
       ];
-      const decorativeFeatures = ['throne', 'temple', 'stables', 'training_ground'];
+      const decorativeFeatures = ['throne', 'temple', 'stables'];
 
       const prioritizedFeatures = [
         ...essentialFeatures.filter(f => features.includes(f)),
@@ -473,10 +465,10 @@ export class NodeActionMenu {
    * Create an action button
    * @param {string} feature
    * @param {boolean} isPrimary
-   * @param {Object} node
+   * @param {Object} _node
    * @returns {HTMLButtonElement}
    */
-  createButton(feature, isPrimary, node) {
+  createButton(feature, isPrimary, _node) {
     const btn = document.createElement('button');
     btn.className = `node-action-menu__button${isPrimary ? ' node-action-menu__button--primary' : ''}`;
 
@@ -489,6 +481,7 @@ export class NodeActionMenu {
       coliseum: { category: 'menu', name: 'coliseum' },
       farm: { category: 'menu', name: 'caravan' },
       guild_hall: { category: 'menu', name: 'guild' },
+      training_ground: { category: 'menu', name: 'guild' },
       guild_advancement: { category: 'menu', name: 'guild' },
       courtyard: { category: 'menu', name: 'party' },
       battle: { category: 'actions', name: 'attack' },
@@ -502,8 +495,11 @@ export class NodeActionMenu {
 
     // Get label text
     let label = this.capitalize(feature);
-    if (feature === 'guild_hall' && node.guild_class) {
-      label = GUILD_ACTION_LABELS[node.guild_class] || 'Guild Hall';
+    if (feature === 'guild_hall') {
+      label = 'Recruitment';
+    }
+    if (feature === 'training_ground') {
+      label = 'Training Grounds';
     }
     if (feature === 'guild_advancement') {
       label = 'Advancement';

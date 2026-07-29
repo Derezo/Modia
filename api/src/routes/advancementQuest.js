@@ -173,10 +173,14 @@ router.get('/current/:characterId', authenticate, readLimiter, asyncHandler(veri
 
 // POST /api/advancement/accept - Accept a quest
 router.post('/accept', authenticate, actionLimiter, asyncHandler(async (req, res) => {
-  const { characterId, questTemplateId } = req.body;
+  const { characterId, questTemplateId, nodeId } = req.body;
 
   if (!characterId || !questTemplateId) {
     throw new AppError('characterId and questTemplateId are required', 400);
+  }
+  const nodeIdError = questService.getAdvancementNodeIdError(nodeId);
+  if (nodeIdError) {
+    throw new AppError(nodeIdError, 400);
   }
 
   // Verify ownership
@@ -194,7 +198,11 @@ router.post('/accept', authenticate, actionLimiter, asyncHandler(async (req, res
   }
 
   try {
-    const result = await questService.acceptQuest(characterId, questTemplateId);
+    const result = await questService.acceptQuest(
+      characterId,
+      questTemplateId,
+      nodeId
+    );
 
     res.json({
       success: true,
@@ -214,7 +222,15 @@ router.post('/accept', authenticate, actionLimiter, asyncHandler(async (req, res
 
 // POST /api/advancement/abandon/:characterId - Abandon current quest
 router.post('/abandon/:characterId', authenticate, actionLimiter, asyncHandler(verifyCharacterOwnership), asyncHandler(async (req, res) => {
-  const abandoned = await questService.abandonQuest(req.characterId);
+  let abandoned;
+  try {
+    abandoned = await questService.abandonQuest(req.characterId);
+  } catch (error) {
+    if (error?.code === 'ADVANCEMENT_QUEST_BATTLE_ACTIVE') {
+      throw new AppError(error.message, 409);
+    }
+    throw error;
+  }
 
   if (!abandoned) {
     throw new AppError('No active quest to abandon', 400);
@@ -238,16 +254,22 @@ router.get('/boss/:characterId', authenticate, readLimiter, asyncHandler(verifyC
 
 // POST /api/advancement/boss/start - Start boss trial battle
 router.post('/boss/start', authenticate, startLimiter, asyncHandler(async (req, res) => {
-  const { characterId } = req.body;
+  const { characterId, nodeId } = req.body;
   const battleMapCapabilities = readAdvancementBattleMapCapabilities(req);
 
   if (!characterId) {
     throw new AppError('characterId is required', 400);
   }
+  const nodeIdError = questService.getAdvancementNodeIdError(nodeId);
+  if (nodeIdError) {
+    throw new AppError(nodeIdError, 400);
+  }
 
   // Verify ownership
   const charResult = await query(
-    'SELECT id, user_id, name, level, current_node_id FROM characters WHERE id = $1',
+    `SELECT id, user_id, name, class, level, current_node_id
+     FROM characters
+     WHERE id = $1`,
     [characterId]
   );
 
@@ -261,20 +283,6 @@ router.post('/boss/start', authenticate, startLimiter, asyncHandler(async (req, 
 
   const character = charResult.rows[0];
 
-  // Validate character is at a guild node
-  const nodeCheck = await query(
-    'SELECT id, node_type FROM world_nodes WHERE id = $1',
-    [character.current_node_id]
-  );
-
-  if (nodeCheck.rows.length === 0) {
-    throw new AppError('Character location not found', 400);
-  }
-
-  if (nodeCheck.rows[0].node_type !== 'guild') {
-    throw new AppError('You must be at a guild to start the boss trial', 400);
-  }
-
   // Check eligibility
   const eligibility = await questService.canStartBossTrial(characterId);
 
@@ -282,16 +290,39 @@ router.post('/boss/start', authenticate, startLimiter, asyncHandler(async (req, 
     throw new AppError(eligibility.reason, 400);
   }
 
+  const nodeCheck = await query(
+    `SELECT id, node_type, guild_class
+     FROM world_nodes
+     WHERE id = $1`,
+    [nodeId]
+  );
+  const locationError = questService.getAdvancementGuildLocationError(
+    character,
+    nodeCheck.rows[0],
+    nodeId,
+    eligibility.guildId
+  );
+  if (locationError) {
+    throw new AppError(locationError, 400);
+  }
+
   const targetClass = eligibility.targetClass;
 
   // Generate guildmaster battle
   let battleConfig;
   try {
+    const transportOptions = {
+      clientCapabilities: battleMapCapabilities
+    };
     battleConfig = await guildmasterBattleService.generateGuildmasterBattle(
       { id: characterId, level: character.level || 10 },
       targetClass,
-      character.current_node_id,
-      { clientCapabilities: battleMapCapabilities }
+      nodeId,
+      {
+        ...transportOptions,
+        advancementQuestId: eligibility.questId,
+        bossConfig: eligibility.bossConfig
+      }
     );
   } catch (error) {
     throwAdvancementCapabilityError(error);
@@ -303,7 +334,21 @@ router.post('/boss/start', authenticate, startLimiter, asyncHandler(async (req, 
   battleConfig.initialState.turnPredictions = battleService.predictTurnOrder(battleConfig.initialState, 10);
 
   // Create battle record
-  const battleId = await guildmasterBattleService.createGuildmasterBattleRecord(battleConfig, req.user.userId);
+  let battleId;
+  try {
+    battleId = await guildmasterBattleService.createGuildmasterBattleRecord(
+      battleConfig,
+      req.user.userId
+    );
+  } catch (error) {
+    if (
+      error?.code === 'ADVANCEMENT_BATTLE_ALREADY_ACTIVE'
+      || error?.code === 'ADVANCEMENT_BATTLE_STATE_CHANGED'
+    ) {
+      throw new AppError(error.message, 409);
+    }
+    throw error;
+  }
   const battleEnvelope = await battleStateRepository.loadBattleForParticipant(
     battleId,
     req.user.userId,

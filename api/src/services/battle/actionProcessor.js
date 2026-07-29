@@ -19,13 +19,117 @@ import {
   getReachableTiles,
   getTargetsInRange,
   findAdjacentTileToTarget,
-  getOppositeType,
   calculatePathCost,
   getManhattanDistance
 } from './movementService.js';
 import { getSkillDefinition } from './skillDefinitionService.js';
 import { getAoETiles, getUnitsInAoE } from './aoeService.js';
-import { CURE_POISON_EFFECTS, CURE_ALL_EFFECTS } from '../../../../shared/battleMath.js';
+import {
+  normalizeLegacyNpcSkill,
+  isExecutableLegacyNpcSkill
+} from '../npcSkillService.js';
+import {
+  isBeneficialStatusEffect,
+  CURE_POISON_EFFECTS,
+  CURE_ALL_EFFECTS
+} from '../../../../shared/battleMath.js';
+
+function hasOffensiveSkillComponent(skill) {
+  return Number(skill?.power) > 0 &&
+    skill?.targetSelf !== true &&
+    skill?.targetAlly !== true &&
+    skill?.targetAllAllies !== true &&
+    skill?.damageType !== 'support' &&
+    skill?.damageType !== 'heal' &&
+    skill?.effect !== 'heal';
+}
+
+function hasSelfSkillComponent(skill) {
+  return skill?.targetSelf === true ||
+    Boolean(skill?.selfBuff) ||
+    Boolean(skill?.cleanse) ||
+    skill?.mpRestore > 0 ||
+    (skill?.healPercent > 0 &&
+      skill?.targetAlly !== true &&
+      skill?.targetAllAllies !== true);
+}
+
+function getSkillBuffEffect(skill) {
+  if (typeof skill?.selfBuff === 'string') return skill.selfBuff;
+  if (skill?.selfBuff && typeof skill.selfBuff === 'object') {
+    return skill.selfBuff.type || `${skill.id || 'skill'}_buff`;
+  }
+  if (skill?.effect && skill.effect !== 'heal') return skill.effect;
+  return null;
+}
+
+function isSkillEffectHandledAsBuff(skill) {
+  return Boolean(skill?.selfBuff) &&
+    skill.effect === getSkillBuffEffect(skill);
+}
+
+function applySkillBuff(target, skill, result) {
+  const buffEffect = getSkillBuffEffect(skill);
+  if (!buffEffect || (skill.effectChance ?? 1) < Math.random()) return false;
+
+  applyStatusEffect(
+    target,
+    buffEffect,
+    skill.buffDuration || skill.effectDuration || 3
+  );
+
+  if (skill.selfBuff && typeof skill.selfBuff === 'object') {
+    const appliedEffect = target.statusEffects?.find(effect =>
+      effect.type === buffEffect
+    );
+    if (appliedEffect) {
+      const modifiers = { ...skill.selfBuff };
+      delete modifiers.type;
+      appliedEffect.modifiers = modifiers;
+    }
+  }
+
+  result.skillEffects.push({
+    type: 'buff',
+    effect: buffEffect,
+    targetId: target.id
+  });
+  return true;
+}
+
+function applySelfSkillEffects(unit, skill, result, applyBuff = true) {
+  if (applyBuff && (skill.selfBuff ||
+      (skill.targetSelf === true && skill.effect && skill.effect !== 'heal'))) {
+    applySkillBuff(unit, skill, result);
+  }
+
+  if (skill.healPercent > 0 &&
+      skill.targetAlly !== true &&
+      skill.targetAllAllies !== true) {
+    const healAmount = Math.floor(unit.maxHp * skill.healPercent / 100);
+    const actualHeal = Math.min(healAmount, Math.max(0, unit.maxHp - unit.hp));
+    unit.hp = Math.min(unit.maxHp, unit.hp + healAmount);
+    unit.healingDone = (unit.healingDone || 0) + actualHeal;
+    result.healing = (result.healing || 0) + actualHeal;
+    result.selfHealing = actualHeal;
+  }
+
+  if (skill.mpRestore > 0 &&
+      skill.targetAlly !== true &&
+      skill.targetAllAllies !== true) {
+    const mpAmount = Math.floor(unit.maxMp * skill.mpRestore / 100);
+    const actualMpRestore = Math.min(mpAmount, Math.max(0, unit.maxMp - unit.mp));
+    unit.mp = Math.min(unit.maxMp, unit.mp + mpAmount);
+    result.mpRestored = (result.mpRestored || 0) + actualMpRestore;
+  }
+
+  if (skill.cleanse &&
+      skill.targetAlly !== true &&
+      skill.targetAllAllies !== true) {
+    unit.statusEffects = (unit.statusEffects || []).filter(isBeneficialStatusEffect);
+    result.skillEffects.push({ type: 'cleanse', targetId: unit.id });
+  }
+}
 
 /**
  * Get all available actions for a unit in the current battle state
@@ -59,7 +163,7 @@ export function getAvailableActions(unit, state) {
 
     // Basic attack
     const attackRange = unit.attackRange || getAttackRange(unit);
-    const attackTargets = getTargetsInRange(unit, state, attackRange, getOppositeType(unit.type));
+    const attackTargets = getTargetsInRange(unit, state, attackRange, 'opponent');
     actions.attacks = {
       range: attackRange,
       targets: attackTargets
@@ -72,41 +176,47 @@ export function getAvailableActions(unit, state) {
           // Only active skills
           if (skill.type === 'passive') return false;
           // Check MP cost
-          const mpCost = skill.mpCost || 0;
+          const mpCost = skill.mpCost ?? 0;
           if (mpCost > unit.mp) return false;
           // Check cooldown
           if (unit.skillCooldowns?.[skill.id] > 0) return false;
           return true;
         })
+        .map(skill => normalizeLegacyNpcSkill(skill))
+        .filter(skill => isExecutableLegacyNpcSkill(skill))
         .map(skill => {
           // Determine targets based on skill type
           let targets;
-          const skillRange = skill.range || 1;
+          const skillRange = skill.range ?? 1;
+          const isCasterCenteredAoE = skillRange === 0 && (skill.aoeRadius ?? 0) > 0;
 
-          if (skill.selfBuff || skill.cleanse || (skill.healPercent && !skill.targetAlly)) {
+          if (skill.targetAllAllies || isCasterCenteredAoE) {
+            // Group ally skills and range-zero AoEs are cast from the unit's tile.
+            targets = [{ x: unit.tileX, y: unit.tileY, unitId: unit.id, distance: 0 }];
+          } else if (hasSelfSkillComponent(skill) &&
+              !hasOffensiveSkillComponent(skill) &&
+              skill.targetAlly !== true) {
             // Self-targeting
-            targets = [{ x: unit.tileX, y: unit.tileY, unitId: unit.id }];
-          } else if (skill.targetAlly || skill.targetAllAllies) {
+            targets = [{ x: unit.tileX, y: unit.tileY, unitId: unit.id, distance: 0 }];
+          } else if (skill.targetAlly) {
             // Ally-targeting
             targets = getTargetsInRange(unit, state, skillRange, 'ally');
             // Add self as valid target for ally skills
             targets.unshift({ x: unit.tileX, y: unit.tileY, unitId: unit.id, distance: 0 });
           } else {
             // Enemy-targeting (default)
-            targets = getTargetsInRange(unit, state, skillRange, getOppositeType(unit.type));
+            targets = getTargetsInRange(unit, state, skillRange, 'opponent');
           }
 
           return {
-            id: skill.id,
-            name: skill.name,
-            mpCost: skill.mpCost || 0,
+            // Preserve targeting and utility metadata for AI classification as
+            // well as the client. Omitting heal/buff flags made restorative
+            // skills look like generic attacks to downstream consumers.
+            ...skill,
+            mpCost: skill.mpCost ?? 0,
             range: skillRange,
             cooldown: skill.cooldown || 0,
             currentCooldown: unit.skillCooldowns?.[skill.id] || 0,
-            power: skill.power,
-            damageType: skill.damageType,
-            aoeRadius: skill.aoeRadius,
-            effect: skill.effect,
             targets
           };
         });
@@ -331,8 +441,10 @@ function processSkillAction(state, unit, targetTile, skillId) {
   }
 
   // Pass unit to getSkillDefinition so it can check unit's skills array directly
-  const skill = getSkillDefinition(unit.class, skillId, unitSkillLevel, unit);
-  if (!skill) {
+  const skill = normalizeLegacyNpcSkill(
+    getSkillDefinition(unit.class, skillId, unitSkillLevel, unit)
+  );
+  if (!skill || !isExecutableLegacyNpcSkill(skill)) {
     result.error = 'Invalid skill';
     return result;
   }
@@ -347,19 +459,52 @@ function processSkillAction(state, unit, targetTile, skillId) {
   }
 
   // SECURITY: Validate skill range server-side (anti-cheat)
-  const isSelfTargetingSkill = skill.selfBuff || skill.cleanse || (skill.healPercent && !skill.targetAlly);
-  if (!isSelfTargetingSkill) {
-    const skillRange = skill.range || 1;
+  const isAllAlliesTargetingSkill = skill.targetAllAllies === true;
+  const isAllyTargetingSkill = skill.targetAlly === true && !isAllAlliesTargetingSkill;
+  const skillRange = skill.range ?? 1;
+  const isCasterCenteredAoE = !isAllAlliesTargetingSkill &&
+    !isAllyTargetingSkill &&
+    skillRange === 0 &&
+    (skill.aoeRadius ?? 0) > 0;
+  const isSelfTargetingSkill = !isAllAlliesTargetingSkill &&
+    !isAllyTargetingSkill &&
+    !isCasterCenteredAoE &&
+    hasSelfSkillComponent(skill) &&
+    !hasOffensiveSkillComponent(skill);
+  const isCasterCenteredSkill = isSelfTargetingSkill ||
+    isAllAlliesTargetingSkill ||
+    isCasterCenteredAoE;
+
+  if (!isCasterCenteredSkill) {
     const skillDistance = getManhattanDistance(unit.tileX, unit.tileY, targetTile.x, targetTile.y);
 
     if (skillDistance > skillRange) {
       result.error = `Target out of skill range (max: ${skillRange}, attempted: ${skillDistance})`;
       return result;
     }
+  } else if (isCasterCenteredAoE || isAllAlliesTargetingSkill) {
+    // These skills are always centered on the caster, regardless of a stale or
+    // malicious client-provided tile.
+    targetTile = { x: unit.tileX, y: unit.tileY };
+  }
+
+  // Resolve ally targets before spending resources. Invalid, defeated, or
+  // opposing targets must not consume MP or the unit's action.
+  let target = null;
+  if (isAllyTargetingSkill) {
+    target = state.units.find(u =>
+      u.tileX === targetTile.x && u.tileY === targetTile.y && u.hp > 0
+    );
+
+    if (!target || getUnitTeamId(target) !== getUnitTeamId(unit)) {
+      result.error = 'Invalid ally target';
+      return result;
+    }
   }
 
   // Calculate MP cost
-  const mpCost = skill.mpCost || (skill.baseCost ? Math.floor(skill.baseCost / 10) : 5);
+  const mpCost = skill.mpCost ??
+    (skill.baseCost ? Math.floor(skill.baseCost / 10) : 5);
   if (unit.mp < mpCost) {
     result.error = 'Not enough MP';
     return result;
@@ -372,31 +517,62 @@ function processSkillAction(state, unit, targetTile, skillId) {
   result.mpCost = mpCost;
 
   // Handle self-targeting skills (buffs, heals)
-  if (skill.selfBuff || skill.healPercent || skill.cleanse) {
-    if (skill.selfBuff) {
-      applyStatusEffect(unit, skill.selfBuff, skill.buffDuration || 3);
-      result.skillEffects.push({ type: 'buff', effect: skill.selfBuff, targetId: unit.id });
+  if (isSelfTargetingSkill) {
+    applySelfSkillEffects(unit, skill, result);
+    result.targetId = unit.id;
+    if (skill.cooldown && skill.cooldown > 0) {
+      unit.skillCooldowns[skillId] = skill.cooldown;
     }
-    if (skill.healPercent) {
-      const healAmount = Math.floor(unit.maxHp * skill.healPercent / 100);
-      const actualHeal = Math.min(healAmount, unit.maxHp - unit.hp);
-      unit.hp = Math.min(unit.maxHp, unit.hp + healAmount);
-      // Track healing statistics
-      unit.healingDone = (unit.healingDone || 0) + actualHeal;
-      result.healing = healAmount;
-      result.targetId = unit.id;
+    unit.actUsed = true;
+    return result;
+  }
+
+  // Handle party-wide healing and buffs. A range of zero means the whole
+  // living team; positive ranges limit recipients by distance from the caster.
+  if (isAllAlliesTargetingSkill) {
+    const recipients = state.units.filter(candidate => {
+      if (candidate.hp <= 0 || getUnitTeamId(candidate) !== getUnitTeamId(unit)) {
+        return false;
+      }
+      return skillRange <= 0 ||
+        getManhattanDistance(unit.tileX, unit.tileY, candidate.tileX, candidate.tileY) <= skillRange;
+    });
+
+    let totalHealing = 0;
+    let totalMpRestored = 0;
+    const buffEffect = getSkillBuffEffect(skill);
+
+    for (const recipient of recipients) {
+      if (skill.healPercent) {
+        const healAmount = Math.floor(recipient.maxHp * skill.healPercent / 100);
+        const actualHeal = Math.min(healAmount, recipient.maxHp - recipient.hp);
+        recipient.hp = Math.min(recipient.maxHp, recipient.hp + healAmount);
+        totalHealing += actualHeal;
+      }
+
+      if (skill.mpRestore) {
+        const mpAmount = Math.floor(recipient.maxMp * skill.mpRestore / 100);
+        const actualMpRestore = Math.min(mpAmount, recipient.maxMp - recipient.mp);
+        recipient.mp = Math.min(recipient.maxMp, recipient.mp + mpAmount);
+        totalMpRestored += actualMpRestore;
+      }
+
+      if (skill.cleanse) {
+        recipient.statusEffects = (recipient.statusEffects || [])
+          .filter(isBeneficialStatusEffect);
+        result.skillEffects.push({ type: 'cleanse', targetId: recipient.id });
+      }
+
+      if (buffEffect) {
+        applySkillBuff(recipient, skill, result);
+      }
     }
-    if (skill.mpRestore) {
-      const mpAmount = Math.floor(unit.maxMp * skill.mpRestore / 100);
-      unit.mp = Math.min(unit.maxMp, unit.mp + mpAmount);
-      result.mpRestored = mpAmount;
-    }
-    if (skill.cleanse) {
-      unit.statusEffects = (unit.statusEffects || []).filter(e =>
-        ['rage', 'fortify', 'haste', 'regen'].includes(e.type)
-      );
-      result.skillEffects.push({ type: 'cleanse', targetId: unit.id });
-    }
+
+    unit.healingDone = (unit.healingDone || 0) + totalHealing;
+    result.healing = totalHealing;
+    result.mpRestored = totalMpRestored;
+    result.targetIds = recipients.map(recipient => recipient.id);
+
     if (skill.cooldown && skill.cooldown > 0) {
       unit.skillCooldowns[skillId] = skill.cooldown;
     }
@@ -417,25 +593,41 @@ function processSkillAction(state, unit, targetTile, skillId) {
   }
 
   // Find target at tile
-  const target = state.units.find(u =>
-    u.tileX === targetTile.x && u.tileY === targetTile.y && u.hp > 0
-  );
+  if (!target) {
+    target = state.units.find(u =>
+      u.tileX === targetTile.x && u.tileY === targetTile.y && u.hp > 0
+    );
+  }
 
   // Handle ally-targeting skills (heals, buffs)
-  if (skill.targetAlly && target && target.type === unit.type) {
+  if (isAllyTargetingSkill) {
     if (skill.healPercent) {
       const healAmount = Math.floor(target.maxHp * skill.healPercent / 100);
       const actualHeal = Math.min(healAmount, target.maxHp - target.hp);
       target.hp = Math.min(target.maxHp, target.hp + healAmount);
       // Track healing statistics
       unit.healingDone = (unit.healingDone || 0) + actualHeal;
-      result.healing = healAmount;
-      result.targetId = target.id;
+      result.healing = actualHeal;
     }
-    if (skill.effect && skill.effectChance >= Math.random()) {
-      applyStatusEffect(target, skill.effect, skill.effectDuration || 3);
-      result.skillEffects.push({ type: 'buff', effect: skill.effect, targetId: target.id });
+
+    if (skill.mpRestore) {
+      const mpAmount = Math.floor(target.maxMp * skill.mpRestore / 100);
+      const actualMpRestore = Math.min(mpAmount, Math.max(0, target.maxMp - target.mp));
+      target.mp = Math.min(target.maxMp, target.mp + mpAmount);
+      result.mpRestored = actualMpRestore;
     }
+
+    if (skill.cleanse) {
+      target.statusEffects = (target.statusEffects || [])
+        .filter(isBeneficialStatusEffect);
+      result.skillEffects.push({ type: 'cleanse', targetId: target.id });
+    }
+
+    if (getSkillBuffEffect(skill)) {
+      applySkillBuff(target, skill, result);
+    }
+
+    result.targetId = target.id;
     if (skill.cooldown && skill.cooldown > 0) {
       unit.skillCooldowns[skillId] = skill.cooldown;
     }
@@ -456,6 +648,9 @@ function processSkillAction(state, unit, targetTile, skillId) {
   // Empty tile skill - animation plays but no damage
   result.attackedEmptyTile = true;
   result.targetTile = targetTile;
+  if (hasSelfSkillComponent(skill)) {
+    applySelfSkillEffects(unit, skill, result);
+  }
   if (skill.cooldown && skill.cooldown > 0) {
     unit.skillCooldowns[skillId] = skill.cooldown;
   }
@@ -486,83 +681,89 @@ function processAoESkill(state, unit, targetTile, skill, skillId, result) {
     skill.aoePattern || 'circle'
   );
 
-  const power = skill.power || 150;
+  const isOffensive = hasOffensiveSkillComponent(skill);
+  const appliesBuffInArea = !isOffensive && Boolean(skill.selfBuff);
+  const power = skill.power ?? 150;
   const damageType = skill.damageType || 'physical';
   const skillElement = skill.element || null;
-  const hits = skill.hits || 1;
+  const hits = skill.hits ?? 1;
 
   let totalAoEDamage = 0;
   result.element = skillElement;
 
   for (const { unit: affectedUnit, isCenter } of affectedUnits) {
-    const damageResult = damageType === 'magical'
-      ? calculateMagicalDamage(unit, affectedUnit, power, skillElement)
-      : calculatePhysicalDamage(unit, affectedUnit, power, skillElement);
-
-    // Handle absorb (element heals instead of damages)
-    if (damageResult.isAbsorb) {
-      const healAmount = damageResult.damage;
-      affectedUnit.hp = Math.min(affectedUnit.maxHp, affectedUnit.hp + healAmount);
-      result.aoeTargets.push({
-        targetId: affectedUnit.id,
-        targetName: affectedUnit.name,
-        targetType: affectedUnit.type,
-        healing: healAmount,
-        isAbsorb: true,
-        isCenter,
-        tileX: affectedUnit.tileX,
-        tileY: affectedUnit.tileY,
-        element: skillElement,
-        elementalModifier: damageResult.elementalModifier
-      });
-      continue;
-    }
-
-    // Apply damage (multiply by hits if multi-hit skill)
-    let totalDamage = 0;
-    for (let i = 0; i < hits; i++) {
-      totalDamage += damageResult.damage;
-    }
-
-    // Reduce damage for non-center targets (75% damage at edges)
-    if (!isCenter) {
-      totalDamage = Math.floor(totalDamage * 0.75);
-    }
-
-    // Apply damage with death save check
-    const wouldKill = affectedUnit.hp - totalDamage <= 0;
-    if (wouldKill && traitService.checkDeathSave(affectedUnit)) {
-      affectedUnit.hp = 1;
-    } else {
-      affectedUnit.hp = Math.max(0, affectedUnit.hp - totalDamage);
-    }
-
-    // Track battle statistics for AoE
-    unit.damageDealt = (unit.damageDealt || 0) + totalDamage;
-    affectedUnit.damageTaken = (affectedUnit.damageTaken || 0) + totalDamage;
-    if (affectedUnit.hp <= 0) {
-      unit.kills = (unit.kills || 0) + 1;
-      affectedUnit.deaths = (affectedUnit.deaths || 0) + 1;
-    }
-
-    totalAoEDamage += totalDamage;
-
     const targetResult = {
       targetId: affectedUnit.id,
       targetName: affectedUnit.name,
       targetType: affectedUnit.type,
-      damage: totalDamage,
-      isCritical: damageResult.isCritical,
       isCenter,
       tileX: affectedUnit.tileX,
       tileY: affectedUnit.tileY,
-      deathSaveTrigger: wouldKill && affectedUnit.hp === 1,
       element: skillElement,
-      elementalModifier: damageResult.elementalModifier
     };
 
+    if (isOffensive) {
+      const damageResult = damageType === 'magical'
+        ? calculateMagicalDamage(unit, affectedUnit, power, skillElement)
+        : calculatePhysicalDamage(unit, affectedUnit, power, skillElement);
+
+      targetResult.elementalModifier = damageResult.elementalModifier;
+
+      // Handle absorb (element heals instead of damages)
+      if (damageResult.isAbsorb) {
+        const healAmount = damageResult.damage;
+        affectedUnit.hp = Math.min(affectedUnit.maxHp, affectedUnit.hp + healAmount);
+        targetResult.healing = healAmount;
+        targetResult.isAbsorb = true;
+      } else {
+        // Apply damage (multiply by hits if multi-hit skill)
+        let totalDamage = 0;
+        for (let i = 0; i < hits; i++) {
+          totalDamage += damageResult.damage;
+        }
+
+        // Reduce damage for non-center targets (75% damage at edges)
+        if (!isCenter) {
+          totalDamage = Math.floor(totalDamage * 0.75);
+        }
+
+        // Apply damage with death save check
+        const wouldKill = affectedUnit.hp - totalDamage <= 0;
+        if (wouldKill && traitService.checkDeathSave(affectedUnit)) {
+          affectedUnit.hp = 1;
+        } else {
+          affectedUnit.hp = Math.max(0, affectedUnit.hp - totalDamage);
+        }
+
+        // Track battle statistics for AoE
+        unit.damageDealt = (unit.damageDealt || 0) + totalDamage;
+        affectedUnit.damageTaken = (affectedUnit.damageTaken || 0) + totalDamage;
+        if (affectedUnit.hp <= 0) {
+          unit.kills = (unit.kills || 0) + 1;
+          affectedUnit.deaths = (affectedUnit.deaths || 0) + 1;
+        }
+
+        totalAoEDamage += totalDamage;
+        targetResult.damage = totalDamage;
+        targetResult.isCritical = damageResult.isCritical;
+        targetResult.deathSaveTrigger = wouldKill && affectedUnit.hp === 1;
+      }
+    }
+
+    // Support-only radial buffs affect living teammates in the area, without
+    // sending the skill through a damage formula.
+    if (appliesBuffInArea &&
+        getUnitTeamId(affectedUnit) === getUnitTeamId(unit)) {
+      if (applySkillBuff(affectedUnit, skill, result)) {
+        targetResult.effectApplied = getSkillBuffEffect(skill);
+      }
+    }
+
     // Apply status effect if skill has one and chance succeeds
-    if (skill.effect && skill.effectChance && Math.random() < skill.effectChance) {
+    if (skill.effect &&
+        skill.effect !== 'heal' &&
+        !isSkillEffectHandledAsBuff(skill) &&
+        Math.random() < (skill.effectChance ?? 1)) {
       const effectApplied = applyStatusEffect(
         affectedUnit,
         skill.effect,
@@ -601,6 +802,11 @@ function processAoESkill(state, unit, targetTile, skill, skillId, result) {
     result.targetTile = targetTile;
   }
 
+  if (hasSelfSkillComponent(skill)) {
+    // A support-only radial buff already included the caster in its recipients.
+    applySelfSkillEffects(unit, skill, result, !appliesBuffInArea);
+  }
+
   if (skill.cooldown && skill.cooldown > 0) {
     unit.skillCooldowns[skillId] = skill.cooldown;
   }
@@ -612,14 +818,55 @@ function processAoESkill(state, unit, targetTile, skill, skillId, result) {
  * Process a single-target skill
  */
 function processSingleTargetSkill(state, unit, target, skill, skillId, result) {
-  const power = skill.power || 150;
+  const isOffensive = hasOffensiveSkillComponent(skill);
+  const power = skill.power ?? 150;
   const damageType = skill.damageType || 'physical';
   const skillElement = skill.element || null;
+
+  result.element = skillElement;
+  result.targetId = target.id;
+  result.targetType = target.type;
+
+  // Damage-free debuffs (fear, freeze, weaken, taunt, and similar skills)
+  // still consume the action and can apply their status, but must not fall
+  // through to the legacy 150-power damage default.
+  if (!isOffensive) {
+    result.damage = 0;
+
+    if (hasSelfSkillComponent(skill)) {
+      applySelfSkillEffects(unit, skill, result);
+    }
+
+    if (skill.effect &&
+        skill.effect !== 'heal' &&
+        !isSkillEffectHandledAsBuff(skill) &&
+        Math.random() < (skill.effectChance ?? 1)) {
+      const effectApplied = applyStatusEffect(
+        target,
+        skill.effect,
+        skill.effectDuration || 3
+      );
+      if (effectApplied) {
+        result.skillEffects.push({
+          type: 'debuff',
+          effect: skill.effect,
+          duration: skill.effectDuration || 3,
+          targetId: target.id
+        });
+      }
+    }
+
+    if (skill.cooldown && skill.cooldown > 0) {
+      unit.skillCooldowns[skillId] = skill.cooldown;
+    }
+    unit.actUsed = true;
+    return result;
+  }
+
   const damageResult = damageType === 'magical'
     ? calculateMagicalDamage(unit, target, power, skillElement)
     : calculatePhysicalDamage(unit, target, power, skillElement);
 
-  result.element = skillElement;
   result.elementalModifier = damageResult.elementalModifier;
 
   // Handle absorb (element heals instead of damages)
@@ -630,6 +877,9 @@ function processSingleTargetSkill(state, unit, target, skill, skillId, result) {
     result.isAbsorb = true;
     result.targetId = target.id;
     result.targetType = target.type;
+    if (hasSelfSkillComponent(skill)) {
+      applySelfSkillEffects(unit, skill, result);
+    }
     if (skill.cooldown && skill.cooldown > 0) {
       unit.skillCooldowns[skillId] = skill.cooldown;
     }
@@ -675,8 +925,15 @@ function processSingleTargetSkill(state, unit, target, skill, skillId, result) {
     result.lifestealAmount = lifestealAmount;
   }
 
+  if (hasSelfSkillComponent(skill)) {
+    applySelfSkillEffects(unit, skill, result);
+  }
+
   // Apply status effect if skill has one and chance succeeds
-  if (skill.effect && skill.effectChance && Math.random() < skill.effectChance) {
+  if (skill.effect &&
+      skill.effect !== 'heal' &&
+      !isSkillEffectHandledAsBuff(skill) &&
+      Math.random() < (skill.effectChance ?? 1)) {
     const effectApplied = applyStatusEffect(
       target,
       skill.effect,

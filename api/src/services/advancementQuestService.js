@@ -26,7 +26,7 @@ function requireQueryClient(client, operation) {
 /**
  * Get the guild ID for a given class
  */
-function getGuildForClass(className) {
+export function getGuildForClass(className) {
   if (BASE_CLASSES.includes(className)) {
     return className;
   }
@@ -36,6 +36,92 @@ function getGuildForClass(className) {
     }
   }
   return null;
+}
+
+export function getAdvancementNodeIdError(nodeId) {
+  if (nodeId === undefined || nodeId === null) {
+    return 'nodeId is required';
+  }
+  if (!Number.isSafeInteger(nodeId) || nodeId < 1) {
+    return 'Valid nodeId is required';
+  }
+  return null;
+}
+
+/**
+ * Validate that a character is at the requested node and that the node is the
+ * guild responsible for the character's active advancement path.
+ *
+ * @returns {string|null} A client-safe validation message, or null when valid.
+ */
+export function getAdvancementGuildLocationError(
+  character,
+  node,
+  nodeId,
+  questGuildId
+) {
+  const nodeIdError = getAdvancementNodeIdError(nodeId);
+  if (nodeIdError) return nodeIdError;
+  if (character?.current_node_id !== nodeId) {
+    return 'Character is not at the selected guild node';
+  }
+  if (!node || node.id !== nodeId) {
+    return 'Selected guild node not found';
+  }
+  if (node.node_type !== 'guild') {
+    return 'Selected node is not a guild';
+  }
+
+  const characterGuildId = getGuildForClass(character?.class);
+  if (!characterGuildId) {
+    return 'Character class does not belong to an advancement guild';
+  }
+  if (characterGuildId !== questGuildId) {
+    return 'Advancement quest does not match the character guild';
+  }
+  if (node.guild_class !== questGuildId) {
+    return 'Selected guild does not match the advancement quest guild';
+  }
+
+  return null;
+}
+
+/**
+ * Resolve the one advancement template a locked character may currently use.
+ */
+export function getNextAdvancementStep(character) {
+  const currentClass = character?.class;
+  const guildId = getGuildForClass(currentClass);
+  const level = Number(character?.level);
+  if (
+    !guildId
+    || !Number.isFinite(level)
+    || level < ADVANCEMENT_QUEST_MIN_LEVEL
+  ) {
+    return null;
+  }
+
+  const tiers = GUILD_ADVANCEMENT_TIERS[guildId];
+  if (BASE_CLASSES.includes(currentClass)) {
+    return {
+      guildId,
+      tier: 1,
+      prerequisiteClass: null,
+      targetClass: tiers[0]
+    };
+  }
+
+  const currentTierIndex = tiers.indexOf(currentClass);
+  if (currentTierIndex < 0 || currentTierIndex >= tiers.length - 1) {
+    return null;
+  }
+
+  return {
+    guildId,
+    tier: currentTierIndex + 2,
+    prerequisiteClass: currentClass,
+    targetClass: tiers[currentTierIndex + 1]
+  };
 }
 
 /**
@@ -55,15 +141,8 @@ export async function getAvailableQuests(characterId) {
   }
 
   const character = charResult.rows[0];
-  const currentClass = character.class;
-  const guildId = getGuildForClass(currentClass);
-
-  if (!guildId) {
-    return [];
-  }
-
-  // Check minimum level
-  if (character.level < ADVANCEMENT_QUEST_MIN_LEVEL) {
+  const advancementStep = getNextAdvancementStep(character);
+  if (!advancementStep) {
     return [];
   }
 
@@ -78,37 +157,22 @@ export async function getAvailableQuests(characterId) {
     return []; // Already has active quest
   }
 
-  // Get available quest templates for this guild
-  // T1 quests require base class, T2+ require previous tier
-  const tiers = GUILD_ADVANCEMENT_TIERS[guildId];
-  const currentTierIndex = tiers.indexOf(currentClass);
-
-  // Determine what prerequisite class is needed for the next tier
-  let prerequisiteClass = null;
-  let nextTier = 1;
-
-  if (BASE_CLASSES.includes(currentClass)) {
-    // Base class can do T1 quest
-    prerequisiteClass = null;
-    nextTier = 1;
-  } else if (currentTierIndex >= 0 && currentTierIndex < tiers.length - 1) {
-    // Advanced class can do next tier quest
-    prerequisiteClass = currentClass;
-    nextTier = currentTierIndex + 2; // +2 because index 0 = tier 1
-  } else {
-    // Already at max tier or unknown class
-    return [];
-  }
-
   // Query for matching quest template
   const questResult = await query(
     `SELECT aqt.*, g.name as guildmaster_name
      FROM advancement_quest_templates aqt
-     LEFT JOIN guildmaster_templates g ON g.guild_class = aqt.target_class
+     LEFT JOIN guildmaster_templates g
+       ON g.guild_class = aqt.boss_config->>'guildmaster_class'
      WHERE aqt.guild_id = $1
      AND aqt.tier = $2
-     AND (aqt.prerequisite_class = $3 OR (aqt.prerequisite_class IS NULL AND $3 IS NULL))`,
-    [guildId, nextTier, prerequisiteClass]
+     AND aqt.prerequisite_class IS NOT DISTINCT FROM $3
+     AND aqt.target_class = $4`,
+    [
+      advancementStep.guildId,
+      advancementStep.tier,
+      advancementStep.prerequisiteClass,
+      advancementStep.targetClass
+    ]
   );
 
   return questResult.rows;
@@ -118,54 +182,111 @@ export async function getAvailableQuests(characterId) {
  * Accept an advancement quest
  * @param {number} characterId - Character ID
  * @param {number} questTemplateId - Quest template ID
+ * @param {number} nodeId - Selected guild node ID
  * @returns {Object} Created quest record
  */
-export async function acceptQuest(characterId, questTemplateId) {
-  // First, check quest availability outside transaction (non-blocking read)
-  const availableQuests = await getAvailableQuests(characterId);
-  const questTemplate = availableQuests.find(q => q.id === questTemplateId);
+export async function acceptQuest(characterId, questTemplateId, nodeId) {
+  return withTransaction(client =>
+    acceptQuestWithClient(client, characterId, questTemplateId, nodeId)
+  );
+}
 
-  if (!questTemplate) {
+/**
+ * Accept a quest using only state read after the character row is locked.
+ * This prevents a stale quest-board response from being accepted after a
+ * concurrent class or level change.
+ */
+export async function acceptQuestWithClient(
+  client,
+  characterId,
+  questTemplateId,
+  nodeId
+) {
+  requireQueryClient(client, 'acceptQuestWithClient');
+  if (!Number.isSafeInteger(nodeId) || nodeId < 1) {
+    throw new Error('Valid nodeId is required');
+  }
+  if (!Number.isSafeInteger(questTemplateId) || questTemplateId < 1) {
+    throw new Error('Valid questTemplateId is required');
+  }
+
+  // Lock first, then derive eligibility exclusively from the locked row.
+  const lockResult = await client.query(
+    `SELECT id, class, level, current_node_id
+     FROM characters
+     WHERE id = $1
+     FOR UPDATE`,
+    [characterId]
+  );
+
+  if (lockResult.rows.length === 0) {
+    throw new Error('Character not found');
+  }
+
+  const character = lockResult.rows[0];
+  const advancementStep = getNextAdvancementStep(character);
+  if (!advancementStep) {
     throw new Error('Quest not available for this character');
   }
 
-  // Use transaction with row locking to prevent race conditions
-  return await withTransaction(async (client) => {
-    // Lock character row to serialize concurrent quest acceptances
-    const lockResult = await client.query(
-      'SELECT id FROM characters WHERE id = $1 FOR UPDATE',
-      [characterId]
-    );
+  const activeCheck = await client.query(
+    `SELECT id FROM character_quests
+     WHERE character_id = $1 AND status IN ('active', 'boss_ready')
+     FOR UPDATE`,
+    [characterId]
+  );
+  if (activeCheck.rows.length > 0) {
+    throw new Error('Character already has an active quest');
+  }
 
-    if (lockResult.rows.length === 0) {
-      throw new Error('Character not found');
-    }
+  const templateResult = await client.query(
+    `SELECT *
+     FROM advancement_quest_templates
+     WHERE id = $1
+       AND guild_id = $2
+       AND tier = $3
+       AND prerequisite_class IS NOT DISTINCT FROM $4
+       AND target_class = $5`,
+    [
+      questTemplateId,
+      advancementStep.guildId,
+      advancementStep.tier,
+      advancementStep.prerequisiteClass,
+      advancementStep.targetClass
+    ]
+  );
+  if (templateResult.rows.length === 0) {
+    throw new Error('Quest not available for this character');
+  }
+  const questTemplate = templateResult.rows[0];
 
-    // Re-check for existing active quest within transaction (critical check)
-    const activeCheck = await client.query(
-      `SELECT id FROM character_quests
-       WHERE character_id = $1 AND status IN ('active', 'boss_ready')
-       FOR UPDATE`,
-      [characterId]
-    );
+  const nodeResult = await client.query(
+    `SELECT id, node_type, guild_class
+     FROM world_nodes
+     WHERE id = $1`,
+    [nodeId]
+  );
+  const locationError = getAdvancementGuildLocationError(
+    character,
+    nodeResult.rows[0],
+    nodeId,
+    advancementStep.guildId
+  );
+  if (locationError) {
+    throw new Error(locationError);
+  }
 
-    if (activeCheck.rows.length > 0) {
-      throw new Error('Character already has an active quest');
-    }
+  const result = await client.query(
+    `INSERT INTO character_quests (character_id, quest_template_id, status)
+     VALUES ($1, $2, 'active')
+     RETURNING *`,
+    [characterId, questTemplateId]
+  );
 
-    // Create the quest record
-    const result = await client.query(
-      `INSERT INTO character_quests (character_id, quest_template_id, status)
-       VALUES ($1, $2, 'active')
-       RETURNING *`,
-      [characterId, questTemplateId]
-    );
-
-    return {
-      quest: result.rows[0],
-      template: questTemplate
-    };
-  });
+  return {
+    quest: result.rows[0],
+    template: questTemplate
+  };
 }
 
 /**
@@ -243,7 +364,7 @@ export async function getQuestProgressWithClient(client, characterId) {
   };
 }
 
-function calculateMaterialProgress(requirements, progress) {
+export function calculateMaterialProgress(requirements, progress) {
   if (!requirements || requirements.length === 0) {
     return { items: [], complete: true, percentage: 100 };
   }
@@ -252,6 +373,8 @@ function calculateMaterialProgress(requirements, progress) {
     const collected = progress?.[req.item_template_id] || 0;
     return {
       itemTemplateId: req.item_template_id,
+      name: req.name ?? `Item ${req.item_template_id}`,
+      rarity: req.rarity ?? null,
       required: req.quantity,
       collected,
       complete: collected >= req.quantity
@@ -266,7 +389,7 @@ function calculateMaterialProgress(requirements, progress) {
   return { items, complete, percentage };
 }
 
-function calculateEnemyProgress(requirements, progress) {
+export function calculateEnemyProgress(requirements, progress) {
   if (!requirements || requirements.length === 0) {
     return { enemies: [], complete: true, percentage: 100 };
   }
@@ -275,6 +398,8 @@ function calculateEnemyProgress(requirements, progress) {
     const killed = progress?.[req.enemy_archetype] || 0;
     return {
       enemyArchetype: req.enemy_archetype,
+      name: req.name ?? req.enemy_archetype,
+      zoneTier: req.zone_tier ?? null,
       required: req.count,
       killed,
       complete: killed >= req.count
@@ -289,7 +414,7 @@ function calculateEnemyProgress(requirements, progress) {
   return { enemies, complete, percentage };
 }
 
-function calculateNodeProgress(requirements, progress) {
+export function calculateNodeProgress(requirements, progress) {
   if (!requirements || requirements.length === 0) {
     return { nodes: [], complete: true, percentage: 100 };
   }
@@ -298,6 +423,8 @@ function calculateNodeProgress(requirements, progress) {
     const visited = progress?.[req.node_type]?.length || 0;
     return {
       nodeType: req.node_type,
+      name: req.name ?? req.node_type,
+      minTier: req.min_tier ?? null,
       required: req.count,
       visited,
       complete: visited >= req.count
@@ -509,8 +636,10 @@ export async function canStartBossTrial(characterId) {
   return {
     eligible: true,
     reason: 'Ready to challenge the guildmaster',
+    questId: progress.questId,
     bossConfig: progress.bossConfig,
-    targetClass: progress.targetClass
+    targetClass: progress.targetClass,
+    guildId: progress.guildId
   };
 }
 
@@ -659,12 +788,47 @@ export async function completeQuestWithClient(client, characterId, battleId) {
  * @returns {boolean} True if quest was abandoned
  */
 export async function abandonQuest(characterId) {
-  const result = await query(
+  return withTransaction(client => abandonQuestWithClient(client, characterId));
+}
+
+/**
+ * Serialize abandonment with boss-trial creation on the character lock.
+ */
+export async function abandonQuestWithClient(client, characterId) {
+  requireQueryClient(client, 'abandonQuestWithClient');
+  const characterResult = await client.query(
+    `SELECT id, in_battle
+     FROM characters
+     WHERE id = $1
+     FOR UPDATE`,
+    [characterId]
+  );
+  if (characterResult.rows.length === 0) return false;
+  if (characterResult.rows[0].in_battle) {
+    const error = new Error(
+      'Cannot abandon an advancement quest during its boss trial'
+    );
+    error.code = 'ADVANCEMENT_QUEST_BATTLE_ACTIVE';
+    throw error;
+  }
+
+  const questResult = await client.query(
+    `SELECT id
+     FROM character_quests
+     WHERE character_id = $1
+       AND status IN ('active', 'boss_ready')
+     FOR UPDATE`,
+    [characterId]
+  );
+  if (questResult.rows.length === 0) return false;
+
+  const result = await client.query(
     `UPDATE character_quests
      SET status = 'abandoned', abandoned_at = NOW()
-     WHERE character_id = $1 AND status IN ('active', 'boss_ready')
+     WHERE id = $1
+       AND status IN ('active', 'boss_ready')
      RETURNING id`,
-    [characterId]
+    [questResult.rows[0].id]
   );
 
   return result.rows.length > 0;
@@ -689,9 +853,17 @@ export async function getCompletedQuests(characterId) {
 }
 
 export default {
+  getGuildForClass,
+  getAdvancementNodeIdError,
+  getAdvancementGuildLocationError,
+  getNextAdvancementStep,
   getAvailableQuests,
   acceptQuest,
+  acceptQuestWithClient,
   getQuestProgress,
+  calculateMaterialProgress,
+  calculateEnemyProgress,
+  calculateNodeProgress,
   updateMaterialProgress,
   updateMaterialProgressWithClient,
   updateEnemyProgress,
@@ -702,5 +874,6 @@ export default {
   completeQuest,
   completeQuestWithClient,
   abandonQuest,
+  abandonQuestWithClient,
   getCompletedQuests
 };

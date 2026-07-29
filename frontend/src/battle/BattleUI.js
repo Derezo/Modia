@@ -741,8 +741,9 @@ export class BattleUI {
       this.menuDropdown.setNextUnit(nextUnit || null);
     }
 
-    // Update the turn order modal if it's open
-    if (this.turnOrderModal && this.turnOrderModal.isOpen()) {
+    // Keep the modal's queue synchronized even while it is closed.
+    // TurnOrderModal decides whether to render immediately or on its next open.
+    if (this.turnOrderModal) {
       this.turnOrderModal.updateTurnOrder(predictions);
     }
   }

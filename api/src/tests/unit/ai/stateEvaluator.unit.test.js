@@ -195,6 +195,419 @@ describe('StateEvaluator', () => {
       assert.ok(result.factors.DAMAGE_DEALT >= 0);
     });
 
+    it('values a damage-free hostile status without inventing damage', () => {
+      const state = createMockBattleState(
+        [{ id: 'target', tileX: 6, tileY: 5, statusEffects: [] }],
+        [{ id: 'caster', tileX: 5, tileY: 5, mp: 50 }]
+      );
+      const evaluator = new StateEvaluator(getWeights('tactical'));
+      const caster = state.units.find(unit => unit.id === 'caster');
+      const target = state.units.find(unit => unit.id === 'target');
+      const freeze = createMockSkill({
+        id: 'frozen_tomb',
+        power: 0,
+        range: 3,
+        mpCost: 10,
+        effect: 'freeze',
+        effectChance: 0.8,
+        effectDuration: 2
+      });
+
+      const useful = evaluator.evaluateAction(caster, {
+        type: 'skill',
+        targetId: target.id,
+        skill: freeze
+      }, state);
+      target.statusEffects.push({ type: 'freeze', duration: 2 });
+      const redundant = evaluator.evaluateAction(caster, {
+        type: 'skill',
+        targetId: target.id,
+        skill: freeze
+      }, state);
+
+      assert.strictEqual(useful.factors.KILL_POTENTIAL, 0);
+      assert.ok(useful.factors.DAMAGE_DEALT > 0);
+      assert.strictEqual(redundant.factors.DAMAGE_DEALT, 0);
+      assert.strictEqual(redundant.factors.TARGET_PRIORITY, 0);
+      assert.ok(useful.score > redundant.score);
+    });
+
+    it('values every damage-free AoE debuff target and avoids redundant effects', () => {
+      const state = createMockBattleState(
+        [
+          { id: 'target-a', tileX: 6, tileY: 5, statusEffects: [] },
+          { id: 'target-b', tileX: 7, tileY: 5, statusEffects: [] }
+        ],
+        [{ id: 'caster', tileX: 3, tileY: 5, mp: 50 }]
+      );
+      const evaluator = new StateEvaluator(getWeights('tactical'));
+      const caster = state.units.find(unit => unit.id === 'caster');
+      const smokeBomb = createMockSkill({
+        id: 'smoke_bomb',
+        power: 0,
+        range: 3,
+        mpCost: 10,
+        aoeRadius: 1,
+        effect: 'blind',
+        effectChance: 1,
+        effectDuration: 2
+      });
+      const action = {
+        type: 'skill',
+        skill: smokeBomb,
+        targetId: 'target-a',
+        target: { x: 6, y: 5 },
+        aoeCenter: { x: 6, y: 5 }
+      };
+
+      const twoTargets = evaluator.evaluateAction(caster, action, state);
+      state.units.find(unit => unit.id === 'target-b')
+        .statusEffects.push({ type: 'blind', duration: 2 });
+      const oneNewTarget = evaluator.evaluateAction(caster, action, state);
+
+      assert.strictEqual(twoTargets.factors.KILL_POTENTIAL, 0);
+      assert.ok(twoTargets.factors.DAMAGE_DEALT > oneNewTarget.factors.DAMAGE_DEALT);
+      assert.ok(oneNewTarget.factors.DAMAGE_DEALT > 0);
+    });
+
+    it('scores every AoE target and subtracts friendly fire', () => {
+      const evaluator = new StateEvaluator(getWeights('tactical'));
+      const skill = createMockSkill({
+        id: 'blast',
+        power: 100,
+        range: 3,
+        aoeRadius: 1,
+        mpCost: 10
+      });
+      const state = createMockBattleState(
+        [
+          { id: 'enemy-a', tileX: 6, tileY: 5, vitality: 10, defense: 5 },
+          { id: 'enemy-b', tileX: 7, tileY: 5, vitality: 10, defense: 5 }
+        ],
+        [
+          { id: 'caster', tileX: 5, tileY: 5, strength: 50, attack: 20 },
+          { id: 'ally', tileX: 6, tileY: 6, vitality: 10, defense: 5 }
+        ]
+      );
+      const caster = state.units.find(unit => unit.id === 'caster');
+      const action = {
+        type: 'skill',
+        skill,
+        targetId: 'enemy-a',
+        target: { x: 6, y: 5 },
+        aoeCenter: { x: 6, y: 5 }
+      };
+
+      const withFriendlyFire = evaluator.evaluateAction(caster, action, state);
+      state.units.find(unit => unit.id === 'ally').tileX = 10;
+      const opponentsOnly = evaluator.evaluateAction(caster, action, state);
+      state.units.find(unit => unit.id === 'enemy-b').tileX = 10;
+      const oneOpponent = evaluator.evaluateAction(caster, action, state);
+
+      assert.ok(opponentsOnly.factors.DAMAGE_DEALT > oneOpponent.factors.DAMAGE_DEALT);
+      assert.ok(
+        withFriendlyFire.factors.DAMAGE_DEALT < opponentsOnly.factors.DAMAGE_DEALT,
+        'friendly damage should reduce the action benefit'
+      );
+    });
+
+    it('penalizes a caster-centered AoE that damages allies but no opponents', () => {
+      const evaluator = new StateEvaluator(getWeights('aggressive'));
+      const skill = createMockSkill({
+        id: 'nova',
+        power: 100,
+        range: 0,
+        aoeRadius: 1,
+        mpCost: 10
+      });
+      const state = createMockBattleState(
+        [{ id: 'distant-opponent', tileX: 12, tileY: 5 }],
+        [
+          { id: 'caster', tileX: 5, tileY: 5, strength: 50, attack: 20 },
+          { id: 'ally', tileX: 6, tileY: 5 }
+        ]
+      );
+      const caster = state.units.find(unit => unit.id === 'caster');
+
+      const result = evaluator.evaluateAction(caster, {
+        type: 'skill',
+        skill,
+        target: { x: 5, y: 5 },
+        aoeCenter: { x: 5, y: 5 }
+      }, state);
+
+      assert.ok(result.factors.DAMAGE_DEALT < 0);
+      assert.ok(result.score < 0);
+    });
+
+    it('values every same-team recipient of a caster-centered support AoE', () => {
+      const evaluator = new StateEvaluator(getWeights('support'));
+      const skill = createMockSkill({
+        id: 'beast_howl',
+        power: 0,
+        range: 0,
+        aoeRadius: 1,
+        damageType: 'support',
+        selfBuff: { attack: 1.2 },
+        buffDuration: 3
+      });
+      const state = createMockBattleState(
+        [
+          { id: 'caster', teamId: 7, tileX: 5, tileY: 5 },
+          { id: 'nearby-ally', teamId: 7, tileX: 6, tileY: 5 },
+          { id: 'defeated-ally', teamId: 7, tileX: 5, tileY: 4, hp: 0 },
+          { id: 'distant-ally', teamId: 7, tileX: 8, tileY: 5 }
+        ],
+        [{ id: 'nearby-opponent', teamId: 8, tileX: 5, tileY: 6 }]
+      );
+      const caster = state.units.find(unit => unit.id === 'caster');
+      const nearbyAlly = state.units.find(unit => unit.id === 'nearby-ally');
+      const action = {
+        type: 'skill',
+        targetId: caster.id,
+        target: { x: 12, y: 5 },
+        aoeCenter: { x: 12, y: 5 },
+        skill
+      };
+
+      const useful = evaluator.evaluateAction(caster, action, state);
+      caster.statusEffects.push({ type: 'beast_howl_buff', duration: 3 });
+      nearbyAlly.statusEffects.push({ type: 'beast_howl_buff', duration: 3 });
+      const redundant = evaluator.evaluateAction(caster, action, state);
+
+      assert.strictEqual(useful.factors.HEALING_VALUE, 100);
+      assert.strictEqual(redundant.factors.HEALING_VALUE, 0);
+    });
+
+    it('scores both offensive and self-preservation value for a hybrid skill', () => {
+      const state = createMockBattleState(
+        [{ tileX: 6, tileY: 5, hp: 200, maxHp: 200, vitality: 10, defense: 5 }],
+        [{
+          tileX: 5,
+          tileY: 5,
+          hp: 80,
+          maxHp: 200,
+          mp: 50,
+          maxMp: 100,
+          strength: 40,
+          attack: 20
+        }]
+      );
+      const evaluator = new StateEvaluator(getWeights('tactical'));
+      const actor = state.units[1];
+      const target = state.units[0];
+      const hybridSkill = createMockSkill({
+        id: 'frenzy',
+        power: 120,
+        mpCost: 15,
+        healPercent: 20,
+        selfBuff: { attack: 1.5 }
+      });
+
+      const result = evaluator.evaluateAction(actor, {
+        type: 'skill',
+        targetId: target.id,
+        skill: hybridSkill
+      }, state);
+
+      assert.ok(result.factors.DAMAGE_DEALT > 0);
+      assert.ok(result.factors.HEALING_VALUE > 0);
+      assert.strictEqual(
+        result.factors._skillBenefit,
+        result.factors.DAMAGE_DEALT + result.factors.HEALING_VALUE
+      );
+    });
+
+    it('distinguishes self-buff identities from hostile hybrid effects', () => {
+      const state = createMockBattleState(
+        [{ tileX: 6, tileY: 5, hp: 200, maxHp: 200 }],
+        [{ tileX: 5, tileY: 5, strength: 40, attack: 20 }]
+      );
+      const evaluator = new StateEvaluator(getWeights('tactical'));
+      const caster = state.units[1];
+      const target = state.units[0];
+      const cases = [
+        {
+          name: 'string identity',
+          selfBuff: 'berserk',
+          effect: 'berserk',
+          hostile: false
+        },
+        {
+          name: 'object type identity',
+          selfBuff: { type: 'berserk', attack: 1.2 },
+          effect: 'berserk',
+          hostile: false
+        },
+        {
+          name: 'skill-id fallback identity',
+          selfBuff: { attack: 1.2 },
+          effect: 'beast_frenzy_buff',
+          hostile: false
+        },
+        {
+          name: 'different target effect',
+          selfBuff: 'berserk',
+          effect: 'weaken',
+          hostile: true
+        }
+      ];
+
+      const originalRandom = Math.random;
+      try {
+        Math.random = () => 0.5;
+        for (const testCase of cases) {
+          const skill = createMockSkill({
+            id: 'beast_frenzy',
+            power: 80,
+            effectDuration: 3,
+            selfBuff: testCase.selfBuff,
+            effect: testCase.effect
+          });
+          const action = {
+            type: 'skill',
+            targetId: target.id,
+            skill
+          };
+          const result = evaluator.evaluateAction(caster, action, state);
+          const withoutTargetEffect = evaluator.evaluateAction(caster, {
+            ...action,
+            skill: { ...skill, effect: null }
+          }, state);
+
+          assert.ok(result.factors.DAMAGE_DEALT > 0, testCase.name);
+          if (testCase.hostile) {
+            assert.ok(
+              result.factors.DAMAGE_DEALT >
+                withoutTargetEffect.factors.DAMAGE_DEALT,
+              testCase.name
+            );
+          } else {
+            assert.strictEqual(
+              result.factors.DAMAGE_DEALT,
+              withoutTargetEffect.factors.DAMAGE_DEALT,
+              testCase.name
+            );
+          }
+          assert.strictEqual(result.factors.HEALING_VALUE, 50, testCase.name);
+        }
+      } finally {
+        Math.random = originalRandom;
+      }
+    });
+
+    it('strongly penalizes spending MP to heal a full-health ally', () => {
+      const state = createMockBattleState(
+        [],
+        [
+          { tileX: 5, tileY: 5, hp: 200, maxHp: 200, mp: 50, maxMp: 100 },
+          { tileX: 6, tileY: 5, hp: 200, maxHp: 200 }
+        ]
+      );
+      const evaluator = new StateEvaluator(getWeights('support'));
+      const healer = state.units[0];
+      const target = state.units[1];
+      const wastedHeal = createMockSkill({
+        damageType: 'heal',
+        power: 0,
+        healPercent: 30,
+        mpCost: 20,
+        targetAlly: true
+      });
+      const freeHeal = { ...wastedHeal, mpCost: 0 };
+
+      const wastedResult = evaluator.evaluateAction(healer, {
+        type: 'skill',
+        targetId: target.id,
+        skill: wastedHeal
+      }, state);
+      const freeResult = evaluator.evaluateAction(healer, {
+        type: 'skill',
+        targetId: target.id,
+        skill: freeHeal
+      }, state);
+
+      assert.strictEqual(wastedResult.factors.HEALING_VALUE, 0);
+      assert.strictEqual(wastedResult.factors._skillBenefit, 0);
+      assert.strictEqual(wastedResult.factors.MP_EFFICIENCY, -200);
+      assert.ok(wastedResult.score < freeResult.score - 300,
+        'a useless mana-consuming heal should be substantially worse than a free no-op');
+    });
+
+    it('scores a self MP restore as support rather than damage', () => {
+      const state = createMockBattleState(
+        [],
+        [{ tileX: 5, tileY: 5, mp: 20, maxMp: 100 }]
+      );
+      const evaluator = new StateEvaluator(getWeights('support'));
+      const actor = state.units[0];
+      const restoreSkill = createMockSkill({
+        power: 0,
+        mpCost: 0,
+        mpRestore: 20,
+        targetSelf: true
+      });
+
+      const result = evaluator.evaluateAction(actor, {
+        type: 'skill',
+        targetId: actor.id,
+        skill: restoreSkill
+      }, state);
+
+      assert.strictEqual(result.factors.DAMAGE_DEALT, 0);
+      assert.strictEqual(result.factors.KILL_POTENTIAL, 0);
+      assert.strictEqual(result.factors.TARGET_PRIORITY, 0);
+      assert.strictEqual(result.factors.HEALING_VALUE, 20);
+      assert.strictEqual(result.factors._skillBenefit, 20);
+    });
+
+    it('does not value cleansing beneficial legacy statuses', () => {
+      const beneficialStatuses = [
+        { type: 'rage', duration: 2 },
+        { type: 'fortify', duration: 2 },
+        { type: 'haste', duration: 2 },
+        { type: 'regen', duration: 2 },
+        { type: 'attack_up', duration: 2 },
+        { type: 'defense_up', duration: 2 },
+        { type: 'magic_shield', duration: 2 },
+        'berserk',
+        { type: 'frenzy', duration: 2 },
+        'final_stand',
+        { type: 'shadow_arts', duration: 2 },
+        'pack_bonus',
+        { type: 'regenerate', duration: 2 },
+        'unmovable',
+        { type: 'fire_resist', duration: 2 },
+        {
+          type: 'test_rally_buff',
+          duration: 2,
+          modifiers: { defense: 1.25 }
+        }
+      ];
+      const state = createMockBattleState(
+        [],
+        [{ statusEffects: beneficialStatuses }]
+      );
+      const evaluator = new StateEvaluator(getWeights('support'));
+      const caster = state.units[0];
+      const cleanse = createMockSkill({
+        id: 'purify',
+        power: 0,
+        mpCost: 0,
+        targetSelf: true,
+        cleanse: true
+      });
+
+      const result = evaluator.evaluateAction(caster, {
+        type: 'skill',
+        targetId: caster.id,
+        skill: cleanse
+      }, state);
+
+      assert.strictEqual(result.factors.HEALING_VALUE, 0);
+      assert.strictEqual(result.factors._skillBenefit, 0);
+    });
+
     it('penalizes high MP cost skills when MP is low', () => {
       const state = createMockBattleState(
         [{ tileX: 6, tileY: 5, hp: 100, maxHp: 200, vitality: 10, defense: 5 }],
@@ -945,6 +1358,58 @@ describe('StateEvaluator', () => {
       ];
       const result = evaluator.evaluateSequence(enemy, sequence, state);
       assert.strictEqual(result.factors.twoActionBonus, 30);
+    });
+
+    it('treats expected incoming damage as a cost when choosing a destination', () => {
+      const state = createMockBattleState(
+        [{ tileX: 6, tileY: 5, movement: 3, attackRange: 1 }],
+        [{ tileX: 5, tileY: 5 }]
+      );
+      const evaluator = new StateEvaluator({
+        name: 'RiskOnly',
+        weights: { DAMAGE_RECEIVED: 1 }
+      });
+      const enemy = state.units[1];
+
+      const threatened = evaluator.evaluateSequence(enemy, [{
+        type: 'move',
+        position: { x: 5, y: 6 }
+      }], state);
+      const safe = evaluator.evaluateSequence(enemy, [{
+        type: 'move',
+        position: { x: 0, y: 0 }
+      }], state);
+
+      assert.ok(threatened.factors.finalRisk.DAMAGE_RECEIVED > 0);
+      assert.strictEqual(safe.factors.finalRisk.DAMAGE_RECEIVED, 0);
+      assert.ok(safe.score > threatened.score,
+        'lower-risk destinations should score higher');
+    });
+
+    it('rewards hit-and-run units for attacking before retreating', () => {
+      const state = createMockBattleState(
+        [{ tileX: 6, tileY: 5, hp: 200, maxHp: 200 }],
+        [{ tileX: 5, tileY: 5, hp: 200, maxHp: 200 }]
+      );
+      const evaluator = new StateEvaluator(getWeights('hit-and-run'));
+      const enemy = state.units[1];
+      const attack = { type: 'attack', targetId: state.units[0].id };
+      const retreat = { type: 'move', position: { x: 0, y: 0 } };
+
+      const attackThenRetreat = evaluator.evaluateSequence(
+        enemy,
+        [attack, retreat],
+        state
+      );
+      const retreatThenAttack = evaluator.evaluateSequence(
+        enemy,
+        [retreat, attack],
+        state
+      );
+
+      assert.ok(attackThenRetreat.factors.retreatBonus > 0);
+      assert.ok(attackThenRetreat.score > retreatThenAttack.score,
+        'the legal attack-then-retreat order should be preferred');
     });
 
     it('gives +30 bonus for move+skill combination', () => {

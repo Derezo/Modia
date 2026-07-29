@@ -23,6 +23,31 @@ import battleStateRepository from './battle/BattleStateRepository.js';
 import { extractBattleMutableState } from './battle/battleMapGenerationService.js';
 
 /**
+ * Clear the authoritative challenger for an advancement battle.
+ *
+ * Advancement trials may use a character outside the active party, so the
+ * normal party-slot cleanup is not sufficient for these battles.
+ *
+ * @param {Object} client - Transaction client
+ * @param {Object} battle - Authoritative battle envelope
+ * @returns {Promise<boolean>} Whether an advancement challenger was cleared
+ */
+export async function clearAdvancementChallengerStatus(client, battle) {
+  if (!battle?.isAdvancementBattle) return false;
+
+  const challengerCharacterId = battle.challengerCharacterId;
+  if (!Number.isSafeInteger(challengerCharacterId) || challengerCharacterId <= 0) {
+    throw new Error('Advancement battle is missing a valid challenger character');
+  }
+
+  await client.query(
+    'UPDATE characters SET in_battle = false WHERE id = $1',
+    [challengerCharacterId]
+  );
+  return true;
+}
+
+/**
  * Compute rewards data for a victorious battle.
  * Does NOT persist to database - call distributeRewards for that.
  *
@@ -101,6 +126,7 @@ export async function distributeRewards(
       client: transactionClient,
       forUpdate: true
     });
+    await clearAdvancementChallengerStatus(transactionClient, battle);
     if (battle.rewards !== null) {
       return {
         rewards: battle.rewards,

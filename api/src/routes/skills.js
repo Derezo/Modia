@@ -3,7 +3,11 @@ import { query, withTransaction } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import { GUILD_ADVANCEMENT_TIERS, ADVANCEMENT_QUEST_MIN_LEVEL } from '../config/constants.js';
-import { SKILL_TREES } from '../config/skillTrees.js';
+import {
+  SKILL_TREES,
+  buildTrainingSkillTree,
+  findSkillInTrainingTree
+} from '../config/skillTrees.js';
 import {
   calculateLevelFromSpentXP,
   getLevelProgress,
@@ -14,11 +18,189 @@ import { calculateStats } from '../../../shared/constants.js';
 
 const router = express.Router();
 
+export function validateSkillLearningLevels(levels) {
+  if (!Number.isSafeInteger(levels) || levels <= 0) {
+    throw new AppError('Levels must be a positive safe integer', 400);
+  }
+
+  return levels;
+}
+
+export async function learnSkillWithClient(client, {
+  characterId,
+  userId,
+  skillId,
+  levels
+}) {
+  validateSkillLearningLevels(levels);
+
+  const charResult = await client.query(
+    `SELECT id, class, race, experience, level, spent_xp,
+            strength, intelligence, agility, vitality, luck,
+            hp_current, mp_current, hp_max, mp_max
+     FROM characters
+     WHERE id = $1 AND user_id = $2
+     FOR UPDATE`,
+    [characterId, userId]
+  );
+
+  if (charResult.rows.length === 0) {
+    throw new AppError('Character not found', 404);
+  }
+
+  const character = charResult.rows[0];
+  const guildTree = buildTrainingSkillTree(character.class);
+
+  if (!guildTree) {
+    throw new AppError('Character class not found', 400);
+  }
+
+  const skillDef = findSkillInTrainingTree(character.class, skillId);
+
+  if (!skillDef) {
+    throw new AppError('Skill not found in guild tree', 404);
+  }
+
+  const relevantSkillIds = [
+    skillId,
+    ...Object.keys(skillDef.requires || {})
+  ];
+  const skillsResult = await client.query(
+    `SELECT skill_id, level
+     FROM character_skills
+     WHERE character_id = $1
+       AND skill_id = ANY($2::text[])
+     FOR UPDATE`,
+    [characterId, relevantSkillIds]
+  );
+  const learnedLevels = new Map(
+    skillsResult.rows.map(row => [row.skill_id, Number(row.level)])
+  );
+  const currentLevel = learnedLevels.get(skillId) || 0;
+  const newLevel = currentLevel + levels;
+
+  if (newLevel > skillDef.maxLevel) {
+    throw new AppError(`Skill is already at max level (${skillDef.maxLevel})`, 400);
+  }
+
+  for (const [reqSkillId, reqLevel] of Object.entries(skillDef.requires || {})) {
+    const prereqLevel = learnedLevels.get(reqSkillId) || 0;
+    if (prereqLevel < reqLevel) {
+      throw new AppError(`Requires ${reqSkillId} at level ${reqLevel}`, 400);
+    }
+  }
+
+  const MAX_SAFE_COST = Number.MAX_SAFE_INTEGER;
+  let totalCost = 0;
+  for (let i = currentLevel; i < newLevel; i++) {
+    const levelCost = Math.floor(skillDef.baseCost * Math.pow(i + 1, 1.5));
+    if (totalCost + levelCost > MAX_SAFE_COST) {
+      throw new AppError('Cost calculation overflow - please level up in smaller increments', 400);
+    }
+    totalCost += levelCost;
+  }
+
+  const currentExperience = Number(character.experience) || 0;
+  if (currentExperience < totalCost) {
+    throw new AppError(`Not enough XP. Need ${totalCost}, have ${currentExperience}`, 400);
+  }
+
+  const currentSpentXP = Number(character.spent_xp) || 0;
+  const levelBeforeSpending = calculateLevelFromSpentXP(currentSpentXP);
+  const newSpentXP = currentSpentXP + totalCost;
+  const levelAfterSpending = calculateLevelFromSpentXP(newSpentXP);
+  const levelsGained = levelAfterSpending - levelBeforeSpending;
+  const statGains = levelsGained > 0
+    ? calculateLevelUpStatGains(levelBeforeSpending, levelAfterSpending, character.class)
+    : null;
+  const levelUpData = statGains
+    ? {
+      oldLevel: levelBeforeSpending,
+      newLevel: levelAfterSpending,
+      levelsGained,
+      statGains
+    }
+    : null;
+
+  let hpMax = character.hp_max;
+  let mpMax = character.mp_max;
+  let hpCurrent = character.hp_current;
+  let mpCurrent = character.mp_current;
+
+  if (statGains) {
+    const newStats = calculateStats(character.race, character.class, levelAfterSpending);
+    const hpDelta = newStats.hpMax - character.hp_max;
+    const mpDelta = newStats.mpMax - character.mp_max;
+    hpMax = newStats.hpMax;
+    mpMax = newStats.mpMax;
+    hpCurrent = Math.min(character.hp_current + hpDelta, hpMax);
+    mpCurrent = Math.min(character.mp_current + mpDelta, mpMax);
+  }
+
+  const updatedChar = await client.query(
+    `UPDATE characters
+     SET experience = $1,
+         spent_xp = $2,
+         level = $3,
+         strength = strength + $4,
+         intelligence = intelligence + $5,
+         agility = agility + $6,
+         vitality = vitality + $7,
+         luck = luck + $8,
+         hp_max = $9,
+         mp_max = $10,
+         hp_current = $11,
+         mp_current = $12
+     WHERE id = $13
+     RETURNING experience, spent_xp, level,
+               strength, intelligence, agility, vitality, luck`,
+    [
+      currentExperience - totalCost,
+      newSpentXP,
+      levelAfterSpending,
+      statGains?.str || 0,
+      statGains?.int || 0,
+      statGains?.agi || 0,
+      statGains?.vit || 0,
+      statGains?.luck || 0,
+      hpMax,
+      mpMax,
+      hpCurrent,
+      mpCurrent,
+      characterId
+    ]
+  );
+
+  const skillResult = await client.query(
+    `INSERT INTO character_skills (character_id, skill_id, level)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (character_id, skill_id)
+     DO UPDATE SET level = character_skills.level + EXCLUDED.level
+     RETURNING level`,
+    [characterId, skillId, levels]
+  );
+
+  const updated = updatedChar.rows[0];
+  const learnedLevel = Number(skillResult.rows[0].level);
+  const calculatedLevel = calculateLevelFromSpentXP(updated.spent_xp);
+  const newLevelProgress = getLevelProgress(updated.spent_xp, calculatedLevel);
+
+  return {
+    skillDef,
+    newLevel: learnedLevel,
+    totalCost,
+    updated,
+    calculatedLevel,
+    newLevelProgress,
+    levelUpData
+  };
+}
+
 // GET /api/skills/tree/:guildId - Get skill tree for a guild
 router.get('/tree/:guildId', authenticate, asyncHandler(async (req, res) => {
   const { guildId } = req.params;
 
-  const tree = SKILL_TREES[guildId.toLowerCase()];
+  const tree = buildTrainingSkillTree(guildId);
   if (!tree) {
     throw new AppError('Guild not found', 404);
   }
@@ -81,205 +263,21 @@ router.get('/characters/:characterId/skills', authenticate, asyncHandler(async (
 // POST /api/skills/learn - Learn or level up a skill
 router.post('/learn', authenticate, asyncHandler(async (req, res) => {
   const { characterId, skillId, levels = 1 } = req.body;
-
-  // Verify character ownership and get full character data
-  const charResult = await query(
-    'SELECT id, class, race, experience, level, spent_xp, strength, intelligence, agility, vitality, luck FROM characters WHERE id = $1 AND user_id = $2',
-    [characterId, req.user.userId]
-  );
-
-  if (charResult.rows.length === 0) {
-    throw new AppError('Character not found', 404);
-  }
-
-  const character = charResult.rows[0];
-  const currentSpentXP = character.spent_xp || 0;
-  const guildTree = SKILL_TREES[character.class];
-
-  if (!guildTree) {
-    throw new AppError('Character class not found', 400);
-  }
-
-  // Find the skill in the tree
-  let skillDef = null;
-  for (const branch of guildTree.branches) {
-    const found = branch.skills.find(s => s.id === skillId);
-    if (found) {
-      skillDef = found;
-      break;
-    }
-  }
-
-  if (!skillDef) {
-    throw new AppError('Skill not found in guild tree', 404);
-  }
-
-  // Get current skill level
-  let currentLevel = 0;
-  try {
-    const currentResult = await query(
-      'SELECT level FROM character_skills WHERE character_id = $1 AND skill_id = $2',
-      [characterId, skillId]
-    );
-    if (currentResult.rows.length > 0) {
-      currentLevel = currentResult.rows[0].level;
-    }
-  } catch (err) {
-    // Table might not exist, will be created below
-  }
-
-  const newLevel = currentLevel + levels;
-
-  // Check max level (now 100 for all skills)
-  if (newLevel > skillDef.maxLevel) {
-    throw new AppError(`Skill is already at max level (${skillDef.maxLevel})`, 400);
-  }
-
-  // Check prerequisites
-  if (skillDef.requires) {
-    for (const [reqSkillId, reqLevel] of Object.entries(skillDef.requires)) {
-      let prereqLevel = 0;
-      try {
-        const prereqResult = await query(
-          'SELECT level FROM character_skills WHERE character_id = $1 AND skill_id = $2',
-          [characterId, reqSkillId]
-        );
-        if (prereqResult.rows.length > 0) {
-          prereqLevel = prereqResult.rows[0].level;
-        }
-      } catch (err) {
-        // Prerequisite not met
-      }
-
-      if (prereqLevel < reqLevel) {
-        throw new AppError(`Requires ${reqSkillId} at level ${reqLevel}`, 400);
-      }
-    }
-  }
-
-  // Calculate XP cost with polynomial growth (more achievable than exponential)
-  // Cost formula: baseCost * level^1.5 (polynomial growth)
-  // Example: baseCost 50 → L10: 1,581 XP, L50: 17,678 XP, L100: 50,000 XP
-  const MAX_SAFE_COST = Number.MAX_SAFE_INTEGER;
-  let totalCost = 0;
-  for (let i = currentLevel; i < newLevel; i++) {
-    // Polynomial: baseCost * (level + 1)^1.5
-    // Using (i + 1) so level 0→1 costs baseCost * 1^1.5 = baseCost
-    const levelCost = Math.floor(skillDef.baseCost * Math.pow(i + 1, 1.5));
-    if (totalCost + levelCost > MAX_SAFE_COST) {
-      throw new AppError('Cost calculation overflow - please level up in smaller increments', 400);
-    }
-    totalCost += levelCost;
-  }
-
-  // Check if character has enough XP
-  if (character.experience < totalCost) {
-    throw new AppError(`Not enough XP. Need ${totalCost}, have ${character.experience}`, 400);
-  }
-
-  // Calculate level before and after spending XP
-  const levelBeforeSpending = calculateLevelFromSpentXP(currentSpentXP);
-  const newSpentXP = currentSpentXP + totalCost;
-  const levelAfterSpending = calculateLevelFromSpentXP(newSpentXP);
-
-  // Prepare level-up data if character will level up
-  let levelUpData = null;
-  let statGains = null;
-
-  if (levelAfterSpending > levelBeforeSpending) {
-    statGains = calculateLevelUpStatGains(levelBeforeSpending, levelAfterSpending, character.class);
-    levelUpData = {
-      oldLevel: levelBeforeSpending,
-      newLevel: levelAfterSpending,
-      levelsGained: levelAfterSpending - levelBeforeSpending,
-      statGains
-    };
-  }
-
-  await withTransaction(async (client) => {
-    // Deduct XP from pool and add to spent_xp
-    await client.query(
-      'UPDATE characters SET experience = experience - $1, spent_xp = spent_xp + $1 WHERE id = $2',
-      [totalCost, characterId]
-    );
-
-    // Apply stat gains if character leveled up
-    if (statGains) {
-      // Calculate new HP/MP based on race, class, and new level
-      const newStats = calculateStats(character.race, character.class, levelAfterSpending);
-
-      // Get current HP/MP values
-      const currentResult = await client.query(
-        'SELECT hp_current, mp_current, hp_max, mp_max FROM characters WHERE id = $1',
-        [characterId]
-      );
-      const { hp_current, mp_current, hp_max, mp_max } = currentResult.rows[0];
-
-      // Calculate new current HP/MP:
-      // - Gain the delta HP/MP from the level up (healing on level up)
-      // - Cap at new max values
-      const hpDelta = newStats.hpMax - hp_max;
-      const mpDelta = newStats.mpMax - mp_max;
-      const newHpCurrent = Math.min(hp_current + hpDelta, newStats.hpMax);
-      const newMpCurrent = Math.min(mp_current + mpDelta, newStats.mpMax);
-
-      await client.query(`
-        UPDATE characters
-        SET level = $1,
-            strength = strength + $2,
-            intelligence = intelligence + $3,
-            agility = agility + $4,
-            vitality = vitality + $5,
-            luck = luck + $6,
-            hp_max = $7,
-            mp_max = $8,
-            hp_current = $9,
-            mp_current = $10
-        WHERE id = $11
-      `, [
-        levelAfterSpending,
-        statGains.str,
-        statGains.int,
-        statGains.agi,
-        statGains.vit,
-        statGains.luck,
-        newStats.hpMax,
-        newStats.mpMax,
-        newHpCurrent,
-        newMpCurrent,
-        characterId
-      ]);
-    }
-
-    // Update or insert skill
-    await client.query(`
-      INSERT INTO character_skills (character_id, skill_id, level)
-      VALUES ($1, $2, $3)
-      ON CONFLICT (character_id, skill_id)
-      DO UPDATE SET level = $3
-    `, [characterId, skillId, newLevel]);
-  });
-
-  // Get updated character info
-  const updatedChar = await query(
-    'SELECT experience, spent_xp, level, strength, intelligence, agility, vitality, luck FROM characters WHERE id = $1',
-    [characterId]
-  );
-
-  const updated = updatedChar.rows[0];
-
-  // Always calculate level from spent_xp (source of truth) instead of using database level
-  const calculatedLevel = calculateLevelFromSpentXP(updated.spent_xp);
-  const newLevelProgress = getLevelProgress(updated.spent_xp, calculatedLevel);
-
-  // Ensure database level column stays in sync with calculated level
-  // This fixes any existing desync and prevents future issues
-  if (updated.level !== calculatedLevel) {
-    await query(
-      'UPDATE characters SET level = $1 WHERE id = $2',
-      [calculatedLevel, characterId]
-    );
-  }
+  validateSkillLearningLevels(levels);
+  const {
+    skillDef,
+    newLevel,
+    totalCost,
+    updated,
+    calculatedLevel,
+    newLevelProgress,
+    levelUpData
+  } = await withTransaction(client => learnSkillWithClient(client, {
+    characterId,
+    userId: req.user.userId,
+    skillId,
+    levels
+  }));
 
   // Get scaled skill attributes for the new level
   const scaledSkill = scaleSkillAttributes(skillDef, newLevel);

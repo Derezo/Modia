@@ -1,3 +1,5 @@
+import { GUILD_ADVANCEMENT_TIERS } from '../../../shared/constants.js';
+
 // Skill definitions by guild (class)
 // Combat properties: power (% damage), range, mpCost, effect (status to apply), effectDuration, effectChance
 // Scaling: All skills now scale to level 100 with linear attribute progression
@@ -294,4 +296,117 @@ const SKILL_TREES = {
   }
 };
 
-export { SKILL_TREES };
+/**
+ * Get the ordered class path unlocked for a base or advanced guild class.
+ * The advancement constants intentionally omit the base class from each tier
+ * array, so it is prepended to every advanced progression path.
+ */
+function getGuildProgressionPath(guildId) {
+  if (typeof guildId !== 'string') {
+    return null;
+  }
+
+  const normalizedGuildId = guildId.trim().toLowerCase();
+  if (Object.prototype.hasOwnProperty.call(GUILD_ADVANCEMENT_TIERS, normalizedGuildId)) {
+    return [normalizedGuildId];
+  }
+
+  for (const [baseGuildId, advancementTiers] of Object.entries(GUILD_ADVANCEMENT_TIERS)) {
+    const currentTierIndex = advancementTiers.indexOf(normalizedGuildId);
+    if (currentTierIndex !== -1) {
+      return [baseGuildId, ...advancementTiers.slice(0, currentTierIndex + 1)];
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Build the tree available in the Training Grounds for a character class.
+ * Classes without their own authored tree inherit every authored tree earlier
+ * in their progression path.
+ */
+function buildTrainingSkillTree(guildId) {
+  const progressionPath = getGuildProgressionPath(guildId);
+  if (!progressionPath) {
+    return null;
+  }
+
+  const currentGuildId = progressionPath[progressionPath.length - 1];
+  const currentTree = SKILL_TREES[currentGuildId];
+
+  // Preserve the existing base-guild response shape and object identity.
+  if (progressionPath.length === 1) {
+    return currentTree || null;
+  }
+
+  const authoredSources = progressionPath.filter(sourceGuildId => SKILL_TREES[sourceGuildId]);
+  if (authoredSources.length === 0) {
+    return null;
+  }
+
+  const sourceTrees = authoredSources.map(sourceGuildId => ({
+    guildId: sourceGuildId,
+    name: SKILL_TREES[sourceGuildId].name,
+    authored: true,
+    inherited: sourceGuildId !== currentGuildId
+  }));
+  const inheritedSources = sourceTrees
+    .filter(source => source.inherited)
+    .map(source => source.guildId);
+  const unavailableSources = progressionPath.filter(sourceGuildId => !SKILL_TREES[sourceGuildId]);
+
+  const branches = authoredSources.flatMap(sourceGuildId => {
+    const sourceTree = SKILL_TREES[sourceGuildId];
+    return sourceTree.branches.map(branch => ({
+      ...branch,
+      name: `${sourceTree.name}: ${branch.name}`,
+      sourceGuildId,
+      sourceGuildName: sourceTree.name,
+      inherited: sourceGuildId !== currentGuildId
+    }));
+  });
+
+  const displayName = currentGuildId
+    .split('_')
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+
+  return {
+    ...(currentTree || {}),
+    name: currentTree?.name || `${displayName} Training`,
+    description: currentTree?.description ||
+      `Training inherited from ${sourceTrees.map(source => source.name).join(' and ')}`,
+    branches,
+    trainingClass: currentGuildId,
+    progressionPath,
+    authoredSources,
+    inheritedSources,
+    unavailableSources,
+    sourceTrees,
+    currentClassHasAuthoredTree: Boolean(currentTree)
+  };
+}
+
+function findSkillInTrainingTree(guildId, skillId) {
+  const trainingTree = buildTrainingSkillTree(guildId);
+  if (!trainingTree || typeof skillId !== 'string') {
+    return null;
+  }
+
+  for (const branch of trainingTree.branches) {
+    const skill = branch.skills.find(candidate => candidate.id === skillId);
+    if (skill) {
+      return skill;
+    }
+  }
+
+  return null;
+}
+
+export {
+  SKILL_TREES,
+  getGuildProgressionPath,
+  buildTrainingSkillTree,
+  findSkillInTrainingTree
+};

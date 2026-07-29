@@ -35,6 +35,7 @@ import {
 } from '../../ui/parchment/ParchmentTheme.js';
 import { getAssetPath, getOptimalSize } from '@shared/assetPaths.js';
 import { escapeHtml } from '../../utils/escapeHtml.js';
+import { resolveAvailableSkillXp } from './characterModalModel.js';
 
 const STYLE_ID = 'character-modal-styles';
 
@@ -55,6 +56,8 @@ export class CharacterModal {
    * @param {Object} options.game - Game instance with API
    * @param {number} options.characterId - Character ID to display
    * @param {Array} [options.inventory] - Shared inventory (optional, will fetch if not provided)
+   * @param {boolean} [options.skillsOnly=false] - Show skill training without equipment
+   * @param {string} [options.title='Character Details'] - Modal title
    * @param {Function} [options.onEquipmentChanged] - Callback when equipment changes
    * @param {Function} [options.onSkillLevelUp] - Callback when skill is leveled up
    * @param {Function} [options.onClose] - Callback when modal closes
@@ -63,6 +66,8 @@ export class CharacterModal {
     this.game = options.game;
     this.characterId = options.characterId;
     this.inventory = options.inventory || [];
+    this.skillsOnly = options.skillsOnly === true;
+    this.title = options.title || 'Character Details';
     this.onEquipmentChanged = options.onEquipmentChanged || (() => {});
     this.onSkillLevelUp = options.onSkillLevelUp || (() => {});
     this.onClose = options.onClose || (() => {});
@@ -368,7 +373,7 @@ export class CharacterModal {
    */
   async open() {
     this.modal = new ParchmentModal({
-      title: 'Character Details',
+      title: this.title,
       content: '<div class="character-modal-content"><div class="character-modal-loading">Loading character data...</div></div>',
       size: 'lg',
       closable: true,
@@ -395,17 +400,20 @@ export class CharacterModal {
    * Load character, equipment, and skills data
    */
   async loadData() {
-    const [charData, skillsData, equipData] = await Promise.all([
+    const requests = [
       this.game.api.getCharacter(this.characterId),
-      this.game.api.getCharacterSkills(this.characterId),
-      this.game.api.getInventory(this.characterId)
-    ]);
+      this.game.api.getCharacterSkills(this.characterId)
+    ];
+    if (!this.skillsOnly) {
+      requests.push(this.game.api.getInventory(this.characterId));
+    }
+
+    const [charData, skillsData, equipData] = await Promise.all(requests);
 
     this.character = charData.character || charData;
-    this.equipment = equipData.equipped || {};
+    this.equipment = this.skillsOnly ? {} : (equipData?.equipped || {});
     this.skills = skillsData.skills || skillsData.learnedSkills || {};
-    this.availableXp = skillsData.availableXp || skillsData.xpPool ||
-      ((this.character.experience || 0) - (this.character.spent_xp || this.character.spentXp || 0));
+    this.availableXp = resolveAvailableSkillXp(skillsData, this.character);
 
     // Load skill tree for class
     if (this.character.class) {
@@ -417,7 +425,7 @@ export class CharacterModal {
     }
 
     // Load inventory if not provided
-    if (this.inventory.length === 0) {
+    if (!this.skillsOnly && this.inventory.length === 0) {
       const invData = await this.game.api.getSharedInventory();
       this.inventory = invData.inventory || invData || [];
     }
@@ -445,7 +453,7 @@ export class CharacterModal {
     const xpPercent = xpNeeded > 0 ? Math.min(100, Math.max(0, (xpIntoLevel / xpNeeded) * 100)) : 100;
 
     // Check for badges
-    const hasEquipmentUpgrade = this.checkHasEquipmentUpgrade();
+    const hasEquipmentUpgrade = !this.skillsOnly && this.checkHasEquipmentUpgrade();
     const hasSkillPoints = this.availableXp > 0;
 
     contentEl.innerHTML = `
@@ -476,14 +484,16 @@ export class CharacterModal {
 
         <!-- Accordions -->
         <div class="character-modal-accordions">
-          <div id="equipment-accordion-container"></div>
+          ${this.skillsOnly ? '' : '<div id="equipment-accordion-container"></div>'}
           <div id="skills-accordion-container"></div>
         </div>
       </div>
     `;
 
     // Create accordions
-    this.createEquipmentAccordion(hasEquipmentUpgrade);
+    if (!this.skillsOnly) {
+      this.createEquipmentAccordion(hasEquipmentUpgrade);
+    }
     this.createSkillsAccordion(hasSkillPoints);
   }
 
@@ -659,11 +669,11 @@ export class CharacterModal {
     if (!container) return;
 
     this.skillsAccordion = new Accordion({
-      id: `char-${this.characterId}-skills`,
+      id: `char-${this.characterId}-${this.skillsOnly ? 'training-' : ''}skills`,
       title: 'Skills',
       badge: hasPoints ? `${this.availableXp.toLocaleString()} XP` : null,
-      defaultOpen: hasPoints,
-      persist: true
+      defaultOpen: this.skillsOnly || hasPoints,
+      persist: !this.skillsOnly
     });
 
     container.appendChild(this.skillsAccordion.element);

@@ -67,14 +67,47 @@ describe('TranspositionTable', () => {
       assert.notStrictEqual(h1, h2);
     });
 
-    it('excludes dead units from hash', () => {
+    it('includes defeated units because revive actions depend on them', () => {
       const state = createMockBattleState(
         [{ hp: 100 }],
         [{ hp: 0 }]
       );
       const h1 = tt.hashState(state, 1, 'enemy');
-      // Dead enemy not included
-      assert.ok(!h1.includes('enemy_1'));
+      assert.ok(h1.includes('enemy_1'));
+    });
+
+    it('distinguishes actor, action rights, statuses, cooldowns, and inventories', () => {
+      const state = createMockBattleState(
+        [{ statusEffects: [], skillCooldowns: {}, consumables: [] }],
+        [{}],
+        { consumables: [] }
+      );
+      const baseline = tt.hashState(state, 2, 'player', state.units[0].id);
+
+      assert.notStrictEqual(
+        baseline,
+        tt.hashState(state, 2, 'player', state.units[1].id),
+        'the current actor changes the legal action space'
+      );
+
+      const variants = [
+        draft => { draft.units[0].teamId = 9; },
+        draft => { draft.units[0].actUsed = true; },
+        draft => { draft.units[0].moveUsed = true; },
+        draft => { draft.units[0].statusEffects = [{ type: 'silence', duration: 2 }]; },
+        draft => { draft.units[0].skillCooldowns = { fireball: 2 }; },
+        draft => { draft.units[0].consumables = [{ itemId: 1, quantity: 1 }]; },
+        draft => { draft.consumables = [{ itemId: 2, quantity: 1 }]; }
+      ];
+
+      for (const mutate of variants) {
+        const variant = structuredClone(state);
+        mutate(variant);
+        assert.notStrictEqual(
+          baseline,
+          tt.hashState(variant, 2, 'player', variant.units[0].id)
+        );
+      }
     });
   });
 
@@ -233,6 +266,16 @@ describe('KillerMoves', () => {
       assert.strictEqual(km.actionsEqual(a, b), false);
     });
 
+    it('matches complete sequences only when their ordered actions match', () => {
+      const move = { type: 'move', position: { x: 5, y: 5 } };
+      const attack = { type: 'attack', targetId: 'e1' };
+      assert.strictEqual(
+        km.actionsEqual([move, attack], [{ ...move }, { ...attack }]),
+        true
+      );
+      assert.strictEqual(km.actionsEqual([move, attack], [attack, move]), false);
+    });
+
     it('handles null inputs', () => {
       assert.strictEqual(km.actionsEqual(null, { type: 'attack' }), false);
       assert.strictEqual(km.actionsEqual({ type: 'attack' }, null), false);
@@ -273,6 +316,15 @@ describe('HistoryHeuristic', () => {
       hh.update(action, 2); // +4
       hh.update(action, 3); // +9
       assert.strictEqual(hh.getScore(action), 13);
+    });
+
+    it('tracks complete sequences without losing action order', () => {
+      const move = { type: 'move', position: { x: 5, y: 5 } };
+      const attack = { type: 'attack', targetId: 'e1' };
+      hh.update([move, attack], 3);
+
+      assert.strictEqual(hh.getScore([move, attack]), 9);
+      assert.strictEqual(hh.getScore([attack, move]), 0);
     });
   });
 
@@ -434,6 +486,560 @@ describe('applyActionToState()', () => {
     assert.ok(target.hp < 200);
     assert.strictEqual(attacker.mp, 35);
     assert.strictEqual(attacker.actUsed, true);
+  });
+
+  it('simulates AoE friendly fire across the runtime pattern and starts cooldown', () => {
+    const state = createMockBattleState(
+      [
+        { id: 'caster', tileX: 5, tileY: 5, strength: 50, attack: 20, mp: 50 },
+        { id: 'ally', tileX: 6, tileY: 6, hp: 200, maxHp: 200 }
+      ],
+      [
+        { id: 'center-enemy', tileX: 6, tileY: 5, hp: 200, maxHp: 200 },
+        { id: 'edge-enemy', tileX: 7, tileY: 5, hp: 200, maxHp: 200 },
+        { id: 'outside-enemy', tileX: 8, tileY: 5, hp: 200, maxHp: 200 }
+      ]
+    );
+    const caster = state.units.find(unit => unit.id === 'caster');
+    const ally = state.units.find(unit => unit.id === 'ally');
+    const centerEnemy = state.units.find(unit => unit.id === 'center-enemy');
+    const edgeEnemy = state.units.find(unit => unit.id === 'edge-enemy');
+    const outsideEnemy = state.units.find(unit => unit.id === 'outside-enemy');
+    const action = {
+      type: 'skill',
+      skillId: 'blast',
+      targetId: centerEnemy.id,
+      target: { x: 6, y: 5 },
+      aoeCenter: { x: 6, y: 5 },
+      skill: { id: 'blast', power: 100, mpCost: 10, cooldown: 3, aoeRadius: 1 }
+    };
+
+    applyActionToState(state, caster, action);
+
+    assert.ok(centerEnemy.hp < edgeEnemy.hp, 'center target should take full damage');
+    assert.ok(edgeEnemy.hp < 200, 'edge opponent should be damaged');
+    assert.ok(ally.hp < 200, 'ally in the pattern should take friendly fire');
+    assert.ok(caster.hp < 200, 'caster in the pattern should take self-damage');
+    assert.strictEqual(outsideEnemy.hp, 200);
+    assert.strictEqual(caster.skillCooldowns.blast, 3);
+  });
+
+  it('forces range-zero offensive AoEs to remain centered on the caster', () => {
+    const state = createMockBattleState(
+      [{ id: 'caster', tileX: 5, tileY: 5, strength: 50, attack: 20 }],
+      [
+        { id: 'nearby', tileX: 6, tileY: 5, hp: 200 },
+        { id: 'stale-target', tileX: 12, tileY: 5, hp: 200 }
+      ]
+    );
+    const caster = state.units.find(unit => unit.id === 'caster');
+    const nearby = state.units.find(unit => unit.id === 'nearby');
+    const staleTarget = state.units.find(unit => unit.id === 'stale-target');
+
+    applyActionToState(state, caster, {
+      type: 'skill',
+      target: { x: 12, y: 5 },
+      aoeCenter: { x: 12, y: 5 },
+      skill: { id: 'nova', power: 100, range: 0, aoeRadius: 1 }
+    });
+
+    assert.ok(caster.hp < 200);
+    assert.ok(nearby.hp < 200);
+    assert.strictEqual(staleTarget.hp, 200);
+  });
+
+  it('applies caster-centered support AoE buffs to living teammates in the area', () => {
+    const state = createMockBattleState(
+      [
+        {
+          id: 'caster',
+          teamId: 7,
+          tileX: 5,
+          tileY: 5,
+          hp: 100,
+          maxHp: 200,
+          mp: 30,
+          statusEffects: []
+        },
+        {
+          id: 'nearby-ally',
+          teamId: 7,
+          tileX: 6,
+          tileY: 5,
+          hp: 100,
+          maxHp: 200,
+          statusEffects: []
+        },
+        {
+          id: 'distant-ally',
+          teamId: 7,
+          tileX: 8,
+          tileY: 5,
+          statusEffects: []
+        },
+        {
+          id: 'defeated-ally',
+          teamId: 7,
+          tileX: 5,
+          tileY: 4,
+          hp: 0,
+          statusEffects: []
+        }
+      ],
+      [{
+        id: 'nearby-opponent',
+        teamId: 8,
+        tileX: 5,
+        tileY: 6,
+        statusEffects: []
+      }]
+    );
+    const caster = state.units.find(unit => unit.id === 'caster');
+    const nearbyAlly = state.units.find(unit => unit.id === 'nearby-ally');
+    const unaffected = state.units.filter(unit =>
+      unit.id !== caster.id && unit.id !== nearbyAlly.id
+    );
+
+    applyActionToState(state, caster, {
+      type: 'skill',
+      skillId: 'beast_howl',
+      targetId: caster.id,
+      target: { x: 12, y: 5 },
+      aoeCenter: { x: 12, y: 5 },
+      skill: {
+        id: 'beast_howl',
+        power: 0,
+        range: 0,
+        aoeRadius: 1,
+        damageType: 'support',
+        selfBuff: { attack: 1.2 },
+        healPercent: 10,
+        buffDuration: 3,
+        mpCost: 5,
+        cooldown: 2
+      }
+    });
+
+    const expectedBuff = [{
+      type: 'beast_howl_buff',
+      duration: 3,
+      modifiers: { attack: 1.2 }
+    }];
+    assert.deepStrictEqual(caster.statusEffects, expectedBuff);
+    assert.deepStrictEqual(nearbyAlly.statusEffects, expectedBuff);
+    for (const unit of unaffected) {
+      assert.deepStrictEqual(unit.statusEffects, []);
+    }
+    assert.strictEqual(caster.hp, 120);
+    assert.strictEqual(nearbyAlly.hp, 100);
+    assert.strictEqual(caster.mp, 25);
+    assert.strictEqual(caster.skillCooldowns.beast_howl, 2);
+    assert.strictEqual(caster.actUsed, true);
+  });
+
+  it('simulates a damage-free single-target debuff without reducing HP', () => {
+    const state = createMockBattleState(
+      [{ id: 'caster', mp: 30 }],
+      [{ id: 'target', hp: 200, maxHp: 200, statusEffects: [] }]
+    );
+    const caster = state.units.find(unit => unit.id === 'caster');
+    const target = state.units.find(unit => unit.id === 'target');
+
+    applyActionToState(state, caster, {
+      type: 'skill',
+      skillId: 'frozen_tomb',
+      targetId: target.id,
+      skill: {
+        id: 'frozen_tomb',
+        power: 0,
+        mpCost: 10,
+        cooldown: 2,
+        effect: 'freeze',
+        effectChance: 0.8,
+        effectDuration: 2
+      }
+    });
+
+    assert.strictEqual(target.hp, 200);
+    assert.deepStrictEqual(target.statusEffects, [
+      { type: 'freeze', duration: 2 }
+    ]);
+    assert.strictEqual(caster.mp, 20);
+    assert.strictEqual(caster.skillCooldowns.frozen_tomb, 2);
+  });
+
+  it('simulates damage-free AoE statuses on every affected unit', () => {
+    const state = createMockBattleState(
+      [
+        { id: 'caster', tileX: 3, tileY: 5 },
+        { id: 'ally', tileX: 6, tileY: 6, hp: 200, statusEffects: [] }
+      ],
+      [
+        { id: 'target-a', tileX: 6, tileY: 5, hp: 200, statusEffects: [] },
+        { id: 'target-b', tileX: 7, tileY: 5, hp: 200, statusEffects: [] }
+      ]
+    );
+    const caster = state.units.find(unit => unit.id === 'caster');
+    const affected = state.units.filter(unit => unit.id !== caster.id);
+
+    applyActionToState(state, caster, {
+      type: 'skill',
+      targetId: 'target-a',
+      target: { x: 6, y: 5 },
+      aoeCenter: { x: 6, y: 5 },
+      skill: {
+        id: 'smoke_bomb',
+        power: 0,
+        aoeRadius: 1,
+        effect: 'blind',
+        effectChance: 1,
+        effectDuration: 2
+      }
+    });
+
+    for (const unit of affected) {
+      assert.strictEqual(unit.hp, 200);
+      assert.deepStrictEqual(unit.statusEffects, [
+        { type: 'blind', duration: 2 }
+      ]);
+    }
+  });
+
+  it('applies a self-healing skill without damaging the caster', () => {
+    const state = createMockBattleState(
+      [{ hp: 50, maxHp: 200, mp: 40 }],
+      [{ hp: 200, maxHp: 200 }]
+    );
+    const caster = state.units[0];
+    applyActionToState(state, caster, {
+      type: 'skill',
+      targetId: caster.id,
+      skill: { healPercent: 25, damageType: 'heal', mpCost: 10 }
+    });
+
+    assert.strictEqual(caster.hp, 100);
+    assert.strictEqual(caster.mp, 30);
+    assert.strictEqual(caster.actUsed, true);
+  });
+
+  it('heals the intended target and leaves other units undamaged', () => {
+    const state = createMockBattleState(
+      [
+        { hp: 150, maxHp: 200, mp: 50 },
+        { hp: 40, maxHp: 200 }
+      ],
+      [{ hp: 180, maxHp: 180 }]
+    );
+    const caster = state.units[0];
+    const ally = state.units[1];
+    const enemy = state.units[2];
+    applyActionToState(state, caster, {
+      type: 'skill',
+      targetId: ally.id,
+      skill: { healPercent: 30, damageType: 'heal', targetAlly: true, mpCost: 15 }
+    });
+
+    assert.strictEqual(ally.hp, 100);
+    assert.strictEqual(caster.hp, 150);
+    assert.strictEqual(enemy.hp, 180);
+    assert.strictEqual(caster.mp, 35);
+  });
+
+  it('defaults healing to self, caps HP, and still deducts MP', () => {
+    const state = createMockBattleState(
+      [{ hp: 190, maxHp: 200, mp: 25 }],
+      [{ hp: 200, maxHp: 200 }]
+    );
+    const caster = state.units[0];
+    applyActionToState(state, caster, {
+      type: 'skill',
+      skill: { healPercent: 50, effect: 'heal', mpCost: 5 }
+    });
+
+    assert.strictEqual(caster.hp, 200);
+    assert.strictEqual(caster.mp, 20);
+  });
+
+  it('applies a range-zero group heal to every living ally only', () => {
+    const state = createMockBattleState(
+      [
+        { tileX: 2, tileY: 2, hp: 100, maxHp: 200, mp: 40 },
+        { tileX: 18, tileY: 18, hp: 20, maxHp: 100 }
+      ],
+      [{ tileX: 3, tileY: 2, hp: 80, maxHp: 100 }]
+    );
+    const caster = state.units[0];
+    const distantAlly = state.units[1];
+    const enemy = state.units[2];
+
+    applyActionToState(state, caster, {
+      type: 'skill',
+      targetId: caster.id,
+      skill: {
+        targetAllAllies: true,
+        range: 0,
+        healPercent: 25,
+        mpCost: 10
+      }
+    });
+
+    assert.strictEqual(caster.hp, 150);
+    assert.strictEqual(distantAlly.hp, 45);
+    assert.strictEqual(enemy.hp, 80);
+    assert.strictEqual(caster.mp, 30);
+  });
+
+  it('limits positive-range group healing by Manhattan distance', () => {
+    const state = createMockBattleState(
+      [
+        { tileX: 2, tileY: 2, hp: 100, maxHp: 200 },
+        { tileX: 3, tileY: 2, hp: 20, maxHp: 100 },
+        { tileX: 6, tileY: 2, hp: 20, maxHp: 100 }
+      ],
+      []
+    );
+    const caster = state.units[0];
+    const nearbyAlly = state.units[1];
+    const distantAlly = state.units[2];
+
+    applyActionToState(state, caster, {
+      type: 'skill',
+      targetId: caster.id,
+      skill: {
+        targetAllAllies: true,
+        range: 2,
+        healPercent: 25,
+        mpCost: 0
+      }
+    });
+
+    assert.strictEqual(caster.hp, 150);
+    assert.strictEqual(nearbyAlly.hp, 45);
+    assert.strictEqual(distantAlly.hp, 20);
+  });
+
+  it('applies a pure self buff without damaging the caster', () => {
+    const state = createMockBattleState(
+      [{ hp: 120, maxHp: 200, mp: 30 }],
+      [{}]
+    );
+    const caster = state.units[0];
+
+    applyActionToState(state, caster, {
+      type: 'skill',
+      targetId: caster.id,
+      skill: {
+        targetSelf: true,
+        selfBuff: 'fortify',
+        buffDuration: 4,
+        mpCost: 10,
+        power: 0
+      }
+    });
+
+    assert.strictEqual(caster.hp, 120);
+    assert.strictEqual(caster.mp, 20);
+    assert.deepStrictEqual(caster.statusEffects, [
+      { type: 'fortify', duration: 4 }
+    ]);
+  });
+
+  it('distinguishes caster buff identities from hostile hybrid effects', () => {
+    const cases = [
+      {
+        name: 'string identity',
+        selfBuff: 'berserk',
+        effect: 'berserk',
+        casterEffect: { type: 'berserk', duration: 3 },
+        targetEffects: []
+      },
+      {
+        name: 'object type identity',
+        selfBuff: { type: 'berserk', attack: 1.2 },
+        effect: 'berserk',
+        casterEffect: {
+          type: 'berserk',
+          duration: 3,
+          modifiers: { type: 'berserk', attack: 1.2 }
+        },
+        targetEffects: []
+      },
+      {
+        name: 'skill-id fallback identity',
+        selfBuff: { attack: 1.2 },
+        effect: 'beast_frenzy_buff',
+        casterEffect: {
+          type: 'beast_frenzy_buff',
+          duration: 3,
+          modifiers: { attack: 1.2 }
+        },
+        targetEffects: []
+      },
+      {
+        name: 'different target effect',
+        selfBuff: 'berserk',
+        effect: 'weaken',
+        casterEffect: { type: 'berserk', duration: 3 },
+        targetEffects: [{ type: 'weaken', duration: 3 }]
+      }
+    ];
+
+    for (const testCase of cases) {
+      const state = createMockBattleState(
+        [{ strength: 50, attack: 20, mp: 40 }],
+        [{ hp: 200, maxHp: 200, vitality: 10, defense: 5 }]
+      );
+      const caster = state.units[0];
+      const target = state.units[1];
+
+      applyActionToState(state, caster, {
+        type: 'skill',
+        targetId: target.id,
+        skill: {
+          id: 'beast_frenzy',
+          power: 80,
+          mpCost: 10,
+          effectDuration: 3,
+          selfBuff: testCase.selfBuff,
+          effect: testCase.effect
+        }
+      });
+
+      assert.ok(target.hp < 200, testCase.name);
+      assert.deepStrictEqual(
+        target.statusEffects,
+        testCase.targetEffects,
+        testCase.name
+      );
+      assert.strictEqual(caster.mp, 30, testCase.name);
+      assert.deepStrictEqual(
+        caster.statusEffects,
+        [testCase.casterEffect],
+        testCase.name
+      );
+    }
+  });
+
+  it('deducts cost before restoring and caps MP without damaging the caster', () => {
+    const state = createMockBattleState(
+      [{ hp: 120, maxHp: 200, mp: 48, maxMp: 50 }],
+      [{}]
+    );
+    const caster = state.units[0];
+
+    applyActionToState(state, caster, {
+      type: 'skill',
+      targetId: caster.id,
+      skill: {
+        targetSelf: true,
+        mpRestore: 40,
+        mpCost: 5,
+        power: 0
+      }
+    });
+
+    assert.strictEqual(caster.hp, 120);
+    assert.strictEqual(caster.mp, 50);
+    assert.strictEqual(caster.actUsed, true);
+  });
+
+  it('preserves beneficial legacy statuses when simulating cleanse', () => {
+    const beneficialStatuses = [
+      { type: 'rage', duration: 2 },
+      { type: 'fortify', duration: 2 },
+      { type: 'haste', duration: 2 },
+      { type: 'regen', duration: 2 },
+      { type: 'attack_up', duration: 2 },
+      { type: 'defense_up', duration: 2 },
+      { type: 'magic_shield', duration: 2 },
+      'berserk',
+      { type: 'frenzy', duration: 2 },
+      'final_stand',
+      { type: 'shadow_arts', duration: 2 },
+      'pack_bonus',
+      { type: 'regenerate', duration: 2 },
+      'unmovable',
+      { type: 'fire_resist', duration: 2 },
+      {
+        type: 'test_rally_buff',
+        duration: 2,
+        modifiers: { defense: 1.25 }
+      }
+    ];
+    const state = createMockBattleState(
+      [{
+        statusEffects: [
+          ...beneficialStatuses,
+          { type: 'poison', duration: 2 }
+        ]
+      }],
+      [{}]
+    );
+    const caster = state.units[0];
+
+    applyActionToState(state, caster, {
+      type: 'skill',
+      targetId: caster.id,
+      skill: {
+        id: 'purify',
+        power: 0,
+        mpCost: 0,
+        targetSelf: true,
+        cleanse: true
+      }
+    });
+
+    assert.deepStrictEqual(caster.statusEffects, beneficialStatuses);
+  });
+
+  it('limits simulated cure items to their runtime status-effect lists', () => {
+    const cases = [
+      {
+        effectType: 'cure_poison',
+        statusEffects: [
+          'poison',
+          { type: 'burn', duration: 2 },
+          { type: 'rage', duration: 2 }
+        ],
+        expected: [
+          { type: 'burn', duration: 2 },
+          { type: 'rage', duration: 2 }
+        ]
+      },
+      {
+        effectType: 'cure_all',
+        statusEffects: [
+          { type: 'poison', duration: 2 },
+          'blind',
+          { type: 'stun', duration: 2 },
+          { type: 'rage', duration: 2 }
+        ],
+        expected: [
+          { type: 'stun', duration: 2 },
+          { type: 'rage', duration: 2 }
+        ]
+      }
+    ];
+
+    for (const testCase of cases) {
+      const state = createMockBattleState(
+        [{ statusEffects: testCase.statusEffects }],
+        [{}]
+      );
+      const caster = state.units[0];
+
+      applyActionToState(state, caster, {
+        type: 'item',
+        targetId: caster.id,
+        item: { effectType: testCase.effectType }
+      });
+
+      assert.deepStrictEqual(
+        caster.statusEffects,
+        testCase.expected,
+        testCase.effectType
+      );
+    }
   });
 
   it('applies wait action', () => {

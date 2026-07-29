@@ -93,6 +93,70 @@ describe('calculatePhysicalDamage', () => {
     assert.ok(lowDefense.damage > highDefense.damage, 'Higher defense should reduce damage');
   });
 
+  test('should apply object-form attack and defense status modifiers', () => {
+    const unmodifiedAttack = withSeededRandom(12345, () => {
+      const attacker = createMockPlayerUnit({
+        strength: 40,
+        attack: 20,
+        luck: 0,
+        statusEffects: []
+      });
+      const defender = createMockEnemyUnit({
+        vitality: 20,
+        defense: 20,
+        statusEffects: []
+      });
+      return battleService.calculatePhysicalDamage(attacker, defender, 100);
+    });
+
+    const modifiedAttack = withSeededRandom(12345, () => {
+      const attacker = createMockPlayerUnit({
+        strength: 40,
+        attack: 20,
+        luck: 0,
+        statusEffects: [{
+          type: 'frenzy',
+          duration: 3,
+          modifiers: { attack: 1.5 }
+        }]
+      });
+      const defender = createMockEnemyUnit({
+        vitality: 20,
+        defense: 20,
+        statusEffects: []
+      });
+      return battleService.calculatePhysicalDamage(attacker, defender, 100);
+    });
+
+    const reducedDefense = withSeededRandom(12345, () => {
+      const attacker = createMockPlayerUnit({
+        strength: 40,
+        attack: 20,
+        luck: 0,
+        statusEffects: []
+      });
+      const defender = createMockEnemyUnit({
+        vitality: 20,
+        defense: 20,
+        statusEffects: [{
+          type: 'frenzy',
+          duration: 3,
+          modifiers: { defense: 0.7 }
+        }]
+      });
+      return battleService.calculatePhysicalDamage(attacker, defender, 100);
+    });
+
+    assert.ok(
+      modifiedAttack.damage > unmodifiedAttack.damage,
+      'An attack multiplier should increase subsequent physical damage'
+    );
+    assert.ok(
+      reducedDefense.damage > unmodifiedAttack.damage,
+      'A defense multiplier below 1 should increase subsequent physical damage taken'
+    );
+  });
+
   test('should always deal minimum 1 damage', () => {
     const result = withSeededRandom(12345, () => {
       const attacker = createMockPlayerUnit({ strength: 1, attack: 0, luck: 0 });
@@ -236,6 +300,70 @@ describe('calculateMagicalDamage', () => {
     });
 
     assert.ok(lowMagicDef.damage > highMagicDef.damage, 'Higher magic defense should reduce damage');
+  });
+
+  test('should apply object-form magical attack and defense status modifiers', () => {
+    const unmodifiedAttack = withSeededRandom(12345, () => {
+      const attacker = createMockPlayerUnit({
+        intelligence: 40,
+        magicAttack: 20,
+        luck: 0,
+        statusEffects: []
+      });
+      const defender = createMockEnemyUnit({
+        intelligence: 20,
+        magicDefense: 20,
+        statusEffects: []
+      });
+      return battleService.calculateMagicalDamage(attacker, defender, 100);
+    });
+
+    const modifiedAttack = withSeededRandom(12345, () => {
+      const attacker = createMockPlayerUnit({
+        intelligence: 40,
+        magicAttack: 20,
+        luck: 0,
+        statusEffects: [{
+          type: 'arcane_focus',
+          duration: 3,
+          modifiers: { magicAttack: 1.5 }
+        }]
+      });
+      const defender = createMockEnemyUnit({
+        intelligence: 20,
+        magicDefense: 20,
+        statusEffects: []
+      });
+      return battleService.calculateMagicalDamage(attacker, defender, 100);
+    });
+
+    const reducedDefense = withSeededRandom(12345, () => {
+      const attacker = createMockPlayerUnit({
+        intelligence: 40,
+        magicAttack: 20,
+        luck: 0,
+        statusEffects: []
+      });
+      const defender = createMockEnemyUnit({
+        intelligence: 20,
+        magicDefense: 20,
+        statusEffects: [{
+          type: 'magic_vulnerability',
+          duration: 3,
+          modifiers: { magicDefense: 0.7 }
+        }]
+      });
+      return battleService.calculateMagicalDamage(attacker, defender, 100);
+    });
+
+    assert.ok(
+      modifiedAttack.damage > unmodifiedAttack.damage,
+      'A magic attack multiplier should increase subsequent magical damage'
+    );
+    assert.ok(
+      reducedDefense.damage > unmodifiedAttack.damage,
+      'A magic defense multiplier below 1 should increase subsequent magical damage taken'
+    );
   });
 
   test('should always deal minimum 1 magical damage', () => {

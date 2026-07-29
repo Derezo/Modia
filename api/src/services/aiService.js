@@ -16,6 +16,11 @@ import { createAIForUnit, quickDecision } from './ai/index.js';
 // Configuration for utility AI usage
 const USE_UTILITY_AI = true;
 const UTILITY_AI_TIME_BUDGET = 450; // ms
+const LOOKAHEAD_IMMEDIATE_SCORE_TOLERANCE = {
+  minimum: 15,
+  maximum: 75,
+  ratio: 0.10
+};
 
 /**
  * Check if AI debug logging is enabled via user settings
@@ -24,6 +29,71 @@ const UTILITY_AI_TIME_BUDGET = 450; // ms
  */
 function isAIDebugEnabled(battleState) {
   return battleState?.debugOptions?.logAIDecisions === true;
+}
+
+/**
+ * Compare quick utility and lookahead decisions on the same immediate-turn
+ * scale. Lookahead's native score includes future board states and is not
+ * directly comparable with quick utility, so it is allowed a bounded immediate
+ * sacrifice for multi-turn planning but cannot replace a clearly better turn.
+ */
+function selectUtilityDecision(quickResult, lookaheadDecision, evaluator, unit, state) {
+  const quickSequence = quickResult?.bestAction;
+  const quickScore = Number.isFinite(quickResult?.score)
+    ? quickResult.score
+    : null;
+  const lookaheadAction = lookaheadDecision?.action;
+
+  if (!lookaheadAction) {
+    return {
+      decision: quickSequence
+        ? { action: quickSequence, score: quickScore }
+        : null,
+      source: 'quick (lookahead failed)',
+      quickScore,
+      lookaheadImmediateScore: null
+    };
+  }
+
+  if (!quickSequence || quickScore === null) {
+    return {
+      decision: lookaheadDecision,
+      source: 'lookahead (quick failed)',
+      quickScore,
+      lookaheadImmediateScore: null
+    };
+  }
+
+  const lookaheadSequence = Array.isArray(lookaheadAction)
+    ? lookaheadAction
+    : [lookaheadAction];
+  const evaluatedLookahead = evaluator.evaluateSequence(unit, lookaheadSequence, state);
+  const lookaheadImmediateScore = Number.isFinite(evaluatedLookahead?.score)
+    ? evaluatedLookahead.score
+    : -Infinity;
+  const tolerance = Math.min(
+    LOOKAHEAD_IMMEDIATE_SCORE_TOLERANCE.maximum,
+    Math.max(
+      LOOKAHEAD_IMMEDIATE_SCORE_TOLERANCE.minimum,
+      Math.abs(quickScore) * LOOKAHEAD_IMMEDIATE_SCORE_TOLERANCE.ratio
+    )
+  );
+
+  if (lookaheadImmediateScore + tolerance < quickScore) {
+    return {
+      decision: { action: quickSequence, score: quickScore },
+      source: 'quick (lookahead below immediate utility floor)',
+      quickScore,
+      lookaheadImmediateScore
+    };
+  }
+
+  return {
+    decision: lookaheadDecision,
+    source: 'lookahead',
+    quickScore,
+    lookaheadImmediateScore
+  };
 }
 
 /**
@@ -107,60 +177,25 @@ function utilityAIDecision(enemy, battleState, aiDebug = false) {
 
   const lookaheadDecision = ai.decideTurnActions(enemy, battleState);
 
-  // Choose between quick and lookahead results
-  let bestDecision;
-  let decisionSource = 'unknown';
-
-  // Quick result is now always an array (sequence)
-  const quickSequence = quickResult.bestAction;
-  const quickScore = quickResult.score;
-
-  if (!lookaheadDecision || !lookaheadDecision.action) {
-    // Lookahead failed, use quick decision
-    bestDecision = { action: quickSequence, score: quickScore };
-    decisionSource = 'quick (lookahead failed)';
-  } else if (!quickSequence || quickScore === undefined) {
-    // Quick decision failed, use lookahead
-    bestDecision = lookaheadDecision;
-    decisionSource = 'lookahead (quick failed)';
-  } else {
-    // Both succeeded - compare action types
-    // Quick is now a sequence, lookahead may be single action or sequence
-    const quickTypes = Array.isArray(quickSequence)
-      ? quickSequence.map(a => a.type)
-      : [quickSequence?.type];
-    const lookaheadTypes = Array.isArray(lookaheadDecision.action)
-      ? lookaheadDecision.action.map(a => a.type)
-      : [lookaheadDecision.action?.type];
-
-    // Check if quick has offensive actions
-    const isQuickOffensive = quickTypes.some(t => t === 'attack' || t === 'skill');
-    // Check if lookahead is passive (only move/wait)
-    const isLookaheadPassive = lookaheadTypes.every(t => t === 'move' || t === 'wait');
-
-    // Quick sequence bonus: prefer sequences with 2 actions over single actions
-    const quickHasTwoActions = Array.isArray(quickSequence) && quickSequence.length === 2;
-    const lookaheadHasTwoActions = Array.isArray(lookaheadDecision.action) && lookaheadDecision.action.length === 2;
-
-    if (isQuickOffensive && isLookaheadPassive && quickScore > 100) {
-      // Quick found a good offensive action/sequence, prefer it over passive lookahead
-      bestDecision = { action: quickSequence, score: quickScore };
-      decisionSource = 'quick (offensive over passive lookahead)';
-    } else if (quickHasTwoActions && !lookaheadHasTwoActions && isQuickOffensive && quickScore > 50) {
-      // Quick has an efficient two-action sequence with offense, prefer it
-      bestDecision = { action: quickSequence, score: quickScore };
-      decisionSource = 'quick (efficient 2-action sequence)';
-    } else {
-      // Trust lookahead's multi-turn planning
-      bestDecision = lookaheadDecision;
-      decisionSource = 'lookahead';
-    }
-  }
+  const selection = selectUtilityDecision(
+    quickResult,
+    lookaheadDecision,
+    ai.evaluator,
+    enemy,
+    battleState
+  );
+  const bestDecision = selection.decision;
+  const decisionSource = selection.source;
 
   if (aiDebug) {
     console.log('[AI] Source:', decisionSource, '| Score:', bestDecision?.score?.toFixed?.(1) ?? bestDecision?.score);
-    if (quickScore !== undefined && lookaheadDecision?.score !== undefined) {
-      console.log('[AI] Comparison: quick=' + quickScore.toFixed(1) + ' vs lookahead=' + lookaheadDecision.score.toFixed(1));
+    if (selection.quickScore !== null && selection.lookaheadImmediateScore !== null) {
+      console.log(
+        '[AI] Immediate comparison: quick=' +
+        selection.quickScore.toFixed(1) +
+        ' vs lookahead=' +
+        selection.lookaheadImmediateScore.toFixed(1)
+      );
     }
   }
 
@@ -873,7 +908,7 @@ function isReachable(enemy, targetX, targetY, battleState) {
   return pathCost !== Infinity && pathCost <= movementRange;
 }
 
-// Only export the primary entry point - all other functions are internal
-export { decideTurnActions };
+// Export the selection helper for focused regression tests.
+export { decideTurnActions, selectUtilityDecision };
 
 export default { decideTurnActions };

@@ -62,10 +62,11 @@ describe('ApiClient battle-map protocol', () => {
       return { battleId: 2 };
     };
 
-    await client.startBossTrial(37);
+    await client.startBossTrial(37, 91);
 
     assert.equal(request.endpoint, '/advancement/boss/start');
     assert.equal(request.body.characterId, 37);
+    assert.equal(request.body.nodeId, 91);
     assert.deepEqual(
       request.body.battleMapCapabilities.supportedBattleMapSchemaVersions,
       [1, 2]
@@ -74,5 +75,25 @@ describe('ApiClient battle-map protocol', () => {
       request.body.battleMapCapabilities.supportedMutableStateProtocolVersions,
       [1]
     );
+  });
+
+  it('includes the selected guild node when accepting an advancement quest', async () => {
+    const client = new ApiClient('/api');
+    let request;
+    client.post = async (endpoint, body) => {
+      request = { endpoint, body };
+      return { success: true };
+    };
+
+    await client.acceptAdvancementQuest(37, 12, 91);
+
+    assert.deepEqual(request, {
+      endpoint: '/advancement/accept',
+      body: {
+        characterId: 37,
+        questTemplateId: 12,
+        nodeId: 91
+      }
+    });
   });
 });

@@ -10,6 +10,39 @@ import { getManhattanDistance } from '../../../../shared/pathfinding.js';
 import { calculateStrategicPath, scoreStrategicMovement } from './strategicPathfinding.js';
 
 /**
+ * Match the battle layer's team fallback so utility scoring works for battles
+ * that use explicit team IDs as well as the usual player/enemy unit types.
+ */
+function getUnitTeamId(unit) {
+  if (unit?.teamId !== undefined && unit?.teamId !== null) {
+    return unit.teamId;
+  }
+  return unit?.type === 'enemy' ? 2 : 1;
+}
+
+function areOpponents(unitA, unitB) {
+  return getUnitTeamId(unitA) !== getUnitTeamId(unitB);
+}
+
+function isRestorativeSkill(skill) {
+  return Boolean(
+    skill?.healPercent > 0 ||
+    skill?.damageType === 'heal' ||
+    skill?.effect === 'heal'
+  );
+}
+
+function hasOffensiveSkillComponent(skill) {
+  return Number(skill?.power) > 0 &&
+    skill?.targetSelf !== true &&
+    skill?.targetAlly !== true &&
+    skill?.targetAllAllies !== true &&
+    skill?.damageType !== 'support' &&
+    skill?.damageType !== 'heal' &&
+    skill?.effect !== 'heal';
+}
+
+/**
  * Calculate expected damage from an action
  * @param {Object} attacker - Attacking unit
  * @param {Object} target - Target unit
@@ -19,6 +52,10 @@ import { calculateStrategicPath, scoreStrategicMovement } from './strategicPathf
  */
 function calculateDamageDealt(attacker, target, skill, state) {
   if (!target || target.hp <= 0) return 0;
+  // Power alone does not make a restorative or ally-targeted skill offensive.
+  // Hybrid skills remain possible when they explicitly target an opponent and
+  // carry both a positive power and a separate restorative/self-buff effect.
+  if (skill && !hasOffensiveSkillComponent(skill)) return 0;
 
   let damage;
   if (!skill) {
@@ -27,7 +64,7 @@ function calculateDamageDealt(attacker, target, skill, state) {
     damage = result.damage;
   } else {
     const damageType = skill.damageType || 'physical';
-    const power = skill.power || 100;
+    const power = skill.power ?? 100;
 
     if (damageType === 'magical' || damageType === 'magic' ||
         damageType === 'fire' || damageType === 'ice' ||
@@ -45,7 +82,13 @@ function calculateDamageDealt(attacker, target, skill, state) {
       const centerX = target.x ?? target.tileX;
       const centerY = target.y ?? target.tileY;
       if (centerX !== undefined && centerY !== undefined) {
-        const potentialTargets = countTargetsInAoe(centerX, centerY, skill.aoeRadius, state, attacker.type);
+        const potentialTargets = countTargetsInAoe(
+          centerX,
+          centerY,
+          skill.aoeRadius,
+          state,
+          attacker
+        );
         damage *= Math.sqrt(potentialTargets); // Diminishing returns for multiple targets
       }
     }
@@ -60,15 +103,17 @@ function calculateDamageDealt(attacker, target, skill, state) {
  * @param {number} centerY - Center Y position
  * @param {number} radius - AoE radius
  * @param {Object} state - Battle state
- * @param {string} attackerType - 'player' or 'enemy'
+ * @param {Object|string} attackerOrType - Attacking unit, or legacy unit type
  * @returns {number} Number of targets in range
  */
-function countTargetsInAoe(centerX, centerY, radius, state, attackerType) {
-  const targetType = attackerType === 'player' ? 'enemy' : 'player';
+function countTargetsInAoe(centerX, centerY, radius, state, attackerOrType) {
+  const attacker = typeof attackerOrType === 'object'
+    ? attackerOrType
+    : { type: attackerOrType };
   let count = 0;
 
   for (const unit of state.units) {
-    if (unit.type !== targetType || unit.hp <= 0) continue;
+    if (!areOpponents(attacker, unit) || unit.hp <= 0) continue;
 
     const dx = Math.abs(unit.tileX - centerX);
     const dy = Math.abs(unit.tileY - centerY);
@@ -92,30 +137,46 @@ function countTargetsInAoe(centerX, centerY, radius, state, attackerType) {
  */
 function calculateDamageReceived(unit, tileX, tileY, state) {
   let totalThreat = 0;
-  const enemyType = unit.type === 'player' ? 'enemy' : 'player';
 
   for (const enemy of state.units) {
-    if (enemy.type !== enemyType || enemy.hp <= 0) continue;
+    if (!areOpponents(unit, enemy) || enemy.hp <= 0 || enemy.actUsed) continue;
 
     const dx = Math.abs(enemy.tileX - tileX);
     const dy = Math.abs(enemy.tileY - tileY);
     const distance = dx + dy; // Manhattan distance (matches server validation)
+    const movementRange = enemy.moveUsed ? 0 : Math.max(0, enemy.movement ?? 3);
+    let bestImmediateThreat = 0;
+    let bestMoveThreat = 0;
 
-    // Basic threat from melee range
-    if (distance <= (enemy.attackRange || 1)) {
-      const damageResult = calculatePhysicalDamage(enemy, unit, 100);
-      totalThreat += damageResult.damage;
+    // A unit can only take one combat action, so use its strongest available
+    // option instead of adding every attack and skill together.
+    const attackRange = enemy.attackRange || 1;
+    const basicDamage = calculatePhysicalDamage(enemy, unit, 100).damage;
+    if (distance <= attackRange) {
+      bestImmediateThreat = basicDamage;
+    } else if (distance <= attackRange + movementRange) {
+      bestMoveThreat = basicDamage * 0.65;
     }
 
-    // Additional threat from skills
+    // Skills that can be used now, or after movement, also contribute threat.
     for (const skill of (enemy.skills || [])) {
-      if (skill.range && distance <= skill.range) {
-        const damageResult = calculatePhysicalDamage(enemy, unit, 100);
-        const skillDamage = skill.power ? (skill.power / 100) * damageResult.damage : 0;
-        // Weight by how likely they are to use this skill
-        totalThreat += skillDamage * 0.3;
+      const mpCost = skill.mpCost ?? 0;
+      if ((enemy.mp ?? 0) < mpCost) continue;
+      if ((enemy.skillCooldowns?.[skill.id] ?? 0) > 0) continue;
+
+      const skillDamage = calculateDamageDealt(enemy, unit, skill, state);
+      if (skillDamage <= 0) continue;
+
+      // Self-centred AoE attacks threaten targets within their AoE radius.
+      const skillRange = Math.max(skill.range ?? 1, skill.aoeRadius ?? 0);
+      if (distance <= skillRange) {
+        bestImmediateThreat = Math.max(bestImmediateThreat, skillDamage * 0.9);
+      } else if (distance <= skillRange + movementRange) {
+        bestMoveThreat = Math.max(bestMoveThreat, skillDamage * 0.55);
       }
     }
+
+    totalThreat += Math.max(bestImmediateThreat, bestMoveThreat);
   }
 
   return totalThreat;
@@ -191,7 +252,7 @@ function calculatePositionQuality(unit, tileX, tileY, state) {
   if (tileY === 0 || tileY === gridHeight - 1) score -= 10;
 
   // Flanking bonus (enemies on multiple sides)
-  const flankedCount = countFlankingPositions(tileX, tileY, state, unit.type === 'player' ? 'enemy' : 'player');
+  const flankedCount = countFlankingPositions(tileX, tileY, state, unit);
   if (flankedCount >= 2) {
     score -= flankedCount * 15; // Penalty for being flanked
   }
@@ -208,12 +269,11 @@ function calculatePositionQuality(unit, tileX, tileY, state) {
  * @returns {Object|null} Nearest enemy unit
  */
 function findNearestEnemy(unit, fromX, fromY, state) {
-  const enemyType = unit.type === 'player' ? 'enemy' : 'player';
   let nearest = null;
   let nearestDistance = Infinity;
 
   for (const enemy of state.units) {
-    if (enemy.type !== enemyType || enemy.hp <= 0) continue;
+    if (!areOpponents(unit, enemy) || enemy.hp <= 0) continue;
 
     const distance = getManhattanDistance(fromX, fromY, enemy.tileX, enemy.tileY);
 
@@ -231,10 +291,10 @@ function findNearestEnemy(unit, fromX, fromY, state) {
  * @param {number} tileX - Position X
  * @param {number} tileY - Position Y
  * @param {Object} state - Battle state
- * @param {string} enemyType - Type to count as enemies
+ * @param {Object|string} reference - Unit being flanked, or legacy enemy type
  * @returns {number} Number of flanking positions occupied
  */
-function countFlankingPositions(tileX, tileY, state, enemyType) {
+function countFlankingPositions(tileX, tileY, state, reference) {
   let count = 0;
   const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
 
@@ -243,7 +303,10 @@ function countFlankingPositions(tileX, tileY, state, enemyType) {
     const checkY = tileY + dy;
 
     for (const unit of state.units) {
-      if (unit.type === enemyType && unit.hp > 0 &&
+      const isEnemy = typeof reference === 'object'
+        ? areOpponents(reference, unit)
+        : unit.type === reference;
+      if (isEnemy && unit.hp > 0 &&
           unit.tileX === checkX && unit.tileY === checkY) {
         count++;
         break;
@@ -264,10 +327,10 @@ function countFlankingPositions(tileX, tileY, state, enemyType) {
  */
 function calculateAllySupport(unit, tileX, tileY, state) {
   let score = 0;
-  const allyType = unit.type;
 
   for (const ally of state.units) {
-    if (ally.type !== allyType || ally.hp <= 0 || ally.id === unit.id) continue;
+    if (getUnitTeamId(ally) !== getUnitTeamId(unit) ||
+        ally.hp <= 0 || ally.id === unit.id) continue;
 
     const distance = getManhattanDistance(tileX, tileY, ally.tileX, ally.tileY);
 
@@ -352,11 +415,11 @@ function calculateSurvivalPriority(unit, tileX, tileY, state) {
   else priority = 20;
 
   // Increase if many enemies nearby
-  const nearbyEnemies = countNearbyEnemies(tileX, tileY, state, unit.type);
+  const nearbyEnemies = countNearbyEnemies(tileX, tileY, state, unit);
   priority += nearbyEnemies * 20;
 
   // Decrease if allies nearby for protection
-  const nearbyAllies = countNearbyAllies(tileX, tileY, state, unit.type, unit.id);
+  const nearbyAllies = countNearbyAllies(tileX, tileY, state, unit, unit.id);
   priority -= nearbyAllies * 10;
 
   return Math.max(0, Math.min(200, priority));
@@ -365,12 +428,14 @@ function calculateSurvivalPriority(unit, tileX, tileY, state) {
 /**
  * Count enemies within range 2 of a position
  */
-function countNearbyEnemies(tileX, tileY, state, unitType) {
-  const enemyType = unitType === 'player' ? 'enemy' : 'player';
+function countNearbyEnemies(tileX, tileY, state, unitOrType) {
+  const referenceUnit = typeof unitOrType === 'object'
+    ? unitOrType
+    : { type: unitOrType };
   let count = 0;
 
   for (const unit of state.units) {
-    if (unit.type !== enemyType || unit.hp <= 0) continue;
+    if (!areOpponents(referenceUnit, unit) || unit.hp <= 0) continue;
 
     const distance = getManhattanDistance(tileX, tileY, unit.tileX, unit.tileY);
     if (distance <= 2) count++;
@@ -382,11 +447,15 @@ function countNearbyEnemies(tileX, tileY, state, unitType) {
 /**
  * Count allies within range 2 of a position
  */
-function countNearbyAllies(tileX, tileY, state, unitType, excludeId) {
+function countNearbyAllies(tileX, tileY, state, unitOrType, excludeId) {
+  const referenceUnit = typeof unitOrType === 'object'
+    ? unitOrType
+    : { type: unitOrType };
   let count = 0;
 
   for (const unit of state.units) {
-    if (unit.type !== unitType || unit.hp <= 0 || unit.id === excludeId) continue;
+    if (getUnitTeamId(unit) !== getUnitTeamId(referenceUnit) ||
+        unit.hp <= 0 || unit.id === excludeId) continue;
 
     const distance = getManhattanDistance(tileX, tileY, unit.tileX, unit.tileY);
     if (distance <= 2) count++;
@@ -503,7 +572,7 @@ export function waitingPenalty(context) {
   const { unit, action, state } = context;
   if (action.type !== 'wait') return 0;
 
-  const enemies = state.units.filter(u => u.type !== unit.type && u.hp > 0);
+  const enemies = state.units.filter(u => areOpponents(unit, u) && u.hp > 0);
   const attackRange = unit.attackRange || 1;
 
   // Check if any enemy is in attack range
@@ -539,6 +608,9 @@ export {
   countTargetsInAoe,
   countNearbyEnemies,
   countNearbyAllies,
-  hasSkillType
+  hasSkillType,
+  getUnitTeamId,
+  areOpponents,
+  isRestorativeSkill
   // strategicPathProgress and waitingPenalty are exported via 'export function' above
 };

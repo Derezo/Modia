@@ -8,7 +8,8 @@
 
 import { StateEvaluator } from './stateEvaluator.js';
 import { getWeights, OPTIMAL_PLAYER_WEIGHTS } from './patternWeights.js';
-import { generateAllActions, pruneActions } from './actionGenerator.js';
+import { generateAllActions, generateMoveActionSequences } from './actionGenerator.js';
+import { getUnitTeamId } from './utilityFactors.js';
 import {
   TranspositionTable,
   KillerMoves,
@@ -36,6 +37,7 @@ class Lookahead {
 
     this.nodesEvaluated = 0;
     this.startTime = 0;
+    this.searchTimedOut = false;
   }
 
   /**
@@ -48,10 +50,12 @@ class Lookahead {
   iterativeDeepening(state, decidingUnit, evaluator) {
     this.startTime = Date.now();
     this.nodesEvaluated = 0;
+    this.searchTimedOut = false;
 
-    const perspective = decidingUnit.type;
-    let bestAction = { type: 'wait' };
+    const perspective = getUnitTeamId(decidingUnit);
+    let bestAction = [{ type: 'wait' }];
     let bestScore = -Infinity;
+    let hasCompletedDepth = false;
 
     // Clear transposition table for new search
     this.transpositionTable.clear();
@@ -65,6 +69,7 @@ class Lookahead {
         break;
       }
 
+      this.searchTimedOut = false;
       const result = this.search(
         cloneState(state),
         decidingUnit,
@@ -76,10 +81,16 @@ class Lookahead {
         true // isDecidingActor
       );
 
-      if (result.action && result.score > bestScore) {
+      // Scores from different depths are not directly comparable. A completed
+      // deeper search supersedes the shallower result even when it exposes a
+      // worse position overall. If the deeper search times out, retain the last
+      // fully searched depth (or use its partial result only as a last resort).
+      if (result.action && (!this.searchTimedOut || !hasCompletedDepth)) {
         bestScore = result.score;
         bestAction = result.action;
       }
+      if (this.searchTimedOut) break;
+      hasCompletedDepth = true;
 
       // Early exit if we found a winning line
       if (bestScore > 5000) break;
@@ -113,6 +124,7 @@ class Lookahead {
 
     // Check time budget
     if (Date.now() - this.startTime > this.timeBudgetMs) {
+      this.searchTimedOut = true;
       return { score: evaluator.evaluateState(state, perspective), action: null };
     }
 
@@ -121,34 +133,52 @@ class Lookahead {
       return { score: evaluator.evaluateState(state, perspective), action: null };
     }
 
-    // Check transposition table
-    const ttKey = this.transpositionTable.hashState(state, roundsRemaining, perspective);
+    // Resolve the actor from the simulated state before hashing. The actor whose
+    // turn it is changes both legal actions and whether this is a maximizing node.
+    const stateActor = state.units.find(unit =>
+      unit.id === currentActor?.id && unit.hp > 0
+    );
+    if (!stateActor) {
+      return { score: evaluator.evaluateState(state, perspective), action: null };
+    }
+
+    // Check transposition table. Only exact entries are safe to return as a
+    // complete minimax result; alpha/beta bounds need separate bound handling.
+    const ttKey = this.transpositionTable.hashState(
+      state,
+      roundsRemaining,
+      perspective,
+      stateActor.id
+    );
     const ttEntry = this.transpositionTable.lookup(ttKey, roundsRemaining);
-    if (ttEntry) {
+    if (ttEntry && (!ttEntry.flag || ttEntry.flag === 'exact')) {
       return { score: ttEntry.score, action: ttEntry.bestAction };
     }
 
-    // Generate actions for current actor
-    let actions = generateAllActions(currentActor, state);
+    // Generate complete turn sequences for the current actor. Resolve the actor
+    // from the simulated state so prior movement, damage, and MP use are honored.
+    let actions = generateMoveActionSequences(stateActor, state);
 
-    // Prune and order actions
+    // Order complete sequences, then limit the branching factor. orderActions()
+    // also accepts legacy single-action objects for public helper compatibility.
     const maxActions = isDecidingActor ? this.decidingActorActions : this.maxActionsPerActor;
-    actions = pruneActions(actions, maxActions);
     actions = this.orderActions(actions, roundsRemaining);
+    actions = this.limitActions(actions, maxActions);
 
-    const isMaximizing = currentActor.type === perspective;
+    const isMaximizing = getUnitTeamId(stateActor) === normalizePerspectiveTeam(perspective);
     let bestScore = isMaximizing ? -Infinity : Infinity;
     let bestAction = actions[0];
+    let fullySearched = true;
 
     for (const action of actions) {
-      // Apply action to cloned state
+      // Apply every action in the sequence before advancing to the next actor.
       const newState = cloneState(state);
-      applyActionToState(newState, currentActor, action);
+      this.applyActionSequence(newState, stateActor, action);
 
       // Determine next actor
       const { nextActor, newRoundsRemaining, turnComplete } = this.getNextActor(
         newState,
-        currentActor,
+        stateActor,
         roundsRemaining
       );
 
@@ -174,7 +204,7 @@ class Lookahead {
           perspective,
           alpha,
           beta,
-          this.getEvaluatorForActor(nextActor, perspective),
+          evaluator,
           false
         );
       }
@@ -198,17 +228,22 @@ class Lookahead {
       if (beta <= alpha) {
         this.killerMoves.store(roundsRemaining, action);
         this.historyHeuristic.update(action, roundsRemaining);
+        fullySearched = false;
         break;
       }
     }
 
-    // Store in transposition table
-    this.transpositionTable.store(ttKey, {
-      score: bestScore,
-      depth: roundsRemaining,
-      bestAction,
-      flag: bestScore <= alpha ? 'upper' : bestScore >= beta ? 'lower' : 'exact'
-    });
+    // A cut-off returns a bound, not an exact result. Keep the table exact-only
+    // so a later node with a different alpha/beta window cannot reuse a bound as
+    // though the entire branch had been searched.
+    if (fullySearched) {
+      this.transpositionTable.store(ttKey, {
+        score: bestScore,
+        depth: roundsRemaining,
+        bestAction,
+        flag: 'exact'
+      });
+    }
 
     return { score: bestScore, action: bestAction };
   }
@@ -226,6 +261,7 @@ class Lookahead {
     // Score each action
     const scored = actions.map(action => {
       let orderScore = 0;
+      const sequence = Array.isArray(action) ? action : [action];
 
       // Killer move bonus
       if (killers.some(k => this.killerMoves.actionsEqual(k, action))) {
@@ -235,15 +271,116 @@ class Lookahead {
       // History heuristic bonus
       orderScore += this.historyHeuristic.getScore(action);
 
-      // Type ordering: attacks > skills > moves > wait
+      // Type ordering: attacks > skills > moves > wait. Summing the actions
+      // favors complete turns without changing legacy single-action ordering.
       const typeBonus = { attack: 1000, skill: 800, move: 500, wait: 0 };
-      orderScore += typeBonus[action.type] || 0;
+      for (const sequenceAction of sequence) {
+        orderScore += typeBonus[sequenceAction.type] || 0;
+      }
 
       return { action, orderScore };
     });
 
     scored.sort((a, b) => b.orderScore - a.orderScore);
     return scored.map(s => s.action);
+  }
+
+  /**
+   * Limit branching while retaining representatives of strategically distinct
+   * turns. A plain slice can fill the whole budget with move-then-attacks and
+   * discard every heal, retreat, or attack-then-move option before evaluation.
+   *
+   * @param {Array} actions - Already ordered actions or action sequences
+   * @param {number} maxActions - Branch budget
+   * @returns {Array} Diverse subset in the original ordering
+   */
+  limitActions(actions, maxActions) {
+    if (actions.length <= maxActions) return actions;
+    if (maxActions <= 0) return [];
+
+    const representatives = new Map();
+    actions.forEach((action, index) => {
+      const category = this.getSequenceCategory(action);
+      if (!representatives.has(category)) {
+        representatives.set(category, { action, index, category });
+      }
+    });
+
+    const categoryPriority = entry => {
+      if (entry.category.includes('skill-support')) return 0;
+      if (entry.category.includes('item-support')) return 1;
+      if (/^(attack|skill-offense|skill-hybrid|item-support)>move$/.test(entry.category)) {
+        return 2;
+      }
+      if (entry.category === 'move') return 3;
+      if (entry.category.startsWith('move>')) return 4;
+      if (entry.category === 'wait') return 6;
+      return 5;
+    };
+
+    const reserved = [...representatives.values()]
+      .sort((first, second) =>
+        categoryPriority(first) - categoryPriority(second) ||
+        first.index - second.index
+      )
+      .slice(0, maxActions);
+    const selected = new Set(reserved.map(entry => entry.action));
+
+    for (const action of actions) {
+      if (selected.size >= maxActions) break;
+      selected.add(action);
+    }
+
+    // Preserve the move ordering used by alpha-beta after reserving diversity.
+    return actions.filter(action => selected.has(action)).slice(0, maxActions);
+  }
+
+  getSequenceCategory(actionOrSequence) {
+    const sequence = Array.isArray(actionOrSequence)
+      ? actionOrSequence
+      : [actionOrSequence];
+    return sequence.map(action => {
+      if (action.type === 'skill') {
+        const skill = action.skill || {};
+        const support = skill.targetAlly === true ||
+          skill.targetAllAllies === true ||
+          skill.targetSelf === true ||
+          Boolean(skill.selfBuff) ||
+          Boolean(skill.cleanse) ||
+          skill.healPercent > 0 ||
+          skill.mpRestore > 0 ||
+          skill.damageType === 'heal' ||
+          skill.effect === 'heal';
+        const offense = Number(skill.power) > 0 &&
+          skill.targetSelf !== true &&
+          skill.targetAlly !== true &&
+          skill.targetAllAllies !== true &&
+          skill.damageType !== 'heal' &&
+          skill.effect !== 'heal';
+        if (support && offense) return 'skill-hybrid';
+        return support ? 'skill-support' : 'skill-offense';
+      }
+      if (action.type === 'item') return 'item-support';
+      return action.type;
+    }).join('>');
+  }
+
+  /**
+   * Apply a complete actor turn to a simulated state.
+   * Accepts a legacy single action as well as an ordered action sequence.
+   * @param {Object} state - Battle state (will be modified)
+   * @param {Object} actor - Acting unit
+   * @param {Object|Array} actionOrSequence - Action or ordered turn sequence
+   * @returns {Object} Modified state
+   */
+  applyActionSequence(state, actor, actionOrSequence) {
+    const sequence = Array.isArray(actionOrSequence) ? actionOrSequence : [actionOrSequence];
+    for (const action of sequence) {
+      if (action) {
+        applyActionToState(state, actor, action);
+      }
+    }
+    return state;
   }
 
   /**
@@ -302,6 +439,16 @@ class Lookahead {
     // Reset acted flags
     for (const unit of state.units) {
       unit.hasActedThisRound = false;
+      unit.moveUsed = false;
+      unit.actUsed = false;
+      // The runtime advances a used skill's cooldown once per completed turn.
+      // In this round-based simulation, each unit completes one turn per round,
+      // so advance every active cooldown at the round boundary.
+      for (const skillId of Object.keys(unit.skillCooldowns || {})) {
+        if (unit.skillCooldowns[skillId] > 0) {
+          unit.skillCooldowns[skillId]--;
+        }
+      }
     }
 
     // Sort by CT
@@ -321,7 +468,7 @@ class Lookahead {
    * @returns {Object} StateEvaluator instance
    */
   getEvaluatorForActor(actor, perspective) {
-    if (actor.type === perspective) {
+    if (getUnitTeamId(actor) === normalizePerspectiveTeam(perspective)) {
       // Ally - use same evaluator
       const pattern = actor.aiType || 'aggressive';
       return new StateEvaluator(getWeights(pattern));
@@ -341,9 +488,12 @@ class Lookahead {
    * @returns {boolean}
    */
   isGameOver(state) {
-    const aliveEnemies = state.units.filter(u => u.type === 'enemy' && u.hp > 0);
-    const alivePlayers = state.units.filter(u => u.type === 'player' && u.hp > 0);
-    return aliveEnemies.length === 0 || alivePlayers.length === 0;
+    const aliveTeams = new Set(
+      state.units
+        .filter(unit => unit.hp > 0)
+        .map(unit => getUnitTeamId(unit))
+    );
+    return aliveTeams.size <= 1;
   }
 
   /**
@@ -353,7 +503,17 @@ class Lookahead {
     this.transpositionTable.clear();
     this.killerMoves.clear();
     this.nodesEvaluated = 0;
+    this.searchTimedOut = false;
   }
+}
+
+function normalizePerspectiveTeam(perspective) {
+  if (perspective && typeof perspective === 'object') {
+    return getUnitTeamId(perspective);
+  }
+  if (perspective === 'player') return 1;
+  if (perspective === 'enemy') return 2;
+  return perspective;
 }
 
 /**

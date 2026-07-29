@@ -1044,6 +1044,8 @@ import {
   PREVENT_ACTING,
   PREVENT_MOVEMENT,
   PREVENT_SKILLS,
+  BENEFICIAL_STATUS_EFFECTS,
+  isBeneficialStatusEffect,
   CURE_POISON_EFFECTS,
   CURE_ALL_EFFECTS,
   PURIFY_EFFECTS
@@ -1082,6 +1084,61 @@ describe('Status effect prevention constants', () => {
 });
 
 describe('Cleansable status effect constants', () => {
+  it('BENEFICIAL_STATUS_EFFECTS should contain every explicit persisted buff', () => {
+    assert.deepStrictEqual([...BENEFICIAL_STATUS_EFFECTS], [
+      'rage',
+      'fortify',
+      'haste',
+      'regen',
+      'regenerate',
+      'attack_up',
+      'defense_up',
+      'magic_shield',
+      'berserk',
+      'frenzy',
+      'reckless',
+      'berserker',
+      'martyr',
+      'final_stand',
+      'mana_shield',
+      'amplify',
+      'elem_shield',
+      'elemental_shield',
+      'invisible',
+      'shadow_arts',
+      'pack_bonus',
+      'unmovable'
+    ]);
+    assert.ok(Object.isFrozen(BENEFICIAL_STATUS_EFFECTS));
+  });
+
+  it('identifies explicit and elemental resistance buffs in either status form', () => {
+    assert.strictEqual(isBeneficialStatusEffect('shadow_arts'), true);
+    assert.strictEqual(
+      isBeneficialStatusEffect({ type: 'final_stand', duration: 999 }),
+      true
+    );
+    assert.strictEqual(
+      isBeneficialStatusEffect({ type: 'fire_resist', value: 25 }),
+      true
+    );
+    assert.strictEqual(
+      isBeneficialStatusEffect({
+        type: 'test_rally_buff',
+        duration: 2,
+        modifiers: { defense: 1.25 }
+      }),
+      true
+    );
+    assert.strictEqual(isBeneficialStatusEffect('poison'), false);
+    assert.strictEqual(isBeneficialStatusEffect({ type: 'slow' }), false);
+    assert.strictEqual(
+      isBeneficialStatusEffect({ type: 'slow', modifiers: null }),
+      false
+    );
+    assert.strictEqual(isBeneficialStatusEffect(null), false);
+  });
+
   it('CURE_POISON_EFFECTS should contain only poison', () => {
     assert.deepStrictEqual([...CURE_POISON_EFFECTS], ['poison']);
   });

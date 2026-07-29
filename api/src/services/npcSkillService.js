@@ -12,6 +12,175 @@ import MONSTER_SKILL_TREES from '../config/monsterSkillTrees.js';
 import { SKILL_TREES } from '../config/skillTrees.js';
 import { pool } from '../config/database.js';
 
+const LEGACY_HEAL_PERCENT_BY_SKILL_ID = Object.freeze({
+  plant_regenerate: 20,
+  plant_photosynthesis: 10,
+  humanoid_heal_ally: 25
+});
+
+// Older DB templates did not store a healing amount. Twenty percent matches
+// the source-tree Regenerate skill and is a useful, non-bursting self-heal
+// fallback for Repair, Cocoon, and other legacy restorative templates.
+const LEGACY_HEAL_PERCENT_FALLBACK = 20;
+
+const LEGACY_RADIAL_ALLY_BUFF_SKILL_IDS = new Set(['beast_howl']);
+const LEGACY_HYBRID_SELF_BUFF_BY_SKILL_ID = Object.freeze({
+  beast_frenzy: Object.freeze({
+    type: 'berserk',
+    attack: 1.5,
+    defense: 0.7
+  })
+});
+const LEGACY_BUFF_MODIFIERS_BY_EFFECT = Object.freeze({
+  attack_up: Object.freeze({
+    type: 'attack_up',
+    attack: 1.2
+  }),
+  defense_up: Object.freeze({
+    type: 'defense_up',
+    defense: 1.3
+  }),
+  magic_shield: Object.freeze({
+    type: 'magic_shield',
+    magicDefense: 1.3
+  })
+});
+const LEGACY_UNSUPPORTED_BUFF_SKILL_IDS = new Set(['demon_dark_pact']);
+
+/**
+ * Restore executable healing metadata omitted by legacy NPC skill rows.
+ * Explicit amounts and targeting always win over inferred compatibility data.
+ *
+ * @param {Object} skillDef - Skill definition from a tree, DB row, or battle state
+ * @returns {Object} Original definition or a normalized copy
+ */
+function normalizeLegacyHealingSkill(skillDef) {
+  if (!skillDef ||
+      (skillDef.damageType !== 'heal' &&
+       skillDef.damage_type !== 'heal' &&
+       skillDef.effect !== 'heal')) {
+    return skillDef;
+  }
+
+  const explicitHealPercent = skillDef.healPercent ?? skillDef.heal_percent;
+  const hasExplicitTargeting = skillDef.targetSelf !== undefined ||
+    skillDef.targetAlly !== undefined ||
+    skillDef.targetAllAllies !== undefined;
+
+  if (explicitHealPercent !== undefined && explicitHealPercent !== null &&
+      hasExplicitTargeting) {
+    return skillDef;
+  }
+
+  const range = skillDef.range ?? 1;
+  return {
+    ...skillDef,
+    ...(explicitHealPercent === undefined || explicitHealPercent === null
+      ? {
+        healPercent: LEGACY_HEAL_PERCENT_BY_SKILL_ID[skillDef.id] ??
+          LEGACY_HEAL_PERCENT_FALLBACK
+      }
+      : { healPercent: explicitHealPercent }),
+    ...(!hasExplicitTargeting
+      ? (range <= 0 ? { targetSelf: true } : { targetAlly: true })
+      : {})
+  };
+}
+
+/**
+ * Restore executable buff metadata omitted by legacy NPC skill rows.
+ * Range-zero buffs target the caster, positive-range buffs target an ally,
+ * and known radial buffs remain caster-centered so their radius is preserved.
+ * Explicit targeting and self-buff metadata always win.
+ *
+ * @param {Object} skillDef - Skill definition from a tree, DB row, or battle state
+ * @returns {Object} Original definition or a normalized copy
+ */
+function normalizeLegacyBuffSkill(skillDef) {
+  if (!skillDef) return skillDef;
+
+  const damageType = skillDef.damageType ?? skillDef.damage_type;
+  const effect = skillDef.effect;
+  const range = skillDef.range ?? 1;
+  const aoeRadius = skillDef.aoeRadius ?? skillDef.aoe_radius ?? 0;
+  const hasExplicitSelfBuff = skillDef.selfBuff !== undefined;
+  const hasExplicitTargeting = skillDef.targetSelf !== undefined ||
+    skillDef.targetAlly !== undefined ||
+    skillDef.targetAllAllies !== undefined;
+
+  const hybridSelfBuff = LEGACY_HYBRID_SELF_BUFF_BY_SKILL_ID[skillDef.id];
+  if (!hasExplicitSelfBuff &&
+      hybridSelfBuff &&
+      effect === hybridSelfBuff.type) {
+    return {
+      ...skillDef,
+      selfBuff: { ...hybridSelfBuff },
+      buffDuration: skillDef.buffDuration ?? 3
+    };
+  }
+
+  if (hasExplicitSelfBuff || hasExplicitTargeting ||
+      typeof effect !== 'string' || effect === 'heal') {
+    return skillDef;
+  }
+
+  if (LEGACY_RADIAL_ALLY_BUFF_SKILL_IDS.has(skillDef.id) &&
+      damageType === 'support' &&
+      range <= 0 &&
+      aoeRadius > 0 &&
+      LEGACY_BUFF_MODIFIERS_BY_EFFECT[effect]) {
+    return {
+      ...skillDef,
+      selfBuff: { ...LEGACY_BUFF_MODIFIERS_BY_EFFECT[effect] },
+      buffDuration: skillDef.buffDuration ?? 3
+    };
+  }
+
+  if (damageType !== 'buff' ||
+      LEGACY_UNSUPPORTED_BUFF_SKILL_IDS.has(skillDef.id)) {
+    return skillDef;
+  }
+
+  const buffModifiers = LEGACY_BUFF_MODIFIERS_BY_EFFECT[effect];
+  if (!buffModifiers) return skillDef;
+
+  return {
+    ...skillDef,
+    selfBuff: { ...buffModifiers },
+    buffDuration: skillDef.buffDuration ?? 3,
+    ...(range <= 0 ? { targetSelf: true } : { targetAlly: true })
+  };
+}
+
+/**
+ * Apply all compatibility metadata needed by legacy NPC skill definitions.
+ *
+ * @param {Object} skillDef - Skill definition from a tree, DB row, or battle state
+ * @returns {Object} Original definition or a normalized copy
+ */
+function normalizeLegacyNpcSkill(skillDef) {
+  return normalizeLegacyBuffSkill(normalizeLegacyHealingSkill(skillDef));
+}
+
+/**
+ * Legacy buff rows without a modeled modifier are not executable. Explicit
+ * skill metadata remains valid because it may be backed by another mechanic.
+ *
+ * @param {Object} skillDef - Normalized or source skill definition
+ * @returns {boolean} Whether the skill may be exposed or processed
+ */
+function isExecutableLegacyNpcSkill(skillDef) {
+  if (!skillDef) return false;
+
+  const damageType = skillDef.damageType ?? skillDef.damage_type;
+  if (damageType !== 'buff') return true;
+
+  return skillDef.selfBuff !== undefined ||
+    skillDef.targetSelf !== undefined ||
+    skillDef.targetAlly !== undefined ||
+    skillDef.targetAllAllies !== undefined;
+}
+
 /**
  * Calculate the maximum number of skill slots for an enemy
  * Formula: 2 + floor(level/15) + floor(tier/2), capped at 6
@@ -209,25 +378,34 @@ function selectSkills(availableSkills, maxSlots) {
  * @returns {Object} Battle-ready skill object
  */
 function createBattleSkill(skillDef, skillLevel) {
+  skillDef = normalizeLegacyNpcSkill(skillDef);
+
   // For passive skills, we don't scale power/mpCost the same way
   const isPassive = skillDef.type === 'passive';
 
   const battleSkill = {
+    // Preserve targeting and mechanic metadata so the AI and action processor
+    // receive the same skill semantics declared in the source tree.
+    ...skillDef,
     id: skillDef.id,
     name: skillDef.name,
     description: skillDef.description,
     type: skillDef.type || 'active',
     level: skillLevel,
     // Passive skills typically don't have power/mpCost
-    power: isPassive ? (skillDef.power || 0) : scaleSkillPower(skillDef.power || 100, skillLevel),
-    range: skillDef.range || 1,
-    mpCost: isPassive ? 0 : scaleSkillMpCost(skillDef.mpCost || skillDef.mp_cost || 0, skillLevel),
-    damageType: skillDef.damageType || skillDef.damage_type || 'physical',
-    effect: skillDef.effect || null,
-    effectChance: skillDef.effectChance || skillDef.effect_chance || 1.0,
-    effectDuration: skillDef.effectDuration || skillDef.effect_duration || 0,
-    aoeRadius: skillDef.aoeRadius || skillDef.aoe_radius || 0,
-    cooldown: skillDef.cooldown || 0,
+    power: isPassive
+      ? (skillDef.power ?? 0)
+      : scaleSkillPower(skillDef.power ?? 100, skillLevel),
+    range: skillDef.range ?? 1,
+    mpCost: isPassive
+      ? 0
+      : scaleSkillMpCost(skillDef.mpCost ?? skillDef.mp_cost ?? 0, skillLevel),
+    damageType: skillDef.damageType ?? skillDef.damage_type ?? 'physical',
+    effect: skillDef.effect ?? null,
+    effectChance: skillDef.effectChance ?? skillDef.effect_chance ?? 1.0,
+    effectDuration: skillDef.effectDuration ?? skillDef.effect_duration ?? 0,
+    aoeRadius: skillDef.aoeRadius ?? skillDef.aoe_radius ?? 0,
+    cooldown: skillDef.cooldown ?? 0,
     priority: skillDef.priority ?? 5,
     source: skillDef.source || 'unknown',
 
@@ -248,13 +426,18 @@ function createBattleSkill(skillDef, skillLevel) {
     // Effectiveness: 60% + (level * 2)%
     ...(skillDef.throwItem && {
       throwItem: {
-        baseRange: skillDef.throwItem.baseRange || 2,
-        rangeLevelDivisor: skillDef.throwItem.rangeLevelDivisor || 5,
-        baseEffectiveness: skillDef.throwItem.baseEffectiveness || 0.6,
-        effectivenessPerLevel: skillDef.throwItem.effectivenessPerLevel || 0.02,
+        baseRange: skillDef.throwItem.baseRange ?? 2,
+        rangeLevelDivisor: skillDef.throwItem.rangeLevelDivisor ?? 5,
+        baseEffectiveness: skillDef.throwItem.baseEffectiveness ?? 0.6,
+        effectivenessPerLevel: skillDef.throwItem.effectivenessPerLevel ?? 0.02,
         // Calculated values at this skill level
-        range: (skillDef.throwItem.baseRange || 2) + Math.floor(skillLevel / (skillDef.throwItem.rangeLevelDivisor || 5)),
-        effectiveness: Math.min(1.0, (skillDef.throwItem.baseEffectiveness || 0.6) + (skillLevel * (skillDef.throwItem.effectivenessPerLevel || 0.02)))
+        range: (skillDef.throwItem.baseRange ?? 2) +
+          Math.floor(skillLevel / (skillDef.throwItem.rangeLevelDivisor ?? 5)),
+        effectiveness: Math.min(
+          1.0,
+          (skillDef.throwItem.baseEffectiveness ?? 0.6) +
+            (skillLevel * (skillDef.throwItem.effectivenessPerLevel ?? 0.02))
+        )
       }
     })
   };
@@ -352,7 +535,7 @@ async function generateEnemySkillsFromDb(templateId, enemyLevel, difficultyTier)
         10
       );
 
-      skills.push(createBattleSkill({
+      const battleSkill = createBattleSkill({
         id: row.skill_id,
         name: row.name,
         description: row.description,
@@ -367,7 +550,13 @@ async function generateEnemySkillsFromDb(templateId, enemyLevel, difficultyTier)
         cooldown: row.cooldown,
         priority: row.priority,
         source: 'database'
-      }, skillLevel));
+      }, skillLevel);
+
+      // Unsupported legacy buff rows must not occupy a skill slot or suppress
+      // procedural fallback when the database contains no executable skills.
+      if (!isExecutableLegacyNpcSkill(battleSkill)) continue;
+
+      skills.push(battleSkill);
     }
 
     return skills.length > 0 ? skills : null;
@@ -479,5 +668,9 @@ export {
   // Skill retrieval
   getMonsterSkillsForArchetype,
   getGuildSkillsForHumanoid,
-  createBattleSkill
+  createBattleSkill,
+  normalizeLegacyHealingSkill,
+  normalizeLegacyBuffSkill,
+  normalizeLegacyNpcSkill,
+  isExecutableLegacyNpcSkill
 };

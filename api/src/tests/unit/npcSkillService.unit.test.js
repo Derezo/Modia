@@ -23,11 +23,14 @@ import {
   scaleSkillPower,
   scaleSkillMpCost,
   createBattleSkill,
-  generateEnemySkills
+  generateEnemySkills,
+  generateEnemySkillsFromDb,
+  isExecutableLegacyNpcSkill
 } from '../../services/npcSkillService.js';
 
 // Import SKILL_TREES to verify skill existence
 import { SKILL_TREES } from '../../config/skillTrees.js';
+import { pool } from '../../config/database.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -488,6 +491,264 @@ describe('createBattleSkill', () => {
       assert.strictEqual(battleSkill.effectChance, 0.5);
       assert.strictEqual(battleSkill.effectDuration, 3);
     });
+
+    it('preserves targeting mechanics and explicit zero values', () => {
+      const skillDef = {
+        id: 'party_guard',
+        name: 'Party Guard',
+        type: 'active',
+        power: 0,
+        range: 0,
+        mpCost: 0,
+        cooldown: 0,
+        effectChance: 0,
+        targetAllAllies: true,
+        selfBuff: { defense: 1.5 },
+        buffDuration: 4
+      };
+
+      const battleSkill = createBattleSkill(skillDef, 5);
+
+      assert.strictEqual(battleSkill.power, 0);
+      assert.strictEqual(battleSkill.range, 0);
+      assert.strictEqual(battleSkill.mpCost, 0);
+      assert.strictEqual(battleSkill.cooldown, 0);
+      assert.strictEqual(battleSkill.effectChance, 0);
+      assert.strictEqual(battleSkill.targetAllAllies, true);
+      assert.deepStrictEqual(battleSkill.selfBuff, { defense: 1.5 });
+      assert.strictEqual(battleSkill.buffDuration, 4);
+    });
+
+    it('restores healing amounts and targets for legacy DB heal templates', () => {
+      const cases = [
+        {
+          id: 'construct_repair',
+          range: 0,
+          expectedHealPercent: 20,
+          expectedTarget: 'targetSelf'
+        },
+        {
+          id: 'insect_cocoon',
+          range: 0,
+          effect: 'regenerate',
+          expectedHealPercent: 20,
+          expectedTarget: 'targetSelf'
+        },
+        {
+          id: 'plant_regenerate',
+          range: 0,
+          effect: 'regenerate',
+          expectedHealPercent: 20,
+          expectedTarget: 'targetSelf'
+        },
+        {
+          id: 'plant_photosynthesis',
+          range: 0,
+          expectedHealPercent: 10,
+          expectedTarget: 'targetSelf'
+        },
+        {
+          id: 'humanoid_heal_ally',
+          range: 4,
+          expectedHealPercent: 25,
+          expectedTarget: 'targetAlly'
+        }
+      ];
+
+      for (const testCase of cases) {
+        const battleSkill = createBattleSkill({
+          id: testCase.id,
+          name: testCase.id,
+          type: 'active',
+          power: 0,
+          range: testCase.range,
+          mpCost: 10,
+          damageType: 'heal',
+          effect: testCase.effect ?? null
+        }, 1);
+
+        assert.strictEqual(
+          battleSkill.healPercent,
+          testCase.expectedHealPercent,
+          testCase.id
+        );
+        assert.strictEqual(battleSkill[testCase.expectedTarget], true, testCase.id);
+        assert.strictEqual(battleSkill.effect, testCase.effect ?? null, testCase.id);
+      }
+    });
+
+    it('preserves explicit healing and targeting metadata on legacy-marked skills', () => {
+      const battleSkill = createBattleSkill({
+        id: 'custom_legacy_heal',
+        name: 'Custom Legacy Heal',
+        type: 'active',
+        power: 0,
+        range: 0,
+        mpCost: 0,
+        damageType: 'heal',
+        effect: 'regenerate',
+        healPercent: 7,
+        targetAllAllies: true
+      }, 1);
+
+      assert.strictEqual(battleSkill.healPercent, 7);
+      assert.strictEqual(battleSkill.targetAllAllies, true);
+      assert.strictEqual(battleSkill.targetSelf, undefined);
+      assert.strictEqual(battleSkill.targetAlly, undefined);
+      assert.strictEqual(battleSkill.effect, 'regenerate');
+    });
+
+    it('restores targeting and effects for legacy DB buff templates', () => {
+      const cases = [
+        {
+          id: 'dragon_draconic_might',
+          range: 0,
+          aoeRadius: 0,
+          damageType: 'buff',
+          effect: 'attack_up',
+          expectedTarget: 'targetSelf',
+          expectedBuff: { type: 'attack_up', attack: 1.2 }
+        },
+        {
+          id: 'elemental_stone_skin',
+          range: 0,
+          aoeRadius: 0,
+          damageType: 'buff',
+          effect: 'defense_up',
+          expectedTarget: 'targetSelf',
+          expectedBuff: { type: 'defense_up', defense: 1.3 }
+        },
+        {
+          id: 'construct_iron_defense',
+          range: 0,
+          aoeRadius: 0,
+          damageType: 'buff',
+          effect: 'defense_up',
+          expectedTarget: 'targetSelf',
+          expectedBuff: { type: 'defense_up', defense: 1.3 }
+        },
+        {
+          id: 'humanoid_magic_shield',
+          range: 3,
+          aoeRadius: 0,
+          damageType: 'buff',
+          effect: 'magic_shield',
+          expectedTarget: 'targetAlly',
+          expectedBuff: { type: 'magic_shield', magicDefense: 1.3 }
+        },
+        {
+          id: 'beast_howl',
+          range: 0,
+          aoeRadius: 2,
+          damageType: 'support',
+          effect: 'attack_up',
+          expectedTarget: null,
+          expectedBuff: { type: 'attack_up', attack: 1.2 }
+        }
+      ];
+
+      for (const testCase of cases) {
+        const battleSkill = createBattleSkill({
+          id: testCase.id,
+          name: testCase.id,
+          type: 'active',
+          power: 0,
+          range: testCase.range,
+          mpCost: 5,
+          damageType: testCase.damageType,
+          effect: testCase.effect,
+          aoeRadius: testCase.aoeRadius
+        }, 1);
+
+        assert.deepStrictEqual(battleSkill.selfBuff, testCase.expectedBuff, testCase.id);
+        assert.strictEqual(battleSkill.buffDuration, 3, testCase.id);
+        assert.strictEqual(battleSkill.effect, testCase.effect, testCase.id);
+        assert.strictEqual(isExecutableLegacyNpcSkill(battleSkill), true, testCase.id);
+        if (testCase.expectedTarget) {
+          assert.strictEqual(battleSkill[testCase.expectedTarget], true, testCase.id);
+        } else {
+          assert.strictEqual(battleSkill.targetSelf, undefined, testCase.id);
+          assert.strictEqual(battleSkill.targetAlly, undefined, testCase.id);
+          assert.strictEqual(battleSkill.targetAllAllies, undefined, testCase.id);
+        }
+      }
+    });
+
+    it('leaves unsupported legacy buff mechanics unavailable', () => {
+      const unsupportedSkills = [
+        {
+          id: 'construct_fortress',
+          effect: 'immovable'
+        },
+        {
+          id: 'demon_dark_pact',
+          effect: 'attack_up',
+          effectDuration: 5
+        }
+      ];
+
+      for (const skill of unsupportedSkills) {
+        const battleSkill = createBattleSkill({
+          ...skill,
+          name: skill.id,
+          type: 'active',
+          power: 0,
+          range: 0,
+          mpCost: 0,
+          damageType: 'buff'
+        }, 1);
+
+        assert.strictEqual(battleSkill.selfBuff, undefined, skill.id);
+        assert.strictEqual(battleSkill.targetSelf, undefined, skill.id);
+        assert.strictEqual(isExecutableLegacyNpcSkill(battleSkill), false, skill.id);
+      }
+    });
+
+    it('keeps legacy Frenzy offensive while treating berserk as a caster buff', () => {
+      const battleSkill = createBattleSkill({
+        id: 'beast_frenzy',
+        name: 'Frenzy',
+        type: 'active',
+        power: 80,
+        range: 1,
+        mpCost: 15,
+        damageType: 'physical',
+        effect: 'berserk'
+      }, 1);
+
+      assert.strictEqual(battleSkill.power, 80);
+      assert.deepStrictEqual(battleSkill.selfBuff, {
+        type: 'berserk',
+        attack: 1.5,
+        defense: 0.7
+      });
+      assert.strictEqual(battleSkill.buffDuration, 3);
+      assert.strictEqual(battleSkill.effect, 'berserk');
+      assert.strictEqual(battleSkill.targetSelf, undefined);
+      assert.strictEqual(battleSkill.targetAlly, undefined);
+    });
+
+    it('preserves explicit targeting and self-buff metadata on buff skills', () => {
+      const battleSkill = createBattleSkill({
+        id: 'beast_howl',
+        name: 'Custom Howl',
+        type: 'active',
+        power: 0,
+        range: 0,
+        mpCost: 5,
+        damageType: 'support',
+        effect: 'attack_up',
+        aoeRadius: 2,
+        targetAllAllies: true,
+        selfBuff: 'pack_bonus'
+      }, 1);
+
+      assert.strictEqual(battleSkill.targetAllAllies, true);
+      assert.strictEqual(battleSkill.selfBuff, 'pack_bonus');
+      assert.strictEqual(battleSkill.effect, 'attack_up');
+      assert.strictEqual(battleSkill.targetSelf, undefined);
+      assert.strictEqual(battleSkill.targetAlly, undefined);
+    });
   });
 
   describe('passive skill creation', () => {
@@ -767,6 +1028,67 @@ describe('generateEnemySkills', () => {
       assert.ok(Array.isArray(skills), 'Should return array');
       // Should be empty or handle gracefully
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// generateEnemySkillsFromDb
+// ---------------------------------------------------------------------------
+
+describe('generateEnemySkillsFromDb', () => {
+  const originalQuery = pool.query;
+  const makeRow = (skillId, damageType, effect = null) => ({
+    skill_id: skillId,
+    name: skillId,
+    description: '',
+    power: damageType === 'physical' ? 50 : 0,
+    range: damageType === 'physical' ? 1 : 0,
+    mp_cost: 0,
+    damage_type: damageType,
+    effect,
+    effect_chance: 0,
+    effect_duration: 0,
+    aoe_radius: 0,
+    cooldown: 0,
+    priority: 1,
+    unlock_chance: 1,
+    base_skill_level: 1,
+    level_scaling: 0
+  });
+
+  afterEach(() => {
+    pool.query = originalQuery;
+  });
+
+  it('does not let unsupported legacy buffs occupy database skill slots', async () => {
+    pool.query = async () => ({
+      rows: [
+        makeRow('construct_fortress', 'buff', 'immovable'),
+        makeRow('demon_dark_pact', 'buff', 'attack_up'),
+        makeRow('supported_strike_one', 'physical'),
+        makeRow('supported_strike_two', 'physical')
+      ]
+    });
+
+    const skills = await generateEnemySkillsFromDb(1, 1, 1);
+
+    assert.deepStrictEqual(
+      skills.map(skill => skill.id),
+      ['supported_strike_one', 'supported_strike_two']
+    );
+  });
+
+  it('returns null for procedural fallback when every database row is unsupported', async () => {
+    pool.query = async () => ({
+      rows: [
+        makeRow('construct_fortress', 'buff', 'immovable'),
+        makeRow('demon_dark_pact', 'buff', 'attack_up')
+      ]
+    });
+
+    const skills = await generateEnemySkillsFromDb(1, 1, 1);
+
+    assert.strictEqual(skills, null);
   });
 });
 

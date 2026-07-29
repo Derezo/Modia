@@ -376,6 +376,10 @@ async function handleBattleEnd(
         },
         allowedStatuses: ['active']
       }, { client });
+      await battleRewardService.clearAdvancementChallengerStatus(
+        client,
+        committed.envelope
+      );
       if (!committed.idempotent) {
         await consumeBattleInventoryItem(client, consumedInventoryId, userId);
         const participantIds = isPvP

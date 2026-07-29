@@ -30,6 +30,8 @@ let countTargetsInAoe = null;
 let countNearbyEnemies = null;
 let countNearbyAllies = null;
 let findNearestEnemy = null;
+let calculateDamageDealt = null;
+let calculateDamageReceived = null;
 
 try {
   const mod = await import('../../services/ai/utilityFactors.js');
@@ -43,6 +45,8 @@ try {
   countNearbyEnemies = mod.countNearbyEnemies;
   countNearbyAllies = mod.countNearbyAllies;
   findNearestEnemy = mod.findNearestEnemy;
+  calculateDamageDealt = mod.calculateDamageDealt;
+  calculateDamageReceived = mod.calculateDamageReceived;
 } catch (err) {
   importError = err;
 }
@@ -79,6 +83,138 @@ function createUnit(overrides = {}) {
     ...overrides
   };
 }
+
+describe('AI Utility Factors - combat risk and restorative skills', { skip: !canImport }, () => {
+  it('never scores a healing skill as damage', () => {
+    const healer = createUnit({ type: 'enemy' });
+    const ally = createUnit({
+      id: 'ally',
+      type: 'enemy',
+      hp: 40,
+      maxHp: 100
+    });
+    const state = createBattleState([healer, ally]);
+
+    const damage = calculateDamageDealt(
+      healer,
+      ally,
+      { power: 100, healPercent: 30, damageType: 'heal' },
+      state
+    );
+
+    assert.strictEqual(damage, 0);
+  });
+
+  it('does not infer offense from power on an ally-targeted support skill', () => {
+    const healer = createUnit({ type: 'enemy', teamId: 2 });
+    const ally = createUnit({ id: 'ally', type: 'enemy', teamId: 2 });
+    const state = createBattleState([healer, ally]);
+
+    const damage = calculateDamageDealt(
+      healer,
+      ally,
+      { power: 100, targetAlly: true, selfBuff: { defense: 1.5 } },
+      state
+    );
+
+    assert.strictEqual(damage, 0);
+  });
+
+  it('does not infer offense from power on a support-typed skill', () => {
+    const caster = createUnit({ type: 'enemy', teamId: 2 });
+    const opponent = createUnit({ id: 'opponent', type: 'player', teamId: 1 });
+    const state = createBattleState([caster, opponent]);
+
+    const damage = calculateDamageDealt(
+      caster,
+      opponent,
+      { power: 100, damageType: 'support', effect: 'weaken' },
+      state
+    );
+
+    assert.strictEqual(damage, 0);
+  });
+
+  it('still scores an opponent-targeted hybrid skill as damage', () => {
+    const attacker = createUnit({
+      type: 'enemy',
+      teamId: 2,
+      strength: 40,
+      attack: 20
+    });
+    const opponent = createUnit({
+      id: 'opponent',
+      type: 'player',
+      teamId: 1,
+      hp: 200,
+      maxHp: 200,
+      vitality: 10,
+      defense: 5
+    });
+    const state = createBattleState([attacker, opponent]);
+
+    const damage = calculateDamageDealt(
+      attacker,
+      opponent,
+      { power: 120, healPercent: 20, selfBuff: { attack: 1.5 } },
+      state
+    );
+
+    assert.ok(damage > 0);
+  });
+
+  it('scores a threatened tile as riskier than a tile beyond retaliation range', () => {
+    const actor = createUnit({
+      id: 'actor',
+      type: 'enemy',
+      teamId: 2,
+      tileX: 5,
+      tileY: 5,
+      defense: 5,
+      vitality: 10
+    });
+    const opponent = createUnit({
+      id: 'opponent',
+      type: 'player',
+      teamId: 1,
+      tileX: 6,
+      tileY: 5,
+      strength: 40,
+      attack: 30,
+      movement: 3,
+      attackRange: 1,
+      actUsed: false
+    });
+    const state = createBattleState([actor, opponent]);
+
+    const threatened = calculateDamageReceived(actor, 5, 5, state);
+    const safe = calculateDamageReceived(actor, 0, 0, state);
+
+    assert.ok(threatened > 0, `Expected positive threat, got ${threatened}`);
+    assert.ok(threatened > safe, `Threatened ${threatened} should exceed safe ${safe}`);
+  });
+
+  it('ignores opponents that already spent their combat action', () => {
+    const actor = createUnit({
+      id: 'actor',
+      type: 'enemy',
+      teamId: 2,
+      defense: 5,
+      vitality: 10
+    });
+    const opponent = createUnit({
+      id: 'opponent',
+      type: 'player',
+      teamId: 1,
+      tileX: 6,
+      tileY: 5,
+      actUsed: true
+    });
+    const state = createBattleState([actor, opponent]);
+
+    assert.strictEqual(calculateDamageReceived(actor, 5, 5, state), 0);
+  });
+});
 
 describe('AI Utility Factors - calculateMpEfficiency', { skip: !canImport }, () => {
   it('returns neutral (50) for free actions', () => {

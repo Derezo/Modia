@@ -357,8 +357,8 @@ export class ApiClient {
     return this.get(`/advancement/current/${characterId}`);
   }
 
-  acceptAdvancementQuest(characterId, questTemplateId) {
-    return this.post('/advancement/accept', { characterId, questTemplateId });
+  acceptAdvancementQuest(characterId, questTemplateId, nodeId) {
+    return this.post('/advancement/accept', { characterId, questTemplateId, nodeId });
   }
 
   abandonAdvancementQuest(characterId) {
@@ -369,9 +369,10 @@ export class ApiClient {
     return this.get(`/advancement/boss/${characterId}`);
   }
 
-  startBossTrial(characterId) {
+  startBossTrial(characterId, nodeId) {
     return this.post('/advancement/boss/start', {
       characterId,
+      nodeId,
       battleMapCapabilities: getBattleMapCapabilities()
     });
   }

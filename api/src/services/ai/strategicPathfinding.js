@@ -13,6 +13,13 @@ import {
 } from '../../../../shared/pathfinding.js';
 import { createBattleTraversalView } from '../battle/movementService.js';
 
+function getUnitTeamId(unit) {
+  if (unit?.teamId !== undefined && unit?.teamId !== null) {
+    return unit.teamId;
+  }
+  return unit?.type === 'enemy' ? 2 : 1;
+}
+
 /**
  * Calculate strategic path from unit to nearest enemy
  * @param {Object} unit - The AI unit planning movement
@@ -20,7 +27,10 @@ import { createBattleTraversalView } from '../battle/movementService.js';
  * @returns {Object} { path, nextWaypoint, turnsToReach, targetEnemy }
  */
 export function calculateStrategicPath(unit, state) {
-  const enemies = state.units.filter(u => u.type !== unit.type && u.hp > 0);
+  const teamId = getUnitTeamId(unit);
+  const enemies = state.units.filter(u =>
+    getUnitTeamId(u) !== teamId && u.hp > 0
+  );
   if (enemies.length === 0) {
     return { path: null, nextWaypoint: null, turnsToReach: Infinity, targetEnemy: null };
   }

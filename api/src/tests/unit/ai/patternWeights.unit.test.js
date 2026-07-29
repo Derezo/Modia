@@ -26,15 +26,15 @@ const ALL_WEIGHT_KEYS = [
 describe('PatternWeights', () => {
 
   describe('PATTERN_WEIGHTS structure', () => {
-    it('defines exactly 9 patterns', () => {
+    it('defines exactly 10 patterns', () => {
       const patterns = Object.keys(PATTERN_WEIGHTS);
-      assert.strictEqual(patterns.length, 9);
+      assert.strictEqual(patterns.length, 10);
     });
 
     it('includes all expected pattern names', () => {
       const expected = [
         'aggressive', 'defensive', 'support', 'tactical',
-        'pack', 'ambush', 'berserker', 'ranged', 'boss'
+        'pack', 'ambush', 'berserker', 'ranged', 'hit-and-run', 'boss'
       ];
       for (const name of expected) {
         assert.ok(PATTERN_WEIGHTS[name], `Missing pattern: ${name}`);
@@ -114,18 +114,23 @@ describe('PatternWeights', () => {
       assert.strictEqual(getWeights(null).name, 'Aggressive');
       assert.strictEqual(getWeights(undefined).name, 'Aggressive');
     });
+
+    it('returns the dedicated hit-and-run config', () => {
+      assert.strictEqual(getWeights('hit-and-run').name, 'HitAndRun');
+    });
   });
 
   describe('getAvailablePatterns()', () => {
-    it('returns array of 9 pattern names', () => {
+    it('returns array of 10 pattern names', () => {
       const patterns = getAvailablePatterns();
-      assert.strictEqual(patterns.length, 9);
+      assert.strictEqual(patterns.length, 10);
       assert.ok(Array.isArray(patterns));
     });
 
     it('contains all expected patterns', () => {
       const patterns = getAvailablePatterns();
       assert.ok(patterns.includes('aggressive'));
+      assert.ok(patterns.includes('hit-and-run'));
       assert.ok(patterns.includes('boss'));
     });
   });
@@ -134,6 +139,7 @@ describe('PatternWeights', () => {
     it('returns true for valid patterns', () => {
       assert.strictEqual(patternExists('aggressive'), true);
       assert.strictEqual(patternExists('defensive'), true);
+      assert.strictEqual(patternExists('hit-and-run'), true);
       assert.strictEqual(patternExists('boss'), true);
     });
 

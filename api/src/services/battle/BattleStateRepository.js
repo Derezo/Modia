@@ -530,6 +530,57 @@ export class BattleStateRepository {
     return this.envelopeFromRow(result.rows[0]);
   }
 
+  async getAdvancementAttemptSummary({
+    challengerCharacterId,
+    targetClass,
+    nodeId
+  }, { client = null } = {}) {
+    assertBattleId(challengerCharacterId);
+    assertNonEmptyString(targetClass, 'targetClass', 32);
+    assertBattleId(nodeId);
+    const executor = client ?? { query: this.query };
+    const result = await execute(
+      executor,
+      `SELECT COUNT(*)::integer AS attempt_count,
+              COUNT(*) FILTER (
+                WHERE status IN ('active', 'victory')
+              )::integer AS blocking_attempt_count
+       FROM battles
+       WHERE is_advancement_battle = TRUE
+         AND challenger_character_id = $1
+         AND target_class = $2
+         AND node_id = $3`,
+      [challengerCharacterId, targetClass, nodeId]
+    );
+    const row = result.rows[0] ?? {};
+    return deepFreeze({
+      attemptCount: Number(row.attempt_count || 0),
+      hasBlockingAttempt: Number(row.blocking_attempt_count || 0) > 0
+    });
+  }
+
+  async persistAdvancementIdentity(
+    battleId,
+    {
+      targetClass,
+      guildmasterTemplateId
+    },
+    { client = null } = {}
+  ) {
+    assertBattleId(battleId);
+    assertNonEmptyString(targetClass, 'targetClass', 32);
+    assertBattleId(guildmasterTemplateId);
+    const executor = client ?? { query: this.query };
+    return execute(
+      executor,
+      `UPDATE battles
+       SET target_class = $1,
+           guildmaster_template_id = $2
+       WHERE id = $3`,
+      [targetClass, guildmasterTemplateId, battleId]
+    );
+  }
+
   async createBattle({
     battleType,
     status = 'active',

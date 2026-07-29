@@ -41,10 +41,154 @@ export function resolveAdvancementSkills(characterClass, learnedSkills) {
 }
 
 /**
+ * Resolve the opponent template independently from the class awarded on win.
+ */
+export function resolveGuildmasterOpponentClass(targetClass, bossConfig) {
+  const configuredClass = bossConfig?.guildmaster_class;
+  return typeof configuredClass === 'string' && configuredClass.trim().length > 0
+    ? configuredClass
+    : targetClass;
+}
+
+/**
+ * Persist the advancement identity needed to authorize quest completion.
+ */
+export async function persistAdvancementBattleIdentity(
+  client,
+  battleId,
+  targetClass,
+  guildmasterTemplateId
+) {
+  if (!client || typeof client.query !== 'function') {
+    throw new TypeError('persistAdvancementBattleIdentity requires a pg client');
+  }
+  return battleStateRepository.persistAdvancementIdentity(
+    battleId,
+    {
+      targetClass,
+      guildmasterTemplateId
+    },
+    { client }
+  );
+}
+
+/**
+ * Build a key that deduplicates one concrete boss-trial attempt without
+ * permanently aliasing later retries to a completed battle.
+ */
+export function buildGuildmasterCreationKey({
+  userId,
+  challengerId,
+  targetClass,
+  nodeId,
+  attempt
+}) {
+  return [
+    'guildmaster',
+    userId,
+    challengerId,
+    targetClass,
+    nodeId,
+    'attempt',
+    attempt
+  ].join(':');
+}
+
+/**
+ * Serialize boss-trial creation for a character and allocate the next attempt.
+ * The character lock prevents two rapid start requests from both creating an
+ * active battle, while completed/defeated battles remain available as history.
+ */
+export async function reserveGuildmasterBattleAttempt(
+  client,
+  {
+    userId,
+    challengerId,
+    advancementQuestId,
+    targetClass,
+    nodeId
+  }
+) {
+  if (!client || typeof client.query !== 'function') {
+    throw new TypeError('reserveGuildmasterBattleAttempt requires a pg client');
+  }
+
+  const characterResult = await client.query(
+    `SELECT c.id, c.user_id, c.class, c.current_node_id, c.in_battle,
+            wn.node_type, wn.guild_class AS node_guild_id
+     FROM characters c
+     LEFT JOIN world_nodes wn ON wn.id = c.current_node_id
+     WHERE c.id = $1
+     FOR UPDATE OF c`,
+    [challengerId]
+  );
+  if (characterResult.rows.length === 0) {
+    throw new Error('Character not found');
+  }
+  const character = characterResult.rows[0];
+  if (character.in_battle) {
+    const error = new Error('Character is already in battle');
+    error.code = 'ADVANCEMENT_BATTLE_ALREADY_ACTIVE';
+    throw error;
+  }
+
+  const questResult = await client.query(
+    `SELECT cq.id AS quest_id,
+            aqt.guild_id, aqt.target_class, aqt.prerequisite_class
+     FROM character_quests cq
+     JOIN advancement_quest_templates aqt
+       ON aqt.id = cq.quest_template_id
+     WHERE cq.character_id = $1
+       AND cq.status = 'boss_ready'
+     FOR UPDATE OF cq`,
+    [challengerId]
+  );
+  const quest = questResult.rows[0];
+  const expectedCurrentClass = quest?.prerequisite_class ?? quest?.guild_id;
+  const stateIsCurrent = (
+    quest
+    && character.user_id === userId
+    && character.current_node_id === nodeId
+    && character.node_type === 'guild'
+    && character.node_guild_id === quest.guild_id
+    && quest.quest_id === advancementQuestId
+    && quest.target_class === targetClass
+    && character.class === expectedCurrentClass
+  );
+  if (!stateIsCurrent) {
+    const error = new Error(
+      'Advancement trial is no longer ready. Refresh the guild and try again.'
+    );
+    error.code = 'ADVANCEMENT_BATTLE_STATE_CHANGED';
+    throw error;
+  }
+
+  const attemptSummary = await battleStateRepository.getAdvancementAttemptSummary(
+    {
+      challengerCharacterId: challengerId,
+      targetClass,
+      nodeId
+    },
+    { client }
+  );
+  if (attemptSummary.hasBlockingAttempt) {
+    const error = new Error(
+      'The guildmaster trial is already active or its victory is being finalized.'
+    );
+    error.code = 'ADVANCEMENT_BATTLE_STATE_CHANGED';
+    throw error;
+  }
+
+  return attemptSummary.attemptCount + 1;
+}
+
+/**
  * Generate a guildmaster battle for advancement
  * @param {Object} character - Character attempting advancement
  * @param {string} targetClass - Class to advance to
  * @param {number} nodeId - Guild node ID where battle takes place
+ * @param {Object} options - Battle generation options
+ * @param {Object|null} options.bossConfig - Active quest boss configuration
  * @returns {Object} Battle state and configuration
  */
 export async function generateGuildmasterBattle(
@@ -52,18 +196,25 @@ export async function generateGuildmasterBattle(
   targetClass,
   nodeId,
   {
+    bossConfig = null,
+    advancementQuestId = null,
     clientCapabilities = null,
     allowV2 = isBattleMapV2EnabledForMode('guild')
   } = {}
 ) {
+  const opponentClass = resolveGuildmasterOpponentClass(
+    targetClass,
+    bossConfig
+  );
+
   // Get guildmaster template from database
   const templateResult = await query(
     'SELECT * FROM guildmaster_templates WHERE guild_class = $1',
-    [targetClass]
+    [opponentClass]
   );
 
   if (templateResult.rows.length === 0) {
-    throw new Error(`No guildmaster template found for class: ${targetClass}`);
+    throw new Error(`No guildmaster template found for class: ${opponentClass}`);
   }
 
   const guildmasterTemplate = templateResult.rows[0];
@@ -150,6 +301,7 @@ export async function generateGuildmasterBattle(
     nodeId,
     guildmasterTemplate,
     isAdvancementBattle: true,
+    advancementQuestId,
     targetClass,
     challengerId: character.id
   };
@@ -492,6 +644,7 @@ export async function createGuildmasterBattleRecord(battleConfig, userId) {
     finalMap,
     legacyFlatState,
     isAdvancementBattle,
+    advancementQuestId,
     targetClass,
     challengerId,
     nodeId
@@ -499,15 +652,22 @@ export async function createGuildmasterBattleRecord(battleConfig, userId) {
   const mutableState = extractBattleMutableState(
     initialState ?? generatedMutableState
   );
-  const creationIdempotencyKey = [
-    'guildmaster',
-    userId,
-    challengerId,
-    targetClass,
-    nodeId
-  ].join(':');
 
   const created = await withTransaction(async (client) => {
+    const attempt = await reserveGuildmasterBattleAttempt(client, {
+      userId,
+      challengerId,
+      advancementQuestId,
+      targetClass,
+      nodeId
+    });
+    const creationIdempotencyKey = buildGuildmasterCreationKey({
+      userId,
+      challengerId,
+      targetClass,
+      nodeId,
+      attempt
+    });
     const result = await battleStateRepository.createBattle({
       battleType: 'pve',
       status: 'active',
@@ -520,6 +680,12 @@ export async function createGuildmasterBattleRecord(battleConfig, userId) {
       legacyFlatState,
       initialMutableState: mutableState
     }, { client });
+    await persistAdvancementBattleIdentity(
+      client,
+      result.battleId,
+      targetClass,
+      battleConfig.guildmasterTemplate.id
+    );
     for (const bossState of Object.values(mutableState.bossStates)) {
       await bossService.saveBossEncounter({
         ...bossState,
@@ -540,5 +706,6 @@ export async function createGuildmasterBattleRecord(battleConfig, userId) {
 
 export default {
   generateGuildmasterBattle,
-  createGuildmasterBattleRecord
+  createGuildmasterBattleRecord,
+  reserveGuildmasterBattleAttempt
 };

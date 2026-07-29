@@ -76,6 +76,52 @@ export const CURE_POISON_EFFECTS = Object.freeze(['poison']);
 export const CURE_ALL_EFFECTS = Object.freeze(['poison', 'blind', 'silence', 'slow', 'burn']);
 /** Status effects removed by purify skills (superset of cure_all) */
 export const PURIFY_EFFECTS = Object.freeze(['poison', 'burn', 'blind', 'silence', 'slow', 'stun', 'freeze', 'root']);
+/** Explicit status effects preserved by general cleanse skills */
+export const BENEFICIAL_STATUS_EFFECTS = Object.freeze([
+  'rage',
+  'fortify',
+  'haste',
+  'regen',
+  'regenerate',
+  'attack_up',
+  'defense_up',
+  'magic_shield',
+  'berserk',
+  'frenzy',
+  'reckless',
+  'berserker',
+  'martyr',
+  'final_stand',
+  'mana_shield',
+  'amplify',
+  'elem_shield',
+  'elemental_shield',
+  'invisible',
+  'shadow_arts',
+  'pack_bonus',
+  'unmovable'
+]);
+const BENEFICIAL_STATUS_EFFECT_SET = new Set(BENEFICIAL_STATUS_EFFECTS);
+const ELEMENTAL_RESIST_STATUS_EFFECTS = new Set(
+  Object.values(ELEMENTS)
+    .filter(element => element !== ELEMENTS.PHYSICAL)
+    .map(element => `${element}_resist`)
+);
+
+/**
+ * Identify a beneficial status in either its persisted object or legacy string form.
+ * Elemental resistance buffs are derived from the shared element registry so new
+ * named elements do not require a second status-effect allowlist update.
+ *
+ * @param {Object|string} effect - Status effect object or legacy type string
+ * @returns {boolean} Whether a general cleanse should preserve the effect
+ */
+export function isBeneficialStatusEffect(effect) {
+  const effectType = typeof effect === 'string' ? effect : effect?.type;
+  return BENEFICIAL_STATUS_EFFECT_SET.has(effectType) ||
+    ELEMENTAL_RESIST_STATUS_EFFECTS.has(effectType) ||
+    (effect?.modifiers !== null && typeof effect?.modifiers === 'object');
+}
 
 // Action-prevention status effect lists
 /** Status effects that prevent all actions (move, act, skills) */

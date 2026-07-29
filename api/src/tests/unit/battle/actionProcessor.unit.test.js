@@ -19,6 +19,10 @@ import {
   processAction,
   getAvailableActions
 } from '../../../services/battle/actionProcessor.js';
+import {
+  calculatePhysicalDamage,
+  calculateMagicalDamage
+} from '../../../services/battle/damageCalculator.js';
 
 // =============================================================================
 // checkBattleEnd
@@ -664,6 +668,67 @@ describe('getAvailableActions', () => {
       // Actually looking at the code, it checks canUnitUseSkills before building skills
       assert.ok(!actions.skills || actions.skills.length === 0);
     });
+
+    it('preserves targeting metadata and range zero for AI skill classification', () => {
+      const unit = createTestUnit({
+        type: 'enemy',
+        teamId: 2,
+        skills: [{
+          id: 'party_heal',
+          name: 'Party Heal',
+          type: 'active',
+          mpCost: 0,
+          range: 0,
+          healPercent: 25,
+          targetAllAllies: true
+        }]
+      });
+      const state = createTestState({ units: [unit] });
+
+      const actions = getAvailableActions(unit, state);
+      const [skill] = actions.skills;
+
+      assert.strictEqual(skill.range, 0);
+      assert.strictEqual(skill.mpCost, 0);
+      assert.strictEqual(skill.healPercent, 25);
+      assert.strictEqual(skill.targetAllAllies, true);
+      assert.deepStrictEqual(skill.targets, [{
+        x: unit.tileX,
+        y: unit.tileY,
+        unitId: unit.id,
+        distance: 0
+      }]);
+    });
+
+    it('centers range-zero offensive AoEs on the caster', () => {
+      const unit = createTestUnit({
+        type: 'enemy',
+        teamId: 2,
+        skills: [{
+          id: 'nova',
+          name: 'Nova',
+          type: 'active',
+          mpCost: 10,
+          range: 0,
+          power: 100,
+          aoeRadius: 2
+        }]
+      });
+      const opponent = createTestUnit({
+        id: 'opponent',
+        type: 'player',
+        teamId: 1,
+        tileX: 6,
+        tileY: 5
+      });
+      const state = createTestState({ units: [unit, opponent] });
+
+      const [skill] = getAvailableActions(unit, state).skills;
+
+      assert.strictEqual(skill.range, 0);
+      assert.strictEqual(skill.targets.length, 1);
+      assert.strictEqual(skill.targets[0].unitId, unit.id);
+    });
   });
 
   describe('items availability', () => {
@@ -978,6 +1043,956 @@ describe('processAction - Attack Action', () => {
     assert.strictEqual(result.turnEnded, true);
     assert.strictEqual(attacker.turnPhase, 'done');
     assert.strictEqual(attacker.hasActed, true);
+  });
+});
+
+// =============================================================================
+// processAction - Healing Skill Tests
+// =============================================================================
+
+describe('processAction - Healing Skills', () => {
+  function createSkillTestUnit(overrides = {}) {
+    return {
+      id: 'healer',
+      type: 'enemy',
+      teamId: 2,
+      tileX: 5,
+      tileY: 5,
+      hp: 100,
+      maxHp: 100,
+      mp: 50,
+      maxMp: 50,
+      moveUsed: false,
+      actUsed: false,
+      turnPhase: 'ready',
+      statusEffects: [],
+      skillCooldowns: {},
+      healingDone: 0,
+      class: 'test_healer',
+      skills: [],
+      ...overrides
+    };
+  }
+
+  function createSkillTestState(units) {
+    return {
+      units,
+      mapWidth: 32,
+      mapHeight: 32,
+      terrain: []
+    };
+  }
+
+  const allyHeal = {
+    id: 'test_ally_heal',
+    name: 'Test Ally Heal',
+    type: 'active',
+    range: 3,
+    mpCost: 15,
+    healPercent: 25,
+    targetAlly: true
+  };
+
+  it('executes a DB-shaped self heal and preserves its regeneration effect', () => {
+    const cocoon = {
+      id: 'insect_cocoon',
+      name: 'Cocoon',
+      type: 'active',
+      power: 0,
+      range: 0,
+      mpCost: 15,
+      damageType: 'heal',
+      effect: 'regenerate',
+      effectChance: 1,
+      effectDuration: 3
+    };
+    const insect = createSkillTestUnit({
+      hp: 50,
+      skills: [cocoon]
+    });
+    const state = createSkillTestState([insect]);
+
+    const result = processAction(
+      state,
+      insect,
+      'skill',
+      { x: insect.tileX, y: insect.tileY },
+      cocoon.id
+    );
+
+    assert.strictEqual(result.error, undefined);
+    assert.strictEqual(insect.hp, 70);
+    assert.strictEqual(insect.mp, 35);
+    assert.strictEqual(insect.actUsed, true);
+    assert.strictEqual(result.healing, 20);
+    assert.deepStrictEqual(insect.statusEffects, [{
+      type: 'regenerate',
+      duration: 3
+    }]);
+  });
+
+  it('executes a DB-shaped Heal Ally against the selected injured teammate', () => {
+    const dbHealAlly = {
+      id: 'humanoid_heal_ally',
+      name: 'Heal Ally',
+      type: 'active',
+      power: 0,
+      range: 4,
+      mpCost: 12,
+      damageType: 'heal'
+    };
+    const healer = createSkillTestUnit({ skills: [dbHealAlly] });
+    const ally = createSkillTestUnit({
+      id: 'ally',
+      type: 'npc',
+      tileX: 7,
+      hp: 50,
+      skills: []
+    });
+    const opponent = createSkillTestUnit({
+      id: 'opponent',
+      type: 'player',
+      teamId: 1,
+      tileX: 6,
+      hp: 50,
+      skills: []
+    });
+    const state = createSkillTestState([healer, ally, opponent]);
+
+    const result = processAction(
+      state,
+      healer,
+      'skill',
+      { x: ally.tileX, y: ally.tileY },
+      dbHealAlly.id
+    );
+
+    assert.strictEqual(result.error, undefined);
+    assert.strictEqual(ally.hp, 75);
+    assert.strictEqual(healer.hp, 100);
+    assert.strictEqual(opponent.hp, 50);
+    assert.strictEqual(healer.mp, 38);
+    assert.strictEqual(result.healing, 25);
+    assert.strictEqual(result.targetId, ally.id);
+  });
+
+  it('heals the selected injured ally instead of the full-health caster', () => {
+    const healer = createSkillTestUnit({ skills: [allyHeal] });
+    const ally = createSkillTestUnit({
+      id: 'ally',
+      type: 'npc',
+      tileX: 7,
+      hp: 50,
+      skills: []
+    });
+    const state = createSkillTestState([healer, ally]);
+
+    const result = processAction(
+      state,
+      healer,
+      'skill',
+      { x: ally.tileX, y: ally.tileY },
+      allyHeal.id
+    );
+
+    assert.strictEqual(result.error, undefined);
+    assert.strictEqual(healer.hp, 100);
+    assert.strictEqual(ally.hp, 75);
+    assert.strictEqual(healer.mp, 35);
+    assert.strictEqual(healer.actUsed, true);
+    assert.strictEqual(healer.healingDone, 25);
+    assert.strictEqual(result.healing, 25);
+    assert.strictEqual(result.targetId, ally.id);
+  });
+
+  it('allows an ally-targeted heal to select the caster', () => {
+    const healer = createSkillTestUnit({
+      hp: 50,
+      skills: [allyHeal]
+    });
+    const state = createSkillTestState([healer]);
+
+    const result = processAction(
+      state,
+      healer,
+      'skill',
+      { x: healer.tileX, y: healer.tileY },
+      allyHeal.id
+    );
+
+    assert.strictEqual(result.error, undefined);
+    assert.strictEqual(healer.hp, 75);
+    assert.strictEqual(result.healing, 25);
+    assert.strictEqual(result.targetId, healer.id);
+  });
+
+  it('keeps a pure self heal targeted on the caster', () => {
+    const selfHeal = {
+      id: 'test_self_heal',
+      name: 'Test Self Heal',
+      type: 'active',
+      range: 0,
+      mpCost: 10,
+      healPercent: 20
+    };
+    const healer = createSkillTestUnit({
+      hp: 90,
+      skills: [selfHeal]
+    });
+    const ally = createSkillTestUnit({
+      id: 'ally',
+      tileX: 6,
+      hp: 50,
+      skills: []
+    });
+    const state = createSkillTestState([healer, ally]);
+
+    const result = processAction(
+      state,
+      healer,
+      'skill',
+      { x: ally.tileX, y: ally.tileY },
+      selfHeal.id
+    );
+
+    assert.strictEqual(result.error, undefined);
+    assert.strictEqual(healer.hp, 100);
+    assert.strictEqual(ally.hp, 50);
+    assert.strictEqual(result.healing, 10);
+    assert.strictEqual(healer.healingDone, 10);
+    assert.strictEqual(result.targetId, healer.id);
+  });
+
+  it('applies both enemy damage and the caster buff for a hybrid skill', () => {
+    const frenzy = {
+      id: 'test_frenzy',
+      name: 'Test Frenzy',
+      type: 'active',
+      range: 1,
+      mpCost: 10,
+      power: 120,
+      damageType: 'physical',
+      selfBuff: { attack: 1.5 },
+      buffDuration: 3
+    };
+    const caster = createSkillTestUnit({
+      strength: 40,
+      attack: 20,
+      luck: 0,
+      skills: [frenzy]
+    });
+    const opponent = createSkillTestUnit({
+      id: 'opponent',
+      type: 'player',
+      teamId: 1,
+      tileX: 6,
+      hp: 200,
+      maxHp: 200,
+      vitality: 20,
+      defense: 10,
+      luck: 0,
+      skills: []
+    });
+    const state = createSkillTestState([caster, opponent]);
+
+    const result = processAction(
+      state,
+      caster,
+      'skill',
+      { x: opponent.tileX, y: opponent.tileY },
+      frenzy.id
+    );
+
+    assert.strictEqual(result.error, undefined);
+    assert.ok(result.damage > 0);
+    assert.ok(opponent.hp < 200);
+    assert.strictEqual(caster.mp, 40);
+    assert.deepStrictEqual(caster.statusEffects, [{
+      type: 'test_frenzy_buff',
+      duration: 3,
+      modifiers: { attack: 1.5 }
+    }]);
+  });
+
+  it('applies ally-targeted MP restoration, cleansing, and object buffs', () => {
+    const rally = {
+      id: 'test_rally',
+      name: 'Test Rally',
+      type: 'active',
+      range: 3,
+      mpCost: 5,
+      power: 0,
+      targetAlly: true,
+      mpRestore: 25,
+      cleanse: true,
+      selfBuff: { defense: 1.25 },
+      buffDuration: 2
+    };
+    const caster = createSkillTestUnit({ skills: [rally] });
+    const ally = createSkillTestUnit({
+      id: 'ally',
+      type: 'npc',
+      tileX: 6,
+      mp: 10,
+      maxMp: 100,
+      statusEffects: [
+        { type: 'poison', duration: 3 },
+        { type: 'rage', duration: 2 },
+        { type: 'fortify', duration: 2 },
+        { type: 'haste', duration: 2 },
+        { type: 'regen', duration: 2 },
+        { type: 'attack_up', duration: 2 },
+        { type: 'defense_up', duration: 2 },
+        { type: 'magic_shield', duration: 2 },
+        { type: 'berserk', duration: 2 },
+        'frenzy',
+        { type: 'final_stand', duration: 999 },
+        'shadow_arts',
+        { type: 'pack_bonus', duration: 2 },
+        'regenerate',
+        { type: 'unmovable', duration: 999 },
+        { type: 'fire_resist', duration: 2 },
+        {
+          type: 'existing_dynamic_buff',
+          duration: 2,
+          modifiers: { attack: 1.2 }
+        }
+      ],
+      skills: []
+    });
+    const state = createSkillTestState([caster, ally]);
+
+    const result = processAction(
+      state,
+      caster,
+      'skill',
+      { x: ally.tileX, y: ally.tileY },
+      rally.id
+    );
+
+    assert.strictEqual(result.error, undefined);
+    assert.strictEqual(ally.mp, 35);
+    assert.ok(!ally.statusEffects.some(effect => effect.type === 'poison'));
+    assert.deepStrictEqual(
+      ally.statusEffects
+        .filter(effect =>
+          (typeof effect === 'string' ? effect : effect.type) !==
+            'test_rally_buff'
+        )
+        .map(effect => typeof effect === 'string' ? effect : effect.type),
+      [
+        'rage',
+        'fortify',
+        'haste',
+        'regen',
+        'attack_up',
+        'defense_up',
+        'magic_shield',
+        'berserk',
+        'frenzy',
+        'final_stand',
+        'shadow_arts',
+        'pack_bonus',
+        'regenerate',
+        'unmovable',
+        'fire_resist',
+        'existing_dynamic_buff'
+      ]
+    );
+    assert.deepStrictEqual(
+      ally.statusEffects.find(effect => effect.type === 'test_rally_buff'),
+      {
+        type: 'test_rally_buff',
+        duration: 2,
+        modifiers: { defense: 1.25 }
+      }
+    );
+    assert.strictEqual(result.targetId, ally.id);
+    assert.strictEqual(caster.mp, 45);
+  });
+
+  it('normalizes DB-shaped Howl as a living-allies-only radial buff with no damage', () => {
+    const howl = {
+      id: 'beast_howl',
+      name: 'Howl',
+      type: 'active',
+      range: 0,
+      mpCost: 5,
+      power: 0,
+      damageType: 'support',
+      effect: 'attack_up',
+      effectChance: 1,
+      aoeRadius: 2
+    };
+    const caster = createSkillTestUnit({
+      strength: 60,
+      attack: 20,
+      skills: [howl]
+    });
+    const ally = createSkillTestUnit({
+      id: 'ally',
+      type: 'npc',
+      tileX: 6,
+      skills: []
+    });
+    const opponent = createSkillTestUnit({
+      id: 'opponent',
+      type: 'player',
+      teamId: 1,
+      tileY: 6,
+      skills: []
+    });
+    const deadAlly = createSkillTestUnit({
+      id: 'dead-ally',
+      type: 'npc',
+      tileX: 4,
+      hp: 0,
+      statusEffects: [],
+      skills: []
+    });
+    const state = createSkillTestState([caster, ally, opponent, deadAlly]);
+
+    const result = processAction(
+      state,
+      caster,
+      'skill',
+      { x: opponent.tileX, y: opponent.tileY },
+      howl.id
+    );
+
+    assert.strictEqual(result.error, undefined);
+    assert.strictEqual(result.isAoE, true);
+    assert.strictEqual(result.damage, 0);
+    assert.strictEqual(caster.hp, 100);
+    assert.strictEqual(ally.hp, 100);
+    assert.strictEqual(opponent.hp, 100);
+    assert.deepStrictEqual(caster.statusEffects, [{
+      type: 'attack_up',
+      duration: 3,
+      modifiers: { attack: 1.2 }
+    }]);
+    assert.deepStrictEqual(ally.statusEffects, [{
+      type: 'attack_up',
+      duration: 3,
+      modifiers: { attack: 1.2 }
+    }]);
+    assert.deepStrictEqual(opponent.statusEffects, []);
+    assert.deepStrictEqual(deadAlly.statusEffects, []);
+    assert.strictEqual(caster.mp, 45);
+    assert.deepStrictEqual(
+      result.skillEffects.map(effect => ({
+        type: effect.type,
+        effect: effect.effect,
+        targetId: effect.targetId
+      })),
+      [
+        { type: 'buff', effect: 'attack_up', targetId: caster.id },
+        { type: 'buff', effect: 'attack_up', targetId: ally.id }
+      ]
+    );
+
+    const baseDamage = withSeededRandom(921, () =>
+      calculatePhysicalDamage({ ...caster, statusEffects: [] }, opponent, 100).damage
+    );
+    const buffedDamage = withSeededRandom(921, () =>
+      calculatePhysicalDamage(caster, opponent, 100).damage
+    );
+    assert.ok(buffedDamage > baseDamage);
+  });
+
+  it('normalizes DB-shaped self and ally buffs and rejects opposing ally targets', () => {
+    const ironDefense = {
+      id: 'construct_iron_defense',
+      name: 'Iron Defense',
+      type: 'active',
+      range: 0,
+      mpCost: 10,
+      power: 0,
+      damageType: 'buff',
+      effect: 'defense_up',
+      effectChance: 1
+    };
+    const magicShield = {
+      id: 'humanoid_magic_shield',
+      name: 'Magic Shield',
+      type: 'active',
+      range: 3,
+      mpCost: 15,
+      power: 0,
+      damageType: 'buff',
+      effect: 'magic_shield',
+      effectChance: 1,
+      effectDuration: 3
+    };
+    const caster = createSkillTestUnit({
+      mp: 50,
+      vitality: 60,
+      defense: 20,
+      skills: [ironDefense, magicShield]
+    });
+    const ally = createSkillTestUnit({
+      id: 'ally',
+      type: 'npc',
+      tileX: 6,
+      intelligence: 40,
+      magicDefense: 30,
+      skills: []
+    });
+    const opponent = createSkillTestUnit({
+      id: 'opponent',
+      type: 'player',
+      teamId: 1,
+      tileY: 6,
+      skills: []
+    });
+    const state = createSkillTestState([caster, ally, opponent]);
+
+    const selfResult = processAction(
+      state,
+      caster,
+      'skill',
+      { x: opponent.tileX, y: opponent.tileY },
+      ironDefense.id
+    );
+
+    assert.strictEqual(selfResult.error, undefined);
+    assert.strictEqual(selfResult.damage, 0);
+    assert.deepStrictEqual(caster.statusEffects, [{
+      type: 'defense_up',
+      duration: 3,
+      modifiers: { defense: 1.3 }
+    }]);
+    assert.deepStrictEqual(opponent.statusEffects, []);
+    assert.strictEqual(caster.mp, 40);
+
+    caster.actUsed = false;
+    const rejectedResult = processAction(
+      state,
+      caster,
+      'skill',
+      { x: opponent.tileX, y: opponent.tileY },
+      magicShield.id
+    );
+
+    assert.strictEqual(rejectedResult.error, 'Invalid ally target');
+    assert.strictEqual(caster.mp, 40);
+    assert.strictEqual(caster.actUsed, false);
+    assert.deepStrictEqual(opponent.statusEffects, []);
+
+    const allyResult = processAction(
+      state,
+      caster,
+      'skill',
+      { x: ally.tileX, y: ally.tileY },
+      magicShield.id
+    );
+
+    assert.strictEqual(allyResult.error, undefined);
+    assert.strictEqual(allyResult.damage, 0);
+    assert.deepStrictEqual(ally.statusEffects, [{
+      type: 'magic_shield',
+      duration: 3,
+      modifiers: { magicDefense: 1.3 }
+    }]);
+    assert.deepStrictEqual(opponent.statusEffects, []);
+    assert.strictEqual(caster.mp, 25);
+
+    const physicalAttacker = {
+      ...opponent,
+      strength: 80,
+      attack: 30,
+      statusEffects: []
+    };
+    const undefendedPhysicalDamage = withSeededRandom(432, () =>
+      calculatePhysicalDamage(
+        physicalAttacker,
+        { ...caster, statusEffects: [] },
+        100
+      ).damage
+    );
+    const defendedPhysicalDamage = withSeededRandom(432, () =>
+      calculatePhysicalDamage(physicalAttacker, caster, 100).damage
+    );
+    assert.ok(defendedPhysicalDamage < undefendedPhysicalDamage);
+
+    const magicalAttacker = {
+      ...opponent,
+      intelligence: 80,
+      magicAttack: 30,
+      statusEffects: []
+    };
+    const unshieldedMagicDamage = withSeededRandom(987, () =>
+      calculateMagicalDamage(
+        magicalAttacker,
+        { ...ally, statusEffects: [] },
+        100
+      ).damage
+    );
+    const shieldedMagicDamage = withSeededRandom(987, () =>
+      calculateMagicalDamage(magicalAttacker, ally, 100).damage
+    );
+    assert.ok(shieldedMagicDamage < unshieldedMagicDamage);
+  });
+
+  it('keeps unsupported legacy buffs unavailable and rejects direct execution', () => {
+    const fortress = {
+      id: 'construct_fortress',
+      name: 'Fortress',
+      type: 'active',
+      range: 0,
+      mpCost: 15,
+      power: 0,
+      damageType: 'buff',
+      effect: 'immovable',
+      effectChance: 1
+    };
+    const darkPact = {
+      id: 'demon_dark_pact',
+      name: 'Dark Pact',
+      type: 'active',
+      range: 0,
+      mpCost: 0,
+      power: 0,
+      damageType: 'buff',
+      effect: 'attack_up',
+      effectChance: 1,
+      effectDuration: 5
+    };
+    const caster = createSkillTestUnit({
+      hp: 80,
+      maxHp: 100,
+      mp: 50,
+      skills: [fortress, darkPact]
+    });
+    const state = createSkillTestState([caster]);
+
+    const availableSkillIds = getAvailableActions(caster, state).skills
+      .map(skill => skill.id);
+    assert.deepStrictEqual(availableSkillIds, []);
+
+    for (const skill of [fortress, darkPact]) {
+      const result = processAction(
+        state,
+        caster,
+        'skill',
+        { x: caster.tileX, y: caster.tileY },
+        skill.id
+      );
+
+      assert.strictEqual(result.error, 'Invalid skill', skill.id);
+      assert.strictEqual(caster.hp, 80, skill.id);
+      assert.strictEqual(caster.mp, 50, skill.id);
+      assert.strictEqual(caster.actUsed, false, skill.id);
+      assert.deepStrictEqual(caster.statusEffects, [], skill.id);
+    }
+  });
+
+  it('normalizes DB-shaped Frenzy as enemy damage plus caster-only berserk', () => {
+    const frenzy = {
+      id: 'beast_frenzy',
+      name: 'Frenzy',
+      type: 'active',
+      range: 1,
+      mpCost: 15,
+      power: 80,
+      damageType: 'physical',
+      effect: 'berserk',
+      effectChance: 1
+    };
+    const caster = createSkillTestUnit({
+      strength: 40,
+      attack: 20,
+      vitality: 40,
+      defense: 20,
+      luck: 0,
+      skills: [frenzy]
+    });
+    const opponent = createSkillTestUnit({
+      id: 'opponent',
+      type: 'player',
+      teamId: 1,
+      tileX: 6,
+      hp: 200,
+      maxHp: 200,
+      vitality: 20,
+      defense: 10,
+      luck: 0,
+      skills: []
+    });
+    const state = createSkillTestState([caster, opponent]);
+
+    const result = processAction(
+      state,
+      caster,
+      'skill',
+      { x: opponent.tileX, y: opponent.tileY },
+      frenzy.id
+    );
+
+    assert.strictEqual(result.error, undefined);
+    assert.ok(result.damage > 0);
+    assert.ok(opponent.hp < 200);
+    assert.deepStrictEqual(caster.statusEffects, [{
+      type: 'berserk',
+      duration: 3,
+      modifiers: {
+        attack: 1.5,
+        defense: 0.7
+      }
+    }]);
+    assert.deepStrictEqual(opponent.statusEffects, []);
+    assert.strictEqual(caster.mp, 35);
+
+    const baseOutgoingDamage = withSeededRandom(246, () =>
+      calculatePhysicalDamage({ ...caster, statusEffects: [] }, opponent, 100).damage
+    );
+    const berserkOutgoingDamage = withSeededRandom(246, () =>
+      calculatePhysicalDamage(caster, opponent, 100).damage
+    );
+    assert.ok(berserkOutgoingDamage > baseOutgoingDamage);
+
+    const incomingAttacker = {
+      ...opponent,
+      strength: 80,
+      attack: 30,
+      statusEffects: []
+    };
+    const baseIncomingDamage = withSeededRandom(642, () =>
+      calculatePhysicalDamage(
+        incomingAttacker,
+        { ...caster, statusEffects: [] },
+        100
+      ).damage
+    );
+    const berserkIncomingDamage = withSeededRandom(642, () =>
+      calculatePhysicalDamage(incomingAttacker, caster, 100).damage
+    );
+    assert.ok(berserkIncomingDamage > baseIncomingDamage);
+  });
+
+  it('applies a debuff-only AoE without dealing damage', () => {
+    const smokeBomb = {
+      id: 'test_smoke_bomb',
+      name: 'Test Smoke Bomb',
+      type: 'active',
+      range: 3,
+      mpCost: 0,
+      power: 0,
+      aoeRadius: 1,
+      effect: 'blind',
+      effectDuration: 2,
+      effectChance: 1
+    };
+    const caster = createSkillTestUnit({ skills: [smokeBomb] });
+    const opponent = createSkillTestUnit({
+      id: 'opponent',
+      type: 'player',
+      teamId: 1,
+      tileX: 7,
+      hp: 200,
+      maxHp: 200,
+      skills: []
+    });
+    const state = createSkillTestState([caster, opponent]);
+
+    const result = processAction(
+      state,
+      caster,
+      'skill',
+      { x: opponent.tileX, y: opponent.tileY },
+      smokeBomb.id
+    );
+
+    assert.strictEqual(result.error, undefined);
+    assert.strictEqual(result.isAoE, true);
+    assert.strictEqual(result.damage, 0);
+    assert.strictEqual(opponent.hp, 200);
+    assert.deepStrictEqual(opponent.statusEffects, [{
+      type: 'blind',
+      duration: 2
+    }]);
+    assert.ok(result.skillEffects.some(effect =>
+      effect.type === 'debuff' &&
+      effect.effect === 'blind' &&
+      effect.targetId === opponent.id
+    ));
+  });
+
+  it('applies a damage-free single-target debuff without fallback damage', () => {
+    const frozenTomb = {
+      id: 'test_frozen_tomb',
+      name: 'Test Frozen Tomb',
+      type: 'active',
+      range: 3,
+      mpCost: 10,
+      power: 0,
+      effect: 'freeze',
+      effectDuration: 2,
+      effectChance: 1,
+      cooldown: 3
+    };
+    const caster = createSkillTestUnit({ skills: [frozenTomb] });
+    const opponent = createSkillTestUnit({
+      id: 'opponent',
+      type: 'player',
+      teamId: 1,
+      tileX: 7,
+      hp: 200,
+      maxHp: 200,
+      skills: []
+    });
+    const state = createSkillTestState([caster, opponent]);
+
+    const result = processAction(
+      state,
+      caster,
+      'skill',
+      { x: opponent.tileX, y: opponent.tileY },
+      frozenTomb.id
+    );
+
+    assert.strictEqual(result.error, undefined);
+    assert.strictEqual(result.damage, 0);
+    assert.strictEqual(opponent.hp, 200);
+    assert.deepStrictEqual(opponent.statusEffects, [{
+      type: 'freeze',
+      duration: 2
+    }]);
+    assert.strictEqual(caster.mp, 40);
+    assert.strictEqual(caster.skillCooldowns[frozenTomb.id], 3);
+    assert.ok(result.skillEffects.some(effect =>
+      effect.type === 'debuff' &&
+      effect.effect === 'freeze' &&
+      effect.targetId === opponent.id
+    ));
+  });
+
+  it('reports effective healing for injured and full-health ally targets', () => {
+    const healer = createSkillTestUnit({ skills: [allyHeal] });
+    const ally = createSkillTestUnit({
+      id: 'ally',
+      tileX: 6,
+      hp: 90,
+      skills: []
+    });
+    const state = createSkillTestState([healer, ally]);
+
+    const injuredResult = processAction(
+      state,
+      healer,
+      'skill',
+      { x: ally.tileX, y: ally.tileY },
+      allyHeal.id
+    );
+
+    assert.strictEqual(ally.hp, 100);
+    assert.strictEqual(injuredResult.healing, 10);
+    assert.strictEqual(healer.healingDone, 10);
+
+    healer.actUsed = false;
+    const fullHealthResult = processAction(
+      state,
+      healer,
+      'skill',
+      { x: ally.tileX, y: ally.tileY },
+      allyHeal.id
+    );
+
+    assert.strictEqual(ally.hp, 100);
+    assert.strictEqual(fullHealthResult.healing, 0);
+    assert.strictEqual(healer.healingDone, 10);
+  });
+
+  it('does not spend MP or consume the action for invalid ally targets', () => {
+    const invalidTargets = [
+      {
+        name: 'an opposing unit',
+        target: createSkillTestUnit({
+          id: 'opponent',
+          type: 'player',
+          teamId: 1,
+          tileX: 6,
+          skills: []
+        })
+      },
+      {
+        name: 'a defeated ally',
+        target: createSkillTestUnit({
+          id: 'defeated_ally',
+          tileX: 7,
+          hp: 0,
+          skills: []
+        })
+      }
+    ];
+
+    for (const { name, target } of invalidTargets) {
+      const healer = createSkillTestUnit({ skills: [allyHeal] });
+      const state = createSkillTestState([healer, target]);
+
+      const result = processAction(
+        state,
+        healer,
+        'skill',
+        { x: target.tileX, y: target.tileY },
+        allyHeal.id
+      );
+
+      assert.strictEqual(result.error, 'Invalid ally target', name);
+      assert.strictEqual(healer.mp, 50, name);
+      assert.strictEqual(healer.actUsed, false, name);
+      assert.strictEqual(healer.skillCooldowns[allyHeal.id], undefined, name);
+    }
+  });
+
+  it('applies a zero-cost party heal only to living teammates', () => {
+    const partyHeal = {
+      id: 'test_party_heal',
+      name: 'Test Party Heal',
+      type: 'active',
+      range: 0,
+      mpCost: 0,
+      healPercent: 20,
+      targetAllAllies: true
+    };
+    const healer = createSkillTestUnit({
+      hp: 80,
+      skills: [partyHeal]
+    });
+    const ally = createSkillTestUnit({
+      id: 'ally',
+      type: 'npc',
+      tileX: 20,
+      tileY: 20,
+      hp: 50,
+      skills: []
+    });
+    const opponent = createSkillTestUnit({
+      id: 'opponent',
+      type: 'player',
+      teamId: 1,
+      tileX: 6,
+      hp: 50,
+      skills: []
+    });
+    const state = createSkillTestState([healer, ally, opponent]);
+
+    const result = processAction(
+      state,
+      healer,
+      'skill',
+      { x: opponent.tileX, y: opponent.tileY },
+      partyHeal.id
+    );
+
+    assert.strictEqual(result.error, undefined);
+    assert.strictEqual(healer.hp, 100);
+    assert.strictEqual(ally.hp, 70);
+    assert.strictEqual(opponent.hp, 50);
+    assert.strictEqual(healer.mp, 50);
+    assert.strictEqual(healer.actUsed, true);
+    assert.strictEqual(result.healing, 40);
+    assert.deepStrictEqual(result.targetIds, [healer.id, ally.id]);
   });
 });
 

@@ -6,12 +6,12 @@
  *
  * Factors:
  * - DAMAGE_DEALT: Expected damage from action (0-1000+)
- * - DAMAGE_RECEIVED: Expected incoming damage at position (0-1000+)
+ * - DAMAGE_RECEIVED: Expected incoming damage at position (0-1000+, cost)
  * - KILL_POTENTIAL: Bonus for lethal actions (0/1)
  * - POSITION_QUALITY: Tactical value of position (-100 to +100)
  * - ALLY_SUPPORT: Proximity to friendly units (0-50)
  * - HEALING_VALUE: Value of support actions (0-500)
- * - SURVIVAL_PRIORITY: Self-preservation importance (0-200)
+ * - SURVIVAL_PRIORITY: Urgency/risk from low HP and nearby enemies (0-200, cost)
  * - MP_EFFICIENCY: Value of conserving MP (0-100)
  * - TARGET_PRIORITY: Preference for specific targets (0-100)
  * - strategicPathProgress: Reward for following optimal path to enemies (0-1)
@@ -192,6 +192,28 @@ const PATTERN_WEIGHTS = {
       TARGET_PRIORITY: 1.5,
       strategicPathProgress: 0.15,
       waitingPenalty: -0.15
+    }
+  },
+
+  /**
+   * Hit-and-run pattern - Strikes before retreating to a safer tile
+   * Best for: Skirmishers, rogues, mobile ranged enemies
+   */
+  'hit-and-run': {
+    name: 'HitAndRun',
+    description: 'Attacks opportunistically, then retreats beyond retaliation range',
+    weights: {
+      DAMAGE_DEALT: 1.8,
+      DAMAGE_RECEIVED: 2.0,
+      KILL_POTENTIAL: 1.8,
+      POSITION_QUALITY: 2.2,
+      ALLY_SUPPORT: 0.6,
+      HEALING_VALUE: 0.8,
+      SURVIVAL_PRIORITY: 2.0,
+      MP_EFFICIENCY: 1.2,
+      TARGET_PRIORITY: 1.5,
+      strategicPathProgress: 0.10,
+      waitingPenalty: -0.25
     }
   },
 

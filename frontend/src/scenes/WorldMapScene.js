@@ -921,6 +921,16 @@ export class WorldMapScene extends Scene {
       return;
     }
 
+    // Training grounds opens the guild's focused skill training view
+    if (feature === 'training_ground') {
+      this.game.scenes.switchTo('guildAdvancement', {
+        nodeId: this.currentNode.id,
+        guildClass: this.currentNode.guild_class,
+        activeTab: 'training'
+      });
+      return;
+    }
+
     // Courtyard feature opens the social hub / LFG scene
     if (feature === 'courtyard') {
       this.game.scenes.switchTo('courtyard', { nodeId: this.currentNode.id });

@@ -19,6 +19,22 @@ import {
 } from '../../../../shared/battleMath.js';
 
 /**
+ * Combine object-form status modifiers for an effective combat stat.
+ * Statuses are unique by type, while distinct active effects stack
+ * multiplicatively. Invalid and negative values are ignored.
+ */
+function getStatusStatMultiplier(unit, statName) {
+  if (!Array.isArray(unit?.statusEffects)) return 1;
+
+  return unit.statusEffects.reduce((multiplier, effect) => {
+    const value = effect?.modifiers?.[statName];
+    return typeof value === 'number' && Number.isFinite(value) && value >= 0
+      ? multiplier * value
+      : multiplier;
+  }, 1);
+}
+
+/**
  * Calculate physical damage with diminishing returns defense
  * Formula: (STR + weaponAttack) * skillPower * (1 - defenseReduction) * elementalMod * variance * crit
  * Defense reduction = (VIT + armorDefense) / ((VIT + armorDefense) + 100)
@@ -30,11 +46,15 @@ import {
  */
 export function calculatePhysicalDamage(attacker, defender, skillPower = 100, element = null) {
   // Base attack = strength + equipment attack bonus
-  const attackPower = (attacker.strength || 0) + (attacker.attack || 0);
+  const attackPower = (
+    (attacker.strength || 0) + (attacker.attack || 0)
+  ) * getStatusStatMultiplier(attacker, 'attack');
   const rawDamage = attackPower * (skillPower / 100);
 
   // Defense with diminishing returns: DEF / (DEF + 100)
-  const defensePower = (defender.vitality || 0) + (defender.defense || 0);
+  const defensePower = (
+    (defender.vitality || 0) + (defender.defense || 0)
+  ) * getStatusStatMultiplier(defender, 'defense');
   const defenseReduction = calculateDefenseReduction(defensePower, PHYSICAL_DEFENSE_CONSTANT);
 
   // Apply defense reduction
@@ -85,12 +105,16 @@ export function calculatePhysicalDamage(attacker, defender, skillPower = 100, el
  */
 export function calculateMagicalDamage(attacker, defender, skillPower = 100, element = null) {
   // Base magic attack = intelligence + equipment magic attack bonus
-  const magicAttackPower = (attacker.intelligence || 0) + (attacker.magicAttack || 0);
+  const magicAttackPower = (
+    (attacker.intelligence || 0) + (attacker.magicAttack || 0)
+  ) * getStatusStatMultiplier(attacker, 'magicAttack');
   const rawDamage = magicAttackPower * (skillPower / 100);
 
   // Magic defense with diminishing returns: (INT/2 + MDEF) / (value + 80)
   const defenderInt = defender.intelligence || 0;
-  const magicDefensePower = Math.floor(defenderInt / 2) + (defender.magicDefense || 0);
+  const magicDefensePower = (
+    Math.floor(defenderInt / 2) + (defender.magicDefense || 0)
+  ) * getStatusStatMultiplier(defender, 'magicDefense');
   const defenseReduction = calculateDefenseReduction(magicDefensePower, MAGIC_DEFENSE_CONSTANT);
 
   // Apply defense reduction

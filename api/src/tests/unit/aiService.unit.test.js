@@ -24,16 +24,65 @@ import { resetIdCounter } from './ai/mockHelpers.js';
 
 // Import the AI service - this is the main entry point we're testing
 let decideTurnActions = null;
+let selectUtilityDecision = null;
 let importError = null;
 
 try {
   const mod = await import('../../services/aiService.js');
   decideTurnActions = mod.decideTurnActions;
+  selectUtilityDecision = mod.selectUtilityDecision;
 } catch (err) {
   importError = err;
 }
 
 const canImport = decideTurnActions !== null;
+
+describe('AI Service - utility decision comparison', { skip: !canImport }, () => {
+  const unit = { id: 'enemy' };
+  const state = { units: [unit] };
+  const evaluator = {
+    evaluateSequence(_unit, sequence) {
+      return { score: sequence[0].immediateScore };
+    }
+  };
+
+  it('rejects a lookahead turn that is clearly worse on immediate utility', () => {
+    const quickAction = [{ type: 'attack', immediateScore: 200 }];
+    const lookaheadAction = [{ type: 'wait', immediateScore: 100 }];
+
+    const selection = selectUtilityDecision(
+      { bestAction: quickAction, score: 200 },
+      { action: lookaheadAction, score: 9999 },
+      evaluator,
+      unit,
+      state
+    );
+
+    assert.strictEqual(selection.decision.action, quickAction);
+    assert.match(selection.source, /immediate utility floor/);
+    assert.strictEqual(selection.lookaheadImmediateScore, 100);
+  });
+
+  it('allows a small immediate tradeoff for a stronger future position', () => {
+    const quickAction = [{ type: 'attack', immediateScore: 200 }];
+    const lookaheadAction = [
+      { type: 'attack', immediateScore: 190 },
+      { type: 'move' }
+    ];
+    const lookaheadDecision = { action: lookaheadAction, score: 500 };
+
+    const selection = selectUtilityDecision(
+      { bestAction: quickAction, score: 200 },
+      lookaheadDecision,
+      evaluator,
+      unit,
+      state
+    );
+
+    assert.strictEqual(selection.decision, lookaheadDecision);
+    assert.strictEqual(selection.source, 'lookahead');
+  });
+});
 
 describe('AI Service - decideTurnActions', () => {
   afterEach(() => {

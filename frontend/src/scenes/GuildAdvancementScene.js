@@ -12,16 +12,23 @@ import {
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { Icon } from '../components/Icon.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
+import {
+  buildBossBattleSceneData,
+  formatClassName,
+  getQuestObjectives,
+  isCharacterAtNode,
+  selectGuildCharacter
+} from './guildAdvancementModel.js';
 
 const P = PARCHMENT_COLORS;
 const STYLE_ID = 'guild-advancement-styles';
 
 // Guild names and descriptions
 const GUILD_INFO = {
-  warrior: { name: 'Warriors Guild', icon: '⚔️', description: 'Masters of martial combat and physical prowess' },
-  wizard: { name: 'Mages Guild', icon: '🔮', description: 'Wielders of arcane magic and mystical knowledge' },
-  monk: { name: 'Monks Order', icon: '👊', description: 'Disciples of body and spirit, masters of martial arts' },
-  chemist: { name: 'Alchemists Guild', icon: '⚗️', description: 'Crafters of potions and masters of transmutation' }
+  warrior: { name: "Warriors' Guild", icon: '⚔️', description: 'Masters of martial combat and physical prowess' },
+  wizard: { name: "Wizards' Guild", icon: '🔮', description: 'Wielders of arcane magic and mystical knowledge' },
+  monk: { name: "Monks' Order", icon: '👊', description: 'Disciples of body and spirit, masters of martial arts' },
+  chemist: { name: "Chemists' Guild", icon: '⚗️', description: 'Crafters of potions and masters of transmutation' }
 };
 
 // Tier names for display
@@ -44,6 +51,7 @@ export class GuildAdvancementScene extends Scene {
     this.guildClass = null;
     this.characterId = null;
     this.character = null;
+    this.guildCharacters = [];
 
     // Quest data
     this.availableQuests = [];
@@ -52,33 +60,68 @@ export class GuildAdvancementScene extends Scene {
     this.bossEligibility = null;
 
     // UI state
-    this.activeTab = 'quests'; // 'quests', 'progress', 'guildmaster'
+    this.activeTab = 'quests'; // 'quests', 'progress', 'training', 'guildmaster'
     this.selectedQuest = null;
     this.isLoading = true;
+    this.isBusy = false;
+    this.loadSequence = 0;
+    this.trainingModal = null;
+    this.trainingModalPromise = null;
   }
 
   async enter(data = {}) {
     this.nodeId = data.nodeId;
-    this.guildClass = data.guildClass;
+    this.guildClass = String(data.guildClass || '').toLowerCase();
+    this.activeTab = ['quests', 'progress', 'training', 'guildmaster'].includes(data.activeTab)
+      ? data.activeTab
+      : 'quests';
     this.isLoading = true;
 
-    // Get lead character
-    const party = this.game.state.get('party');
-    if (!party?.formation || party.formation.length === 0) {
-      parchmentToast.error('No Character', 'You need a character to access the guild');
+    // Refresh the roster so class and location checks reflect the server, while
+    // retaining the cached roster as a fallback for transient read failures.
+    let characters = this.game.state.get('characters') || [];
+    try {
+      const result = await this.game.api.getCharacters();
+      characters = result.characters || [];
+      this.game.state.set('characters', characters);
+    } catch (err) {
+      if (characters.length === 0) {
+        console.error('Failed to load characters for the guild:', err);
+        parchmentToast.error('Roster Unavailable', 'Your characters could not be loaded. Please try again.');
+        this.game.scenes.switchTo('worldMap');
+        return;
+      }
+    }
+
+    if (characters.length === 0) {
+      parchmentToast.error('No Characters', 'Create a character before visiting the guild.');
       this.game.scenes.switchTo('worldMap');
       return;
     }
 
-    this.characterId = party.formation[0];
-    const characters = this.game.state.get('characters') || [];
-    this.character = characters.find(c => c.id === this.characterId);
+    const selection = selectGuildCharacter({
+      characters,
+      guildClass: this.guildClass,
+      preferredCharacterId: data.characterId,
+      activeCharacter: this.game.state.get('activeCharacter'),
+      nodeId: this.nodeId
+    });
+    this.guildCharacters = selection.guildCharacters;
+    this.character = selection.character;
 
     if (!this.character) {
-      parchmentToast.error('Character Error', 'Could not find your character');
+      const className = formatClassName(this.guildClass);
+      const hasGuildCharacter = this.guildCharacters.length > 0;
+      parchmentToast.error(
+        hasGuildCharacter ? `${className} Not Present` : `${className} Required`,
+        hasGuildCharacter
+          ? `Bring a ${className} guild character to this guild before entering.`
+          : `You need a ${className} or one of its advanced classes to use this guild.`
+      );
       this.game.scenes.switchTo('worldMap');
       return;
     }
+    this.characterId = this.character.id;
 
     this.abortController = new AbortController();
     this.addStyles();
@@ -96,6 +139,12 @@ export class GuildAdvancementScene extends Scene {
   }
 
   exit() {
+    this.loadSequence += 1;
+    if (this.trainingModal) {
+      this.trainingModal.close();
+      this.trainingModal = null;
+    }
+    this.trainingModalPromise = null;
     if (this.responsiveUnsubscribe) {
       this.responsiveUnsubscribe();
       this.responsiveUnsubscribe = null;
@@ -133,14 +182,24 @@ export class GuildAdvancementScene extends Scene {
   }
 
   async loadData() {
+    const loadSequence = ++this.loadSequence;
+    const characterId = this.characterId;
+    this.isLoading = true;
+    this.availableQuests = [];
+    this.currentQuest = null;
+    this.completedQuests = [];
+    this.bossEligibility = null;
+    if (this.uiElement) this.updateUI();
+
     try {
       const [questsRes, currentRes, historyRes, bossRes] = await Promise.all([
-        this.game.api.getAvailableAdvancementQuests(this.characterId),
-        this.game.api.getCurrentAdvancementQuest(this.characterId),
-        this.game.api.getAdvancementHistory(this.characterId),
-        this.game.api.checkBossTrialEligibility(this.characterId)
+        this.game.api.getAvailableAdvancementQuests(characterId),
+        this.game.api.getCurrentAdvancementQuest(characterId),
+        this.game.api.getAdvancementHistory(characterId),
+        this.game.api.checkBossTrialEligibility(characterId)
       ]);
 
+      if (loadSequence !== this.loadSequence || characterId !== this.characterId) return;
       this.availableQuests = questsRes.availableQuests || [];
       this.currentQuest = currentRes.hasActiveQuest ? currentRes.quest : null;
       this.completedQuests = historyRes.completedQuests || [];
@@ -154,6 +213,7 @@ export class GuildAdvancementScene extends Scene {
 
       this.updateUI();
     } catch (err) {
+      if (loadSequence !== this.loadSequence || characterId !== this.characterId) return;
       console.error('Failed to load advancement data:', err);
       parchmentToast.error('Load Error', 'Failed to load advancement data');
       this.isLoading = false;
@@ -217,6 +277,29 @@ export class GuildAdvancementScene extends Scene {
         text-align: right;
       }
 
+      .character-switcher {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .character-select {
+        min-width: 210px;
+        max-width: 300px;
+        padding: 8px 10px;
+        border: 2px solid ${P.border};
+        border-radius: 5px;
+        background: ${P.light};
+        color: ${P.text.primary};
+        font-family: Georgia, serif;
+        font-size: 13px;
+      }
+
+      .character-select:focus {
+        outline: 2px solid ${P.accent.burgundy};
+        outline-offset: 1px;
+      }
+
       .character-name {
         color: ${P.text.primary};
         font-weight: bold;
@@ -263,6 +346,12 @@ export class GuildAdvancementScene extends Scene {
         box-shadow: 0 -2px 6px rgba(107, 45, 61, 0.3);
       }
 
+      .advancement-tab.busy {
+        cursor: wait;
+        opacity: 0.55;
+        pointer-events: none;
+      }
+
       .advancement-tab .tab-badge {
         background: ${P.state.success};
         color: white;
@@ -281,6 +370,28 @@ export class GuildAdvancementScene extends Scene {
       }
 
       @media (max-width: 768px) {
+        .advancement-header {
+          align-items: flex-start;
+          flex-wrap: wrap;
+          gap: 12px;
+          padding: 12px;
+        }
+        .advancement-header-actions {
+          width: 100%;
+          justify-content: space-between;
+        }
+        .character-select {
+          min-width: 0;
+          max-width: 190px;
+        }
+        .advancement-tabs {
+          padding: 8px 12px;
+          overflow-x: auto;
+        }
+        .advancement-tab {
+          flex: 0 0 auto;
+          padding: 9px 14px;
+        }
         .advancement-content {
           flex-direction: column;
         }
@@ -673,6 +784,51 @@ export class GuildAdvancementScene extends Scene {
         font-size: 13px;
       }
 
+      .training-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .training-feature {
+        padding: 14px;
+        border: 1px solid ${P.border};
+        border-radius: 6px;
+        background: linear-gradient(to bottom, ${P.light}, ${P.mid});
+      }
+
+      .training-feature-title {
+        color: ${P.text.primary};
+        font-weight: bold;
+        margin-bottom: 6px;
+      }
+
+      .training-feature-copy {
+        color: ${P.text.secondary};
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .training-character-card {
+        padding: 16px;
+        border: 2px solid ${P.accent.burgundy};
+        border-radius: 6px;
+        background: ${getParchmentGradient()};
+        text-align: center;
+      }
+
+      .training-character-icon {
+        font-size: 42px;
+        margin-bottom: 8px;
+      }
+
+      .training-hint {
+        color: ${P.text.muted};
+        font-size: 12px;
+        line-height: 1.5;
+        margin-top: 12px;
+      }
+
       /* Themed Scrollbars */
       ${getParchmentScrollbarCSS('.quest-list')}
       ${getParchmentScrollbarCSS('.advancement-list-panel')}
@@ -686,6 +842,12 @@ export class GuildAdvancementScene extends Scene {
 
   createUI() {
     const guildInfo = GUILD_INFO[this.guildClass] || { name: 'Guild Hall', icon: '🏛️', description: '' };
+    const characterOptions = this.guildCharacters.map(character => {
+      const present = isCharacterAtNode(character, this.nodeId);
+      const selected = String(character.id) === String(this.characterId);
+      const label = `${character.name} — Lv.${character.level || 1} ${formatClassName(character.class)}${present ? '' : ' (away)'}`;
+      return `<option value="${character.id}"${selected ? ' selected' : ''}${present ? '' : ' disabled'}>${escapeHtml(label)}</option>`;
+    }).join('');
 
     const container = document.createElement('div');
     container.className = 'advancement-container';
@@ -699,10 +861,17 @@ export class GuildAdvancementScene extends Scene {
             <div class="advancement-subtitle">${guildInfo.description}</div>
           </div>
         </div>
-        <div style="display: flex; align-items: center; gap: 16px;">
-          <div class="character-info">
+        <div class="advancement-header-actions" style="display: flex; align-items: center; gap: 16px;">
+          <div class="character-switcher">
+            <select class="character-select" id="guild-character-select"
+                    aria-label="Character visiting this guild"
+                    ${this.guildCharacters.filter(character => isCharacterAtNode(character, this.nodeId)).length < 2 ? 'disabled' : ''}>
+              ${characterOptions}
+            </select>
+          </div>
+          <div class="character-info" id="selected-character-summary">
             <div class="character-name">${escapeHtml(this.character?.name || 'Unknown')}</div>
-            <div class="character-class">${this.character?.class || 'Unknown'} Lv.${this.character?.level || 1}</div>
+            <div class="character-class">${escapeHtml(formatClassName(this.character?.class))} · Lv.${this.character?.level || 1}</div>
           </div>
           <button class="back-btn" id="back-btn">Back to Map</button>
         </div>
@@ -716,6 +885,9 @@ export class GuildAdvancementScene extends Scene {
         <div class="advancement-tab ${this.activeTab === 'progress' ? 'active' : ''}" data-tab="progress">
           Current Quest
           ${this.currentQuest ? '<span class="tab-badge">1</span>' : ''}
+        </div>
+        <div class="advancement-tab ${this.activeTab === 'training' ? 'active' : ''}" data-tab="training">
+          Training Grounds
         </div>
         <div class="advancement-tab ${this.activeTab === 'guildmaster' ? 'active' : ''}" data-tab="guildmaster">
           Guildmaster
@@ -748,11 +920,21 @@ export class GuildAdvancementScene extends Scene {
     const opts = { signal: this.abortController.signal };
 
     this.uiElement.querySelector('#back-btn')?.addEventListener('click', () => {
+      if (this.isBusy) return;
       this.game.scenes.switchTo('worldMap');
+    }, opts);
+
+    this.uiElement.querySelector('#guild-character-select')?.addEventListener('change', event => {
+      if (this.isBusy) {
+        this.updateCharacterSummary();
+        return;
+      }
+      this.handleCharacterChange(event.target.value);
     }, opts);
 
     this.uiElement.querySelectorAll('.advancement-tab').forEach(tab => {
       tab.addEventListener('click', () => {
+        if (this.isBusy) return;
         this.activeTab = tab.dataset.tab;
         this.selectedQuest = null;
         this.updateUI();
@@ -761,6 +943,8 @@ export class GuildAdvancementScene extends Scene {
   }
 
   updateUI() {
+    if (!this.uiElement) return;
+
     // Update tab states
     this.uiElement.querySelectorAll('.advancement-tab').forEach(tab => {
       tab.classList.toggle('active', tab.dataset.tab === this.activeTab);
@@ -774,10 +958,221 @@ export class GuildAdvancementScene extends Scene {
       case 'progress':
         this.renderQuestProgress();
         break;
+      case 'training':
+        this.renderTrainingGrounds();
+        break;
       case 'guildmaster':
         this.renderGuildmaster();
         break;
     }
+
+    this.updateBusyControls();
+  }
+
+  updateCharacterSummary() {
+    if (!this.uiElement || !this.character) return;
+
+    const select = this.uiElement.querySelector('#guild-character-select');
+    if (select) select.value = String(this.characterId);
+
+    const nameEl = this.uiElement.querySelector('#selected-character-summary .character-name');
+    const classEl = this.uiElement.querySelector('#selected-character-summary .character-class');
+    if (nameEl) nameEl.textContent = this.character.name || 'Unknown';
+    if (classEl) {
+      classEl.textContent = `${formatClassName(this.character.class)} · Lv.${this.character.level || 1}`;
+    }
+  }
+
+  async handleCharacterChange(characterId) {
+    if (this.isBusy) {
+      this.updateCharacterSummary();
+      return;
+    }
+
+    const nextCharacter = this.guildCharacters.find(character => (
+      String(character.id) === String(characterId)
+      && isCharacterAtNode(character, this.nodeId)
+    ));
+    if (!nextCharacter || String(nextCharacter.id) === String(this.characterId)) {
+      this.updateCharacterSummary();
+      return;
+    }
+
+    this.character = nextCharacter;
+    this.characterId = nextCharacter.id;
+    this.selectedQuest = null;
+    this.updateCharacterSummary();
+    await this.loadData();
+  }
+
+  async refreshSelectedCharacter() {
+    try {
+      const result = await this.game.api.getCharacters();
+      const characters = result.characters || [];
+      this.game.state.set('characters', characters);
+      const selection = selectGuildCharacter({
+        characters,
+        guildClass: this.guildClass,
+        preferredCharacterId: this.characterId,
+        nodeId: this.nodeId
+      });
+      this.guildCharacters = selection.guildCharacters;
+      if (selection.character) {
+        this.character = selection.character;
+        this.characterId = selection.character.id;
+        this.updateCharacterSummary();
+      }
+    } catch (err) {
+      console.warn('Failed to refresh guild character after training:', err);
+    }
+  }
+
+  renderTrainingGrounds() {
+    const listHeader = this.uiElement.querySelector('#list-header');
+    const listEl = this.uiElement.querySelector('#quest-list');
+    const detailEl = this.uiElement.querySelector('#detail-content');
+    const className = formatClassName(this.character?.class);
+
+    listHeader.textContent = 'Training Grounds';
+    listEl.innerHTML = `
+      <div class="training-panel">
+        <div class="training-character-card">
+          <div class="training-character-icon">📖</div>
+          <div class="quest-name">${escapeHtml(this.character?.name || 'Unknown')}</div>
+          <div class="quest-target">Level ${this.character?.level || 1} ${escapeHtml(className)}</div>
+        </div>
+        <div class="training-feature">
+          <div class="training-feature-title">Develop your abilities</div>
+          <div class="training-feature-copy">
+            Spend earned experience to learn new skills or strengthen known ones.
+            Training includes abilities from your base class and every authored
+            class tier you have earned.
+          </div>
+        </div>
+        <div class="training-feature">
+          <div class="training-feature-title">Prepare for advancement</div>
+          <div class="training-feature-copy">
+            Build a skill set that suits your party before accepting an
+            advancement quest or challenging the guildmaster.
+          </div>
+        </div>
+      </div>
+    `;
+
+    detailEl.innerHTML = `
+      <div class="detail-header">
+        <div class="detail-name">Skill Training</div>
+        <div class="detail-class">${escapeHtml(className)}</div>
+      </div>
+      <div class="requirements-section">
+        <div class="requirements-title">Training Profile</div>
+        <div class="requirement-item">
+          <span class="requirement-label">Current Class</span>
+          <span class="requirement-value">${escapeHtml(className)}</span>
+        </div>
+        <div class="requirement-item">
+          <span class="requirement-label">Character Level</span>
+          <span class="requirement-value">${this.character?.level || 1}</span>
+        </div>
+        <div class="requirement-item">
+          <span class="requirement-label">Completed Advancements</span>
+          <span class="requirement-value">${this.completedQuests.length}</span>
+        </div>
+      </div>
+      <div class="training-hint">
+        The training ledger shows available experience, prerequisites, learned
+        levels, and the full skill path currently available to this character.
+      </div>
+      <div class="detail-actions">
+        <button class="action-btn primary" id="open-training-btn">
+          Open Skill Training
+        </button>
+      </div>
+    `;
+
+    const opts = { signal: this.abortController.signal };
+    detailEl.querySelector('#open-training-btn')?.addEventListener(
+      'click',
+      () => this.openTrainingGrounds(),
+      opts
+    );
+  }
+
+  async openTrainingGrounds() {
+    if (this.trainingModal || this.trainingModalPromise) return;
+
+    const sceneController = this.abortController;
+    const characterId = this.characterId;
+    const opening = (async () => {
+      const { CharacterModal } = await import('../components/modals/CharacterModal.js');
+      if (
+        !sceneController
+        || sceneController.signal.aborted
+        || this.abortController !== sceneController
+        || !this.uiElement
+        || characterId !== this.characterId
+      ) {
+        return;
+      }
+
+      const modal = new CharacterModal({
+        game: this.game,
+        characterId,
+        skillsOnly: true,
+        title: 'Training Grounds',
+        onSkillLevelUp: () => this.refreshSelectedCharacter(),
+        onClose: () => {
+          if (this.trainingModal === modal) this.trainingModal = null;
+        }
+      });
+      this.trainingModal = modal;
+      await modal.open();
+    })();
+    this.trainingModalPromise = opening;
+
+    try {
+      await opening;
+    } catch (err) {
+      this.trainingModal = null;
+      console.error('Failed to open Training Grounds:', err);
+      if (!sceneController?.signal.aborted) {
+        parchmentToast.error('Training Unavailable', 'Skill training could not be opened.');
+      }
+    } finally {
+      if (this.trainingModalPromise === opening) {
+        this.trainingModalPromise = null;
+      }
+    }
+  }
+
+  setBusy(isBusy) {
+    this.isBusy = isBusy;
+    this.updateBusyControls();
+  }
+
+  updateBusyControls() {
+    if (!this.uiElement) return;
+
+    this.uiElement.querySelectorAll('.action-btn[id]').forEach(button => {
+      button.disabled = this.isBusy;
+    });
+
+    const presentCharacterCount = this.guildCharacters.filter(character => (
+      isCharacterAtNode(character, this.nodeId)
+    )).length;
+    const selector = this.uiElement.querySelector('#guild-character-select');
+    if (selector) {
+      selector.disabled = this.isBusy || presentCharacterCount < 2;
+      selector.setAttribute('aria-busy', String(this.isBusy));
+    }
+
+    const backButton = this.uiElement.querySelector('#back-btn');
+    if (backButton) backButton.disabled = this.isBusy;
+
+    this.uiElement.querySelectorAll('.advancement-tab').forEach(tab => {
+      tab.classList.toggle('busy', this.isBusy);
+      tab.setAttribute('aria-disabled', String(this.isBusy));
+    });
   }
 
   renderQuestBoard() {
@@ -831,17 +1226,18 @@ export class GuildAdvancementScene extends Scene {
       <div class="quest-card ${this.selectedQuest?.id === quest.id ? 'selected' : ''}"
            data-quest-id="${quest.id}">
         <div class="quest-header">
-          <div class="quest-name">${quest.questName}</div>
+          <div class="quest-name">${escapeHtml(quest.questName || 'Advancement Quest')}</div>
           <div class="quest-tier tier-${quest.tier}">${TIER_NAMES[quest.tier - 1] || `T${quest.tier}`}</div>
         </div>
-        <div class="quest-target">Advance to: ${quest.targetClass.replace('_', ' ')}</div>
-        <div class="quest-desc">${quest.questDescription}</div>
+        <div class="quest-target">Advance to: ${escapeHtml(formatClassName(quest.targetClass))}</div>
+        <div class="quest-desc">${escapeHtml(quest.questDescription || '')}</div>
       </div>
     `).join('');
 
     // Add click handlers
     listEl.querySelectorAll('.quest-card').forEach(card => {
       card.addEventListener('click', () => {
+        if (this.isBusy) return;
         const questId = parseInt(card.dataset.questId);
         this.selectedQuest = this.availableQuests.find(q => q.id === questId);
         this.renderQuestBoard();
@@ -878,15 +1274,44 @@ export class GuildAdvancementScene extends Scene {
     listEl.innerHTML = `
       <div class="quest-card selected">
         <div class="quest-header">
-          <div class="quest-name">${quest.questName}</div>
+          <div class="quest-name">${escapeHtml(quest.questName || 'Advancement Quest')}</div>
           <div class="quest-tier tier-${quest.tier}">${TIER_NAMES[quest.tier - 1] || `T${quest.tier}`}</div>
         </div>
-        <div class="quest-target">Advance to: ${quest.targetClass.replace('_', ' ')}</div>
-        <div class="quest-desc">${quest.questDescription}</div>
+        <div class="quest-target">Advance to: ${escapeHtml(formatClassName(quest.targetClass))}</div>
+        <div class="quest-desc">${escapeHtml(quest.questDescription || '')}</div>
       </div>
     `;
 
     this.renderProgressDetail(quest);
+  }
+
+  renderObjectiveSections(quest) {
+    const objectives = getQuestObjectives(quest);
+    const groups = [
+      ['Materials', objectives.materials],
+      ['Combat', objectives.enemies],
+      ['Exploration', objectives.nodes]
+    ];
+
+    return groups
+      .filter(([, items]) => items.length > 0)
+      .map(([title, items]) => `
+        <div class="requirements-section">
+          <div class="requirements-title">${title}</div>
+          ${items.map(item => `
+            <div class="requirement-item">
+              <span class="requirement-label">${escapeHtml(item.label)}</span>
+              <span class="requirement-value ${item.complete ? 'complete' : 'incomplete'}">
+                ${item.current}/${item.required}
+              </span>
+            </div>
+            <div class="progress-bar-container">
+              <div class="progress-bar-fill" style="width: ${item.percentage}%"></div>
+            </div>
+          `).join('')}
+        </div>
+      `)
+      .join('');
   }
 
   renderProgressDetail(quest) {
@@ -897,107 +1322,25 @@ export class GuildAdvancementScene extends Scene {
       return;
     }
 
-    const { materialProgress, enemyProgress, nodeProgress } = quest;
-
-    let requirementsHtml = '';
-
-    // Material requirements
-    if (quest.materialRequirements?.length > 0) {
-      const matItems = quest.materialRequirements.map(req => {
-        const current = materialProgress?.[req.itemId] || 0;
-        const complete = current >= req.quantity;
-        const pct = Math.min(100, (current / req.quantity) * 100);
-        return `
-          <div class="requirement-item">
-            <span class="requirement-label">${req.name || req.itemId}</span>
-            <span class="requirement-value ${complete ? 'complete' : 'incomplete'}">
-              ${current}/${req.quantity}
-            </span>
-          </div>
-          <div class="progress-bar-container">
-            <div class="progress-bar-fill" style="width: ${pct}%"></div>
-          </div>
-        `;
-      }).join('');
-
-      requirementsHtml += `
-        <div class="requirements-section">
-          <div class="requirements-title">Materials</div>
-          ${matItems}
-        </div>
-      `;
-    }
-
-    // Enemy requirements
-    if (quest.enemyRequirements?.length > 0) {
-      const enemyItems = quest.enemyRequirements.map(req => {
-        const current = enemyProgress?.[req.type] || 0;
-        const complete = current >= req.count;
-        const pct = Math.min(100, (current / req.count) * 100);
-        return `
-          <div class="requirement-item">
-            <span class="requirement-label">Defeat ${req.type}</span>
-            <span class="requirement-value ${complete ? 'complete' : 'incomplete'}">
-              ${current}/${req.count}
-            </span>
-          </div>
-          <div class="progress-bar-container">
-            <div class="progress-bar-fill" style="width: ${pct}%"></div>
-          </div>
-        `;
-      }).join('');
-
-      requirementsHtml += `
-        <div class="requirements-section">
-          <div class="requirements-title">Combat</div>
-          ${enemyItems}
-        </div>
-      `;
-    }
-
-    // Node requirements
-    if (quest.nodeRequirements?.length > 0) {
-      const nodeItems = quest.nodeRequirements.map(req => {
-        const visited = nodeProgress?.[req.nodeType] || 0;
-        const complete = visited >= req.count;
-        const pct = Math.min(100, (visited / req.count) * 100);
-        return `
-          <div class="requirement-item">
-            <span class="requirement-label">Visit ${req.nodeType} nodes</span>
-            <span class="requirement-value ${complete ? 'complete' : 'incomplete'}">
-              ${visited}/${req.count}
-            </span>
-          </div>
-          <div class="progress-bar-container">
-            <div class="progress-bar-fill" style="width: ${pct}%"></div>
-          </div>
-        `;
-      }).join('');
-
-      requirementsHtml += `
-        <div class="requirements-section">
-          <div class="requirements-title">Exploration</div>
-          ${nodeItems}
-        </div>
-      `;
-    }
+    const requirementsHtml = this.renderObjectiveSections(quest);
 
     const canStartBoss = this.bossEligibility?.eligible;
+    const targetClass = formatClassName(quest.targetClass);
 
     detailEl.innerHTML = `
       <div class="detail-header">
-        <div class="detail-name">${quest.questName}</div>
-        <div class="detail-class">${quest.targetClass.replace('_', ' ')}</div>
+        <div class="detail-name">${escapeHtml(quest.questName || 'Advancement Quest')}</div>
+        <div class="detail-class">${escapeHtml(targetClass)}</div>
       </div>
 
       ${requirementsHtml || '<div class="empty-message">No requirements</div>'}
 
       <div class="rewards-section">
         <div class="rewards-title">Rewards</div>
-        <div class="reward-item"><span class="reward-icon">⭐</span> Class: ${quest.targetClass.replace('_', ' ')}</div>
+        <div class="reward-item"><span class="reward-icon">⭐</span> Class: ${escapeHtml(targetClass)}</div>
         ${quest.rewards?.gold ? `<div class="reward-item"><span class="reward-icon">${Icon.html('resources', 'gold', { size: 'sm' })}</span> ${quest.rewards.gold} Gold</div>` : ''}
         ${quest.rewards?.xp ? `<div class="reward-item"><span class="reward-icon">✨</span> ${quest.rewards.xp} XP</div>` : ''}
-        ${quest.rewards?.title ? `<div class="reward-item"><span class="reward-icon">🏆</span> Title: ${quest.rewards.title}</div>` : ''}
+        ${quest.rewards?.title ? `<div class="reward-item"><span class="reward-icon">🏆</span> Title: ${escapeHtml(quest.rewards.title)}</div>` : ''}
       </div>
 
       <div class="detail-actions">
@@ -1028,70 +1371,23 @@ export class GuildAdvancementScene extends Scene {
       return;
     }
 
-    let requirementsHtml = '';
-
-    // Material requirements
-    if (quest.materialRequirements?.length > 0) {
-      const items = quest.materialRequirements.map(req => `
-        <div class="requirement-item">
-          <span class="requirement-label">${req.name || req.itemId}</span>
-          <span class="requirement-value incomplete">0/${req.quantity}</span>
-        </div>
-      `).join('');
-      requirementsHtml += `
-        <div class="requirements-section">
-          <div class="requirements-title">Materials Required</div>
-          ${items}
-        </div>
-      `;
-    }
-
-    // Enemy requirements
-    if (quest.enemyRequirements?.length > 0) {
-      const items = quest.enemyRequirements.map(req => `
-        <div class="requirement-item">
-          <span class="requirement-label">Defeat ${req.type}</span>
-          <span class="requirement-value incomplete">0/${req.count}</span>
-        </div>
-      `).join('');
-      requirementsHtml += `
-        <div class="requirements-section">
-          <div class="requirements-title">Combat Requirements</div>
-          ${items}
-        </div>
-      `;
-    }
-
-    // Node requirements
-    if (quest.nodeRequirements?.length > 0) {
-      const items = quest.nodeRequirements.map(req => `
-        <div class="requirement-item">
-          <span class="requirement-label">Visit ${req.nodeType} nodes</span>
-          <span class="requirement-value incomplete">0/${req.count}</span>
-        </div>
-      `).join('');
-      requirementsHtml += `
-        <div class="requirements-section">
-          <div class="requirements-title">Exploration Requirements</div>
-          ${items}
-        </div>
-      `;
-    }
+    const requirementsHtml = this.renderObjectiveSections(quest);
+    const targetClass = formatClassName(quest.targetClass);
 
     detailEl.innerHTML = `
       <div class="detail-header">
-        <div class="detail-name">${quest.questName}</div>
-        <div class="detail-class">${quest.targetClass.replace('_', ' ')}</div>
+        <div class="detail-name">${escapeHtml(quest.questName || 'Advancement Quest')}</div>
+        <div class="detail-class">${escapeHtml(targetClass)}</div>
       </div>
 
       ${requirementsHtml || '<div class="empty-message">No specific requirements</div>'}
 
       <div class="rewards-section">
         <div class="rewards-title">Rewards</div>
-        <div class="reward-item"><span class="reward-icon">⭐</span> Class: ${quest.targetClass.replace('_', ' ')}</div>
+        <div class="reward-item"><span class="reward-icon">⭐</span> Class: ${escapeHtml(targetClass)}</div>
         ${quest.rewards?.gold ? `<div class="reward-item"><span class="reward-icon">${Icon.html('resources', 'gold', { size: 'sm' })}</span> ${quest.rewards.gold} Gold</div>` : ''}
         ${quest.rewards?.xp ? `<div class="reward-item"><span class="reward-icon">✨</span> ${quest.rewards.xp} XP</div>` : ''}
-        ${quest.rewards?.title ? `<div class="reward-item"><span class="reward-icon">🏆</span> Title: ${quest.rewards.title}</div>` : ''}
+        ${quest.rewards?.title ? `<div class="reward-item"><span class="reward-icon">🏆</span> Title: ${escapeHtml(quest.rewards.title)}</div>` : ''}
       </div>
 
       <div class="detail-actions">
@@ -1110,6 +1406,11 @@ export class GuildAdvancementScene extends Scene {
     const detailEl = this.uiElement.querySelector('#detail-content');
 
     listHeader.textContent = 'Guildmaster';
+    if (this.isLoading) {
+      listEl.innerHTML = '<div class="empty-message">Consulting the guild records...</div>';
+      detailEl.innerHTML = '<div class="empty-message">Loading advancement status...</div>';
+      return;
+    }
 
     const guildInfo = GUILD_INFO[this.guildClass] || { name: 'Guild', icon: '🏛️' };
 
@@ -1119,7 +1420,7 @@ export class GuildAdvancementScene extends Scene {
     if (this.bossEligibility?.eligible) {
       dialogText = `You have proven yourself worthy, ${this.character?.name}.
         Your quest is complete, and now you must face the final trial.
-        Defeat me in combat to earn the right to advance to ${this.bossEligibility.targetClass?.replace('_', ' ')}.`;
+        Defeat me in combat to earn the right to advance to ${formatClassName(this.bossEligibility.targetClass)}.`;
       actionHtml = `
         <button class="action-btn boss" id="gm-boss-btn">
           Begin Boss Trial
@@ -1134,7 +1435,7 @@ export class GuildAdvancementScene extends Scene {
         </button>
       `;
     } else if (this.character?.level < 10) {
-      dialogText = `Greetings, young ${this.character?.class}. You show promise, but you must first
+      dialogText = `Greetings, young ${formatClassName(this.character?.class)}. You show promise, but you must first
         gain more experience before you can walk the path of advancement.
         Return when you have reached level 10.`;
       actionHtml = `
@@ -1155,13 +1456,13 @@ export class GuildAdvancementScene extends Scene {
       <div class="guildmaster-panel">
         <div class="guildmaster-portrait">
           <div class="guildmaster-icon">${guildInfo.icon}</div>
-          <div class="guildmaster-name">${guildInfo.name.replace(' Guild', '').replace(' Order', '')} Guildmaster</div>
-          <div class="guildmaster-title">Master of the ${guildInfo.name}</div>
+          <div class="guildmaster-name">${escapeHtml(guildInfo.name.replace(' Guild', '').replace(' Order', ''))} Guildmaster</div>
+          <div class="guildmaster-title">Master of the ${escapeHtml(guildInfo.name)}</div>
           ${this.bossEligibility?.eligible ? '<div class="boss-ready-badge">READY FOR TRIAL</div>' : ''}
         </div>
 
         <div class="guildmaster-dialog">
-          <div class="dialog-text">${dialogText}</div>
+          <div class="dialog-text">${escapeHtml(dialogText)}</div>
         </div>
       </div>
     `;
@@ -1181,7 +1482,7 @@ export class GuildAdvancementScene extends Scene {
         </div>
         <div class="requirement-item">
           <span class="requirement-label">Current Class</span>
-          <span class="requirement-value">${this.character?.class || 'Unknown'}</span>
+          <span class="requirement-value">${escapeHtml(formatClassName(this.character?.class))}</span>
         </div>
         <div class="requirement-item">
           <span class="requirement-label">Active Quest</span>
@@ -1211,14 +1512,25 @@ export class GuildAdvancementScene extends Scene {
   }
 
   async handleAcceptQuest(quest) {
+    if (this.isBusy) return;
+    const characterId = this.characterId;
+    this.setBusy(true);
     try {
-      const result = await this.game.api.acceptAdvancementQuest(this.characterId, quest.id);
+      const result = await this.game.api.acceptAdvancementQuest(
+        characterId,
+        quest.id,
+        Number(this.nodeId)
+      );
+      if (characterId !== this.characterId || !this.uiElement) return;
       parchmentToast.success('Quest Accepted', result.message);
       await this.loadData();
+      if (characterId !== this.characterId || !this.uiElement) return;
       this.activeTab = 'progress';
       this.updateUI();
     } catch (err) {
       parchmentToast.error('Failed to Accept', err.message);
+    } finally {
+      this.setBusy(false);
     }
   }
 
@@ -1227,14 +1539,21 @@ export class GuildAdvancementScene extends Scene {
       return;
     }
 
+    if (this.isBusy) return;
+    const characterId = this.characterId;
+    this.setBusy(true);
     try {
-      const result = await this.game.api.abandonAdvancementQuest(this.characterId);
+      const result = await this.game.api.abandonAdvancementQuest(characterId);
+      if (characterId !== this.characterId || !this.uiElement) return;
       parchmentToast.info('Quest Abandoned', result.message);
       await this.loadData();
+      if (characterId !== this.characterId || !this.uiElement) return;
       this.activeTab = 'quests';
       this.updateUI();
     } catch (err) {
       parchmentToast.error('Failed to Abandon', err.message);
+    } finally {
+      this.setBusy(false);
     }
   }
 
@@ -1244,22 +1563,31 @@ export class GuildAdvancementScene extends Scene {
       return;
     }
 
+    if (this.isBusy) return;
+    const characterId = this.characterId;
+    const sceneController = this.abortController;
+    this.setBusy(true);
     try {
-      const result = await this.game.api.startBossTrial(this.characterId);
+      const result = await this.game.api.startBossTrial(
+        characterId,
+        Number(this.nodeId)
+      );
 
-      // Switch to battle scene
-      this.game.scenes.switchTo('battle', {
-        battleId: result.battleId,
-        state: result.state,
-        mapSeed: result.mapSeed,
-        mapWidth: result.mapWidth,
-        mapHeight: result.mapHeight,
-        isBossBattle: true,
-        guildmaster: result.guildmaster,
-        availableActions: result.availableActions
-      });
+      if (
+        characterId !== this.characterId
+        || sceneController?.signal.aborted
+        || sceneController !== this.abortController
+        || !this.uiElement
+      ) {
+        return;
+      }
+
+      // Preserve both the legacy state and negotiated snapshot transports.
+      this.game.scenes.switchTo('battle', buildBossBattleSceneData(result));
     } catch (err) {
       parchmentToast.error('Boss Trial Failed', err.message);
+    } finally {
+      this.setBusy(false);
     }
   }
 

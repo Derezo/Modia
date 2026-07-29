@@ -60,6 +60,57 @@ describe('Lookahead', () => {
     });
   });
 
+  describe('iterativeDeepening()', { skip: !canImport }, () => {
+    it('uses the deepest completed result even when its score is lower', () => {
+      const la = new Lookahead({ maxRounds: 2, timeBudgetMs: 1000 });
+      const state = createMockBattleState(
+        [{ id: 'actor' }],
+        [{ id: 'target' }]
+      );
+      const shallowAction = [{ type: 'attack', targetId: 'target' }];
+      const deepAction = [{ type: 'move', position: { x: 2, y: 2 } }];
+
+      la.search = (_state, _unit, rounds) => rounds === 1
+        ? { action: shallowAction, score: 100 }
+        : { action: deepAction, score: 50 };
+
+      const result = la.iterativeDeepening(
+        state,
+        state.units[0],
+        { evaluateState: () => 0 }
+      );
+
+      assert.strictEqual(result.action, deepAction);
+      assert.strictEqual(result.score, 50);
+    });
+
+    it('keeps the last completed result when a deeper search times out', () => {
+      const la = new Lookahead({ maxRounds: 2, timeBudgetMs: 1000 });
+      const state = createMockBattleState(
+        [{ id: 'actor' }],
+        [{ id: 'target' }]
+      );
+      const completedAction = [{ type: 'attack', targetId: 'target' }];
+      const partialAction = [{ type: 'wait' }];
+
+      la.search = function search(_state, _unit, rounds) {
+        if (rounds === 2) this.searchTimedOut = true;
+        return rounds === 1
+          ? { action: completedAction, score: 25 }
+          : { action: partialAction, score: 100 };
+      };
+
+      const result = la.iterativeDeepening(
+        state,
+        state.units[0],
+        { evaluateState: () => 0 }
+      );
+
+      assert.strictEqual(result.action, completedAction);
+      assert.strictEqual(result.score, 25);
+    });
+  });
+
   describe('isGameOver()', { skip: !canImport }, () => {
     it('returns true when all enemies dead', () => {
       const la = new Lookahead();
@@ -156,14 +207,32 @@ describe('Lookahead', () => {
     it('resets hasActedThisRound flags', () => {
       const la = new Lookahead();
       const state = createMockBattleState(
-        [{ agility: 20, hasActedThisRound: true }],
-        [{ agility: 40, hasActedThisRound: true }]
+        [{ agility: 20, hasActedThisRound: true, moveUsed: true, actUsed: true }],
+        [{ agility: 40, hasActedThisRound: true, moveUsed: true, actUsed: true }]
       );
       la.getFirstActor(state, 'player');
-      // All flags should be reset
+      // All per-turn flags should be reset
       for (const unit of state.units) {
         assert.strictEqual(unit.hasActedThisRound, false);
+        assert.strictEqual(unit.moveUsed, false);
+        assert.strictEqual(unit.actUsed, false);
       }
+    });
+
+    it('decrements active skill cooldowns at a new-round reset', () => {
+      const la = new Lookahead();
+      const state = createMockBattleState(
+        [{ agility: 20, skillCooldowns: { fireball: 2, ready: 0 } }],
+        [{ agility: 40, skillCooldowns: { nova: 1 } }]
+      );
+
+      la.getFirstActor(state, 'player');
+
+      assert.deepStrictEqual(state.units[0].skillCooldowns, {
+        fireball: 1,
+        ready: 0
+      });
+      assert.deepStrictEqual(state.units[1].skillCooldowns, { nova: 0 });
     });
 
     it('returns null when no alive units', () => {
@@ -268,6 +337,162 @@ describe('Lookahead', () => {
       // wait actions (0 type + 0 history = 0)
       assert.strictEqual(ordered[0].type, 'move');
     });
+
+    it('orders and preserves complete action sequences', () => {
+      const la = new Lookahead();
+      const moveAttack = [
+        { type: 'move', position: { x: 6, y: 5 } },
+        { type: 'attack', targetId: 'e1' }
+      ];
+      const ordered = la.orderActions([
+        [{ type: 'wait' }],
+        [{ type: 'move', position: { x: 1, y: 1 } }],
+        moveAttack
+      ], 1);
+
+      assert.strictEqual(ordered[0], moveAttack);
+      assert.deepStrictEqual(ordered[0].map(action => action.type), ['move', 'attack']);
+    });
+  });
+
+  describe('limitActions()', { skip: !canImport }, () => {
+    it('retains support, retreat, and both move/action orderings under a branch cap', () => {
+      const la = new Lookahead();
+      const moveAttacks = Array.from({ length: 6 }, (_, index) => [
+        { type: 'move', position: { x: index + 1, y: 1 } },
+        { type: 'attack', targetId: 'target' }
+      ]);
+      const support = [{
+        type: 'skill',
+        targetId: 'ally',
+        skill: { targetAlly: true, healPercent: 25, power: 0 }
+      }];
+      const attackThenMove = [
+        { type: 'attack', targetId: 'target' },
+        { type: 'move', position: { x: 9, y: 9 } }
+      ];
+      const moveOnly = [{ type: 'move', position: { x: 10, y: 10 } }];
+
+      const limited = la.limitActions([
+        ...moveAttacks,
+        support,
+        attackThenMove,
+        moveOnly,
+        [{ type: 'wait' }]
+      ], 4);
+      const categories = limited.map(action => la.getSequenceCategory(action));
+
+      assert.deepStrictEqual(new Set(categories), new Set([
+        'move>attack',
+        'skill-support',
+        'attack>move',
+        'move'
+      ]));
+    });
+  });
+
+  describe('complete turn sequences', { skip: !canImport }, () => {
+    it('applies every action in literal sequence order', () => {
+      const la = new Lookahead();
+      const state = createMockBattleState(
+        [{ tileX: 5, tileY: 5, strength: 50, attack: 20 }],
+        [{ tileX: 6, tileY: 5, hp: 200, maxHp: 200 }]
+      );
+      const actor = state.units[0];
+      const target = state.units[1];
+
+      la.applyActionSequence(state, actor, [
+        { type: 'attack', targetId: target.id },
+        { type: 'move', position: { x: 4, y: 5 } }
+      ]);
+
+      assert.ok(target.hp < 200);
+      assert.deepStrictEqual(
+        { x: actor.tileX, y: actor.tileY },
+        { x: 4, y: 5 }
+      );
+      assert.strictEqual(actor.actUsed, true);
+      assert.strictEqual(actor.moveUsed, true);
+    });
+
+    it('search evaluates a move and attack before advancing the actor turn', () => {
+      const la = new Lookahead({
+        timeBudgetMs: 1000,
+        decidingActorActions: 5,
+        maxActionsPerActor: 5
+      });
+      const state = createMockBattleState(
+        [{
+          tileX: 5,
+          tileY: 5,
+          movement: 1,
+          attackRange: 1,
+          strength: 999,
+          attack: 999
+        }],
+        [{ tileX: 7, tileY: 5, hp: 10, maxHp: 10 }]
+      );
+      const evaluator = {
+        evaluateState(simulatedState) {
+          return simulatedState.units[1].hp === 0 ? 1000 : 0;
+        }
+      };
+      la.startTime = Date.now();
+
+      const result = la.search(
+        state,
+        state.units[0],
+        1,
+        'player',
+        -Infinity,
+        Infinity,
+        evaluator,
+        true
+      );
+
+      assert.strictEqual(result.score, 1000);
+      assert.deepStrictEqual(
+        result.action.map(action => action.type),
+        ['move', 'attack']
+      );
+    });
+
+    it('restores action rights before simulating the next round', () => {
+      const la = new Lookahead({
+        timeBudgetMs: 1000,
+        decidingActorActions: 1,
+        maxActionsPerActor: 1
+      });
+      const rooted = [{ type: 'root' }];
+      const state = createMockBattleState(
+        [{ tileX: 5, tileY: 5, hp: 500, maxHp: 500, statusEffects: rooted }],
+        [{ tileX: 6, tileY: 5, hp: 500, maxHp: 500, statusEffects: rooted }]
+      );
+      const evaluatedStates = [];
+      const evaluator = {
+        evaluateState(simulatedState) {
+          evaluatedStates.push(simulatedState);
+          return 0;
+        }
+      };
+      la.getEvaluatorForActor = () => evaluator;
+      la.startTime = Date.now();
+
+      la.search(
+        state,
+        state.units[0],
+        2,
+        'player',
+        -Infinity,
+        Infinity,
+        evaluator,
+        true
+      );
+
+      const finalState = evaluatedStates.at(-1);
+      assert.ok(finalState.units[0].hp < 461, 'enemy should attack in both rounds');
+      assert.ok(finalState.units[1].hp < 461, 'player should attack in both rounds');
+    });
   });
 
   describe('reset()', { skip: !canImport }, () => {
@@ -278,6 +503,7 @@ describe('Lookahead', () => {
       la.killerMoves.store(0, { type: 'attack', targetId: 'e1' });
       la.reset();
       assert.strictEqual(la.nodesEvaluated, 0);
+      assert.strictEqual(la.searchTimedOut, false);
       assert.strictEqual(la.transpositionTable.table.size, 0);
       assert.strictEqual(la.killerMoves.get(0).length, 0);
     });
