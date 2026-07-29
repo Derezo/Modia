@@ -547,6 +547,11 @@ export class WorldMapScene extends Scene {
   }
 
   exit() {
+    // SceneManager reuses this scene instance and does not await async enter().
+    // Release the initialized minimap so it cannot render retained node data
+    // against the fresh effects state while the next entry is still loading.
+    this.minimap = null;
+
     // Clean up path system
     if (this.pathSystem) {
       this.pathSystem.destroy();
