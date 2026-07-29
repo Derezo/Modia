@@ -65,11 +65,21 @@ function generateEnemyPositions(count) {
  * @param {string} nodeType - The node type (forest, cave, mountain, etc.)
  * @param {number} difficultyTier - The node's difficulty tier (1-5)
  * @param {number} count - Number of enemies to select
+ * @param {{client?: Object|null}} [options] - Optional transaction client
  * @returns {Promise<Array>} Array of enemy templates
  */
-async function selectEnemiesForEncounter(nodeType, difficultyTier, count) {
+async function selectEnemiesForEncounter(
+  nodeType,
+  difficultyTier,
+  count,
+  { client = null } = {}
+) {
+  const executeQuery = client
+    ? client.query.bind(client)
+    : query;
+
   // Query templates that can spawn at this node type and difficulty
-  const result = await query(
+  const result = await executeQuery(
     `SELECT id, name, sprite_id, base_hp, base_mp, base_strength, base_intelligence, base_agility,
             ai_type, abilities, drop_table, experience_reward, gold_reward_min, gold_reward_max,
             archetype, guild, guild_level, enemy_class, movement, attack_range, spawn_node_types,
@@ -84,7 +94,7 @@ async function selectEnemiesForEncounter(nodeType, difficultyTier, count) {
   // If not enough templates found, pad with generic enemies
   if (result.rows.length < count) {
     // Fallback to any templates at or below current difficulty
-    const fallbackResult = await query(
+    const fallbackResult = await executeQuery(
       `SELECT id, name, sprite_id, base_hp, base_mp, base_strength, base_intelligence, base_agility,
               ai_type, abilities, drop_table, experience_reward, gold_reward_min, gold_reward_max,
               archetype, guild, guild_level, enemy_class, movement, attack_range, spawn_node_types,
@@ -192,11 +202,21 @@ async function createEnemyInstance(template, partyLevel, difficultyTier, index, 
  * @param {number} nodeId - The world node ID
  * @param {Array} party - Array of party characters
  * @param {Array<number>|null} formationCharacterIds - Optional array of character IDs in formation (for level calculation)
+ * @param {{client?: Object|null}} [options] - Optional transaction client
  * @returns {Promise<Array>} Array of enemy unit objects
  */
-async function generateEncounter(nodeId, party, formationCharacterIds = null) {
+async function generateEncounter(
+  nodeId,
+  party,
+  formationCharacterIds = null,
+  { client = null } = {}
+) {
+  const executeQuery = client
+    ? client.query.bind(client)
+    : query;
+
   // Get node info
-  const nodeResult = await query(
+  const nodeResult = await executeQuery(
     'SELECT node_type, difficulty_tier FROM world_nodes WHERE id = $1',
     [nodeId]
   );
@@ -222,7 +242,12 @@ async function generateEncounter(nodeId, party, formationCharacterIds = null) {
   const enemyCount = Math.floor(Math.random() * (range.max - range.min + 1)) + range.min;
 
   // Select templates from database
-  const templates = await selectEnemiesForEncounter(nodeType, difficultyTier, enemyCount);
+  const templates = await selectEnemiesForEncounter(
+    nodeType,
+    difficultyTier,
+    enemyCount,
+    { client }
+  );
 
   // Generate randomized positions for all enemies
   const positions = generateEnemyPositions(enemyCount);

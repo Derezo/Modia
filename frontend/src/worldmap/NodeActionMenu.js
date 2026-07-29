@@ -155,6 +155,12 @@ export class NodeActionMenu {
         background: rgba(139, 115, 85, 0.25);
       }
 
+      .node-action-menu__button:disabled {
+        cursor: wait;
+        opacity: 0.7;
+        transform: none;
+      }
+
       /* Primary button (battle) */
       .node-action-menu__button--primary {
         background: linear-gradient(to bottom, ${PARCHMENT_COLORS.accent.copper}, #9a5f23);
@@ -345,7 +351,16 @@ export class NodeActionMenu {
   rebuildActions(node) {
     this.actionsInner.innerHTML = '';
 
-    let features = node.features || [];
+    let features = Array.isArray(node.features)
+      ? node.features.filter(feature => feature !== 'claim_chest')
+      : [];
+    const chestClaimed = Boolean(node.chest_claimed || node.claimed);
+
+    // Chest rewards are one-time claims and should be the clear primary action.
+    if (node.node_type === 'chest' && !chestClaimed) {
+      const claimBtn = this.createButton('claim_chest', true, node);
+      this.actionsInner.appendChild(claimBtn);
+    }
 
     // Auto-add guild_advancement feature for guild nodes
     if (node.guild_class && !features.includes('guild_advancement')) {
@@ -522,6 +537,9 @@ export class NodeActionMenu {
     if (feature === 'garrison') {
       label = 'Garrison';
     }
+    if (feature === 'claim_chest') {
+      label = 'Collect Treasure';
+    }
 
     // Icon
     const iconContainer = document.createElement('span');
@@ -532,15 +550,19 @@ export class NodeActionMenu {
       const iconHtml = Icon.html(iconInfo.category, iconInfo.name, { size: 'sm' });
       // Extract just the img tag, removing the wrapper span
       iconContainer.innerHTML = iconHtml.replace(/<span[^>]*>([^<]*)<\/span>/g, '');
+    } else if (feature === 'claim_chest') {
+      iconContainer.textContent = '🎁';
     }
     btn.appendChild(iconContainer);
 
     // Label
     const labelSpan = document.createElement('span');
+    labelSpan.dataset.actionLabel = feature;
     labelSpan.textContent = label;
     btn.appendChild(labelSpan);
 
     // Click handler
+    btn.dataset.action = feature;
     btn.addEventListener('click', () => {
       if (this.onAction) {
         this.onAction(feature);
@@ -548,6 +570,22 @@ export class NodeActionMenu {
     }, { signal: this.abortController.signal });
 
     return btn;
+  }
+
+  /**
+   * Toggle the pending state for a menu action.
+   * @param {string} feature
+   * @param {boolean} pending
+   */
+  setActionPending(feature, pending) {
+    const button = this.actionsInner.querySelector(`[data-action="${feature}"]`);
+    if (!button) return;
+
+    button.disabled = pending;
+    const label = button.querySelector(`[data-action-label="${feature}"]`);
+    if (label && feature === 'claim_chest') {
+      label.textContent = pending ? 'Collecting…' : 'Collect Treasure';
+    }
   }
 
   /**

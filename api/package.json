@@ -25,7 +25,7 @@
     "worldgen:corpus:extended": "node src/scripts/worldgen-corpus-report.js --start=1 --end=5000",
     "test:worldgen:corpus": "npm run worldgen:corpus",
     "test:integration": "NODE_ENV=test node --test --test-concurrency=4 src/tests/integration/*.test.js",
-    "test:ratelimit": "NODE_ENV=test TEST_RATE_LIMITS=true node --test --test-concurrency=4 src/tests/ratelimit/*.test.js",
+    "test:ratelimit": "node src/tests/runRateLimitTests.js",
     "test:quick": "npm run test:unit",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:ratelimit",
     "test:ci": "npm run test:unit && npm run test:integration",

@@ -268,6 +268,125 @@ describe('BattleStateRepository', () => {
     );
   });
 
+  it('checks active participant battles without hydrating battle state', async () => {
+    const results = [true, false];
+    const calls = [];
+    const repository = createBattleStateRepository({
+      query: async (sql, params) => {
+        calls.push({ sql, params });
+        return { rows: [{ has_active_battle: results.shift() }] };
+      },
+      withTransaction: async callback => callback({ query: repository.query })
+    });
+
+    assert.equal(await repository.hasActiveBattleForPlayer(11), true);
+    assert.equal(
+      await repository.hasActiveBattleForPlayer(11, { battleType: 'pve' }),
+      false
+    );
+
+    assert.match(calls[0].sql, /SELECT EXISTS/);
+    assert.match(calls[0].sql, /player1_id = \$1/);
+    assert.match(calls[0].sql, /player2_id = \$1/);
+    assert.match(calls[0].sql, /FROM battle_players/);
+    assert.match(calls[0].sql, /status = 'active'/);
+    assert.doesNotMatch(calls[0].sql, /battle_state/);
+    assert.deepEqual(calls[0].params, [11]);
+    assert.match(calls[1].sql, /battle_type = \$2/);
+    assert.deepEqual(calls[1].params, [11, 'pve']);
+  });
+
+  it('uses a supplied client for active participant checks', async () => {
+    let defaultQueryCount = 0;
+    const suppliedCalls = [];
+    const repository = createBattleStateRepository({
+      query: async () => {
+        defaultQueryCount += 1;
+        return { rows: [{ has_active_battle: false }] };
+      },
+      withTransaction: async callback => callback({ query: repository.query })
+    });
+    const client = {
+      async query(sql, params) {
+        suppliedCalls.push({ sql, params });
+        return { rows: [{ has_active_battle: true }] };
+      }
+    };
+
+    assert.equal(
+      await repository.hasActiveBattleForPlayer(23, { client }),
+      true
+    );
+    assert.equal(defaultQueryCount, 0);
+    assert.equal(suppliedCalls.length, 1);
+    assert.deepEqual(suppliedCalls[0].params, [23]);
+  });
+
+  it('checks active battles for validated, deduplicated participant IDs', async () => {
+    const results = [false, true];
+    const calls = [];
+    const repository = createBattleStateRepository({
+      query: async (sql, params) => {
+        calls.push({ sql, params });
+        return { rows: [{ has_active_battle: results.shift() }] };
+      },
+      withTransaction: async callback => callback({ query: repository.query })
+    });
+
+    assert.equal(
+      await repository.hasActiveBattleForAnyPlayer([9, '3', 9]),
+      false
+    );
+    assert.equal(
+      await repository.hasActiveBattleForAnyPlayer([3, 9], {
+        battleType: 'pvp_coliseum'
+      }),
+      true
+    );
+
+    assert.match(calls[0].sql, /player1_id = ANY\(\$1::int\[\]\)/);
+    assert.match(calls[0].sql, /player2_id = ANY\(\$1::int\[\]\)/);
+    assert.match(calls[0].sql, /battle_players\.user_id = ANY\(\$1::int\[\]\)/);
+    assert.deepEqual(calls[0].params, [[3, 9]]);
+    assert.match(calls[1].sql, /battle_type = \$2/);
+    assert.deepEqual(calls[1].params, [[3, 9], 'pvp_coliseum']);
+
+    await assert.rejects(
+      repository.hasActiveBattleForAnyPlayer([]),
+      /userIds must be a non-empty array/
+    );
+    await assert.rejects(
+      repository.hasActiveBattleForAnyPlayer([3, 'invalid']),
+      /positive safe integers/
+    );
+  });
+
+  it('uses a supplied client for bulk active participant checks', async () => {
+    let defaultQueryCount = 0;
+    const suppliedCalls = [];
+    const repository = createBattleStateRepository({
+      query: async () => {
+        defaultQueryCount += 1;
+        return { rows: [{ has_active_battle: false }] };
+      },
+      withTransaction: async callback => callback({ query: repository.query })
+    });
+    const client = {
+      async query(sql, params) {
+        suppliedCalls.push({ sql, params });
+        return { rows: [{ has_active_battle: true }] };
+      }
+    };
+
+    assert.equal(
+      await repository.hasActiveBattleForAnyPlayer([9, 3], { client }),
+      true
+    );
+    assert.equal(defaultQueryCount, 0);
+    assert.equal(suppliedCalls.length, 1);
+    assert.deepEqual(suppliedCalls[0].params, [[3, 9]]);
+  });
+
   it('commits exactly one successor revision and makes a duplicate command idempotent', async () => {
     const client = new MutationClient(createBattleRow());
     const repository = repositoryFor(client);
@@ -474,6 +593,105 @@ describe('BattleStateRepository', () => {
     );
     assert.equal(results[0].stateRevision, 1);
     assert.equal(results[1].stateRevision, 1);
+  });
+
+  it('binds a stable command receipt to caller intent independently of revision', async () => {
+    const client = new MutationClient(createBattleRow());
+    const repository = repositoryFor(client);
+    const initial = await repository.loadBattle(41);
+    const nextState = clone(initial.state);
+    nextState.turn = 2;
+    const idempotencyRequest = {
+      userId: 11,
+      actionType: 'move',
+      unitId: 'unit:1',
+      targetTile: { x: 1, y: 2 },
+      skillId: null,
+      inventoryId: null
+    };
+
+    const committed = await repository.commitLegacyState({
+      battleId: 41,
+      expectedRevision: 0,
+      commandType: 'player_action',
+      idempotencyKey: 'player:11:command:move-1',
+      idempotencyRequest,
+      replayMetadata: {
+        actionResult: { moved: true },
+        battleStatus: 'active',
+        turnContinues: true,
+        availableActions: { canMove: false, canAct: true }
+      },
+      flatState: nextState
+    });
+    assert.deepEqual(committed.replayMetadata.actionResult, { moved: true });
+
+    const receipt = await repository.findCommandReceipt({
+      battleId: 41,
+      commandType: 'player_action',
+      idempotencyKey: 'player:11:command:move-1',
+      idempotencyRequest
+    });
+    assert.equal(receipt.idempotent, true);
+    assert.equal(receipt.baseStateRevision, 0);
+    assert.equal(receipt.stateRevision, 1);
+    assert.deepEqual(receipt.replayMetadata.availableActions, {
+      canMove: false,
+      canAct: true
+    });
+
+    const replay = await repository.commitLegacyState({
+      battleId: 41,
+      expectedRevision: 99,
+      commandType: 'player_action',
+      idempotencyKey: 'player:11:command:move-1',
+      idempotencyRequest,
+      replayMetadata: { actionResult: { moved: false } },
+      flatState: nextState
+    });
+    assert.equal(replay.idempotent, true);
+    assert.deepEqual(replay.replayMetadata.actionResult, { moved: true });
+    assert.equal(client.updateCount, 1);
+  });
+
+  it('rejects a stable command ID reused with different caller intent', async () => {
+    const client = new MutationClient(createBattleRow());
+    const repository = repositoryFor(client);
+    const initial = await repository.loadBattle(41);
+    const nextState = clone(initial.state);
+    nextState.turn = 2;
+    const command = {
+      battleId: 41,
+      expectedRevision: 0,
+      commandType: 'player_action',
+      idempotencyKey: 'player:11:command:conflict',
+      idempotencyRequest: {
+        userId: 11,
+        actionType: 'item',
+        unitId: 'unit:1',
+        targetTile: null,
+        skillId: null,
+        inventoryId: 7
+      },
+      flatState: nextState
+    };
+
+    await repository.commitLegacyState(command);
+
+    await assert.rejects(
+      repository.findCommandReceipt({
+        battleId: 41,
+        commandType: command.commandType,
+        idempotencyKey: command.idempotencyKey,
+        idempotencyRequest: {
+          ...command.idempotencyRequest,
+          inventoryId: 8
+        }
+      }),
+      error => error instanceof BattleStateIdempotencyError
+        && /different request/.test(error.message)
+    );
+    assert.equal(client.updateCount, 1);
   });
 
   it('keeps an omitted terminal timestamp stable in the request fingerprint', async () => {

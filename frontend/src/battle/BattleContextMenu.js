@@ -21,6 +21,7 @@ export class BattleContextMenu {
     // State
     this.canMove = true;
     this.canAct = true;
+    this.canWait = true;
     this.currentUnitMp = 0;
     this.selectedIndex = 0;
 
@@ -404,8 +405,7 @@ export class BattleContextMenu {
     let html = '';
 
     this.menuItems.forEach((item, index) => {
-      const disabled = (item.requiresMove && !this.canMove) ||
-                       (item.requiresAct && !this.canAct);
+      const disabled = !this.canUseAction(item.id, { notify: false });
       const selected = index === this.selectedIndex;
 
       // Add divider before Wait
@@ -433,9 +433,10 @@ export class BattleContextMenu {
   /**
    * Show the context menu at position
    */
-  show(screenX, screenY, canMove = true, canAct = true, mp = 0) {
+  show(screenX, screenY, canMove = true, canAct = true, mp = 0, canWait = true) {
     this.canMove = canMove;
     this.canAct = canAct;
+    this.canWait = canWait;
     this.currentUnitMp = mp;
     this.selectedIndex = 0;
     this.closeSubmenu();
@@ -496,7 +497,6 @@ export class BattleContextMenu {
     this.element.querySelectorAll('.context-menu-item').forEach(item => {
       item.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (item.classList.contains('disabled')) return;
 
         const action = item.dataset.action;
         this.handleActionClick(action);
@@ -509,7 +509,8 @@ export class BattleContextMenu {
 
         // Show submenu on hover for skill/item
         const action = item.dataset.action;
-        if ((action === 'skill' || action === 'item') && !item.classList.contains('disabled')) {
+        if ((action === 'skill' || action === 'item') &&
+            this.canUseAction(action, { notify: false })) {
           this.showSubmenu(action, item);
         } else {
           this.closeSubmenu();
@@ -531,36 +532,45 @@ export class BattleContextMenu {
    * Handle action click
    */
   handleActionClick(action) {
+    if (!this.canUseAction(action)) return false;
+
     switch (action) {
       case 'move':
-        if (this.canMove) {
-          this.hide();
-          this.callbacks.onMove?.();
-        }
+        this.hide();
+        this.callbacks.onMove?.();
         break;
       case 'attack':
-        if (this.canAct) {
-          this.hide();
-          this.callbacks.onAttack?.();
-        }
+        this.hide();
+        this.callbacks.onAttack?.();
         break;
       case 'skill':
-        if (this.canAct) {
-          const item = this.element.querySelector('[data-action="skill"]');
-          this.showSubmenu('skill', item);
-        }
+        this.showSubmenu(
+          'skill',
+          this.element.querySelector('[data-action="skill"]')
+        );
         break;
       case 'item':
-        if (this.canAct) {
-          const item = this.element.querySelector('[data-action="item"]');
-          this.showSubmenu('item', item);
-        }
+        this.showSubmenu(
+          'item',
+          this.element.querySelector('[data-action="item"]')
+        );
         break;
       case 'wait':
         this.hide();
         this.callbacks.onWait?.();
         break;
     }
+    return true;
+  }
+
+  canUseAction(action, options = {}) {
+    if (this.callbacks.canUseAction) {
+      return this.callbacks.canUseAction(action, options);
+    }
+    if (action === 'move') return this.canMove;
+    if (['attack', 'skill', 'item'].includes(action)) return this.canAct;
+    if (action === 'wait') return this.canWait;
+    return false;
   }
 
   /**
@@ -693,11 +703,13 @@ export class BattleContextMenu {
         const itemId = item.dataset.itemId;
         const inventoryId = item.dataset.inventoryId;
 
-        this.hide();
-
         if (skillId) {
+          if (!this.canUseAction('skill')) return;
+          this.hide();
           this.callbacks.onSkillSelect?.(skillId);
         } else if (itemId) {
+          if (!this.canUseAction('item')) return;
+          this.hide();
           this.callbacks.onItemSelect?.({ itemId, inventoryId });
         }
       });
@@ -755,28 +767,20 @@ export class BattleContextMenu {
         this.callbacks.onCancel?.();
         break;
       case 'm':
-        if (this.canMove) {
-          e.preventDefault();
-          this.handleActionClick('move');
-        }
+        e.preventDefault();
+        this.handleActionClick('move');
         break;
       case 'a':
-        if (this.canAct) {
-          e.preventDefault();
-          this.handleActionClick('attack');
-        }
+        e.preventDefault();
+        this.handleActionClick('attack');
         break;
       case 's':
-        if (this.canAct) {
-          e.preventDefault();
-          this.handleActionClick('skill');
-        }
+        e.preventDefault();
+        this.handleActionClick('skill');
         break;
       case 'i':
-        if (this.canAct) {
-          e.preventDefault();
-          this.handleActionClick('item');
-        }
+        e.preventDefault();
+        this.handleActionClick('item');
         break;
       case 'w':
         e.preventDefault();
@@ -819,9 +823,7 @@ export class BattleContextMenu {
     const item = this.menuItems[this.selectedIndex];
     if (!item) return;
 
-    const disabled = (item.requiresMove && !this.canMove) ||
-                     (item.requiresAct && !this.canAct);
-    if (disabled) return;
+    if (!this.canUseAction(item.id)) return;
 
     this.handleActionClick(item.id);
   }

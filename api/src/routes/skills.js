@@ -37,7 +37,7 @@ export async function learnSkillWithClient(client, {
   const charResult = await client.query(
     `SELECT id, class, race, experience, level, spent_xp,
             strength, intelligence, agility, vitality, luck,
-            hp_current, mp_current, hp_max, mp_max
+            hp_current, mp_current, hp_max, mp_max, in_battle
      FROM characters
      WHERE id = $1 AND user_id = $2
      FOR UPDATE`,
@@ -49,6 +49,9 @@ export async function learnSkillWithClient(client, {
   }
 
   const character = charResult.rows[0];
+  if (character.in_battle) {
+    throw new AppError('Cannot learn skills during battle', 400);
+  }
   const guildTree = buildTrainingSkillTree(character.class);
 
   if (!guildTree) {

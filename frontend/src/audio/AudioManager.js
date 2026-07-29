@@ -490,8 +490,9 @@ export class AudioManager {
       ],
       shop: [
         { category: 'music', id: 'shop_theme' },
-        { category: 'sfx', id: 'gold_coins' },
-        { category: 'sfx', id: 'item_pickup' }
+        { category: 'interactions', id: 'gold_spend' },
+        { category: 'interactions', id: 'gold_receive' },
+        { category: 'interactions', id: 'item_pickup' }
       ],
       tavern: [
         { category: 'music', id: 'tavern_ambience' }

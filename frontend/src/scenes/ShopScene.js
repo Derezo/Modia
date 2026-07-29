@@ -1192,7 +1192,7 @@ export class ShopScene extends Scene {
       this.game.state.set('user', { ...this.game.state.get('user'), gold: this.playerGold });
 
       // Play purchase sound
-      this.game.audio?.playSFX('gold_spend');
+      this.game.audio?.playInteraction('gold_spend');
 
       parchmentToast.success('Purchase Complete', result.message);
 
@@ -1223,7 +1223,7 @@ export class ShopScene extends Scene {
       this.game.state.set('user', { ...this.game.state.get('user'), gold: this.playerGold });
 
       // Play sell sound
-      this.game.audio?.playSFX('gold_receive');
+      this.game.audio?.playInteraction('gold_receive');
 
       parchmentToast.success('Item Sold', result.message);
 

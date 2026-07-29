@@ -75,7 +75,7 @@ export function getSkillSoundKey(skillId, isMonster = false) {
  * @returns {string} UI sound key
  */
 export function getUiSoundKey(id) {
-  return `ui_${id}`;
+  return id;
 }
 
 /**
@@ -84,7 +84,7 @@ export function getUiSoundKey(id) {
  * @returns {string} Interaction sound key
  */
 export function getInteractionSoundKey(id) {
-  return `interaction_${id}`;
+  return id;
 }
 
 /**
@@ -93,5 +93,5 @@ export function getInteractionSoundKey(id) {
  * @returns {string} Ambient sound key
  */
 export function getAmbientSoundKey(id) {
-  return `ambient_${id}`;
+  return id;
 }

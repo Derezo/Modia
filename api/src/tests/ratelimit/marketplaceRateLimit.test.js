@@ -27,7 +27,7 @@ describe('Marketplace Rate Limiting', () => {
     // Create test user and character
     testUser = await createTestUser();
     testCharacter = await createTestCharacter(testUser.accessToken);
-    resetAllLimiterStats();
+    await resetAllLimiterStats();
   });
 
   after(async () => {
@@ -37,15 +37,14 @@ describe('Marketplace Rate Limiting', () => {
     await runCleanup();
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Reset stats between test groups
-    resetAllLimiterStats();
+    await resetAllLimiterStats();
   });
 
   describe('Order Placement Rate Limiting', () => {
     it('should allow limit orders up to the limit', async () => {
-      // orderLimiter has base 5 requests, production 2x = 10 per minute
-      const limit = 10;
+      const limit = 5;
 
       const responses = await fireRequests(
         limit,
@@ -69,9 +68,9 @@ describe('Marketplace Rate Limiting', () => {
     });
 
     it('should block limit orders beyond the limit', async () => {
-      // Fire 10 requests first (within limit)
+      // Fire 5 requests first (within limit)
       await fireRequests(
-        10,
+        5,
         'POST',
         '/api/marketplace/orders/limit',
         { itemTemplateId: 1, price: 100, quantity: 1, side: 'buy' },
@@ -105,9 +104,9 @@ describe('Marketplace Rate Limiting', () => {
 
   describe('Market Order Rate Limiting', () => {
     it('should have stricter limits for market orders', async () => {
-      // marketOrderLimiter has base 2 requests, production 2x = 4 per minute
+      // TEST_RATE_LIMITS uses the configured base maximum.
       // This is the most restrictive limiter
-      const limit = 4;
+      const limit = 2;
       const overLimit = 2;
 
       const responses = await fireRequests(
@@ -138,8 +137,7 @@ describe('Marketplace Rate Limiting', () => {
 
   describe('Order Cancellation Rate Limiting', () => {
     it('should allow cancellations up to the limit', async () => {
-      // cancelLimiter has base 10 requests, production 2x = 20 per minute
-      const limit = 20;
+      const limit = 10;
 
       const responses = await fireRequests(
         limit,
@@ -158,8 +156,8 @@ describe('Marketplace Rate Limiting', () => {
     });
 
     it('should block cancellations beyond the limit', async () => {
-      // Fire 20 requests first
-      await fireRequests(20, 'DELETE', '/api/marketplace/orders/12345', null, testUser.accessToken);
+      // Fire 10 requests first
+      await fireRequests(10, 'DELETE', '/api/marketplace/orders/12345', null, testUser.accessToken);
 
       // Now fire more to exceed limit
       const extraRequests = 5;
@@ -182,8 +180,7 @@ describe('Marketplace Rate Limiting', () => {
 
   describe('Read Operations Rate Limiting', () => {
     it('should allow more read requests (most lenient)', async () => {
-      // readLimiter has base 30 requests, production 2x = 60 per minute
-      const limit = 60;
+      const limit = 30;
 
       const responses = await fireRequests(
         limit,
@@ -202,8 +199,8 @@ describe('Marketplace Rate Limiting', () => {
     });
 
     it('should still block excessive read requests', async () => {
-      // Fire 60 requests first
-      await fireRequests(60, 'GET', '/api/marketplace/orderbook/1', null, testUser.accessToken);
+      // Fire 30 requests first
+      await fireRequests(30, 'GET', '/api/marketplace/orderbook/1', null, testUser.accessToken);
 
       // Now fire more to exceed limit
       const extraRequests = 5;
@@ -226,8 +223,7 @@ describe('Marketplace Rate Limiting', () => {
 
   describe('Search Operations Rate Limiting', () => {
     it('should rate limit search operations', async () => {
-      // searchLimiter has base 15 requests, production 2x = 30 per minute
-      const limit = 30;
+      const limit = 15;
       const overLimit = 5;
 
       const responses = await fireRequests(
@@ -252,7 +248,15 @@ describe('Marketplace Rate Limiting', () => {
     });
 
     it('should track stats correctly', async () => {
-      const stats = getRateLimiterStats('marketplace:search');
+      await fireRequests(
+        16,
+        'GET',
+        '/api/marketplace/search?query=stats',
+        null,
+        testUser.accessToken
+      );
+
+      const stats = await getRateLimiterStats('marketplace:search');
       assert.ok(stats, 'Marketplace search limiter stats should exist');
       assert.ok(stats.calls > 0, 'Should have tracked calls');
       assert.ok(stats.blocked > 0, 'Should have tracked blocked requests');
@@ -261,14 +265,14 @@ describe('Marketplace Rate Limiting', () => {
 
   describe('Limiter Independence', () => {
     it('should track different limiters independently', async () => {
-      resetAllLimiterStats();
+      await resetAllLimiterStats();
 
       // Fire requests to different endpoints
       await fireRequests(5, 'GET', '/api/marketplace/orderbook/1', null, testUser.accessToken);
       await fireRequests(3, 'GET', '/api/marketplace/search?query=test', null, testUser.accessToken);
 
-      const readStats = getRateLimiterStats('marketplace:read');
-      const searchStats = getRateLimiterStats('marketplace:search');
+      const readStats = await getRateLimiterStats('marketplace:read');
+      const searchStats = await getRateLimiterStats('marketplace:search');
 
       assert.strictEqual(readStats.calls, 5, 'Read limiter should have 5 calls');
       assert.strictEqual(searchStats.calls, 3, 'Search limiter should have 3 calls');

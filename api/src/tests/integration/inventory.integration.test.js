@@ -1,29 +1,58 @@
-import { describe, it, before } from 'node:test';
+import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
-import { request, createTestUser, createTestCharacter } from '../testHelper.js';
+import {
+  request,
+  createTestUser,
+  createTestCharacter,
+  cleanupTestUser
+} from '../testHelper.js';
 
 describe('Inventory API', () => {
   let user = null;
   let character = null;
+  const createdUserIds = [];
+
+  async function createTrackedUser() {
+    const created = await createTestUser();
+    createdUserIds.push(created.userId);
+    return created;
+  }
 
   before(async () => {
-    user = await createTestUser();
+    user = await createTrackedUser();
     character = await createTestCharacter(user.accessToken);
   });
 
+  after(async () => {
+    for (const userId of createdUserIds) {
+      await cleanupTestUser(userId);
+    }
+  });
+
   describe('GET /api/inventory/:characterId', () => {
-    it('should return character inventory', async () => {
+    it('should return equipped items while shared inventory uses its own endpoint', async () => {
       const res = await request('GET', `/api/inventory/${character.id}`, null, user.accessToken);
 
       assert.strictEqual(res.status, 200);
       assert.ok(res.body.equipped !== undefined);
-      assert.ok(res.body.inventory !== undefined);
       assert.ok(typeof res.body.equipped === 'object');
-      assert.ok(Array.isArray(res.body.inventory));
+      assert.strictEqual(
+        Object.prototype.hasOwnProperty.call(res.body, 'inventory'),
+        false
+      );
+
+      const sharedRes = await request(
+        'GET',
+        '/api/inventory/shared',
+        null,
+        user.accessToken
+      );
+      assert.strictEqual(sharedRes.status, 200);
+      assert.ok(Array.isArray(sharedRes.body.inventory));
     });
 
     it('should reject access to another user inventory', async () => {
-      const otherUser = await createTestUser();
+      const otherUser = await createTrackedUser();
       const otherChar = await createTestCharacter(otherUser.accessToken);
 
       const res = await request('GET', `/api/inventory/${otherChar.id}`, null, user.accessToken);
@@ -107,7 +136,7 @@ describe('Inventory API', () => {
   describe('POST /api/inventory/use', () => {
     it('should reject using non-existent item', async () => {
       const res = await request('POST', '/api/inventory/use', {
-        characterId: character.id,
+        targetCharacterId: character.id,
         itemInstanceId: 999999
       }, user.accessToken);
 
@@ -116,7 +145,7 @@ describe('Inventory API', () => {
 
     it('should reject unauthenticated use', async () => {
       const res = await request('POST', '/api/inventory/use', {
-        characterId: character.id,
+        targetCharacterId: character.id,
         itemInstanceId: 1
       });
 

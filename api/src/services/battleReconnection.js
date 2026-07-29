@@ -245,7 +245,8 @@ async function handleAbandonTimeout(battleId, playerId) {
       battleId,
       committedNextUnit,
       committedNextUnit.type,
-      nextTurn.predictions
+      nextTurn.predictions,
+      committedEnvelope.stateRevision
     );
   }
   await battleWebsocket.broadcastStateUpdate(battleId, commitResult.update);

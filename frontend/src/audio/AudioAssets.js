@@ -4,7 +4,7 @@
  * This is the main entry point that re-exports from modular manifest files.
  * All original exports are maintained for backward compatibility.
  *
- * Total: 55 music tracks + 244 sound effects = 299 audio assets
+ * Total: 55 music tracks + 247 sound effects = 302 audio assets
  */
 
 import { debugLog } from '../utils/debugLogger.js';

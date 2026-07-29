@@ -96,11 +96,11 @@ describe('Marketplace API', () => {
       try {
         await client.query('BEGIN');
 
-        // Give character an unequipped item
+        // Add an unequipped item to the user's shared inventory.
         const unequippedResult = await client.query(
-          `INSERT INTO character_items (character_id, item_template_id, quantity, equipped_slot)
+          `INSERT INTO character_items (user_id, item_template_id, quantity, equipped_slot)
            VALUES ($1, $2, 5, NULL) RETURNING id`,
-          [testCharacter.id, tradeableItemId]
+          [testUser.userId, tradeableItemId]
         );
         createdUnequippedId = unequippedResult.rows[0].id;
 
@@ -181,11 +181,11 @@ describe('Marketplace API', () => {
       try {
         await client.query('BEGIN');
 
-        // Give character a non-tradeable item
+        // Add a non-tradeable item to the user's shared inventory.
         const result = await client.query(
-          `INSERT INTO character_items (character_id, item_template_id, quantity, equipped_slot)
+          `INSERT INTO character_items (user_id, item_template_id, quantity, equipped_slot)
            VALUES ($1, $2, 3, NULL) RETURNING id`,
-          [testCharacter.id, nonTradeableItemId]
+          [testUser.userId, nonTradeableItemId]
         );
         createdItemId = result.rows[0].id;
 
@@ -253,12 +253,12 @@ describe('Marketplace API', () => {
 
         const weaponId = weaponResult.rows[0].id;
 
-        // Create the item
+        // Create the item in the user's shared inventory.
         const itemResult = await client.query(
-          `INSERT INTO character_items (character_id, item_template_id, quantity, equipped_slot, modifications)
+          `INSERT INTO character_items (user_id, item_template_id, quantity, equipped_slot, modifications)
            VALUES ($1, $2, 1, NULL, '{}')
            RETURNING id`,
-          [testCharacter.id, weaponId]
+          [testUser.userId, weaponId]
         );
         characterItemId = itemResult.rows[0].id;
 
@@ -273,8 +273,8 @@ describe('Marketplace API', () => {
 
         // Mark item as listed
         await client.query(
-          `UPDATE character_items SET modifications = '{"listed": true}'::jsonb WHERE id = $1`,
-          [characterItemId]
+          'UPDATE character_items SET modifications = $1::jsonb WHERE id = $2',
+          [JSON.stringify({ listed: true }), characterItemId]
         );
 
         await client.query('COMMIT');
@@ -315,14 +315,11 @@ describe('Marketplace API', () => {
       }
     });
 
-    it('should return items from all characters owned by user', async () => {
+    it('should return every matching item instance from the shared inventory', async () => {
       if (!tradeableItemId) {
         console.log('Skipping test - no tradeable items available');
         return;
       }
-
-      // Create a second character for this user
-      const secondCharacter = await createTestCharacter(testUser.accessToken, 'SecondChr');
 
       const client = await getClient();
       let item1Id = null;
@@ -331,19 +328,18 @@ describe('Marketplace API', () => {
       try {
         await client.query('BEGIN');
 
-        // Give first character an item
+        // Shared inventory can contain separate instances of the same template.
         const item1Result = await client.query(
-          `INSERT INTO character_items (character_id, item_template_id, quantity, equipped_slot)
+          `INSERT INTO character_items (user_id, item_template_id, quantity, equipped_slot)
            VALUES ($1, $2, 3, NULL) RETURNING id`,
-          [testCharacter.id, tradeableItemId]
+          [testUser.userId, tradeableItemId]
         );
         item1Id = item1Result.rows[0].id;
 
-        // Give second character an item
         const item2Result = await client.query(
-          `INSERT INTO character_items (character_id, item_template_id, quantity, equipped_slot)
+          `INSERT INTO character_items (user_id, item_template_id, quantity, equipped_slot)
            VALUES ($1, $2, 2, NULL) RETURNING id`,
-          [secondCharacter.id, tradeableItemId]
+          [testUser.userId, tradeableItemId]
         );
         item2Id = item2Result.rows[0].id;
 
@@ -359,16 +355,15 @@ describe('Marketplace API', () => {
 
         assert.strictEqual(res.status, 200);
 
-        // Should have items from both characters
-        const charIds = new Set(res.body.items.map(item => item.characterId));
+        const instanceIds = new Set(res.body.items.map(item => item.instanceId));
 
         assert.ok(
-          charIds.has(testCharacter.id),
-          'Should include items from first character'
+          instanceIds.has(item1Id),
+          'Should include the first shared item instance'
         );
         assert.ok(
-          charIds.has(secondCharacter.id),
-          'Should include items from second character'
+          instanceIds.has(item2Id),
+          'Should include the second shared item instance'
         );
 
       } catch (err) {
@@ -397,11 +392,11 @@ describe('Marketplace API', () => {
       try {
         await client.query('BEGIN');
 
-        // Ensure character has an item
+        // Ensure the shared inventory has an item.
         const itemResult = await client.query(
-          `INSERT INTO character_items (character_id, item_template_id, quantity, equipped_slot)
+          `INSERT INTO character_items (user_id, item_template_id, quantity, equipped_slot)
            VALUES ($1, $2, 7, NULL) RETURNING id`,
-          [testCharacter.id, tradeableItemId]
+          [testUser.userId, tradeableItemId]
         );
         createdItemId = itemResult.rows[0].id;
 
@@ -424,7 +419,6 @@ describe('Marketplace API', () => {
 
         // Verify essential fields are present
         assert.ok(item.instanceId !== undefined, 'Should have instanceId');
-        assert.ok(item.characterId !== undefined, 'Should have characterId');
         assert.ok(item.templateId !== undefined, 'Should have templateId');
         assert.ok(item.name !== undefined, 'Should have name');
         assert.ok(item.type !== undefined, 'Should have type');
@@ -455,11 +449,11 @@ describe('Marketplace API', () => {
       try {
         await client.query('BEGIN');
 
-        // Give testUser2's character an item
+        // Give testUser2 a shared-pool item.
         const result = await client.query(
-          `INSERT INTO character_items (character_id, item_template_id, quantity, equipped_slot)
+          `INSERT INTO character_items (user_id, item_template_id, quantity, equipped_slot)
            VALUES ($1, $2, 10, NULL) RETURNING id`,
-          [testCharacter2.id, tradeableItemId]
+          [testUser2.userId, tradeableItemId]
         );
         otherUserItemId = result.rows[0].id;
 
@@ -475,9 +469,9 @@ describe('Marketplace API', () => {
 
         assert.strictEqual(res.status, 200);
 
-        // Should not contain items from testUser2's character
+        // Should not contain items from testUser2's shared inventory.
         const hasOtherUserItem = res.body.items.some(
-          item => item.characterId === testCharacter2.id
+          item => item.instanceId === otherUserItemId
         );
 
         assert.strictEqual(

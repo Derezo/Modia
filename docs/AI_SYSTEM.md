@@ -71,16 +71,16 @@ Each action is scored using these factors:
 | `SURVIVAL_PRIORITY` | Self-preservation importance | 0-200 |
 | `MP_EFFICIENCY` | Value of conserving MP | -200 to +100 |
 | `TARGET_PRIORITY` | Preference for specific targets | 0-100 |
-| `strategicPathProgress` | Reward for following optimal path to enemies | 0-1 |
-| `waitingPenalty` | Penalty for idle waiting when enemies far (use negative weight) | 0-1 |
+| `strategicPathProgress` | Reward for following optimal path to enemies | 0-100 |
+| `waitingPenalty` | Penalty for idle waiting when enemies far (use negative weight) | 0-100 |
 
 ### Factor Details
 
-**strategicPathProgress**: Calculates how well a move follows the optimal path toward enemies. Uses `calculateStrategicPath()` to find the best route, then `scoreStrategicMovement()` to evaluate tiles. Returns normalized 0-1 score.
+**strategicPathProgress**: Calculates how well a move follows the optimal path toward enemies. Uses `calculateStrategicPath()` to find the best route, then `scoreStrategicMovement()` to evaluate tiles. Returns a 0-100 score.
 
-**waitingPenalty**: Discourages waiting when enemies are out of attack range. Returns 0 if an enemy is within range (waiting may be tactically valid), 0.3 if enemies are 1 turn away, or 0.8 if enemies are 2+ turns away. Applied with negative weight to penalize.
+**waitingPenalty**: Discourages waiting when enemies are out of attack range. Returns 0 if an enemy is within range or no strategic route exists, 30 if enemies are 1 turn away, or 80 if enemies are 2+ turns away. Applied with negative weight to penalize.
 
-**MP_EFFICIENCY**: Returns -200 for zero-benefit actions (e.g., healing full-HP targets) to strongly penalize wasted MP. Otherwise scales 0-100 based on MP remaining and skill cost.
+**MP_EFFICIENCY**: Returns -200 for zero-benefit actions (e.g., healing full-HP targets) to strongly penalize wasted MP. Otherwise scales 0-100 based on MP remaining and skill cost. Moving and waiting use the same neutral value so an idle turn is not rewarded simply for conserving MP.
 
 ## AI Patterns
 
@@ -118,8 +118,8 @@ Each action is scored using these factors:
 - Maximum aggression, ignores safety
 - Pure damage focus (3.0 weight)
 - Zero survival priority
-- Highest strategic path progress (0.35)
-- Strongest waiting penalty (-0.5)
+- Strong strategic path progress (1.0)
+- Strongest waiting penalty (-1.25)
 
 ### Ranged
 - Maintains safe distance
@@ -135,19 +135,19 @@ Each action is scored using these factors:
 
 Complete weight values for all AI patterns:
 
-| Factor | Aggressive | Defensive | Support | Tactical | Pack | Ambush | Berserker | Ranged | Boss |
-|--------|-----------|-----------|---------|----------|------|--------|-----------|--------|------|
-| DAMAGE_DEALT | 2.0 | 0.8 | 0.5 | 1.5 | 1.5 | 2.5 | **3.0** | 1.8 | 1.5 |
-| DAMAGE_RECEIVED | 0.3 | 2.0 | 1.8 | 1.2 | 0.8 | 1.5 | **0.0** | 1.5 | 1.0 |
-| KILL_POTENTIAL | 2.5 | 1.0 | 0.5 | **3.0** | 1.5 | **3.5** | 2.0 | 1.5 | 2.0 |
-| POSITION_QUALITY | 0.8 | 1.5 | 1.2 | 2.0 | 1.5 | 2.5 | 0.3 | **2.5** | 1.5 |
-| ALLY_SUPPORT | 0.5 | 1.5 | 2.5 | 1.0 | **3.0** | 0.3 | 0.0 | 0.8 | 1.0 |
-| HEALING_VALUE | 0.3 | 1.5 | **3.0** | 1.0 | 1.2 | 0.2 | 0.0 | 0.5 | 1.5 |
-| SURVIVAL_PRIORITY | 0.3 | **2.5** | 2.0 | 1.5 | 1.0 | 1.8 | 0.0 | 1.8 | 1.5 |
-| MP_EFFICIENCY | 0.5 | 1.0 | 1.5 | 1.2 | 0.8 | 1.0 | 0.0 | 1.5 | 1.0 |
-| TARGET_PRIORITY | 1.2 | 0.8 | 0.5 | 2.0 | 1.5 | 2.5 | 1.0 | 1.5 | 1.8 |
-| strategicPathProgress | 0.25 | 0.10 | 0.15 | 0.20 | 0.20 | 0.10 | **0.35** | 0.15 | 0.20 |
-| waitingPenalty | -0.3 | -0.1 | -0.1 | -0.2 | -0.25 | -0.05 | **-0.5** | -0.15 | -0.2 |
+| Factor | Aggressive | Defensive | Support | Tactical | Pack | Ambush | Berserker | Ranged | Hit-and-run | Boss |
+|--------|-----------|-----------|---------|----------|------|--------|-----------|--------|-------------|------|
+| DAMAGE_DEALT | 2.0 | 0.8 | 0.5 | 1.5 | 1.5 | 2.5 | **3.0** | 1.8 | 1.8 | 1.5 |
+| DAMAGE_RECEIVED | 0.3 | **2.0** | 1.8 | 1.2 | 0.8 | 1.5 | 0.0 | 1.5 | **2.0** | 1.0 |
+| KILL_POTENTIAL | 2.5 | 1.0 | 0.5 | 3.0 | 1.5 | **3.5** | 2.0 | 1.5 | 1.8 | 2.0 |
+| POSITION_QUALITY | 0.8 | 1.5 | 1.2 | 2.0 | 1.5 | **2.5** | 0.3 | **2.5** | 2.2 | 1.5 |
+| ALLY_SUPPORT | 0.5 | 1.5 | 2.5 | 1.0 | **3.0** | 0.3 | 0.0 | 0.8 | 0.6 | 1.0 |
+| HEALING_VALUE | 0.3 | 1.5 | **3.0** | 1.0 | 1.2 | 0.2 | 0.0 | 0.5 | 0.8 | 1.5 |
+| SURVIVAL_PRIORITY | 0.3 | **2.5** | 2.0 | 1.5 | 1.0 | 1.8 | 0.0 | 1.8 | 2.0 | 1.5 |
+| MP_EFFICIENCY | 0.5 | 1.0 | **1.5** | 1.2 | 0.8 | 1.0 | 0.0 | **1.5** | 1.2 | 1.0 |
+| TARGET_PRIORITY | 1.2 | 0.8 | 0.5 | 2.0 | 1.5 | **2.5** | 1.0 | 1.5 | 1.5 | 1.8 |
+| strategicPathProgress | 0.75 | 0.75 | 0.8 | 0.75 | **1.0** | 0.4 | **1.0** | 0.55 | 0.65 | 0.70 |
+| waitingPenalty | -1.0 | -0.4 | -0.5 | -0.75 | -0.75 | -0.05 | **-1.25** | -0.5 | -0.65 | -0.75 |
 
 **Bold** values indicate the highest (or most extreme) weight for that factor.
 
@@ -230,9 +230,9 @@ Scoring algorithm:
 
 Strategic pathfinding integrates with utility factors:
 
-1. **strategicPathProgress factor**: Calls `calculateStrategicPath()` and `scoreStrategicMovement()`, normalizes to 0-1
+1. **strategicPathProgress factor**: Calls `calculateStrategicPath()` and `scoreStrategicMovement()`, preserving its 0-100 utility scale
 2. **waitingPenalty factor**: Uses `turnsToReach` to determine penalty severity
-3. Both factors are weighted by pattern (berserker has highest path progress weight at 0.35)
+3. Both factors are weighted by pattern (berserker has the strongest approach pressure)
 
 ### Example: Berserker Movement
 
@@ -241,8 +241,8 @@ Strategic pathfinding integrates with utility factors:
 {
   DAMAGE_DEALT: 3.0,          // Max damage focus
   SURVIVAL_PRIORITY: 0.0,     // No self-preservation
-  strategicPathProgress: 0.35, // Strong path-following incentive
-  waitingPenalty: -0.5        // Heavy penalty for waiting
+  strategicPathProgress: 1.0,  // Strong path-following incentive
+  waitingPenalty: -1.25        // Heavy penalty for waiting
 }
 // Result: Berserker always moves toward enemies, never waits
 ```

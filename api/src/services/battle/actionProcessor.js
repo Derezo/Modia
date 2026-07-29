@@ -143,6 +143,8 @@ export function getAvailableActions(unit, state) {
   const actions = {
     canMove: false,
     canAct: false,
+    canWait: true,
+    turnPhase: unit.turnPhase ?? 'ready',
     movement: null,
     attacks: null,
     skills: null,
@@ -289,7 +291,8 @@ function processMoveAction(state, unit, targetTile) {
     return result;
   }
 
-  // Traversal treats every unit position, including defeated units, as blocked.
+  // Every unit still reserves its tile as a destination. Shared traversal may
+  // cross defeated units while calculating a route to a different free tile.
   const occupyingUnit = state.units.find(u =>
     u.id !== unit.id && u.tileX === targetTile.x && u.tileY === targetTile.y
   );
@@ -1241,7 +1244,12 @@ export function processAction(state, unit, actionType, targetTile, skillId = nul
   // Calculate available actions for response
   const canMove = canUnitMove(unit) && !unit.moveUsed;
   const canAct = canUnitAct(unit) && !unit.actUsed;
-  result.availableActions = { canMove, canAct };
+  result.availableActions = {
+    canMove,
+    canAct,
+    canWait: true,
+    turnPhase: unit.turnPhase
+  };
 
   return result;
 }

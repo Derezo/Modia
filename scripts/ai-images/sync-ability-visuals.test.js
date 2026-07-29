@@ -17,6 +17,7 @@ const {
   findDuplicateIds,
   compareRegistryIds,
   buildAbilityRegistry,
+  resolveStatusOverlayAssetPath,
   loadSourceDefinitions
 } = require('./sync-ability-visuals');
 
@@ -118,6 +119,36 @@ test('builds stable visual fields and deliberately reuses shared archetypes', ()
     needsRegeneration: false,
     generatedAt: null
   });
+});
+
+test('status overlays reuse existing artwork instead of missing custom paths', () => {
+  assert.equal(
+    resolveStatusOverlayAssetPath('bleed'),
+    '/assets/icons/originals/augments/damage.webp'
+  );
+  assert.equal(
+    resolveStatusOverlayAssetPath('cleanse'),
+    '/assets/icons/originals/augments/cleanse.webp'
+  );
+  assert.equal(
+    resolveStatusOverlayAssetPath('invisible'),
+    '/assets/icons/originals/actions/stealth.webp'
+  );
+  assert.equal(
+    resolveStatusOverlayAssetPath('taunt'),
+    '/assets/icons/originals/actions/taunt.webp'
+  );
+  assert.equal(
+    resolveStatusOverlayAssetPath('future_status'),
+    '/assets/abilities/status/future_status.webp'
+  );
+  for (const status of ['bleed', 'cleanse', 'invisible', 'taunt']) {
+    assert.equal(
+      resolveStatusOverlayAssetPath(status).startsWith('/assets/abilities/icons/'),
+      false,
+      `${status} must not use a generated ability icon as compiler input`
+    );
+  }
 });
 
 test('zodiac overrides capture mechanics absent from the blessing definition', () => {

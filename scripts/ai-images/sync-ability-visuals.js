@@ -204,6 +204,16 @@ const POSITIVE_STATUS_OVERLAYS = new Set([
   'shell', 'strength_up'
 ]);
 
+// Reuse existing, semantically matching artwork before reserving a new
+// /assets/abilities/status file. These aliases keep generated registries from
+// pointing at placeholders that do not exist on disk.
+const STATUS_OVERLAY_ASSET_ALIASES = Object.freeze({
+  bleed: '/assets/icons/originals/augments/damage.webp',
+  cleanse: '/assets/icons/originals/augments/cleanse.webp',
+  invisible: '/assets/icons/originals/actions/stealth.webp',
+  taunt: '/assets/icons/originals/actions/taunt.webp'
+});
+
 function readJson(filePath, fallback = null) {
   if (!fs.existsSync(filePath)) return fallback;
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -451,9 +461,11 @@ function compareRegistryIds(existingAbilities, expectedDefinitions) {
 
 function resolveStatusOverlayAssetPath(statusOverlay, knownStatusIcons = new Set()) {
   if (!statusOverlay) return null;
-  return knownStatusIcons.has(statusOverlay)
-    ? `/assets/icons/originals/status/${statusOverlay}.webp`
-    : `/assets/abilities/status/${statusOverlay}.webp`;
+  if (knownStatusIcons.has(statusOverlay)) {
+    return `/assets/icons/originals/status/${statusOverlay}.webp`;
+  }
+  return STATUS_OVERLAY_ASSET_ALIASES[statusOverlay]
+    || `/assets/abilities/status/${statusOverlay}.webp`;
 }
 
 function buildAbilityRegistry(definitions, options = {}) {

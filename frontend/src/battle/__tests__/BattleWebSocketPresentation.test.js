@@ -43,7 +43,15 @@ const {
   createBattleStateSnapshotV1
 } = await import('../../../../shared/battleStateProtocol.js');
 
-function createUnit(id, { hp = 100, maxHp = 100, mp = 20, maxMp = 100, teamId = 1 } = {}) {
+function createUnit(id, {
+  hp = 100,
+  maxHp = 100,
+  mp = 20,
+  maxMp = 100,
+  teamId = 1,
+  type = 'player',
+  ownerId = 1
+} = {}) {
   const calls = { hit: 0, death: 0, reconciled: 0, thinking: [] };
   return {
     id,
@@ -53,6 +61,8 @@ function createUnit(id, { hp = 100, maxHp = 100, mp = 20, maxMp = 100, teamId = 
     mp,
     maxMp,
     teamId,
+    type,
+    ownerId,
     screenX: 100,
     screenY: 120,
     gridX: 1,
@@ -62,6 +72,9 @@ function createUnit(id, { hp = 100, maxHp = 100, mp = 20, maxMp = 100, teamId = 
     playHitAnimation() { calls.hit++; },
     playDeathAnimation() { calls.death++; },
     reconcileAnimationWithHealth() { calls.reconciled++; },
+    isLocalPlayerUnit(localUserId) {
+      return this.type === 'player' && this.ownerId === localUserId;
+    },
     isAlive() { return this.hp > 0; }
   };
 }
@@ -98,6 +111,7 @@ function createHarness(units) {
       addMiss() {}
     },
     audioManager: {
+      playSound() {},
       playSkillSound(...args) { calls.skillSounds.push(args); },
       playImpactSound() {},
       playStatusEffectSound(...args) { calls.statusSounds.push(args); }
@@ -114,6 +128,37 @@ function createHarness(units) {
       };
     },
     async waitForAnimation(duration) { calls.waits.push(duration); },
+    isLocalActiveUnit(unit = this.units.get(this.battleState.activeUnitId)) {
+      return unit?.type === 'player' && unit.ownerId === 1;
+    },
+    isStaleStateRevision(revision) {
+      return revision != null && this.stateRevision != null &&
+        Number(revision) < Number(this.stateRevision);
+    },
+    noteStateRevision(revision) {
+      if (revision != null) this.stateRevision = revision;
+    },
+    applyAuthoritativeAvailability(availableActions) {
+      this.serverAvailableActions = availableActions || null;
+      this.canMove = availableActions?.canMove === true;
+      this.canAct = availableActions?.canAct === true;
+    },
+    reconcileAuthoritativePayload(payload) {
+      if (this.isStaleStateRevision(payload.stateRevision)) return false;
+      this.noteStateRevision(payload.stateRevision);
+      if (payload.state) this.battleState = payload.state;
+      this.syncUnitsWithState?.(payload.state?.units || []);
+      if (payload.availableActions !== undefined) {
+        this.applyAuthoritativeAvailability(payload.availableActions);
+      }
+      return true;
+    },
+    refreshActionControls() {},
+    clearActionTargetingState() {
+      this.currentAction = null;
+      this.validTiles = [];
+    },
+    updateUI() {},
     handleBattleEnd(status, rewards) {
       calls.battleEnds.push({ status, rewards });
       this.battleEnded = true;
@@ -121,6 +166,208 @@ function createHarness(units) {
   };
   return { manager: new BattleWebSocketManager(scene), scene, calls };
 }
+
+describe('BattleWebSocketManager local turn recovery', () => {
+  it('fully recovers your_turn when turn_start is missing', () => {
+    const player = createUnit('player');
+    const { manager, scene } = createHarness([player]);
+    const recoveries = [];
+    scene.game.localUserId = 1;
+    scene.currentAction = 'attack';
+    scene.validTiles = [{ x: 2, y: 2 }];
+    scene.inEnemySequence = true;
+    scene.syncUnitsWithState = units => {
+      player.hp = units[0].hp;
+    };
+    scene.recoverLocalTurn = payload => {
+      recoveries.push(payload);
+      scene.battleState.activeUnitId = payload.unitId;
+      scene.applyAuthoritativeAvailability(payload.availableActions);
+      scene.clearActionTargetingState();
+      scene.inEnemySequence = false;
+      scene.inputEnabled = true;
+      return true;
+    };
+
+    manager.handleRemoteYourTurn({
+      unitId: player.id,
+      availableActions: { canMove: true, canAct: false },
+      stateRevision: 7,
+      state: {
+        status: 'active',
+        activeUnitId: player.id,
+        units: [{ id: player.id, hp: 42 }]
+      }
+    });
+
+    assert.deepEqual(recoveries, [{
+      unitId: player.id,
+      availableActions: { canMove: true, canAct: false },
+      stateRevision: 7
+    }]);
+    assert.equal(scene.battleState.activeUnitId, player.id);
+    assert.equal(scene.inputEnabled, true);
+    assert.equal(scene.currentAction, null);
+    assert.equal(scene.inEnemySequence, false);
+    assert.equal(player.hp, 42);
+  });
+
+  it('unlocks from turn_start before optional camera presentation', async () => {
+    const player = createUnit('player');
+    const { manager, scene } = createHarness([player]);
+    scene.game.localUserId = 1;
+    scene.ui = {
+      updateTurnOrder() {},
+      showTurnIndicator() {}
+    };
+    scene.recoverLocalTurn = payload => {
+      scene.battleState.activeUnitId = payload.unitId;
+      scene.applyAuthoritativeAvailability(payload.availableActions);
+      scene.inputEnabled = true;
+      return true;
+    };
+
+    await manager.processTurnStartEvent({
+      type: 'turn_start',
+      unitId: player.id,
+      unitName: 'Player',
+      unitType: 'player',
+      position: null,
+      availableActions: { canMove: true, canAct: true },
+      stateRevision: 8
+    });
+
+    assert.equal(scene.inputEnabled, true);
+    assert.equal(scene.battleState.activeUnitId, player.id);
+    assert.equal(scene.canMove, true);
+    assert.equal(scene.canAct, true);
+  });
+
+  it('ignores a reordered revisionless enemy turn_start after your_turn recovery', () => {
+    const player = createUnit('player');
+    const { manager, scene } = createHarness([player]);
+    scene.game.localUserId = 1;
+    scene.battleState.activeUnitId = player.id;
+    scene.inputEnabled = true;
+    manager.lastYourTurnUnitId = player.id;
+    manager.processTurnEventQueue = () => {};
+
+    manager.handleRemoteTurnStart({
+      unitId: 'old-enemy',
+      unitName: 'Old Enemy',
+      unitType: 'enemy'
+    });
+
+    assert.deepEqual(manager.turnEventQueue, []);
+    assert.equal(scene.battleState.activeUnitId, player.id);
+    assert.equal(scene.inputEnabled, true);
+  });
+
+  it('ignores a revisionless enemy turn_start queued before your_turn recovery', async () => {
+    const player = createUnit('player');
+    const { manager, scene } = createHarness([player]);
+    scene.game.localUserId = 1;
+    scene.recoverLocalTurn = payload => {
+      scene.battleState.activeUnitId = payload.unitId;
+      scene.inputEnabled = true;
+      return true;
+    };
+    const oldTurnStart = {
+      type: 'turn_start',
+      unitId: 'old-enemy',
+      unitName: 'Old Enemy',
+      unitType: 'enemy'
+    };
+    manager.turnEventQueue.push(oldTurnStart);
+
+    manager.handleRemoteYourTurn({
+      unitId: player.id,
+      availableActions: { canMove: true, canAct: true }
+    });
+    await manager.processTurnStartEvent(manager.turnEventQueue.shift());
+
+    assert.equal(scene.battleState.activeUnitId, player.id);
+    assert.equal(scene.inputEnabled, true);
+    assert.equal(scene.battleLogTurnCounter, 0);
+  });
+
+  it('does not relock after your_turn supersedes an in-flight camera transition', async () => {
+    const player = createUnit('player');
+    const enemy = createUnit('enemy', { type: 'enemy', ownerId: null });
+    const { manager, scene } = createHarness([player, enemy]);
+    scene.game.localUserId = 1;
+    scene.battleState.activeUnitId = enemy.id;
+    scene.ui = {
+      updateTurnOrder() {},
+      showTurnIndicator() {},
+      showTargetInfo() {},
+      setTargetSticky() {}
+    };
+    scene.grid.clearIntentHighlights = () => {};
+    let finishCamera;
+    let followTarget = null;
+    scene.camera = {
+      setFollowTarget(unit) {
+        followTarget = unit;
+      },
+      startTurnTransition(_x, _y, callback) {
+        finishCamera = callback;
+      }
+    };
+    scene.recoverLocalTurn = payload => {
+      scene.battleState.activeUnitId = payload.unitId;
+      scene.inputEnabled = true;
+      scene.inEnemySequence = false;
+      return true;
+    };
+
+    const presentation = manager.processTurnStartEvent({
+      type: 'turn_start',
+      unitId: enemy.id,
+      unitName: 'Enemy',
+      unitType: 'enemy',
+      position: { x: 1, y: 2 }
+    });
+    manager.handleRemoteYourTurn({
+      unitId: player.id,
+      availableActions: { canMove: true, canAct: true }
+    });
+    finishCamera();
+    await presentation;
+
+    assert.equal(scene.battleState.activeUnitId, player.id);
+    assert.equal(scene.inputEnabled, true);
+    assert.equal(scene.inEnemySequence, false);
+    assert.equal(followTarget, player);
+  });
+
+  it('keeps distinct revisioned turns for the same fast unit', () => {
+    const player = createUnit('player');
+    const { manager } = createHarness([player]);
+    manager.processTurnEventQueue = () => {};
+
+    manager.queueTurnEvent({
+      type: 'turn_start',
+      unitId: player.id,
+      stateRevision: 12
+    });
+    manager.queueTurnEvent({
+      type: 'turn_start',
+      unitId: player.id,
+      stateRevision: 13
+    });
+    manager.queueTurnEvent({
+      type: 'turn_start',
+      unitId: player.id,
+      stateRevision: 13
+    });
+
+    assert.deepEqual(
+      manager.turnEventQueue.map(event => event.stateRevision),
+      [12, 13]
+    );
+  });
+});
 
 describe('BattleWebSocketManager action presentation parity', () => {
   it('uses the AoE center and applies damage/absorb feedback once per target', async () => {
@@ -507,6 +754,49 @@ describe('BattleWebSocketManager revisioned state updates', () => {
     assert.equal(manager.battleState.turn, 2);
   });
 
+  it('rejects a stale full snapshot before mutating the map session', async () => {
+    clearBattleMapSessionCache();
+    const map = await createMinimalBattleMapV2FinalFixture();
+    const session = new BattleMapSession();
+    await session.acceptSnapshot(createBattleStateSnapshotV1({
+      battleId: 89,
+      stateRevision: 10,
+      battleMap: map,
+      mutableState: createBattleMutableStateV1({
+        turn: 10,
+        units: [{ id: 'player', hp: 20, tileX: 0, tileY: 0 }]
+      })
+    }));
+
+    const player = createUnit('player', { hp: 20 });
+    const { manager, scene } = createHarness([player]);
+    let synchronized = 0;
+    scene.stateRevision = 10;
+    scene.mapSession = session;
+    scene.battleState = session.state;
+    scene.syncUnitsWithState = () => { synchronized++; };
+
+    const staleSnapshot = createBattleStateSnapshotV1({
+      battleId: 89,
+      stateRevision: 8,
+      battleMap: map,
+      mutableState: createBattleMutableStateV1({
+        turn: 8,
+        units: [{ id: 'player', hp: 1, tileX: 4, tileY: 4 }]
+      })
+    });
+    const result = await manager.handleRemoteStateUpdate({
+      battleId: 89,
+      snapshot: staleSnapshot
+    });
+
+    assert.equal(result.status, 'duplicate');
+    assert.equal(result.reason, 'stale_revision');
+    assert.equal(session.current.stateRevision, 10);
+    assert.equal(session.state.turn, 10);
+    assert.equal(synchronized, 0);
+  });
+
   it('sends BattleMap capabilities on the rejoin HTTP request', async (t) => {
     clearBattleMapSessionCache();
     const { manager, scene } = createHarness([]);
@@ -535,5 +825,87 @@ describe('BattleWebSocketManager revisioned state updates', () => {
     assert.deepEqual(capabilities.supportedHashVersions, ['sha256-cjson-v1']);
     assert.deepEqual(capabilities.supportedMutableStateProtocolVersions, [1]);
     assert.deepEqual(capabilities.cachedMaps, []);
+  });
+
+  it('does not hydrate or apply a rejoin snapshot older than WebSocket state', async (t) => {
+    const player = createUnit('player', { hp: 80 });
+    const { manager, scene } = createHarness([player]);
+    let hydrateCount = 0;
+    scene.battleId = 92;
+    scene.stateRevision = 6;
+    scene.inputEnabled = true;
+    scene.serverAvailableActions = {
+      canMove: true,
+      canAct: false,
+      canWait: true
+    };
+    scene.battleState = {
+      status: 'active',
+      activeUnitId: player.id,
+      stateRevision: 6,
+      units: [{ id: player.id, hp: 80 }]
+    };
+    scene.mapSession = {
+      capabilities: {},
+      getCapabilities() {
+        return {};
+      },
+      async hydrateResponse(response) {
+        hydrateCount++;
+        return response;
+      }
+    };
+    scene.game.api = {
+      async get() {
+        return {
+          success: true,
+          stateRevision: 5,
+          state: {
+            status: 'active',
+            activeUnitId: player.id,
+            units: [{ id: player.id, hp: 10 }]
+          }
+        };
+      }
+    };
+    const syncRequests = [];
+    scene.game.socket = {
+      joinBattleRoom() {},
+      requestBattleSync(...args) {
+        syncRequests.push(args);
+      }
+    };
+    scene.recoverLocalTurn = payload => {
+      scene.battleState.activeUnitId = payload.unitId;
+      scene.applyAuthoritativeAvailability(payload.availableActions);
+      scene.inputEnabled = true;
+      return true;
+    };
+    let pollCount = 0;
+    manager.statePoller = {
+      poll() {
+        pollCount++;
+      },
+      setLocalState() {}
+    };
+
+    const previousInfo = parchmentToast.info;
+    const previousSuccess = parchmentToast.success;
+    parchmentToast.info = () => {};
+    parchmentToast.success = () => {};
+    t.after(() => {
+      parchmentToast.info = previousInfo;
+      parchmentToast.success = previousSuccess;
+    });
+
+    assert.equal(await manager.attemptRejoin(), true);
+    assert.equal(hydrateCount, 0);
+    assert.equal(manager.battleState.stateRevision, 6);
+    assert.equal(player.hp, 80);
+    assert.equal(scene.inputEnabled, true);
+    assert.equal(manager.lastYourTurnUnitId, player.id);
+    assert.equal(syncRequests.length, 1);
+    assert.equal(syncRequests[0][2], 'stale_rejoin_snapshot');
+    assert.equal(pollCount, 1);
   });
 });

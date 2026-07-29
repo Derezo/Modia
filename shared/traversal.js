@@ -159,6 +159,10 @@ export function getTraversalOccupant(view, point, { exclude } = {}) {
   return null;
 }
 
+function isDefeatedOccupant(occupant) {
+  return typeof occupant?.hp === 'number' && occupant.hp <= 0;
+}
+
 export function getElevationConnection(view, from, to) {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
@@ -194,7 +198,8 @@ function resolveHook(hook, context, fallback) {
 
 function evaluateStep(view, from, to, {
   goal = null,
-  start = from
+  start = from,
+  isTransit: explicitTransit
 } = {}) {
   assertPoint('from', from);
   assertPoint('to', to);
@@ -213,6 +218,8 @@ function evaluateStep(view, from, to, {
     ? null
     : getTraversalOccupant(view, to, { exclude: start });
   const isGoal = Boolean(goal && goal.x === to.x && goal.y === to.y);
+  const isTransit = explicitTransit ?? Boolean(goal && !isGoal);
+  const occupantDefeated = isDefeatedOccupant(occupant);
   const connection = getElevationConnection(view, from, to);
   const fromElevation = getElevationAt(view, from);
   const toElevation = getElevationAt(view, to);
@@ -237,6 +244,8 @@ function evaluateStep(view, from, to, {
     terrainCost,
     obstacle,
     occupant,
+    occupantDefeated,
+    isTransit,
     connection,
     fromElevation,
     toElevation,
@@ -264,7 +273,9 @@ function evaluateStep(view, from, to, {
   const occupantPassable = !occupant || resolveHook(
     policy.canTraverseOccupant,
     context,
-    isGoal && policy.allowOccupiedGoal
+    occupantDefeated
+      ? isTransit && !isGoal
+      : isGoal && policy.allowOccupiedGoal
   );
   if (!occupantPassable) {
     return { canEnter: false, cost: Infinity, reason: 'occupied', context };
@@ -348,7 +359,17 @@ function searchTraversal(view, { start, goal = null, maxCost = Infinity }) {
 
     for (const step of CARDINAL_STEPS) {
       const neighbor = { x: current.x + step.dx, y: current.y + step.dy };
-      const stepCost = getStepCost(view, current, neighbor, { start, goal });
+      const isGoalStep = Boolean(
+        goal && neighbor.x === goal.x && neighbor.y === goal.y
+      );
+      const stepCost = getStepCost(view, current, neighbor, {
+        start,
+        goal,
+        // Defeated units may be crossed, but never selected as an endpoint.
+        // Reachability has no single goal, so occupied result tiles are
+        // filtered below after still participating in the search frontier.
+        isTransit: !isGoalStep
+      });
       if (!Number.isFinite(stepCost)) continue;
 
       const newCost = current.cost + stepCost;
@@ -374,6 +395,10 @@ export function getReachableTilesForTraversal(view, { start, range }) {
   for (const [key, cost] of costs) {
     if (key === startKey) continue;
     const [x, y] = key.split(',').map(Number);
+    if (!view.movementPolicy.ignoreUnits &&
+        getTraversalOccupant(view, { x, y }, { exclude: start })) {
+      continue;
+    }
     reachable.push({ x, y, z: getElevationAt(view, { x, y }), cost });
   }
   return reachable;
@@ -413,4 +438,3 @@ export function findTraversalPath(view, {
   }
   return path;
 }
-

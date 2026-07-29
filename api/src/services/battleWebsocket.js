@@ -342,12 +342,22 @@ async function broadcastTurnChanged(battleId, activeUnitIndex, turn, excludeUser
  * @param {Object} unit - Active unit info { id, name, type, position }
  * @param {string} unitType - 'player_local' | 'player_remote' | 'enemy'
  * @param {Array} turnPredictions - Predicted next 10 turns
+ * @param {number|null} stateRevision - Authoritative revision for this turn
+ * @param {Object|null} availableActions - Authoritative actions for the owner
+ * @returns {Promise<Map<number, number>>} Reliability sequences by recipient
  */
-async function broadcastTurnStart(battleId, unit, unitType, turnPredictions = null) {
+async function broadcastTurnStart(
+  battleId,
+  unit,
+  unitType,
+  turnPredictions = null,
+  stateRevision = null,
+  availableActions = null
+) {
   const roomName = `battle:${battleId}`;
 
   // Use ACK-required broadcast - critical for turn flow
-  await broadcastWithAck(null, roomName, {
+  return broadcastWithAck(null, roomName, {
     type: 'battle:turn_start',
     payload: {
       battleId,
@@ -356,6 +366,12 @@ async function broadcastTurnStart(battleId, unit, unitType, turnPredictions = nu
       unitType,
       position: unit.position,
       turnPredictions,
+      ...(availableActions !== null && availableActions !== undefined
+        ? { availableActions }
+        : {}),
+      ...(stateRevision !== null && stateRevision !== undefined
+        ? { stateRevision }
+        : {}),
       timestamp: Date.now()
     }
   }, battleId);
@@ -395,25 +411,39 @@ async function broadcastIntentHighlight(battleId, unitId, highlightType, tiles, 
  * @param {string} unitId - Active unit ID
  * @param {Object} state - Current battle state
  * @param {Array} availableActions - List of available actions
+ * @param {number|null} stateRevision - Authoritative revision for recovery
+ * @returns {Promise<number>} Reliability sequence, or -1 without an open connection
  */
-async function sendYourTurn(userId, battleId, unitId, state, availableActions = null) {
+async function sendYourTurn(
+  userId,
+  battleId,
+  unitId,
+  state,
+  availableActions = null,
+  stateRevision = null
+) {
   const ws = await getWebsocket();
   const { connections } = ws;
   const connection = connections.get(userId);
 
   if (connection && connection.readyState === 1) { // WebSocket.OPEN = 1
     // Use ACK-required send - must enable player input
-    sendWithAck(connection, {
+    return sendWithAckAfterRecovery(connection, {
       type: 'battle:your_turn',
       payload: {
         battleId,
         unitId,
         state,
         availableActions,
+        ...(stateRevision !== null && stateRevision !== undefined
+          ? { stateRevision }
+          : {}),
         timestamp: Date.now()
       }
     }, battleId, userId);
   }
+
+  return -1;
 }
 
 /**

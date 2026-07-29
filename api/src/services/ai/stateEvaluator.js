@@ -513,7 +513,10 @@ class StateEvaluator {
         factors.ALLY_SUPPORT = calculateAllySupport(unit, unit.tileX, unit.tileY, state);
         factors.HEALING_VALUE = 0;
         factors.SURVIVAL_PRIORITY = calculateSurvivalPriority(unit, unit.tileX, unit.tileY, state);
-        factors.MP_EFFICIENCY = 100; // Perfect efficiency (no cost)
+        // MP efficiency compares the value of skills that actually spend MP.
+        // Treating an idle turn as "perfect" efficiency made support, pack,
+        // ranged, and boss units prefer waiting over closing with the enemy.
+        factors.MP_EFFICIENCY = 50; // Neutral, like a movement action
         factors.strategicPathProgress = 0; // No path progress when waiting
         factors.waitingPenalty = waitingPenalty({ unit, action, state });
         break;
@@ -539,7 +542,12 @@ class StateEvaluator {
     }
 
     // Apply action type bonuses/penalties (conditional for skills)
-    totalScore += this.getActionTypeBonus(action.type, factors._skillBenefit);
+    totalScore += this.getActionTypeBonus(
+      action.type,
+      factors._skillBenefit,
+      unit,
+      state
+    );
 
     return { score: totalScore, factors };
   }
@@ -548,9 +556,16 @@ class StateEvaluator {
    * Get bonus/penalty for action types based on pattern
    * @param {string} actionType - Type of action
    * @param {number|null} skillBenefit - Skill benefit value (null for non-skills)
+   * @param {Object|null} unit - Acting unit, when evaluating a real action
+   * @param {Object|null} state - Current battle state
    * @returns {number} Bonus value
    */
-  getActionTypeBonus(actionType, skillBenefit = null) {
+  getActionTypeBonus(
+    actionType,
+    skillBenefit = null,
+    unit = null,
+    state = null
+  ) {
     // No bonus for zero-benefit skills - they shouldn't get rewarded
     if (actionType === 'skill' && skillBenefit !== null && skillBenefit === 0) {
       return 0;
@@ -590,7 +605,25 @@ class StateEvaluator {
 
     // Ambush patterns prefer to wait if hidden
     if (this.patternName === 'Ambush') {
-      if (actionType === 'wait') return 20;
+      if (actionType === 'wait') {
+        const opponents = state?.units?.filter(candidate =>
+          candidate.hp > 0 &&
+          getUnitTeamId(candidate) !== getUnitTeamId(unit)
+        ) || [];
+        const opponentInAmbushRange = opponents.some(opponent => {
+          const distance = Math.abs(opponent.tileX - unit.tileX) +
+            Math.abs(opponent.tileY - unit.tileY);
+          return distance <= 2;
+        });
+
+        // Preserve the explicit ambush fantasy: a hidden unit may hold its
+        // ground until a target enters spring range. Revealed ambushers and
+        // ambushers without this state should advance like other combatants.
+        if (unit?.isHidden && !unit?.hasAmbushed && !opponentInAmbushRange) {
+          return 70;
+        }
+        return 20;
+      }
       if (actionType === 'attack') return 10; // Springing the ambush is fine
       if (actionType === 'item') return 10;
     }

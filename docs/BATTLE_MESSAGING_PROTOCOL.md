@@ -96,12 +96,12 @@ Note: The `timestamp` is included in the payload. Sequence numbers are not curre
 
 | Message | Payload | Purpose |
 |---------|---------|---------|
-| `battle:turn_start` | `{ battleId, unitId, unitType, unitName, position, turnPredictions }` | Broadcast when any unit's turn begins |
+| `battle:turn_start` | `{ battleId, unitId, unitType, unitName, position, turnPredictions, stateRevision? }` | Broadcast when any unit's turn begins |
 | `battle:intent_highlight` | `{ battleId, unitId, highlightType, tiles[], duration }` | Show enemy movement/attack range preview |
 | `battle:action_executed` | `{ battleId, actorId, actionType, result }` | Result of action for animation |
 | `battle:turn_changed` | `{ battleId, activeUnitIndex, activeUnitId, turn, turnPredictions }` | Turn complete, announce next unit (legacy) |
 | `battle:unit_moved` | `{ battleId, unitId, from, to }` | Unit movement event |
-| `battle:your_turn` | `{ battleId, unitId, state, availableActions }` | Sent only to controlling player |
+| `battle:your_turn` | `{ battleId, unitId, state, availableActions, stateRevision? }` | Authoritative local-control recovery sent only to the controlling player |
 | `battle:player_disconnected` | `{ battleId, playerId, playerName }` | Player dropped from battle |
 | `battle:player_reconnected` | `{ battleId, playerId, playerName }` | Player returned to battle |
 | `battle:state_sync` | `{ battleId, state, reason }` | Full state synchronization |
@@ -130,6 +130,7 @@ Broadcast to all participants when a unit's turn begins. Triggers camera pan to 
       { "unitId": "char_3", "estimatedTicks": 5 },
       { "unitId": "char_1", "estimatedTicks": 8 }
     ],
+    "stateRevision": 18,
     "timestamp": 1704556800000
   }
 }
@@ -143,6 +144,7 @@ Broadcast to all participants when a unit's turn begins. Triggers camera pan to 
 | `unitName` | string | Display name for UI |
 | `position` | object | Unit position `{ x, y }` for camera panning |
 | `turnPredictions` | array | Predicted upcoming turns based on CT |
+| `stateRevision` | number | Optional authoritative revision for stale-event rejection |
 | `timestamp` | number | Server timestamp |
 
 ---
@@ -289,7 +291,17 @@ Sent only to the controlling player when their unit's turn begins. Enables playe
       "activeUnitId": "char_1",
       "units": [ ... ]
     },
-    "availableActions": ["move", "attack", "skill", "item", "wait"],
+    "availableActions": {
+      "canMove": true,
+      "canAct": true,
+      "canWait": true,
+      "turnPhase": "ready",
+      "movement": { ... },
+      "attacks": { ... },
+      "skills": [ ... ],
+      "items": [ ... ]
+    },
+    "stateRevision": 18,
     "timestamp": 1704556800000
   }
 }
@@ -300,8 +312,16 @@ Sent only to the controlling player when their unit's turn begins. Enables playe
 | `battleId` | number | Battle identifier |
 | `unitId` | string | Active unit identifier |
 | `state` | object | Full battle state |
-| `availableActions` | array | List of available action types |
+| `availableActions` | object | Authoritative movement/action flags and legal options |
+| `stateRevision` | number | Optional authoritative revision for stale-event rejection |
 | `timestamp` | number | Server timestamp |
+
+The client applies the logical recovery immediately: it sets the active local
+unit, exits enemy-sequence state, applies `availableActions`, clears stale
+targeting, and refreshes all controls. Camera movement and turn presentation
+are independent and cannot delay input recovery. If availability is missing,
+the client remains locked and requests a full sync plus a defensive poll after
+a short timeout.
 
 ---
 
@@ -521,6 +541,7 @@ The WebSocket channel is used exclusively for server-to-client broadcasts.
 | `GET` | `/api/battle/current` | Get current active battle state |
 | `GET` | `/api/battle/:battleId/rejoin` | Rejoin battle after disconnect |
 | `POST` | `/api/battle/action` | Submit battle action |
+| `GET` | `/api/battle/:battleId/state` | Get lightweight drift-recovery state |
 | `GET` | `/api/battle/rewards/:battleId` | Get rewards after victory |
 | `POST` | `/api/battle/:battleId/zodiac-ability` | Use zodiac signature ability |
 | `GET` | `/api/battle/:battleId/zodiac-abilities/:characterId` | Get available zodiac abilities |
@@ -538,6 +559,9 @@ Start a new PvE battle at the player's current node.
   }
 }
 ```
+
+`formation` must contain 1–5 owned roster characters. Its keys are the
+authoritative participant set; omitted roster characters are not deployed.
 
 **Response (201 Created):**
 ```json
@@ -572,7 +596,11 @@ Submit a player action during battle.
   "actionType": "move",
   "unitId": "char_1",
   "targetTile": { "x": 4, "y": 5 },
-  "skillId": null
+  "skillId": null,
+  "inventoryId": null,
+  "stateRevision": 17,
+  "commandId": "0193f5d6-8d70-7ef0-a3b1-38c59fcb98b1",
+  "actionSequence": 47
 }
 ```
 
@@ -583,6 +611,23 @@ Submit a player action during battle.
 | `unitId` | string | Yes | Acting unit identifier |
 | `targetTile` | object | For move/attack/skill | Target position `{ x, y }` |
 | `skillId` | string | For skill action | Skill to use |
+| `inventoryId` | number | For item action | Stable inventory-row identity |
+| `stateRevision` | number | Recommended | Revision on which this intent was created |
+| `commandId` | string | Recommended | Stable 1–128 character ID for this user intent |
+| `actionSequence` | number | No | Legacy session counter |
+
+Movement and acting are independent. A unit may move before or after its one
+attack, skill, or item action. The server validates `moveUsed` and `actUsed`
+separately.
+
+The client reuses the same `commandId`, `stateRevision`, and semantic payload
+after an ambiguous network failure. The server stores the committed result and
+replays it for an exact retry, including after the battle becomes terminal.
+The action and all inventory, reward, and rating side effects execute at most
+once. A new command carrying an obsolete `stateRevision` is rejected before
+business processing; legacy clients may omit the precondition. A request that
+omits `commandId` receives a one-shot server receipt identity; its resettable
+`actionSequence` is diagnostic only and does not provide replay semantics.
 
 **Response (200 OK):**
 ```json
@@ -599,10 +644,14 @@ Submit a player action during battle.
   "availableActions": {
     "canMove": false,
     "canAct": true,
-    "movementRange": [],
-    "attackRange": [ ... ],
+    "canWait": true,
+    "turnPhase": "partial",
+    "movement": null,
+    "attacks": { ... },
     "skills": [ ... ]
-  }
+  },
+  "stateRevision": 18,
+  "commandId": "0193f5d6-8d70-7ef0-a3b1-38c59fcb98b1"
 }
 ```
 
@@ -613,9 +662,15 @@ The response includes the updated battle state. Results are also broadcast via W
 {
   "error": "Not this unit's turn",
   "state": { ... },
-  "availableActions": { ... }
+  "availableActions": { ... },
+  "stateRevision": 18
 }
 ```
+
+Structured `400`, `403`, and `409` responses include reconciliation state
+whenever the battle can be loaded. A `409` is returned for a stale state
+precondition, concurrent state conflict, inactive battle, or a `commandId`
+reused with different intent.
 
 ### 4.4 GET /api/battle/:battleId/rejoin
 
@@ -644,7 +699,10 @@ Rejoin an active battle after disconnect.
 | Error | HTTP Status | Description |
 |-------|-------------|-------------|
 | Not this unit's turn | 400 | Not the specified unit's turn |
-| Battle not found or not active | 404 | Battle does not exist or ended |
+| Battle not found | 404 | Battle does not exist or requester is not a participant |
+| Battle is no longer active | 409 | Reconcile the returned terminal state |
+| Battle state has changed | 409 | Submitted `stateRevision` is stale or a concurrent commit won |
+| Command ID conflict | 409 | Stable ID was reused with different intent |
 | You do not control this unit | 403 | Unit belongs to another player |
 | Cannot battle at this location | 400 | Node type doesn't support battles |
 | No battle party set | 400 | No characters in battle party |
@@ -654,7 +712,20 @@ Rejoin an active battle after disconnect.
 
 ## 5. State Synchronization Protocol
 
-### 5.1 Sequence Number System
+### 5.1 Authoritative State Revisions
+
+Every durable battle mutation increments `stateRevision`. Action responses,
+structured action errors, full snapshots, the defensive poll endpoint, and
+critical turn notifications carry that revision. Clients never apply a lower
+revision over a higher one.
+
+The defensive `GET /api/battle/:battleId/state` snapshot includes
+`stateRevision`, the active actor, `moveUsed`, `actUsed`, `turnPhase`,
+participant-scoped `availableActions`, status, and per-unit position, HP, MP,
+and active-unit action flags. It can therefore reconstruct actionable UI, not
+only visual state.
+
+### 5.2 Sequence Number System
 
 Every server broadcast includes a monotonically increasing sequence number. Clients track received sequences to detect gaps and request resynchronization when needed.
 
@@ -685,7 +756,7 @@ Every server broadcast includes a monotonically increasing sequence number. Clie
 +-----------------------------------------------------------------------------+
 ```
 
-### 5.2 Client Sequence Tracking
+### 5.3 Client Sequence Tracking
 
 ```javascript
 class BattleSequenceTracker {
@@ -742,7 +813,7 @@ class BattleSequenceTracker {
 }
 ```
 
-### 5.3 State Sync Triggers
+### 5.4 State Sync Triggers
 
 | Trigger | Action |
 |---------|--------|
@@ -751,7 +822,7 @@ class BattleSequenceTracker {
 | Explicit sync request | Server sends full state sync |
 | Server detects stale client | Push state sync to client |
 
-### 5.4 Reconnection Flow
+### 5.5 Reconnection Flow
 
 ```
 +-----------------------------------------------------------------------------+

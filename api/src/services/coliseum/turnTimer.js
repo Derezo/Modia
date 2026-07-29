@@ -176,7 +176,8 @@ async function skipPlayerTurn(battleId, playerId, isPvE = false) {
         id: nextUnit.id,
         name: nextUnit.name,
         position: { x: nextUnit.tileX, y: nextUnit.tileY }
-      }, nextUnit.type, battleService.predictTurnOrder(state, 10));
+      }, nextUnit.type, battleService.predictTurnOrder(state, 10),
+      commit.stateRevision);
 
       // Start new turn timer if it's a player's turn
       if (nextUnit.type === 'player' && nextUnit.ownerId) {

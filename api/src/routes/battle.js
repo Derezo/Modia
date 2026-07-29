@@ -4,7 +4,11 @@ import { query, withTransaction } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import { actionLimiter, startLimiter, readLimiter, rejoinLimiter, rewardsLimiter, stateLimiter } from '../middleware/battleRateLimiter.js';
-import { BATTLE_NODE_TYPES, MAX_BATTLE_PARTY_SIZE } from '../config/constants.js';
+import {
+  BATTLE_NODE_TYPES,
+  MAX_BATTLE_PARTY_SIZE,
+  MAX_PARTY_SIZE
+} from '../config/constants.js';
 import * as battleService from '../services/battleService.js';
 import * as battleRewardService from '../services/battleRewardService.js';
 import * as aiService from '../services/aiService.js';
@@ -12,6 +16,8 @@ import * as enemyService from '../services/enemyService.js';
 import battleWebsocket from '../services/battleWebsocket.js';
 import { createPlayerBattleUnit } from '../services/battleUnitFactory.js';
 import { validateFormationPayload } from '../services/battle/formationValidation.js';
+import { getParticipantAvailableActions } from
+  '../services/battle/participantActionAvailability.js';
 import { deriveEncounterTerrainSeed } from '../services/battle/encounterService.js';
 import {
   CURRENT_BATTLE_MAP_VERSION,
@@ -28,7 +34,11 @@ import {
   completeMatch as completeColiseumMatch,
   publishColiseumMatchResultEvents
 } from '../services/coliseumService.js';
-import { battleStateRepository } from '../services/battle/BattleStateRepository.js';
+import {
+  BattleStateConflictError,
+  BattleStateIdempotencyError,
+  battleStateRepository
+} from '../services/battle/BattleStateRepository.js';
 import { battleTerminalOutbox } from '../services/battle/BattleTerminalOutbox.js';
 import {
   BATTLE_TERMINAL_PROGRESSION_EVENT_TYPE,
@@ -41,6 +51,7 @@ import {
 import {
   assertBattleMapCapabilities
 } from '../../../shared/battleStateProtocol.js';
+import { battleMapV2ToFlatState } from '../../../shared/index.js';
 import {
   validateActionSequence,
   resetActionSequence,
@@ -86,6 +97,9 @@ function throwCapabilityError(error) {
 }
 
 const BATTLE_START_REQUEST_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/;
+const BATTLE_ACTION_COMMAND_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
+const PLAYER_ACTION_COMMAND_TYPE = 'player_action';
+const PLAYER_ACTION_TYPES = new Set(['move', 'attack', 'skill', 'item', 'wait']);
 
 function createBattleCreationKey(requestId, userId, nodeId) {
   const normalizedRequestId = requestId ?? randomUUID();
@@ -100,11 +114,164 @@ function createBattleCreationKey(requestId, userId, nodeId) {
   return `pve:${userId}:${nodeId}:${normalizedRequestId}`;
 }
 
+function createBattleActionCommand({
+  battleId,
+  userId,
+  commandId,
+  actionType,
+  unitId,
+  targetTile,
+  skillId,
+  inventoryId,
+  stateRevision
+}) {
+  if (commandId !== undefined && commandId !== null) {
+    if (typeof commandId !== 'string'
+      || !BATTLE_ACTION_COMMAND_ID_PATTERN.test(commandId)) {
+      throw new AppError(
+        'commandId must be 1-128 URL-safe characters',
+        400,
+        { code: 'battle_command_id_invalid' }
+      );
+    }
+  }
+  if (stateRevision !== undefined && stateRevision !== null
+    && (!Number.isSafeInteger(stateRevision) || stateRevision < 0)) {
+    throw new AppError(
+      'stateRevision must be a nonnegative safe integer',
+      400,
+      { code: 'battle_state_revision_invalid' }
+    );
+  }
+
+  // actionSequence is reset when a client rejoins and therefore cannot name a
+  // durable receipt. Only an explicit commandId is replayable; legacy requests
+  // receive a fresh one-shot identity for each submission.
+  const identity = commandId !== undefined && commandId !== null
+    ? `command:${commandId}`
+    : `legacy:${randomUUID()}`;
+
+  return {
+    commandId: commandId ?? null,
+    commandType: PLAYER_ACTION_COMMAND_TYPE,
+    idempotencyKey: `player:${userId}:${identity}`,
+    idempotencyRequest: {
+      battleId: String(battleId),
+      userId: String(userId),
+      actionType: actionType ?? null,
+      unitId: unitId ?? null,
+      targetTile: targetTile ?? null,
+      skillId: skillId ?? null,
+      inventoryId: inventoryId ?? null,
+      stateRevision: stateRevision ?? null
+    }
+  };
+}
+
+function createBattleActionRecovery(battle, userId) {
+  const state = battleService.withBattleStateVisualIdentities(battle.state);
+  return {
+    state,
+    availableActions: getParticipantAvailableActions(battle, state, userId),
+    stateRevision: battle.stateRevision
+  };
+}
+
+async function materializeBattleActionReceipt(receipt, battle) {
+  const state = battle.battleMapSchemaVersion === 2
+    ? await battleMapV2ToFlatState(battle.map, receipt.mutableState)
+    : { ...receipt.mutableState, ...battle.map };
+  return battleService.withBattleStateVisualIdentities(state);
+}
+
+async function sendBattleActionReplay(res, receipt, battle, commandId, userId) {
+  const replayMetadata = receipt.replayMetadata;
+  if (!replayMetadata) {
+    throw new AppError('Battle command result cannot be replayed', 409, {
+      code: 'battle_command_replay_unavailable',
+      ...createBattleActionRecovery(battle, userId)
+    });
+  }
+  return res.json({
+    state: await materializeBattleActionReceipt(receipt, battle),
+    actionResult: replayMetadata.actionResult,
+    battleStatus: replayMetadata.battleStatus,
+    turnContinues: replayMetadata.turnContinues,
+    availableActions: replayMetadata.availableActions,
+    stateRevision: receipt.stateRevision,
+    commandId
+  });
+}
+
+async function throwBattleActionCommitError(error, battleId, userId) {
+  const idempotencyConflict = error instanceof BattleStateIdempotencyError
+    || error?.code === 'BATTLE_IDEMPOTENCY_CONFLICT';
+  const stateConflict = error instanceof BattleStateConflictError
+    || error?.code === 'BATTLE_STATE_CONFLICT';
+  if (!idempotencyConflict && !stateConflict) {
+    throw error;
+  }
+  const battle = await loadParticipantBattleOr404(battleId, userId);
+  throw new AppError(
+    idempotencyConflict
+      ? 'commandId was already used for a different action'
+      : 'Battle state has changed - please retry',
+    409,
+    {
+      code: idempotencyConflict
+        ? 'battle_command_id_conflict'
+        : 'battle_state_conflict',
+      ...createBattleActionRecovery(battle, userId)
+    }
+  );
+}
+
 function requireCompatibleBattleMap(negotiation) {
   if (negotiation.compatible) return;
   throw new AppError('This battle map requires a newer client', 426, {
     ...createBattleMapUpgradeRequiredPayload(negotiation)
   });
+}
+
+async function loadPveBattleParty(queryFn, userId) {
+  return queryFn(
+    `SELECT c.id, c.name, c.race, c.gender, c.class, c.level,
+            c.hp_current, c.hp_max, c.mp_current, c.mp_max,
+            c.strength, c.intelligence, c.agility, c.vitality, c.luck,
+            c.current_node_id, c.in_battle,
+            COALESCE(eq.equip_strength, 0) as equip_strength,
+            COALESCE(eq.equip_intelligence, 0) as equip_intelligence,
+            COALESCE(eq.equip_agility, 0) as equip_agility,
+            COALESCE(eq.equip_vitality, 0) as equip_vitality,
+            COALESCE(eq.equip_luck, 0) as equip_luck,
+            COALESCE(eq.equip_hp, 0) as equip_hp,
+            COALESCE(eq.equip_mp, 0) as equip_mp,
+            COALESCE(eq.equip_attack, 0) as equip_attack,
+            COALESCE(eq.equip_defense, 0) as equip_defense,
+            COALESCE(eq.equip_magic_attack, 0) as equip_magic_attack,
+            COALESCE(eq.equip_magic_defense, 0) as equip_magic_defense
+     FROM characters c
+     LEFT JOIN LATERAL (
+       SELECT
+         SUM(COALESCE((it.stat_bonuses->>'strength')::int, 0) + COALESCE((ci.modifications->>'strength')::int, 0)) as equip_strength,
+         SUM(COALESCE((it.stat_bonuses->>'intelligence')::int, 0) + COALESCE((ci.modifications->>'intelligence')::int, 0)) as equip_intelligence,
+         SUM(COALESCE((it.stat_bonuses->>'agility')::int, 0) + COALESCE((ci.modifications->>'agility')::int, 0)) as equip_agility,
+         SUM(COALESCE((it.stat_bonuses->>'vitality')::int, 0) + COALESCE((ci.modifications->>'vitality')::int, 0)) as equip_vitality,
+         SUM(COALESCE((it.stat_bonuses->>'luck')::int, 0) + COALESCE((ci.modifications->>'luck')::int, 0)) as equip_luck,
+         SUM(COALESCE((it.stat_bonuses->>'hp')::int, 0) + COALESCE((ci.modifications->>'hp_max')::int, 0)) as equip_hp,
+         SUM(COALESCE((it.stat_bonuses->>'mp')::int, 0) + COALESCE((ci.modifications->>'mp_max')::int, 0)) as equip_mp,
+         SUM(COALESCE((it.stat_bonuses->>'attack')::int, 0) + COALESCE((ci.modifications->>'attack')::int, 0)) as equip_attack,
+         SUM(COALESCE((it.stat_bonuses->>'defense')::int, 0) + COALESCE((ci.modifications->>'defense')::int, 0)) as equip_defense,
+         SUM(COALESCE((it.stat_bonuses->>'magic_attack')::int, 0) + COALESCE((ci.modifications->>'magic_attack')::int, 0)) as equip_magic_attack,
+         SUM(COALESCE((it.stat_bonuses->>'magic_defense')::int, 0) + COALESCE((ci.modifications->>'magic_defense')::int, 0)) as equip_magic_defense
+       FROM character_items ci
+       JOIN item_templates it ON ci.item_template_id = it.id
+       WHERE ci.character_id = c.id AND ci.equipped_slot IS NOT NULL
+     ) eq ON true
+     WHERE c.user_id = $1 AND c.party_slot <= $2 AND c.party_slot IS NOT NULL
+     ORDER BY c.party_slot ASC`,
+    [userId, MAX_PARTY_SIZE]
+  );
 }
 
 export function negotiateBattleTransport(battle, clientCapabilities) {
@@ -255,6 +422,9 @@ async function handleBattleEnd(
     expectedRevision,
     consumedInventoryId = null,
     commandIdentity = `terminal:${battleId}:${expectedRevision}`,
+    commandType = 'battle_complete',
+    idempotencyRequest,
+    replayMetadata,
     publish = true
   } = {}
 ) {
@@ -263,6 +433,7 @@ async function handleBattleEnd(
   let committedState = state;
   let committedStateRevision = expectedRevision;
   let presentationEvents = [];
+  let commandReceipt = null;
 
   // For PvP battles, include player IDs and winning team so each player gets
   // their perspective. The persisted lifecycle has one canonical winner.
@@ -299,9 +470,16 @@ async function handleBattleEnd(
         expectedRevision,
         consumedInventoryId,
         actingUserId: userId,
+        battleCommand: idempotencyRequest === undefined ? null : {
+          commandType,
+          idempotencyKey: commandIdentity,
+          idempotencyRequest,
+          replayMetadata
+        },
         publish
       }
     );
+    commandReceipt = completion?.commit ?? null;
     committedUpdate = completion?.commit?.update ?? null;
     committedState = completion?.commit?.envelope?.state ?? state;
     committedStateRevision =
@@ -312,12 +490,32 @@ async function handleBattleEnd(
     // returned by the transaction is ever sent to clients. An ambiguous retry
     // therefore replays the stored outcome instead of a newly rolled response.
     const rewardsData = await battleRewardService.computeRewards(state, battleId);
+    const terminalReplayMetadata = replayMetadata === undefined ? undefined : {
+      ...replayMetadata,
+      actionResult: {
+        ...replayMetadata.actionResult,
+        rewards: {
+          gold: rewardsData.gold,
+          experience: rewardsData.experience,
+          items: rewardsData.items
+        }
+      }
+    };
     const completion = await withTransaction(async client => {
       const distributed = await battleRewardService.distributeRewards(
         userId,
         rewardsData,
         battleId,
-        { finalState: state, client }
+        {
+          finalState: state,
+          client,
+          battleCommand: idempotencyRequest === undefined ? null : {
+            commandType,
+            idempotencyKey: commandIdentity,
+            idempotencyRequest,
+            replayMetadata: terminalReplayMetadata
+          }
+        }
       );
       if (!distributed.idempotent) {
         await consumeBattleInventoryItem(client, consumedInventoryId, userId);
@@ -352,6 +550,7 @@ async function handleBattleEnd(
       }
       return distributed;
     });
+    commandReceipt = completion.commandReceipt ?? null;
     committedUpdate = completion.update;
     committedState = completion.envelope?.state ?? state;
     committedStateRevision =
@@ -366,8 +565,10 @@ async function handleBattleEnd(
       const committed = await battleStateRepository.commitBattleState({
         battleId,
         expectedRevision,
-        commandType: 'battle_complete',
+        commandType,
         idempotencyKey: commandIdentity,
+        idempotencyRequest,
+        replayMetadata,
         flatState: state,
         lifecycle: {
           status: terminalStatus,
@@ -376,24 +577,38 @@ async function handleBattleEnd(
         },
         allowedStatuses: ['active']
       }, { client });
-      await battleRewardService.clearAdvancementChallengerStatus(
-        client,
-        committed.envelope
-      );
       if (!committed.idempotent) {
-        await consumeBattleInventoryItem(client, consumedInventoryId, userId);
-        const participantIds = isPvP
-          ? [state.player1Id, state.player2Id]
-          : [userId];
-        await client.query(
-          `UPDATE characters SET in_battle = false
-           WHERE user_id = ANY($1::int[]) AND party_slot <= $2`,
-          [participantIds, MAX_BATTLE_PARTY_SIZE]
+        await battleRewardService.clearAdvancementChallengerStatus(
+          client,
+          committed.envelope
         );
+        await consumeBattleInventoryItem(client, consumedInventoryId, userId);
+        if (isPvP) {
+          await client.query(
+            `UPDATE characters SET in_battle = false
+             WHERE user_id = ANY($1::int[]) AND party_slot <= $2`,
+            [[state.player1Id, state.player2Id], MAX_BATTLE_PARTY_SIZE]
+          );
+        } else {
+          const playerCharacterIds = [...new Set(
+            (state.units ?? [])
+              .filter(unit => unit.type === 'player')
+              .map(unit => Number(unit.characterId ?? unit.id))
+              .filter(characterId => Number.isSafeInteger(characterId) && characterId > 0)
+          )];
+          if (playerCharacterIds.length > 0) {
+            await client.query(
+              `UPDATE characters SET in_battle = false
+               WHERE user_id = $1 AND id = ANY($2::int[])`,
+              [userId, playerCharacterIds]
+            );
+          }
+        }
         await bossService.cleanupBossEncounter(battleId, { client });
       }
       return committed;
     });
+    commandReceipt = completion;
     committedUpdate = completion.update;
     committedState = completion.envelope?.state ?? state;
     committedStateRevision =
@@ -420,10 +635,14 @@ async function handleBattleEnd(
   return {
     rewards,
     state: committedState,
-    stateRevision: committedStateRevision,
+    stateRevision: commandReceipt?.stateRevision ?? committedStateRevision,
     committedUpdate,
     pvpInfo,
-    presentationEvents
+    presentationEvents,
+    idempotent: commandReceipt?.idempotent ?? false,
+    mutableState: commandReceipt?.mutableState,
+    baseStateRevision: commandReceipt?.baseStateRevision,
+    replayMetadata: commandReceipt?.replayMetadata
   };
 }
 
@@ -436,6 +655,10 @@ async function handleProcessedEnemyTurns(
   enemyTurnResult,
   userId
 ) {
+  if (enemyTurnResult?.skipped) {
+    return enemyTurnResult;
+  }
+
   let {
     state,
     stateRevision,
@@ -468,24 +691,34 @@ async function handleProcessedEnemyTurns(
     stateRevision = completed.stateRevision;
     committedUpdate = completed.committedUpdate;
   } else {
-    const activeCommit = await battleTurnManager.updateBattleState(
-      battleId,
-      state,
-      stateRevision,
-      {
-        commandType: 'enemy_turn_settle',
-        idempotencyKey: `enemy-turn-settle:${battleId}:${stateRevision}`
-      }
+    // The final enemy advance is already the committed, broadcast player-ready
+    // state. A second identical "settle" commit created an actionable window in
+    // which a fast player action could advance the revision and make this
+    // handoff fail. Re-read only to ensure we do not publish a stale turn notice.
+    const authoritativeBattle = await battleStateRepository.loadBattle(battleId);
+    const authoritativeState = authoritativeBattle.state;
+    const authoritativeUnit = authoritativeState.units?.find(
+      unit => unit.id === authoritativeState.activeUnitId
     );
-    state = activeCommit.envelope.state;
-    stateRevision = activeCommit.envelope.stateRevision;
-    if (!activeCommit.idempotent) {
-      committedUpdate = activeCommit.update;
-      await battleWebsocket.broadcastStateUpdate(battleId, committedUpdate);
+    const handoffIsCurrent = authoritativeBattle.status === 'active' &&
+      authoritativeBattle.stateRevision === stateRevision &&
+      String(authoritativeState.activeUnitId) === String(state.activeUnitId) &&
+      authoritativeUnit?.type === 'player';
+
+    state = authoritativeState;
+    stateRevision = authoritativeBattle.stateRevision;
+    if (handoffIsCurrent) {
+      await battleTurnManager.notifyPlayerTurn(
+        battleId,
+        state,
+        stateRevision
+      );
     } else {
-      committedUpdate = null;
+      console.log(
+        '[AsyncTurnManager] Player handoff was superseded before notification for battle',
+        battleId
+      );
     }
-    battleTurnManager.notifyPlayerTurn(battleId, state);
   }
 
   return {
@@ -513,49 +746,12 @@ router.get('/preview/:nodeId', authenticate, readLimiter, asyncHandler(async (re
 
 // POST /api/battle/start - Start PvE battle at current node
 router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) => {
-  // Get optional formation from request
+  // Get required formation from request
   const { formation, battleStartRequestId } = req.body || {};
   const battleMapCapabilities = readBattleMapCapabilities(req);
 
   // Get user's battle party with equipment stat bonuses
-  const partyResult = await query(
-    `SELECT c.id, c.name, c.race, c.gender, c.class, c.level,
-            c.hp_current, c.hp_max, c.mp_current, c.mp_max,
-            c.strength, c.intelligence, c.agility, c.vitality, c.luck,
-            c.current_node_id, c.in_battle,
-            COALESCE(eq.equip_strength, 0) as equip_strength,
-            COALESCE(eq.equip_intelligence, 0) as equip_intelligence,
-            COALESCE(eq.equip_agility, 0) as equip_agility,
-            COALESCE(eq.equip_vitality, 0) as equip_vitality,
-            COALESCE(eq.equip_luck, 0) as equip_luck,
-            COALESCE(eq.equip_hp, 0) as equip_hp,
-            COALESCE(eq.equip_mp, 0) as equip_mp,
-            COALESCE(eq.equip_attack, 0) as equip_attack,
-            COALESCE(eq.equip_defense, 0) as equip_defense,
-            COALESCE(eq.equip_magic_attack, 0) as equip_magic_attack,
-            COALESCE(eq.equip_magic_defense, 0) as equip_magic_defense
-     FROM characters c
-     LEFT JOIN LATERAL (
-       SELECT
-         SUM(COALESCE((it.stat_bonuses->>'strength')::int, 0) + COALESCE((ci.modifications->>'strength')::int, 0)) as equip_strength,
-         SUM(COALESCE((it.stat_bonuses->>'intelligence')::int, 0) + COALESCE((ci.modifications->>'intelligence')::int, 0)) as equip_intelligence,
-         SUM(COALESCE((it.stat_bonuses->>'agility')::int, 0) + COALESCE((ci.modifications->>'agility')::int, 0)) as equip_agility,
-         SUM(COALESCE((it.stat_bonuses->>'vitality')::int, 0) + COALESCE((ci.modifications->>'vitality')::int, 0)) as equip_vitality,
-         SUM(COALESCE((it.stat_bonuses->>'luck')::int, 0) + COALESCE((ci.modifications->>'luck')::int, 0)) as equip_luck,
-         SUM(COALESCE((it.stat_bonuses->>'hp')::int, 0) + COALESCE((ci.modifications->>'hp_max')::int, 0)) as equip_hp,
-         SUM(COALESCE((it.stat_bonuses->>'mp')::int, 0) + COALESCE((ci.modifications->>'mp_max')::int, 0)) as equip_mp,
-         SUM(COALESCE((it.stat_bonuses->>'attack')::int, 0) + COALESCE((ci.modifications->>'attack')::int, 0)) as equip_attack,
-         SUM(COALESCE((it.stat_bonuses->>'defense')::int, 0) + COALESCE((ci.modifications->>'defense')::int, 0)) as equip_defense,
-         SUM(COALESCE((it.stat_bonuses->>'magic_attack')::int, 0) + COALESCE((ci.modifications->>'magic_attack')::int, 0)) as equip_magic_attack,
-         SUM(COALESCE((it.stat_bonuses->>'magic_defense')::int, 0) + COALESCE((ci.modifications->>'magic_defense')::int, 0)) as equip_magic_defense
-       FROM character_items ci
-       JOIN item_templates it ON ci.item_template_id = it.id
-       WHERE ci.character_id = c.id AND ci.equipped_slot IS NOT NULL
-     ) eq ON true
-     WHERE c.user_id = $1 AND c.party_slot <= $2 AND c.party_slot IS NOT NULL
-     ORDER BY c.party_slot ASC`,
-    [req.user.userId, MAX_BATTLE_PARTY_SIZE]
-  );
+  const partyResult = await loadPveBattleParty(query, req.user.userId);
 
   if (partyResult.rows.length === 0) {
     throw new AppError('No battle party set', 400);
@@ -564,37 +760,14 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
   const party = partyResult.rows;
   const formationValidation = validateFormationPayload(formation, {
     allowedCharacterIds: party.map(character => character.id),
-    maxCharacters: MAX_BATTLE_PARTY_SIZE
+    maxCharacters: MAX_BATTLE_PARTY_SIZE,
+    required: true
   });
   if (!formationValidation.success) {
     throw new AppError(formationValidation.error, 400);
   }
 
-  // Get learned skills for all party members
-  const characterIds = party.map(c => c.id);
-  const skillsResult = await query(
-    `SELECT character_id, skill_id, level
-     FROM character_skills
-     WHERE character_id = ANY($1)`,
-    [characterIds]
-  );
-
-  // Group skills by character and enhance with skill definitions
-  const characterSkills = {};
-  for (const row of skillsResult.rows) {
-    if (!characterSkills[row.character_id]) {
-      characterSkills[row.character_id] = [];
-    }
-    // Get character class to find skill definition
-    const char = party.find(c => c.id === row.character_id);
-    const skill = char
-      ? battleService.resolveBattleSkill(char.class, row)
-      : null;
-
-    if (skill) {
-      characterSkills[row.character_id].push(skill);
-    }
-  }
+  const selectedCharacterIds = formationValidation.characterIds;
 
   // Check if already in battle - if so, return existing battle data for rejoin
   if (party.some(c => c.in_battle)) {
@@ -605,6 +778,9 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
     if (battleEnvelope) {
       // Return existing battle for rejoin
       const nodeMetadata = await loadBattleNodeMetadata(battleEnvelope.nodeId);
+      const battleState = battleService.withBattleStateVisualIdentities(
+        battleEnvelope.state
+      );
       const negotiated = negotiateBattleTransport(
         battleEnvelope,
         battleMapCapabilities
@@ -624,41 +800,19 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
         mapHeight: battleEnvelope.mapHeight,
         nodeType: nodeMetadata.nodeType,
         nodeName: nodeMetadata.nodeName,
-        state: battleService.withBattleStateVisualIdentities(battleEnvelope.state),
+        state: battleState,
         stateRevision: battleEnvelope.stateRevision,
+        availableActions: getParticipantAvailableActions(
+          battleEnvelope,
+          battleState,
+          req.user.userId
+        ),
         rejoined: true
       }, battleEnvelope, battleMapCapabilities, negotiated));
     }
 
-    // Corrupted state: in_battle=true but no active battle found - reset and continue
-    await query(
-      'UPDATE characters SET in_battle = false WHERE user_id = $1',
-      [req.user.userId]
-    );
-  }
-
-  // Check if any party member has 0 HP
-  if (party.some(c => c.hp_current <= 0)) {
-    throw new AppError('Cannot battle with incapacitated characters', 400);
-  }
-
-  const currentNodeId = party[0].current_node_id;
-
-  // Get node info
-  const nodeResult = await query(
-    'SELECT node_type, name, difficulty_tier, local_seed FROM world_nodes WHERE id = $1',
-    [currentNodeId]
-  );
-
-  if (nodeResult.rows.length === 0) {
-    throw new AppError('Current location not found', 400);
-  }
-
-  const node = nodeResult.rows[0];
-
-  // Verify this is a battle node
-  if (!BATTLE_NODE_TYPES.includes(node.node_type)) {
-    throw new AppError('Cannot battle at this location', 400);
+    // A stale in_battle flag is repaired only after the lifecycle lock and a
+    // second active-battle check inside the creation transaction below.
   }
 
   let selectedGenerationVersion;
@@ -670,170 +824,17 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
   } catch (error) {
     throwCapabilityError(error);
   }
-  const mapSeed = deriveEncounterTerrainSeed(
-    node.local_seed,
-    node.node_type,
-    selectedGenerationVersion
-  );
-
-  // Load character traits for all party members
-  const characterTraits = await traitService.loadCharacterTraits(characterIds);
-
-  // Load zodiac signature abilities for the user
-  const zodiacAbilities = await zodiacAbilityService.loadActiveZodiacAbilities(req.user.userId);
-
-  // Load user settings for debug options
-  const settingsResult = await query(
-    'SELECT settings FROM user_settings WHERE user_id = $1',
-    [req.user.userId]
-  );
-  const userSettings = settingsResult.rows[0]?.settings || {};
-  const debugOptions = {
-    // BattleMutableStateV1 is canonical JSON. Optional settings must collapse
-    // to a real boolean instead of leaking `undefined` into the wire state.
-    logAIDecisions: Boolean(
-      userSettings?.developer?.enabled
-      && userSettings?.developer?.battle?.logAIDecisions
-    )
-  };
-
-  // Create initial battle state
-  const initialState = {
-    turn: 1,
-    phase: 'active',
-    activeUnitIndex: 0,
-    activeUnitId: null,
-    debugOptions, // User's debug settings for AI logging etc.
-    units: party.map((char, idx) => {
-      // Use formation position if provided, otherwise default layout
-      const formationPos = formation?.[char.id];
-      const defaultX = 1 + (idx % 3);
-      const defaultY = 13 + Math.floor(idx / 3) * 2;
-
-      // Use BattleUnit factory for unified unit creation
-      return createPlayerBattleUnit(
-        {
-          ...char,
-          user_id: req.user.userId,
-          hp_current: char.hp_current,
-          hp_max: char.hp_max,
-          mp_current: char.mp_current,
-          mp_max: char.mp_max,
-          equip_hp: parseInt(char.equip_hp, 10) || 0,
-          equip_mp: parseInt(char.equip_mp, 10) || 0,
-          equip_strength: parseInt(char.equip_strength, 10) || 0,
-          equip_intelligence: parseInt(char.equip_intelligence, 10) || 0,
-          equip_agility: parseInt(char.equip_agility, 10) || 0,
-          equip_vitality: parseInt(char.equip_vitality, 10) || 0,
-          equip_luck: parseInt(char.equip_luck, 10) || 0,
-          equip_attack: parseInt(char.equip_attack, 10) || 0,
-          equip_defense: parseInt(char.equip_defense, 10) || 0,
-          equip_magic_attack: parseInt(char.equip_magic_attack, 10) || 0,
-          equip_magic_defense: parseInt(char.equip_magic_defense, 10) || 0
-        },
-        formationPos ? { tileX: formationPos.tileX, tileY: formationPos.tileY + 12 } : null,
-        characterSkills[char.id] || [],
-        {
-          defaultX,
-          defaultY,
-          traits: characterTraits[char.id] || [],
-          zodiacAbilities: zodiacAbilities // Pass zodiac abilities to all player units
-        }
-      );
-    })
-  };
-
-  // Get consumable items from shared inventory (user_id based, not character_id)
-  const consumablesResult = await query(
-    `SELECT ci.id as inventory_id, it.id as item_id, it.name, it.item_type,
-            it.effect_type, it.effect_value, it.description, ci.quantity,
-            it.sprite_id
-     FROM character_items ci
-     JOIN item_templates it ON ci.item_template_id = it.id
-     WHERE ci.user_id = $1 AND it.item_type = 'consumable' AND ci.quantity > 0
-       AND ci.equipped_slot IS NULL
-     ORDER BY it.name`,
-    [req.user.userId]
-  );
-
-  // Map consumables to battle format
-  initialState.consumables = consumablesResult.rows.map(item => ({
-    inventoryId: item.inventory_id,
-    itemId: item.item_id,
-    name: item.name,
-    quantity: item.quantity,
-    description: item.description,
-    effectType: item.effect_type,
-    effectValue: item.effect_value,
-    spriteId: item.sprite_id
-  }));
-
-  // Extract character IDs from formation (only placed characters count for enemy scaling)
-  const formationCharacterIds = formationValidation.characterIds;
-
-  // Generate enemies from templates (scaled to formation characters)
-  const enemies = await enemyService.generateEncounter(currentNodeId, party, formationCharacterIds);
-  initialState.units.push(...enemies);
-
-  // Initialize boss states for any boss enemies
-  initialState.bossStates = {};
-  for (const enemy of enemies) {
-    if (bossService.isBoss(enemy)) {
-      // The durable battle ID is attached when the battle row is created.
-      const bossState = bossService.initializeBossState(enemy, null);
-      if (bossState) {
-        initialState.bossStates[enemy.id] = bossState;
-        enemy.isBoss = true;
-        enemy.currentPhase = bossState.currentPhase;
-        enemy.maxPhases = bossState.maxPhases;
-        enemy.phaseName = bossState.phaseName;
-      }
-    }
-  }
-
-  // Initialize CT values for all units (adds initial variation)
-  battleService.initializeCT(initialState.units);
-
-  // Advance CT and find the first actor
-  battleService.advanceToNextActor(initialState);
-
-  // Generate turn predictions
-  initialState.turnPredictions = battleService.predictTurnOrder(initialState, 10);
-
-  let generatedBattle;
-  try {
-    generatedBattle = await generateBattleMap({
-      terrainSeed: mapSeed,
-      nodeType: node.node_type,
-      mode: 'pve',
-      playerCount: initialState.units.filter(unit => unit.type === 'player').length,
-      enemyCount: enemies.length,
-      enemyCapacity: Math.max(1, enemies.length),
-      enemyStrategy: 'formation',
-      existingUnits: [],
-      initialMutableState: initialState,
-      allowV2: selectedGenerationVersion === CURRENT_BATTLE_MAP_VERSION,
-      clientCapabilities: battleMapCapabilities
-    });
-  } catch (error) {
-    throwCapabilityError(error);
-  }
-
-  const creationIdempotencyKey = createBattleCreationKey(
-    battleStartRequestId,
-    req.user.userId,
-    currentNodeId
-  );
   const creation = await withTransaction(async client => {
-    // Serialize battle creation for a party. This closes the race where two
-    // concurrent start requests both observed in_battle=false.
-    await client.query(
-      `SELECT id
+    // Character deletion and Coliseum lifecycle writes use the same user-wide,
+    // deterministic lock order. Lock every owned row before trusting the
+    // selected formation or materializing any persisted player snapshot.
+    const lockedCharacters = await client.query(
+      `SELECT id, in_battle
        FROM characters
-       WHERE user_id = $1 AND party_slot <= $2 AND party_slot IS NOT NULL
+       WHERE user_id = $1
        ORDER BY id
        FOR UPDATE`,
-      [req.user.userId, MAX_BATTLE_PARTY_SIZE]
+      [req.user.userId]
     );
 
     const concurrentlyCreated = await battleStateRepository.findActiveBattleForPlayer(
@@ -848,7 +849,226 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
         envelope: concurrentlyCreated
       };
     }
+    if (lockedCharacters.rows.some(character => character.in_battle)) {
+      await client.query(
+        `UPDATE characters
+         SET in_battle = false
+         WHERE user_id = $1 AND in_battle = true`,
+        [req.user.userId]
+      );
+    }
 
+    const authoritativePartyResult = await loadPveBattleParty(
+      client.query.bind(client),
+      req.user.userId
+    );
+    const authoritativeParty = authoritativePartyResult.rows;
+    const authoritativeFormation = validateFormationPayload(formation, {
+      allowedCharacterIds: authoritativeParty.map(character => character.id),
+      maxCharacters: MAX_BATTLE_PARTY_SIZE,
+      required: true
+    });
+    if (
+      !authoritativeFormation.success
+      || authoritativeFormation.characterIds.length !== selectedCharacterIds.length
+      || authoritativeFormation.characterIds.some(
+        characterId => !selectedCharacterIds.includes(characterId)
+      )
+    ) {
+      throw new AppError('Selected formation changed - please retry', 409);
+    }
+
+    const authoritativeCharacterIds = authoritativeFormation.characterIds;
+    const authoritativeCharacterIdSet = new Set(authoritativeCharacterIds);
+    const selectedParty = authoritativeParty.filter(
+      character => authoritativeCharacterIdSet.has(character.id)
+    );
+    if (selectedParty.length !== authoritativeCharacterIds.length) {
+      throw new AppError('Selected formation changed - please retry', 409);
+    }
+    if (selectedParty.some(character => character.in_battle)) {
+      throw new AppError('Selected characters are no longer available', 409);
+    }
+    if (selectedParty.some(character => character.hp_current <= 0)) {
+      throw new AppError('Cannot battle with incapacitated characters', 400);
+    }
+
+    const currentNodeId = selectedParty[0].current_node_id;
+    if (selectedParty.some(character => character.current_node_id !== currentNodeId)) {
+      throw new AppError('Selected characters must be at the same location', 400);
+    }
+    const nodeResult = await client.query(
+      'SELECT node_type, name, difficulty_tier, local_seed FROM world_nodes WHERE id = $1',
+      [currentNodeId]
+    );
+    if (nodeResult.rows.length === 0) {
+      throw new AppError('Current location not found', 400);
+    }
+    const node = nodeResult.rows[0];
+    if (!BATTLE_NODE_TYPES.includes(node.node_type)) {
+      throw new AppError('Cannot battle at this location', 400);
+    }
+
+    const skillsResult = await client.query(
+      `SELECT character_id, skill_id, level
+       FROM character_skills
+       WHERE character_id = ANY($1::int[])`,
+      [authoritativeCharacterIds]
+    );
+    const characterSkills = {};
+    for (const row of skillsResult.rows) {
+      if (!characterSkills[row.character_id]) {
+        characterSkills[row.character_id] = [];
+      }
+      const character = selectedParty.find(candidate => candidate.id === row.character_id);
+      const skill = character
+        ? battleService.resolveBattleSkill(character.class, row)
+        : null;
+      if (skill) {
+        characterSkills[row.character_id].push(skill);
+      }
+    }
+
+    // These character-dependent reads happen only after the owned-character
+    // locks. A concurrent deletion either commits first and fails formation
+    // revalidation above, or waits until this battle snapshot is committed.
+    const characterTraits = await traitService.loadCharacterTraits(
+      authoritativeCharacterIds,
+      { client }
+    );
+    const zodiacAbilities = await zodiacAbilityService.loadActiveZodiacAbilities(
+      req.user.userId,
+      { client }
+    );
+    const settingsResult = await client.query(
+      'SELECT settings FROM user_settings WHERE user_id = $1',
+      [req.user.userId]
+    );
+    const userSettings = settingsResult.rows[0]?.settings || {};
+    const debugOptions = {
+      logAIDecisions: Boolean(
+        userSettings?.developer?.enabled
+        && userSettings?.developer?.battle?.logAIDecisions
+      )
+    };
+
+    const initialState = {
+      turn: 1,
+      phase: 'active',
+      activeUnitIndex: 0,
+      activeUnitId: null,
+      debugOptions,
+      units: selectedParty.map((character, index) => {
+        const formationPosition = formation[character.id];
+        const defaultX = 1 + (index % 3);
+        const defaultY = 13 + Math.floor(index / 3) * 2;
+        return createPlayerBattleUnit(
+          {
+            ...character,
+            user_id: req.user.userId,
+            equip_hp: parseInt(character.equip_hp, 10) || 0,
+            equip_mp: parseInt(character.equip_mp, 10) || 0,
+            equip_strength: parseInt(character.equip_strength, 10) || 0,
+            equip_intelligence: parseInt(character.equip_intelligence, 10) || 0,
+            equip_agility: parseInt(character.equip_agility, 10) || 0,
+            equip_vitality: parseInt(character.equip_vitality, 10) || 0,
+            equip_luck: parseInt(character.equip_luck, 10) || 0,
+            equip_attack: parseInt(character.equip_attack, 10) || 0,
+            equip_defense: parseInt(character.equip_defense, 10) || 0,
+            equip_magic_attack: parseInt(character.equip_magic_attack, 10) || 0,
+            equip_magic_defense: parseInt(character.equip_magic_defense, 10) || 0
+          },
+          {
+            tileX: formationPosition.tileX,
+            tileY: formationPosition.tileY + 12
+          },
+          characterSkills[character.id] || [],
+          {
+            defaultX,
+            defaultY,
+            traits: characterTraits[character.id] || [],
+            zodiacAbilities
+          }
+        );
+      })
+    };
+
+    const consumablesResult = await client.query(
+      `SELECT ci.id as inventory_id, it.id as item_id, it.name, it.item_type,
+              it.effect_type, it.effect_value, it.description, ci.quantity,
+              it.sprite_id
+       FROM character_items ci
+       JOIN item_templates it ON ci.item_template_id = it.id
+       WHERE ci.user_id = $1 AND it.item_type = 'consumable' AND ci.quantity > 0
+         AND ci.equipped_slot IS NULL
+       ORDER BY it.name`,
+      [req.user.userId]
+    );
+    initialState.consumables = consumablesResult.rows.map(item => ({
+      inventoryId: item.inventory_id,
+      itemId: item.item_id,
+      name: item.name,
+      quantity: item.quantity,
+      description: item.description,
+      effectType: item.effect_type,
+      effectValue: item.effect_value,
+      spriteId: item.sprite_id
+    }));
+
+    const enemies = await enemyService.generateEncounter(
+      currentNodeId,
+      selectedParty,
+      authoritativeCharacterIds,
+      { client }
+    );
+    initialState.units.push(...enemies);
+    initialState.bossStates = {};
+    for (const enemy of enemies) {
+      if (bossService.isBoss(enemy)) {
+        const bossState = bossService.initializeBossState(enemy, null);
+        if (bossState) {
+          initialState.bossStates[enemy.id] = bossState;
+          enemy.isBoss = true;
+          enemy.currentPhase = bossState.currentPhase;
+          enemy.maxPhases = bossState.maxPhases;
+          enemy.phaseName = bossState.phaseName;
+        }
+      }
+    }
+
+    battleService.initializeCT(initialState.units);
+    battleService.advanceToNextActor(initialState);
+    initialState.turnPredictions = battleService.predictTurnOrder(initialState, 10);
+
+    const mapSeed = deriveEncounterTerrainSeed(
+      node.local_seed,
+      node.node_type,
+      selectedGenerationVersion
+    );
+    let generatedBattle;
+    try {
+      generatedBattle = await generateBattleMap({
+        terrainSeed: mapSeed,
+        nodeType: node.node_type,
+        mode: 'pve',
+        playerCount: selectedParty.length,
+        enemyCount: enemies.length,
+        enemyCapacity: Math.max(1, enemies.length),
+        enemyStrategy: 'formation',
+        existingUnits: [],
+        initialMutableState: initialState,
+        allowV2: selectedGenerationVersion === CURRENT_BATTLE_MAP_VERSION,
+        clientCapabilities: battleMapCapabilities
+      });
+    } catch (error) {
+      throwCapabilityError(error);
+    }
+
+    const creationIdempotencyKey = createBattleCreationKey(
+      battleStartRequestId,
+      req.user.userId,
+      currentNodeId
+    );
     const result = await battleStateRepository.createBattle({
       battleType: 'pve',
       status: 'active',
@@ -860,11 +1080,19 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
       initialMutableState: generatedBattle.mutableState
     }, { client });
 
-    await client.query(
+    const updateResult = await client.query(
       `UPDATE characters SET in_battle = true
-       WHERE user_id = $1 AND party_slot <= $2 AND party_slot IS NOT NULL`,
-      [req.user.userId, MAX_BATTLE_PARTY_SIZE]
+       WHERE user_id = $1
+         AND id = ANY($2::int[])
+         AND party_slot IS NOT NULL
+         AND party_slot <= $3
+         AND hp_current > 0
+         AND in_battle = false`,
+      [req.user.userId, authoritativeCharacterIds, MAX_PARTY_SIZE]
     );
+    if (updateResult.rowCount !== authoritativeCharacterIds.length) {
+      throw new AppError('Selected characters are no longer available', 409);
+    }
     if (result.created) {
       for (const bossState of Object.values(generatedBattle.mutableState.bossStates ?? {})) {
         await bossService.saveBossEncounter(
@@ -873,7 +1101,11 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
         );
       }
     }
-    return result;
+    return {
+      ...result,
+      currentNodeId,
+      node
+    };
   });
 
   const battleEnvelope = creation.envelope;
@@ -882,12 +1114,12 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
   const battleState = battleService.withBattleStateVisualIdentities(
     battleEnvelope.state
   );
-  const responseNode = battleEnvelope.nodeId === currentNodeId
-    ? { nodeType: node.node_type, nodeName: node.name }
+  const responseNode = creation.node && battleEnvelope.nodeId === creation.currentNodeId
+    ? { nodeType: creation.node.node_type, nodeName: creation.node.name }
     : await loadBattleNodeMetadata(battleEnvelope.nodeId);
 
   // Join battle WebSocket room
-  battleWebsocket.joinBattle(battleId, req.user.userId);
+  await battleWebsocket.joinBattle(battleId, req.user.userId);
 
   // Check if the first actor is an enemy - if so, process their turns asynchronously
   const firstActor = battleState.units.find(u => u.id === battleState.activeUnitId);
@@ -913,13 +1145,11 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
     });
   }
 
-  // Get available actions for the first player unit (if their turn)
-  const firstPlayerUnit = battleState.units.find(
-    u => u.id === battleState.activeUnitId && u.type === 'player'
+  const availableActions = getParticipantAvailableActions(
+    battleEnvelope,
+    battleState,
+    req.user.userId
   );
-  const availableActions = firstPlayerUnit
-    ? battleService.getAvailableActions(firstPlayerUnit, battleState)
-    : null;
 
   res.status(creation.created ? 201 : 200).json(createBattleTransportResponse({
     battleId,
@@ -973,7 +1203,7 @@ router.get('/current', authenticate, readLimiter, asyncHandler(async (req, res) 
   }
 
   // Join battle WebSocket room for updates
-  battleWebsocket.joinBattle(battleId, req.user.userId);
+  await battleWebsocket.joinBattle(battleId, req.user.userId);
 
   // For PvP battles, restart turn timer if it's this player's turn
   // This handles the case where a player refreshes during their turn
@@ -1011,11 +1241,11 @@ router.get('/current', authenticate, readLimiter, asyncHandler(async (req, res) 
     });
   }
 
-  // Get available actions for active player unit
-  const activePlayerUnit = state.units?.find(u => u.id === state.activeUnitId && u.type === 'player');
-  const availableActions = activePlayerUnit
-    ? battleService.getAvailableActions(activePlayerUnit, state)
-    : null;
+  const availableActions = getParticipantAvailableActions(
+    battleEnvelope,
+    state,
+    req.user.userId
+  );
 
   res.json(createBattleTransportResponse({
     battleId: battleId,
@@ -1074,12 +1304,12 @@ router.get('/:battleId/rejoin', authenticate, rejoinLimiter, asyncHandler(async 
   // Get disconnected players info
   const disconnectedPlayers = battleReconnection.getDisconnectedPlayers(parseInt(battleId));
 
-  // Get available actions for active player unit
   const battleState = battleService.withBattleStateVisualIdentities(battleEnvelope.state);
-  const activePlayerUnit = battleState.units?.find(u => u.id === battleState.activeUnitId && u.type === 'player');
-  const availableActions = activePlayerUnit
-    ? battleService.getAvailableActions(activePlayerUnit, battleState)
-    : null;
+  const availableActions = getParticipantAvailableActions(
+    battleEnvelope,
+    battleState,
+    req.user.userId
+  );
 
   res.json(createBattleTransportResponse({
     success: true,
@@ -1103,7 +1333,17 @@ router.get('/:battleId/rejoin', authenticate, rejoinLimiter, asyncHandler(async 
 
 // POST /api/battle/action - Submit battle action
 router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res) => {
-  const { battleId, actionType, unitId, targetTile, skillId, actionSequence } = req.body;
+  const {
+    battleId,
+    actionType,
+    unitId,
+    targetTile,
+    skillId,
+    inventoryId,
+    actionSequence,
+    commandId,
+    stateRevision
+  } = req.body;
 
   if (battleId === undefined || battleId === null || battleId === '') {
     throw new AppError('Battle ID is required', 400, {
@@ -1111,17 +1351,57 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
     });
   }
 
-  // Validate action sequence — reject stale or duplicate submissions
-  const sequenceValidation = validateActionSequence(battleId, req.user.userId, actionSequence);
-  if (!sequenceValidation.valid) {
-    throw new AppError('Battle state has changed - please retry', 409);
-  }
+  const actionCommand = createBattleActionCommand({
+    battleId,
+    userId: req.user.userId,
+    commandId,
+    actionType,
+    unitId,
+    targetTile,
+    skillId,
+    inventoryId,
+    stateRevision
+  });
 
   const battle = await loadParticipantBattleOr404(
     battleId,
-    req.user.userId,
-    { requireActive: true }
+    req.user.userId
   );
+  let priorReceipt;
+  try {
+    priorReceipt = await battleStateRepository.findCommandReceipt({
+      battleId,
+      idempotencyKey: actionCommand.idempotencyKey,
+      commandType: actionCommand.commandType,
+      idempotencyRequest: actionCommand.idempotencyRequest
+    });
+  } catch (error) {
+    await throwBattleActionCommitError(error, battleId, req.user.userId);
+  }
+  if (priorReceipt) {
+    return sendBattleActionReplay(
+      res,
+      priorReceipt,
+      battle,
+      actionCommand.commandId,
+      req.user.userId
+    );
+  }
+  if (stateRevision !== undefined
+    && stateRevision !== null
+    && stateRevision !== battle.stateRevision) {
+    throw new AppError('Battle state has changed - please retry', 409, {
+      code: 'battle_state_conflict',
+      ...createBattleActionRecovery(battle, req.user.userId)
+    });
+  }
+  if (battle.status !== 'active') {
+    throw new AppError('Battle is no longer active', 409, {
+      code: 'battle_not_active',
+      ...createBattleActionRecovery(battle, req.user.userId)
+    });
+  }
+
   let state = structuredClone(
     battleService.withBattleStateVisualIdentities(battle.state)
   );
@@ -1145,13 +1425,27 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
 
   // Validate it's the player's turn
   if (!activeUnit || activeUnit.type !== 'player' || activeUnit.id !== unitId) {
-    throw new AppError('Not this unit\'s turn', 400);
+    return res.status(400).json({
+      error: 'Not this unit\'s turn',
+      ...createBattleActionRecovery(battle, req.user.userId)
+    });
   }
 
   // For PvP/co-op: validate unit ownership (ownerId field)
   // If ownerId is set, only the owning player can control that unit
-  if (activeUnit.ownerId && activeUnit.ownerId !== req.user.userId) {
-    throw new AppError('You do not control this unit', 403);
+  if (activeUnit.ownerId !== undefined
+    && activeUnit.ownerId !== null
+    && String(activeUnit.ownerId) !== String(req.user.userId)) {
+    return res.status(403).json({
+      error: 'You do not control this unit',
+      ...createBattleActionRecovery(battle, req.user.userId)
+    });
+  }
+  if (!PLAYER_ACTION_TYPES.has(actionType)) {
+    return res.status(400).json({
+      error: 'Invalid action type',
+      ...createBattleActionRecovery(battle, req.user.userId)
+    });
   }
 
   // Capture old position BEFORE processAction modifies the unit (for movement broadcast)
@@ -1164,8 +1458,7 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
   if (result.error) {
     return res.status(400).json({
       error: result.error,
-      state,
-      availableActions: result.availableActions
+      ...createBattleActionRecovery(battle, req.user.userId)
     });
   }
 
@@ -1203,6 +1496,15 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
 
   // Track if turn continues (two-action system: move + act)
   const turnContinues = !result.turnEnded && battleStatus === 'active';
+  const availableActions = battleStatus === 'active' && turnContinues
+    ? result.availableActions
+    : null;
+  let replayMetadata = {
+    actionResult: result,
+    battleStatus,
+    turnContinues,
+    availableActions
+  };
 
   let committedPlayerState = null;
   let committedRevision = null;
@@ -1214,23 +1516,34 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
     }
     state.turnPredictions = battleService.predictTurnOrder(state, 10);
 
-    const actionCommit = await commitBattleActionState({
-      battleId,
-      expectedRevision: battle.stateRevision,
-      commandType: result.turnEnded ? 'player_turn_advance' : 'player_action',
-      idempotencyKey:
-        `${result.turnEnded ? 'player-turn' : 'player-action'}:`
-        + `${battleId}:${battle.stateRevision}:${req.user.userId}:${actionSequence}`,
-      flatState: state,
-      lifecycle: { status: 'active' },
-      allowedStatuses: ['active']
-    }, {
-      userId: req.user.userId,
-      consumedInventoryId: result.consumedInventoryId,
-      bossState: changedBossState
-    });
+    let actionCommit;
+    try {
+      actionCommit = await commitBattleActionState({
+        battleId,
+        expectedRevision: battle.stateRevision,
+        commandType: actionCommand.commandType,
+        idempotencyKey: actionCommand.idempotencyKey,
+        idempotencyRequest: actionCommand.idempotencyRequest,
+        replayMetadata,
+        flatState: state,
+        lifecycle: { status: 'active' },
+        allowedStatuses: ['active']
+      }, {
+        userId: req.user.userId,
+        consumedInventoryId: result.consumedInventoryId,
+        bossState: changedBossState
+      });
+    } catch (error) {
+      await throwBattleActionCommitError(error, battleId, req.user.userId);
+    }
     if (actionCommit.idempotent) {
-      throw new AppError('Battle state has changed - please retry', 409);
+      return sendBattleActionReplay(
+        res,
+        actionCommit,
+        battle,
+        actionCommand.commandId,
+        req.user.userId
+      );
     }
     state = structuredClone(actionCommit.envelope.state);
     committedPlayerState = state;
@@ -1241,23 +1554,41 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
     await battleWebsocket.broadcastStateUpdate(battleId, actionCommit.update);
   } else {
     state.turnPredictions = battleService.predictTurnOrder(state, 10);
-    completion = await handleBattleEnd(
-      battleId,
-      battleStatus,
-      state,
-      req.user.userId,
-      battleEndResult,
-      {
-        expectedRevision: battle.stateRevision,
-        consumedInventoryId: result.consumedInventoryId,
-        commandIdentity:
-          `player-complete:${battleId}:${battle.stateRevision}:`
-          + `${req.user.userId}:${actionSequence}`,
-        publish: false
-      }
-    );
+    try {
+      completion = await handleBattleEnd(
+        battleId,
+        battleStatus,
+        state,
+        req.user.userId,
+        battleEndResult,
+        {
+          expectedRevision: battle.stateRevision,
+          consumedInventoryId: result.consumedInventoryId,
+          commandIdentity: actionCommand.idempotencyKey,
+          commandType: actionCommand.commandType,
+          idempotencyRequest: actionCommand.idempotencyRequest,
+          replayMetadata,
+          publish: false
+        }
+      );
+    } catch (error) {
+      await throwBattleActionCommitError(error, battleId, req.user.userId);
+    }
+    if (completion.idempotent) {
+      return sendBattleActionReplay(
+        res,
+        completion,
+        battle,
+        actionCommand.commandId,
+        req.user.userId
+      );
+    }
     state = structuredClone(completion.state);
     result.rewards = completion.rewards;
+    replayMetadata = completion.replayMetadata ?? {
+      ...replayMetadata,
+      actionResult: result
+    };
     cancelTurnTimer(battleId);
     if (completion.committedUpdate) {
       await battleWebsocket.broadcastStateUpdate(
@@ -1266,6 +1597,11 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
       );
     }
   }
+
+  // Legacy actionSequence is telemetry only. Recording it
+  // after business validation and durable commit prevents rejected actions
+  // from consuming a sequence number.
+  validateActionSequence(battleId, req.user.userId, actionSequence);
 
   if (phaseTransitionNotification) {
     await battleWebsocket.broadcastPhaseTransition(
@@ -1335,7 +1671,9 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
     battleStatus,
     // Two-action turn system: indicate if turn continues
     turnContinues,
-    availableActions: result.availableActions
+    availableActions,
+    stateRevision: completion?.stateRevision ?? committedRevision,
+    commandId: actionCommand.commandId
   });
 }));
 
@@ -1380,6 +1718,12 @@ router.get('/:id/state', authenticate, stateLimiter, asyncHandler(async (req, re
     winnerId: battle.winnerId,
     isHeadToHead
   });
+  const activeUnit = battleState.units?.find(
+    unit => unit.id === battleState.activeUnitId
+  ) ?? null;
+  const participantAvailableActions = participantStatus === 'active'
+    ? getParticipantAvailableActions(battle, battleState, req.user.userId)
+    : null;
 
   // Build lightweight state for polling
   // Note: Battle units use tileX/tileY for position (not x/y)
@@ -1387,6 +1731,12 @@ router.get('/:id/state', authenticate, stateLimiter, asyncHandler(async (req, re
   const state = {
     activeUnitId: battleState.activeUnitId || null,
     turnCount: battleState.turn || 0,
+    stateRevision: battle.stateRevision,
+    moveUsed: activeUnit?.moveUsed ?? false,
+    actUsed: activeUnit?.actUsed ?? false,
+    turnPhase: activeUnit?.turnPhase ?? 'ready',
+    hasActed: activeUnit?.hasActed ?? false,
+    availableActions: participantAvailableActions,
     status: participantStatus,
     rewards: participantStatus === 'victory' ? (battle.rewards || null) : null,
     units: (battleState.units || []).map(u => ({
@@ -1395,7 +1745,13 @@ router.get('/:id/state', authenticate, stateLimiter, asyncHandler(async (req, re
       y: u.tileY ?? 0,
       hp: u.hp ?? 0,
       mp: u.mp ?? 0,
-      statusEffects: (u.statusEffects || []).map(e => e.type || e)
+      statusEffects: (u.statusEffects || []).map(e => e.type || e),
+      ...(u.id === battleState.activeUnitId ? {
+        moveUsed: u.moveUsed ?? false,
+        actUsed: u.actUsed ?? false,
+        turnPhase: u.turnPhase ?? 'ready',
+        hasActed: u.hasActed ?? false
+      } : {})
     }))
   };
 

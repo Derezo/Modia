@@ -457,7 +457,7 @@ describe('findAdjacentTileToTarget', () => {
     assert.ok(result.y >= 0 && result.y < 2, 'Y should be in bounds');
   });
 
-  test('should treat dead units as blocking occupancy consistently', () => {
+  test('should not choose a dead unit tile as a leap landing destination', () => {
     const unit = createMockPlayerUnit({ id: 'p1', tileX: 3, tileY: 5 });
     const deadUnit = createMockEnemyUnit({ id: 'e1', tileX: 4, tileY: 5, hp: 0 });
     const state = createMockBattleState({
@@ -472,7 +472,7 @@ describe('findAdjacentTileToTarget', () => {
     assert.deepStrictEqual(
       result,
       { x: 4, y: 4 },
-      'Corpses use the same blocking rule as normal traversal'
+      'A corpse tile remains reserved even though paths may cross it'
     );
   });
 });
@@ -662,6 +662,44 @@ describe('calculatePathCost', () => {
     assert.strictEqual(cost, 8, 'Should be Manhattan distance 5+3=8');
   });
 
+  test('should enforce occupancy when no terrain is present', () => {
+    const unit = createMockPlayerUnit({
+      id: 'p1',
+      tileX: 0,
+      tileY: 0
+    });
+    const blocker = createMockEnemyUnit({
+      id: 'e1',
+      tileX: 1,
+      tileY: 0,
+      hp: 100
+    });
+    const state = createMockBattleState({
+      units: [unit, blocker],
+      mapWidth: 3,
+      mapHeight: 1
+    });
+    delete state.terrain;
+
+    assert.strictEqual(
+      calculatePathCost(0, 0, 2, 0, state, 3),
+      Infinity,
+      'a living unit must block the only route even without a terrain layer'
+    );
+
+    blocker.hp = 0;
+    assert.strictEqual(
+      calculatePathCost(0, 0, 2, 0, state, 3),
+      2,
+      'a defeated unit remains transit-passable on synthesized default terrain'
+    );
+    assert.strictEqual(
+      calculatePathCost(0, 0, 1, 0, state, 3),
+      Infinity,
+      'a defeated unit still reserves its tile as a destination'
+    );
+  });
+
   test('should return 0 for same position', () => {
     const state = createMockBattleState({});
     delete state.terrain;
@@ -721,6 +759,35 @@ describe('calculatePathCost', () => {
       Infinity,
       'ordinary movement cannot route onto an occupied destination'
     );
+  });
+
+  test('should traverse a defeated unit at normal cost but reject its tile as a goal', () => {
+    const unit = createMockPlayerUnit({
+      id: 'p1',
+      class: 'warrior',
+      tileX: 0,
+      tileY: 0
+    });
+    const corpse = createMockEnemyUnit({
+      id: 'e1',
+      tileX: 1,
+      tileY: 0,
+      hp: 0
+    });
+    const state = createMockBattleState({
+      units: [unit, corpse],
+      terrain: [['grass', 'grass', 'grass']],
+      elevation: [[0, 0, 0]],
+      elevationFormat: 'discrete',
+      mapWidth: 3,
+      mapHeight: 1
+    });
+
+    assert.deepStrictEqual(getReachableTiles(unit, state), [
+      { x: 2, y: 0, z: 0, cost: 2 }
+    ]);
+    assert.strictEqual(calculatePathCost(0, 0, 2, 0, state, 3), 2);
+    assert.strictEqual(calculatePathCost(0, 0, 1, 0, state, 3), Infinity);
   });
 
   test('should consume directional elevation connections', () => {

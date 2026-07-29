@@ -12,6 +12,10 @@
  */
 
 import { getAssetPath, getOptimalSize } from '../../../../shared/assetPaths.js';
+import {
+  CANONICAL_AUGMENT_OVERLAY_IDS,
+  resolveAugmentOverlay
+} from '../../../../shared/overlayMapping.js';
 
 /**
  * Rarity overlay alpha values for compositing
@@ -67,7 +71,8 @@ export async function loadItemComposite(context, basePath, itemId, category, rar
 
   // Generate cache key for this specific combination
   const subcategory = normalizeItemSubcategory(category);
-  const cacheKey = `item_${subcategory}_${itemId}_${rarity}_${augment || 'none'}`;
+  const overlayId = resolveAugmentOverlay(augment);
+  const cacheKey = `item_${subcategory}_${itemId}_${rarity}_${overlayId || 'none'}`;
 
   // Return cached composite if available
   if (cache.has(cacheKey)) {
@@ -101,9 +106,11 @@ export async function loadItemComposite(context, basePath, itemId, category, rar
 
   // Load augment overlay if specified
   let augmentOverlay = null;
-  if (augment) {
-    const size = COMPOSITE_SIZE;
-    const augmentPath = `${basePath}/overlays/${size}/augments/augment_${augment}.webp`;
+  if (overlayId) {
+    const augmentPath = getAssetPath('overlays', overlayId, {
+      subcategory: 'augments',
+      size: COMPOSITE_SIZE
+    });
     try {
       augmentOverlay = await loadImage(augmentPath);
     } catch {
@@ -185,7 +192,8 @@ export function composeItemSprite(base, rarityOverlay, augmentOverlay, rarity) {
  */
 export function getItemComposite(cache, itemId, category, rarity = 'common', augment = null) {
   const subcategory = normalizeItemSubcategory(category);
-  const cacheKey = `item_${subcategory}_${itemId}_${rarity}_${augment || 'none'}`;
+  const overlayId = resolveAugmentOverlay(augment);
+  const cacheKey = `item_${subcategory}_${itemId}_${rarity}_${overlayId || 'none'}`;
   return cache.get(cacheKey) || null;
 }
 
@@ -198,14 +206,6 @@ export function getItemComposite(cache, itemId, category, rarity = 'common', aug
  */
 export async function preloadOverlays(loadImage, basePath) {
   const rarities = ['uncommon', 'rare', 'epic', 'legendary'];
-  const augments = [
-    // Elemental augments
-    'fire', 'ice', 'lightning', 'poison', 'holy', 'dark', 'earth', 'wind',
-    // Combat augments
-    'critical', 'lifesteal', 'speed', 'pierce', 'stun', 'chain',
-    // Special augments
-    'arcane', 'fortune', 'vitality', 'slayer'
-  ];
 
   const size = COMPOSITE_SIZE;
   const promises = [
@@ -215,8 +215,11 @@ export async function preloadOverlays(loadImage, basePath) {
         .catch(() => null) // Don't fail if overlay doesn't exist
     ),
     // Preload augment overlays
-    ...augments.map(augment =>
-      loadImage(`${basePath}/overlays/${size}/augments/augment_${augment}.webp`)
+    ...CANONICAL_AUGMENT_OVERLAY_IDS.map(overlayId =>
+      loadImage(getAssetPath('overlays', overlayId, {
+        subcategory: 'augments',
+        size
+      }))
         .catch(() => null) // Don't fail if overlay doesn't exist
     )
   ];

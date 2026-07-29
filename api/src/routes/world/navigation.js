@@ -43,6 +43,32 @@ const worldRouteConnectionSelect = WORLD_ROUTE_CONNECTION_COLUMNS
   .map((column) => `wnc.${column}`)
   .join(', ');
 
+/**
+ * Build the interactions offered at a world node.
+ *
+ * Keep one-time activities out of the response after they have been consumed,
+ * so clients can rebuild their menus from authoritative server state.
+ */
+export function buildAvailableNodeActions(node) {
+  const actions = [];
+
+  if (Array.isArray(node?.features)) {
+    node.features.forEach(feature => {
+      actions.push({ type: 'feature', name: feature });
+    });
+  }
+
+  if (node?.node_type === 'chest' && !node.chest_claimed) {
+    actions.push({ type: 'claim_chest', name: 'Claim Treasure' });
+  }
+
+  if (['forest', 'cave', 'mountain', 'bridge'].includes(node?.node_type)) {
+    actions.push({ type: 'battle', name: 'Battle' });
+  }
+
+  return actions;
+}
+
 // ============================================================================
 // ROUTE HANDLERS
 // ============================================================================
@@ -332,6 +358,7 @@ router.get('/nodes', authenticate, asyncHandler(async (req, res) => {
             und.discovered_at,
             und.discovery_method,
             CASE WHEN und.discovery_method = 'travel' THEN true ELSE false END as visited,
+            CASE WHEN ucc.node_id IS NOT NULL THEN true ELSE false END as chest_claimed,
             -- Clearance status: combat nodes need clearing
             CASE WHEN unc.node_id IS NOT NULL THEN true ELSE false END as cleared,
             -- Blocked status: combat nodes that aren't cleared
@@ -340,6 +367,7 @@ router.get('/nodes', authenticate, asyncHandler(async (req, res) => {
      FROM world_nodes wn
      INNER JOIN user_node_discovery und ON wn.id = und.node_id
      LEFT JOIN user_node_clearance unc ON wn.id = unc.node_id AND unc.user_id = $1
+     LEFT JOIN user_chest_claims ucc ON wn.id = ucc.node_id AND ucc.user_id = $1
      WHERE und.user_id = $1
      ORDER BY wn.distance_from_center ASC`,
     [userId]
@@ -369,9 +397,11 @@ router.get('/nodes/:id', authenticate, asyncHandler(async (req, res) => {
     `SELECT wn.id, wn.node_type, wn.name, wn.x_coord, wn.y_coord, wn.distance_from_center,
             wn.features, wn.guild_class, wn.local_seed, wn.difficulty_tier,
             wn.region_id, wn.region_race, wn.ring_distance,
-            wr.race as region_name, wr.dominant_terrain as region_terrain
+            wr.race as region_name, wr.dominant_terrain as region_terrain,
+            CASE WHEN ucc.node_id IS NOT NULL THEN true ELSE false END as chest_claimed
      FROM world_nodes wn
      LEFT JOIN world_regions wr ON wr.id = wn.region_id
+     LEFT JOIN user_chest_claims ucc ON wn.id = ucc.node_id AND ucc.user_id = $2
      WHERE wn.id = $1
        AND EXISTS (
          SELECT 1
@@ -653,9 +683,12 @@ router.post('/travel', authenticate, travelLimiter, asyncHandler(async (req, res
   // Get new node details (including region for quest tracking)
   const nodeResult = await query(
     `SELECT wn.id, wn.node_type, wn.name, wn.features, wn.guild_class,
-            wn.local_seed, wn.difficulty_tier, wn.region_id
-     FROM world_nodes wn WHERE wn.id = $1`,
-    [targetNodeId]
+            wn.local_seed, wn.difficulty_tier, wn.region_id,
+            CASE WHEN ucc.node_id IS NOT NULL THEN true ELSE false END as chest_claimed
+     FROM world_nodes wn
+     LEFT JOIN user_chest_claims ucc ON wn.id = ucc.node_id AND ucc.user_id = $2
+     WHERE wn.id = $1`,
+    [targetNodeId, req.user.userId]
   );
 
   // Get path node details for animation
@@ -761,6 +794,7 @@ router.get('/current', authenticate, asyncHandler(async (req, res) => {
             wn.region_id, wn.region_race, wn.ring_distance,
             wr.race as region_name, wr.dominant_terrain as region_terrain,
             wr.castle_node_id as region_castle_id,
+            CASE WHEN ucc.node_id IS NOT NULL THEN true ELSE false END as chest_claimed,
             CASE WHEN unc.node_id IS NOT NULL THEN true ELSE false END as cleared,
             CASE WHEN wn.node_type IN ('forest', 'cave', 'mountain', 'bridge')
                  AND unc.node_id IS NULL THEN true ELSE false END as blocked
@@ -768,6 +802,7 @@ router.get('/current', authenticate, asyncHandler(async (req, res) => {
      JOIN world_nodes wn ON c.current_node_id = wn.id
      LEFT JOIN world_regions wr ON wr.id = wn.region_id
      LEFT JOIN user_node_clearance unc ON wn.id = unc.node_id AND unc.user_id = $1
+     LEFT JOIN user_chest_claims ucc ON wn.id = ucc.node_id AND ucc.user_id = $1
      WHERE c.user_id = $1 AND c.party_slot = 1`,
     [req.user.userId]
   );
@@ -777,20 +812,7 @@ router.get('/current', authenticate, asyncHandler(async (req, res) => {
   }
 
   const node = result.rows[0];
-
-  // Determine available actions based on node type and features
-  const actions = [];
-
-  if (node.features && Array.isArray(node.features)) {
-    node.features.forEach(feature => {
-      actions.push({ type: 'feature', name: feature });
-    });
-  }
-
-  // Battle nodes allow battle action
-  if (['forest', 'cave', 'mountain', 'bridge'].includes(node.node_type)) {
-    actions.push({ type: 'battle', name: 'Battle' });
-  }
+  const actions = buildAvailableNodeActions(node);
 
   // Build region info object
   const regionInfo = node.region_id ? {

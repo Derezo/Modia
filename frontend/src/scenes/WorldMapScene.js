@@ -99,6 +99,7 @@ export class WorldMapScene extends Scene {
 
     // Node action menu (positioned near current node)
     this.nodeActionMenu = null;
+    this.chestClaimPending = false;
 
     // Node hover tooltip (for non-current nodes)
     this.nodeHoverTooltip = null;
@@ -150,6 +151,8 @@ export class WorldMapScene extends Scene {
       onAction: (feature) => {
         if (feature === 'battle') {
           this.startBattle();
+        } else if (feature === 'claim_chest') {
+          return this.claimCurrentChest();
         } else if (feature === 'debug_clear') {
           // Debug mode: node was auto-cleared, refresh the map
           this.refreshNodes();
@@ -978,6 +981,77 @@ export class WorldMapScene extends Scene {
     parchmentToast.info('Coming Soon', `${this.capitalize(feature)} feature is under development.`);
   }
 
+  /**
+   * Claim the one-time reward at the current chest node.
+   */
+  async claimCurrentChest() {
+    if (this.chestClaimPending || !this.currentNode || this.currentNode.node_type !== 'chest') {
+      return;
+    }
+
+    if (this.currentNode.chest_claimed || this.currentNode.claimed) {
+      return;
+    }
+
+    const chestNodeId = this.currentNode.id;
+
+    this.chestClaimPending = true;
+    this.nodeActionMenu?.setActionPending('claim_chest', true);
+
+    try {
+      const result = await this.game.api.claimChest(chestNodeId);
+
+      if (result.new_gold_balance !== null && result.new_gold_balance !== undefined) {
+        this.game.state.set('gold', result.new_gold_balance);
+      }
+
+      // Remove the one-time action immediately. The server has committed the
+      // claim even if the following world-state refresh encounters a network error.
+      this.nodes = this.nodes.map(node => (
+        node.id === chestNodeId
+          ? { ...node, chest_claimed: true, claimed: true }
+          : node
+      ));
+      this.game.state.set('worldNodes', this.nodes);
+
+      // Navigation may complete while the claim request is in flight. Only
+      // replace and rebuild the current node if it is still the claimed chest.
+      if (this.currentNode?.id === chestNodeId) {
+        this.currentNode = {
+          ...this.currentNode,
+          chest_claimed: true,
+          claimed: true
+        };
+        this.game.state.set('currentNode', this.currentNode);
+        this.nodeActionMenu?.rebuildActions(this.currentNode);
+      }
+
+      parchmentToast.success(
+        result.already_claimed ? 'Treasure Already Collected' : 'Treasure Collected',
+        result.message || (
+          result.already_claimed
+            ? 'This treasure was already collected.'
+            : `You found ${result.gold_awarded || 0} gold.`
+        )
+      );
+
+      // Refresh authoritative node claim state and rebuild the current menu.
+      try {
+        await this.refreshNodes();
+      } catch (refreshError) {
+        console.warn('Treasure claimed, but world state refresh failed:', refreshError);
+      }
+    } catch (error) {
+      parchmentToast.error(
+        'Treasure Unavailable',
+        error.message || 'Unable to collect this treasure. Please try again.'
+      );
+    } finally {
+      this.chestClaimPending = false;
+      this.nodeActionMenu?.setActionPending('claim_chest', false);
+    }
+  }
+
   async openRuinsPuzzle() {
     // Dynamically import the modal to avoid circular dependencies
     const { RuinsPuzzleModal } = await import('../modals/RuinsPuzzleModal.js');
@@ -1242,8 +1316,10 @@ export class WorldMapScene extends Scene {
    * Travel to a node with walking animation
    */
   async travelToNode(node) {
-    // Block travel if already traveling
-    if (this.isTraveling) return;
+    // World-location mutations are mutually exclusive. The server also locks
+    // the party leader during a chest claim, but avoiding the race here keeps
+    // the map interaction predictable while that request is pending.
+    if (this.isTraveling || this.chestClaimPending) return;
 
     // Check if this is the current node
     if (this.currentNode && node.id === this.currentNode.id) {

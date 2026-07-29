@@ -8,6 +8,7 @@ import {
 function createTrainingHarness({
   experience = 1000,
   spentXP = 0,
+  inBattle = false,
   skills = {}
 } = {}) {
   const state = {
@@ -26,7 +27,8 @@ function createTrainingHarness({
       hp_current: 100,
       mp_current: 100,
       hp_max: 100,
-      mp_max: 100
+      mp_max: 100,
+      in_battle: inBattle
     },
     skills: new Map(Object.entries(skills)),
     queries: []
@@ -186,6 +188,21 @@ describe('Training Grounds skill learning hardening', () => {
     assert.equal(harness.state.skills.get('fireball'), 1);
     assert.equal(harness.state.character.experience, 50);
     assert.equal(harness.state.character.spent_xp, 50);
+  });
+
+  it('rejects learning after the locked character enters a battle', async () => {
+    const harness = createTrainingHarness({ inBattle: true });
+
+    await assert.rejects(
+      harness.learn(),
+      error => error.statusCode === 400
+        && error.message === 'Cannot learn skills during battle'
+    );
+
+    assert.equal(harness.state.character.experience, 1000);
+    assert.equal(harness.state.skills.size, 0);
+    assert.equal(harness.state.queries.length, 1);
+    assert.ok(harness.state.queries[0].sql.endsWith('FOR UPDATE'));
   });
 
   it('checks prerequisites from the locked skill state before spending XP', async () => {

@@ -117,23 +117,25 @@ router.post('/equip', authenticate, inventoryLimiter, asyncHandler(async (req, r
     throw new AppError('Invalid equipment slot', 400);
   }
 
-  // Verify character ownership and get character info
-  const charResult = await query(
-    'SELECT id, level, class, race, in_battle FROM characters WHERE id = $1 AND user_id = $2',
-    [characterId, req.user.userId]
-  );
-
-  if (charResult.rows.length === 0) {
-    throw new AppError('Character not found', 404);
-  }
-
-  const character = charResult.rows[0];
-
-  if (character.in_battle) {
-    throw new AppError('Cannot change equipment during battle', 400);
-  }
-
   await withTransaction(async (client) => {
+    // Character-first locking is shared with battle creation. If battle start
+    // wins the lock, this request observes in_battle=true and cannot mutate
+    // equipment after the combat snapshot is captured.
+    const charResult = await client.query(
+      `SELECT id, level, class, race, in_battle
+       FROM characters
+       WHERE id = $1 AND user_id = $2
+       FOR UPDATE`,
+      [characterId, req.user.userId]
+    );
+    if (charResult.rows.length === 0) {
+      throw new AppError('Character not found', 404);
+    }
+    const character = charResult.rows[0];
+    if (character.in_battle) {
+      throw new AppError('Cannot change equipment during battle', 400);
+    }
+
     // Verify item ownership with FOR UPDATE lock - check both character inventory and shared pool
     const itemResult = await client.query(
       `SELECT ci.id, ci.equipped_slot, ci.character_id, ci.user_id, ci.listed,
@@ -220,32 +222,32 @@ router.post('/unequip', authenticate, inventoryLimiter, asyncHandler(async (req,
     throw new AppError('Invalid equipment slot', 400);
   }
 
-  // Verify character ownership
-  const charResult = await query(
-    'SELECT id, in_battle FROM characters WHERE id = $1 AND user_id = $2',
-    [characterId, req.user.userId]
-  );
+  await withTransaction(async (client) => {
+    const charResult = await client.query(
+      `SELECT id, in_battle
+       FROM characters
+       WHERE id = $1 AND user_id = $2
+       FOR UPDATE`,
+      [characterId, req.user.userId]
+    );
+    if (charResult.rows.length === 0) {
+      throw new AppError('Character not found', 404);
+    }
+    if (charResult.rows[0].in_battle) {
+      throw new AppError('Cannot change equipment during battle', 400);
+    }
 
-  if (charResult.rows.length === 0) {
-    throw new AppError('Character not found', 404);
-  }
-
-  if (charResult.rows[0].in_battle) {
-    throw new AppError('Cannot change equipment during battle', 400);
-  }
-
-  // Unequip the item - move to shared pool
-  const result = await query(
-    `UPDATE character_items
-     SET equipped_slot = NULL, character_id = NULL, user_id = $3
-     WHERE character_id = $1 AND equipped_slot = $2
-     RETURNING id`,
-    [characterId, slot, req.user.userId]
-  );
-
-  if (result.rows.length === 0) {
-    throw new AppError('No item equipped in that slot', 400);
-  }
+    const result = await client.query(
+      `UPDATE character_items
+       SET equipped_slot = NULL, character_id = NULL, user_id = $3
+       WHERE character_id = $1 AND equipped_slot = $2
+       RETURNING id`,
+      [characterId, slot, req.user.userId]
+    );
+    if (result.rows.length === 0) {
+      throw new AppError('No item equipped in that slot', 400);
+    }
+  });
 
   // Return updated inventory
   const updatedInventory = await getCharacterInventory(characterId);
@@ -257,43 +259,44 @@ router.post('/use', authenticate, inventoryLimiter, asyncHandler(async (req, res
   const { itemInstanceId, targetCharacterId } = req.body;
   const userId = req.user.userId;
 
-  // Get item info from shared pool
-  const itemResult = await query(
-    `SELECT ci.id, ci.quantity, it.item_type, it.stat_bonuses, it.effect_type, it.effect_value, it.name
-     FROM character_items ci
-     JOIN item_templates it ON ci.item_template_id = it.id
-     WHERE ci.id = $1 AND ci.user_id = $2`,
-    [itemInstanceId, userId]
-  );
-
-  if (itemResult.rows.length === 0) {
-    throw new AppError('Item not found in shared inventory', 404);
-  }
-
-  const item = itemResult.rows[0];
-
-  // Verify it's a consumable
-  if (item.item_type !== 'consumable') {
-    throw new AppError('Item is not consumable', 400);
-  }
-
-  // Get target character - must be owned by user
   if (!targetCharacterId) {
     throw new AppError('Target character ID is required', 400);
   }
-  const targetResult = await query(
-    'SELECT id, hp_current, hp_max, mp_current, mp_max FROM characters WHERE id = $1 AND user_id = $2',
-    [targetCharacterId, userId]
-  );
 
-  if (targetResult.rows.length === 0) {
-    throw new AppError('Target character not found', 404);
-  }
+  const usedItem = await withTransaction(async (client) => {
+    const targetResult = await client.query(
+      `SELECT id, hp_current, hp_max, mp_current, mp_max, in_battle
+       FROM characters
+       WHERE id = $1 AND user_id = $2
+       FOR UPDATE`,
+      [targetCharacterId, userId]
+    );
+    if (targetResult.rows.length === 0) {
+      throw new AppError('Target character not found', 404);
+    }
+    const target = targetResult.rows[0];
+    if (target.in_battle) {
+      throw new AppError('Cannot use inventory items during battle', 400);
+    }
 
-  const target = targetResult.rows[0];
-  const stats = item.stat_bonuses || {};
+    const itemResult = await client.query(
+      `SELECT ci.id, ci.quantity, it.item_type, it.stat_bonuses,
+              it.effect_type, it.effect_value, it.name
+       FROM character_items ci
+       JOIN item_templates it ON ci.item_template_id = it.id
+       WHERE ci.id = $1 AND ci.user_id = $2
+       FOR UPDATE OF ci`,
+      [itemInstanceId, userId]
+    );
+    if (itemResult.rows.length === 0) {
+      throw new AppError('Item not found in shared inventory', 404);
+    }
+    const item = itemResult.rows[0];
+    if (item.item_type !== 'consumable') {
+      throw new AppError('Item is not consumable', 400);
+    }
+    const stats = item.stat_bonuses || {};
 
-  await withTransaction(async (client) => {
     // Apply item effects
     if (stats.hp_restore) {
       const newHp = Math.min(target.hp_max, target.hp_current + stats.hp_restore);
@@ -323,12 +326,14 @@ router.post('/use', authenticate, inventoryLimiter, asyncHandler(async (req, res
         [itemInstanceId]
       );
     }
+
+    return { name: item.name, effects: stats };
   });
 
   res.json({
     success: true,
-    message: `Used ${item.name}`,
-    effects: stats
+    message: `Used ${usedItem.name}`,
+    effects: usedItem.effects
   });
 }));
 

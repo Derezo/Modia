@@ -1,4 +1,4 @@
-import rateLimit from 'express-rate-limit';
+import rateLimit, { MemoryStore } from 'express-rate-limit';
 import { RedisStore } from 'rate-limit-redis';
 import { getRedisClientForRateLimit, isRedisConfigured } from '../config/redis.js';
 
@@ -62,8 +62,10 @@ if (!process.env.NODE_ENV) {
 // Stats tracking for test assertions
 const limiterStats = new Map();
 
-// Store references to limiter instances for reset capability
-const limiterInstances = new Map();
+// Store references to the stores used by each limiter for reset capability.
+// express-rate-limit does not expose its default MemoryStore through the
+// middleware function, so create and retain the stores explicitly.
+const limiterStores = new Map();
 
 /**
  * Initialize Redis store for rate limiting
@@ -178,15 +180,15 @@ export function createLimiter({ name, windowMs, maxRequests, message, useUserKey
     }
   };
 
-  // Use Redis store if available (initialized synchronously from previous calls)
-  if (redisStore) {
-    limiterConfig.store = redisStore;
-  }
+  // Always provide an explicit store so resetAllRateLimiters can clear the real
+  // counters used by the middleware. Redis is used when it was initialized
+  // before limiter creation; otherwise each limiter gets an isolated store.
+  const store = redisStore || new MemoryStore();
+  limiterConfig.store = store;
 
   const limiter = rateLimit(limiterConfig);
 
-  // Store the limiter instance for reset capability
-  limiterInstances.set(name, limiter);
+  limiterStores.set(name, store);
 
   // Wrap the limiter to track all calls
   return (req, res, next) => {
@@ -284,31 +286,29 @@ export async function resetAllRateLimiters() {
     return false;
   }
 
-  for (const [name, limiter] of limiterInstances) {
+  let allReset = true;
+
+  for (const [name, store] of limiterStores) {
     try {
-      // express-rate-limit stores have a resetAll method
-      if (limiter.resetKey) {
-        // For newer versions, we need to reset all keys
-        // The limiter doesn't expose a resetAll directly, but we can access the store
-        const store = limiter.options?.store;
-        if (store && typeof store.resetAll === 'function') {
-          await store.resetAll();
-        }
+      if (typeof store.resetAll !== 'function') {
+        throw new Error('Store does not support resetAll');
+      }
+      await store.resetAll();
+
+      // Keep metrics aligned with the counter store.
+      const stats = limiterStats.get(name);
+      if (stats) {
+        stats.calls = 0;
+        stats.blocked = 0;
+        stats.lastReset = Date.now();
       }
     } catch (err) {
+      allReset = false;
       console.warn(`Failed to reset limiter ${name}:`, err.message);
-    }
-
-    // Also reset our stats tracking
-    const stats = limiterStats.get(name);
-    if (stats) {
-      stats.calls = 0;
-      stats.blocked = 0;
-      stats.lastReset = Date.now();
     }
   }
 
-  return true;
+  return allReset;
 }
 
 /**

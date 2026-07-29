@@ -548,7 +548,7 @@ function getTargetValue(target, _state) {
  * Used to prevent AI from getting stuck when enemies are far away
  *
  * @param {Object} context - { unit, action, state }
- * @returns {number} 0-1 normalized score for path progress
+ * @returns {number} 0-100 score for path progress
  */
 export function strategicPathProgress(context) {
   const { unit, action, state } = context;
@@ -557,16 +557,29 @@ export function strategicPathProgress(context) {
   const strategicInfo = calculateStrategicPath(unit, state);
   if (!strategicInfo.path) return 0;
 
-  const score = scoreStrategicMovement(action.position, strategicInfo, unit);
-  return Math.min(1, score / 100);
+  const isOnStrategicPath = strategicInfo.path.some(tile =>
+    tile.x === action.position.x && tile.y === action.position.y
+  );
+  if (!isOnStrategicPath) return 0;
+
+  // Route adherence is the primary signal. Keep a smaller preference for
+  // reaching the turn waypoint so support and pack units can advance one or
+  // two tiles while preserving safety and formation instead of always using
+  // their maximum movement.
+  const movementScore = scoreStrategicMovement(
+    action.position,
+    strategicInfo,
+    unit
+  );
+  return Math.min(100, 70 + movementScore * 0.3);
 }
 
 /**
  * Waiting penalty - discourages waiting when enemies are out of range
- * Returns a penalty value (0-1) that should be applied with negative weight
+ * Returns a penalty value (0-100) that should be applied with negative weight
  *
  * @param {Object} context - { unit, action, state }
- * @returns {number} 0-1 penalty value (higher = more penalty for waiting)
+ * @returns {number} 0-100 penalty value (higher = more penalty for waiting)
  */
 export function waitingPenalty(context) {
   const { unit, action, state } = context;
@@ -586,9 +599,10 @@ export function waitingPenalty(context) {
 
   // Calculate how far away the nearest enemy is
   const strategicInfo = calculateStrategicPath(unit, state);
+  if (!strategicInfo.path) return 0;
 
   // Higher penalty when enemies are multiple turns away
-  return strategicInfo.turnsToReach > 1 ? 0.8 : 0.3;
+  return strategicInfo.turnsToReach > 1 ? 80 : 30;
 }
 
 export {

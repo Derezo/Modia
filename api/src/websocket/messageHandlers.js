@@ -37,6 +37,8 @@ import {
   battleStateRepository
 } from '../services/battle/BattleStateRepository.js';
 import { recordBattleMapResyncRequest } from '../services/battle/BattleMapOperations.js';
+import { getParticipantAvailableActions } from
+  '../services/battle/participantActionAvailability.js';
 import { assertBattleMapCapabilities } from '../../../shared/battleStateProtocol.js';
 
 import {
@@ -87,7 +89,7 @@ function buildBattleStateForSync(state) {
  * @param {number} battleId - Battle ID
  * @returns {Object|null} Battle state or null if not found
  */
-async function getBattleStateForSync(battleId, clientCapabilities) {
+async function getBattleStateForSync(battleId, clientCapabilities, userId = null) {
   try {
     const battle = await battleStateRepository.loadBattle(battleId, {
       requireActive: true
@@ -102,6 +104,9 @@ async function getBattleStateForSync(battleId, clientCapabilities) {
         ? buildBattleStateForSync(battle.state)
         : undefined,
       stateRevision: battle.stateRevision,
+      availableActions: userId === null
+        ? null
+        : getParticipantAvailableActions(battle, battle.state, userId),
       negotiation,
       snapshot
     };
@@ -708,7 +713,11 @@ async function handleBattleSyncRequest(ws, userId, message) {
     // null opts into legacy delivery instead of inheriting stale V2 support
     // from an earlier join/sync on this socket.
     const clientCapabilities = declaredCapabilities ?? undefined;
-    const syncState = await getBattleStateForSync(numericBattleId, clientCapabilities);
+    const syncState = await getBattleStateForSync(
+      numericBattleId,
+      clientCapabilities,
+      userId
+    );
     if (syncState) {
       if (!syncState.negotiation.compatible) {
         ws.send(JSON.stringify({
@@ -723,6 +732,7 @@ async function handleBattleSyncRequest(ws, userId, message) {
       const syncPayload = {
         battleId,
         stateRevision: syncState.stateRevision,
+        availableActions: syncState.availableActions,
         snapshot: syncState.snapshot,
         reason: 'full_sync'
       };

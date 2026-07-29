@@ -54,6 +54,35 @@ async function verifyUserAtNode(userId, nodeId) {
   return result.rows.length > 0;
 }
 
+/**
+ * Read the response-safe representation of a previously committed chest claim.
+ * @param {Object} client - Database client or transaction
+ * @param {number} userId
+ * @param {number} nodeId
+ * @returns {Promise<Object|null>}
+ */
+async function getPersistedChestClaim(client, userId, nodeId) {
+  const result = await client.query(
+    `SELECT ucc.gold_awarded, ucc.items_awarded, u.gold AS new_gold_balance
+     FROM user_chest_claims ucc
+     JOIN users u ON u.id = ucc.user_id
+     WHERE ucc.user_id = $1 AND ucc.node_id = $2`,
+    [userId, nodeId]
+  );
+
+  if (result.rows.length === 0) {
+    return null;
+  }
+
+  const claim = result.rows[0];
+  return {
+    alreadyClaimed: true,
+    goldAwarded: claim.gold_awarded,
+    itemsAwarded: claim.items_awarded,
+    newGoldBalance: claim.new_gold_balance
+  };
+}
+
 // ============================================================================
 // CHEST ENDPOINTS
 // ============================================================================
@@ -63,50 +92,80 @@ router.post('/nodes/:id/claim-chest', authenticate, chestClaimLimiter, asyncHand
   const userId = req.user.userId;
   const nodeId = parseInt(req.params.id, 10);
 
-  // Verify user is at this node
-  const atNode = await verifyUserAtNode(userId, nodeId);
-  if (!atNode) {
-    throw new AppError('You must be at this location to claim the treasure', 400);
-  }
-
-  // Verify the node exists and is a chest type
-  const nodeResult = await query(
-    'SELECT id, node_type, distance_from_center FROM world_nodes WHERE id = $1',
-    [nodeId]
-  );
-
-  if (nodeResult.rows.length === 0) {
-    throw new AppError('Node not found', 404);
-  }
-
-  const node = nodeResult.rows[0];
-  if (node.node_type !== 'chest') {
-    throw new AppError('This node is not a treasure chest', 400);
-  }
-
-  // Generate loot based on distance (farther = better rewards)
-  const distance = node.distance_from_center;
-  const baseGold = 100 + (distance * 15);
-  const goldVariance = Math.floor(baseGold * 0.2);
-  const goldAwarded = baseGold + Math.floor(Math.random() * goldVariance * 2) - goldVariance;
-
-  // Generate item drops based on distance tier
-  const itemsAwarded = generateChestLoot({ userId, nodeId, distance });
-
-  // Use transaction to atomically claim chest, add items, and award gold
+  // Use one transaction to serialize location changes, claim the chest, and
+  // award its loot. A retry after a lost response returns the persisted claim
+  // without awarding anything a second time.
   const result = await withTransaction(async (client) => {
+    let existingClaim = await getPersistedChestClaim(client, userId, nodeId);
+    if (existingClaim) {
+      return existingClaim;
+    }
+
+    // Lock the leader row so travel's UPDATE cannot change location between
+    // authorization and commit. If travel commits first, this reads its new
+    // location and rejects the claim.
+    const locationResult = await client.query(
+      `SELECT current_node_id
+       FROM characters
+       WHERE user_id = $1 AND party_slot = 1
+       FOR UPDATE`,
+      [userId]
+    );
+
+    // A concurrent claim may have committed while this transaction waited for
+    // the leader lock. Recheck before enforcing location so that such a retry
+    // remains idempotent even if travel was queued at the same time.
+    existingClaim = await getPersistedChestClaim(client, userId, nodeId);
+    if (existingClaim) {
+      return existingClaim;
+    }
+
+    if (
+      locationResult.rows.length === 0 ||
+      locationResult.rows[0].current_node_id !== nodeId
+    ) {
+      throw new AppError('You must be at this location to claim the treasure', 400);
+    }
+
+    const nodeResult = await client.query(
+      'SELECT id, node_type, distance_from_center FROM world_nodes WHERE id = $1',
+      [nodeId]
+    );
+
+    if (nodeResult.rows.length === 0) {
+      throw new AppError('Node not found', 404);
+    }
+
+    const node = nodeResult.rows[0];
+    if (node.node_type !== 'chest') {
+      throw new AppError('This node is not a treasure chest', 400);
+    }
+
+    // Generate loot based on distance (farther = better rewards).
+    const distance = node.distance_from_center;
+    const baseGold = 100 + (distance * 15);
+    const goldVariance = Math.floor(baseGold * 0.2);
+    const goldAwarded = baseGold
+      + Math.floor(Math.random() * goldVariance * 2)
+      - goldVariance;
+    const itemsAwarded = generateChestLoot({ userId, nodeId, distance });
+
     // Atomically insert claim - prevents race condition via unique constraint
     // ON CONFLICT DO NOTHING returns 0 rows if already claimed
     const claimResult = await client.query(
       `INSERT INTO user_chest_claims (user_id, node_id, gold_awarded, items_awarded)
        VALUES ($1, $2, $3, $4)
        ON CONFLICT (user_id, node_id) DO NOTHING
-       RETURNING id`,
+       RETURNING node_id`,
       [userId, nodeId, goldAwarded, JSON.stringify(itemsAwarded)]
     );
 
     if (claimResult.rows.length === 0) {
-      throw new AppError('You have already claimed this treasure', 400);
+      const concurrentClaim = await getPersistedChestClaim(client, userId, nodeId);
+      if (!concurrentClaim) {
+        throw new AppError('Unable to resolve treasure claim', 409);
+      }
+      return concurrentClaim;
     }
 
     // Add items to user's shared inventory
@@ -114,27 +173,37 @@ router.post('/nodes/:id/claim-chest', authenticate, chestClaimLimiter, asyncHand
       await addItemsToInventory(client, userId, itemsAwarded);
     }
 
-    // Award gold to user's active character with overflow protection
-    const charResult = await client.query(
-      `UPDATE characters SET gold = LEAST(gold + $1, $3)
-       WHERE user_id = $2 AND is_active = true
-       RETURNING id, gold`,
+    // Gold is account-wide, matching shops, fishing, ruins, and other rewards.
+    const userResult = await client.query(
+      `UPDATE users SET gold = LEAST(gold + $1, $3)
+       WHERE id = $2
+       RETURNING gold`,
       [goldAwarded, userId, MAX_GOLD]
     );
 
+    if (userResult.rows.length === 0) {
+      throw new AppError('User not found', 404);
+    }
+
     return {
-      newGoldBalance: charResult.rows[0]?.gold || null
+      alreadyClaimed: false,
+      goldAwarded,
+      itemsAwarded,
+      newGoldBalance: userResult.rows[0].gold
     };
   });
 
   res.json({
     success: true,
-    gold_awarded: goldAwarded,
-    items_awarded: itemsAwarded,
+    already_claimed: result.alreadyClaimed,
+    gold_awarded: result.goldAwarded,
+    items_awarded: result.itemsAwarded,
     new_gold_balance: result.newGoldBalance,
-    message: itemsAwarded.length > 0
-      ? `You found ${goldAwarded} gold and ${itemsAwarded.length} item(s) in the treasure chest!`
-      : `You found ${goldAwarded} gold in the treasure chest!`
+    message: result.alreadyClaimed
+      ? 'This treasure was already collected.'
+      : result.itemsAwarded.length > 0
+        ? `You found ${result.goldAwarded} gold and ${result.itemsAwarded.length} item(s) in the treasure chest!`
+        : `You found ${result.goldAwarded} gold in the treasure chest!`
   });
 }));
 

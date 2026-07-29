@@ -87,6 +87,26 @@ describe('BattleGrid elevation contract', () => {
     assert.equal(pathfinding.findPath(0, 0, 1, 0), null);
   });
 
+  it('routes through a dead unit without exposing its tile as a destination', () => {
+    const grid = createGrid(3, 1);
+    const units = new Map([[
+      'corpse',
+      { gridX: 1, gridY: 0, hp: 0 }
+    ]]);
+    const pathfinding = new BattlePathfinding(grid, units);
+
+    assert.deepEqual(pathfinding.getReachableTiles(0, 0, 2), [
+      { x: 2, y: 0, z: 0, cost: 2 }
+    ]);
+    assert.deepEqual(pathfinding.findPath(0, 0, 2, 0), [
+      { x: 0, y: 0, z: 0 },
+      { x: 1, y: 0, z: 0 },
+      { x: 2, y: 0, z: 0 }
+    ]);
+    assert.equal(pathfinding.findPath(0, 0, 1, 0), null);
+    assert.equal(pathfinding.isValidMove(1, 0), false);
+  });
+
   it('hydrates BattleMapV2 terrain, obstacles, and connections', () => {
     const grid = createGrid(3, 1);
     grid.setTerrain([[

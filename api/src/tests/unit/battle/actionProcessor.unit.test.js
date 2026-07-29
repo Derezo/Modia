@@ -850,6 +850,46 @@ describe('processAction - Move Action', () => {
     assert.strictEqual(result.error, 'Target tile is occupied');
   });
 
+  it('should move through a dead unit to a free tile at normal cost', () => {
+    const unit = createMoveTestUnit({ tileX: 0, tileY: 0 });
+    const corpse = { id: 'corpse', tileX: 1, tileY: 0, hp: 0 };
+    const state = createMoveTestState({
+      units: [unit, corpse],
+      mapWidth: 3,
+      mapHeight: 1,
+      terrain: [['grass', 'grass', 'grass']]
+    });
+
+    const result = processAction(state, unit, 'move', { x: 2, y: 0 });
+
+    assert.strictEqual(result.error, undefined);
+    assert.strictEqual(result.moved, true);
+    assert.deepStrictEqual(result.newPosition, { x: 2, y: 0 });
+  });
+
+  it('should not bypass a living blocker when terrain data is absent', () => {
+    const unit = createMoveTestUnit({ tileX: 0, tileY: 0 });
+    const blocker = { id: 'blocker', tileX: 1, tileY: 0, hp: 100 };
+    const state = createMoveTestState({
+      units: [unit, blocker],
+      mapWidth: 3,
+      mapHeight: 1,
+      terrain: undefined
+    });
+
+    const result = processAction(state, unit, 'move', { x: 2, y: 0 });
+
+    assert.strictEqual(
+      result.error,
+      'Target out of movement range (max: 3, cost: unreachable)'
+    );
+    assert.deepStrictEqual(
+      { x: unit.tileX, y: unit.tileY },
+      { x: 0, y: 0 }
+    );
+    assert.strictEqual(unit.moveUsed, false);
+  });
+
   it('should reject move outside map bounds before traversal', () => {
     const unit = createMoveTestUnit({ tileX: 0, tileY: 0 });
     const state = createMoveTestState({ units: [unit] });
@@ -1044,6 +1084,26 @@ describe('processAction - Attack Action', () => {
     assert.strictEqual(attacker.turnPhase, 'done');
     assert.strictEqual(attacker.hasActed, true);
   });
+
+  it('allows movement after attacking first', () => {
+    const attacker = createAttackTestUnit({ movement: 3 });
+    const state = createAttackTestState({ units: [attacker] });
+
+    const attack = processAction(state, attacker, 'attack', { x: 6, y: 5 });
+    const move = processAction(state, attacker, 'move', { x: 6, y: 5 });
+
+    assert.strictEqual(attack.error, undefined);
+    assert.strictEqual(attack.turnEnded, false);
+    assert.deepStrictEqual(attack.availableActions, {
+      canMove: true,
+      canAct: false,
+      canWait: true,
+      turnPhase: 'partial'
+    });
+    assert.strictEqual(move.error, undefined);
+    assert.strictEqual(move.moved, true);
+    assert.strictEqual(move.turnEnded, true);
+  });
 });
 
 // =============================================================================
@@ -1129,6 +1189,46 @@ describe('processAction - Healing Skills', () => {
       type: 'regenerate',
       duration: 3
     }]);
+  });
+
+  it('allows movement after using a skill first', () => {
+    const selfHeal = {
+      id: 'test_self_heal',
+      name: 'Test Self Heal',
+      type: 'active',
+      power: 0,
+      range: 0,
+      mpCost: 5,
+      damageType: 'heal'
+    };
+    const caster = createSkillTestUnit({
+      type: 'player',
+      hp: 50,
+      movement: 3,
+      skills: [selfHeal]
+    });
+    const state = createSkillTestState([caster]);
+
+    const skill = processAction(
+      state,
+      caster,
+      'skill',
+      { x: caster.tileX, y: caster.tileY },
+      selfHeal.id
+    );
+    const move = processAction(state, caster, 'move', { x: 6, y: 5 });
+
+    assert.strictEqual(skill.error, undefined);
+    assert.strictEqual(skill.turnEnded, false);
+    assert.deepStrictEqual(skill.availableActions, {
+      canMove: true,
+      canAct: false,
+      canWait: true,
+      turnPhase: 'partial'
+    });
+    assert.strictEqual(move.error, undefined);
+    assert.strictEqual(move.moved, true);
+    assert.strictEqual(move.turnEnded, true);
   });
 
   it('executes a DB-shaped Heal Ally against the selected injured teammate', () => {

@@ -474,6 +474,31 @@ describe('processItemAction - result metadata', () => {
     assert.strictEqual(unit.actUsed, true);
   });
 
+  it('allows movement after using an item first', () => {
+    const state = createBaseState();
+    state.mapWidth = 10;
+    state.mapHeight = 10;
+    state.terrain = [];
+    const unit = state.units[0];
+    unit.movement = 3;
+    unit.turnPhase = 'ready';
+
+    const item = processAction(state, unit, 'item', null, 12);
+    const move = processAction(state, unit, 'move', { x: 3, y: 4 });
+
+    assert.strictEqual(item.error, undefined);
+    assert.strictEqual(item.turnEnded, false);
+    assert.deepStrictEqual(item.availableActions, {
+      canMove: true,
+      canAct: false,
+      canWait: true,
+      turnPhase: 'partial'
+    });
+    assert.strictEqual(move.error, undefined);
+    assert.strictEqual(move.moved, true);
+    assert.strictEqual(move.turnEnded, true);
+  });
+
   it('includes itemEffects array with heal entry', () => {
     const state = createBaseState();
     const unit = state.units[0];

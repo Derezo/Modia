@@ -44,8 +44,29 @@ describe('battle formation validation', () => {
     );
   });
 
-  it('requires at least one character for competitive submission', () => {
+  it('requires at least one character when formation is mandatory', () => {
     assert.equal(validateFormationPayload({}, { required: true }).success, false);
     assert.equal(validateFormationPayload(null, { required: true }).success, false);
+  });
+
+  it('accepts at most five characters', () => {
+    const fiveCharacters = Object.fromEntries(
+      [11, 12, 13, 14, 15].map((characterId, index) => [
+        characterId,
+        { tileX: index, tileY: 0 }
+      ])
+    );
+
+    assert.equal(
+      validateFormationPayload(fiveCharacters, { required: true }).success,
+      true
+    );
+    assert.deepEqual(
+      validateFormationPayload({
+        ...fiveCharacters,
+        16: { tileX: 0, tileY: 1 }
+      }, { required: true }),
+      { success: false, error: 'Formation cannot have more than 5 characters' }
+    );
   });
 });

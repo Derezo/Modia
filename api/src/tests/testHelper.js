@@ -4,10 +4,6 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { pool, getClient, withTransaction, query } from '../config/database.js';
 import {
-  getLimiterStats,
-  getAllLimiterStats,
-  resetLimiterStats,
-  resetAllLimiterStats,
   isRateLimitingEnabled,
   TEST_BYPASS_HEADER,
   TEST_BYPASS_SECRET
@@ -16,7 +12,8 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const BASE_URL = `http://localhost:${process.env.PORT || 3000}`;
+const BASE_URL = process.env.TEST_API_BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
+const REQUEST_TIMEOUT_MS = Number.parseInt(process.env.TEST_REQUEST_TIMEOUT_MS || '30000', 10);
 
 // ============================================================================
 // Test Isolation Utilities
@@ -52,51 +49,297 @@ async function runCleanup() {
 }
 
 /**
- * Delete test user and all associated data by user ID
- * Cascades through characters, inventory, party, etc.
- * @param {number} userId - User ID to delete
+ * Delete a complete set of test-owned users and their associated data.
+ *
+ * Shared active battles are only safe to delete when every participant is in
+ * this cleanup scope. Terminal battles with an out-of-scope participant are
+ * retained and detached only after all terminal events are fully processed.
+ *
+ * @param {Array<number>} userIds - Complete set of test-owned user IDs
  */
-async function cleanupTestUser(userId) {
-  if (!userId) return;
+async function cleanupTestUsers(userIds) {
+  const normalizedUserIds = [...new Set(
+    (userIds || [])
+      .map(Number)
+      .filter(userId => Number.isSafeInteger(userId) && userId > 0)
+  )].sort((left, right) => left - right);
+  if (normalizedUserIds.length === 0) return;
 
-  try {
-    // Delete in dependency order (most dependent first)
-    // Get character IDs first
-    const chars = await query(
-      'SELECT id FROM characters WHERE user_id = $1',
-      [userId]
+  await withTransaction(async (client) => {
+    const charLookup = await client.query(
+      `SELECT id, user_id
+       FROM characters
+       WHERE user_id = ANY($1::int[])
+       ORDER BY user_id, id`,
+      [normalizedUserIds]
     );
-    const charIds = chars.rows.map(c => c.id);
+    const charIds = charLookup.rows.map(character => character.id);
+
+    // Battle terminal paths lock battle rows before characters. Test cleanup
+    // follows the same order to avoid deadlocks with an in-flight completion.
+    const battles = await client.query(
+      `SELECT b.id, b.status, b.player1_id, b.player2_id
+       FROM battles b
+       WHERE b.player1_id = ANY($1::int[])
+          OR b.player2_id = ANY($1::int[])
+          OR b.winner_id = ANY($1::int[])
+          OR b.challenger_character_id = ANY($2::int[])
+          OR EXISTS (
+            SELECT 1
+            FROM battle_players bp
+            WHERE bp.battle_id = b.id
+              AND bp.user_id = ANY($1::int[])
+          )
+       ORDER BY b.id
+       FOR UPDATE OF b`,
+      [normalizedUserIds, charIds]
+    );
+    const battleIds = battles.rows.map(battle => battle.id);
+    const memberships = battleIds.length > 0
+      ? await client.query(
+        `SELECT battle_id, user_id
+         FROM battle_players
+         WHERE battle_id = ANY($1::int[])
+         ORDER BY battle_id, user_id
+         FOR UPDATE`,
+        [battleIds]
+      )
+      : { rows: [] };
+
+    await client.query(
+      `SELECT id
+       FROM characters
+       WHERE user_id = ANY($1::int[])
+       ORDER BY user_id, id
+       FOR UPDATE`,
+      [normalizedUserIds]
+    );
+
+    const outbox = battleIds.length > 0
+      ? await client.query(
+        `SELECT battle_id, event_key, claim_token, processed_at
+         FROM battle_terminal_effect_outbox
+         WHERE battle_id = ANY($1::int[])
+         ORDER BY id
+         FOR UPDATE`,
+        [battleIds]
+      )
+      : { rows: [] };
+    if (outbox.rows.some(event => event.claim_token !== null)) {
+      throw new Error(
+        'Cannot clean test users while a terminal battle event is actively claimed'
+      );
+    }
+
+    const cleanupUserIds = new Set(normalizedUserIds.map(String));
+    const participantIdsByBattle = new Map();
+    for (const battle of battles.rows) {
+      participantIdsByBattle.set(
+        battle.id,
+        new Set(
+          [battle.player1_id, battle.player2_id]
+            .filter(participantId => participantId !== null)
+            .map(String)
+        )
+      );
+    }
+    for (const membership of memberships.rows) {
+      participantIdsByBattle
+        .get(membership.battle_id)
+        ?.add(String(membership.user_id));
+    }
+
+    const sharedBattleIds = [];
+    const ownedBattleIds = [];
+    for (const battle of battles.rows) {
+      const participantIds = participantIdsByBattle.get(battle.id) ?? new Set();
+      const hasOutsideParticipant = [...participantIds]
+        .some(participantId => !cleanupUserIds.has(participantId));
+      if (!hasOutsideParticipant) {
+        ownedBattleIds.push(battle.id);
+        continue;
+      }
+      if (battle.status === 'active') {
+        throw new Error(
+          `Cannot clean a participant from active shared battle ${battle.id}`
+        );
+      }
+      const pendingEvent = outbox.rows.find(event =>
+        event.battle_id === battle.id && event.processed_at === null
+      );
+      if (pendingEvent) {
+        throw new Error(
+          `Cannot clean a participant while shared battle ${battle.id} `
+          + 'has pending terminal events'
+        );
+      }
+      sharedBattleIds.push(battle.id);
+    }
+
+    if (sharedBattleIds.length > 0) {
+      if (charIds.length > 0) {
+        await client.query(
+          `DELETE FROM battle_participants
+           WHERE battle_id = ANY($1::int[])
+             AND character_id = ANY($2::int[])`,
+          [sharedBattleIds, charIds]
+        );
+      }
+      await client.query(
+        `DELETE FROM battle_players
+         WHERE battle_id = ANY($1::int[])
+           AND user_id = ANY($2::int[])`,
+        [sharedBattleIds, normalizedUserIds]
+      );
+      await client.query(
+        `UPDATE battles
+         SET player1_id = CASE
+               WHEN player1_id = ANY($2::int[]) THEN NULL
+               ELSE player1_id
+             END,
+             player2_id = CASE
+               WHEN player2_id = ANY($2::int[]) THEN NULL
+               ELSE player2_id
+             END,
+             winner_id = CASE
+               WHEN winner_id = ANY($2::int[]) THEN NULL
+               ELSE winner_id
+             END,
+             challenger_character_id = CASE
+               WHEN challenger_character_id = ANY($3::int[]) THEN NULL
+               ELSE challenger_character_id
+             END
+         WHERE id = ANY($1::int[])`,
+        [sharedBattleIds, normalizedUserIds, charIds]
+      );
+    }
+
+    if (ownedBattleIds.length > 0) {
+      // Outbox/receipt tables deliberately have no battle FK. Test teardown
+      // owns these events and must remove them explicitly to avoid residue.
+      const eventKeys = outbox.rows
+        .filter(event => ownedBattleIds.includes(event.battle_id))
+        .map(event => event.event_key);
+      if (eventKeys.length > 0) {
+        await client.query(
+          `DELETE FROM battle_terminal_progression_receipts
+           WHERE event_key = ANY($1::text[])`,
+          [eventKeys]
+        );
+        await client.query(
+          `DELETE FROM battle_terminal_effect_outbox
+           WHERE event_key = ANY($1::text[])`,
+          [eventKeys]
+        );
+      }
+
+      // Clearances for another participant remain valid even after the test
+      // battle history is removed, so detach rather than delete those rows.
+      await client.query(
+        `UPDATE user_node_clearance
+         SET battle_id = NULL
+         WHERE battle_id = ANY($1::int[])`,
+        [ownedBattleIds]
+      );
+      await client.query(
+        'DELETE FROM battles WHERE id = ANY($1::int[])',
+        [ownedBattleIds]
+      );
+    }
+
+    // Preserve an out-of-scope opponent's Coliseum history while releasing
+    // only references touched by this cleanup. The DELETE is intentionally
+    // scoped through UPDATE ... RETURNING so unrelated anonymized history is
+    // never removed.
+    const touchedMatches = await client.query(
+      `UPDATE coliseum_matches
+       SET winner_user_id = CASE
+             WHEN winner_user_id = ANY($1::int[]) THEN NULL
+             ELSE winner_user_id
+           END,
+           loser_user_id = CASE
+             WHEN loser_user_id = ANY($1::int[]) THEN NULL
+             ELSE loser_user_id
+           END
+       WHERE winner_user_id = ANY($1::int[])
+          OR loser_user_id = ANY($1::int[])
+       RETURNING id, battle_id, winner_user_id, loser_user_id`,
+      [normalizedUserIds]
+    );
+    const emptyTouchedMatchIds = touchedMatches.rows
+      .filter(match =>
+        match.battle_id === null
+        && match.winner_user_id === null
+        && match.loser_user_id === null
+      )
+      .map(match => match.id);
+    if (emptyTouchedMatchIds.length > 0) {
+      await client.query(
+        'DELETE FROM coliseum_matches WHERE id = ANY($1::int[])',
+        [emptyTouchedMatchIds]
+      );
+    }
+    await client.query(
+      'DELETE FROM coliseum_queue WHERE user_id = ANY($1::int[])',
+      [normalizedUserIds]
+    );
 
     if (charIds.length > 0) {
       // Clean up character-related data
-      await query('DELETE FROM character_skills WHERE character_id = ANY($1)', [charIds]);
-      await query('DELETE FROM character_traits WHERE character_id = ANY($1)', [charIds]);
-      await query(
-        'DELETE FROM character_items WHERE character_id = ANY($1) OR user_id = $2',
-        [charIds, userId]
+      await client.query(
+        'DELETE FROM character_skills WHERE character_id = ANY($1::int[])',
+        [charIds]
       );
-      await query('DELETE FROM party_members WHERE character_id = ANY($1)', [charIds]);
+      await client.query(
+        'DELETE FROM character_traits WHERE character_id = ANY($1::int[])',
+        [charIds]
+      );
+      await client.query(
+        `DELETE FROM character_items
+         WHERE character_id = ANY($1::int[])
+            OR user_id = ANY($2::int[])`,
+        [charIds, normalizedUserIds]
+      );
     }
+    await client.query(
+      'DELETE FROM party_members WHERE user_id = ANY($1::int[])',
+      [normalizedUserIds]
+    );
+    await client.query(
+      'DELETE FROM notifications WHERE user_id = ANY($1::int[])',
+      [normalizedUserIds]
+    );
+    await client.query(
+      `DELETE FROM friendships
+       WHERE user_id = ANY($1::int[])
+          OR friend_id = ANY($1::int[])`,
+      [normalizedUserIds]
+    );
+    await client.query(
+      'DELETE FROM user_settings WHERE user_id = ANY($1::int[])',
+      [normalizedUserIds]
+    );
+    await client.query(
+      'DELETE FROM gold_reservations WHERE user_id = ANY($1::int[])',
+      [normalizedUserIds]
+    );
+    await client.query(
+      'DELETE FROM characters WHERE user_id = ANY($1::int[])',
+      [normalizedUserIds]
+    );
+    await client.query(
+      'DELETE FROM users WHERE id = ANY($1::int[])',
+      [normalizedUserIds]
+    );
+  });
+}
 
-    // Clean up user-related data (silently ignore missing tables)
-    const safeDelete = async (sql, params) => {
-      try {
-        await query(sql, params);
-      } catch (err) {
-        if (!err.message.includes('does not exist')) throw err;
-      }
-    };
-    await safeDelete('DELETE FROM notifications WHERE user_id = $1', [userId]);
-    await safeDelete('DELETE FROM friendships WHERE user_id = $1 OR friend_id = $1', [userId]);
-    await safeDelete('DELETE FROM user_settings WHERE user_id = $1', [userId]);
-    await safeDelete('DELETE FROM gold_reservations WHERE user_id = $1', [userId]);
-    await safeDelete('DELETE FROM refresh_tokens WHERE user_id = $1', [userId]);
-    await query('DELETE FROM characters WHERE user_id = $1', [userId]);
-    await query('DELETE FROM users WHERE id = $1', [userId]);
-  } catch (err) {
-    console.warn(`Failed to cleanup test user ${userId}:`, err.message);
-  }
+/**
+ * Delete one test user when it has no active out-of-scope battle opponent.
+ * @param {number} userId - User ID to delete
+ */
+async function cleanupTestUser(userId) {
+  return cleanupTestUsers([userId]);
 }
 
 /**
@@ -158,9 +401,7 @@ function createTestContext() {
      * Clean up all tracked resources
      */
     async cleanup() {
-      for (const userId of userIds) {
-        await cleanupTestUser(userId);
-      }
+      await cleanupTestUsers(userIds);
       userIds.length = 0;
       characterIds.length = 0;
     }
@@ -168,14 +409,16 @@ function createTestContext() {
 }
 
 // Simple HTTP client for testing
-async function request(method, path, body = null, token = null) {
+async function sendRequest(method, path, body = null, token = null, bypassRateLimit = true) {
   const url = new URL(path, BASE_URL);
 
   const headers = {
-    'Content-Type': 'application/json',
-    // Always include test bypass header for rate limiting
-    [TEST_BYPASS_HEADER]: TEST_BYPASS_SECRET
+    'Content-Type': 'application/json'
   };
+
+  if (bypassRateLimit) {
+    headers[TEST_BYPASS_HEADER] = TEST_BYPASS_SECRET;
+  }
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -201,6 +444,9 @@ async function request(method, path, body = null, token = null) {
     });
 
     req.on('error', reject);
+    req.setTimeout(REQUEST_TIMEOUT_MS, () => {
+      req.destroy(new Error(`Request timed out after ${REQUEST_TIMEOUT_MS}ms: ${method} ${path}`));
+    });
 
     if (body) {
       req.write(JSON.stringify(body));
@@ -208,6 +454,14 @@ async function request(method, path, body = null, token = null) {
 
     req.end();
   });
+}
+
+async function request(method, path, body = null, token = null) {
+  return sendRequest(method, path, body, token, true);
+}
+
+async function rateLimitedRequest(method, path, body = null, token = null) {
+  return sendRequest(method, path, body, token, false);
 }
 
 // Generate unique test data
@@ -265,6 +519,79 @@ async function createTestCharacter(token, name = null) {
   return res.body.character;
 }
 
+/**
+ * Create an additional party character as a persistence fixture.
+ *
+ * Public manual creation intentionally permits only a user's first character;
+ * subsequent party members come from recruitment. Integration tests that are
+ * not testing recruitment itself can use this helper to establish that state
+ * without weakening the public creation policy.
+ */
+async function createTestPartyCharacter(userId, {
+  name = null
+} = {}) {
+  const sourceResult = await query(
+    `SELECT *
+     FROM characters
+     WHERE user_id = $1
+     ORDER BY party_slot NULLS LAST, id
+     LIMIT 1`,
+    [userId]
+  );
+  if (sourceResult.rows.length === 0) {
+    throw new Error('Cannot create a party fixture without an existing character');
+  }
+
+  const source = sourceResult.rows[0];
+  const slotResult = await query(
+    `SELECT COALESCE(MAX(party_slot), 0) + 1 AS next_slot
+     FROM characters
+     WHERE user_id = $1`,
+    [userId]
+  );
+  const nextSlot = Number(slotResult.rows[0].next_slot);
+  const characterName = name || `TP${Date.now().toString(36).slice(-6)}`;
+
+  const result = await query(
+    `INSERT INTO characters (
+       user_id, name, race, class, gender, level, experience,
+       hp_current, hp_max, mp_current, mp_max,
+       strength, intelligence, agility, vitality, luck,
+       current_node_id, party_slot, home_region_id
+     )
+     VALUES (
+       $1, $2, $3, $4, $5, $6, $7,
+       $8, $9, $10, $11,
+       $12, $13, $14, $15, $16,
+       $17, $18, $19
+     )
+     RETURNING *`,
+    [
+      userId,
+      characterName,
+      source.race,
+      source.class,
+      source.gender ?? 'other',
+      source.level,
+      source.experience,
+      source.hp_current,
+      source.hp_max,
+      source.mp_current,
+      source.mp_max,
+      source.strength,
+      source.intelligence,
+      source.agility,
+      source.vitality,
+      source.luck,
+      source.current_node_id,
+      nextSlot,
+      source.home_region_id
+    ]
+  );
+
+  return result.rows[0];
+}
+
 // ============================================================================
 // Rate Limit Testing Utilities
 // ============================================================================
@@ -282,7 +609,7 @@ async function createTestCharacter(token, name = null) {
 async function fireRequests(count, method, path, body = null, token = null) {
   const results = [];
   for (let i = 0; i < count; i++) {
-    results.push(await request(method, path, body, token));
+    results.push(await rateLimitedRequest(method, path, body, token));
   }
   return results;
 }
@@ -299,7 +626,7 @@ async function fireRequests(count, method, path, body = null, token = null) {
 async function fireRequestsParallel(count, method, path, body = null, token = null) {
   const promises = [];
   for (let i = 0; i < count; i++) {
-    promises.push(request(method, path, body, token));
+    promises.push(rateLimitedRequest(method, path, body, token));
   }
   return Promise.all(promises);
 }
@@ -314,10 +641,22 @@ function waitForRateLimitReset(ms) {
 }
 
 /**
- * Get rate limiter stats wrapper (re-exported from factory)
+ * Read all rate limiter stats from the API server process.
  */
-function getRateLimiterStats(name) {
-  return getLimiterStats(name);
+async function getAllLimiterStats() {
+  const res = await request('GET', '/api/health/metrics');
+  if (res.status !== 200 || !res.body?.rateLimiter?.stats) {
+    throw new Error(`Failed to read rate limiter stats: ${res.status} ${JSON.stringify(res.body)}`);
+  }
+  return res.body.rateLimiter.stats;
+}
+
+/**
+ * Read one rate limiter's stats from the API server process.
+ */
+async function getRateLimiterStats(name) {
+  const stats = await getAllLimiterStats();
+  return stats[name] || null;
 }
 
 /**
@@ -326,18 +665,25 @@ function getRateLimiterStats(name) {
  * @returns {Promise<boolean>} True if reset was successful
  */
 async function resetRateLimitersViaApi() {
-  try {
-    const res = await request('POST', '/api/test/reset-rate-limiters');
-    return res.status === 200;
-  } catch (err) {
-    console.warn('Failed to reset rate limiters via API:', err.message);
-    return false;
+  const res = await request('POST', '/api/test/reset-rate-limiters');
+  if (res.status !== 200) {
+    throw new Error(`Failed to reset rate limiters: ${res.status} ${JSON.stringify(res.body)}`);
   }
+  return true;
+}
+
+async function resetAllLimiterStats() {
+  return resetRateLimitersViaApi();
+}
+
+async function resetLimiterStats() {
+  return resetRateLimitersViaApi();
 }
 
 export {
   // HTTP client
   request,
+  rateLimitedRequest,
   BASE_URL,
 
   // Data generators
@@ -345,11 +691,13 @@ export {
   uniqueEmail,
   createTestUser,
   createTestCharacter,
+  createTestPartyCharacter,
 
   // Test isolation
   registerCleanup,
   runCleanup,
   cleanupTestUser,
+  cleanupTestUsers,
   withTestTransaction,
   createTestContext,
 

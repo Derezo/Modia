@@ -1,7 +1,18 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
 import http from 'http';
-import { request, createTestUser, createTestContext, query, cleanupTestUser, BASE_URL } from '../testHelper.js';
+import { randomUUID } from 'node:crypto';
+import {
+  request,
+  createTestUser,
+  createTestCharacter,
+  createTestContext,
+  query,
+  getClient,
+  cleanupTestUser,
+  cleanupTestUsers,
+  BASE_URL
+} from '../testHelper.js';
 import {
   TERRAIN_GENERATION_VERSION,
   deriveEncounterTerrainSeed
@@ -99,12 +110,12 @@ describe('Battle API', () => {
     characters.push(mainChar);
 
     // Insert additional characters directly to bypass recruitment restriction
-    const additionalChars = await insertAdditionalCharacters(user.userId, mainChar.id, 2);
+    const additionalChars = await insertAdditionalCharacters(user.userId, mainChar.id, 5);
     characters.push(...additionalChars);
 
     // Set battle party
     await request('PUT', '/api/party/battle', {
-      characterIds: characters.map(c => c.id)
+      characterIds: characters.slice(0, 5).map(c => c.id)
     }, user.accessToken);
 
     // Set current location to a battle node
@@ -126,12 +137,433 @@ describe('Battle API', () => {
   });
 
   after(async () => {
+    const battleId = battle?.battleId;
+    const userId = user?.userId;
+    const terminalEvents = battleId
+      ? await query(
+        `SELECT event_key
+         FROM battle_terminal_effect_outbox
+         WHERE battle_id = $1`,
+        [battleId]
+      )
+      : { rows: [] };
+    const terminalEventKeys = terminalEvents.rows.map(event => event.event_key);
     await ctx.cleanup();
+
+    if (battleId) {
+      const persistedBattle = await query(
+        'SELECT id FROM battles WHERE id = $1',
+        [battleId]
+      );
+      assert.strictEqual(
+        persistedBattle.rowCount,
+        0,
+        'test context cleanup should remove persisted battles'
+      );
+      const persistedOutbox = await query(
+        `SELECT id
+         FROM battle_terminal_effect_outbox
+         WHERE battle_id = $1`,
+        [battleId]
+      );
+      assert.strictEqual(
+        persistedOutbox.rowCount,
+        0,
+        'test context cleanup should remove terminal outbox events'
+      );
+    }
+    if (terminalEventKeys.length > 0) {
+      const persistedReceipts = await query(
+        `SELECT event_key
+         FROM battle_terminal_progression_receipts
+         WHERE event_key = ANY($1::text[])`,
+        [terminalEventKeys]
+      );
+      assert.strictEqual(
+        persistedReceipts.rowCount,
+        0,
+        'test context cleanup should remove terminal progression receipts'
+      );
+    }
+    if (userId) {
+      const persistedUser = await query(
+        'SELECT id FROM users WHERE id = $1',
+        [userId]
+      );
+      assert.strictEqual(
+        persistedUser.rowCount,
+        0,
+        'test context cleanup should remove the test user'
+      );
+    }
   });
 
   describe('POST /api/battle/start', () => {
-    it('should start a battle successfully', async () => {
-      const res = await request('POST', '/api/battle/start', {}, user.accessToken);
+    it('should reject an omitted or empty formation', async () => {
+      const omitted = await request('POST', '/api/battle/start', {}, user.accessToken);
+      assert.strictEqual(omitted.status, 400);
+
+      const empty = await request(
+        'POST',
+        '/api/battle/start',
+        { formation: {} },
+        user.accessToken
+      );
+      assert.strictEqual(empty.status, 400);
+    });
+
+    it('does not create a stale battle when deletion commits before the lifecycle lock', async () => {
+      const raceUser = await createTestUser();
+      const mainCharacter = await createTestCharacter(raceUser.accessToken);
+      const [selectedCharacter] = await insertAdditionalCharacters(
+        raceUser.userId,
+        mainCharacter.id,
+        1
+      );
+      const locker = await getClient();
+      let transactionOpen = false;
+      let startRequest;
+
+      try {
+        await request(
+          'PUT',
+          '/api/party/battle',
+          { characterIds: [mainCharacter.id, selectedCharacter.id] },
+          raceUser.accessToken
+        );
+        await query(
+          'UPDATE characters SET current_node_id = $1 WHERE user_id = $2',
+          [battleNode.id, raceUser.userId]
+        );
+
+        await locker.query('BEGIN');
+        transactionOpen = true;
+        const lockerBackend = await locker.query(
+          'SELECT pg_backend_pid() AS pid'
+        );
+        const lockerPid = lockerBackend.rows[0].pid;
+        await locker.query(
+          `SELECT id
+           FROM characters
+           WHERE user_id = $1
+           ORDER BY id
+           FOR UPDATE`,
+          [raceUser.userId]
+        );
+
+        startRequest = request(
+          'POST',
+          '/api/battle/start',
+          {
+            formation: {
+              [selectedCharacter.id]: { tileX: 2, tileY: 1 }
+            }
+          },
+          raceUser.accessToken
+        );
+
+        const deadline = Date.now() + 5000;
+        let lockWaitObserved = false;
+        while (Date.now() < deadline) {
+          const waiters = await query(
+            `SELECT 1
+             FROM pg_stat_activity
+             WHERE datname = current_database()
+               AND wait_event_type = 'Lock'
+               AND query LIKE '%FROM characters%'
+               AND query LIKE '%ORDER BY id%'
+               AND query LIKE '%FOR UPDATE%'
+               AND $1 = ANY(pg_blocking_pids(pid))
+             LIMIT 1`,
+            [lockerPid]
+          );
+          if (waiters.rowCount > 0) {
+            lockWaitObserved = true;
+            break;
+          }
+          await new Promise(resolve => setTimeout(resolve, 25));
+        }
+        assert.strictEqual(
+          lockWaitObserved,
+          true,
+          'battle start should reach and wait on the owned-character lifecycle lock'
+        );
+
+        await locker.query(
+          'DELETE FROM characters WHERE id = $1 AND user_id = $2',
+          [selectedCharacter.id, raceUser.userId]
+        );
+        await locker.query('COMMIT');
+        transactionOpen = false;
+
+        const response = await startRequest;
+        assert.strictEqual(response.status, 409);
+        assert.match(response.body.error, /formation changed/i);
+
+        const persistedBattle = await query(
+          `SELECT id
+           FROM battles
+           WHERE player1_id = $1 AND status = 'active'`,
+          [raceUser.userId]
+        );
+        assert.strictEqual(
+          persistedBattle.rowCount,
+          0,
+          'deleted selected character must not survive in a stale battle snapshot'
+        );
+      } finally {
+        if (transactionOpen) {
+          await locker.query('ROLLBACK');
+        }
+        locker.release();
+        if (startRequest) {
+          await startRequest.catch(() => {});
+        }
+        await cleanupTestUser(raceUser.userId);
+      }
+    });
+
+    it('repairs stale battle flags under the lifecycle lock without duplicating a battle', async () => {
+      const staleUser = await createTestUser();
+      const staleCharacter = await createTestCharacter(
+        staleUser.accessToken,
+        `Stale${Date.now().toString(36).slice(-5)}`
+      );
+      const requestId = `stale-repair-${randomUUID()}`;
+
+      try {
+        await query(
+          `UPDATE characters
+           SET current_node_id = $1, in_battle = true, agility = 999
+           WHERE id = $2 AND user_id = $3`,
+          [battleNode.id, staleCharacter.id, staleUser.userId]
+        );
+
+        const payload = {
+          battleStartRequestId: requestId,
+          formation: {
+            [staleCharacter.id]: { tileX: 2, tileY: 1 }
+          }
+        };
+        const created = await request(
+          'POST',
+          '/api/battle/start',
+          payload,
+          staleUser.accessToken
+        );
+        assert.strictEqual(created.status, 201, JSON.stringify(created.body));
+        assert.strictEqual(created.body.rejoined, false);
+
+        const rejoined = await request(
+          'POST',
+          '/api/battle/start',
+          payload,
+          staleUser.accessToken
+        );
+        assert.strictEqual(rejoined.status, 200, JSON.stringify(rejoined.body));
+        assert.strictEqual(rejoined.body.rejoined, true);
+        assert.strictEqual(rejoined.body.battleId, created.body.battleId);
+
+        const persisted = await query(
+          `SELECT
+             (SELECT COUNT(*)::int
+              FROM battles
+              WHERE player1_id = $1 AND status = 'active') AS active_battles,
+             (SELECT in_battle
+              FROM characters
+              WHERE id = $2 AND user_id = $1) AS in_battle`,
+          [staleUser.userId, staleCharacter.id]
+        );
+        assert.deepStrictEqual(persisted.rows[0], {
+          active_battles: 1,
+          in_battle: true
+        });
+      } finally {
+        await cleanupTestUser(staleUser.userId);
+      }
+    });
+
+    it('does not expose opponent actions when a shared battle wins the start race', async () => {
+      const raceUser = await createTestUser();
+      const opponent = await createTestUser();
+      const raceCharacter = await createTestCharacter(
+        raceUser.accessToken,
+        `Race${Date.now().toString(36).slice(-5)}`
+      );
+      const opponentCharacter = await createTestCharacter(
+        opponent.accessToken,
+        `Opp${Date.now().toString(36).slice(-5)}`
+      );
+      const locker = await getClient();
+      let transactionOpen = false;
+      let startRequest = null;
+
+      try {
+        await query(
+          'UPDATE characters SET current_node_id = $1 WHERE user_id = ANY($2::int[])',
+          [battleNode.id, [raceUser.userId, opponent.userId]]
+        );
+
+        await locker.query('BEGIN');
+        transactionOpen = true;
+        const lockerBackend = await locker.query(
+          'SELECT pg_backend_pid() AS pid'
+        );
+        const lockerPid = lockerBackend.rows[0].pid;
+        await locker.query(
+          `SELECT id
+           FROM characters
+           WHERE user_id = $1
+           ORDER BY id
+           FOR UPDATE`,
+          [raceUser.userId]
+        );
+
+        startRequest = request(
+          'POST',
+          '/api/battle/start',
+          {
+            formation: {
+              [raceCharacter.id]: { tileX: 2, tileY: 1 }
+            }
+          },
+          raceUser.accessToken
+        );
+
+        const deadline = Date.now() + 5000;
+        let lockWaitObserved = false;
+        while (Date.now() < deadline) {
+          const waiters = await query(
+            `SELECT 1
+             FROM pg_stat_activity
+             WHERE datname = current_database()
+               AND wait_event_type = 'Lock'
+               AND query LIKE '%FROM characters%'
+               AND query LIKE '%ORDER BY id%'
+               AND query LIKE '%FOR UPDATE%'
+               AND $1 = ANY(pg_blocking_pids(pid))
+             LIMIT 1`,
+            [lockerPid]
+          );
+          if (waiters.rowCount > 0) {
+            lockWaitObserved = true;
+            break;
+          }
+          await new Promise(resolve => setTimeout(resolve, 25));
+        }
+        assert.strictEqual(
+          lockWaitObserved,
+          true,
+          'battle start should wait on this user lifecycle lock before the raced insert'
+        );
+
+        const mapWidth = 2;
+        const mapHeight = 2;
+        const terrainSeed = 45123;
+        const opponentUnitId = `p2_${opponentCharacter.id}`;
+        const battleState = {
+          turn: 1,
+          phase: 'active',
+          battleType: 'pvp',
+          player1Id: raceUser.userId,
+          player2Id: opponent.userId,
+          activeUnitId: opponentUnitId,
+          units: [
+            {
+              id: `p1_${raceCharacter.id}`,
+              characterId: raceCharacter.id,
+              type: 'player',
+              ownerId: raceUser.userId,
+              hp: 100,
+              maxHp: 100,
+              mp: 50,
+              maxMp: 50,
+              movement: 3,
+              attackRange: 1
+            },
+            {
+              id: opponentUnitId,
+              characterId: opponentCharacter.id,
+              type: 'player',
+              ownerId: opponent.userId,
+              hp: 100,
+              maxHp: 100,
+              mp: 50,
+              maxMp: 50,
+              movement: 3,
+              attackRange: 1,
+              moveUsed: false,
+              actUsed: false,
+              turnPhase: 'ready'
+            }
+          ],
+          terrainSeed,
+          mapWidth,
+          mapHeight,
+          terrain: Array.from({ length: mapHeight }, () => Array(mapWidth).fill('grass')),
+          elevation: Array.from({ length: mapHeight }, () => Array(mapWidth).fill(0)),
+          obstacles: []
+        };
+        const racedBattle = await query(
+          `INSERT INTO battles (
+             battle_type,
+             status,
+             node_id,
+             battle_state,
+             map_seed,
+             map_width,
+             map_height,
+             player1_id,
+             player2_id
+           )
+           VALUES ('pvp_coliseum', 'active', NULL, $1, $2, $3, $4, $5, $6)
+           RETURNING id`,
+          [
+            JSON.stringify(battleState),
+            terrainSeed,
+            mapWidth,
+            mapHeight,
+            raceUser.userId,
+            opponent.userId
+          ]
+        );
+
+        await locker.query('COMMIT');
+        transactionOpen = false;
+
+        const response = await startRequest;
+        assert.strictEqual(response.status, 200, JSON.stringify(response.body));
+        assert.strictEqual(response.body.battleId, racedBattle.rows[0].id);
+        assert.strictEqual(response.body.rejoined, true);
+        assert.strictEqual(response.body.state.activeUnitId, opponentUnitId);
+        assert.strictEqual(
+          response.body.availableActions,
+          null,
+          'the requester must not receive actions for the opponent-owned active unit'
+        );
+      } finally {
+        if (transactionOpen) {
+          await locker.query('ROLLBACK');
+        }
+        locker.release();
+        if (startRequest) {
+          await startRequest.catch(() => {});
+        }
+        await cleanupTestUsers([raceUser.userId, opponent.userId]);
+      }
+    });
+
+    it('should start with only a formed roster character beyond slot five', async () => {
+      const selectedCharacter = characters[5];
+      const formation = {
+        [selectedCharacter.id]: { tileX: 2, tileY: 1 }
+      };
+      const res = await request(
+        'POST',
+        '/api/battle/start',
+        { formation },
+        user.accessToken
+      );
 
       assert.strictEqual(res.status, 201);
       assert.ok(res.body.battleId);
@@ -152,6 +584,10 @@ describe('Battle API', () => {
       );
       assert.equal(res.body.state.terrainSeed, res.body.mapSeed);
       assert.equal(res.body.state.terrainGenerationVersion, TERRAIN_GENERATION_VERSION);
+      assert.deepStrictEqual(
+        res.body.state.units.filter(unit => unit.type === 'player').map(unit => unit.id),
+        [selectedCharacter.id]
+      );
 
       battle = res.body;
 
@@ -161,6 +597,12 @@ describe('Battle API', () => {
       );
       assert.equal(persisted.rows[0].map_seed, battle.mapSeed);
       assert.equal(persisted.rows[0].battle_state.terrainSeed, battle.mapSeed);
+      assert.deepStrictEqual(
+        persisted.rows[0].battle_state.units
+          .filter(unit => unit.type === 'player')
+          .map(unit => unit.id),
+        [selectedCharacter.id]
+      );
       assert.deepStrictEqual(persisted.rows[0].battle_state.terrain, battle.state.terrain);
       assert.deepStrictEqual(persisted.rows[0].battle_state.elevation, battle.state.elevation);
       assert.deepStrictEqual(persisted.rows[0].battle_state.obstacles, battle.state.obstacles);
@@ -168,6 +610,15 @@ describe('Battle API', () => {
       assert.equal(
         persisted.rows[0].battle_state.terrainGenerationVersion,
         TERRAIN_GENERATION_VERSION
+      );
+
+      const battleFlags = await query(
+        'SELECT id, in_battle FROM characters WHERE user_id = $1 ORDER BY party_slot',
+        [user.userId]
+      );
+      assert.deepStrictEqual(
+        battleFlags.rows.filter(character => character.in_battle).map(character => character.id),
+        [selectedCharacter.id]
       );
 
       const rejoin = await request(
@@ -234,6 +685,238 @@ describe('Battle API', () => {
   });
 
   describe('POST /api/battle/action', () => {
+    it('replays a stable command without committing the action twice', async () => {
+      if (!battle) return;
+
+      const persisted = await query(
+        'SELECT battle_state, state_revision FROM battles WHERE id = $1',
+        [battle.battleId]
+      );
+      const preparedState = structuredClone(persisted.rows[0].battle_state);
+      const playerUnit = preparedState.units.find(
+        unit => unit.type === 'player' && unit.hp > 0
+      );
+      assert.ok(playerUnit, 'battle should contain a living player unit');
+      playerUnit.moveUsed = false;
+      playerUnit.actUsed = false;
+      playerUnit.hasActed = false;
+      playerUnit.turnPhase = 'ready';
+      preparedState.activeUnitId = playerUnit.id;
+      preparedState.activeUnitIndex = preparedState.units.findIndex(
+        unit => unit.id === playerUnit.id
+      );
+      preparedState.status = 'active';
+      const prepared = await query(
+        `UPDATE battles
+         SET battle_state = $1, status = 'active', state_revision = state_revision + 1
+         WHERE id = $2
+         RETURNING state_revision`,
+        [JSON.stringify(preparedState), battle.battleId]
+      );
+
+      const commandNonce = randomUUID();
+      const command = {
+        battleId: battle.battleId,
+        actionType: 'move',
+        unitId: playerUnit.id,
+        targetTile: { x: playerUnit.tileX, y: playerUnit.tileY },
+        inventoryId: null,
+        actionSequence: 7001,
+        commandId: `integration-replay-${commandNonce}`,
+        stateRevision: Number(prepared.rows[0].state_revision)
+      };
+      const first = await request(
+        'POST',
+        '/api/battle/action',
+        command,
+        user.accessToken
+      );
+      const replay = await request(
+        'POST',
+        '/api/battle/action',
+        command,
+        user.accessToken
+      );
+
+      assert.strictEqual(first.status, 200, JSON.stringify(first.body));
+      assert.strictEqual(replay.status, 200, JSON.stringify(replay.body));
+      assert.strictEqual(replay.body.stateRevision, first.body.stateRevision);
+      assert.deepStrictEqual(replay.body.actionResult, first.body.actionResult);
+      assert.deepStrictEqual(replay.body.state, first.body.state);
+
+      const afterReplay = await query(
+        `SELECT state_revision,
+                (SELECT COUNT(*)::int
+                 FROM battle_command_results
+                 WHERE battle_id = $1 AND idempotency_key = $2) AS receipt_count
+         FROM battles
+         WHERE id = $1`,
+        [battle.battleId, `player:${user.userId}:command:${command.commandId}`]
+      );
+      assert.strictEqual(
+        Number(afterReplay.rows[0].state_revision),
+        first.body.stateRevision
+      );
+      assert.strictEqual(afterReplay.rows[0].receipt_count, 1);
+
+      const mismatch = await request(
+        'POST',
+        '/api/battle/action',
+        { ...command, inventoryId: 999 },
+        user.accessToken
+      );
+      assert.strictEqual(mismatch.status, 409);
+      assert.strictEqual(mismatch.body.code, 'battle_command_id_conflict');
+      assert.ok(mismatch.body.state);
+      assert.ok(Object.hasOwn(mismatch.body, 'availableActions'));
+      assert.strictEqual(
+        mismatch.body.stateRevision,
+        first.body.stateRevision
+      );
+
+      const correctedCommandId = `integration-corrected-${commandNonce}`;
+      const rejected = await request(
+        'POST',
+        '/api/battle/action',
+        {
+          ...command,
+          commandId: correctedCommandId,
+          actionType: 'invalid_action',
+          stateRevision: first.body.stateRevision
+        },
+        user.accessToken
+      );
+      assert.strictEqual(rejected.status, 400);
+
+      const corrected = await request(
+        'POST',
+        '/api/battle/action',
+        {
+          ...command,
+          commandId: correctedCommandId,
+          actionType: 'attack',
+          stateRevision: first.body.stateRevision,
+          targetTile: {
+            x: playerUnit.tileX < preparedState.mapWidth - 1
+              ? playerUnit.tileX + 1
+              : playerUnit.tileX - 1,
+            y: playerUnit.tileY
+          }
+        },
+        user.accessToken
+      );
+      assert.strictEqual(corrected.status, 200, JSON.stringify(corrected.body));
+      assert.ok(corrected.body.stateRevision > first.body.stateRevision);
+
+      const stale = await request(
+        'POST',
+        '/api/battle/action',
+        {
+          ...command,
+          commandId: `integration-stale-${commandNonce}`
+        },
+        user.accessToken
+      );
+      assert.strictEqual(stale.status, 409);
+      assert.strictEqual(stale.body.code, 'battle_state_conflict');
+      assert.strictEqual(stale.body.stateRevision, corrected.body.stateRevision);
+    });
+
+    it('treats a reused legacy sequence after rejoin as a new command', async () => {
+      if (!battle) return;
+
+      const persisted = await query(
+        'SELECT battle_state FROM battles WHERE id = $1',
+        [battle.battleId]
+      );
+      const preparedState = structuredClone(persisted.rows[0].battle_state);
+      const playerUnit = preparedState.units.find(
+        unit => unit.type === 'player' && unit.hp > 0
+      );
+      assert.ok(playerUnit, 'battle should contain a living player unit');
+      playerUnit.moveUsed = false;
+      playerUnit.actUsed = false;
+      playerUnit.hasActed = false;
+      playerUnit.turnPhase = 'ready';
+      preparedState.activeUnitId = playerUnit.id;
+      preparedState.activeUnitIndex = preparedState.units.findIndex(
+        unit => unit.id === playerUnit.id
+      );
+      preparedState.status = 'active';
+      const prepared = await query(
+        `UPDATE battles
+         SET battle_state = $1, status = 'active', state_revision = state_revision + 1
+         WHERE id = $2
+         RETURNING state_revision`,
+        [JSON.stringify(preparedState), battle.battleId]
+      );
+      const initialRevision = Number(prepared.rows[0].state_revision);
+      const reusedSequence = 91001;
+
+      const first = await request(
+        'POST',
+        '/api/battle/action',
+        {
+          battleId: battle.battleId,
+          actionType: 'move',
+          unitId: playerUnit.id,
+          targetTile: { x: playerUnit.tileX, y: playerUnit.tileY },
+          actionSequence: reusedSequence,
+          stateRevision: initialRevision
+        },
+        user.accessToken
+      );
+      assert.strictEqual(first.status, 200, JSON.stringify(first.body));
+      assert.strictEqual(first.body.commandId, null);
+
+      const rejoin = await request(
+        'GET',
+        `/api/battle/${battle.battleId}/rejoin`,
+        null,
+        user.accessToken
+      );
+      assert.strictEqual(rejoin.status, 200, JSON.stringify(rejoin.body));
+      assert.strictEqual(rejoin.body.stateRevision, first.body.stateRevision);
+
+      const second = await request(
+        'POST',
+        '/api/battle/action',
+        {
+          battleId: battle.battleId,
+          actionType: 'wait',
+          unitId: playerUnit.id,
+          actionSequence: reusedSequence,
+          stateRevision: rejoin.body.stateRevision
+        },
+        user.accessToken
+      );
+      assert.strictEqual(second.status, 200, JSON.stringify(second.body));
+      assert.strictEqual(second.body.commandId, null);
+      assert.ok(second.body.stateRevision > first.body.stateRevision);
+
+      const receipts = await query(
+        `SELECT idempotency_key, base_state_revision
+         FROM battle_command_results
+         WHERE battle_id = $1
+           AND command_type = 'player_action'
+           AND base_state_revision IN ($2, $3)
+         ORDER BY base_state_revision`,
+        [battle.battleId, initialRevision, first.body.stateRevision]
+      );
+      assert.strictEqual(receipts.rows.length, 2);
+      assert.deepStrictEqual(
+        receipts.rows.map(row => Number(row.base_state_revision)),
+        [initialRevision, first.body.stateRevision]
+      );
+      assert.ok(receipts.rows.every(row =>
+        row.idempotency_key.startsWith(`player:${user.userId}:legacy:`)
+      ));
+      assert.notStrictEqual(
+        receipts.rows[0].idempotency_key,
+        receipts.rows[1].idempotency_key
+      );
+    });
+
     it('should process wait action', async () => {
       if (!battle) {
         console.log('Skipping - no battle started');
@@ -273,6 +956,21 @@ describe('Battle API', () => {
       }, user.accessToken);
 
       assert.strictEqual(res.status, 400);
+      assert.ok(res.body.state);
+      assert.ok(Object.hasOwn(res.body, 'availableActions'));
+      assert.ok(Number.isSafeInteger(res.body.stateRevision));
+    });
+
+    it('should reject malformed command IDs', async () => {
+      const res = await request('POST', '/api/battle/action', {
+        battleId: battle.battleId,
+        actionType: 'wait',
+        unitId: 1,
+        commandId: 'contains spaces'
+      }, user.accessToken);
+
+      assert.strictEqual(res.status, 400);
+      assert.strictEqual(res.body.code, 'battle_command_id_invalid');
     });
 
     it('should reject action without battle ID', async () => {
@@ -318,6 +1016,12 @@ describe('Battle API', () => {
       // Verify lightweight state structure
       assert.ok(res.body.hasOwnProperty('activeUnitId'), 'Should have activeUnitId');
       assert.ok(res.body.hasOwnProperty('turnCount'), 'Should have turnCount');
+      assert.ok(res.body.hasOwnProperty('stateRevision'), 'Should have stateRevision');
+      assert.ok(res.body.hasOwnProperty('moveUsed'), 'Should have moveUsed');
+      assert.ok(res.body.hasOwnProperty('actUsed'), 'Should have actUsed');
+      assert.ok(res.body.hasOwnProperty('turnPhase'), 'Should have turnPhase');
+      assert.ok(res.body.hasOwnProperty('hasActed'), 'Should have hasActed');
+      assert.ok(res.body.hasOwnProperty('availableActions'), 'Should have availableActions');
       assert.ok(res.body.hasOwnProperty('status'), 'Should have status');
       assert.ok(Array.isArray(res.body.units), 'Should have units array');
 
@@ -645,6 +1349,117 @@ describe('Battle API', () => {
       // Should be accepted after sequence reset
       assert.ok([200, 400].includes(postRejoinRes.status),
         `Expected 200 or 400, got ${postRejoinRes.status}`);
+    });
+  });
+
+  describe('terminal action replay', () => {
+    it('serializes concurrent PvE victory retries and applies rewards once', async () => {
+      if (!battle?.battleId) return;
+
+      const persisted = await query(
+        'SELECT battle_state FROM battles WHERE id = $1',
+        [battle.battleId]
+      );
+      const terminalState = structuredClone(persisted.rows[0].battle_state);
+      const playerUnit = terminalState.units.find(
+        unit => unit.type === 'player' && unit.hp > 0
+      );
+      assert.ok(playerUnit, 'battle should contain a living player unit');
+      for (const enemy of terminalState.units.filter(unit => unit.type === 'enemy')) {
+        enemy.hp = 0;
+      }
+      playerUnit.moveUsed = false;
+      playerUnit.actUsed = false;
+      playerUnit.hasActed = false;
+      playerUnit.turnPhase = 'ready';
+      terminalState.activeUnitId = playerUnit.id;
+      terminalState.activeUnitIndex = terminalState.units.findIndex(
+        unit => unit.id === playerUnit.id
+      );
+      terminalState.status = 'active';
+      terminalState.rewards = null;
+      terminalState.endedAt = null;
+      terminalState.winnerId = null;
+
+      const prepared = await query(
+        `UPDATE battles
+         SET battle_state = $1,
+             status = 'active',
+             rewards = NULL,
+             winner_id = NULL,
+             ended_at = NULL,
+             state_revision = state_revision + 1
+         WHERE id = $2
+         RETURNING state_revision`,
+        [JSON.stringify(terminalState), battle.battleId]
+      );
+      const before = await query(
+        `SELECT u.gold, c.experience
+         FROM users u
+         JOIN characters c ON c.user_id = u.id
+         WHERE u.id = $1 AND c.id = $2`,
+        [user.userId, Number(playerUnit.characterId ?? playerUnit.id)]
+      );
+      const commandId = `terminal-replay-${randomUUID()}`;
+      const command = {
+        battleId: battle.battleId,
+        actionType: 'move',
+        unitId: playerUnit.id,
+        targetTile: { x: playerUnit.tileX, y: playerUnit.tileY },
+        actionSequence: 8001,
+        commandId,
+        stateRevision: Number(prepared.rows[0].state_revision)
+      };
+
+      const [first, replay] = await Promise.all([
+        request('POST', '/api/battle/action', command, user.accessToken),
+        request('POST', '/api/battle/action', command, user.accessToken)
+      ]);
+
+      assert.strictEqual(first.status, 200, JSON.stringify(first.body));
+      assert.strictEqual(replay.status, 200, JSON.stringify(replay.body));
+      assert.strictEqual(first.body.battleStatus, 'victory');
+      assert.strictEqual(replay.body.stateRevision, first.body.stateRevision);
+      assert.deepStrictEqual(replay.body.actionResult, first.body.actionResult);
+
+      const after = await query(
+        `SELECT b.state_revision,
+                b.status,
+                u.gold,
+                c.experience,
+                (SELECT COUNT(*)::int
+                 FROM battle_command_results
+                 WHERE battle_id = b.id AND idempotency_key = $3) AS receipt_count,
+                (SELECT COUNT(*)::int
+                 FROM battle_terminal_effect_outbox
+                 WHERE battle_id = b.id) AS outbox_count
+         FROM battles b
+         JOIN users u ON u.id = $2
+         JOIN characters c ON c.user_id = u.id AND c.id = $4
+         WHERE b.id = $1`,
+        [
+          battle.battleId,
+          user.userId,
+          `player:${user.userId}:command:${commandId}`,
+          Number(playerUnit.characterId ?? playerUnit.id)
+        ]
+      );
+      const rewards = first.body.actionResult.rewards;
+      assert.strictEqual(after.rows[0].status, 'victory');
+      assert.strictEqual(
+        Number(after.rows[0].state_revision),
+        first.body.stateRevision
+      );
+      assert.strictEqual(
+        Number(after.rows[0].gold) - Number(before.rows[0].gold),
+        rewards.gold
+      );
+      assert.strictEqual(
+        Number(after.rows[0].experience) - Number(before.rows[0].experience),
+        rewards.experience
+      );
+      assert.strictEqual(after.rows[0].receipt_count, 1);
+      assert.strictEqual(after.rows[0].outbox_count, 1);
     });
   });
 });

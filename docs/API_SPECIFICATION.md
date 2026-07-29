@@ -918,6 +918,7 @@ POST /api/world/nodes/:id/claim-chest
 ```json
 {
   "success": true,
+  "already_claimed": false,
   "gold_awarded": 250,
   "items_awarded": [
     {
@@ -933,12 +934,15 @@ POST /api/world/nodes/:id/claim-chest
 }
 ```
 
+The operation is idempotent. Retrying an already-committed claim returns `200`
+with the persisted rewards, the current account balance, and
+`"already_claimed": true`; it does not award the rewards again.
+
 **Errors:**
 | Code | Message |
 |------|---------|
 | 400 | You must be at this location to claim the treasure |
 | 400 | This node is not a treasure chest |
-| 400 | You have already claimed this treasure |
 | 404 | Node not found |
 
 ---
@@ -1081,6 +1085,18 @@ POST /api/battle/start
 
 **Headers:** `Authorization: Bearer <token>`
 
+**Request Body:**
+```json
+{
+  "formation": {
+    "1": { "tileX": 2, "tileY": 1 }
+  }
+}
+```
+
+`formation` is required and must contain 1–5 owned roster character IDs.
+Only the characters included in this object are deployed into the battle.
+
 **Response (201 Created):**
 ```json
 {
@@ -1162,9 +1178,23 @@ GET /api/battle/current
   "mapHeight": 8,
   "nodeType": "forest",
   "nodeName": "Dark Woods",
-  "state": { ... }
+  "state": { ... },
+  "stateRevision": 12,
+  "availableActions": {
+    "canMove": true,
+    "canAct": false,
+    "canWait": true,
+    "turnPhase": "partial",
+    "movement": { ... },
+    "attacks": null,
+    "skills": null,
+    "items": null
+  }
 }
 ```
+
+`availableActions` is `null` unless the active unit belongs to the requesting
+participant.
 
 **Errors:**
 | Code | Message |
@@ -1191,20 +1221,53 @@ POST /api/battle/action
   "unitId": 1,
   "targetTile": { "x": 2, "y": 5 },
   "skillId": null,
+  "inventoryId": null,
+  "stateRevision": 12,
+  "commandId": "0193f5d6-8d70-7ef0-a3b1-38c59fcb98b1",
   "actionSequence": 47
 }
 ```
 
+`commandId` is a stable, client-generated ID for one user intent. Retrying an
+ambiguous request must reuse both the ID and the same semantic payload. An
+exact retry returns the stored result without executing the action or its side
+effects again. Reusing an ID for a different action returns `409`.
+`stateRevision` is the revision on which the intent was created and must also
+remain stable across a retry; a new command with an obsolete revision is
+rejected before action processing.
+`actionSequence` remains optional for legacy clients; durable replay is based
+on `commandId`. If `commandId` is omitted, the server assigns a fresh one-shot
+receipt identity; reconnect-reset sequence values are never reused as durable
+command keys.
+
+Movement and acting are independent allowances. A unit may move then attack,
+use a skill, or use an item, or perform one of those actions and move
+afterward. `hasActed` is a legacy completed-turn field; `moveUsed`, `actUsed`,
+`turnPhase`, and `availableActions` are authoritative for the current turn.
+
 **Response (200 OK):**
 ```json
 {
-  "success": true,
-  "actionId": "act_abc123",
-  "message": "Action queued, results will be broadcast via WebSocket"
+  "state": { ... },
+  "actionResult": {
+    "damage": 45,
+    "turnEnded": false
+  },
+  "battleStatus": "active",
+  "turnContinues": true,
+  "availableActions": {
+    "canMove": true,
+    "canAct": false,
+    "canWait": true,
+    "turnPhase": "partial"
+  },
+  "stateRevision": 13,
+  "commandId": "0193f5d6-8d70-7ef0-a3b1-38c59fcb98b1"
 }
 ```
 
-> **Note:** Action results including damage calculations, status effects, unit state changes, and battle outcome are delivered via WebSocket events (`battle:action_result`, `battle:state_update`, `battle:end`). See Section 7.6 and 7.8 for WebSocket event schemas.
+The HTTP response is authoritative. Presentation events are also delivered by
+WebSocket to keep other participants synchronized.
 
 **Battle Status Values (via WebSocket):**
 - `active` - Battle continues
@@ -1215,8 +1278,16 @@ POST /api/battle/action
 | Code | Message |
 |------|---------|
 | 400 | Not this unit's turn |
-| 404 | Battle not found or not active |
-| 409 | Stale action sequence - battle state has changed |
+| 400 | Action failed business validation, such as already moved or acted |
+| 403 | You do not control this unit |
+| 404 | Battle not found or participant access denied |
+| 409 | Battle is no longer active |
+| 409 | `commandId` was already used for a different action |
+| 409 | Battle state changed during the command |
+
+Business-validation and conflict responses include the current `state`,
+`availableActions`, and `stateRevision` whenever the battle can be loaded, so
+the client can reconcile immediately.
 
 ---
 
@@ -1264,17 +1335,22 @@ GET /api/battle/:battleId/rejoin
 ```json
 {
   "battleId": 123,
-  "canRejoin": true,
+  "battleType": "pve",
   "state": {
     "turn": 5,
     "activeUnitId": 3,
     "units": [...],
     "log": [...]
   },
-  "yourUnits": [1, 2, 3],
-  "currentTurnUnit": 5,
-  "sequence": 47,
-  "gracePeriodRemaining": 25000
+  "stateRevision": 18,
+  "gracePeriod": 25000,
+  "disconnectedPlayers": [],
+  "availableActions": {
+    "canMove": true,
+    "canAct": true,
+    "canWait": true,
+    "turnPhase": "ready"
+  }
 }
 ```
 
@@ -1285,6 +1361,54 @@ GET /api/battle/:battleId/rejoin
 | 400 | Battle has ended |
 | 400 | Grace period expired |
 | 403 | Not a participant in this battle |
+
+---
+
+### 6.6 Poll Battle State
+
+Get the lightweight authoritative state used for drift recovery.
+
+```
+GET /api/battle/:battleId/state
+```
+
+**Response (200 OK):**
+```json
+{
+  "activeUnitId": 3,
+  "turnCount": 5,
+  "stateRevision": 18,
+  "moveUsed": false,
+  "actUsed": true,
+  "turnPhase": "partial",
+  "hasActed": false,
+  "availableActions": {
+    "canMove": true,
+    "canAct": false,
+    "canWait": true,
+    "turnPhase": "partial"
+  },
+  "status": "active",
+  "rewards": null,
+  "units": [
+    {
+      "id": 3,
+      "x": 2,
+      "y": 5,
+      "hp": 90,
+      "mp": 20,
+      "moveUsed": false,
+      "actUsed": true,
+      "turnPhase": "partial",
+      "hasActed": false
+    }
+  ]
+}
+```
+
+`availableActions` is participant-scoped and is `null` when another
+participant or an enemy controls the active unit. The endpoint supports
+conditional requests with `ETag`/`If-None-Match`.
 
 ---
 
@@ -1586,7 +1710,8 @@ Production:    wss://modia.example.com/ws
     "unitId": 5,
     "unitType": "enemy",
     "unitName": "Forest Goblin",
-    "turnPredictions": [5, 1, 3, 2]
+    "turnPredictions": [5, 1, 3, 2],
+    "stateRevision": 18
   }
 }
 ```
@@ -1613,13 +1738,23 @@ Production:    wss://modia.example.com/ws
     "battleId": 123,
     "unitId": 1,
     "state": {...},
-    "availableActions": ["move", "attack", "skill", "item", "wait"],
-    "timeout": 60000
+    "availableActions": {
+      "canMove": true,
+      "canAct": true,
+      "canWait": true,
+      "turnPhase": "ready"
+    },
+    "stateRevision": 18
   }
 }
 ```
 
-**Player Action (Client → Server):**
+`battle:your_turn` is a complete logical recovery event. The client restores
+the active actor and authoritative controls before camera presentation. A
+short timeout requests full synchronization and polling if availability is
+missing.
+
+**Player Action (legacy; use `POST /api/battle/action`):**
 ```json
 {
   "type": "battle:player_action",

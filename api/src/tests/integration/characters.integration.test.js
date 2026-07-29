@@ -1,13 +1,34 @@
-import { describe, it, before } from 'node:test';
+import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
-import { request, createTestUser, createTestCharacter, query } from '../testHelper.js';
+import {
+  request,
+  createTestUser,
+  createTestCharacter,
+  createTestPartyCharacter,
+  cleanupTestUser,
+  getClient,
+  query
+} from '../testHelper.js';
 
 describe('Characters API', () => {
   let user = null;
   let character = null;
+  const createdUserIds = [];
+
+  async function createTrackedUser() {
+    const created = await createTestUser();
+    createdUserIds.push(created.userId);
+    return created;
+  }
 
   before(async () => {
-    user = await createTestUser();
+    user = await createTrackedUser();
+  });
+
+  after(async () => {
+    for (const userId of createdUserIds) {
+      await cleanupTestUser(userId);
+    }
   });
 
   describe('POST /api/characters', () => {
@@ -32,11 +53,12 @@ describe('Characters API', () => {
       const races = ['elf', 'dwarf', 'orc'];
 
       for (const race of races) {
+        const raceUser = await createTrackedUser();
         const res = await request('POST', '/api/characters', {
           name: `Test${race}`,
           race,
           characterClass: 'wizard'
-        }, user.accessToken);
+        }, raceUser.accessToken);
 
         assert.strictEqual(res.status, 201);
         assert.strictEqual(res.body.character.race, race);
@@ -47,11 +69,12 @@ describe('Characters API', () => {
       const classes = ['monk', 'chemist'];
 
       for (const charClass of classes) {
+        const classUser = await createTrackedUser();
         const res = await request('POST', '/api/characters', {
           name: `Test${charClass}`,
           race: 'human',
           characterClass: charClass
-        }, user.accessToken);
+        }, classUser.accessToken);
 
         assert.strictEqual(res.status, 201);
         assert.strictEqual(res.body.character.class, charClass);
@@ -78,24 +101,15 @@ describe('Characters API', () => {
       assert.strictEqual(res.status, 400);
     });
 
-    it('should reject duplicate character name for same user', async () => {
-      const name = `UniqueName_${Date.now()}`;
-
-      // Create first character
-      await request('POST', '/api/characters', {
-        name,
+    it('should apply the manual-creation policy before duplicate-name checks', async () => {
+      const res = await request('POST', '/api/characters', {
+        name: character.name,
         race: 'human',
         characterClass: 'warrior'
       }, user.accessToken);
 
-      // Try to create second with same name
-      const res = await request('POST', '/api/characters', {
-        name,
-        race: 'elf',
-        characterClass: 'wizard'
-      }, user.accessToken);
-
-      assert.strictEqual(res.status, 409);
+      assert.strictEqual(res.status, 400);
+      assert.match(res.body.error, /guild recruitment/i);
     });
 
     it('should reject missing name', async () => {
@@ -119,7 +133,7 @@ describe('Characters API', () => {
 
     it('should assign starting trait to new character', async () => {
       // Create a fresh user to ensure test isolation
-      const freshUser = await createTestUser();
+      const freshUser = await createTrackedUser();
 
       const res = await request('POST', '/api/characters', {
         name: `TraitTest_${Date.now()}`,
@@ -147,7 +161,7 @@ describe('Characters API', () => {
 
     it('should assign correct starting trait for elf wizard', async () => {
       // Create a fresh user to ensure test isolation
-      const freshUser = await createTestUser();
+      const freshUser = await createTrackedUser();
 
       const res = await request('POST', '/api/characters', {
         name: `ElfWiz_${Date.now()}`,
@@ -175,7 +189,7 @@ describe('Characters API', () => {
 
     it('should block manual character creation when user already has characters', async () => {
       // Create a fresh user to ensure test isolation
-      const freshUser = await createTestUser();
+      const freshUser = await createTrackedUser();
 
       // Create the first character - this should succeed
       const firstRes = await request('POST', '/api/characters', {
@@ -242,7 +256,7 @@ describe('Characters API', () => {
 
     it('should reject access to another user character', async () => {
       // Create another user
-      const otherUser = await createTestUser();
+      const otherUser = await createTrackedUser();
       const otherChar = await createTestCharacter(otherUser.accessToken);
 
       // Try to access with original user
@@ -358,14 +372,12 @@ describe('Characters API', () => {
 
   describe('DELETE /api/characters/:id', () => {
     it('should delete character successfully', async () => {
-      // Create a character to delete
-      const charRes = await request('POST', '/api/characters', {
-        name: `ToDelete_${Date.now()}`,
-        race: 'human',
-        characterClass: 'warrior'
-      }, user.accessToken);
-
-      const charId = charRes.body.character.id;
+      // Recruited party members can be deleted; the manually created leader
+      // cannot. Establish a recruited-character persistence fixture directly.
+      const characterToDelete = await createTestPartyCharacter(user.userId, {
+        name: `ToDelete_${Date.now()}`
+      });
+      const charId = characterToDelete.id;
 
       const res = await request('DELETE', `/api/characters/${charId}`, null, user.accessToken);
 
@@ -377,12 +389,112 @@ describe('Characters API', () => {
     });
 
     it('should reject deleting another user character', async () => {
-      const otherUser = await createTestUser();
+      const otherUser = await createTrackedUser();
       const otherChar = await createTestCharacter(otherUser.accessToken);
 
       const res = await request('DELETE', `/api/characters/${otherChar.id}`, null, user.accessToken);
 
       assert.strictEqual(res.status, 404);
+    });
+
+    it('should wait for the battle lock and preserve a character that enters battle', async () => {
+      const characterToKeep = await createTestPartyCharacter(user.userId, {
+        name: `DeleteRace_${Date.now()}`
+      });
+      const locker = await getClient();
+      let transactionOpen = false;
+      let deleteRequest = null;
+      let requestSettled = false;
+
+      try {
+        await locker.query('BEGIN');
+        transactionOpen = true;
+        const lockerBackend = await locker.query(
+          'SELECT pg_backend_pid() AS pid'
+        );
+        const lockerPid = lockerBackend.rows[0].pid;
+        await locker.query(
+          `SELECT id
+           FROM characters
+           WHERE user_id = $1
+           ORDER BY id
+           FOR UPDATE`,
+          [user.userId]
+        );
+
+        deleteRequest = request(
+          'DELETE',
+          `/api/characters/${characterToKeep.id}`,
+          null,
+          user.accessToken
+        ).then((response) => {
+          requestSettled = true;
+          return response;
+        });
+
+        const deadline = Date.now() + 5000;
+        let deleteReachedLock = false;
+        while (Date.now() < deadline) {
+          const waiting = await query(
+            `SELECT EXISTS (
+               SELECT 1
+               FROM pg_stat_activity
+               WHERE datname = current_database()
+                 AND state = 'active'
+                 AND wait_event_type = 'Lock'
+                 AND query LIKE '%FROM characters%'
+                 AND query LIKE '%FOR UPDATE%'
+                 AND $1 = ANY(pg_blocking_pids(pid))
+             ) AS waiting`,
+            [lockerPid]
+          );
+          if (waiting.rows[0].waiting) {
+            deleteReachedLock = true;
+            break;
+          }
+          await new Promise(resolve => setTimeout(resolve, 25));
+        }
+        assert.strictEqual(
+          deleteReachedLock,
+          true,
+          'character deletion should reach and wait on the lifecycle row lock'
+        );
+        assert.strictEqual(
+          requestSettled,
+          false,
+          'character deletion should wait for the owned-character lifecycle lock'
+        );
+
+        await locker.query(
+          'UPDATE characters SET in_battle = true WHERE id = $1',
+          [characterToKeep.id]
+        );
+        await locker.query('COMMIT');
+        transactionOpen = false;
+
+        const response = await deleteRequest;
+        assert.strictEqual(response.status, 400);
+        assert.match(response.body.error, /while in battle/i);
+
+        const persisted = await query(
+          'SELECT id, in_battle FROM characters WHERE id = $1 AND user_id = $2',
+          [characterToKeep.id, user.userId]
+        );
+        assert.strictEqual(persisted.rowCount, 1);
+        assert.strictEqual(persisted.rows[0].in_battle, true);
+      } finally {
+        if (transactionOpen) {
+          await locker.query('ROLLBACK');
+        }
+        locker.release();
+        if (deleteRequest) {
+          await deleteRequest.catch(() => {});
+        }
+        await query(
+          'UPDATE characters SET in_battle = false WHERE id = $1',
+          [characterToKeep.id]
+        );
+      }
     });
 
     it('should block deletion of main character (oldest character)', async () => {

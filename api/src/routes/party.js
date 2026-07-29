@@ -1,11 +1,28 @@
 import express from 'express';
-import { query } from '../config/database.js';
+import { query, withTransaction } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import { MAX_PARTY_SIZE, MAX_BATTLE_PARTY_SIZE } from '../config/constants.js';
 import partyWebsocket from '../services/partyWebsocket.js';
 
 const router = express.Router();
+
+async function lockOwnedCharacters(client, userId) {
+  const result = await client.query(
+    `SELECT id, hp_current, in_battle
+     FROM characters
+     WHERE user_id = $1
+     ORDER BY id
+     FOR UPDATE`,
+    [userId]
+  );
+
+  if (result.rows.some(character => character.in_battle)) {
+    throw new AppError('Cannot change party formation during battle', 400);
+  }
+
+  return result.rows;
+}
 
 // GET /api/party - Get current party formation
 router.get('/', authenticate, asyncHandler(async (req, res) => {
@@ -40,54 +57,65 @@ router.put('/', authenticate, asyncHandler(async (req, res) => {
     slots.add(slot);
   }
 
-  // Verify all characters belong to user
   const charIds = formation.map(f => f.characterId);
-  const verifyResult = await query(
-    'SELECT id FROM characters WHERE id = ANY($1) AND user_id = $2',
-    [charIds, req.user.userId]
-  );
-
-  if (verifyResult.rows.length !== charIds.length) {
-    throw new AppError('One or more characters not found', 404);
-  }
-
-  // Ensure main character (oldest) stays in slot 1
-  const mainCharResult = await query(
-    'SELECT id FROM characters WHERE user_id = $1 ORDER BY created_at ASC LIMIT 1',
-    [req.user.userId]
-  );
-  if (mainCharResult.rows.length > 0) {
-    const mainCharId = mainCharResult.rows[0].id;
-    const slot1Assignment = formation.find(f => f.slot === 1);
-    if (!slot1Assignment || slot1Assignment.characterId !== mainCharId) {
-      throw new AppError('Main character must remain in slot 1', 400);
+  const party = await withTransaction(async (client) => {
+    const ownedCharacters = await lockOwnedCharacters(client, req.user.userId);
+    const ownedIds = new Set(ownedCharacters.map(character => String(character.id)));
+    if (
+      new Set(charIds.map(String)).size !== charIds.length
+      || charIds.some(characterId => !ownedIds.has(String(characterId)))
+    ) {
+      throw new AppError('One or more characters not found', 404);
     }
-  }
 
-  // Clear existing slots first
-  await query(
-    'UPDATE characters SET party_slot = NULL WHERE user_id = $1',
-    [req.user.userId]
-  );
-
-  // Set new slots
-  for (const { characterId, slot } of formation) {
-    await query(
-      'UPDATE characters SET party_slot = $1 WHERE id = $2 AND user_id = $3',
-      [slot, characterId, req.user.userId]
+    // Ensure main character (oldest) stays in slot 1 while the roster is locked.
+    const mainCharResult = await client.query(
+      `SELECT id
+       FROM characters
+       WHERE user_id = $1
+       ORDER BY created_at ASC, id ASC
+       LIMIT 1`,
+      [req.user.userId]
     );
-  }
+    if (mainCharResult.rows.length > 0) {
+      const mainCharId = mainCharResult.rows[0].id;
+      const slot1Assignment = formation.find(f => f.slot === 1);
+      if (
+        !slot1Assignment
+        || String(slot1Assignment.characterId) !== String(mainCharId)
+      ) {
+        throw new AppError('Main character must remain in slot 1', 400);
+      }
+    }
 
-  // Return updated party
-  const result = await query(
-    `SELECT id, name, race, class, level, hp_current, hp_max, mp_current, mp_max, party_slot
-     FROM characters
-     WHERE user_id = $1 AND party_slot IS NOT NULL
-     ORDER BY party_slot ASC`,
-    [req.user.userId]
-  );
+    await client.query(
+      'UPDATE characters SET party_slot = NULL WHERE user_id = $1',
+      [req.user.userId]
+    );
 
-  res.json({ party: result.rows });
+    for (const { characterId, slot } of formation) {
+      const update = await client.query(
+        `UPDATE characters
+         SET party_slot = $1
+         WHERE id = $2 AND user_id = $3`,
+        [slot, characterId, req.user.userId]
+      );
+      if (update.rowCount !== 1) {
+        throw new AppError('Party formation changed - please retry', 409);
+      }
+    }
+
+    const result = await client.query(
+      `SELECT id, name, race, class, level, hp_current, hp_max, mp_current, mp_max, party_slot
+       FROM characters
+       WHERE user_id = $1 AND party_slot IS NOT NULL
+       ORDER BY party_slot ASC`,
+      [req.user.userId]
+    );
+    return result.rows;
+  });
+
+  res.json({ party });
 }));
 
 // PUT /api/party/battle - Set battle party (top 5 for combat)
@@ -106,42 +134,50 @@ router.put('/battle', authenticate, asyncHandler(async (req, res) => {
     throw new AppError('Battle party must have at least 1 character', 400);
   }
 
-  // Verify all characters belong to user and are alive
-  const verifyResult = await query(
-    `SELECT id FROM characters
-     WHERE id = ANY($1) AND user_id = $2 AND hp_current > 0`,
-    [characterIds, req.user.userId]
-  );
-
-  if (verifyResult.rows.length !== characterIds.length) {
-    throw new AppError('One or more characters not found or are incapacitated', 400);
-  }
-
-  // Clear current battle party slots (1-5)
-  await query(
-    `UPDATE characters SET party_slot = NULL
-     WHERE user_id = $1 AND party_slot <= $2`,
-    [req.user.userId, MAX_BATTLE_PARTY_SIZE]
-  );
-
-  // Assign new battle party to slots 1-5
-  for (let i = 0; i < characterIds.length; i++) {
-    await query(
-      'UPDATE characters SET party_slot = $1 WHERE id = $2 AND user_id = $3',
-      [i + 1, characterIds[i], req.user.userId]
+  const battleParty = await withTransaction(async (client) => {
+    const ownedCharacters = await lockOwnedCharacters(client, req.user.userId);
+    const ownedById = new Map(
+      ownedCharacters.map(character => [String(character.id), character])
     );
-  }
+    if (
+      new Set(characterIds.map(String)).size !== characterIds.length
+      || characterIds.some(characterId => {
+        const character = ownedById.get(String(characterId));
+        return !character || character.hp_current <= 0;
+      })
+    ) {
+      throw new AppError('One or more characters not found or are incapacitated', 400);
+    }
 
-  // Return battle party
-  const result = await query(
-    `SELECT id, name, race, class, level, hp_current, hp_max, mp_current, mp_max, party_slot
-     FROM characters
-     WHERE user_id = $1 AND party_slot <= $2
-     ORDER BY party_slot ASC`,
-    [req.user.userId, MAX_BATTLE_PARTY_SIZE]
-  );
+    await client.query(
+      `UPDATE characters SET party_slot = NULL
+       WHERE user_id = $1 AND party_slot <= $2`,
+      [req.user.userId, MAX_BATTLE_PARTY_SIZE]
+    );
 
-  res.json({ battleParty: result.rows });
+    for (let index = 0; index < characterIds.length; index++) {
+      const update = await client.query(
+        `UPDATE characters
+         SET party_slot = $1
+         WHERE id = $2 AND user_id = $3`,
+        [index + 1, characterIds[index], req.user.userId]
+      );
+      if (update.rowCount !== 1) {
+        throw new AppError('Battle party changed - please retry', 409);
+      }
+    }
+
+    const result = await client.query(
+      `SELECT id, name, race, class, level, hp_current, hp_max, mp_current, mp_max, party_slot
+       FROM characters
+       WHERE user_id = $1 AND party_slot <= $2
+       ORDER BY party_slot ASC`,
+      [req.user.userId, MAX_BATTLE_PARTY_SIZE]
+    );
+    return result.rows;
+  });
+
+  res.json({ battleParty });
 }));
 
 // ============================================================================

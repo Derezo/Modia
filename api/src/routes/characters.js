@@ -1,5 +1,5 @@
 import express from 'express';
-import { query } from '../config/database.js';
+import { query, withTransaction } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import { RACES, CLASSES, GENDERS, MAX_PARTY_SIZE, calculateStats, STARTING_EXPERIENCE, RACE_BASE_STATS } from '../config/constants.js';
@@ -29,6 +29,121 @@ const STARTER_SKILLS = {
   monk: ['palm_strike'],
   chemist: ['brew_potion']
 };
+
+/**
+ * Respawn a party after serializing against battle lifecycle writes.
+ *
+ * Locking every owned character shares the same row-lock boundary used by
+ * battle creation. The battles table remains authoritative, while in_battle
+ * also blocks movement when terminal cleanup has not completed yet.
+ */
+export async function respawnPartyWithClient(client, userId) {
+  if (!client || typeof client.query !== 'function') {
+    throw new TypeError('respawnPartyWithClient requires a pg client');
+  }
+
+  const charactersResult = await client.query(
+    `SELECT c.id, c.party_slot, c.home_region_id, wr.castle_node_id, c.in_battle
+     FROM characters c
+     LEFT JOIN world_regions wr ON c.home_region_id = wr.id
+     WHERE c.user_id = $1
+     ORDER BY c.id
+     FOR UPDATE OF c`,
+    [userId]
+  );
+  const leader = charactersResult.rows.find(character => character.party_slot === 1);
+  if (!leader) {
+    throw new AppError('No party leader found', 404);
+  }
+
+  const activeBattleResult = await client.query(
+    `SELECT id
+     FROM battles
+     WHERE status = 'active'
+       AND (
+         player1_id = $1
+         OR player2_id = $1
+         OR EXISTS (
+           SELECT 1
+           FROM battle_players
+           WHERE battle_players.battle_id = battles.id
+             AND battle_players.user_id = $1
+         )
+       )
+     LIMIT 1`,
+    [userId]
+  );
+  if (
+    activeBattleResult.rows.length > 0
+    || charactersResult.rows.some(character => character.in_battle)
+  ) {
+    throw new AppError('Cannot respawn while in battle', 400);
+  }
+
+  if (!leader.home_region_id || !leader.castle_node_id) {
+    throw new AppError('Character has no home region set', 400);
+  }
+
+  const result = await client.query(
+    `UPDATE characters
+     SET current_node_id = $1
+     WHERE user_id = $2 AND party_slot IS NOT NULL
+     RETURNING id, name, current_node_id`,
+    [leader.castle_node_id, userId]
+  );
+  return {
+    nodeId: leader.castle_node_id,
+    characters: result.rows
+  };
+}
+
+/**
+ * Delete a character while sharing the user-wide lifecycle lock used by
+ * battle creation. The target checks and delete must all use this client.
+ */
+async function deleteCharacterWithClient(client, userId, characterId) {
+  if (!client || typeof client.query !== 'function') {
+    throw new TypeError('deleteCharacterWithClient requires a pg client');
+  }
+
+  const charactersResult = await client.query(
+    `SELECT id, in_battle
+     FROM characters
+     WHERE user_id = $1
+     ORDER BY id
+     FOR UPDATE`,
+    [userId]
+  );
+  const character = charactersResult.rows.find(
+    candidate => String(candidate.id) === String(characterId)
+  );
+  if (!character) {
+    throw new AppError('Character not found', 404);
+  }
+  if (character.in_battle) {
+    throw new AppError('Cannot delete character while in battle', 400);
+  }
+
+  const oldestResult = await client.query(
+    `SELECT id
+     FROM characters
+     WHERE user_id = $1
+     ORDER BY created_at ASC, id ASC
+     LIMIT 1`,
+    [userId]
+  );
+  if (String(oldestResult.rows[0]?.id) === String(characterId)) {
+    throw new AppError('Cannot delete main character', 400);
+  }
+
+  const deleteResult = await client.query(
+    'DELETE FROM characters WHERE id = $1 AND user_id = $2',
+    [characterId, userId]
+  );
+  if (deleteResult.rowCount !== 1) {
+    throw new AppError('Character not found', 404);
+  }
+}
 
 // GET /api/characters - List all user's characters
 router.get('/', authenticate, asyncHandler(async (req, res) => {
@@ -371,73 +486,22 @@ router.put('/:id', authenticate, characterUpdateLimiter, asyncHandler(async (req
 // DELETE /api/characters/:id - Delete character
 router.delete('/:id', authenticate, characterDeleteLimiter, asyncHandler(async (req, res) => {
   const { id } = req.params;
-
-  // Check if character is in battle
-  const checkResult = await query(
-    'SELECT in_battle FROM characters WHERE id = $1 AND user_id = $2',
-    [id, req.user.userId]
+  await withTransaction(
+    client => deleteCharacterWithClient(client, req.user.userId, id)
   );
-
-  if (checkResult.rows.length === 0) {
-    throw new AppError('Character not found', 404);
-  }
-
-  if (checkResult.rows[0].in_battle) {
-    throw new AppError('Cannot delete character while in battle', 400);
-  }
-
-  // Block deletion of main character (oldest character)
-  const oldestResult = await query(
-    'SELECT id FROM characters WHERE user_id = $1 ORDER BY created_at ASC LIMIT 1',
-    [req.user.userId]
-  );
-  if (oldestResult.rows[0]?.id === parseInt(id, 10)) {
-    throw new AppError('Cannot delete main character', 400);
-  }
-
-  await query('DELETE FROM characters WHERE id = $1 AND user_id = $2', [id, req.user.userId]);
 
   res.json({ message: 'Character deleted successfully' });
 }));
 
 // POST /api/characters/respawn - Return all party characters to home region castle
 router.post('/respawn', authenticate, asyncHandler(async (req, res) => {
-  // Get party leader to determine home region
-  const leaderResult = await query(
-    `SELECT c.id, c.home_region_id, wr.castle_node_id, c.in_battle
-     FROM characters c
-     LEFT JOIN world_regions wr ON c.home_region_id = wr.id
-     WHERE c.user_id = $1 AND c.party_slot = 1`,
-    [req.user.userId]
-  );
-
-  if (leaderResult.rows.length === 0) {
-    throw new AppError('No party leader found', 404);
-  }
-
-  const leader = leaderResult.rows[0];
-
-  if (leader.in_battle) {
-    throw new AppError('Cannot respawn while in battle', 400);
-  }
-
-  if (!leader.home_region_id || !leader.castle_node_id) {
-    throw new AppError('Character has no home region set', 400);
-  }
-
-  // Move all party members to the party leader's home castle
-  const result = await query(
-    `UPDATE characters
-     SET current_node_id = $1
-     WHERE user_id = $2 AND party_slot IS NOT NULL
-     RETURNING id, name, current_node_id`,
-    [leader.castle_node_id, req.user.userId]
+  const result = await withTransaction(
+    client => respawnPartyWithClient(client, req.user.userId)
   );
 
   res.json({
     message: 'Party respawned at home castle',
-    nodeId: leader.castle_node_id,
-    characters: result.rows
+    ...result
   });
 }));
 

@@ -36,6 +36,23 @@ test('characters category no longer declares legacy top-level registry metadata'
   });
 });
 
+test('overlay metadata routes through its declared subcategory', () => {
+  assert.equal(
+    CATEGORY_METADATA.overlays.getSubcategory({
+      category: 'overlays',
+      subcategory: 'augments'
+    }),
+    'augments'
+  );
+  assert.equal(
+    CATEGORY_METADATA.overlays.getSubcategory({
+      category: 'overlays',
+      subcategory: 'rarity'
+    }),
+    'rarity'
+  );
+});
+
 test('character runtime issue routing includes authored characters but not unrelated assets', () => {
   assert.equal(isCharacterRuntimeIssue({ scope: 'players', code: 'player_sheet_missing' }), true);
   assert.equal(isCharacterRuntimeIssue({ scope: 'enemies', code: 'enemy_authored_spec_missing' }), true);

@@ -74,6 +74,13 @@ import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { BattleLoadingScreen } from '../ui/parchment/BattleLoadingScreen.js';
 import { responsive } from '../core/Responsive.js';
 
+export function createBattleCommandId() {
+  if (globalThis.crypto?.randomUUID) {
+    return globalThis.crypto.randomUUID();
+  }
+  return `battle-action-${Date.now()}-${Math.random().toString(36).slice(2, 13)}`;
+}
+
 export function createAssetPreloadProgress(loadingScreen) {
   const phases = new Map();
 
@@ -158,7 +165,13 @@ export class BattleScene extends Scene {
     // Two-action turn state
     this.canMove = true;
     this.canAct = true;
+    this.canWait = true;
     this.turnPhase = 'ready'; // 'ready' | 'partial' | 'done'
+    this.inputEnabled = false;
+    this.isActionSubmitting = false;
+    this.stateRevision = null;
+    this.retryableActionIntent = null;
+    this.processedCommandIds = new Set();
 
     // Turn transition tracking
     this.lastActiveUnitId = null;
@@ -214,9 +227,16 @@ export class BattleScene extends Scene {
     this.battleId = data.battleId;
     this.mapSeed = data.mapSeed;
     this.battleState = data.state;
+    this.battleState.status ??= 'active';
     this.nodeType = data.nodeType || null; // Store nodeType from server for terrain generation
     // Store initial available actions from server for first turn
     this.serverAvailableActions = data.availableActions || null;
+    this.stateRevision = data.stateRevision ?? data.state?.stateRevision ?? null;
+    this.inputEnabled = false;
+    this.isActionSubmitting = false;
+    this.retryableActionIntent = null;
+    this.processedCommandIds.clear();
+    this.applyAuthoritativeAvailability(this.serverAvailableActions);
     this.initialEnemyActions = data.initialEnemyActions || null;
     this.battleType = data.battleType || 'pve'; // 'pve', 'pvp', 'pvp_coliseum', 'pve_coop'
     this.opponentUsername = data.opponentUsername || null;
@@ -445,7 +465,9 @@ export class BattleScene extends Scene {
       onSkillSelect: (skillId) => this.startSkillAction(skillId),
       onItemSelect: (itemData) => this.startItemAction(itemData),
       getSkills: () => this.getActiveUnitSkillsForRadial(),
-      getItems: () => this.getActiveUnitItemsForRadial()
+      getItems: () => this.getActiveUnitItemsForRadial(),
+      canUseAction: (actionType, { notify = true } = {}) =>
+        this.canSubmitAction(actionType, { notify })
     });
 
     // Initialize FFT-style context menu (shown on right-click or unit click on desktop)
@@ -458,7 +480,9 @@ export class BattleScene extends Scene {
       onSkillSelect: (skillId) => this.startSkillAction(skillId),
       onItemSelect: (itemData) => this.startItemAction(itemData),
       getSkills: () => this.getActiveUnitSkillsForRadial(),
-      getItems: () => this.getActiveUnitItemsForRadial()
+      getItems: () => this.getActiveUnitItemsForRadial(),
+      canUseAction: (actionType, { notify = true } = {}) =>
+        this.canSubmitAction(actionType, { notify })
     });
 
     // Initialize grid cursor for keyboard navigation
@@ -631,6 +655,8 @@ export class BattleScene extends Scene {
     this.validTiles = [];
     this.currentAction = null;
     this.selectedUnit = null;
+    this.inputEnabled = false;
+    this.isActionSubmitting = false;
   }
 
   /**
@@ -805,12 +831,216 @@ export class BattleScene extends Scene {
   }
 
   /**
+   * Whether the current actor belongs to the local player.
+   */
+  isLocalActiveUnit(unit = this.getActiveUnit()) {
+    if (!unit) return false;
+    return this.isPvP
+      ? unit.isLocalPlayerUnit(this.game.localUserId)
+      : unit.type === 'player';
+  }
+
+  /**
+   * Apply the server's two-action availability as the single local display
+   * source. A missing availability payload is deliberately treated as locked.
+   */
+  applyAuthoritativeAvailability(availableActions) {
+    this.serverAvailableActions = availableActions || null;
+    this.canMove = availableActions?.canMove === true;
+    this.canAct = availableActions?.canAct === true;
+    // Legacy servers did not send canWait. An active unit can always end its
+    // turn, including when status effects prevent both movement and acting.
+    this.canWait = !!availableActions && availableActions.canWait !== false;
+    const bothAvailable = this.canMove && this.canAct;
+    const neitherAvailable = !this.canMove && !this.canAct;
+    this.turnPhase = availableActions?.turnPhase ??
+      (bothAvailable ? 'ready' : (neitherAvailable ? 'done' : 'partial'));
+  }
+
+  getActionAvailability(actionType) {
+    if (!this.serverAvailableActions) return false;
+    if (actionType === 'move') return this.canMove;
+    if (['attack', 'skill', 'item'].includes(actionType)) return this.canAct;
+    if (actionType === 'wait') return this.canWait;
+    if (actionType === 'any') return this.canMove || this.canAct || this.canWait;
+    return false;
+  }
+
+  /**
+   * Authoritative gate shared by menus, shortcuts, targeting, confirmation,
+   * and the final network submission.
+   */
+  canSubmitAction(actionType, { notify = false } = {}) {
+    const activeUnit = this.getActiveUnit();
+    let message = null;
+
+    if (!this.battleId || this.battleEnded ||
+        (this.battleState?.status ?? 'active') !== 'active') {
+      message = 'This battle is no longer active';
+    } else if (!activeUnit || !this.isLocalActiveUnit(activeUnit)) {
+      message = 'Wait for your active unit';
+    } else if (!this.inputEnabled) {
+      message = 'Battle state is still synchronizing';
+    } else if (this.isActionSubmitting) {
+      message = 'Your previous action is still being submitted';
+    } else if (!this.getActionAvailability(actionType)) {
+      message = actionType === 'move'
+        ? 'Already moved this turn'
+        : actionType === 'wait'
+          ? 'No actions remain this turn'
+          : 'Already acted this turn';
+    }
+
+    if (message && notify) {
+      parchmentToast.warning('Action Unavailable', message);
+    }
+    return !message;
+  }
+
+  isStaleStateRevision(revision) {
+    if (revision === null || revision === undefined ||
+        this.stateRevision === null || this.stateRevision === undefined) {
+      return false;
+    }
+    const incoming = Number(revision);
+    const current = Number(this.stateRevision);
+    return Number.isFinite(incoming) && Number.isFinite(current) && incoming < current;
+  }
+
+  noteStateRevision(revision) {
+    if (revision === null || revision === undefined) return;
+    if (!this.isStaleStateRevision(revision)) {
+      const retryBaseRevision = this.retryableActionIntent?.baseRevision;
+      if (retryBaseRevision !== null && retryBaseRevision !== undefined &&
+          Number(revision) > Number(retryBaseRevision)) {
+        this.retryableActionIntent = null;
+      }
+      this.stateRevision = revision;
+      if (this.battleState) this.battleState.stateRevision = revision;
+    }
+  }
+
+  clearActionTargetingState() {
+    this.currentAction = null;
+    this.validTiles = [];
+    this.pendingAction = null;
+    this.lockedTarget = null;
+    this.selectedSkillId = null;
+    this.selectedItemId = null;
+    this.selectedInventoryId = null;
+    this.selectedMoveTile = null;
+    this.hideRadialMenu();
+    this.ui?.hideConfirmation?.();
+    this.ui?.hideSkillPanel?.();
+    this.ui?.hideItemPanel?.();
+    this.ui?.hideTargetingMode?.();
+    this.ui?.clearTargetSticky?.();
+    this.ui?.hideActiveUnitPreview?.();
+  }
+
+  refreshActionControls() {
+    const activeUnit = this.getActiveUnit();
+    const controlsEnabled = this.canSubmitAction('any');
+    this.ui?.updateAvailableActions?.(this.canMove, this.canAct);
+    this.ui?.setActionsEnabled?.(controlsEnabled);
+    if (this.actionBar && activeUnit) {
+      this.actionBar.updateTurnState(
+        controlsEnabled && this.canMove,
+        controlsEnabled && this.canAct,
+        activeUnit.mp,
+        controlsEnabled && this.canWait
+      );
+    }
+  }
+
+  /**
+   * Complete, idempotent local-turn recovery used by both your_turn and
+   * turn_start. Logical control recovery is independent of camera animation.
+   */
+  recoverLocalTurn({ unitId, availableActions, stateRevision } = {}) {
+    if (!unitId || this.isStaleStateRevision(stateRevision)) return false;
+    const activeUnit = this.units.get(unitId);
+    if (!activeUnit || !this.isLocalActiveUnit(activeUnit)) return false;
+
+    const startsNewLocalTurn = !this.inputEnabled ||
+      String(this.battleState?.activeUnitId) !== String(unitId) ||
+      (stateRevision != null && this.stateRevision != null &&
+        Number(stateRevision) > Number(this.stateRevision));
+    this.noteStateRevision(stateRevision);
+    if (startsNewLocalTurn) {
+      // A new authoritative local turn supersedes any ambiguous identity left
+      // over from an earlier turn; an exact duplicate notification does not.
+      this.retryableActionIntent = null;
+    }
+    this.battleState.status ??= 'active';
+    this.battleState.activeUnitId = unitId;
+    if (this.selectedUnit && this.selectedUnit !== activeUnit) {
+      this.selectedUnit.isSelected = false;
+    }
+    this.selectedUnit = activeUnit;
+    activeUnit.isSelected = true;
+    this.inEnemySequence = false;
+    this.lastTurnWasEnemy = false;
+    this.playerTurnPending = false;
+    this.clearActionTargetingState();
+    this.applyAuthoritativeAvailability(
+      availableActions !== undefined
+        ? availableActions
+        : this.serverAvailableActions
+    );
+    this.inputEnabled = !!this.serverAvailableActions &&
+      (this.battleState?.status ?? 'active') === 'active' && !this.battleEnded;
+    this.updateUI();
+    this.refreshActionControls();
+    return this.inputEnabled;
+  }
+
+  /**
+   * Reconcile a structured success/error/poll response without allowing an
+   * older replay response to regress newer WebSocket state.
+   */
+  reconcileAuthoritativePayload(payload = {}, { refresh = true } = {}) {
+    const state = payload.state || null;
+    const revision = payload.stateRevision ?? state?.stateRevision ?? null;
+    if (this.isStaleStateRevision(revision)) return false;
+
+    this.noteStateRevision(revision);
+    if (state) {
+      this.battleState = { ...this.battleState, ...state };
+      if (state.units) this.syncUnitsWithState(state.units);
+    }
+    if (payload.availableActions !== undefined) {
+      this.applyAuthoritativeAvailability(payload.availableActions);
+    }
+
+    this.battleState.status ??= 'active';
+    this.inputEnabled = this.battleState.status === 'active' &&
+      !this.battleEnded &&
+      this.isLocalActiveUnit() &&
+      !!this.serverAvailableActions;
+
+    if (refresh) {
+      this.updateUI();
+      this.refreshActionControls();
+    }
+    return true;
+  }
+
+  /**
    * Handle click on a tile
    * @param {number} x - Tile X coordinate
    * @param {number} y - Tile Y coordinate
    * @param {Object} mousePos - Optional mouse position { mouseX, mouseY } for context menu
    */
   handleTileClick(x, y, mousePos = null) {
+    const actionBeingTargeted = this.pendingAction?.type || this.currentAction;
+    if (actionBeingTargeted &&
+        !this.canSubmitAction(actionBeingTargeted, { notify: true })) {
+      this.clearActionTargetingState();
+      this.refreshActionControls();
+      return;
+    }
+
     // If there's a pending action awaiting confirmation
     if (this.pendingAction) {
       const target = this.pendingAction.targetTile;
@@ -834,6 +1064,7 @@ export class BattleScene extends Scene {
       : activeUnit?.type === 'player';
     if (!this.currentAction && activeUnit && isLocalUnit) {
       if (x === activeUnit.gridX && y === activeUnit.gridY) {
+        if (!this.canSubmitAction('any', { notify: true })) return;
         this.showActionMenu(mousePos);
         return;
       }
@@ -913,11 +1144,7 @@ export class BattleScene extends Scene {
    * Start move action - show valid movement tiles
    */
   startMoveAction() {
-    // Two-action system: check if move is available
-    if (!this.canMove) {
-      parchmentToast.warning('Action Used', 'Already moved this turn');
-      return;
-    }
+    if (!this.canSubmitAction('move', { notify: true })) return;
 
     this.hideRadialMenu();
     this.currentAction = 'move';
@@ -945,11 +1172,7 @@ export class BattleScene extends Scene {
    * Start attack action - show valid attack targets
    */
   startAttackAction() {
-    // Two-action system: check if act is available
-    if (!this.canAct) {
-      parchmentToast.warning('Action Used', 'Already acted this turn');
-      return;
-    }
+    if (!this.canSubmitAction('attack', { notify: true })) return;
 
     this.hideRadialMenu();
     this.currentAction = 'attack';
@@ -983,11 +1206,7 @@ export class BattleScene extends Scene {
    * Show skill selection menu
    */
   showSkillMenu() {
-    // Two-action system: check if act is available
-    if (!this.canAct) {
-      parchmentToast.warning('Action Used', 'Already acted this turn');
-      return;
-    }
+    if (!this.canSubmitAction('skill', { notify: true })) return;
 
     const activeUnit = this.getActiveUnit();
     if (!activeUnit) return;
@@ -1124,6 +1343,7 @@ export class BattleScene extends Scene {
   showActionMenu(mousePos = null) {
     // Don't show menu during battle intro
     if (this.isIntroPlaying) return;
+    if (!this.canSubmitAction('any')) return;
 
     const activeUnit = this.getActiveUnit();
     if (!activeUnit || activeUnit.type !== 'player') return;
@@ -1191,7 +1411,7 @@ export class BattleScene extends Scene {
    * @param {Object} mousePos - Optional mouse position { mouseX, mouseY }
    */
   showContextMenuForUnit(unit, mousePos = null) {
-    if (!unit) return;
+    if (!unit || !this.canSubmitAction('any')) return;
 
     let menuX, menuY;
 
@@ -1225,6 +1445,7 @@ export class BattleScene extends Scene {
   showRadialMenu() {
     // Don't show radial menu during battle intro
     if (this.isIntroPlaying) return;
+    if (!this.canSubmitAction('any')) return;
 
     const activeUnit = this.getActiveUnit();
     if (!activeUnit || activeUnit.type !== 'player') return;
@@ -1320,7 +1541,8 @@ export class BattleScene extends Scene {
    */
   handleCursorSelect(x, y) {
     const activeUnit = this.getActiveUnit();
-    if (!activeUnit || activeUnit.type !== 'player') return;
+    if (!activeUnit || !this.isLocalActiveUnit(activeUnit) ||
+        !this.canSubmitAction(this.currentAction || 'any')) return;
 
     // If no action is in progress, check what's at cursor
     if (!this.currentAction) {
@@ -1433,6 +1655,7 @@ export class BattleScene extends Scene {
    * @param {string} skillId - The skill to use
    */
   startSkillAction(skillId) {
+    if (!this.canSubmitAction('skill', { notify: true })) return;
     this.hideRadialMenu();
     this.currentAction = 'skill';
     this.selectedSkillId = skillId;
@@ -1539,11 +1762,7 @@ export class BattleScene extends Scene {
    * Show item selection menu
    */
   showItemMenu() {
-    // Two-action system: check if act is available
-    if (!this.canAct) {
-      parchmentToast.warning('Action Used', 'Already acted this turn');
-      return;
-    }
+    if (!this.canSubmitAction('item', { notify: true })) return;
 
     // Get consumables from battle state
     const consumables = this.battleState.consumables || [];
@@ -1557,6 +1776,7 @@ export class BattleScene extends Scene {
    * @param {Object} itemData - Object with itemId and inventoryId
    */
   startItemAction(itemData) {
+    if (!this.canSubmitAction('item', { notify: true })) return;
     this.hideRadialMenu();
     this.currentAction = 'item';
     this.selectedItemId = itemData.itemId;
@@ -1627,19 +1847,25 @@ export class BattleScene extends Scene {
    * Confirm pending action
    */
   async confirmAction() {
-    this.ui.hideConfirmation();
-
-    if (this.pendingAction) {
-      // Validate locked target is still valid (could have died via concurrent action)
-      if (this.lockedTarget?.unit && this.lockedTarget.unit.hp <= 0) {
-        parchmentToast.warning('Target Defeated', 'The target was defeated');
-        this.cancelAction();
-        return;
-      }
-      await this.submitAction(this.pendingAction.type, this.pendingAction.targetTile);
+    if (!this.pendingAction ||
+        !this.canSubmitAction(this.pendingAction.type, { notify: true })) {
+      return false;
     }
 
+    this.ui.hideConfirmation();
+
+    // Validate locked target is still valid (could have died via concurrent action)
+    if (this.lockedTarget?.unit && this.lockedTarget.unit.hp <= 0) {
+      parchmentToast.warning('Target Defeated', 'The target was defeated');
+      this.cancelAction();
+      return false;
+    }
+    const submitted = await this.submitAction(
+      this.pendingAction.type,
+      this.pendingAction.targetTile
+    );
     this.cancelAction();
+    return submitted;
   }
 
   /**
@@ -1659,7 +1885,7 @@ export class BattleScene extends Scene {
     this.ui.hideSkillPanel();
     this.ui.hideItemPanel();
     this.ui.hideTargetingMode();
-    this.ui.setActionsEnabled(true);
+    this.refreshActionControls();
 
     // Clear sticky target and damage preview when action cancelled
     this.ui.clearTargetSticky();
@@ -1674,45 +1900,111 @@ export class BattleScene extends Scene {
   async submitAction(actionType, targetTile = null) {
     this.hideRadialMenu();
     const activeUnit = this.getActiveUnit();
-    if (!activeUnit) return;
+    if (!activeUnit ||
+        !this.canSubmitAction(actionType, { notify: true })) return false;
+
+    const selectedSkillId = actionType === 'skill'
+      ? this.selectedSkillId
+      : actionType === 'item'
+        ? this.selectedItemId
+        : null;
+    const selectedInventoryId = actionType === 'item'
+      ? this.selectedInventoryId
+      : null;
+    const intentSignature = JSON.stringify({
+      battleId: this.battleId,
+      actionType,
+      unitId: activeUnit.id,
+      targetTile,
+      skillId: selectedSkillId,
+      inventoryId: selectedInventoryId
+    });
+    const retryIntent = this.retryableActionIntent?.signature === intentSignature
+      ? this.retryableActionIntent
+      : null;
+    const commandId = retryIntent?.commandId ?? createBattleCommandId();
+    const actionSequence = retryIntent?.actionSequence ??
+      this.wsManager?.getNextActionSequence();
+    const commandBaseRevision = retryIntent?.baseRevision ?? this.stateRevision;
+    const submittedIntent = {
+      ...(this.pendingAction || {}),
+      type: actionType,
+      unitId: activeUnit.id,
+      targetTile,
+      skillId: selectedSkillId,
+      inventoryId: selectedInventoryId
+    };
+
+    this.isActionSubmitting = true;
+    this.refreshActionControls();
 
     try {
-      this.ui.setActionsEnabled(false);
-
       // Build action payload
       const actionData = {
         battleId: this.battleId,
         actionType,
         unitId: activeUnit.id,
-        targetTile
+        targetTile,
+        commandId,
+        stateRevision: commandBaseRevision
       };
 
       // Add action sequence number for server-side validation
       // This helps detect stale/duplicate actions after reconnection
-      if (this.wsManager) {
-        actionData.actionSequence = this.wsManager.getNextActionSequence();
-      }
+      if (actionSequence !== undefined) actionData.actionSequence = actionSequence;
 
       // Add skill or item ID depending on action type
       if (actionType === 'skill') {
-        actionData.skillId = this.selectedSkillId;
+        actionData.skillId = selectedSkillId;
         // Play specific skill sound (e.g., skill_fireball, skill_inferno)
-        this.audioManager.playSkillSound({ id: this.selectedSkillId }, this.units.get(activeUnit?.id));
+        this.audioManager.playSkillSound({ id: selectedSkillId }, this.units.get(activeUnit?.id));
       } else if (actionType === 'item') {
         // For items, we use skillId field to pass the item's itemId
         // (backend expects skillId for item type lookups)
-        actionData.skillId = this.selectedItemId;
-        actionData.inventoryId = this.selectedInventoryId;
+        actionData.skillId = selectedSkillId;
+        actionData.inventoryId = selectedInventoryId;
       }
 
       const result = await this.game.api.submitBattleAction(actionData);
 
-      // Process action result
-      await this.processActionResult(result);
+      if (!this.processedCommandIds.has(commandId)) {
+        await this.processActionResult(result, submittedIntent);
+        this.processedCommandIds.add(commandId);
+      } else {
+        this.reconcileAuthoritativePayload(result);
+      }
+      if (this.retryableActionIntent?.commandId === commandId) {
+        this.retryableActionIntent = null;
+      }
+      return true;
 
     } catch (err) {
+      const responsePayload = err.data || err.response;
+      const hasAuthoritativeRecovery = !!responsePayload && (
+        responsePayload.state !== undefined ||
+        responsePayload.snapshot !== undefined ||
+        responsePayload.availableActions !== undefined ||
+        responsePayload.stateRevision !== undefined
+      );
+      if (hasAuthoritativeRecovery) {
+        this.reconcileAuthoritativePayload(responsePayload);
+        this.retryableActionIntent = null;
+      } else {
+        // Without an authoritative successor, the outcome is ambiguous even
+        // for an HTTP error: a commit may have succeeded before the response
+        // failed. Preserve both identities for an exact, replay-safe retry.
+        this.retryableActionIntent = {
+          signature: intentSignature,
+          commandId,
+          actionSequence,
+          baseRevision: commandBaseRevision
+        };
+      }
       parchmentToast.error('Action Failed', err.message);
-      this.ui.setActionsEnabled(true);
+      return false;
+    } finally {
+      this.isActionSubmitting = false;
+      this.refreshActionControls();
     }
   }
 
@@ -1720,15 +2012,31 @@ export class BattleScene extends Scene {
    * Process action result from server
    * Handles two-action turn system where turnContinues=true means player has more actions
    */
-  async processActionResult(result) {
-    const { state, actionResult, enemyActions, battleStatus, turnContinues, availableActions } = result;
+  async processActionResult(result, submittedIntent = this.pendingAction) {
+    const {
+      state,
+      actionResult,
+      enemyActions,
+      battleStatus,
+      turnContinues,
+      availableActions,
+      stateRevision
+    } = result;
+    const responseRevision = stateRevision ?? state?.stateRevision ?? null;
+    if (this.isStaleStateRevision(responseRevision)) {
+      console.log('[Battle] Ignoring stale action replay response:', responseRevision);
+      return false;
+    }
+    this.noteStateRevision(responseRevision);
 
     // Handle player movement
-    if (actionResult.moved && this.pendingAction?.targetTile) {
-      const unit = this.units.get(this.getActiveUnit()?.id);
+    if (actionResult.moved && submittedIntent?.targetTile) {
+      const unit = this.units.get(
+        submittedIntent?.unitId ?? this.getActiveUnit()?.id
+      );
       if (unit) {
         const from = { x: unit.gridX, y: unit.gridY };
-        const to = this.pendingAction.targetTile;
+        const to = submittedIntent.targetTile;
         unit.moveTo(to.x, to.y);
         // Use consistent distance-based timing
         const distance = Math.abs(to.x - from.x) + Math.abs(to.y - from.y);
@@ -1739,13 +2047,15 @@ export class BattleScene extends Scene {
 
     // Normalize the actor pose and skill effect once before applying result
     // numbers. This replaces the separate attack-only branches below.
-    const submittedActionType = this.pendingAction?.type;
-    const presentationActor = this.units.get(this.getActiveUnit()?.id);
+    const submittedActionType = submittedIntent?.type;
+    const presentationActor = this.units.get(
+      submittedIntent?.unitId ?? this.getActiveUnit()?.id
+    );
     const primaryPresentationTarget = actionResult.targetId
       ? this.units.get(actionResult.targetId)
       : null;
     const aoeCenter = actionResult.aoeTiles?.find(tile => tile.isCenter) || null;
-    const presentationTargetTile = this.pendingAction?.targetTile ||
+    const presentationTargetTile = submittedIntent?.targetTile ||
       (aoeCenter ? { x: aoeCenter.x, y: aoeCenter.y } : null);
     const actionPresentation = this.playActionPresentation({
       actor: presentationActor,
@@ -1755,7 +2065,7 @@ export class BattleScene extends Scene {
       // affected unit happened to become the compatibility primary target.
       target: actionResult.isAoE ? null : primaryPresentationTarget,
       targetTile: presentationTargetTile,
-      skillId: this.pendingAction?.skillId || actionResult.skillUsed || actionResult.skillId
+      skillId: submittedIntent?.skillId || actionResult.skillUsed || actionResult.skillId
     });
     if (actionPresentation) {
       await this.waitForAnimation(200);
@@ -1971,23 +2281,23 @@ export class BattleScene extends Scene {
         if (!target) continue;
 
         if (effect.type === 'heal') {
-          this.audioManager.playSound('heal');
+          this.audioManager.playSound('skill_heal');
           target.hp = Math.min(target.maxHp, target.hp + effect.amount);
           this.animations.addHealNumber(target.screenX, target.screenY - 40, effect.amount);
           this.animations.addParticleBurst(target.screenX, target.screenY - 32, '#44ff44');
           await this.waitForAnimation(300);
         } else if (effect.type === 'mpRestore') {
-          this.audioManager.playSound('heal');
+          this.audioManager.playSound('skill_heal');
           target.mp = Math.min(target.maxMp, target.mp + effect.amount);
           this.animations.addHealNumber(target.screenX, target.screenY - 40, effect.amount);
           this.animations.addParticleBurst(target.screenX, target.screenY - 32, '#4488ff');
           await this.waitForAnimation(300);
         } else if (effect.type === 'cleanse') {
-          this.audioManager.playSound('heal');
+          this.audioManager.playSound('skill_heal');
           this.animations.addHealNumber(target.screenX, target.screenY - 40, 'Cleansed');
           await this.waitForAnimation(300);
         } else if (effect.type === 'revive') {
-          this.audioManager.playSound('heal');
+          this.audioManager.playSound('skill_heal');
           target.hp = effect.amount;
           this.animations.addHealNumber(target.screenX, target.screenY - 40, 'Revive!');
           this.animations.addParticleBurst(target.screenX, target.screenY - 32, '#ffdd44');
@@ -2009,10 +2319,12 @@ export class BattleScene extends Scene {
 
     // Add battle log entry for player action
     // (WebSocket excludes the acting player, so we create the entry from HTTP response)
-    if (this.pendingAction && actionResult) {
-      const activeUnit = this.units.get(this.getActiveUnit()?.id);
+    if (submittedIntent && actionResult) {
+      const activeUnit = this.units.get(
+        submittedIntent.unitId ?? this.getActiveUnit()?.id
+      );
       const targetUnit = actionResult.targetId ? this.units.get(actionResult.targetId) : null;
-      const actionType = this.pendingAction.type;
+      const actionType = submittedIntent.type;
 
       // Build result object with all relevant data
       const logResult = {
@@ -2029,12 +2341,30 @@ export class BattleScene extends Scene {
       };
 
       // For movement, add position data
-      if (actionType === 'move' && this.pendingAction.targetTile) {
+      if (actionType === 'move' && submittedIntent.targetTile) {
         logResult.from = { x: activeUnit?.gridX, y: activeUnit?.gridY };
-        logResult.to = this.pendingAction.targetTile;
+        logResult.to = submittedIntent.targetTile;
       }
 
       this.addBattleLogEntry(activeUnit, actionType, targetUnit, logResult);
+    }
+
+    // Action presentation intentionally awaits local animation. During that
+    // time the enemy sequence can finish and a newer WebSocket revision can
+    // restore the next local turn. Never let this older HTTP response overwrite
+    // that successor or lock input again after it was already recovered.
+    if (this.isStaleStateRevision(responseRevision)) {
+      console.log(
+        '[Battle] Action response was superseded during presentation; preserving WebSocket state:',
+        responseRevision,
+        '->',
+        this.stateRevision
+      );
+      this.clearActionTargetingState();
+      this.syncUnitsWithState(this.battleState?.units || []);
+      this.updateUI();
+      this.refreshActionControls();
+      return true;
     }
 
     // Sync enemy action results from HTTP response
@@ -2065,10 +2395,10 @@ export class BattleScene extends Scene {
     // HTTP response arrives before WebSocket, so if we set activeUnitId here, updateUI() triggers
     // camera pan, then turn_start arrives and triggers it AGAIN
     console.log('[Camera] processActionResult - syncing unit data only (activeUnitId stays:', this.battleState?.activeUnitId, ')');
-    this.syncUnitsWithState(state.units);
+    this.syncUnitsWithState(state?.units || []);
 
     // Update turn predictions if available (for turn order display)
-    if (state.turnPredictions) {
+    if (state?.turnPredictions) {
       this.battleState.turnPredictions = state.turnPredictions;
     }
 
@@ -2082,10 +2412,11 @@ export class BattleScene extends Scene {
     this.ui.clearTargetSticky();
 
     // Store full availableActions for use in action methods
-    this.serverAvailableActions = availableActions || null;
+    this.applyAuthoritativeAvailability(availableActions);
 
     // Check battle end - queue so it waits for death animations
     if (battleStatus !== 'active') {
+      this.inputEnabled = false;
       console.log('[BattleScene] Queueing battle_end from HTTP response:', {
         status: battleStatus,
         hasRewards: !!actionResult.rewards,
@@ -2096,17 +2427,18 @@ export class BattleScene extends Scene {
       this.wsManager?.queueAuthoritativeBattleEnd(battleStatus, actionResult.rewards);
     } else if (turnContinues) {
       // Two-action system: turn not complete, update available actions
-      this.canMove = availableActions?.canMove ?? false;
-      this.canAct = availableActions?.canAct ?? false;
-      this.turnPhase = 'partial';
+      this.applyAuthoritativeAvailability(availableActions);
+      this.inputEnabled = !!this.serverAvailableActions &&
+        this.isLocalActiveUnit();
 
       // Update UI to show remaining options
       this.updateUIForPartialTurn();
     } else {
-      // Turn complete - reset turn state for next turn
-      this.canMove = true;
-      this.canAct = true;
-      this.turnPhase = 'ready';
+      // Turn complete: remain logically locked until an authoritative local
+      // turn recovery arrives via your_turn, turn_start, or synchronization.
+      this.applyAuthoritativeAvailability(null);
+      this.inputEnabled = false;
+      if (this.wsManager) this.wsManager.lastYourTurnUnitId = null;
 
       // Mark that we're entering enemy sequence (prevents camera drift to player)
       // This flag is set BEFORE WebSocket events arrive, preventing the race condition
@@ -2117,6 +2449,7 @@ export class BattleScene extends Scene {
       // The queue will process enemy turn_start events, then player turn_start,
       // which will call updateUI() at the appropriate time
     }
+    return true;
   }
 
   /**
@@ -2184,11 +2517,12 @@ export class BattleScene extends Scene {
     // Brief pause then show player UI
     await this.waitForAnimation(300);
 
-    // Reset turn state and update UI for player's turn
-    this.canMove = true;
-    this.canAct = true;
-    this.turnPhase = 'ready';
-    this.updateUI();
+    // Recover from the authoritative initial payload after presentation.
+    this.recoverLocalTurn({
+      unitId: this.battleState.activeUnitId,
+      availableActions: this.serverAvailableActions,
+      stateRevision: this.stateRevision
+    });
   }
 
   /**
@@ -2205,11 +2539,16 @@ export class BattleScene extends Scene {
     // Update UI with available actions
     this.ui.updateAvailableActions(this.canMove, this.canAct);
     this.ui.showActionMenu();
-    this.ui.setActionsEnabled(true);
+    this.ui.setActionsEnabled(this.canSubmitAction('any'));
 
     // Update persistent action bar with new turn state
     if (this.actionBar) {
-      this.actionBar.updateTurnState(this.canMove, this.canAct, activeUnit.mp);
+      this.actionBar.updateTurnState(
+        this.canMove,
+        this.canAct,
+        activeUnit.mp,
+        this.canWait
+      );
     }
 
     // Show action menu after partial turn so player can select remaining action
@@ -2287,6 +2626,7 @@ export class BattleScene extends Scene {
     this.currentAction = null;
     this.validTiles = [];
     this.inputEnabled = false;
+    this.applyAuthoritativeAvailability(null);
     this.selectedSkillId = null;
     this.selectedItemId = null;
     this.selectedInventoryId = null;
@@ -2666,12 +3006,18 @@ export class BattleScene extends Scene {
       if (isLocalPlayerTurn) {
         // Two-action system: update available actions for new turn
         this.ui.updateAvailableActions(this.canMove, this.canAct);
-        this.ui.setActionsEnabled(true);
+        const controlsEnabled = this.canSubmitAction('any');
+        this.ui.setActionsEnabled(controlsEnabled);
 
         // Show action bar only if user preference is 'actionbar'
         const actionStyle = this.getActionMenuStyle();
         if (this.actionBar && actionStyle === 'actionbar') {
-          this.actionBar.show(this.canMove, this.canAct, activeUnit.mp);
+          this.actionBar.show(
+            controlsEnabled && this.canMove,
+            controlsEnabled && this.canAct,
+            activeUnit.mp,
+            controlsEnabled && this.canWait
+          );
         } else if (this.actionBar) {
           this.actionBar.hide();
         }
@@ -2684,7 +3030,8 @@ export class BattleScene extends Scene {
 
         // Show action menu automatically on player's turn (after short delay for camera)
         setTimeout(() => {
-          if (this.getActiveUnit()?.id === activeUnit.id && !this.currentAction) {
+          if (this.getActiveUnit()?.id === activeUnit.id &&
+              !this.currentAction && this.canSubmitAction('any')) {
             this.showActionMenu();
           }
         }, 300);
@@ -2768,7 +3115,12 @@ export class BattleScene extends Scene {
         if (this.initialEnemyActions && this.initialEnemyActions.length > 0) {
           this.processInitialEnemyActions();
         } else {
-          this.updateUI();
+          const recovered = this.recoverLocalTurn({
+            unitId: this.battleState.activeUnitId,
+            availableActions: this.serverAvailableActions,
+            stateRevision: this.stateRevision
+          });
+          if (!recovered) this.updateUI();
         }
       }
       // Don't process input during intro

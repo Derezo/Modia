@@ -27,7 +27,7 @@ describe('Battle Rate Limiting', () => {
     // Create test user and character
     testUser = await createTestUser();
     testCharacter = await createTestCharacter(testUser.accessToken);
-    resetAllLimiterStats();
+    await resetAllLimiterStats();
   });
 
   after(async () => {
@@ -37,15 +37,14 @@ describe('Battle Rate Limiting', () => {
     await runCleanup();
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Reset stats between test groups
-    resetAllLimiterStats();
+    await resetAllLimiterStats();
   });
 
   describe('Battle Start Rate Limiting', () => {
     it('should allow battle start requests up to the limit', async () => {
-      // startLimiter has base 5 requests, production 2x = 10 per minute
-      const limit = 10;
+      const limit = 5;
 
       // Fire requests to start battles (they may fail for other reasons, but shouldn't be rate limited)
       const responses = await fireRequests(
@@ -65,9 +64,9 @@ describe('Battle Rate Limiting', () => {
     });
 
     it('should block battle start requests beyond the limit', async () => {
-      // Fire 10 requests first (within limit)
+      // Fire 5 requests first (within limit)
       await fireRequests(
-        10,
+        5,
         'POST',
         '/api/battle/start',
         { characterId: testCharacter.id, nodeId: 1 },
@@ -101,8 +100,7 @@ describe('Battle Rate Limiting', () => {
 
   describe('Battle Read Rate Limiting', () => {
     it('should allow read requests up to the limit', async () => {
-      // readLimiter has base 15 requests, production 2x = 30 per minute
-      const limit = 30;
+      const limit = 15;
 
       const responses = await fireRequests(
         limit,
@@ -121,8 +119,8 @@ describe('Battle Rate Limiting', () => {
     });
 
     it('should block read requests beyond the limit', async () => {
-      // Fire 30 requests first (within limit)
-      await fireRequests(30, 'GET', '/api/battle/current', null, testUser.accessToken);
+      // Fire 15 requests first (within limit)
+      await fireRequests(15, 'GET', '/api/battle/current', null, testUser.accessToken);
 
       // Now fire more to exceed limit
       const extraRequests = 5;
@@ -145,8 +143,7 @@ describe('Battle Rate Limiting', () => {
 
   describe('Battle Action Rate Limiting', () => {
     it('should allow action requests up to the limit', async () => {
-      // actionLimiter has base 10 requests, production 2x = 20 per minute
-      const limit = 20;
+      const limit = 10;
 
       const responses = await fireRequests(
         limit,
@@ -165,9 +162,9 @@ describe('Battle Rate Limiting', () => {
     });
 
     it('should block action requests beyond the limit', async () => {
-      // Fire 20 requests first (within limit)
+      // Fire 10 requests first (within limit)
       await fireRequests(
-        20,
+        10,
         'POST',
         '/api/battle/action',
         { action: 'move', x: 0, y: 0 },
@@ -199,7 +196,15 @@ describe('Battle Rate Limiting', () => {
     });
 
     it('should track stats correctly', async () => {
-      const stats = getRateLimiterStats('battle:action');
+      await fireRequests(
+        11,
+        'POST',
+        '/api/battle/action',
+        { action: 'move', x: 0, y: 0 },
+        testUser.accessToken
+      );
+
+      const stats = await getRateLimiterStats('battle:action');
       assert.ok(stats, 'Battle action limiter stats should exist');
       assert.ok(stats.calls > 0, 'Should have tracked calls');
       assert.ok(stats.blocked > 0, 'Should have tracked blocked requests');
@@ -208,8 +213,7 @@ describe('Battle Rate Limiting', () => {
 
   describe('Battle Rejoin Rate Limiting', () => {
     it('should rate limit rejoin attempts', async () => {
-      // rejoinLimiter has base 5 requests, production 2x = 10 per minute
-      const limit = 10;
+      const limit = 5;
       const overLimit = 3;
 
       // Fire requests beyond the limit
@@ -231,8 +235,7 @@ describe('Battle Rate Limiting', () => {
 
   describe('Battle Rewards Rate Limiting', () => {
     it('should rate limit rewards requests', async () => {
-      // rewardsLimiter has base 10 requests, production 2x = 20 per minute
-      const limit = 20;
+      const limit = 10;
       const overLimit = 5;
 
       const responses = await fireRequests(

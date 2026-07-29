@@ -634,5 +634,6 @@ export {
   formatDropsForResponse,
   RARITIES,
   MATERIAL_TIERS,
-  AUGMENTS
+  AUGMENTS,
+  CONSUMABLE_AUGMENTS
 };

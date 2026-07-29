@@ -97,6 +97,17 @@ function assertRevision(value, label = 'expectedRevision') {
   }
 }
 
+function normalizePlayerIds(userIds) {
+  if (!Array.isArray(userIds) || userIds.length === 0) {
+    throw new TypeError('userIds must be a non-empty array');
+  }
+  const normalized = userIds.map(userId => Number(userId));
+  if (normalized.some(userId => !Number.isSafeInteger(userId) || userId < 1)) {
+    throw new TypeError('userIds must contain only positive safe integers');
+  }
+  return [...new Set(normalized)].sort((left, right) => left - right);
+}
+
 function parseJson(value, label) {
   if (typeof value === 'string') {
     try {
@@ -124,13 +135,21 @@ function canonicalHash(value) {
     .digest('hex')}`;
 }
 
-function commandRequestHash({
-  commandType,
-  expectedRevision,
-  mutableState,
-  lifecycle,
-  allowedStatuses
-}) {
+function commandRequestHash(command) {
+  const {
+    commandType,
+    expectedRevision,
+    mutableState,
+    lifecycle,
+    allowedStatuses
+  } = command;
+  if (own(command, 'idempotencyRequest')) {
+    assertPlainObject(command.idempotencyRequest, 'idempotencyRequest');
+    return canonicalHash({
+      commandType,
+      idempotencyRequest: command.idempotencyRequest
+    });
+  }
   return canonicalHash({
     commandType,
     expectedRevision,
@@ -530,6 +549,67 @@ export class BattleStateRepository {
     return this.envelopeFromRow(result.rows[0]);
   }
 
+  async hasActiveBattleForPlayer(userId, {
+    client = null,
+    battleType = null
+  } = {}) {
+    const params = [userId];
+    const typeClause = battleType === null ? '' : ' AND battle_type = $2';
+    if (battleType !== null) params.push(battleType);
+    const executor = client ?? { query: this.query };
+    const result = await execute(
+      executor,
+      `SELECT EXISTS (
+         SELECT 1
+         FROM battles
+         WHERE (
+           player1_id = $1
+           OR player2_id = $1
+           OR EXISTS (
+             SELECT 1
+             FROM battle_players
+             WHERE battle_players.battle_id = battles.id
+               AND battle_players.user_id = $1
+           )
+         )
+           AND status = 'active'${typeClause}
+       ) AS has_active_battle`,
+      params
+    );
+    return result.rows[0]?.has_active_battle === true;
+  }
+
+  async hasActiveBattleForAnyPlayer(userIds, {
+    client = null,
+    battleType = null
+  } = {}) {
+    const normalizedUserIds = normalizePlayerIds(userIds);
+    const params = [normalizedUserIds];
+    const typeClause = battleType === null ? '' : ' AND battle_type = $2';
+    if (battleType !== null) params.push(battleType);
+    const executor = client ?? { query: this.query };
+    const result = await execute(
+      executor,
+      `SELECT EXISTS (
+         SELECT 1
+         FROM battles
+         WHERE (
+           player1_id = ANY($1::int[])
+           OR player2_id = ANY($1::int[])
+           OR EXISTS (
+             SELECT 1
+             FROM battle_players
+             WHERE battle_players.battle_id = battles.id
+               AND battle_players.user_id = ANY($1::int[])
+           )
+         )
+           AND status = 'active'${typeClause}
+       ) AS has_active_battle`,
+      params
+    );
+    return result.rows[0]?.has_active_battle === true;
+  }
+
   async getAdvancementAttemptSummary({
     challengerCharacterId,
     targetClass,
@@ -822,6 +902,33 @@ export class BattleStateRepository {
     );
   }
 
+  async findCommandReceipt({
+    battleId,
+    idempotencyKey,
+    commandType,
+    idempotencyRequest
+  }, { client = null } = {}) {
+    assertBattleId(battleId);
+    assertNonEmptyString(commandType, 'commandType', COMMAND_TYPE_MAX_LENGTH);
+    assertNonEmptyString(idempotencyKey, 'idempotencyKey', COMMAND_KEY_MAX_LENGTH);
+    assertPlainObject(idempotencyRequest, 'idempotencyRequest');
+    const requestHash = commandRequestHash({
+      commandType,
+      idempotencyRequest
+    });
+    const executor = client ?? { query: this.query };
+    const receipt = await this.findCommandResult(executor, {
+      battleId,
+      idempotencyKey,
+      commandType,
+      requestHash
+    });
+    return receipt === null ? null : deepFreeze({
+      ...receipt,
+      idempotent: true
+    });
+  }
+
   async commitMutableState({
     battleId,
     expectedRevision,
@@ -830,6 +937,8 @@ export class BattleStateRepository {
     mutableState,
     lifecycle = {},
     requestLifecycle = lifecycle,
+    idempotencyRequest,
+    replayMetadata,
     allowedStatuses = ['active']
   }, { client = null } = {}) {
     return this.inTransaction(client, async transactionClient => {
@@ -847,6 +956,8 @@ export class BattleStateRepository {
         requestMutableState: mutableState,
         lifecycle,
         requestLifecycle,
+        idempotencyRequest,
+        replayMetadata,
         allowedStatuses
       });
     });
@@ -859,6 +970,8 @@ export class BattleStateRepository {
     idempotencyKey,
     flatState,
     lifecycle = {},
+    idempotencyRequest,
+    replayMetadata,
     allowedStatuses = ['active']
   }, { client = null } = {}) {
     assertPlainObject(flatState, 'flatState');
@@ -899,6 +1012,8 @@ export class BattleStateRepository {
         requestMutableState: legacyMutableInputFromFlatState(flatState),
         lifecycle,
         requestLifecycle: lifecycle,
+        idempotencyRequest,
+        replayMetadata,
         allowedStatuses
       });
     });
@@ -916,6 +1031,8 @@ export class BattleStateRepository {
     idempotencyKey,
     flatState,
     lifecycle = {},
+    idempotencyRequest,
+    replayMetadata,
     allowedStatuses = ['active']
   }, { client = null } = {}) {
     assertPlainObject(flatState, 'flatState');
@@ -975,6 +1092,8 @@ export class BattleStateRepository {
         requestMutableState,
         lifecycle,
         requestLifecycle: lifecycle,
+        idempotencyRequest,
+        replayMetadata,
         allowedStatuses
       });
     });
@@ -990,7 +1109,9 @@ export class BattleStateRepository {
       status,
       winnerId = null,
       rewards = null,
-      endedAt
+      endedAt,
+      idempotencyRequest,
+      replayMetadata
     } = command;
     if (!TERMINAL_STATUSES.has(status)) {
       throw new TypeError(`Terminal battle status ${status} is unsupported`);
@@ -1012,6 +1133,8 @@ export class BattleStateRepository {
         rewards,
         ...(hasExplicitEndedAt ? { endedAt } : {})
       },
+      idempotencyRequest,
+      replayMetadata,
       allowedStatuses: ['active']
     }, { client });
   }
@@ -1026,6 +1149,8 @@ export class BattleStateRepository {
     requestMutableState,
     lifecycle,
     requestLifecycle,
+    idempotencyRequest,
+    replayMetadata,
     allowedStatuses
   }) {
     assertRevision(expectedRevision);
@@ -1039,6 +1164,12 @@ export class BattleStateRepository {
     const lifecycleChanges = normalizeLifecycle(lifecycle);
     const requestLifecycleChanges = normalizeLifecycle(requestLifecycle);
     const normalizedRequestMutableState = createBattleMutableStateV1(requestMutableState);
+    if (idempotencyRequest !== undefined) {
+      assertPlainObject(idempotencyRequest, 'idempotencyRequest');
+    }
+    if (replayMetadata !== undefined) {
+      assertPlainObject(replayMetadata, 'replayMetadata');
+    }
     const normalizedAllowedStatuses = [...new Set(allowedStatuses)].sort();
     const nextLifecycle = {
       status: lifecycleChanges.status ?? envelope.status,
@@ -1063,7 +1194,8 @@ export class BattleStateRepository {
       expectedRevision,
       mutableState: normalizedRequestMutableState,
       lifecycle: requestLifecycleChanges,
-      allowedStatuses: normalizedAllowedStatuses
+      allowedStatuses: normalizedAllowedStatuses,
+      ...(idempotencyRequest !== undefined ? { idempotencyRequest } : {})
     });
     const duplicate = await this.findCommandResult(transactionClient, {
       battleId: envelope.battleId,
@@ -1155,6 +1287,9 @@ export class BattleStateRepository {
       stateRevision: nextRevision,
       mutableState: nextMutableState
     };
+    if (replayMetadata !== undefined) {
+      storedResult.replayMetadata = deepCloneJsonValue(replayMetadata);
+    }
     await transactionClient.query(
       `INSERT INTO battle_command_results (
          battle_id,
@@ -1199,6 +1334,12 @@ export const loadBattleForParticipant = (...args) =>
   battleStateRepository.loadBattleForParticipant(...args);
 export const findActiveBattleForPlayer = (...args) =>
   battleStateRepository.findActiveBattleForPlayer(...args);
+export const hasActiveBattleForPlayer = (...args) =>
+  battleStateRepository.hasActiveBattleForPlayer(...args);
+export const hasActiveBattleForAnyPlayer = (...args) =>
+  battleStateRepository.hasActiveBattleForAnyPlayer(...args);
+export const findCommandReceipt = (...args) =>
+  battleStateRepository.findCommandReceipt(...args);
 export const createBattle = (...args) => battleStateRepository.createBattle(...args);
 export const commitMutableState = (...args) =>
   battleStateRepository.commitMutableState(...args);

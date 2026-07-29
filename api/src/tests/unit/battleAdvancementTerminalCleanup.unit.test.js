@@ -83,5 +83,9 @@ describe('advancement battle terminal cleanup', () => {
       defeatTransaction,
       /WHERE user_id = ANY\(\$1::int\[\]\) AND party_slot <= \$2/
     );
+    assert.match(
+      defeatTransaction,
+      /state\.units[\s\S]*characterId \?\? unit\.id[\s\S]*WHERE user_id = \$1 AND id = ANY\(\$2::int\[\]\)/
+    );
   });
 });

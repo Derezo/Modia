@@ -520,11 +520,6 @@ export function areAllies(unitA, unitB) {
  * @returns {number} Path cost to reach target, or Infinity if unreachable
  */
 export function calculatePathCost(startX, startY, targetX, targetY, state, maxCost) {
-  // If no terrain data, fall back to Manhattan distance for backwards compatibility
-  if (!state.terrain) {
-    return getManhattanDistance(startX, startY, targetX, targetY);
-  }
-
   return calculateTraversalPathCost(createBattleTraversalView(state), {
     start: { x: startX, y: startY },
     goal: { x: targetX, y: targetY },

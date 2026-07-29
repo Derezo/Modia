@@ -29,6 +29,8 @@ import {
   recordBattleMapWebsocketDelivery
 } from './battle/BattleMapOperations.js';
 import { getParticipantBattleView } from './battleOutcomeService.js';
+import { getParticipantAvailableActions } from
+  './battle/participantActionAvailability.js';
 
 // ============================================================
 // Configuration Constants
@@ -590,6 +592,11 @@ async function performFullStateSync(ws, numericBattleId, connectionId) {
     const payload = {
       battleId: numericBattleId,
       stateRevision: battle.stateRevision,
+      availableActions: getParticipantAvailableActions(
+        battle,
+        battle.state,
+        connectionId
+      ),
       snapshot,
       reason: 'full_sync',
       timestamp: Date.now()

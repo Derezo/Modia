@@ -16,7 +16,11 @@
  * @see MusicContext.js - Region-aware music management
  */
 
-import { getSkillSoundKey, RACE_TO_REGION } from '../audio/AudioAssets.js';
+import { RACE_TO_REGION } from '../audio/AudioAssets.js';
+import {
+  resolveSkillSfx,
+  resolveStatusSfx
+} from '../audio/audioEffectResolver.js';
 
 export class BattleAudioManager {
   /**
@@ -140,7 +144,7 @@ export class BattleAudioManager {
 
   /**
    * Play sound for a skill execution
-   * Tries specific skill sound first, falls back to visual category
+   * Uses a direct or semantic skill sound, with a safe generic fallback
    * @param {Object} skill - The skill being used
    * @param {Object} attacker - The unit using the skill
    */
@@ -150,11 +154,8 @@ export class BattleAudioManager {
     const isMonster = attacker?.type === 'enemy';
     const skillId = skill.id || skill.skillId;
 
-    // Get the skill sound key using AudioAssets helper
-    const soundKey = getSkillSoundKey(skillId, isMonster);
+    const soundKey = resolveSkillSfx(skillId, isMonster);
 
-    // Try to play the specific skill sound
-    // The audio system will handle fallback if the sound doesn't exist
     this.game.audio.playCombat(soundKey);
 
     // Log for debugging
@@ -168,8 +169,7 @@ export class BattleAudioManager {
   playStatusEffectSound(effectType) {
     if (!this.game.audio || !effectType) return;
 
-    // Map effect types to sound keys
-    const soundKey = `status_${effectType.toLowerCase()}`;
+    const soundKey = resolveStatusSfx(effectType);
     this.game.audio.playCombat(soundKey);
   }
 

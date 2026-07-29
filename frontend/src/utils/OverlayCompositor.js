@@ -17,6 +17,10 @@
  */
 
 import { getAssetPath, getOptimalSize } from '../../../shared/assetPaths.js';
+import {
+  CANONICAL_AUGMENT_OVERLAY_IDS,
+  resolveAugmentOverlays
+} from '../../../shared/overlayMapping.js';
 
 /**
  * Rarity overlay alpha values for compositing
@@ -124,9 +128,12 @@ class OverlayCompositor {
     } = options;
 
     const normalizedRarity = this.normalizeRarity(rarity);
+    const resolvedAugments = resolveAugmentOverlays(augments);
 
     // Generate cache key for this specific combination
-    const augmentKey = augments.length > 0 ? [...augments].sort().join('_') : 'none';
+    const augmentKey = resolvedAugments.length > 0
+      ? [...resolvedAugments].sort().join('_')
+      : 'none';
     const cacheKey = `composite_${spriteId}_${subcategory}_${size}_${normalizedRarity}_${augmentKey}`;
 
     // Return cached result if available
@@ -164,15 +171,16 @@ class OverlayCompositor {
 
     // Load augment overlays
     const augmentOverlays = [];
-    for (const augment of augments) {
-      if (augment) {
-        const augmentPath = `${ASSETS_BASE}/overlays/${OVERLAY_ASSET_SIZE}/augments/augment_${augment}.webp`;
-        try {
-          const overlay = await this.loadImage(augmentPath);
-          augmentOverlays.push(overlay);
-        } catch {
-          // Augment overlay is optional
-        }
+    for (const overlayId of resolvedAugments) {
+      const augmentPath = getAssetPath('overlays', overlayId, {
+        subcategory: 'augments',
+        size: OVERLAY_ASSET_SIZE
+      });
+      try {
+        const overlay = await this.loadImage(augmentPath);
+        augmentOverlays.push(overlay);
+      } catch {
+        // Augment overlay is optional
       }
     }
 
@@ -248,22 +256,17 @@ class OverlayCompositor {
    */
   async preloadOverlays() {
     const rarities = ['uncommon', 'rare', 'epic', 'legendary'];
-    const augments = [
-      // Elemental augments
-      'fire', 'ice', 'lightning', 'poison', 'holy', 'dark', 'earth', 'wind',
-      // Combat augments
-      'critical', 'lifesteal', 'speed', 'pierce', 'stun', 'chain',
-      // Special augments
-      'arcane', 'fortune', 'vitality', 'slayer'
-    ];
 
     const promises = [
       ...rarities.map(rarity =>
         this.loadImage(`${ASSETS_BASE}/overlays/${OVERLAY_ASSET_SIZE}/rarity/rarity_${rarity}.webp`)
           .catch(() => null)
       ),
-      ...augments.map(augment =>
-        this.loadImage(`${ASSETS_BASE}/overlays/${OVERLAY_ASSET_SIZE}/augments/augment_${augment}.webp`)
+      ...CANONICAL_AUGMENT_OVERLAY_IDS.map(overlayId =>
+        this.loadImage(getAssetPath('overlays', overlayId, {
+          subcategory: 'augments',
+          size: OVERLAY_ASSET_SIZE
+        }))
           .catch(() => null)
       )
     ];

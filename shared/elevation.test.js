@@ -557,6 +557,54 @@ describe('findPath3D', () => {
     const path = findPath3D(0, 0, 2, 2, terrain, elevation, connections, [], 3, 3);
     assert.strictEqual(path, null, 'Should not find path blocked by cliffs');
   });
+
+  it('should cross a corpse at normal cost without ending on its tile', () => {
+    const terrain = [['grass', 'grass', 'grass']];
+    const elevation = [[0, 0, 0]];
+    const connections = [[{}, {}, {}]];
+    const units = [{ tileX: 1, tileY: 0, hp: 0 }];
+
+    assert.deepStrictEqual(
+      getReachableTiles3D(
+        0, 0, 0, 2,
+        terrain, elevation, connections,
+        units, 3, 1
+      ).map(({ x, y, cost }) => ({ x, y, cost })),
+      [{ x: 2, y: 0, cost: 2 }]
+    );
+    assert.strictEqual(
+      calculatePathCost3D(
+        0, 0, 2, 0,
+        terrain, elevation, connections,
+        units, 2, 3, 1
+      ),
+      2
+    );
+    assert.strictEqual(
+      calculatePathCost3D(
+        0, 0, 1, 0,
+        terrain, elevation, connections,
+        units, 2, 3, 1
+      ),
+      Infinity
+    );
+    assert.deepStrictEqual(
+      findPath3D(
+        0, 0, 2, 0,
+        terrain, elevation, connections,
+        units, 3, 1
+      ).map(({ x, y }) => ({ x, y })),
+      [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }]
+    );
+    assert.strictEqual(
+      findPath3D(
+        0, 0, 1, 0,
+        terrain, elevation, connections,
+        units, 3, 1
+      ),
+      null
+    );
+  });
 });
 
 // ============================================================================

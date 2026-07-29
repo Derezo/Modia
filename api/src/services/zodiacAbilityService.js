@@ -15,11 +15,15 @@ import { ZODIAC_SHRINE_BUFFS } from '../../../shared/constants.js';
  * 2. Have not been used this battle (signature_used = FALSE)
  *
  * @param {number} userId - User ID to load abilities for
+ * @param {{client?: Object|null}} [options] - Optional transaction client
  * @returns {Promise<Array>} Array of zodiac ability objects
  */
-export async function loadActiveZodiacAbilities(userId) {
+export async function loadActiveZodiacAbilities(userId, { client = null } = {}) {
   try {
-    const result = await query(
+    const executeQuery = client
+      ? client.query.bind(client)
+      : query;
+    const result = await executeQuery(
       `SELECT wn.zodiac_sign, usv.signature_ability, usv.buff_type, usv.expires_at
        FROM user_shrine_visits usv
        JOIN world_nodes wn ON usv.node_id = wn.id

@@ -1,5 +1,6 @@
-// Action sequence tracking for stale/duplicate action detection in battles.
-// Used by POST /api/battle/action to reject replayed or out-of-order client submissions.
+// Best-effort action sequence telemetry for stale/duplicate diagnostics.
+// Correctness and replay safety are enforced by durable command receipts and
+// state revisions; this process-local counter is recorded only after commit.
 
 const lastActionSequences = new Map();
 
@@ -43,7 +44,7 @@ export function validateActionSequence(battleId, userId, actionSequence) {
   }
 
   if (actionSequence <= lastSequence) {
-    console.warn(`[Battle] Stale action sequence rejected: battle=${battleId}, user=${userId}, received=${actionSequence}, last=${lastSequence}`);
+    console.warn(`[Battle] Stale action sequence observed: battle=${battleId}, user=${userId}, received=${actionSequence}, last=${lastSequence}`);
     return { valid: false, error: 'Action sequence is stale or duplicate' };
   }
 

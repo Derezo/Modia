@@ -1015,6 +1015,8 @@ export class BattleUnit {
    * Render HP bar above unit
    */
   renderHPBar(ctx, x, y) {
+    if (!this.isAlive()) return;
+
     const width = 32;
     const height = 4;
     const hpPercent = this.hp / this.maxHp;

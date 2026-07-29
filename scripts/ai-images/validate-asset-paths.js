@@ -83,7 +83,7 @@ const CATEGORY_METADATA = {
     metadataFiles: ['overlays/rarity.json', 'overlays/augments.json'],
     getAssets: (data) => data.overlays || [],
     getAssetId: (asset) => asset.id,
-    getSubcategory: (data) => data.category // 'rarity', 'augments'
+    getSubcategory: (data) => data.subcategory // 'rarity', 'augments'
   },
   tiles: {
     metadataFiles: [

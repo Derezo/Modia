@@ -16,6 +16,7 @@ describe('battleRewardService', () => {
 
       assert.strictEqual(typeof service.computeRewards, 'function');
       assert.strictEqual(typeof service.distributeRewards, 'function');
+      assert.strictEqual(typeof service.getRewardParticipantCharacterIds, 'function');
       assert.strictEqual(typeof service.updateQuestProgress, 'function');
       assert.strictEqual(typeof service.clearInBattleStatus, 'function');
       assert.strictEqual(typeof service.getAdvancementBattleInfo, 'function');
@@ -108,6 +109,25 @@ describe('battleRewardService', () => {
   });
 
   describe('distributeRewards transaction logic', () => {
+    it('targets only the user characters recorded in battle state', async () => {
+      const { getRewardParticipantCharacterIds } = await import(
+        '../../services/battleRewardService.js'
+      );
+      const players = [
+        { id: 11, ownerId: 123 },
+        { id: 12, ownerId: 123 },
+        { id: 11, ownerId: 123 },
+        { id: 21, ownerId: 456 },
+        { id: 'player_13', characterId: 13 },
+        { id: 'not-a-character', ownerId: 123 }
+      ];
+
+      assert.deepStrictEqual(
+        getRewardParticipantCharacterIds(players, 123),
+        [11, 12, 13]
+      );
+    });
+
     it('should validate rewards data structure', () => {
       const validRewardsData = {
         gold: 200,

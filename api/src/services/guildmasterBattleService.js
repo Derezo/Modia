@@ -95,9 +95,10 @@ export function buildGuildmasterCreationKey({
 }
 
 /**
- * Serialize boss-trial creation for a character and allocate the next attempt.
- * The character lock prevents two rapid start requests from both creating an
- * active battle, while completed/defeated battles remain available as history.
+ * Serialize boss-trial creation for a user and allocate the next attempt.
+ * Locking every owned character shares the lifecycle boundary used by normal
+ * party battle creation, including when the challenger was omitted from that
+ * battle's formation.
  */
 export async function reserveGuildmasterBattleAttempt(
   client,
@@ -113,20 +114,31 @@ export async function reserveGuildmasterBattleAttempt(
     throw new TypeError('reserveGuildmasterBattleAttempt requires a pg client');
   }
 
-  const characterResult = await client.query(
+  const charactersResult = await client.query(
     `SELECT c.id, c.user_id, c.class, c.current_node_id, c.in_battle,
             wn.node_type, wn.guild_class AS node_guild_id
      FROM characters c
      LEFT JOIN world_nodes wn ON wn.id = c.current_node_id
-     WHERE c.id = $1
+     WHERE c.user_id = $1
+     ORDER BY c.id
      FOR UPDATE OF c`,
-    [challengerId]
+    [userId]
   );
-  if (characterResult.rows.length === 0) {
+  const character = charactersResult.rows.find(
+    candidate => Number(candidate.id) === Number(challengerId)
+  );
+  if (!character) {
     throw new Error('Character not found');
   }
-  const character = characterResult.rows[0];
-  if (character.in_battle) {
+
+  const hasActiveBattle = await battleStateRepository.hasActiveBattleForPlayer(
+    userId,
+    { client }
+  );
+  if (
+    hasActiveBattle
+    || charactersResult.rows.some(candidate => candidate.in_battle)
+  ) {
     const error = new Error('Character is already in battle');
     error.code = 'ADVANCEMENT_BATTLE_ALREADY_ACTIVE';
     throw error;

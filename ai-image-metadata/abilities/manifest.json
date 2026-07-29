@@ -142,10 +142,10 @@
       "status": "generated"
     },
     "bleed": {
-      "assetPath": "/assets/abilities/status/bleed.webp",
+      "assetPath": "/assets/icons/originals/augments/damage.webp",
       "fallbackAssetPath": "/assets/icons/originals/actions/debuff.webp",
-      "generated": false,
-      "status": "missing"
+      "generated": true,
+      "status": "generated"
     },
     "blind": {
       "assetPath": "/assets/icons/originals/status/blind.webp",
@@ -160,10 +160,10 @@
       "status": "generated"
     },
     "cleanse": {
-      "assetPath": "/assets/abilities/status/cleanse.webp",
+      "assetPath": "/assets/icons/originals/augments/cleanse.webp",
       "fallbackAssetPath": "/assets/icons/originals/actions/buff.webp",
-      "generated": false,
-      "status": "missing"
+      "generated": true,
+      "status": "generated"
     },
     "confusion": {
       "assetPath": "/assets/icons/originals/status/confusion.webp",
@@ -202,10 +202,10 @@
       "status": "generated"
     },
     "invisible": {
-      "assetPath": "/assets/abilities/status/invisible.webp",
+      "assetPath": "/assets/icons/originals/actions/stealth.webp",
       "fallbackAssetPath": "/assets/icons/originals/actions/buff.webp",
-      "generated": false,
-      "status": "missing"
+      "generated": true,
+      "status": "generated"
     },
     "poison": {
       "assetPath": "/assets/icons/originals/status/poison.webp",
@@ -262,10 +262,10 @@
       "status": "generated"
     },
     "taunt": {
-      "assetPath": "/assets/abilities/status/taunt.webp",
+      "assetPath": "/assets/icons/originals/actions/taunt.webp",
       "fallbackAssetPath": "/assets/icons/originals/actions/debuff.webp",
-      "generated": false,
-      "status": "missing"
+      "generated": true,
+      "status": "generated"
     }
   }
 }

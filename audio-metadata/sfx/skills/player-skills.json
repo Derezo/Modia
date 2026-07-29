@@ -1113,9 +1113,11 @@
       "subcategory": "generic",
       "prompt": "Fantasy healing magic with warm restorative glow and soothing divine energy shimmer",
       "path": "/assets/audio/sfx/skills/heal.mp3",
-      "duration": 1.0,
+      "duration": 1,
       "volume": 0.75,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-07-29T22:25:01.525Z",
+      "actualDuration": 3.030204
     }
   ]
 }

@@ -1,9 +1,7 @@
 /**
  * Overlay System Unit Tests
  *
- * Tests for overlay mapping and priority resolution.
- * Tests the shared overlayMapping module for category mapping and priority functions.
- * OverlayCompositor DOM-dependent methods are not tested here (require browser environment).
+ * Tests for overlay mapping, safe resolution, and compositor URL construction.
  *
  * Run with: node --test frontend/src/utils/__tests__/OverlayCompositor.test.js
  * Or: npm run test -w frontend (requires test script in package.json)
@@ -12,10 +10,90 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import {
+  CANONICAL_AUGMENT_OVERLAY_IDS,
   CATEGORY_TO_OVERLAY,
   OVERLAY_PRIORITY,
-  getPrimaryOverlay
+  getPrimaryOverlay,
+  resolveAugmentOverlay,
+  resolveAugmentOverlays
 } from '../../../../shared/overlayMapping.js';
+import { OverlayCompositor } from '../OverlayCompositor.js';
+import {
+  loadItemComposite,
+  preloadOverlays as preloadLegacyOverlays
+} from '../../core/assetLoader/ItemCompositing.js';
+import {
+  AUGMENTS,
+  CONSUMABLE_AUGMENTS
+} from '../../../../api/src/services/itemDropService.js';
+
+const EQUIPMENT_CATEGORY_MAPPINGS = {
+  fire: 'augment_fire',
+  ice: 'augment_ice',
+  lightning: 'augment_lightning',
+  poison: 'augment_poison',
+  holy: 'augment_holy',
+  dark: 'augment_dark',
+  critical: 'augment_critical',
+  speed: 'augment_speed',
+  damage: 'augment_critical',
+  power: 'augment_critical',
+  defense: 'augment_earth',
+  magic_defense: 'augment_arcane',
+  armor: 'augment_earth',
+  dragon_slayer: 'augment_slayer',
+  undead_slayer: 'augment_slayer',
+  demon_slayer: 'augment_slayer',
+  strength: 'augment_critical',
+  intelligence: 'augment_arcane',
+  agility: 'augment_speed',
+  vitality: 'augment_vitality',
+  luck: 'augment_fortune',
+  hp: 'augment_vitality',
+  mp: 'augment_arcane',
+  regen: 'augment_vitality',
+  mp_regen: 'augment_arcane',
+  accuracy: 'augment_critical',
+  crit: 'augment_critical',
+  block: 'augment_earth',
+  spell_resist: 'augment_arcane',
+  protection: 'augment_earth'
+};
+
+const CONSUMABLE_CATEGORY_MAPPINGS = {
+  potency: 'augment_arcane',
+  concentration: 'augment_arcane',
+  empowerment: 'augment_arcane',
+  hot_minor: 'augment_vitality',
+  hot_major: 'augment_vitality',
+  hot_percent: 'augment_vitality',
+  mp_bonus: 'augment_arcane',
+  mp_regen: 'augment_arcane',
+  spell_cost: 'augment_arcane',
+  cleanse_minor: 'augment_holy',
+  cleanse_major: 'augment_holy',
+  cleanse_all: 'augment_holy',
+  buff_vit: 'augment_vitality',
+  buff_str: 'augment_critical',
+  buff_int: 'augment_arcane',
+  buff_agi: 'augment_speed',
+  revive_bonus: 'augment_holy',
+  revive_full: 'augment_holy',
+  revive_immunity: 'augment_holy',
+  instant: 'augment_speed',
+  aoe: 'augment_chain'
+};
+
+const RUNTIME_CATEGORY_MAPPINGS = {
+  ...EQUIPMENT_CATEGORY_MAPPINGS,
+  ...CONSUMABLE_CATEGORY_MAPPINGS
+};
+
+function categoriesFrom(definitions) {
+  return [...new Set(
+    Object.values(definitions).map(augment => augment.category)
+  )].sort();
+}
 
 describe('overlayMapping', () => {
   describe('CATEGORY_TO_OVERLAY - elemental categories', () => {
@@ -366,6 +444,233 @@ describe('getPrimaryOverlay', () => {
       const result = getPrimaryOverlay(['', '', '']);
       assert.strictEqual(result, null);
     });
+  });
+});
+
+describe('safe augment overlay resolution', () => {
+  it('resolves all 30 equipment categories emitted by itemDropService', () => {
+    assert.deepEqual(
+      Object.keys(EQUIPMENT_CATEGORY_MAPPINGS).sort(),
+      categoriesFrom(AUGMENTS)
+    );
+    for (const [category, expectedOverlay] of Object.entries(EQUIPMENT_CATEGORY_MAPPINGS)) {
+      assert.equal(resolveAugmentOverlay(category), expectedOverlay, category);
+    }
+  });
+
+  it('resolves all 21 consumable categories emitted by itemDropService', () => {
+    assert.deepEqual(
+      Object.keys(CONSUMABLE_CATEGORY_MAPPINGS).sort(),
+      categoriesFrom(CONSUMABLE_AUGMENTS)
+    );
+    for (const [category, expectedOverlay] of Object.entries(CONSUMABLE_CATEGORY_MAPPINGS)) {
+      assert.equal(resolveAugmentOverlay(category), expectedOverlay, category);
+    }
+  });
+
+  it('keeps the combined runtime category registry complete', () => {
+    assert.equal(Object.keys(RUNTIME_CATEGORY_MAPPINGS).length, 50);
+    for (const [category, expectedOverlay] of Object.entries(RUNTIME_CATEGORY_MAPPINGS)) {
+      assert.equal(resolveAugmentOverlay(category), expectedOverlay, category);
+    }
+  });
+
+  it('resolves every user-reported missing category to an authored overlay', () => {
+    const reported = {
+      undead_slayer: 'augment_slayer',
+      agility: 'augment_speed',
+      damage: 'augment_critical',
+      demon_slayer: 'augment_slayer',
+      magic_defense: 'augment_arcane',
+      power: 'augment_critical',
+      hp: 'augment_vitality',
+      intelligence: 'augment_arcane',
+      strength: 'augment_critical',
+      crit: 'augment_critical',
+      armor: 'augment_earth'
+    };
+
+    for (const [category, expectedOverlay] of Object.entries(reported)) {
+      assert.equal(resolveAugmentOverlay(category), expectedOverlay, category);
+    }
+  });
+
+  it('normalizes case, whitespace, and hyphens and accepts canonical IDs', () => {
+    assert.equal(resolveAugmentOverlay('  Magic-Defense  '), 'augment_arcane');
+    assert.equal(resolveAugmentOverlay('UNDEAD SLAYER'), 'augment_slayer');
+    assert.equal(resolveAugmentOverlay(' AUGMENT-FIRE '), 'augment_fire');
+    assert.equal(resolveAugmentOverlay('augment_arcane'), 'augment_arcane');
+  });
+
+  it('rejects unknown, non-string, and path-like values', () => {
+    for (const value of [
+      'unknown',
+      '../augment_fire',
+      'fire.webp',
+      'fire/../../secret',
+      '',
+      null,
+      undefined,
+      42,
+      { category: 'fire' }
+    ]) {
+      assert.equal(resolveAugmentOverlay(value), null, String(value));
+    }
+  });
+
+  it('deduplicates categories and canonical aliases by resolved overlay ID', () => {
+    assert.deepEqual(
+      resolveAugmentOverlays([
+        'damage',
+        'crit',
+        'augment_critical',
+        'agility',
+        'instant',
+        'unknown'
+      ]),
+      ['augment_critical', 'augment_speed']
+    );
+  });
+
+  it('lists exactly the 18 authored overlay IDs', () => {
+    assert.equal(CANONICAL_AUGMENT_OVERLAY_IDS.length, 18);
+    assert.equal(new Set(CANONICAL_AUGMENT_OVERLAY_IDS).size, 18);
+    assert.equal(
+      CANONICAL_AUGMENT_OVERLAY_IDS.every(id => /^augment_[a-z]+$/.test(id)),
+      true
+    );
+  });
+});
+
+describe('compositor augment requests', () => {
+  class RecordingCompositor extends OverlayCompositor {
+    constructor() {
+      super();
+      this.requests = [];
+    }
+
+    async loadImage(src) {
+      this.requests.push(src);
+      return { src };
+    }
+
+    composeSprite() {
+      return 'data:image/png;base64,test';
+    }
+  }
+
+  it('requests only canonical URLs and deduplicates equivalent aliases', async () => {
+    const compositor = new RecordingCompositor();
+    await compositor.composite({
+      spriteId: 'sword_long',
+      subcategory: 'weapons',
+      augments: [
+        'damage',
+        ' CRIT ',
+        'augment-critical',
+        'undead-slayer',
+        'demon_slayer',
+        '../augment_fire',
+        'unknown'
+      ]
+    });
+
+    assert.deepEqual(compositor.requests, [
+      '/assets/items/64/weapons/sword_long.webp',
+      '/assets/overlays/128/augments/augment_critical.webp',
+      '/assets/overlays/128/augments/augment_slayer.webp'
+    ]);
+  });
+
+  it('does not make an augment request when every value is unknown or unsafe', async () => {
+    const compositor = new RecordingCompositor();
+    await compositor.composite({
+      spriteId: 'sword_long',
+      subcategory: 'weapons',
+      augments: ['unknown', '../augment_fire', null]
+    });
+
+    assert.deepEqual(compositor.requests, [
+      '/assets/items/64/weapons/sword_long.webp'
+    ]);
+  });
+
+  it('preloads each actual canonical augment file once without double-prefixing', async () => {
+    const compositor = new RecordingCompositor();
+    await compositor.preloadOverlays();
+
+    const augmentRequests = compositor.requests.filter(path => path.includes('/augments/'));
+    assert.equal(augmentRequests.length, 18);
+    assert.equal(new Set(augmentRequests).size, 18);
+    assert.equal(augmentRequests.some(path => path.includes('augment_augment_')), false);
+    assert.equal(
+      augmentRequests.every(path =>
+        CANONICAL_AUGMENT_OVERLAY_IDS.some(id => path.endsWith(`/${id}.webp`))
+      ),
+      true
+    );
+  });
+
+  it('uses canonical augment paths in the legacy item compositor', async () => {
+    const requests = [];
+    const originalDocument = globalThis.document;
+    const originalImage = globalThis.Image;
+    globalThis.document = {
+      createElement() {
+        return {
+          width: 0,
+          height: 0,
+          getContext() {
+            return {
+              globalCompositeOperation: 'source-over',
+              globalAlpha: 1,
+              clearRect() {},
+              drawImage() {}
+            };
+          },
+          toDataURL() {
+            return 'data:image/png;base64,test';
+          }
+        };
+      }
+    };
+    globalThis.Image = class {
+      set src(value) {
+        this.srcValue = value;
+      }
+    };
+
+    try {
+      await loadItemComposite({
+        cache: new Map(),
+        async loadImage(src) {
+          requests.push(src);
+          return { src };
+        }
+      }, '/legacy-assets', 'sword_long', 'weapon', 'common', 'augment-critical');
+    } finally {
+      globalThis.document = originalDocument;
+      globalThis.Image = originalImage;
+    }
+
+    assert.deepEqual(requests, [
+      '/assets/items/128/weapons/sword_long.webp',
+      '/assets/overlays/128/augments/augment_critical.webp'
+    ]);
+  });
+
+  it('legacy preload requests only the 18 canonical augment files', async () => {
+    const requests = [];
+    await preloadLegacyOverlays(async src => {
+      requests.push(src);
+      return { src };
+    }, '/legacy-assets');
+
+    const augmentRequests = requests.filter(path => path.includes('/augments/'));
+    assert.equal(augmentRequests.length, 18);
+    assert.equal(new Set(augmentRequests).size, 18);
+    assert.equal(augmentRequests.some(path => path.includes('augment_augment_')), false);
+    assert.equal(augmentRequests.every(path => path.startsWith('/assets/overlays/128/augments/')), true);
   });
 });
 

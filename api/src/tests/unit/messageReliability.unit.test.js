@@ -1192,6 +1192,14 @@ describe('Message Reliability Service', () => {
           'full_sync'
         );
         assert.strictEqual(mockWs.sentMessages[0].payload.stateRevision, 7);
+        assert.ok(
+          Object.hasOwn(mockWs.sentMessages[0].payload, 'availableActions'),
+          'Full recovery must carry participant-scoped action availability'
+        );
+        assert.strictEqual(
+          mockWs.sentMessages[0].payload.availableActions,
+          null
+        );
         assert.strictEqual(mockWs.sentMessages[0].seq, 1);
         assert.strictEqual(mockWs.sentMessages[1].payload.stateRevision, 8);
         assert.strictEqual(mockWs.sentMessages[1].seq, 2);

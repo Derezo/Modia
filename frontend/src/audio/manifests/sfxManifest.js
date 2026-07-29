@@ -1,5 +1,5 @@
 /**
- * SFX Manifest - 187 effects
+ * SFX Manifest - 190 effects
  * Combat sounds, skill sounds, status effects, and movement
  */
 

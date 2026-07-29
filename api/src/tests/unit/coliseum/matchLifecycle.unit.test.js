@@ -14,6 +14,8 @@
 
 import { describe, it, before, after, beforeEach, afterEach, mock } from 'node:test';
 import assert from 'node:assert';
+import { pool } from '../../../config/database.js';
+import battleStateRepository from '../../../services/battle/BattleStateRepository.js';
 
 // =============================================================================
 // MOCK TRACKING
@@ -146,6 +148,432 @@ describe('Match Lifecycle Constants', () => {
 
   it('should export getWebsocket as a function', () => {
     assert.strictEqual(typeof constants.getWebsocket, 'function', 'getWebsocket should be a function');
+  });
+});
+
+// =============================================================================
+// FORMATION PARTY SELECTION TESTS
+// =============================================================================
+
+describe('selectFormationParty', () => {
+  let selectFormationParty;
+
+  before(async () => {
+    ({ selectFormationParty } =
+      await import('../../../services/coliseum/matchLifecycle.js'));
+  });
+
+  it('selects only characters placed in a partial formation', () => {
+    const party = [1, 2, 3, 4, 5].map(id => ({ id, name: `Character ${id}` }));
+    const formation = {
+      1: { tileX: 0, tileY: 0 },
+      2: { tileX: 1, tileY: 0 },
+      3: { tileX: 2, tileY: 0 },
+      4: { tileX: 3, tileY: 0 }
+    };
+
+    assert.deepStrictEqual(
+      selectFormationParty(party, formation).map(character => character.id),
+      [1, 2, 3, 4]
+    );
+  });
+
+  it('allows a single placed character without adding default units', () => {
+    const party = [1, 2, 3, 4, 5].map(id => ({ id }));
+
+    assert.deepStrictEqual(
+      selectFormationParty(party, { 4: { tileX: 2, tileY: 1 } }),
+      [{ id: 4 }]
+    );
+  });
+
+  it('matches serialized formation keys to numeric or string character IDs', () => {
+    const party = [{ id: 10 }, { id: '11' }, { id: 12 }];
+
+    assert.deepStrictEqual(
+      selectFormationParty(party, {
+        10: { tileX: 0, tileY: 0 },
+        11: { tileX: 1, tileY: 0 }
+      }),
+      [{ id: 10 }, { id: '11' }]
+    );
+  });
+});
+
+describe('reserveColiseumBattleParticipants', () => {
+  let reserveColiseumBattleParticipants;
+
+  before(async () => {
+    ({ reserveColiseumBattleParticipants } =
+      await import('../../../services/coliseum/matchLifecycle.js'));
+  });
+
+  it('locks both users in stable order and rechecks authoritative battles', async () => {
+    const calls = [];
+    const client = {
+      async query(sql, params) {
+        calls.push({ sql, params });
+        if (sql.includes('FROM characters')) {
+          return {
+            rows: [
+              { id: 31, user_id: 3, party_slot: 1, in_battle: false },
+              { id: 91, user_id: 9, party_slot: 2, in_battle: false }
+            ]
+          };
+        }
+        if (sql.includes("status = 'active'")) {
+          return { rows: [{ has_active_battle: false }] };
+        }
+        throw new Error(`Unexpected query: ${sql}`);
+      }
+    };
+
+    const locked = await reserveColiseumBattleParticipants(client, [
+      { userId: 9, characterIds: [91] },
+      { userId: 3, characterIds: [31] }
+    ]);
+
+    assert.deepStrictEqual(calls[0].params, [[3, 9]]);
+    assert.match(calls[0].sql, /ORDER BY user_id, id/);
+    assert.match(calls[0].sql, /FOR UPDATE/);
+    assert.match(calls[1].sql, /FROM battle_players/);
+    assert.deepStrictEqual(calls[1].params, [[3, 9]]);
+    assert.deepStrictEqual(locked.map(character => character.id), [31, 91]);
+  });
+
+  it('rejects creation if either user entered another battle after queueing', async () => {
+    const client = {
+      async query(sql) {
+        if (sql.includes('FROM characters')) {
+          return {
+            rows: [
+              { id: 31, user_id: 3, party_slot: 1, in_battle: false },
+              { id: 91, user_id: 9, party_slot: 1, in_battle: false }
+            ]
+          };
+        }
+        if (sql.includes("status = 'active'")) {
+          return { rows: [{ has_active_battle: true }] };
+        }
+        throw new Error(`Unexpected query: ${sql}`);
+      }
+    };
+
+    await assert.rejects(
+      reserveColiseumBattleParticipants(client, [
+        { userId: 3, characterIds: [31] },
+        { userId: 9, characterIds: [91] }
+      ]),
+      error => {
+        assert.equal(error.code, 'COLISEUM_BATTLE_ALREADY_ACTIVE');
+        return true;
+      }
+    );
+  });
+
+  it('rejects selected characters that vanished, changed owners, or left the party', async () => {
+    const cases = [
+      {
+        name: 'vanished',
+        rows: [{ id: 91, user_id: 9, party_slot: 1, in_battle: false }]
+      },
+      {
+        name: 'changed owners',
+        rows: [
+          { id: 31, user_id: 9, party_slot: 1, in_battle: false },
+          { id: 91, user_id: 9, party_slot: 1, in_battle: false }
+        ]
+      },
+      {
+        name: 'left the party',
+        rows: [
+          { id: 31, user_id: 3, party_slot: null, in_battle: false },
+          { id: 91, user_id: 9, party_slot: 1, in_battle: false }
+        ]
+      },
+      {
+        name: 'became unavailable',
+        rows: [
+          { id: 31, user_id: 3, party_slot: 1, in_battle: true },
+          { id: 91, user_id: 9, party_slot: 1, in_battle: false }
+        ]
+      }
+    ];
+
+    for (const testCase of cases) {
+      const client = {
+        async query(sql) {
+          if (sql.includes('FROM characters')) return { rows: testCase.rows };
+          throw new Error(`Unexpected query for ${testCase.name}: ${sql}`);
+        }
+      };
+
+      await assert.rejects(
+        reserveColiseumBattleParticipants(client, [
+          { userId: 3, characterIds: [31] },
+          { userId: 9, characterIds: [91] }
+        ]),
+        error => {
+          assert.equal(error.code, 'COLISEUM_PARTICIPANTS_CHANGED', testCase.name);
+          return true;
+        }
+      );
+    }
+  });
+});
+
+describe('Coliseum battle snapshot transaction', () => {
+  let matchLifecycle;
+  let constants;
+  let coliseumService;
+
+  before(async () => {
+    matchLifecycle = await import('../../../services/coliseum/matchLifecycle.js');
+    constants = await import('../../../services/coliseum/constants.js');
+    coliseumService = await import('../../../services/coliseumService.js');
+  });
+
+  beforeEach(() => {
+    clearMocks();
+    coliseumService._resetForTests();
+  });
+
+  afterEach(() => {
+    coliseumService._resetForTests();
+    constants.pendingFormations.clear();
+    constants.formationTimers.forEach(timerId => clearTimeout(timerId));
+    constants.formationTimers.clear();
+  });
+
+  it('locks exact selections before client-bound hydration and rolls back a short update', async (t) => {
+    const player1Id = 301;
+    const player2Id = 302;
+    const player1CharacterId = 401;
+    const player2CharacterId = 402;
+    const matchId = constants.matchIdCounter.value++;
+    const transactionEvents = [];
+    const validationCalls = [];
+    let createBattleInput = null;
+    let updateCount = 0;
+
+    const characterRows = new Map([
+      [player1Id, {
+        id: player1CharacterId,
+        name: 'Locked Vanguard',
+        class: 'warrior',
+        level: 10,
+        race: 'human',
+        gender: 'female',
+        hp_current: 115,
+        hp_max: 120,
+        mp_current: 22,
+        mp_max: 25,
+        strength: 40,
+        intelligence: 9,
+        agility: 18,
+        vitality: 30,
+        luck: 12,
+        equip_strength: '7',
+        equip_intelligence: '0',
+        equip_agility: '3',
+        equip_vitality: '2',
+        equip_luck: '1',
+        equip_hp: '30',
+        equip_mp: '4',
+        equip_attack: '11',
+        equip_defense: '13',
+        equip_magic_attack: '0',
+        equip_magic_defense: '5'
+      }],
+      [player2Id, {
+        id: player2CharacterId,
+        name: 'Locked Rival',
+        class: 'warrior',
+        level: 10,
+        race: 'human',
+        gender: 'male',
+        hp_current: 100,
+        hp_max: 100,
+        mp_current: 20,
+        mp_max: 20,
+        strength: 35,
+        intelligence: 8,
+        agility: 16,
+        vitality: 25,
+        luck: 10,
+        equip_strength: '2',
+        equip_intelligence: '0',
+        equip_agility: '0',
+        equip_vitality: '0',
+        equip_luck: '0',
+        equip_hp: '0',
+        equip_mp: '0',
+        equip_attack: '4',
+        equip_defense: '6',
+        equip_magic_attack: '0',
+        equip_magic_defense: '0'
+      }]
+    ]);
+
+    t.mock.method(pool, 'query', async (sql, params) => {
+      validationCalls.push({ sql, params });
+      if (sql.includes('SELECT id FROM characters')) {
+        return {
+          rows: params[1].map(id => ({ id })),
+          rowCount: params[1].length
+        };
+      }
+      throw new Error(`Unexpected pool query: ${sql}`);
+    });
+    t.mock.method(battleStateRepository, 'createBattle', async (input, options) => {
+      transactionEvents.push('createBattle');
+      assert.strictEqual(options.client, client);
+      createBattleInput = input;
+      return {
+        battleId: 901,
+        envelope: {
+          stateRevision: 0,
+          state: input.initialMutableState
+        }
+      };
+    });
+    t.mock.method(console, 'error', () => {});
+
+    const client = {
+      async query(sql, params) {
+        if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK') {
+          transactionEvents.push(sql);
+          return { rows: [], rowCount: null };
+        }
+        if (sql.includes('FOR UPDATE') && sql.includes('FROM characters')) {
+          transactionEvents.push('lockCharacters');
+          assert.deepStrictEqual(params, [[player1Id, player2Id]]);
+          return {
+            rows: [
+              {
+                id: player1CharacterId,
+                user_id: player1Id,
+                party_slot: 1,
+                in_battle: false
+              },
+              {
+                id: 499,
+                user_id: player1Id,
+                party_slot: 2,
+                in_battle: false
+              },
+              {
+                id: player2CharacterId,
+                user_id: player2Id,
+                party_slot: 1,
+                in_battle: false
+              }
+            ],
+            rowCount: 3
+          };
+        }
+        if (sql.includes("status = 'active'") && sql.includes('FROM battle_players')) {
+          transactionEvents.push('checkActiveBattle');
+          return { rows: [{ has_active_battle: false }], rowCount: 1 };
+        }
+        if (sql.includes('LEFT JOIN LATERAL')) {
+          transactionEvents.push(`hydrateEquipment:${params[0]}`);
+          assert.deepStrictEqual(params[1], [
+            params[0] === player1Id ? player1CharacterId : player2CharacterId
+          ]);
+          return { rows: [characterRows.get(params[0])], rowCount: 1 };
+        }
+        if (sql.includes('FROM character_skills')) {
+          transactionEvents.push(`hydrateSkills:${params[0][0]}`);
+          return {
+            rows: [{
+              character_id: params[0][0],
+              skill_id: 'power_strike',
+              level: 3
+            }],
+            rowCount: 1
+          };
+        }
+        if (sql.includes('UPDATE characters SET in_battle = true')) {
+          updateCount += 1;
+          transactionEvents.push(`updateInBattle:${params[0]}`);
+          return { rows: [], rowCount: updateCount === 1 ? 1 : 0 };
+        }
+        throw new Error(`Unexpected transaction query: ${sql}`);
+      },
+      release() {
+        transactionEvents.push('release');
+      }
+    };
+    t.mock.method(pool, 'connect', async () => client);
+
+    constants.activeMatches.set(matchId, {
+      id: matchId,
+      queueType: '1v1',
+      status: 'formation_selection',
+      createdAt: 123456,
+      player1: {
+        userId: player1Id,
+        username: 'Player One',
+        ready: true,
+        battleMapCapabilities: null
+      },
+      player2: {
+        userId: player2Id,
+        username: 'Player Two',
+        ready: true,
+        battleMapCapabilities: null
+      }
+    });
+    constants.pendingFormations.set(matchId, {});
+
+    const player1Result = await matchLifecycle.submitFormation(
+      matchId,
+      player1Id,
+      { [player1CharacterId]: { tileX: 1, tileY: 1 } }
+    );
+    const player2Result = await matchLifecycle.submitFormation(
+      matchId,
+      player2Id,
+      { [player2CharacterId]: { tileX: 2, tileY: 1 } }
+    );
+
+    assert.equal(player1Result.success, true);
+    assert.equal(player2Result.success, true);
+    assert.equal(validationCalls.length, 2);
+    assert.deepStrictEqual(transactionEvents.slice(0, 7), [
+      'BEGIN',
+      'lockCharacters',
+      'checkActiveBattle',
+      `hydrateEquipment:${player1Id}`,
+      `hydrateSkills:${player1CharacterId}`,
+      `hydrateEquipment:${player2Id}`,
+      `hydrateSkills:${player2CharacterId}`
+    ]);
+    assert.ok(
+      transactionEvents.indexOf('lockCharacters')
+        < transactionEvents.indexOf(`hydrateEquipment:${player1Id}`)
+    );
+    assert.ok(
+      transactionEvents.indexOf(`hydrateSkills:${player2CharacterId}`)
+        < transactionEvents.indexOf('createBattle')
+    );
+    assert.deepStrictEqual(transactionEvents.slice(-4), [
+      `updateInBattle:${player1Id}`,
+      `updateInBattle:${player2Id}`,
+      'ROLLBACK',
+      'release'
+    ]);
+    assert.ok(!transactionEvents.includes('COMMIT'));
+
+    const player1Snapshot = createBattleInput.initialMutableState.units
+      .find(unit => unit.id === player1CharacterId);
+    assert.equal(player1Snapshot.strength, 47);
+    assert.equal(player1Snapshot.maxHp, 150);
+    assert.equal(player1Snapshot.attack, 11);
+    assert.equal(player1Snapshot.skills[0].id, 'power_strike');
+    assert.equal(player1Snapshot.skills[0].level, 3);
+    assert.equal(constants.activeMatches.has(matchId), false);
   });
 });
 
@@ -473,18 +901,217 @@ describe('completeMatch', () => {
     }
   });
 
-  it('should reset in_battle flag for both players characters via database queries', () => {
-    // Verify that the completeMatch function includes the necessary database calls
-    // to reset in_battle = false for BOTH players' characters.
-    // This is a critical fix - without it, characters get stuck unable to use shops/travel.
-    //
-    // The fix adds two UPDATE queries:
-    // - UPDATE characters SET in_battle = false WHERE user_id = $1 (winnerId) AND party_slot <= MAX
-    // - UPDATE characters SET in_battle = false WHERE user_id = $1 (loserId) AND party_slot <= MAX
-    //
-    // These run in parallel via Promise.all after updating battle status.
-    // Integration tests verify this works end-to-end; this test documents the requirement.
-    assert.ok(true, 'completeMatch must reset in_battle for both winner and loser');
+  it('clears only persisted battle units and replays completion idempotently', async (t) => {
+    const battleId = 701;
+    const winnerId = 11;
+    const loserId = 22;
+    const selectedCharacterIds = [101, 201];
+    const characterBattleState = new Map([
+      [101, true],
+      [102, false],
+      [201, true],
+      [202, false]
+    ]);
+    const mutableState = {
+      turn: 4,
+      units: [
+        { id: 101, type: 'player', ownerId: winnerId, hp: 10 },
+        { id: 201, type: 'player', ownerId: loserId, hp: 0 }
+      ],
+      log: []
+    };
+    const battleEnvelope = {
+      battleId,
+      battleType: 'pvp_coliseum',
+      status: 'active',
+      stateRevision: 3,
+      player1Id: winnerId,
+      player2Id: loserId,
+      creationIdempotencyKey: 'coliseum:1v1:fixture',
+      startedAt: new Date().toISOString(),
+      mutableState,
+      state: {
+        ...mutableState,
+        player1Id: winnerId,
+        player2Id: loserId
+      }
+    };
+    const command = {
+      commandType: 'player_action',
+      idempotencyKey: 'coliseum:test:complete',
+      idempotencyRequest: { action: 'attack', unitId: 101 }
+    };
+    const receipt = {
+      idempotent: true,
+      battleId,
+      stateRevision: 4
+    };
+    let storedMatchResult = null;
+    let cleanupCount = 0;
+    let cleanupCharacterIds = null;
+    let completionCount = 0;
+
+    t.mock.method(battleStateRepository, 'loadBattle', async () => battleEnvelope);
+    t.mock.method(battleStateRepository, 'completeBattle', async () => {
+      completionCount += 1;
+      return {
+        idempotent: false,
+        update: { stateRevision: 4 },
+        envelope: {
+          ...battleEnvelope,
+          status: 'victory',
+          stateRevision: 4
+        }
+      };
+    });
+    t.mock.method(
+      battleStateRepository,
+      'findCommandReceipt',
+      async () => receipt
+    );
+    t.mock.method(pool, 'query', async (sql, params) => {
+      if (sql.includes('FROM coliseum_matches')) {
+        return { rows: storedMatchResult ? [storedMatchResult] : [], rowCount: 0 };
+      }
+      if (sql.includes('FROM characters c')) {
+        return { rows: [] };
+      }
+      if (sql.includes('FROM pvp_ratings pr')) {
+        return {
+          rows: [{
+            user_id: params[0],
+            rating: 1000,
+            wins: 0,
+            losses: 0,
+            rank: 1
+          }]
+        };
+      }
+      if (sql.includes('FROM users WHERE id = ANY')) {
+        return { rows: [] };
+      }
+      throw new Error(`Unexpected pool query: ${sql}`);
+    });
+
+    const client = {
+      async query(sql, params) {
+        if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK') {
+          return { rows: [], rowCount: null };
+        }
+        if (sql.includes('FROM coliseum_matches')) {
+          return { rows: storedMatchResult ? [storedMatchResult] : [], rowCount: 0 };
+        }
+        if (sql.includes('SELECT * FROM pvp_ratings')) {
+          return {
+            rows: [{
+              user_id: params[0],
+              rating: 1000,
+              peak_rating: 1000,
+              wins: 0,
+              losses: 0,
+              win_streak: 0
+            }]
+          };
+        }
+        if (sql.includes('SELECT rating, peak_rating')) {
+          return { rows: [{ rating: 1000, peak_rating: 1000 }] };
+        }
+        if (sql.includes('UPDATE pvp_ratings SET')) {
+          return {
+            rows: [{
+              user_id: params[0],
+              rating: params[2],
+              peak_rating: params[3],
+              wins: params[6] ? 1 : 0,
+              losses: params[6] ? 0 : 1
+            }],
+            rowCount: 1
+          };
+        }
+        if (sql.includes('INSERT INTO coliseum_matches')) {
+          storedMatchResult = {
+            id: 801,
+            queue_type: params[1],
+            winner_user_id: params[2],
+            loser_user_id: params[3],
+            winner_rating_change: params[4],
+            loser_rating_change: params[5]
+          };
+          return { rows: [], rowCount: 1 };
+        }
+        if (sql.includes('INSERT INTO battle_terminal_effect_outbox')) {
+          return {
+            rows: [{
+              id: params[0],
+              event_key: params[0],
+              battle_id: params[1],
+              event_type: params[2],
+              payload: JSON.parse(params[3])
+            }],
+            rowCount: 1
+          };
+        }
+        if (sql.includes('SET in_battle = false')) {
+          cleanupCount += 1;
+          const [characterIds, userIds] = params;
+          cleanupCharacterIds = [...characterIds];
+          let rowCount = 0;
+          for (const characterId of characterIds) {
+            const ownerId = characterId < 200 ? winnerId : loserId;
+            if (userIds.includes(ownerId) && characterBattleState.has(characterId)) {
+              characterBattleState.set(characterId, false);
+              rowCount += 1;
+            }
+          }
+          return { rows: [], rowCount };
+        }
+        if (sql.includes('WHERE user_id = $1 AND party_slot = 1')) {
+          return { rows: [{ id: 101 }], rowCount: 1 };
+        }
+        throw new Error(`Unexpected transaction query: ${sql}`);
+      },
+      release() {}
+    };
+    t.mock.method(pool, 'connect', async () => client);
+
+    constants.activeMatches.set(91, {
+      id: 91,
+      battleId,
+      queueType: '1v1',
+      player1: { userId: winnerId, ppr: 1000 },
+      player2: { userId: loserId, ppr: 1000 }
+    });
+
+    const completed = await matchLifecycle.completeMatch(
+      battleId,
+      winnerId,
+      loserId,
+      'victory',
+      true,
+      { battleCommand: command, publish: false }
+    );
+    assert.equal(completed.idempotent, false);
+    assert.equal(completionCount, 1);
+    assert.equal(cleanupCount, 1);
+    assert.deepStrictEqual(cleanupCharacterIds, selectedCharacterIds);
+    for (const characterId of selectedCharacterIds) {
+      assert.equal(characterBattleState.get(characterId), false);
+    }
+    assert.equal(characterBattleState.get(102), false);
+    assert.equal(characterBattleState.get(202), false);
+
+    const replay = await matchLifecycle.completeMatch(
+      battleId,
+      winnerId,
+      loserId,
+      'victory',
+      true,
+      { battleCommand: command, publish: false }
+    );
+    assert.equal(replay.idempotent, true);
+    assert.strictEqual(replay.commit, receipt);
+    assert.equal(completionCount, 1);
+    assert.equal(cleanupCount, 1);
   });
 });
 
@@ -1569,7 +2196,7 @@ describe('Formation Position Validation (via submitFormation)', () => {
   it('should validate position bounds check exists in source', async () => {
     // Verify the source code has the bounds check
     // This is a meta-test to ensure the validation exists
-    const sourceCheck = `pos.tileX < 0 || pos.tileX > 4 || pos.tileY < 0 || pos.tileY > 3`;
+    const sourceCheck = 'pos.tileX < 0 || pos.tileX > 4 || pos.tileY < 0 || pos.tileY > 3';
     assert.ok(sourceCheck.includes('pos.tileX > 4'), 'Source should check X upper bound');
     assert.ok(sourceCheck.includes('pos.tileY > 3'), 'Source should check Y upper bound');
   });

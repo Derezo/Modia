@@ -287,6 +287,7 @@ Final Gold = baseGold +/- variance
 #### Mechanics
 - One claim per user per chest
 - User must be physically at the node
+- Safe retries return the existing claim without awarding it again
 - Gold awarded to user account
 - Item drops based on distance tier (distance-scaled rewards including items)
 

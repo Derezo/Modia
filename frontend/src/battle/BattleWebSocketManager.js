@@ -24,6 +24,7 @@ import { applyBattleMapPatch, mergeBattleStatePatch } from './mergeBattleState.j
 import { getBattleMapCapabilities } from './BattleMapSession.js';
 
 const QUEUE_TIMEOUT_MS = 5000; // 5 second timeout for queue events
+const TURN_RECOVERY_SYNC_DELAY_MS = 750;
 
 function battleMapResyncReason(error) {
   const code = String(error?.code ?? '').toLowerCase();
@@ -101,6 +102,8 @@ export class BattleWebSocketManager {
 
     // Deferred input enable (when your_turn arrives before turn_start)
     this.pendingInputEnable = false;
+    this.lastYourTurnUnitId = null;
+    this.turnRecoveryTimer = null;
 
     // Action sequence number for validation (increments with each action)
     // This helps the server detect stale/duplicate actions after reconnection
@@ -349,6 +352,11 @@ export class BattleWebSocketManager {
     this.timeoutCount = 0;
     this.battleEndPending = false;
     this.stateUpdateChain = Promise.resolve();
+    this.lastYourTurnUnitId = null;
+    if (this.turnRecoveryTimer) {
+      clearTimeout(this.turnRecoveryTimer);
+      this.turnRecoveryTimer = null;
+    }
 
     // Clean up reliability manager for this battle
     const websocket = this.game?.websocket;
@@ -478,6 +486,11 @@ export class BattleWebSocketManager {
 
     // Reset pending input enable flag
     this.pendingInputEnable = false;
+    this.lastYourTurnUnitId = null;
+    if (this.turnRecoveryTimer) {
+      clearTimeout(this.turnRecoveryTimer);
+      this.turnRecoveryTimer = null;
+    }
 
     debugLog('battle.stateSync', 'Pending actions cleared after reconnection');
   }
@@ -520,37 +533,42 @@ export class BattleWebSocketManager {
       if (response.success) {
         console.log('[Battle] Rejoin successful');
 
-        const hydrated = this.mapSession
-          ? await this.mapSession.hydrateResponse(response)
-          : response;
+        // Serialize rejoin hydration with WebSocket revisions and reject an
+        // older HTTP snapshot before it can mutate the map session or scene.
+        this.stateUpdateChain = this.stateUpdateChain.then(async () => {
+          const responseRevision = response.stateRevision ??
+            response.state?.stateRevision ??
+            response.snapshot?.stateRevision;
+          if (this.scene.isStaleStateRevision?.(responseRevision)) {
+            return { stale: true, hydrated: response };
+          }
 
-        // Update local state only after the map/snapshot has been verified.
-        this.battleState = hydrated.state;
-        this.scene.syncUnitsWithState(hydrated.state.units);
+          const hydrated = this.mapSession
+            ? await this.mapSession.hydrateResponse(response)
+            : response;
+          const hydratedRevision = hydrated.stateRevision ??
+            hydrated.state?.stateRevision ??
+            responseRevision;
+          if (this.scene.isStaleStateRevision?.(hydratedRevision)) {
+            return { stale: true, hydrated };
+          }
 
-        // Store server-provided available actions for movement validation
-        this.scene.serverAvailableActions = hydrated.availableActions || null;
+          const accepted = this.scene.reconcileAuthoritativePayload({
+            state: hydrated.state,
+            availableActions: hydrated.availableActions || null,
+            stateRevision: hydratedRevision
+          });
+          if (!accepted) {
+            return { stale: true, hydrated };
+          }
 
-        // Sync every authoritative map layer from the full rejoin snapshot.
-        applyBattleMapPatch(this.scene.grid, hydrated.state);
-
-        // Apply turn state from availableActions (two-action system)
-        if (hydrated.availableActions) {
-          this.scene.canMove = hydrated.availableActions.canMove ?? true;
-          this.scene.canAct = hydrated.availableActions.canAct ?? true;
-          const bothAvailable = this.scene.canMove && this.scene.canAct;
-          const neitherAvailable = !this.scene.canMove && !this.scene.canAct;
-          this.scene.turnPhase = bothAvailable ? 'ready' : (neitherAvailable ? 'done' : 'partial');
-          console.log(`[Battle] Turn state restored: canMove=${this.scene.canMove}, canAct=${this.scene.canAct}, turnPhase=${this.scene.turnPhase}`);
-        } else {
-          // Not player's turn - disable actions until turn_start arrives
-          this.scene.canMove = false;
-          this.scene.canAct = false;
-          this.scene.turnPhase = 'done';
-          console.log('[Battle] Not player turn on rejoin - actions disabled');
-        }
-
-        this.scene.updateUI();
+          // Apply map layers only after the state revision is accepted.
+          applyBattleMapPatch(this.scene.grid, hydrated.state);
+          this.battleState = this.scene.battleState;
+          return { stale: false, hydrated };
+        });
+        const rejoinApplication = await this.stateUpdateChain;
+        const hydrated = rejoinApplication.hydrated;
 
         // Rejoin WebSocket room
         if (this.game.socket) {
@@ -560,6 +578,28 @@ export class BattleWebSocketManager {
           );
         }
 
+        if (rejoinApplication.stale) {
+          // clearPendingActions() locked input before the request. If a newer
+          // WebSocket revision won the race, recover from that already-applied
+          // authoritative state immediately and request a fresh snapshot.
+          const activeUnitId = this.battleState?.activeUnitId;
+          const activeUnit = this.units.get(activeUnitId);
+          if (this.battleState?.status === 'active' &&
+              this.scene.isLocalActiveUnit?.(activeUnit)) {
+            const recovered = this.scene.recoverLocalTurn?.({
+              unitId: activeUnitId,
+              availableActions: this.scene.serverAvailableActions ??
+                this.battleState.availableActions ??
+                null,
+              stateRevision: this.scene.stateRevision ??
+                this.battleState.stateRevision
+            });
+            if (recovered) this.lastYourTurnUnitId = activeUnitId;
+          }
+          this.requestFullStateSync({ reason: 'stale_rejoin_snapshot' });
+          void this.statePoller?.poll?.();
+        }
+
         // Update poller state with fresh server state
         this.updatePollerState();
 
@@ -567,12 +607,13 @@ export class BattleWebSocketManager {
         parchmentToast.success('Connection', 'Reconnected!');
 
         // Handle grace period (brief delay before turn timer resumes)
-        if (hydrated.gracePeriod > 0) {
+        if (!rejoinApplication.stale && hydrated.gracePeriod > 0) {
           console.log(`[Battle] Grace period: ${hydrated.gracePeriod}ms`);
         }
 
         // Show any disconnected players
-        if (hydrated.disconnectedPlayers?.length > 0) {
+        if (!rejoinApplication.stale &&
+            hydrated.disconnectedPlayers?.length > 0) {
           for (const player of hydrated.disconnectedPlayers) {
             parchmentToast.warning('Player Status', `${player.playerName} is disconnected`);
           }
@@ -642,9 +683,19 @@ export class BattleWebSocketManager {
 
   async handleRemoteStateUpdate(payload) {
     console.log('[Battle WS] Processing state update (sync only, no camera control)');
-    // Sync unit data but preserve activeUnitId if queue is processing
-    const preserveActiveUnit = this.isProcessingQueue || this.inEnemySequence;
-    const currentActiveId = this.battleState?.activeUnitId;
+
+    const payloadRevision = payload.stateRevision ??
+      payload.snapshot?.stateRevision ??
+      payload.update?.stateRevision ??
+      payload.delta?.stateRevision ??
+      payload.state?.stateRevision ??
+      null;
+    // Snapshot verification mutates BattleMapSession when accepted. Reject a
+    // delayed payload before that point so the map session cannot roll back
+    // underneath a newer scene revision.
+    if (this.scene.isStaleStateRevision?.(payloadRevision)) {
+      return { status: 'duplicate', reason: 'stale_revision' };
+    }
 
     let nextState;
     let mapPatch = null;
@@ -689,16 +740,40 @@ export class BattleWebSocketManager {
       }
     }
 
+    const stateRevision = payload.stateRevision ?? nextState?.stateRevision ?? null;
+    if (this.scene.isStaleStateRevision?.(stateRevision)) {
+      return { status: 'duplicate', reason: 'stale_revision' };
+    }
+
     this.battleState = nextState;
-    this.scene.syncUnitsWithState(this.battleState?.units || []);
     if (mapPatch) applyBattleMapPatch(this.scene.grid, mapPatch);
     this.queueAuthoritativeBattleEnd(nextState?.status, nextState?.rewards);
 
-    // Restore activeUnitId if we should preserve it (queue handles transitions)
-    if (preserveActiveUnit && currentActiveId != null) {
-      this.battleState.activeUnitId = currentActiveId;
+    let synchronizedAvailability = payload.availableActions !== undefined
+      ? payload.availableActions
+      : nextState?.availableActions;
+    if (synchronizedAvailability === undefined) {
+      const activeStateUnit = nextState?.units?.find(
+        unit => String(unit.id) === String(nextState.activeUnitId)
+      );
+      const activeUnit = this.units.get(nextState?.activeUnitId);
+      synchronizedAvailability = this.scene.isLocalActiveUnit?.(activeUnit) &&
+        (typeof activeStateUnit?.moveUsed === 'boolean' ||
+         typeof activeStateUnit?.actUsed === 'boolean')
+        ? {
+          canMove: activeStateUnit.moveUsed !== true,
+          canAct: activeStateUnit.actUsed !== true,
+          turnPhase: activeStateUnit.turnPhase
+        }
+        : null;
     }
-    // Don't call updateUI() - let queue system handle camera and UI updates
+    this.scene.reconcileAuthoritativePayload({
+      state: this.battleState,
+      availableActions: synchronizedAvailability,
+      stateRevision
+    }, { refresh: false });
+    this.scene.updateUI?.();
+    this.scene.refreshActionControls?.();
 
     // Update poller baseline to prevent false drift detection
     this.updatePollerState();
@@ -784,7 +859,19 @@ export class BattleWebSocketManager {
    * Handle turn start event - queue for sequential processing
    */
   handleRemoteTurnStart(payload) {
-    const { unitId, unitName, unitType, position, turnPredictions } = payload;
+    const {
+      unitId,
+      unitName,
+      unitType,
+      position,
+      turnPredictions,
+      availableActions,
+      stateRevision
+    } = payload;
+    if (this.isSupersededTurnStart(payload)) {
+      console.log('[Battle WS] Ignoring reordered legacy turn_start:', unitId);
+      return;
+    }
     console.log(`[Battle WS] Turn start: ${unitName} (${unitType})`);
 
     // Queue the turn start for sequential processing
@@ -795,7 +882,9 @@ export class BattleWebSocketManager {
       unitName,
       unitType,
       position,
-      turnPredictions
+      turnPredictions,
+      availableActions,
+      stateRevision
     });
   }
 
@@ -818,38 +907,63 @@ export class BattleWebSocketManager {
 
   /**
    * Handle "your turn" notification
-   * NOTE: This is redundant with turn_start for player turns.
-   * The queue system handles camera and UI via processTurnStartEvent.
-   * This handler only enables input - doesn't touch camera or call updateUI.
+   * This is the complete logical recovery path when turn_start presentation is
+   * missing, delayed, or reordered. Camera work remains in the turn queue.
    */
   handleRemoteYourTurn(payload) {
-    const { unitId, availableActions } = payload;
+    const { unitId, availableActions, stateRevision, state } = payload;
+    const authoritativeRevision = stateRevision ?? state?.stateRevision;
+    if (this.scene.isStaleStateRevision?.(authoritativeRevision)) return;
 
     // Play turn start sound for player
     this.scene.audioManager.playSound('turn_start');
 
-    // Store server-provided available actions for use in action methods
-    this.scene.serverAvailableActions = availableActions || null;
-
-    // Check if queue has pending turn_start - if so, defer input enable
-    // This prevents players from submitting actions before seeing their turn start animation
-    const hasPendingTurnStart = this.turnEventQueue.some(e => e.type === 'turn_start');
-
-    if (hasPendingTurnStart) {
-      // Mark that input should be enabled after queue processes turn_start
-      this.pendingInputEnable = true;
-      console.log('[Battle WS] Your turn:', unitId, '(deferring input enable until turn_start processes)');
-    } else {
-      // No pending turn_start - enable input immediately
-      this.scene.inputEnabled = true;
-      this.scene.currentAction = null;
-      this.scene.validTiles = [];
-      console.log('[Battle WS] Your turn:', unitId, '(input enabled immediately)');
+    if (state) {
+      this.scene.reconcileAuthoritativePayload({
+        state,
+        availableActions,
+        stateRevision: authoritativeRevision
+      }, { refresh: false });
     }
+    this.lastYourTurnUnitId = unitId;
+    this.pendingInputEnable = false;
+    if (this.turnRecoveryTimer) {
+      clearTimeout(this.turnRecoveryTimer);
+      this.turnRecoveryTimer = null;
+    }
+    const recovered = this.scene.recoverLocalTurn({
+      unitId,
+      availableActions,
+      stateRevision: authoritativeRevision
+    });
+    console.log('[Battle WS] Your turn:', unitId,
+      recovered ? '(controls recovered)' : '(awaiting authoritative availability)');
+    if (!recovered) this.scheduleTurnRecoverySync(unitId);
+  }
 
-    // NOTE: Don't call updateUI() - the queue's processTurnStartEvent handles that
-    // NOTE: Don't set activeUnitId - the queue's processTurnStartEvent handles that
-    // This prevents camera bounce when your_turn arrives before queue processes turn_start
+  isSupersededTurnStart({ unitId, stateRevision } = {}) {
+    if (this.scene.isStaleStateRevision?.(stateRevision)) return true;
+    return (stateRevision === null || stateRevision === undefined) &&
+      this.scene.inputEnabled &&
+      this.lastYourTurnUnitId != null &&
+      String(unitId) !== String(this.lastYourTurnUnitId) &&
+      String(this.battleState?.activeUnitId) === String(this.lastYourTurnUnitId);
+  }
+
+  scheduleTurnRecoverySync(unitId) {
+    if (this.turnRecoveryTimer) clearTimeout(this.turnRecoveryTimer);
+    this.turnRecoveryTimer = setTimeout(() => {
+      this.turnRecoveryTimer = null;
+      if (this.scene.battleEnded ||
+          (this.battleState?.activeUnitId != null &&
+           String(this.battleState.activeUnitId) !== String(unitId)) ||
+          this.scene.inputEnabled) {
+        return;
+      }
+      console.warn('[Battle WS] Local turn availability missing - requesting state sync');
+      this.requestFullStateSync({ reason: 'turn_unlock_timeout' });
+      void this.statePoller?.poll();
+    }, TURN_RECOVERY_SYNC_DELAY_MS);
   }
 
   /**
@@ -906,11 +1020,20 @@ export class BattleWebSocketManager {
       this.requestFullStateSync({ reason: 'revisioned_snapshot_required' });
       return { status: 'resync_required', reason: 'revisioned_snapshot_required' };
     }
+    const stateRevision = payload.stateRevision ?? state?.stateRevision ?? null;
+    if (this.scene.isStaleStateRevision?.(stateRevision)) {
+      return { status: 'duplicate', reason: 'stale_revision' };
+    }
     this.battleState = state;
-    this.scene.syncUnitsWithState(state.units);
     applyBattleMapPatch(this.scene.grid, state);
     this.queueAuthoritativeBattleEnd(state.status, state.rewards);
-    this.scene.updateUI();
+    this.scene.reconcileAuthoritativePayload({
+      state,
+      availableActions: payload.availableActions !== undefined
+        ? payload.availableActions
+        : state.availableActions,
+      stateRevision
+    });
     return { status: 'applied', state };
   }
 
@@ -959,7 +1082,7 @@ export class BattleWebSocketManager {
         parchmentToast.error('FINAL WARNING',
           'Your turn was skipped! One more timeout will forfeit the match!',
           { duration: 5000 });
-        this.game.audio?.playSFX?.('warning_critical');
+        this.game.audio?.playUI?.('warning');
         // Show persistent warning badge
         this.scene.pvpUI?.showTimeoutWarning(timeoutsRemaining);
       } else if (timeoutsRemaining === 2) {
@@ -995,7 +1118,10 @@ export class BattleWebSocketManager {
   getEventDeduplicationKey(event) {
     switch (event.type) {
       case 'turn_start':
-        return `turn_start:${event.unitId}`;
+        return event.stateRevision === undefined ||
+          event.stateRevision === null
+          ? `turn_start:${event.unitId}`
+          : `turn_start:${event.unitId}:revision:${event.stateRevision}`;
       case 'unit_moved':
         return `unit_moved:${event.unitId}:${event.to?.x},${event.to?.y}`;
       case 'action_executed':
@@ -1156,7 +1282,7 @@ export class BattleWebSocketManager {
     console.warn('[Battle WS] State drift detected - applying server state');
 
     // Apply the server state to the battle
-    this.applyServerState(serverState);
+    if (!this.applyServerState(serverState)) return;
     this.queueAuthoritativeBattleEnd(serverState.status, serverState.rewards);
 
     // Reset timeout counter since we've synced
@@ -1178,6 +1304,7 @@ export class BattleWebSocketManager {
    */
   handleCriticalDrift(driftType, serverValue, serverState) {
     console.warn(`[Battle WS] Critical drift during animation: ${driftType}`, serverValue);
+    if (this.scene.isStaleStateRevision?.(serverState?.stateRevision)) return;
 
     // A terminal snapshot takes priority even when the first reported mismatch
     // is a turn or turn-count change from the same server update.
@@ -1207,14 +1334,19 @@ export class BattleWebSocketManager {
    * Updates unit positions, HP, MP, and turn state
    */
   applyServerState(serverState) {
+    if (this.scene.isStaleStateRevision?.(serverState.stateRevision)) {
+      return false;
+    }
+    this.scene.noteStateRevision?.(serverState.stateRevision);
+
     // Update units from server state
     if (serverState.units && this.units) {
       for (const serverUnit of serverState.units) {
         const localUnit = this.units.get(serverUnit.id);
         if (localUnit) {
           // Validate server position data - skip invalid positions to prevent NaN
-          const serverX = serverUnit.x;
-          const serverY = serverUnit.y;
+          const serverX = serverUnit.x ?? serverUnit.tileX;
+          const serverY = serverUnit.y ?? serverUnit.tileY;
           if (typeof serverX !== 'number' || typeof serverY !== 'number' ||
               isNaN(serverX) || isNaN(serverY)) {
             console.warn(`[Battle WS] Invalid position for unit ${serverUnit.id}: x=${serverX}, y=${serverY}`);
@@ -1251,6 +1383,15 @@ export class BattleWebSocketManager {
           if (serverUnit.statusEffects) {
             localUnit.statusEffects = serverUnit.statusEffects;
           }
+          if (serverUnit.moveUsed !== undefined) {
+            localUnit.moveUsed = serverUnit.moveUsed;
+          }
+          if (serverUnit.actUsed !== undefined) {
+            localUnit.actUsed = serverUnit.actUsed;
+          }
+          if (serverUnit.turnPhase !== undefined) {
+            localUnit.turnPhase = serverUnit.turnPhase;
+          }
         }
       }
     }
@@ -1265,11 +1406,23 @@ export class BattleWebSocketManager {
     if (serverState.status !== undefined && this.battleState) {
       this.battleState.status = serverState.status;
     }
+    if (serverState.availableActions !== undefined) {
+      this.scene.applyAuthoritativeAvailability?.(serverState.availableActions);
+    } else if (serverState.turnPhase !== undefined) {
+      this.scene.turnPhase = serverState.turnPhase;
+    }
+    this.scene.inputEnabled = this.battleState?.status === 'active' &&
+      !this.scene.battleEnded &&
+      this.scene.isLocalActiveUnit?.() &&
+      !!this.scene.serverAvailableActions;
+    this.scene.updateUI?.();
+    this.scene.refreshActionControls?.();
 
     // Emit event for scene to handle full refresh if needed
     if (this.scene.onStateSync) {
       this.scene.onStateSync(serverState);
     }
+    return true;
   }
 
   /**
@@ -1279,15 +1432,21 @@ export class BattleWebSocketManager {
     if (!this.statePoller || !this.scene) return;
 
     const state = {
+      stateRevision: this.scene.stateRevision ?? this.battleState?.stateRevision,
       activeUnitId: this.battleState?.activeUnitId,
       turnCount: this.battleLogTurnCounter || 0,
       status: this.battleState?.status || 'active',
+      turnPhase: this.scene.turnPhase,
+      availableActions: this.scene.serverAvailableActions,
       units: this.units ? Array.from(this.units.values()).map(u => ({
         id: u.id,
         x: u.gridX,  // BattleUnit uses gridX/gridY, not x/y
         y: u.gridY,
         hp: u.hp,
-        mp: u.mp
+        mp: u.mp,
+        moveUsed: u.moveUsed,
+        actUsed: u.actUsed,
+        turnPhase: u.turnPhase
       })) : []
     };
 
@@ -1368,7 +1527,16 @@ export class BattleWebSocketManager {
    * Process turn_start event from queue
    */
   async processTurnStartEvent(event) {
-    const { unitId, unitName, unitType, position, turnPredictions } = event;
+    const {
+      unitId,
+      unitName,
+      unitType,
+      position,
+      turnPredictions,
+      availableActions,
+      stateRevision
+    } = event;
+    if (this.isSupersededTurnStart(event)) return;
     const isPlayerTurn = unitType === 'player' || unitType === 'player_local';
 
     debugLog('battle.logTurnEvents', 'Turn start:', {
@@ -1407,7 +1575,31 @@ export class BattleWebSocketManager {
     // Server sends 'player_local' to ALL clients, but we need to show
     // "Your Turn!" only to the actual owner of the unit
     const localUserId = this.game.localUserId;
-    const isLocalUnit = activeUnit?.isLocalPlayerUnit(localUserId);
+    const isLocalUnit = this.scene.isLocalActiveUnit
+      ? this.scene.isLocalActiveUnit(activeUnit)
+      : activeUnit?.isLocalPlayerUnit(localUserId);
+
+    // Recover the logical turn before any camera or presentation work. A
+    // stalled/missing camera callback must never strand actionable state.
+    if (isPlayerTurn && isLocalUnit) {
+      const knownAvailability = availableActions ??
+        (this.lastYourTurnUnitId === unitId
+          ? this.scene.serverAvailableActions
+          : null);
+      const recovered = this.scene.recoverLocalTurn({
+        unitId,
+        availableActions: knownAvailability,
+        stateRevision
+      });
+      if (!recovered) this.scheduleTurnRecoverySync(unitId);
+    } else {
+      this.scene.inputEnabled = false;
+      this.scene.applyAuthoritativeAvailability?.(null);
+      this.scene.clearActionTargetingState?.();
+      this.scene.refreshActionControls?.();
+      this.inEnemySequence = true;
+      this.lastTurnWasEnemy = true;
+    }
 
     // Determine display unit type:
     // - 'player_local' if it's our turn (shows "Your Turn!")
@@ -1457,6 +1649,11 @@ export class BattleWebSocketManager {
 
       // Add settling delay after camera pan for smooth transitions
       await this.scene.waitForAnimation(ANIMATION_TIMING.TURN_SETTLE_DELAY);
+      if (this.isSupersededTurnStart(event)) {
+        const currentActiveUnit = this.units.get(this.battleState?.activeUnitId);
+        if (currentActiveUnit) this.camera.setFollowTarget(currentActiveUnit);
+        return;
+      }
 
       if (isPlayerTurn && isLocalUnit) {
         // Local player's turn
@@ -1469,17 +1666,7 @@ export class BattleWebSocketManager {
           this.ui.hideTargetInfo();
         }
 
-        // Enable player controls after camera pan
-        this.scene.updateUI();
-
-        // Apply deferred input enable if your_turn arrived before turn_start
-        if (this.pendingInputEnable) {
-          this.scene.inputEnabled = true;
-          this.scene.currentAction = null;
-          this.scene.validTiles = [];
-          this.pendingInputEnable = false;
-          console.log('[Battle WS] Deferred input enable applied after turn_start');
-        }
+        // Controls were already recovered before presentation began.
       } else {
         // Enemy turn OR opponent's turn in PvP
         this.inEnemySequence = true;

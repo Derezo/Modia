@@ -35,6 +35,13 @@ const TIMING = {
   TURN_END_BUFFER: 300        // Buffer before next turn
 };
 
+// A battle can be resumed by battle start, /current, and action completion.
+// Keep those recovery paths from running the same AI turn concurrently. The
+// supported deployment is a singleton process; repository CAS still protects
+// writes if that topology changes, but presentation would also need a
+// distributed lease before enabling multiple API workers.
+const activeEnemyTurnJobs = new Map();
+
 /**
  * Process enemy turns asynchronously with visualization delays
  * @param {number} battleId - Battle ID
@@ -55,6 +62,64 @@ async function processEnemyTurnsAsync(
     throw new TypeError('expectedRevision must be a non-negative safe integer');
   }
 
+  const jobKey = String(battleId);
+  if (activeEnemyTurnJobs.has(jobKey)) {
+    console.log(
+      '[AsyncTurnManager] Enemy turn processing already active for battle',
+      battleId,
+      '- skipping duplicate trigger'
+    );
+    return {
+      skipped: true,
+      reason: 'already_processing'
+    };
+  }
+
+  const jobToken = {};
+  activeEnemyTurnJobs.set(jobKey, jobToken);
+  try {
+    // Every launcher supplies the snapshot that caused it to schedule work, but
+    // another trigger/action may win before this async job starts. Always begin
+    // from the latest persisted revision.
+    const authoritativeBattle = await battleStateRepository.loadBattle(battleId);
+    if (authoritativeBattle.status !== 'active') {
+      return {
+        skipped: true,
+        reason: 'battle_not_active'
+      };
+    }
+    if (authoritativeBattle.stateRevision !== expectedRevision) {
+      console.log(
+        '[AsyncTurnManager] Scheduled revision',
+        expectedRevision,
+        'advanced to',
+        authoritativeBattle.stateRevision,
+        'before processing battle',
+        battleId
+      );
+    }
+
+    return await processEnemyTurnsFromState(
+      battleId,
+      authoritativeBattle.state,
+      aiService,
+      battleService,
+      authoritativeBattle.stateRevision
+    );
+  } finally {
+    if (activeEnemyTurnJobs.get(jobKey) === jobToken) {
+      activeEnemyTurnJobs.delete(jobKey);
+    }
+  }
+}
+
+async function processEnemyTurnsFromState(
+  battleId,
+  state,
+  aiService,
+  battleService,
+  expectedRevision
+) {
   state = structuredClone(state);
   let stateRevision = expectedRevision;
   let lastCommittedUpdate = null;
@@ -93,11 +158,17 @@ async function processEnemyTurnsAsync(
 
     // Broadcast turn start for this enemy
     const turnPredictions = battleService.predictTurnOrder(state, 10);
-    battleWebsocket.broadcastTurnStart(battleId, {
-      id: activeUnit.id,
-      name: activeUnit.name,
-      position: { x: activeUnit.tileX, y: activeUnit.tileY }
-    }, 'enemy', turnPredictions);
+    await battleWebsocket.broadcastTurnStart(
+      battleId,
+      {
+        id: activeUnit.id,
+        name: activeUnit.name,
+        position: { x: activeUnit.tileX, y: activeUnit.tileY }
+      },
+      'enemy',
+      turnPredictions,
+      stateRevision
+    );
 
     // Wait for camera pan
     await delay(TIMING.TURN_START_DELAY);
@@ -612,16 +683,37 @@ function delay(ms) {
  * Notify the next player that it's their turn
  * @param {number} battleId - Battle ID
  * @param {Object} state - Battle state
+ * @param {number|null} stateRevision - Authoritative settled revision
  */
-async function notifyPlayerTurn(battleId, state) {
+async function notifyPlayerTurn(battleId, state, stateRevision = null) {
   const activeUnit = state.units.find(u => u.id === state.activeUnitId);
 
   if (activeUnit && activeUnit.type === 'player') {
     const battleService = await import('./battleService.js');
     const turnPredictions = battleService.predictTurnOrder(state, 10);
+    const hasOwner = activeUnit.ownerId !== null &&
+      activeUnit.ownerId !== undefined;
+    const availableActions = hasOwner
+      ? getAvailableActions(activeUnit, state)
+      : null;
+    const playerUnits = state.units.filter(
+      unit => unit.type === 'player' &&
+        unit.ownerId !== null &&
+        unit.ownerId !== undefined
+    );
+    const uniqueOwners = new Set(playerUnits.map(unit => unit.ownerId));
+    const isPvP = state.battleType === 'pvp' ||
+      state.battleType === 'pvp_coliseum';
+    const isMultiplayerPvE = !isPvP && uniqueOwners.size > 1;
+    const isMultiplayer = isPvP || isMultiplayerPvE;
+
+    // Full action availability can include skills, inventory, and legal target
+    // tiles. It is useful as a redundant solo-turn recovery signal, but must not
+    // be broadcast to other human participants.
+    const turnStartAvailability = !isMultiplayer ? availableActions : null;
 
     // Broadcast turn start to all
-    battleWebsocket.broadcastTurnStart(
+    const turnStartDeliveries = await battleWebsocket.broadcastTurnStart(
       battleId,
       {
         id: activeUnit.id,
@@ -629,28 +721,22 @@ async function notifyPlayerTurn(battleId, state) {
         position: { x: activeUnit.tileX, y: activeUnit.tileY }
       },
       'player_local',  // Will be adjusted client-side based on who receives it
-      turnPredictions
+      turnPredictions,
+      stateRevision,
+      turnStartAvailability
     );
 
     // Send personal notification if ownerId is set (multiplayer battles)
-    if (activeUnit.ownerId) {
-      // Compute full available actions including reachableTiles for movement validation
-      const availableActions = getAvailableActions(activeUnit, state);
-      battleWebsocket.sendYourTurn(
+    let yourTurnSequence = -1;
+    if (hasOwner) {
+      yourTurnSequence = await battleWebsocket.sendYourTurn(
         activeUnit.ownerId,
         battleId,
         activeUnit.id,
         state,
-        availableActions
+        availableActions,
+        stateRevision
       );
-
-      // Determine if this is a multiplayer battle (multiple human players)
-      // Check for multiple unique ownerIds among player units, or explicit PvP battle type
-      const playerUnits = state.units.filter(u => u.type === 'player' && u.ownerId);
-      const uniqueOwners = new Set(playerUnits.map(u => u.ownerId));
-      const isPvP = state.battleType === 'pvp' || state.battleType === 'pvp_coliseum';
-      const isMultiplayerPvE = !isPvP && uniqueOwners.size > 1;
-      const isMultiplayer = isPvP || isMultiplayerPvE;
 
       // Only start turn timers for multiplayer battles
       // Solo PvE battles have no turn timer (single player, no need to wait)
@@ -659,7 +745,15 @@ async function notifyPlayerTurn(battleId, state) {
         startTurnTimer(battleId, activeUnit.ownerId, isMultiplayerPvE);
       }
     }
+
+    return {
+      notified: true,
+      turnStartDeliveries,
+      yourTurnSequence
+    };
   }
+
+  return { notified: false };
 }
 
 export {

@@ -389,7 +389,7 @@ async function handleBuyListing(listing, context) {
         game.state.set('user', { ...game.state.get('user'), gold: result.gold });
 
         // Play purchase sound effect
-        game.audio?.playSFX('gold_spend');
+        game.audio?.playInteraction('gold_spend');
 
         parchmentToast.success('Purchase Complete', `Bought ${result.purchase.itemName} for ${result.purchase.price}g`);
 

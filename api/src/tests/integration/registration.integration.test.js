@@ -333,6 +333,7 @@ describe('POST /api/auth/register-with-character', () => {
       });
 
       assert.strictEqual(secondRes.status, 409, 'Should return 409 for duplicate username');
+      assert.strictEqual(secondRes.body.error, 'Username already exists');
 
       // Verify only one user with that username exists
       const userResult = await query(
@@ -373,6 +374,7 @@ describe('POST /api/auth/register-with-character', () => {
       });
 
       assert.strictEqual(secondRes.status, 409, 'Should return 409 for duplicate email');
+      assert.strictEqual(secondRes.body.error, 'Email already exists');
 
       // Verify only one user with that email exists
       const userResult = await query(

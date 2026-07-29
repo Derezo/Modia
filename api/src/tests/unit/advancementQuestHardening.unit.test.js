@@ -282,6 +282,9 @@ describe('advancement quest hardening', () => {
             }]
           };
         }
+        if (sql.includes("status = 'active'")) {
+          return { rows: [{ has_active_battle: false }] };
+        }
         if (sql.includes('FROM battles')) {
           assert.match(sql, /status IN \('active', 'victory'\)/);
           return {
@@ -305,9 +308,10 @@ describe('advancement quest hardening', () => {
 
     assert.equal(attempt, 2);
     assert.match(calls[0].sql, /FOR UPDATE/);
-    assert.match(calls[1].sql, /status = 'boss_ready'/);
-    assert.match(calls[1].sql, /FOR UPDATE OF cq/);
-    assert.deepEqual(calls[2].params, [7, 'summoner', 12]);
+    assert.match(calls[1].sql, /status = 'active'/);
+    assert.match(calls[2].sql, /status = 'boss_ready'/);
+    assert.match(calls[2].sql, /FOR UPDATE OF cq/);
+    assert.deepEqual(calls[3].params, [7, 'summoner', 12]);
     assert.equal(
       buildGuildmasterCreationKey({
         userId: 3,
@@ -346,6 +350,9 @@ describe('advancement quest hardening', () => {
             }]
           };
         }
+        if (sql.includes("status = 'active'")) {
+          return { rows: [{ has_active_battle: false }] };
+        }
         if (sql.includes('FROM battles')) {
           return {
             rows: [{
@@ -377,8 +384,14 @@ describe('advancement quest hardening', () => {
   it('rejects a second active guildmaster battle under the character lock', async () => {
     const client = {
       async query(sql) {
-        assert.match(sql, /FOR UPDATE/);
-        return { rows: [{ id: 7, in_battle: true }] };
+        if (sql.includes('FROM characters')) {
+          assert.match(sql, /FOR UPDATE/);
+          return { rows: [{ id: 7, in_battle: true }] };
+        }
+        if (sql.includes("status = 'active'")) {
+          return { rows: [{ has_active_battle: false }] };
+        }
+        throw new Error(`Unexpected query: ${sql}`);
       }
     };
 
@@ -392,6 +405,76 @@ describe('advancement quest hardening', () => {
       }),
       error => {
         assert.equal(error.message, 'Character is already in battle');
+        assert.equal(error.code, 'ADVANCEMENT_BATTLE_ALREADY_ACTIVE');
+        return true;
+      }
+    );
+  });
+
+  it('rejects a guildmaster battle when another owned character is in battle', async () => {
+    const calls = [];
+    const client = {
+      async query(sql, params) {
+        calls.push({ sql, params });
+        if (sql.includes('FROM characters')) {
+          return {
+            rows: [
+              { id: 7, in_battle: false },
+              { id: 8, in_battle: true }
+            ]
+          };
+        }
+        if (sql.includes("status = 'active'")) {
+          return { rows: [{ has_active_battle: false }] };
+        }
+        throw new Error(`Unexpected query: ${sql}`);
+      }
+    };
+
+    await assert.rejects(
+      reserveGuildmasterBattleAttempt(client, {
+        userId: 3,
+        challengerId: 7,
+        advancementQuestId: 31,
+        targetClass: 'summoner',
+        nodeId: 12
+      }),
+      error => {
+        assert.equal(error.code, 'ADVANCEMENT_BATTLE_ALREADY_ACTIVE');
+        return true;
+      }
+    );
+
+    assert.match(calls[0].sql, /WHERE c\.user_id = \$1/);
+    assert.match(calls[0].sql, /ORDER BY c\.id/);
+    assert.match(calls[0].sql, /FOR UPDATE OF c/);
+    assert.deepEqual(calls[0].params, [3]);
+    assert.equal(calls.length, 2);
+  });
+
+  it('rejects a guildmaster battle when the user has an authoritative active battle', async () => {
+    const client = {
+      async query(sql) {
+        if (sql.includes('FROM characters')) {
+          return { rows: [{ id: 7, in_battle: false }] };
+        }
+        if (sql.includes("status = 'active'")) {
+          assert.match(sql, /FROM battle_players/);
+          return { rows: [{ has_active_battle: true }] };
+        }
+        throw new Error(`Unexpected query: ${sql}`);
+      }
+    };
+
+    await assert.rejects(
+      reserveGuildmasterBattleAttempt(client, {
+        userId: 3,
+        challengerId: 7,
+        advancementQuestId: 31,
+        targetClass: 'summoner',
+        nodeId: 12
+      }),
+      error => {
         assert.equal(error.code, 'ADVANCEMENT_BATTLE_ALREADY_ACTIVE');
         return true;
       }
@@ -413,6 +496,9 @@ describe('advancement quest hardening', () => {
               node_guild_id: 'wizard'
             }]
           };
+        }
+        if (sql.includes("status = 'active'")) {
+          return { rows: [{ has_active_battle: false }] };
         }
         if (sql.includes('FROM character_quests')) {
           return {

@@ -101,6 +101,9 @@ export function getReachableTiles(startX, startY, range, terrain, units, mapWidt
   for (const [key, cost] of costs) {
     if (key === `${startX},${startY}`) continue;
     const [x, y] = key.split(',').map(Number);
+    // Occupants may participate in the search frontier when defeated, but no
+    // unit-occupied tile is a legal movement destination.
+    if (isAnyOccupied(x, y, units, startX, startY)) continue;
     reachable.push({ x, y, cost });
   }
 
@@ -123,6 +126,16 @@ export function getReachableTiles(startX, startY, range, terrain, units, mapWidt
  * @returns {number} Path cost to reach target, or Infinity if unreachable
  */
 export function calculatePathCost(startX, startY, targetX, targetY, terrain, units, maxCost, mapWidth, mapHeight) {
+  if (hasDefeatedOccupant(
+    targetX,
+    targetY,
+    units,
+    startX,
+    startY
+  )) {
+    return Infinity;
+  }
+
   // If no terrain data, fall back to Manhattan distance for backwards compatibility
   if (!terrain) {
     return Math.abs(targetX - startX) + Math.abs(targetY - startY);
@@ -206,6 +219,10 @@ export function calculatePathCost(startX, startY, targetX, targetY, terrain, uni
  * @returns {Array|null} Array of { x, y } waypoints, or null if no path exists
  */
 export function findPath(startX, startY, endX, endY, terrain, units, mapWidth, mapHeight) {
+  if (hasDefeatedOccupant(endX, endY, units, startX, startY)) {
+    return null;
+  }
+
   const openSet = [{ x: startX, y: startY, g: 0, f: 0, parent: null }];
   const closedSet = new Set();
   const gScores = new Map();
@@ -306,8 +323,8 @@ function reconstructPath(node) {
 }
 
 /**
- * Check if a tile is occupied by a unit (including dead units)
- * Dead units block movement as their corpses remain on the battlefield.
+ * Check if a tile is occupied by a living unit.
+ * Defeated units remain reserved as destinations but are transit-passable.
  * Supports both { tileX, tileY } and { x, y } formats
  *
  * @param {number} x - X position to check
@@ -325,18 +342,46 @@ function isOccupied(x, y, units, excludeX = null, excludeY = null) {
     const unitX = unit.tileX ?? unit.gridX ?? unit.x;
     const unitY = unit.tileY ?? unit.gridY ?? unit.y;
 
-    // Dead units now block movement (corpses remain on battlefield)
-
     // Skip the excluded position (the unit that's moving)
     if (excludeX !== null && excludeY !== null &&
         unitX === excludeX && unitY === excludeY) continue;
 
-    if (unitX === x && unitY === y) {
+    if (unitX === x && unitY === y && !isDefeatedUnit(unit)) {
       return true;
     }
   }
 
   return false;
+}
+
+function isAnyOccupied(x, y, units, excludeX = null, excludeY = null) {
+  if (!units || !Array.isArray(units)) return false;
+  return units.some(unit => {
+    const unitX = unit?.tileX ?? unit?.gridX ?? unit?.x;
+    const unitY = unit?.tileY ?? unit?.gridY ?? unit?.y;
+    if (excludeX !== null && excludeY !== null &&
+        unitX === excludeX && unitY === excludeY) {
+      return false;
+    }
+    return unitX === x && unitY === y;
+  });
+}
+
+function hasDefeatedOccupant(x, y, units, excludeX = null, excludeY = null) {
+  if (!units || !Array.isArray(units)) return false;
+  return units.some(unit => {
+    const unitX = unit?.tileX ?? unit?.gridX ?? unit?.x;
+    const unitY = unit?.tileY ?? unit?.gridY ?? unit?.y;
+    if (excludeX !== null && excludeY !== null &&
+        unitX === excludeX && unitY === excludeY) {
+      return false;
+    }
+    return unitX === x && unitY === y && isDefeatedUnit(unit);
+  });
+}
+
+function isDefeatedUnit(unit) {
+  return typeof unit?.hp === 'number' && unit.hp <= 0;
 }
 
 /**
@@ -607,6 +652,7 @@ export function getReachableTiles3D(
   for (const [key, cost] of costs) {
     if (key === `${startX},${startY}`) continue;
     const [x, y] = key.split(',').map(Number);
+    if (isAnyOccupied(x, y, units, startX, startY)) continue;
     // Return discrete elevation levels for consistency
     const rawZ = elevation[y]?.[x] ?? 0;
     const z = discretizeElevation(rawZ);
@@ -645,6 +691,9 @@ export function findPath3D(
     const path2D = findPath(startX, startY, endX, endY, terrain, units, mapWidth, mapHeight);
     if (!path2D) return null;
     return path2D.map(p => ({ ...p, z: 0 }));
+  }
+  if (hasDefeatedOccupant(endX, endY, units, startX, startY)) {
+    return null;
   }
 
   const maxClimb = options.maxClimb ?? ELEVATION_RULES.MAX_CLIMB;
@@ -802,6 +851,15 @@ export function calculatePathCost3D(
   // If no elevation data, fall back to 2D
   if (!elevation) {
     return calculatePathCost(startX, startY, targetX, targetY, terrain, units, maxCost, mapWidth, mapHeight);
+  }
+  if (hasDefeatedOccupant(
+    targetX,
+    targetY,
+    units,
+    startX,
+    startY
+  )) {
+    return Infinity;
   }
 
   const maxClimb = options.maxClimb ?? ELEVATION_RULES.MAX_CLIMB;

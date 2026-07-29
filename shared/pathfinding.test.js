@@ -182,6 +182,45 @@ describe('TraversalView object API', () => {
     ]);
   });
 
+  it('allows corpse transit without allowing a corpse destination', () => {
+    const corpse = { tileX: 1, tileY: 0, hp: 0 };
+    const view = createView({
+      width: 3,
+      height: 1,
+      units: [corpse]
+    });
+    const start = { x: 0, y: 0 };
+    const corpseTile = { x: 1, y: 0 };
+    const beyond = { x: 2, y: 0 };
+
+    assert.deepStrictEqual(
+      getReachableTilesForTraversal(view, { start, range: 2 }),
+      [{ x: 2, y: 0, z: 0, cost: 2 }]
+    );
+    assert.strictEqual(
+      calculateTraversalPathCost(view, { start, goal: corpseTile }),
+      Infinity
+    );
+    assert.strictEqual(findTraversalPath(view, { start, goal: corpseTile }), null);
+    assert.strictEqual(
+      calculateTraversalPathCost(view, { start, goal: beyond }),
+      2
+    );
+    assert.deepStrictEqual(findTraversalPath(view, { start, goal: beyond }), [
+      { x: 0, y: 0, z: 0 },
+      { x: 1, y: 0, z: 0 },
+      { x: 2, y: 0, z: 0 }
+    ]);
+
+    corpse.hp = 10;
+    assert.deepStrictEqual(
+      getReachableTilesForTraversal(view, { start, range: 2 }),
+      [],
+      'A revived unit becomes a normal traversal blocker again'
+    );
+    assert.strictEqual(findTraversalPath(view, { start, goal: beyond }), null);
+  });
+
   it('uses the same directional elevation connection cost in every object API', () => {
     const elevation = [[0.33, 0.66]];
     const elevationConnections = [[
@@ -317,16 +356,23 @@ describe('getReachableTiles', () => {
     assert.strictEqual(result.length, 3, 'Should have 3 reachable tiles');
   });
 
-  it('should block movement on dead units (corpses remain on battlefield)', () => {
+  it('should cross dead units without offering their tiles as destinations', () => {
     const terrain = createGrid(10, 10);
     const units = [
       { tileX: 6, tileY: 5, hp: 0 } // Dead unit (corpse)
     ];
-    const result = getReachableTiles(5, 5, 1, terrain, units, 10, 10);
+    const result = getReachableTiles(5, 5, 2, terrain, units, 10, 10);
 
-    const hasTile = result.some(t => t.x === 6 && t.y === 5);
-    assert.strictEqual(hasTile, false, 'Should NOT include tile with dead unit corpse');
-    assert.strictEqual(result.length, 3, 'Should have 3 reachable tiles (corpse blocks one)');
+    assert.strictEqual(
+      result.some(t => t.x === 6 && t.y === 5),
+      false,
+      'The corpse tile must not be a destination'
+    );
+    assert.deepStrictEqual(
+      result.find(t => t.x === 7 && t.y === 5),
+      { x: 7, y: 5, cost: 2 },
+      'The free tile beyond the corpse uses normal movement cost'
+    );
   });
 
   it('should handle forest terrain with higher movement cost', () => {
@@ -383,6 +429,20 @@ describe('calculatePathCost', () => {
     const terrain = createGrid(10, 10);
     const cost = calculatePathCost(5, 5, 8, 5, terrain, [], 10, 10, 10);
     assert.strictEqual(cost, 3, 'Should cost 3 to move 3 tiles on grass');
+  });
+
+  it('should charge normal cost through a corpse and reject the corpse goal', () => {
+    const terrain = createGrid(3, 1);
+    const units = [{ tileX: 1, tileY: 0, hp: 0 }];
+
+    assert.strictEqual(
+      calculatePathCost(0, 0, 2, 0, terrain, units, 2, 3, 1),
+      2
+    );
+    assert.strictEqual(
+      calculatePathCost(0, 0, 1, 0, terrain, units, 2, 3, 1),
+      Infinity
+    );
   });
 
   it('should return Infinity when target is unreachable', () => {
@@ -484,6 +544,17 @@ describe('findPath', () => {
     assert.ok(path, 'Path should exist');
     const goesThrough = path.some(p => p.x === 6 && p.y === 5);
     assert.strictEqual(goesThrough, false, 'Path should avoid occupied tile');
+  });
+
+  it('should route through a corpse but not end on it', () => {
+    const terrain = createGrid(3, 1);
+    const units = [{ tileX: 1, tileY: 0, hp: 0 }];
+
+    assert.deepStrictEqual(
+      findPath(0, 0, 2, 0, terrain, units, 3, 1),
+      [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }]
+    );
+    assert.strictEqual(findPath(0, 0, 1, 0, terrain, units, 3, 1), null);
   });
 
   it('should allow ending on occupied destination', () => {

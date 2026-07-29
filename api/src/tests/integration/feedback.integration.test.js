@@ -19,6 +19,7 @@ describe('Feedback API', () => {
   let testCharacter = null;
   let targetUser = null;
   let targetCharacter = null;
+  let targetCharacterName = null;
   const createdUserIds = [];
 
   before(async () => {
@@ -32,7 +33,11 @@ describe('Feedback API', () => {
     // Create a target user/character for abuse reports
     targetUser = await createTestUser();
     createdUserIds.push(targetUser.userId);
-    targetCharacter = await createTestCharacter(targetUser.accessToken, 'AbuseTarget');
+    targetCharacterName = `Abuse${Date.now().toString(36).slice(-8)}`;
+    targetCharacter = await createTestCharacter(
+      targetUser.accessToken,
+      targetCharacterName
+    );
   });
 
   after(async () => {
@@ -91,7 +96,7 @@ describe('Feedback API', () => {
         feedbackType: 'abuse',
         title: 'Harassment in chat',
         description: 'This player was sending inappropriate messages in global chat.',
-        reportedCharacterName: 'AbuseTarget'
+        reportedCharacterName: targetCharacterName
       }, testUser.accessToken);
 
       assert.strictEqual(res.status, 201, `Expected 201, got ${res.status}: ${JSON.stringify(res.body)}`);

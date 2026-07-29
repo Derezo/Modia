@@ -52,7 +52,7 @@ test('builds a unique deterministic recipe from semantic Modia icon families', (
     assert.equal(recipe.action.family, 'actions');
     assert.equal(recipe.impactBadge.family, 'augments');
     assert.ok(['augments', 'actions'].includes(recipe.projectileBadge?.family || 'augments'));
-    assert.ok(['status', 'actions'].includes(recipe.statusBadge?.family || 'actions'));
+    assert.ok(['status', 'actions', 'augments'].includes(recipe.statusBadge?.family || 'actions'));
     for (const layer of [recipe.action, recipe.impactBadge, recipe.projectileBadge, recipe.statusBadge]) {
       if (layer) assert.ok(fs.existsSync(layer.path), `${recipe.id} source layer ${layer.path} is missing`);
     }

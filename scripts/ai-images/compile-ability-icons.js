@@ -135,8 +135,11 @@ function parseBadgeToken(token) {
 function resolveExistingStatusAsset(ability, projectRoot) {
   const declared = publicAssetUrlToFile(projectRoot, ability.statusOverlayAssetPath);
   if (declared && fs.existsSync(declared)) {
+    const libraryFamily = ability.statusOverlayAssetPath.match(
+      /^\/assets\/icons\/originals\/(actions|augments|status)\//
+    )?.[1];
     return {
-      family: ability.statusOverlayAssetPath.includes('/status/') ? 'status' : 'custom',
+      family: libraryFamily || 'custom',
       id: ability.statusOverlay,
       path: declared
     };

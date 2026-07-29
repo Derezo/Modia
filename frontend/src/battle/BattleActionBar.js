@@ -21,6 +21,7 @@ export class BattleActionBar {
     // State
     this.canMove = true;
     this.canAct = true;
+    this.canWait = true;
     this.currentUnitMp = 0;
 
     // Callbacks
@@ -530,6 +531,14 @@ export class BattleActionBar {
    * Handle action button click
    */
   handleActionClick(action) {
+    // BattleScene owns the authoritative input gate. The booleans maintained by
+    // this component are display state only and may lag behind server events.
+    if (action !== 'escape' && this.callbacks.canUseAction &&
+        !this.callbacks.canUseAction(action)) {
+      this.closeDropdown();
+      return false;
+    }
+
     // Close any open dropdown first
     if (this.activeDropdown && action !== this.activeDropdown) {
       this.closeDropdown();
@@ -537,29 +546,22 @@ export class BattleActionBar {
 
     switch (action) {
       case 'move':
-        if (this.canMove) {
-          this.callbacks.onMove?.();
-        }
+        this.callbacks.onMove?.();
         break;
       case 'attack':
-        if (this.canAct) {
-          this.callbacks.onAttack?.();
-        }
+        this.callbacks.onAttack?.();
         break;
       case 'skill':
-        if (this.canAct) {
-          this.toggleDropdown('skill');
-        }
+        this.toggleDropdown('skill');
         break;
       case 'item':
-        if (this.canAct) {
-          this.toggleDropdown('item');
-        }
+        this.toggleDropdown('item');
         break;
       case 'wait':
         this.callbacks.onWait?.();
         break;
     }
+    return true;
   }
 
   /**
@@ -631,6 +633,11 @@ export class BattleActionBar {
     container.querySelectorAll('.dropdown-item:not(.disabled)').forEach(item => {
       item.addEventListener('click', () => {
         const skillId = item.dataset.skillId;
+        if (this.callbacks.canUseAction &&
+            !this.callbacks.canUseAction('skill')) {
+          this.closeDropdown();
+          return;
+        }
         this.closeDropdown();
         this.callbacks.onSkillSelect?.(skillId);
       });
@@ -668,6 +675,11 @@ export class BattleActionBar {
       item.addEventListener('click', () => {
         const itemId = item.dataset.itemId;
         const inventoryId = item.dataset.inventoryId;
+        if (this.callbacks.canUseAction &&
+            !this.callbacks.canUseAction('item')) {
+          this.closeDropdown();
+          return;
+        }
         this.closeDropdown();
         this.callbacks.onItemSelect?.({ itemId, inventoryId });
       });
@@ -698,28 +710,20 @@ export class BattleActionBar {
 
     switch (key) {
       case 'm':
-        if (this.canMove) {
-          e.preventDefault();
-          this.handleActionClick('move');
-        }
+        e.preventDefault();
+        this.handleActionClick('move');
         break;
       case 'a':
-        if (this.canAct) {
-          e.preventDefault();
-          this.handleActionClick('attack');
-        }
+        e.preventDefault();
+        this.handleActionClick('attack');
         break;
       case 's':
-        if (this.canAct) {
-          e.preventDefault();
-          this.handleActionClick('skill');
-        }
+        e.preventDefault();
+        this.handleActionClick('skill');
         break;
       case 'i':
-        if (this.canAct) {
-          e.preventDefault();
-          this.handleActionClick('item');
-        }
+        e.preventDefault();
+        this.handleActionClick('item');
         break;
       case 'w':
         e.preventDefault();
@@ -753,9 +757,10 @@ export class BattleActionBar {
   /**
    * Update turn state (which actions are available)
    */
-  updateTurnState(canMove, canAct, mp = 0) {
+  updateTurnState(canMove, canAct, mp = 0, canWait = true) {
     this.canMove = canMove;
     this.canAct = canAct;
+    this.canWait = canWait;
     this.currentUnitMp = mp;
 
     // Update button states
@@ -763,6 +768,7 @@ export class BattleActionBar {
     const attackBtn = this.element.querySelector('[data-action="attack"]');
     const skillBtn = this.element.querySelector('[data-action="skill"]');
     const itemBtn = this.element.querySelector('[data-action="item"]');
+    const waitBtn = this.element.querySelector('[data-action="wait"]');
 
     // Move button
     moveBtn.disabled = !canMove;
@@ -773,6 +779,7 @@ export class BattleActionBar {
       btn.disabled = !canAct;
       btn.classList.toggle('used', !canAct && this.isVisible);
     });
+    waitBtn.disabled = !canWait;
 
     // Update pips
     const movePip = this.element.querySelector('.pip-move');
@@ -794,6 +801,8 @@ export class BattleActionBar {
       stateText.textContent = 'Move Left';
     } else if (canAct) {
       stateText.textContent = 'Action Left';
+    } else if (canWait) {
+      stateText.textContent = 'End Turn';
     } else {
       stateText.textContent = 'Turn Complete';
     }
@@ -802,10 +811,10 @@ export class BattleActionBar {
   /**
    * Show the action bar
    */
-  show(canMove = true, canAct = true, mp = 0) {
+  show(canMove = true, canAct = true, mp = 0, canWait = true) {
     this.isVisible = true;
     this.element.style.display = 'block';
-    this.updateTurnState(canMove, canAct, mp);
+    this.updateTurnState(canMove, canAct, mp, canWait);
 
     // Add keyboard listener
     document.addEventListener('keydown', this.boundKeydownHandler);

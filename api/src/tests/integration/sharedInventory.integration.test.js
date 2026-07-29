@@ -17,7 +17,7 @@
  * - POST /api/inventory/discard - Deletes item from shared pool
  */
 
-import { describe, it, before, after, beforeEach, afterEach } from 'node:test';
+import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
 import {
   query,
@@ -25,6 +25,7 @@ import {
   request,
   createTestUser,
   createTestCharacter,
+  createTestPartyCharacter,
   cleanupTestUser,
   resetRateLimitersViaApi
 } from '../testHelper.js';
@@ -44,17 +45,19 @@ describe('Shared Inventory System', () => {
     // Create test user with two characters
     testUser = await createTestUser();
     testCharacter1 = await createTestCharacter(testUser.accessToken, 'InvTest1');
-    testCharacter2 = await createTestCharacter(testUser.accessToken, 'InvTest2');
+    testCharacter2 = await createTestPartyCharacter(testUser.userId, {
+      name: 'InvTest2'
+    });
 
     // Find item templates for testing
     const weaponResult = await query(
-      `SELECT id FROM item_templates WHERE item_type = 'weapon' LIMIT 1`
+      "SELECT id FROM item_templates WHERE item_type = 'weapon' LIMIT 1"
     );
     const armorResult = await query(
-      `SELECT id FROM item_templates WHERE item_type = 'armor' LIMIT 1`
+      "SELECT id FROM item_templates WHERE item_type = 'armor' LIMIT 1"
     );
     const consumableResult = await query(
-      `SELECT id FROM item_templates WHERE item_type = 'consumable' LIMIT 1`
+      "SELECT id FROM item_templates WHERE item_type = 'consumable' LIMIT 1"
     );
 
     if (weaponResult.rows.length === 0 || armorResult.rows.length === 0) {
@@ -202,6 +205,78 @@ describe('Shared Inventory System', () => {
   });
 
   describe('POST /api/inventory/equip', () => {
+    it('should serialize equipment changes behind the battle character lock', async () => {
+      const itemId = await createSharedPoolItem(
+        testUser.userId,
+        weaponTemplateId,
+        1,
+        false
+      );
+      const locker = await getClient();
+      let transactionOpen = false;
+      let equipRequest = null;
+      let requestSettled = false;
+
+      try {
+        await locker.query('BEGIN');
+        transactionOpen = true;
+        await locker.query(
+          'SELECT id FROM characters WHERE id = $1 FOR UPDATE',
+          [testCharacter1.id]
+        );
+
+        equipRequest = request('POST', '/api/inventory/equip', {
+          characterId: testCharacter1.id,
+          itemInstanceId: itemId,
+          slot: 'main_hand'
+        }, testUser.accessToken).then((response) => {
+          requestSettled = true;
+          return response;
+        });
+
+        await new Promise(resolve => setTimeout(resolve, 50));
+        assert.strictEqual(
+          requestSettled,
+          false,
+          'equip should wait for the character row lock'
+        );
+
+        await locker.query(
+          'UPDATE characters SET in_battle = true WHERE id = $1',
+          [testCharacter1.id]
+        );
+        await locker.query('COMMIT');
+        transactionOpen = false;
+
+        const response = await equipRequest;
+        assert.strictEqual(response.status, 400);
+        assert.match(response.body.error, /during battle/i);
+
+        const persisted = await query(
+          `SELECT character_id, user_id, equipped_slot
+           FROM character_items
+           WHERE id = $1`,
+          [itemId]
+        );
+        assert.strictEqual(persisted.rows[0].character_id, null);
+        assert.strictEqual(persisted.rows[0].user_id, testUser.userId);
+        assert.strictEqual(persisted.rows[0].equipped_slot, null);
+      } finally {
+        if (transactionOpen) {
+          await locker.query('ROLLBACK');
+        }
+        locker.release();
+        if (equipRequest) {
+          await equipRequest.catch(() => {});
+        }
+        await query(
+          'UPDATE characters SET in_battle = false WHERE id = $1',
+          [testCharacter1.id]
+        );
+        await cleanupTestItems([itemId]);
+      }
+    });
+
     it('should move item from shared pool to character equipment', async () => {
       const createdItems = [];
 
@@ -400,6 +475,42 @@ describe('Shared Inventory System', () => {
   });
 
   describe('POST /api/inventory/unequip', () => {
+    it('should not unequip items after the character enters battle', async () => {
+      const itemId = await createEquippedItem(
+        testCharacter1.id,
+        weaponTemplateId,
+        'main_hand'
+      );
+      await query(
+        'UPDATE characters SET in_battle = true WHERE id = $1',
+        [testCharacter1.id]
+      );
+
+      try {
+        const response = await request('POST', '/api/inventory/unequip', {
+          characterId: testCharacter1.id,
+          slot: 'main_hand'
+        }, testUser.accessToken);
+
+        assert.strictEqual(response.status, 400);
+        assert.match(response.body.error, /during battle/i);
+        const persisted = await query(
+          `SELECT character_id, equipped_slot
+           FROM character_items
+           WHERE id = $1`,
+          [itemId]
+        );
+        assert.strictEqual(persisted.rows[0].character_id, testCharacter1.id);
+        assert.strictEqual(persisted.rows[0].equipped_slot, 'main_hand');
+      } finally {
+        await query(
+          'UPDATE characters SET in_battle = false WHERE id = $1',
+          [testCharacter1.id]
+        );
+        await cleanupTestItems([itemId]);
+      }
+    });
+
     it('should move item from character equipment to shared pool', async () => {
       const createdItems = [];
 
@@ -520,6 +631,44 @@ describe('Shared Inventory System', () => {
         res.body.error && res.body.error.includes('Invalid'),
         'Error should indicate invalid slot'
       );
+    });
+  });
+
+  describe('POST /api/inventory/use', () => {
+    it('should not consume shared items while the target is in battle', async () => {
+      if (!consumableTemplateId) return;
+
+      const itemId = await createSharedPoolItem(
+        testUser.userId,
+        consumableTemplateId,
+        2,
+        false
+      );
+      await query(
+        'UPDATE characters SET in_battle = true WHERE id = $1',
+        [testCharacter1.id]
+      );
+
+      try {
+        const response = await request('POST', '/api/inventory/use', {
+          itemInstanceId: itemId,
+          targetCharacterId: testCharacter1.id
+        }, testUser.accessToken);
+
+        assert.strictEqual(response.status, 400);
+        assert.match(response.body.error, /during battle/i);
+        const persisted = await query(
+          'SELECT quantity FROM character_items WHERE id = $1',
+          [itemId]
+        );
+        assert.strictEqual(persisted.rows[0].quantity, 2);
+      } finally {
+        await query(
+          'UPDATE characters SET in_battle = false WHERE id = $1',
+          [testCharacter1.id]
+        );
+        await cleanupTestItems([itemId]);
+      }
     });
   });
 
@@ -809,7 +958,7 @@ describe('Shared Inventory System', () => {
 
       try {
         otherUser = await createTestUser();
-        const otherCharacter = await createTestCharacter(otherUser.accessToken, 'OtherCh');
+        await createTestCharacter(otherUser.accessToken, 'OtherCh');
 
         // Create shared pool item for each user
         const user1ItemId = await createSharedPoolItem(testUser.userId, weaponTemplateId, 1, false);

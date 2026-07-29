@@ -18,6 +18,52 @@ const terminalState = {
 };
 
 describe('BattleStatePoller terminal recovery', () => {
+  it('detects authoritative action availability and unit action-flag drift', () => {
+    const poller = new BattleStatePoller(1, () => {}, {});
+    poller.setLocalState({
+      ...activeState,
+      stateRevision: 4,
+      turnPhase: 'ready',
+      availableActions: { canMove: true, canAct: true },
+      units: [{
+        ...activeState.units[0],
+        moveUsed: false,
+        actUsed: false,
+        turnPhase: 'ready'
+      }]
+    });
+
+    const serverState = {
+      ...activeState,
+      stateRevision: 5,
+      turnPhase: 'partial',
+      availableActions: { canMove: true, canAct: false },
+      units: [{
+        ...activeState.units[0],
+        moveUsed: false,
+        actUsed: true,
+        turnPhase: 'partial'
+      }]
+    };
+
+    assert.equal(poller.hasStateDrift(serverState), true);
+  });
+
+  it('ignores a delayed poll response older than the applied revision', () => {
+    const poller = new BattleStatePoller(1, () => {}, {});
+    poller.setLocalState({
+      ...activeState,
+      stateRevision: 6,
+      availableActions: { canMove: true, canAct: false }
+    });
+
+    assert.equal(poller.hasStateDrift({
+      ...activeState,
+      stateRevision: 5,
+      availableActions: { canMove: true, canAct: true }
+    }), false);
+  });
+
   it('prioritizes terminal status over simultaneous turn drift', () => {
     const poller = new BattleStatePoller(1, () => {}, {}, () => {});
     poller.setLocalState(activeState);

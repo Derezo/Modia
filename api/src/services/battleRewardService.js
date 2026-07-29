@@ -19,7 +19,9 @@ import * as battleService from './battleService.js';
 import * as itemDropService from './itemDropService.js';
 import * as advancementQuestService from './advancementQuestService.js';
 import * as dailyQuestService from './dailyQuestService.js';
-import battleStateRepository from './battle/BattleStateRepository.js';
+import battleStateRepository, {
+  BattleStateConflictError
+} from './battle/BattleStateRepository.js';
 import { extractBattleMutableState } from './battle/battleMapGenerationService.js';
 
 /**
@@ -100,6 +102,40 @@ export async function computeRewards(state, battleId) {
 }
 
 /**
+ * Resolve the authoritative character participants for one user's rewards.
+ *
+ * Standard PvE units use their character ID as `id`, while advancement
+ * battles use a presentation-safe string ID and retain the database ID in
+ * `characterId`.
+ *
+ * @param {Array<Object>} players - Player units from the completed battle
+ * @param {number} userId - User receiving rewards
+ * @returns {number[]} Unique character IDs in battle-state order
+ */
+export function getRewardParticipantCharacterIds(players, userId) {
+  const normalizedUserId = Number(userId);
+  const characterIds = [];
+  const seen = new Set();
+
+  for (const player of players || []) {
+    const rawOwnerId = player?.ownerId ?? player?.userId;
+    if (rawOwnerId != null && Number(rawOwnerId) !== normalizedUserId) {
+      continue;
+    }
+
+    const characterId = Number(player?.characterId ?? player?.id);
+    if (!Number.isSafeInteger(characterId) || characterId <= 0 || seen.has(characterId)) {
+      continue;
+    }
+
+    seen.add(characterId);
+    characterIds.push(characterId);
+  }
+
+  return characterIds;
+}
+
+/**
  * Distribute rewards to the user within a transaction.
  *
  * @param {number} userId - User to receive rewards
@@ -112,9 +148,13 @@ export async function distributeRewards(
   userId,
   rewardsData,
   battleId,
-  { finalState = null, client = null } = {}
+  { finalState = null, client = null, battleCommand = null } = {}
 ) {
   const { gold, experience, droppedItems, items, nodeId, nodeType, players } = rewardsData;
+  const participantCharacterIds = getRewardParticipantCharacterIds(players, userId);
+  if (participantCharacterIds.length === 0) {
+    throw new Error(`Battle ${battleId} has no reward participants for user ${userId}`);
+  }
 
   const distribute = async (transactionClient) => {
     const rewardsRecord = {
@@ -128,6 +168,27 @@ export async function distributeRewards(
     });
     await clearAdvancementChallengerStatus(transactionClient, battle);
     if (battle.rewards !== null) {
+      if (battleCommand) {
+        const commandReceipt = await battleStateRepository.findCommandReceipt({
+          battleId,
+          commandType: battleCommand.commandType,
+          idempotencyKey: battleCommand.idempotencyKey,
+          idempotencyRequest: battleCommand.idempotencyRequest
+        }, { client: transactionClient });
+        if (!commandReceipt) {
+          throw new BattleStateConflictError(
+            `Battle ${battleId} completed without the requested command receipt`,
+            { battleId, actualRevision: battle.stateRevision }
+          );
+        }
+        return {
+          rewards: battle.rewards,
+          envelope: battle,
+          update: null,
+          idempotent: true,
+          commandReceipt
+        };
+      }
       return {
         rewards: battle.rewards,
         envelope: battle,
@@ -141,6 +202,7 @@ export async function distributeRewards(
       expectedRevision: battle.stateRevision,
       commandType: 'battle_rewards',
       idempotencyKey: `battle-rewards:${battleId}:${userId}`,
+      ...(battleCommand ?? {}),
       mutableState: finalState === null
         ? battle.mutableState
         : extractBattleMutableState(finalState)
@@ -169,7 +231,8 @@ export async function distributeRewards(
         rewards: stored.rewards,
         envelope: stored,
         update: null,
-        idempotent: true
+        idempotent: true,
+        ...(battleCommand ? { commandReceipt: committed } : {})
       };
     }
 
@@ -179,14 +242,14 @@ export async function distributeRewards(
       [gold, MAX_GOLD, userId]
     );
 
-    // Distribute XP to battle party characters
-    const xpPerCharacter = Math.floor(experience / Math.max(players.length, 1));
+    // Distribute XP only to characters recorded as participants in battle state.
+    const xpPerCharacter = Math.floor(experience / participantCharacterIds.length);
     await transactionClient.query(
       `UPDATE characters
        SET experience = experience + $1,
            in_battle = false
-       WHERE user_id = $2 AND party_slot <= $3 AND party_slot IS NOT NULL`,
-      [xpPerCharacter, userId, MAX_BATTLE_PARTY_SIZE]
+       WHERE user_id = $2 AND id = ANY($3::int[])`,
+      [xpPerCharacter, userId, participantCharacterIds]
     );
 
     // Store dropped items in user's shared inventory
@@ -208,7 +271,8 @@ export async function distributeRewards(
       rewards: rewardsRecord,
       envelope: committed.envelope,
       update: committed.update,
-      idempotent: false
+      idempotent: false,
+      commandReceipt: committed
     };
   };
 

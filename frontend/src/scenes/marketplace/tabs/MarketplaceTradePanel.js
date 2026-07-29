@@ -370,9 +370,9 @@ async function executeOrder(context) {
 
     // Play appropriate sound effect
     if (orderSide === 'buy') {
-      game.audio?.playSFX('gold_spend');
+      game.audio?.playInteraction('gold_spend');
     } else {
-      game.audio?.playSFX('gold_receive');
+      game.audio?.playInteraction('gold_receive');
     }
 
     // Show success toast

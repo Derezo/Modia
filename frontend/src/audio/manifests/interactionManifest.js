@@ -1,5 +1,5 @@
 /**
- * Interaction Sound Manifest - 26 effects
+ * Interaction Sound Manifest - 25 effects
  * Equipment, inventory, and game interaction sounds
  */
 

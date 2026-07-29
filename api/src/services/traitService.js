@@ -15,9 +15,10 @@ import {
 /**
  * Load traits for a list of character IDs
  * @param {number[]} characterIds - Array of character IDs
+ * @param {{client?: Object|null}} [options] - Optional transaction client
  * @returns {Promise<Object>} Map of characterId -> array of trait objects
  */
-async function loadCharacterTraits(characterIds) {
+async function loadCharacterTraits(characterIds, { client = null } = {}) {
   if (!characterIds || characterIds.length === 0) {
     console.log('[TraitService] loadCharacterTraits called with empty/null characterIds');
     return {};
@@ -25,7 +26,10 @@ async function loadCharacterTraits(characterIds) {
 
   console.log('[TraitService] Loading traits for characters:', characterIds);
 
-  const result = await query(
+  const executeQuery = client
+    ? client.query.bind(client)
+    : query;
+  const result = await executeQuery(
     `SELECT ct.character_id, t.id, t.name, t.description, t.category,
             t.rarity, t.effect_type, t.effect_value
      FROM character_traits ct

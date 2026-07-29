@@ -1,7 +1,7 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
 import {
-  request,
+  rateLimitedRequest,
   fireRequests,
   uniqueEmail,
   uniqueUsername,
@@ -9,22 +9,20 @@ import {
   getRateLimiterStats,
   isRateLimitingEnabled,
   cleanupTestUser,
-  registerCleanup,
-  runCleanup,
-  query
+  runCleanup
 } from '../testHelper.js';
 
 describe('Auth Rate Limiting', () => {
   const createdUserIds = [];
 
-  before(() => {
+  before(async () => {
     // Verify rate limiting is enabled for these tests
     assert.strictEqual(
       isRateLimitingEnabled(),
       true,
       'Rate limiting must be enabled for rate limit tests. Set TEST_RATE_LIMITS=true'
     );
-    resetAllLimiterStats();
+    await resetAllLimiterStats();
   });
 
   after(async () => {
@@ -37,9 +35,8 @@ describe('Auth Rate Limiting', () => {
 
   describe('Login Rate Limiting', () => {
     it('should allow requests up to the limit', async () => {
-      // Auth limiter has base 10 requests, production multiplier 2x = 20 requests per 15 min
-      // With TEST_RATE_LIMITS=true, we use production limits
-      const limit = 20;
+      // TEST_RATE_LIMITS uses the configured base maximum.
+      const limit = 10;
       const credentials = {
         username: 'nonexistent_user',
         password: 'testInvalidCredential123'
@@ -58,7 +55,7 @@ describe('Auth Rate Limiting', () => {
     });
 
     it('should block requests beyond the limit', async () => {
-      // Continue from previous test - we've already used 20 requests
+      // Continue from previous test - we've already used 10 requests
       // Fire a few more to trigger rate limiting
       const extraRequests = 5;
       const credentials = {
@@ -84,7 +81,7 @@ describe('Auth Rate Limiting', () => {
     });
 
     it('should track stats correctly', async () => {
-      const stats = getRateLimiterStats('auth');
+      const stats = await getRateLimiterStats('auth');
       assert.ok(stats, 'Auth limiter stats should exist');
       assert.ok(stats.calls > 0, 'Should have tracked calls');
       assert.ok(stats.blocked > 0, 'Should have tracked blocked requests');
@@ -92,15 +89,15 @@ describe('Auth Rate Limiting', () => {
   });
 
   describe('Registration Rate Limiting', () => {
-    before(() => {
+    before(async () => {
       // Reset stats for this test group
-      resetAllLimiterStats();
+      await resetAllLimiterStats();
     });
 
     it('should rate limit registration attempts', async () => {
       // Auth limiter is shared between login and register
       // Fire many registration requests with unique emails
-      const limit = 20;
+      const limit = 10;
       const overLimit = 5;
       const totalRequests = limit + overLimit;
 
@@ -115,7 +112,7 @@ describe('Auth Rate Limiting', () => {
 
       const responses = [];
       for (const body of requests) {
-        const res = await request('POST', '/api/auth/register', body);
+        const res = await rateLimitedRequest('POST', '/api/auth/register', body);
         responses.push(res);
 
         // Track created users for cleanup

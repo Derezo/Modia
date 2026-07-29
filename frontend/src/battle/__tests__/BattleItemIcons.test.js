@@ -460,4 +460,47 @@ describe('canonical battle item icons', () => {
       true
     );
   });
+
+  it('resolves reported augment categories to existing files without duplicate requests', async () => {
+    const reportedCategories = [
+      'undead_slayer',
+      'agility',
+      'damage',
+      'undead_slayer',
+      'demon_slayer',
+      'magic_defense',
+      'power',
+      'hp',
+      'agility',
+      'intelligence',
+      'strength',
+      'crit',
+      'armor',
+      '../augment_fire',
+      'unknown'
+    ];
+
+    const src = await getBattleItemCompositeSrc({
+      name: 'Aliased Augment Item',
+      itemType: 'weapon',
+      rarity: 'common',
+      spriteId: 'sword_short',
+      augments: reportedCategories.map(category => ({ category }))
+    });
+
+    assert.equal(src, 'data:image/png;base64,composited');
+    const augmentRequests = FakeImage.instances
+      .map(image => image.src)
+      .filter(path => path?.includes('/augments/'));
+    assert.deepEqual(augmentRequests.sort(), [
+      '/assets/overlays/128/augments/augment_arcane.webp',
+      '/assets/overlays/128/augments/augment_critical.webp',
+      '/assets/overlays/128/augments/augment_earth.webp',
+      '/assets/overlays/128/augments/augment_slayer.webp',
+      '/assets/overlays/128/augments/augment_speed.webp',
+      '/assets/overlays/128/augments/augment_vitality.webp'
+    ]);
+    assert.equal(augmentRequests.some(path => path.includes('undead_slayer')), false);
+    assert.equal(augmentRequests.some(path => path.includes('augment_augment_')), false);
+  });
 });

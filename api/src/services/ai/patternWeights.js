@@ -14,7 +14,7 @@
  * - SURVIVAL_PRIORITY: Urgency/risk from low HP and nearby enemies (0-200, cost)
  * - MP_EFFICIENCY: Value of conserving MP (0-100)
  * - TARGET_PRIORITY: Preference for specific targets (0-100)
- * - strategicPathProgress: Reward for following optimal path to enemies (0-1)
+ * - strategicPathProgress: Reward for following optimal path to enemies (0-100)
  * - waitingPenalty: Penalty for waiting when enemies are far (use negative weight)
  */
 
@@ -36,8 +36,8 @@ const PATTERN_WEIGHTS = {
       SURVIVAL_PRIORITY: 0.3,
       MP_EFFICIENCY: 0.5,
       TARGET_PRIORITY: 1.2,
-      strategicPathProgress: 0.25,
-      waitingPenalty: -0.3
+      strategicPathProgress: 0.75,
+      waitingPenalty: -1.0
     }
   },
 
@@ -58,8 +58,8 @@ const PATTERN_WEIGHTS = {
       SURVIVAL_PRIORITY: 2.5,
       MP_EFFICIENCY: 1.0,
       TARGET_PRIORITY: 0.8,
-      strategicPathProgress: 0.10,
-      waitingPenalty: -0.1
+      strategicPathProgress: 0.75,
+      waitingPenalty: -0.4
     }
   },
 
@@ -80,8 +80,8 @@ const PATTERN_WEIGHTS = {
       SURVIVAL_PRIORITY: 2.0,
       MP_EFFICIENCY: 1.5,
       TARGET_PRIORITY: 0.5,
-      strategicPathProgress: 0.15,
-      waitingPenalty: -0.1
+      strategicPathProgress: 0.8,
+      waitingPenalty: -0.5
     }
   },
 
@@ -102,8 +102,8 @@ const PATTERN_WEIGHTS = {
       SURVIVAL_PRIORITY: 1.5,
       MP_EFFICIENCY: 1.2,
       TARGET_PRIORITY: 2.0,
-      strategicPathProgress: 0.20,
-      waitingPenalty: -0.2
+      strategicPathProgress: 0.75,
+      waitingPenalty: -0.75
     }
   },
 
@@ -124,8 +124,8 @@ const PATTERN_WEIGHTS = {
       SURVIVAL_PRIORITY: 1.0,
       MP_EFFICIENCY: 0.8,
       TARGET_PRIORITY: 1.5,
-      strategicPathProgress: 0.20,
-      waitingPenalty: -0.25
+      strategicPathProgress: 1.0,
+      waitingPenalty: -0.75
     }
   },
 
@@ -146,7 +146,7 @@ const PATTERN_WEIGHTS = {
       SURVIVAL_PRIORITY: 1.8,
       MP_EFFICIENCY: 1.0,
       TARGET_PRIORITY: 2.5,
-      strategicPathProgress: 0.10,
+      strategicPathProgress: 0.4,
       waitingPenalty: -0.05
     }
   },
@@ -168,8 +168,8 @@ const PATTERN_WEIGHTS = {
       SURVIVAL_PRIORITY: 0.0,
       MP_EFFICIENCY: 0.0,
       TARGET_PRIORITY: 1.0,
-      strategicPathProgress: 0.35,
-      waitingPenalty: -0.5
+      strategicPathProgress: 1.0,
+      waitingPenalty: -1.25
     }
   },
 
@@ -190,8 +190,8 @@ const PATTERN_WEIGHTS = {
       SURVIVAL_PRIORITY: 1.8,
       MP_EFFICIENCY: 1.5,
       TARGET_PRIORITY: 1.5,
-      strategicPathProgress: 0.15,
-      waitingPenalty: -0.15
+      strategicPathProgress: 0.55,
+      waitingPenalty: -0.5
     }
   },
 
@@ -212,8 +212,8 @@ const PATTERN_WEIGHTS = {
       SURVIVAL_PRIORITY: 2.0,
       MP_EFFICIENCY: 1.2,
       TARGET_PRIORITY: 1.5,
-      strategicPathProgress: 0.10,
-      waitingPenalty: -0.25
+      strategicPathProgress: 0.65,
+      waitingPenalty: -0.65
     }
   },
 
@@ -234,8 +234,8 @@ const PATTERN_WEIGHTS = {
       SURVIVAL_PRIORITY: 1.5,
       MP_EFFICIENCY: 1.0,
       TARGET_PRIORITY: 1.8,
-      strategicPathProgress: 0.20,
-      waitingPenalty: -0.2
+      strategicPathProgress: 0.70,
+      waitingPenalty: -0.75
     }
   }
 };

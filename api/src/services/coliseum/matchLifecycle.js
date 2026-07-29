@@ -576,10 +576,15 @@ function checkMatchReady(matchId) {
  * Get a player's battle party characters with stats and equipment
  * Uses LATERAL JOIN to properly extract equipment bonuses from stat_bonuses JSON field
  * @param {number} userId - User ID
+ * @param {Object|null} client - Optional caller-owned pg client
+ * @param {Array<number>|null} characterIds - Optional exact character IDs to hydrate
  * @returns {Promise<Array>} Battle party characters
  */
-async function getPlayerBattleParty(userId) {
-  const result = await query(
+async function getPlayerBattleParty(userId, client = null, characterIds = null) {
+  const executeQuery = client
+    ? client.query.bind(client)
+    : query;
+  const result = await executeQuery(
     `SELECT c.id, c.name, c.class, c.level, c.race, c.gender,
             c.hp_current, c.hp_max, c.mp_current, c.mp_max,
             c.strength, c.intelligence, c.agility, c.vitality, c.luck,
@@ -612,19 +617,22 @@ async function getPlayerBattleParty(userId) {
        JOIN item_templates it ON ci.item_template_id = it.id
        WHERE ci.character_id = c.id AND ci.equipped_slot IS NOT NULL
      ) eq ON true
-     WHERE c.user_id = $1 AND c.party_slot IS NOT NULL AND c.party_slot <= $2
+     WHERE c.user_id = $1
+       AND ($2::int[] IS NULL OR c.id = ANY($2::int[]))
+       AND c.party_slot IS NOT NULL
+       AND c.party_slot <= $3
      ORDER BY c.party_slot`,
-    [userId, MAX_BATTLE_PARTY_SIZE]
+    [userId, characterIds, MAX_BATTLE_PARTY_SIZE]
   );
 
   // Get skills for each character with full definitions (matching PvE pattern)
   const characters = result.rows;
-  const characterIds = characters.map(c => c.id);
-  const skillsResult = await query(
+  const hydratedCharacterIds = characters.map(c => c.id);
+  const skillsResult = await executeQuery(
     `SELECT character_id, skill_id, level
      FROM character_skills
      WHERE character_id = ANY($1)`,
-    [characterIds]
+    [hydratedCharacterIds]
   );
 
   // Group skills by character and enhance with skill definitions
@@ -652,6 +660,104 @@ async function getPlayerBattleParty(userId) {
 }
 
 /**
+ * Select only the configured battle-party characters present in a formation.
+ * Formation keys are serialized as strings while database IDs may be numbers.
+ *
+ * @param {Array<Object>} party - Configured battle-party characters
+ * @param {Object} formation - Submitted formation keyed by character ID
+ * @returns {Array<Object>} Selected characters in configured party order
+ */
+export function selectFormationParty(party, formation) {
+  const selectedIds = new Set(Object.keys(formation).map(String));
+  return party.filter(character => selectedIds.has(String(character.id)));
+}
+
+/**
+ * Serialize Coliseum creation against every battle lifecycle for both users,
+ * then recheck the exact selected characters and authoritative battle records
+ * inside the transaction.
+ */
+export async function reserveColiseumBattleParticipants(client, participants) {
+  if (!client || typeof client.query !== 'function') {
+    throw new TypeError('reserveColiseumBattleParticipants requires a pg client');
+  }
+  if (!Array.isArray(participants) || participants.length !== 2) {
+    throw new TypeError('A Coliseum battle requires two distinct users');
+  }
+  const normalizedParticipants = participants.map((participant) => {
+    const userId = Number(participant?.userId);
+    if (!Number.isSafeInteger(userId) || userId < 1) {
+      throw new TypeError('Coliseum participant user IDs must be positive safe integers');
+    }
+    if (!Array.isArray(participant.characterIds) || participant.characterIds.length === 0) {
+      throw new TypeError('Each Coliseum participant requires selected characters');
+    }
+    const characterIds = participant.characterIds.map(Number);
+    if (characterIds.some(characterId =>
+      !Number.isSafeInteger(characterId) || characterId < 1)) {
+      throw new TypeError('Selected character IDs must be positive safe integers');
+    }
+    const uniqueCharacterIds = [...new Set(characterIds)]
+      .sort((left, right) => left - right);
+    if (uniqueCharacterIds.length !== characterIds.length) {
+      throw new TypeError('Selected character IDs must be distinct');
+    }
+    return { userId, characterIds: uniqueCharacterIds };
+  }).sort((left, right) => left.userId - right.userId);
+  const participantUserIds = normalizedParticipants.map(participant => participant.userId);
+  if (new Set(participantUserIds).size !== 2) {
+    throw new TypeError('A Coliseum battle requires two distinct users');
+  }
+  // Lock every owned character to preserve the user-wide battle lifecycle
+  // mutex shared with PvE and advancement battle creation. Only the exact
+  // submitted IDs are validated, hydrated, snapshotted, and updated below.
+  const lockedCharacters = await client.query(
+    `SELECT id, user_id, party_slot, in_battle
+     FROM characters
+     WHERE user_id = ANY($1::int[])
+     ORDER BY user_id, id
+     FOR UPDATE`,
+    [participantUserIds]
+  );
+  const lockedById = new Map(
+    lockedCharacters.rows.map(character => [String(character.id), character])
+  );
+  const selectedCharacters = [];
+  for (const participant of normalizedParticipants) {
+    for (const characterId of participant.characterIds) {
+      const character = lockedById.get(String(characterId));
+      const partySlot = Number(character?.party_slot);
+      if (
+        !character
+        || Number(character.user_id) !== participant.userId
+        || !Number.isSafeInteger(partySlot)
+        || partySlot < 1
+        || partySlot > MAX_BATTLE_PARTY_SIZE
+        || character.in_battle !== false
+      ) {
+        const error = new Error(
+          'A selected Coliseum character is no longer owned, eligible, or available'
+        );
+        error.code = 'COLISEUM_PARTICIPANTS_CHANGED';
+        throw error;
+      }
+      selectedCharacters.push(character);
+    }
+  }
+
+  const hasActiveBattle = await battleStateRepository.hasActiveBattleForAnyPlayer(
+    participantUserIds,
+    { client }
+  );
+  if (hasActiveBattle) {
+    const error = new Error('A matched player is already in an active battle');
+    error.code = 'COLISEUM_BATTLE_ALREADY_ACTIVE';
+    throw error;
+  }
+  return selectedCharacters;
+}
+
+/**
  * Start the match with submitted formations (create PvP battle)
  * @param {number} matchId - Match ID
  */
@@ -675,24 +781,10 @@ async function startMatchWithFormations(matchId) {
   pendingFormations.delete(matchId);
 
   try {
-    // Get battle party characters for both players
-    const [player1Party, player2Party] = await Promise.all([
-      getPlayerBattleParty(match.player1.userId),
-      getPlayerBattleParty(match.player2.userId)
-    ]);
-
-    // Validate battle party data
-    if (!player1Party || player1Party.length === 0) {
-      console.error('Player 1 battle party is empty or undefined:', match.player1.userId);
-      cancelMatch(matchId, 'Battle party data unavailable');
-      return;
-    }
-    if (!player2Party || player2Party.length === 0) {
-      console.error('Player 2 battle party is empty or undefined:', match.player2.userId);
-      cancelMatch(matchId, 'Battle party data unavailable');
-      return;
-    }
-
+    const player1CharacterIds = Object.keys(player1Formation).map(Number);
+    const player2CharacterIds = Object.keys(player2Formation).map(Number);
+    const player1FormationSize = player1CharacterIds.length;
+    const player2FormationSize = player2CharacterIds.length;
     const serverAllowsV2 = isBattleMapV2EnabledForMode('pvp_coliseum');
     const player1Version = selectBattleMapGenerationVersion({
       mode: 'pvp_coliseum',
@@ -711,145 +803,6 @@ async function startMatchWithFormations(matchId) {
       'arena',
       terrainGenerationVersion
     );
-
-    // Build initial battle state
-    const initialState = {
-      turn: 1,
-      phase: 'action',
-      activeUnit: null,
-      status: 'active',
-      battleType: 'pvp',
-      player1Id: match.player1.userId,
-      player2Id: match.player2.userId,
-      units: [],
-      consumables: [],
-      log: [{ type: 'battle_start', message: 'PvP Battle begins!', timestamp: Date.now() }]
-    };
-
-    // Add player 1's units (bottom side of map) - Team 1
-    // Use submitted formation if available, otherwise use default positions
-    player1Party.forEach((char, idx) => {
-      const formationPos = player1Formation[char.id];
-      let tileX = 4 + (idx % 3) * 2;  // Default
-      let tileY = 26 - Math.floor(idx / 3) * 2;  // Default bottom
-
-      if (formationPos) {
-        // Map 5x4 formation grid to battle map
-        // Formation X: 0-4 -> Battle X: 2-10 (spread across center-bottom)
-        // Formation Y: 0-3 -> Battle Y: 24-27 (bottom of map)
-        tileX = 2 + formationPos.tileX * 2;
-        tileY = 27 - formationPos.tileY;
-      }
-
-      initialState.units.push(withBattleVisualIdentity({
-        id: char.id,
-        type: 'player',
-        teamId: 1, // Player 1's units are on team 1
-        ownerId: match.player1.userId,
-        name: char.name,
-        class: char.class,
-        level: char.level,
-        race: char.race,
-        gender: char.gender,
-        hp: char.hp_current,
-        maxHp: char.hp_max + (parseInt(char.equip_hp, 10) || 0),
-        mp: char.mp_current,
-        maxMp: char.mp_max + (parseInt(char.equip_mp, 10) || 0),
-        strength: char.strength + (parseInt(char.equip_strength, 10) || 0),
-        intelligence: char.intelligence + (parseInt(char.equip_intelligence, 10) || 0),
-        agility: char.agility + (parseInt(char.equip_agility, 10) || 0),
-        vitality: char.vitality + (parseInt(char.equip_vitality, 10) || 0),
-        luck: char.luck + (parseInt(char.equip_luck, 10) || 0),
-        attack: parseInt(char.equip_attack, 10) || 0,
-        defense: parseInt(char.equip_defense, 10) || 0,
-        magicAttack: parseInt(char.equip_magic_attack, 10) || 0,
-        magicDefense: parseInt(char.equip_magic_defense, 10) || 0,
-        tileX,
-        tileY,
-        ct: 0,
-        hasActed: false,
-        statusEffects: [],
-        skills: char.skills || []
-      }, {
-        kind: 'player',
-        id: char.id
-      }));
-    });
-
-    // Add player 2's units (top side of map) - Team 2
-    // Use submitted formation if available, otherwise use default positions
-    player2Party.forEach((char, idx) => {
-      const formationPos = player2Formation[char.id];
-      let tileX = 4 + (idx % 3) * 2;  // Default
-      let tileY = 5 + Math.floor(idx / 3) * 2;  // Default top
-
-      if (formationPos) {
-        // Map 5x4 formation grid to battle map
-        // Player 2 is at top of map
-        tileX = 2 + formationPos.tileX * 2;
-        tileY = 4 + formationPos.tileY;
-      }
-
-      initialState.units.push(withBattleVisualIdentity({
-        id: char.id,
-        type: 'player',
-        teamId: 2, // Player 2's units are on team 2
-        ownerId: match.player2.userId,
-        name: char.name,
-        class: char.class,
-        level: char.level,
-        race: char.race,
-        gender: char.gender,
-        hp: char.hp_current,
-        maxHp: char.hp_max + (parseInt(char.equip_hp, 10) || 0),
-        mp: char.mp_current,
-        maxMp: char.mp_max + (parseInt(char.equip_mp, 10) || 0),
-        strength: char.strength + (parseInt(char.equip_strength, 10) || 0),
-        intelligence: char.intelligence + (parseInt(char.equip_intelligence, 10) || 0),
-        agility: char.agility + (parseInt(char.equip_agility, 10) || 0),
-        vitality: char.vitality + (parseInt(char.equip_vitality, 10) || 0),
-        luck: char.luck + (parseInt(char.equip_luck, 10) || 0),
-        attack: parseInt(char.equip_attack, 10) || 0,
-        defense: parseInt(char.equip_defense, 10) || 0,
-        magicAttack: parseInt(char.equip_magic_attack, 10) || 0,
-        magicDefense: parseInt(char.equip_magic_defense, 10) || 0,
-        tileX,
-        tileY,
-        ct: 0,
-        hasActed: false,
-        statusEffects: [],
-        skills: char.skills || []
-      }, {
-        kind: 'player',
-        id: char.id
-      }));
-    });
-
-    // Initialize CT values for all units
-    battleService.initializeCT(initialState.units);
-
-    // Advance CT and find the first actor
-    battleService.advanceToNextActor(initialState);
-
-    // Generate turn predictions
-    initialState.turnPredictions = battleService.predictTurnOrder(initialState, 10);
-
-    const generatedMap = await generateBattleMap({
-      terrainSeed: mapSeed,
-      nodeType: 'arena',
-      mapWidth: 32,
-      mapHeight: 32,
-      mode: 'pvp_coliseum',
-      playerCount: player1Party.length,
-      enemyCount: player2Party.length,
-      enemyCapacity: player2Party.length,
-      existingUnits: initialState.units,
-      initialMutableState: initialState,
-      allowV2: useV2,
-      clientCapabilities: useV2
-        ? match.player1.battleMapCapabilities
-        : null
-    });
     const creationIdempotencyKey = [
       'coliseum',
       match.queueType,
@@ -859,6 +812,179 @@ async function startMatchWithFormations(matchId) {
       match.player2.userId
     ].join(':');
     const created = await withTransaction(async client => {
+      const lockedParticipants = await reserveColiseumBattleParticipants(client, [
+        {
+          userId: match.player1.userId,
+          characterIds: player1CharacterIds
+        },
+        {
+          userId: match.player2.userId,
+          characterIds: player2CharacterIds
+        }
+      ]);
+      const lockedIdsByUser = new Map();
+      for (const character of lockedParticipants) {
+        const userId = Number(character.user_id);
+        const characterIds = lockedIdsByUser.get(userId) ?? [];
+        characterIds.push(Number(character.id));
+        lockedIdsByUser.set(userId, characterIds);
+      }
+
+      // Hydrate the exact reserved characters through the transaction client.
+      // Character mutations in inventory/skill flows serialize on the locked rows.
+      const loadedPlayer1Party = await getPlayerBattleParty(
+        match.player1.userId,
+        client,
+        player1CharacterIds
+      );
+      const loadedPlayer2Party = await getPlayerBattleParty(
+        match.player2.userId,
+        client,
+        player2CharacterIds
+      );
+      const player1Party = selectFormationParty(loadedPlayer1Party, player1Formation);
+      const player2Party = selectFormationParty(loadedPlayer2Party, player2Formation);
+
+      // A validated formation must still resolve exactly after party data is loaded.
+      if (player1FormationSize === 0 || player1Party.length !== player1FormationSize) {
+        console.error('Player 1 formation characters are unavailable:', match.player1.userId);
+        const error = new Error('Player 1 battle party data is unavailable');
+        error.code = 'COLISEUM_PARTICIPANTS_CHANGED';
+        throw error;
+      }
+      if (player2FormationSize === 0 || player2Party.length !== player2FormationSize) {
+        console.error('Player 2 formation characters are unavailable:', match.player2.userId);
+        const error = new Error('Player 2 battle party data is unavailable');
+        error.code = 'COLISEUM_PARTICIPANTS_CHANGED';
+        throw error;
+      }
+
+      // Build initial battle state
+      const initialState = {
+        turn: 1,
+        phase: 'action',
+        activeUnit: null,
+        status: 'active',
+        battleType: 'pvp',
+        player1Id: match.player1.userId,
+        player2Id: match.player2.userId,
+        units: [],
+        consumables: [],
+        log: [{ type: 'battle_start', message: 'PvP Battle begins!', timestamp: Date.now() }]
+      };
+
+      // Add player 1's units (bottom side of map) - Team 1
+      player1Party.forEach(char => {
+        const formationPos = player1Formation[char.id];
+        // Map 5x4 formation grid to battle map
+        // Formation X: 0-4 -> Battle X: 2-10 (spread across center-bottom)
+        // Formation Y: 0-3 -> Battle Y: 24-27 (bottom of map)
+        const tileX = 2 + formationPos.tileX * 2;
+        const tileY = 27 - formationPos.tileY;
+
+        initialState.units.push(withBattleVisualIdentity({
+          id: char.id,
+          type: 'player',
+          teamId: 1, // Player 1's units are on team 1
+          ownerId: match.player1.userId,
+          name: char.name,
+          class: char.class,
+          level: char.level,
+          race: char.race,
+          gender: char.gender,
+          hp: char.hp_current,
+          maxHp: char.hp_max + (parseInt(char.equip_hp, 10) || 0),
+          mp: char.mp_current,
+          maxMp: char.mp_max + (parseInt(char.equip_mp, 10) || 0),
+          strength: char.strength + (parseInt(char.equip_strength, 10) || 0),
+          intelligence: char.intelligence + (parseInt(char.equip_intelligence, 10) || 0),
+          agility: char.agility + (parseInt(char.equip_agility, 10) || 0),
+          vitality: char.vitality + (parseInt(char.equip_vitality, 10) || 0),
+          luck: char.luck + (parseInt(char.equip_luck, 10) || 0),
+          attack: parseInt(char.equip_attack, 10) || 0,
+          defense: parseInt(char.equip_defense, 10) || 0,
+          magicAttack: parseInt(char.equip_magic_attack, 10) || 0,
+          magicDefense: parseInt(char.equip_magic_defense, 10) || 0,
+          tileX,
+          tileY,
+          ct: 0,
+          hasActed: false,
+          statusEffects: [],
+          skills: char.skills || []
+        }, {
+          kind: 'player',
+          id: char.id
+        }));
+      });
+
+      // Add player 2's units (top side of map) - Team 2
+      player2Party.forEach(char => {
+        const formationPos = player2Formation[char.id];
+        // Map 5x4 formation grid to battle map
+        // Player 2 is at top of map
+        const tileX = 2 + formationPos.tileX * 2;
+        const tileY = 4 + formationPos.tileY;
+
+        initialState.units.push(withBattleVisualIdentity({
+          id: char.id,
+          type: 'player',
+          teamId: 2, // Player 2's units are on team 2
+          ownerId: match.player2.userId,
+          name: char.name,
+          class: char.class,
+          level: char.level,
+          race: char.race,
+          gender: char.gender,
+          hp: char.hp_current,
+          maxHp: char.hp_max + (parseInt(char.equip_hp, 10) || 0),
+          mp: char.mp_current,
+          maxMp: char.mp_max + (parseInt(char.equip_mp, 10) || 0),
+          strength: char.strength + (parseInt(char.equip_strength, 10) || 0),
+          intelligence: char.intelligence + (parseInt(char.equip_intelligence, 10) || 0),
+          agility: char.agility + (parseInt(char.equip_agility, 10) || 0),
+          vitality: char.vitality + (parseInt(char.equip_vitality, 10) || 0),
+          luck: char.luck + (parseInt(char.equip_luck, 10) || 0),
+          attack: parseInt(char.equip_attack, 10) || 0,
+          defense: parseInt(char.equip_defense, 10) || 0,
+          magicAttack: parseInt(char.equip_magic_attack, 10) || 0,
+          magicDefense: parseInt(char.equip_magic_defense, 10) || 0,
+          tileX,
+          tileY,
+          ct: 0,
+          hasActed: false,
+          statusEffects: [],
+          skills: char.skills || []
+        }, {
+          kind: 'player',
+          id: char.id
+        }));
+      });
+
+      // Initialize CT values for all units
+      battleService.initializeCT(initialState.units);
+
+      // Advance CT and find the first actor
+      battleService.advanceToNextActor(initialState);
+
+      // Generate turn predictions
+      initialState.turnPredictions = battleService.predictTurnOrder(initialState, 10);
+
+      const generatedMap = await generateBattleMap({
+        terrainSeed: mapSeed,
+        nodeType: 'arena',
+        mapWidth: 32,
+        mapHeight: 32,
+        mode: 'pvp_coliseum',
+        playerCount: player1Party.length,
+        enemyCount: player2Party.length,
+        enemyCapacity: player2Party.length,
+        existingUnits: initialState.units,
+        initialMutableState: initialState,
+        allowV2: useV2,
+        clientCapabilities: useV2
+          ? match.player1.battleMapCapabilities
+          : null
+      });
       const result = await battleStateRepository.createBattle({
         battleType: 'pvp_coliseum',
         status: 'active',
@@ -871,18 +997,29 @@ async function startMatchWithFormations(matchId) {
       }, { client });
 
       // Mark characters as in battle in the same transaction as battle creation.
-      await Promise.all([
-        client.query(
+      for (const [userId, expectedCharacters] of [
+        [match.player1.userId, player1Party],
+        [match.player2.userId, player2Party]
+      ]) {
+        const lockedCharacterIds = lockedIdsByUser.get(Number(userId)) ?? [];
+        const updateResult = await client.query(
           `UPDATE characters SET in_battle = true
-           WHERE user_id = $1 AND party_slot <= $2 AND party_slot IS NOT NULL`,
-          [match.player1.userId, MAX_BATTLE_PARTY_SIZE]
-        ),
-        client.query(
-          `UPDATE characters SET in_battle = true
-           WHERE user_id = $1 AND party_slot <= $2 AND party_slot IS NOT NULL`,
-          [match.player2.userId, MAX_BATTLE_PARTY_SIZE]
-        )
-      ]);
+           WHERE user_id = $1
+             AND id = ANY($2::int[])
+             AND party_slot IS NOT NULL
+             AND party_slot <= $3
+             AND in_battle = false`,
+          [userId, lockedCharacterIds, MAX_BATTLE_PARTY_SIZE]
+        );
+        if (updateResult.rowCount !== expectedCharacters.length) {
+          const error = new Error(
+            `Coliseum participant update changed ${updateResult.rowCount} `
+            + `of ${expectedCharacters.length} selected characters`
+          );
+          error.code = 'COLISEUM_PARTICIPANTS_CHANGED';
+          throw error;
+        }
+      }
       return result;
     });
 
@@ -965,7 +1102,9 @@ async function startMatchWithFormations(matchId) {
       error: error.message,
       stack: error.stack
     });
-    cancelMatch(matchId, 'Error creating battle');
+    await cancelMatch(matchId, error.code === 'COLISEUM_BATTLE_ALREADY_ACTIVE'
+      ? 'A player entered another battle'
+      : 'Error creating battle');
   }
 }
 
@@ -1028,6 +1167,7 @@ export async function completeMatch(
     expectedRevision = null,
     consumedInventoryId = null,
     actingUserId = null,
+    battleCommand = null,
     publish = true
   } = {}
 ) {
@@ -1049,9 +1189,25 @@ export async function completeMatch(
     [battleId]
   );
   if (priorCompletion.rows.length > 0) {
+    const commandReceipt = battleCommand
+      ? await battleStateRepository.findCommandReceipt({
+        battleId,
+        commandType: battleCommand.commandType,
+        idempotencyKey: battleCommand.idempotencyKey,
+        idempotencyRequest: battleCommand.idempotencyRequest
+      })
+      : null;
+    if (battleCommand && !commandReceipt) {
+      const error = new Error(
+        `Battle ${battleId} completed without the requested command receipt`
+      );
+      error.code = 'BATTLE_STATE_CONFLICT';
+      error.actualRevision = battleEnvelope.stateRevision;
+      throw error;
+    }
     return {
       idempotent: true,
-      commit: null,
+      commit: commandReceipt,
       matchResult: priorCompletion.rows[0]
     };
   }
@@ -1126,9 +1282,25 @@ export async function completeMatch(
       [battleId]
     );
     if (existingResult.rows.length > 0) {
+      const commandReceipt = battleCommand
+        ? await battleStateRepository.findCommandReceipt({
+          battleId,
+          commandType: battleCommand.commandType,
+          idempotencyKey: battleCommand.idempotencyKey,
+          idempotencyRequest: battleCommand.idempotencyRequest
+        }, { client })
+        : null;
+      if (battleCommand && !commandReceipt) {
+        const error = new Error(
+          `Battle ${battleId} completed without the requested command receipt`
+        );
+        error.code = 'BATTLE_STATE_CONFLICT';
+        error.actualRevision = lockedBattle.stateRevision;
+        throw error;
+      }
       return {
         idempotent: true,
-        commit: null,
+        commit: commandReceipt,
         matchResult: existingResult.rows[0]
       };
     }
@@ -1210,6 +1382,7 @@ export async function completeMatch(
       expectedRevision: lockedBattle.stateRevision,
       commandType: 'coliseum_match_complete',
       idempotencyKey: `coliseum-match-complete:${battleId}`,
+      ...(battleCommand ?? {}),
       mutableState: finalState
         ? extractBattleMutableState(finalState)
         : lockedBattle.mutableState,
@@ -1272,12 +1445,29 @@ export async function completeMatch(
         JSON.stringify(enhancedStatsToStore)
       ]
     );
-    await client.query(
+    const battleCharacterIds = [
+      ...new Set(
+        commit.envelope.mutableState.units
+          .filter(unit => unit.type === 'player'
+            && participantIds.has(String(unit.ownerId)))
+          .map(unit => Number(unit.id))
+          .filter(Number.isSafeInteger)
+      )
+    ];
+    const releaseResult = await client.query(
       `UPDATE characters
        SET in_battle = false
-       WHERE user_id = ANY($1::int[]) AND party_slot <= $2`,
-      [[winnerId, loserId], MAX_BATTLE_PARTY_SIZE]
+       WHERE id = ANY($1::int[]) AND user_id = ANY($2::int[])`,
+      [battleCharacterIds, [winnerId, loserId]]
     );
+    if (releaseResult.rowCount !== battleCharacterIds.length) {
+      const error = new Error(
+        `Coliseum cleanup released ${releaseResult.rowCount} `
+        + `of ${battleCharacterIds.length} battle characters`
+      );
+      error.code = 'COLISEUM_PARTICIPANT_CLEANUP_CONFLICT';
+      throw error;
+    }
     const winnerCharacterResult = await client.query(
       `SELECT id
        FROM characters

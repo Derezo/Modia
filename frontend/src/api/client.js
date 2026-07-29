@@ -1,11 +1,23 @@
 import { debugLog } from '../utils/debugLogger.js';
 import { getBattleMapCapabilities } from '../battle/BattleMapSession.js';
 
+const BATTLE_ACTION_TIMEOUT_MS = 15000;
+
 function createBattleStartRequestId() {
   if (globalThis.crypto?.randomUUID) {
     return globalThis.crypto.randomUUID();
   }
   return `battle-${Date.now()}-${Math.random().toString(36).slice(2, 13)}`;
+}
+
+export class ApiError extends Error {
+  constructor(message, { status = null, data = null, cause = null } = {}) {
+    super(message, cause ? { cause } : undefined);
+    this.name = 'ApiError';
+    this.status = status;
+    this.data = data;
+    this.response = data;
+  }
 }
 
 export class ApiClient {
@@ -44,6 +56,32 @@ export class ApiClient {
       method,
       headers
     };
+    const timeoutMs = Number.isFinite(options.timeoutMs) && options.timeoutMs > 0
+      ? options.timeoutMs
+      : null;
+    const timeoutController = timeoutMs ? new AbortController() : null;
+    let timeoutHandle = null;
+    let timedOut = false;
+    let removeExternalAbortListener = null;
+
+    if (timeoutController) {
+      if (options.signal?.aborted) {
+        timeoutController.abort(options.signal.reason);
+      } else if (options.signal) {
+        const forwardAbort = () => timeoutController.abort(options.signal.reason);
+        options.signal.addEventListener('abort', forwardAbort, { once: true });
+        removeExternalAbortListener = () => {
+          options.signal.removeEventListener('abort', forwardAbort);
+        };
+      }
+      fetchOptions.signal = timeoutController.signal;
+      timeoutHandle = setTimeout(() => {
+        timedOut = true;
+        timeoutController.abort();
+      }, timeoutMs);
+    } else if (options.signal) {
+      fetchOptions.signal = options.signal;
+    }
 
     if (data && method !== 'GET') {
       fetchOptions.body = JSON.stringify(data);
@@ -84,7 +122,7 @@ export class ApiClient {
         if (this.onUnauthorized) {
           this.onUnauthorized();
         }
-        throw new Error('Unauthorized');
+        throw new ApiError('Unauthorized', { status: 401 });
       }
 
       const result = await response.json();
@@ -92,15 +130,34 @@ export class ApiClient {
       debugLog('network.logAPIRequests', `${method} ${endpoint} -> ${response.status}`, { response: result });
 
       if (!response.ok) {
-        throw new Error(result.error || result.message || 'Request failed');
+        throw new ApiError(result.error || result.message || 'Request failed', {
+          status: response.status,
+          data: result
+        });
       }
 
       return result;
     } catch (err) {
+      if (timedOut) {
+        const timeoutError = new ApiError(
+          'Battle action request timed out; retrying is safe',
+          { cause: err }
+        );
+        timeoutError.isNetworkError = true;
+        timeoutError.isTimeout = true;
+        throw timeoutError;
+      }
       if (err.name === 'TypeError' && err.message === 'Failed to fetch') {
-        throw new Error('Unable to connect to server');
+        const networkError = new ApiError('Unable to connect to server', {
+          cause: err
+        });
+        networkError.isNetworkError = true;
+        throw networkError;
       }
       throw err;
+    } finally {
+      if (timeoutHandle) clearTimeout(timeoutHandle);
+      removeExternalAbortListener?.();
     }
   }
 
@@ -242,6 +299,10 @@ export class ApiClient {
     return this.get('/world/current');
   }
 
+  claimChest(nodeId) {
+    return this.post(`/world/nodes/${nodeId}/claim-chest`);
+  }
+
   getWatchtowerView(nodeId) {
     return this.get(`/world/watchtower-view/${nodeId}`);
   }
@@ -280,9 +341,32 @@ export class ApiClient {
     });
   }
 
-  submitBattleAction(data) {
-    const { battleId, actionType, unitId, targetTile, skillId, actionSequence } = data;
-    return this.post('/battle/action', { battleId, actionType, unitId, targetTile, skillId, actionSequence });
+  submitBattleAction(data, options = {}) {
+    const {
+      battleId,
+      actionType,
+      unitId,
+      targetTile,
+      skillId,
+      inventoryId,
+      actionSequence,
+      commandId,
+      stateRevision
+    } = data;
+    return this.post('/battle/action', {
+      battleId,
+      actionType,
+      unitId,
+      targetTile,
+      skillId,
+      inventoryId,
+      actionSequence,
+      commandId,
+      stateRevision
+    }, {
+      ...options,
+      timeoutMs: options.timeoutMs ?? BATTLE_ACTION_TIMEOUT_MS
+    });
   }
 
   getBattleRewards(battleId) {

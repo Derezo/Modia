@@ -14,6 +14,22 @@ import { request } from '../testHelper.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
+function getTileAssetLocator(asset) {
+  if (asset._sourceFile) {
+    return { sourceFile: asset._sourceFile };
+  }
+
+  const biome = asset._biome || asset.biome;
+  assert.ok(biome, 'Listed tile asset should include _sourceFile or biome metadata');
+  return { biome };
+}
+
+function getTileAssetUrl(assetId, asset) {
+  const locator = getTileAssetLocator(asset);
+  const query = new URLSearchParams(locator);
+  return `/api/admin/assets/tiles/${assetId}?${query}`;
+}
+
 describe('Admin Assets API', { skip: isProduction }, () => {
   before(() => {
     if (isProduction) {
@@ -92,6 +108,7 @@ describe('Admin Assets API', { skip: isProduction }, () => {
         const assetId = testAsset.key || testAsset.id;
 
         const res = await request('PUT', `/api/admin/assets/tiles/${assetId}`, {
+          ...getTileAssetLocator(testAsset),
           loraModel: 'v1'
         });
 
@@ -109,6 +126,7 @@ describe('Admin Assets API', { skip: isProduction }, () => {
         const assetId = testAsset.key || testAsset.id;
 
         const res = await request('PUT', `/api/admin/assets/tiles/${assetId}`, {
+          ...getTileAssetLocator(testAsset),
           loraModel: 'v2'
         });
 
@@ -125,6 +143,7 @@ describe('Admin Assets API', { skip: isProduction }, () => {
         const assetId = testAsset.key || testAsset.id;
 
         const res = await request('PUT', `/api/admin/assets/tiles/${assetId}`, {
+          ...getTileAssetLocator(testAsset),
           loraModel: 'modern-pixel'
         });
 
@@ -141,6 +160,7 @@ describe('Admin Assets API', { skip: isProduction }, () => {
         const assetId = testAsset.key || testAsset.id;
 
         const res = await request('PUT', `/api/admin/assets/tiles/${assetId}`, {
+          ...getTileAssetLocator(testAsset),
           loraModel: 'retro-pixel'
         });
 
@@ -157,6 +177,7 @@ describe('Admin Assets API', { skip: isProduction }, () => {
         const assetId = testAsset.key || testAsset.id;
 
         const res = await request('PUT', `/api/admin/assets/tiles/${assetId}`, {
+          ...getTileAssetLocator(testAsset),
           loraModel: 'invalid-model'
         });
 
@@ -175,6 +196,7 @@ describe('Admin Assets API', { skip: isProduction }, () => {
         const assetId = testAsset.key || testAsset.id;
 
         const res = await request('PUT', `/api/admin/assets/tiles/${assetId}`, {
+          ...getTileAssetLocator(testAsset),
           loraModel: 'V1'
         });
 
@@ -194,6 +216,7 @@ describe('Admin Assets API', { skip: isProduction }, () => {
         // Note: empty string should pass validation (not trigger the validation check)
         // because the condition is `updates.loraModel && !validLoraModels.includes(...)`
         const res = await request('PUT', `/api/admin/assets/tiles/${assetId}`, {
+          ...getTileAssetLocator(testAsset),
           loraModel: ''
         });
 
@@ -214,11 +237,12 @@ describe('Admin Assets API', { skip: isProduction }, () => {
 
         // Set loraModel
         await request('PUT', `/api/admin/assets/tiles/${assetId}`, {
+          ...getTileAssetLocator(testAsset),
           loraModel: 'modern-pixel'
         });
 
         // Verify it's persisted by re-fetching
-        const getRes = await request('GET', `/api/admin/assets/tiles/${assetId}`);
+        const getRes = await request('GET', getTileAssetUrl(assetId, testAsset));
         assert.strictEqual(getRes.status, 200);
         assert.strictEqual(getRes.body.loraModel, 'modern-pixel');
       });
@@ -234,16 +258,19 @@ describe('Admin Assets API', { skip: isProduction }, () => {
 
         // Use single-asset GET to capture original prompt for this specific asset
         // This avoids list ordering issues that could cause flaky tests
-        const originalAsset = await request('GET', `/api/admin/assets/tiles/${assetId}`);
+        const originalAsset = await request('GET', getTileAssetUrl(assetId, testAsset));
+        assert.strictEqual(originalAsset.status, 200);
         const originalPrompt = originalAsset.body.prompt;
 
         // Update only loraModel
         await request('PUT', `/api/admin/assets/tiles/${assetId}`, {
+          ...getTileAssetLocator(testAsset),
           loraModel: 'v2'
         });
 
         // Verify other fields unchanged
-        const getRes = await request('GET', `/api/admin/assets/tiles/${assetId}`);
+        const getRes = await request('GET', getTileAssetUrl(assetId, testAsset));
+        assert.strictEqual(getRes.status, 200);
         assert.strictEqual(getRes.body.prompt, originalPrompt);
       });
     });
@@ -261,12 +288,13 @@ describe('Admin Assets API', { skip: isProduction }, () => {
       const assetId = testAsset.key || testAsset.id;
 
       await request('PUT', `/api/admin/assets/tiles/${assetId}`, {
+        ...getTileAssetLocator(testAsset),
         loraModel: 'v1'
       });
 
       // Use single-asset GET endpoint to verify loraModel is set
       // This avoids list ordering issues that could cause flaky tests
-      const getRes = await request('GET', `/api/admin/assets/tiles/${assetId}`);
+      const getRes = await request('GET', getTileAssetUrl(assetId, testAsset));
       assert.strictEqual(getRes.status, 200);
       assert.strictEqual(getRes.body.loraModel, 'v1');
     });

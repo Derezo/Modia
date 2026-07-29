@@ -276,9 +276,11 @@
       "subcategory": "activity",
       "prompt": "Fantasy successful fish catch with splashing water and satisfying rewarding tug confirmation",
       "path": "/assets/audio/sfx/interactions/fishing_catch.mp3",
-      "duration": 1.0,
+      "duration": 1,
       "volume": 0.75,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-07-29T22:25:03.752Z",
+      "actualDuration": 2.037551
     },
     {
       "id": "interaction_puzzle_solve",

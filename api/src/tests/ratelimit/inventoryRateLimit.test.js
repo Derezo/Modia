@@ -27,7 +27,7 @@ describe('Inventory Rate Limiting', () => {
     // Create test user and character
     testUser = await createTestUser();
     testCharacter = await createTestCharacter(testUser.accessToken);
-    resetAllLimiterStats();
+    await resetAllLimiterStats();
   });
 
   after(async () => {
@@ -37,9 +37,9 @@ describe('Inventory Rate Limiting', () => {
     await runCleanup();
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Reset stats between test groups
-    resetAllLimiterStats();
+    await resetAllLimiterStats();
   });
 
   describe('Inventory Read Rate Limiting (gameReadLimiter)', () => {
@@ -226,7 +226,15 @@ describe('Inventory Rate Limiting', () => {
     });
 
     it('should track stats correctly', async () => {
-      const stats = getRateLimiterStats('gameplay:inventory');
+      await fireRequests(
+        46,
+        'POST',
+        '/api/inventory/equip',
+        { characterId: testCharacter.id, itemInstanceId: 99999, slot: 'main_hand' },
+        testUser.accessToken
+      );
+
+      const stats = await getRateLimiterStats('gameplay:inventory');
       assert.ok(stats, 'Inventory limiter stats should exist');
       assert.ok(stats.calls > 0, 'Should have tracked calls');
       assert.ok(stats.blocked > 0, 'Should have tracked blocked requests');

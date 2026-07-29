@@ -11,7 +11,7 @@
  * matching the server's action validation.
  */
 
-import { describe, test, beforeEach } from 'node:test';
+import { describe, test } from 'node:test';
 import assert from 'node:assert';
 import {
   createMockPlayerUnit,
@@ -29,8 +29,7 @@ import {
   calculateAllySupport,
   findNearestEnemy,
   countTargetsInAoe,
-  countNearbyEnemies,
-  countNearbyAllies
+  countNearbyEnemies
 } from '../../services/ai/utilityFactors.js';
 import { StateEvaluator } from '../../services/ai/stateEvaluator.js';
 import { generateAllActions } from '../../services/ai/actionGenerator.js';
@@ -94,10 +93,6 @@ describe('AI Attack Range Decisions', () => {
       id: 'player_1',
       tileX: 1,
       tileY: 2
-    });
-
-    const state = createMockBattleState({
-      units: [enemy, player]
     });
 
     // Calculate distance using Manhattan
@@ -166,7 +161,7 @@ describe('AI Attack Range Decisions', () => {
 // =============================================================================
 
 describe('calculateDamageReceived (Manhattan distance)', () => {
-  test('should calculate threat using Manhattan distance', () => {
+  test('should reject direct threat outside Manhattan range after movement is spent', () => {
     const unit = createMockPlayerUnit({
       id: 'player_1',
       tileX: 5,
@@ -180,19 +175,46 @@ describe('calculateDamageReceived (Manhattan distance)', () => {
       id: 'enemy_1',
       tileX: 7,
       tileY: 8,
-      attackRange: 3  // Chebyshev says in range, Manhattan says not
+      attackRange: 3,  // Chebyshev says in range, Manhattan says not
+      moveUsed: true
     });
 
     const state = createMockBattleState({
       units: [unit, enemy]
     });
 
-    // With Manhattan (5) > attackRange (3): enemy should NOT be a threat
+    // With movement already spent and Manhattan (5) > attackRange (3), the
+    // enemy should not be a direct threat. Chebyshev would incorrectly count it.
     // With Chebyshev (3) <= attackRange (3): enemy would be a threat (bug)
     const threat = calculateDamageReceived(unit, unit.tileX, unit.tileY, state);
 
-    // After the fix, threat should be 0 because enemy is out of range
     assert.strictEqual(threat, 0, 'Enemy at Manhattan distance 5 should not threaten with range 3');
+  });
+
+  test('should discount a threat that can move into Manhattan attack range', () => {
+    const unit = createMockPlayerUnit({
+      id: 'player_1',
+      tileX: 5,
+      tileY: 5
+    });
+    const enemy = createMockEnemyUnit({
+      id: 'enemy_1',
+      tileX: 7,
+      tileY: 8,
+      attackRange: 3,
+      movement: 3,
+      moveUsed: false
+    });
+    const state = createMockBattleState({
+      units: [unit, enemy]
+    });
+
+    const threat = calculateDamageReceived(unit, unit.tileX, unit.tileY, state);
+
+    assert.ok(
+      threat > 0,
+      'Enemy should remain a discounted threat when it can move then attack'
+    );
   });
 
   test('should detect threat from enemy within Manhattan range', () => {

@@ -160,27 +160,33 @@ describe('Movement Sync - Pathfinding Consistency', () => {
       }
     });
 
-    it('should treat dead units as blocking battlefield corpses', () => {
-      const width = 10;
-      const height = 10;
+    it('should cross dead units without offering corpse tiles as destinations', () => {
+      const width = 3;
+      const height = 1;
       const terrain = Array.from({ length: height }, () =>
         Array(width).fill('grass')
       );
 
-      // Place a dead unit
       const units = [
-        { x: 6, y: 5, hp: 0 },  // Dead unit
+        { x: 1, y: 0, hp: 0 }
       ];
 
-      const startX = 5;
-      const startY = 5;
-      const range = 3;
+      const startX = 0;
+      const startY = 0;
+      const range = 2;
 
       const reachable = getReachableTiles(startX, startY, range, terrain, units, width, height);
 
-      // Corpses remain authoritative occupants until battle cleanup.
-      const deadTile = reachable.find(t => t.x === 6 && t.y === 5);
-      assert.equal(deadTile, undefined, 'Tile with dead unit should be blocked');
+      assert.equal(
+        reachable.find(t => t.x === 1 && t.y === 0),
+        undefined,
+        'The corpse tile cannot be selected as a destination'
+      );
+      assert.deepEqual(
+        reachable.find(t => t.x === 2 && t.y === 0),
+        { x: 2, y: 0, cost: 2 },
+        'A corpse adds no cost or range restriction to transit'
+      );
     });
   });
 

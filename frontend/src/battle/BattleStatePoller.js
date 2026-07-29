@@ -237,6 +237,10 @@ export class BattleStatePoller {
       return null;
     }
 
+    if (this.isStaleRevision(serverState.stateRevision)) {
+      return null;
+    }
+
     // Terminal outcome is the most important mismatch. A battle-ending update
     // commonly changes the active unit and turn count at the same time.
     if (serverState.status !== this.localState.status) {
@@ -279,6 +283,21 @@ export class BattleStatePoller {
       return false;
     }
 
+    if (this.isStaleRevision(serverState.stateRevision)) {
+      debugLog('battle.stateSync', 'Ignoring stale polled revision', {
+        server: serverState.stateRevision,
+        local: this.localState.stateRevision
+      });
+      return false;
+    }
+
+    if (serverState.stateRevision !== undefined &&
+        serverState.stateRevision !== this.localState.stateRevision) {
+      debugLog('battle.stateSync', 'Drift detected: stateRevision mismatch',
+        { server: serverState.stateRevision, local: this.localState.stateRevision });
+      return true;
+    }
+
     // Check turn state
     if (serverState.activeUnitId !== this.localState.activeUnitId) {
       debugLog('battle.stateSync', 'Drift detected: activeUnitId mismatch',
@@ -295,6 +314,20 @@ export class BattleStatePoller {
     if (serverState.status !== this.localState.status) {
       debugLog('battle.stateSync', 'Drift detected: status mismatch',
         { server: serverState.status, local: this.localState.status });
+      return true;
+    }
+
+    if (serverState.turnPhase !== undefined &&
+        serverState.turnPhase !== this.localState.turnPhase) {
+      debugLog('battle.stateSync', 'Drift detected: turnPhase mismatch',
+        { server: serverState.turnPhase, local: this.localState.turnPhase });
+      return true;
+    }
+
+    if (serverState.availableActions !== undefined &&
+        JSON.stringify(serverState.availableActions) !==
+          JSON.stringify(this.localState.availableActions)) {
+      debugLog('battle.stateSync', 'Drift detected: availableActions mismatch');
       return true;
     }
 
@@ -319,9 +352,36 @@ export class BattleStatePoller {
           { server: serverUnit.hp, local: localUnit.hp });
         return true;
       }
+
+      if (serverUnit.mp !== undefined && serverUnit.mp !== localUnit.mp) {
+        debugLog('battle.stateSync', `Drift detected: unit ${serverUnit.id} MP mismatch`,
+          { server: serverUnit.mp, local: localUnit.mp });
+        return true;
+      }
+
+      for (const field of ['moveUsed', 'actUsed', 'turnPhase']) {
+        if (serverUnit[field] !== undefined &&
+            serverUnit[field] !== localUnit[field]) {
+          debugLog('battle.stateSync',
+            `Drift detected: unit ${serverUnit.id} ${field} mismatch`,
+            { server: serverUnit[field], local: localUnit[field] });
+          return true;
+        }
+      }
     }
 
     return false;
+  }
+
+  isStaleRevision(serverRevision) {
+    if (serverRevision === null || serverRevision === undefined ||
+        this.localState?.stateRevision === null ||
+        this.localState?.stateRevision === undefined) {
+      return false;
+    }
+    const server = Number(serverRevision);
+    const local = Number(this.localState.stateRevision);
+    return Number.isFinite(server) && Number.isFinite(local) && server < local;
   }
 
   /**

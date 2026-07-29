@@ -136,9 +136,9 @@ export async function registerUserWithCharacter({
     if (existingUser.rows.length > 0) {
       const existing = existingUser.rows[0];
       if (existing.username === normalizedUsername) {
-        throw new Error('Username already exists');
+        throw new AppError('Username already exists', 409);
       }
-      throw new Error('Email already exists');
+      throw new AppError('Email already exists', 409);
     }
 
     // Insert user

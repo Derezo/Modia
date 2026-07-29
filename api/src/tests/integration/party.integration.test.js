@@ -51,5 +51,50 @@ describe('Party API', () => {
 
       assert.strictEqual(res.status, 200);
     });
+
+    it('should reject party mutations while an owned character is in battle', async () => {
+      await query(
+        'UPDATE characters SET in_battle = true WHERE id = $1',
+        [secondCharId]
+      );
+
+      try {
+        const before = await query(
+          `SELECT id, party_slot
+           FROM characters
+           WHERE user_id = $1
+           ORDER BY id`,
+          [user.userId]
+        );
+        const formationResponse = await request('PUT', '/api/party', {
+          formation: [
+            { characterId: mainCharId, slot: 1 },
+            { characterId: secondCharId, slot: 2 }
+          ]
+        }, user.accessToken);
+        const battlePartyResponse = await request('PUT', '/api/party/battle', {
+          characterIds: [mainCharId, secondCharId]
+        }, user.accessToken);
+
+        assert.strictEqual(formationResponse.status, 400);
+        assert.match(formationResponse.body.error, /during battle/i);
+        assert.strictEqual(battlePartyResponse.status, 400);
+        assert.match(battlePartyResponse.body.error, /during battle/i);
+
+        const after = await query(
+          `SELECT id, party_slot
+           FROM characters
+           WHERE user_id = $1
+           ORDER BY id`,
+          [user.userId]
+        );
+        assert.deepStrictEqual(after.rows, before.rows);
+      } finally {
+        await query(
+          'UPDATE characters SET in_battle = false WHERE id = $1',
+          [secondCharId]
+        );
+      }
+    });
   });
 });

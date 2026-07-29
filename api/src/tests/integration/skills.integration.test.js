@@ -1,14 +1,28 @@
-import { describe, it, before } from 'node:test';
+import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
-import { request, createTestUser, createTestCharacter } from '../testHelper.js';
+import {
+  request,
+  createTestUser,
+  createTestCharacter,
+  cleanupTestUser,
+  query
+} from '../testHelper.js';
 
 describe('Skills API', () => {
   let user = null;
   let warriorChar = null;
+  let wizardUser = null;
   let wizardChar = null;
+  const createdUserIds = [];
+
+  async function createTrackedUser() {
+    const created = await createTestUser();
+    createdUserIds.push(created.userId);
+    return created;
+  }
 
   before(async () => {
-    user = await createTestUser();
+    user = await createTrackedUser();
 
     // Create characters of specific classes
     const warRes = await request('POST', '/api/characters', {
@@ -18,12 +32,19 @@ describe('Skills API', () => {
     }, user.accessToken);
     warriorChar = warRes.body.character;
 
-    const wizRes = await request('POST', '/api/characters', {
+    wizardUser = await createTrackedUser();
+    const wizardRes = await request('POST', '/api/characters', {
       name: `Wizard_${Date.now()}`,
       race: 'elf',
       characterClass: 'wizard'
-    }, user.accessToken);
-    wizardChar = wizRes.body.character;
+    }, wizardUser.accessToken);
+    wizardChar = wizardRes.body.character;
+  });
+
+  after(async () => {
+    for (const userId of createdUserIds) {
+      await cleanupTestUser(userId);
+    }
   });
 
   describe('GET /api/skills/tree/:guildId', () => {
@@ -100,7 +121,7 @@ describe('Skills API', () => {
     });
 
     it('should reject access to another user character skills', async () => {
-      const otherUser = await createTestUser();
+      const otherUser = await createTrackedUser();
       const otherChar = await createTestCharacter(otherUser.accessToken);
 
       const res = await request('GET', `/api/skills/characters/${otherChar.id}/skills`, null, user.accessToken);
@@ -117,7 +138,13 @@ describe('Skills API', () => {
 
   describe('POST /api/skills/learn', () => {
     it('should reject learning skill without enough XP', async () => {
-      // New character starts with 0 XP, so learning should fail
+      // New characters intentionally receive starting XP. Force this fixture
+      // below the skill cost so the test exercises the insufficient-XP branch.
+      await query(
+        'UPDATE characters SET experience = 0 WHERE id = $1',
+        [warriorChar.id]
+      );
+
       const res = await request('POST', '/api/skills/learn', {
         characterId: warriorChar.id,
         skillId: 'power_strike',
@@ -134,7 +161,7 @@ describe('Skills API', () => {
         characterId: wizardChar.id,
         skillId: 'power_strike',
         levels: 1
-      }, user.accessToken);
+      }, wizardUser.accessToken);
 
       assert.strictEqual(res.status, 404);
     });

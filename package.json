@@ -70,7 +70,7 @@
     "audio:download": "node scripts/audio/download-audio.js",
     "audio:validate": "node scripts/audio/validate-audio.js",
     "audio:status": "node scripts/audio/validate-audio.js --status",
-    "audio:check": "node scripts/audio/validate-audio.js --status && node scripts/audio/validate-manifest-sync.js",
+    "audio:check": "node scripts/audio/validate-audio.js --status && node scripts/audio/validate-manifest-sync.js && node scripts/audio/validate-runtime-sfx.js",
     "ai:generate": "node scripts/ai-images/generate-all.js",
     "ai:generate:tiles": "node scripts/tiles/generate-isometric-tiles.js",
     "ai:generate:floors": "node scripts/tiles/generate-isometric-tiles.js --category floors",
@@ -145,6 +145,7 @@
     "@playwright/test": "^1.40.0",
     "artillery": "^2.0.0",
     "concurrently": "^8.2.2",
+    "espree": "^10.4.0",
     "husky": "^9.1.7",
     "knip": "^5.81.0"
   },
