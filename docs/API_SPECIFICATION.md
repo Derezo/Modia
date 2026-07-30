@@ -5,9 +5,9 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| API Version | 2.9 |
+| API Version | 3.0 |
 | Base URL | `/api` |
-| Last Updated | February 2026 |
+| Last Updated | July 2026 |
 
 ---
 
@@ -767,6 +767,23 @@ GET /api/world/nodes
 }
 ```
 
+Shrine nodes in this response, `GET /world/nodes/:id`, travel's
+`currentNode`, and `GET /world/current` include the same authenticated,
+user-scoped status fields:
+
+| Field | Type | Meaning |
+|-------|------|---------|
+| `shrine_buff_type` | string or null | Standard blessing identity |
+| `zodiac_sign` | string or null | Zodiac shrine identity |
+| `shrine_buff_active` | boolean | This user's blessing has not expired |
+| `shrine_on_cooldown` | boolean | This user cannot revisit the shrine yet |
+| `shrine_available` | boolean | The shrine can be activated now |
+| `shrine_buff_expires_at` | timestamp or null | End of the four-hour blessing |
+| `shrine_cooldown_until` | timestamp or null | End of the six-hour visit cooldown |
+
+These fields never expose another user's visit state. Non-shrine nodes return
+null timing/identity values and false status values.
+
 ---
 
 ### 5.3 Get Node Details
@@ -879,6 +896,18 @@ GET /api/world/current
 }
 ```
 
+When the current node is a shrine, `availableActions` instead includes an
+action that remains visible during cooldown:
+
+```json
+{
+  "type": "visit_shrine",
+  "name": "Receive Blessing",
+  "enabled": false,
+  "cooldown_until": "2026-07-29T18:00:00.000Z"
+}
+```
+
 ---
 
 ### 5.6 Get World Obstacles
@@ -949,7 +978,9 @@ with the persisted rewards, the current account balance, and
 
 ### 5.8 Visit Shrine (Terminator Node)
 
-Receive a timed buff from a shrine node. User must be at the node. 24-hour cooldown per shrine.
+Receive a timed buff from a shrine node. The user must be at the node. Each
+user has a separate 6-hour cooldown per shrine; blessings remain active for 4
+hours.
 
 ```
 POST /api/world/nodes/:id/visit-shrine
@@ -961,13 +992,31 @@ POST /api/world/nodes/:id/visit-shrine
 ```json
 {
   "success": true,
+  "buff_type": "stamina_regen",
   "buff_name": "Pilgrim's Rest",
   "buff_description": "Stamina regenerates 50% faster",
-  "expires_at": "2026-01-14T12:00:00.000Z",
+  "visited_at": "2026-07-29T12:00:00.000Z",
+  "expires_at": "2026-07-29T16:00:00.000Z",
   "duration_hours": 4,
+  "shrine_buff_active": true,
+  "shrine_on_cooldown": true,
+  "shrine_cooldown_until": "2026-07-29T18:00:00.000Z",
+  "cooldown_hours": 6,
   "message": "You received the blessing: Pilgrim's Rest!"
 }
 ```
+
+Zodiac shrine responses additionally include the zodiac sign, signature
+ability, crystal-award status, total collected crystals, collection completion
+status, `collectionTitle`, `collectionTitleAwarded`,
+`zodiacBlessingSlots`, `activeZodiacBlessings`, and `replacedBlessings`.
+Completing the collection idempotently grants the `Celestial Wanderer`
+character title without changing the currently displayed title. A user has one
+active Zodiac blessing slot by default and two after completing the crystal
+collection. Activating at capacity expires the oldest active Zodiac blessing
+atomically; standard blessings do not consume these slots. Each active
+signature ability has one use per battle across that user's party, with a
+fresh use in each new battle during the four-hour blessing window.
 
 **Errors:**
 | Code | Message |
@@ -977,6 +1026,10 @@ POST /api/world/nodes/:id/visit-shrine
 | 400 | Shrine is on cooldown. Return in X hour(s). |
 | 404 | Node not found |
 | 500 | Invalid shrine buff type |
+
+Cooldown errors also include `shrine_cooldown_until`, `cooldown_hours`, and
+`remaining_seconds`, allowing the client to recover authoritative countdown
+state after a stale request.
 
 ---
 
@@ -1030,22 +1083,68 @@ GET /api/world/active-buffs
 {
   "buffs": [
     {
+      "node_id": 42,
       "buff_type": "stamina_regen",
       "buff_info": {
         "name": "Pilgrim's Rest",
         "description": "Stamina regenerates 50% faster",
         "duration": 4
       },
-      "expires_at": "2026-01-14T12:00:00.000Z",
-      "shrine_name": "Sacred Altar"
+      "expires_at": "2026-07-29T16:00:00.000Z",
+      "shrine_name": "Sacred Altar",
+      "zodiac_sign": null
     }
   ]
 }
 ```
 
+Standard shrine buffs are enforced by the server during stamina regeneration
+and battle reward settlement. Permanent Zodiac crystal modifiers are loaded
+when battle state is created, while active Zodiac blessings provide their
+signature abilities.
+
 ---
 
-### 5.11 Get My Discoveries
+### 5.11 Get Zodiac Collection
+
+Get the authenticated user's canonical 12-crystal collection. Unknown legacy
+sign values are ignored for progress and completion rewards.
+
+```
+GET /api/world/zodiac-collection
+```
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response (200 OK):**
+```json
+{
+  "crystals": [
+    {
+      "sign": "aries",
+      "name": "Crystal of the Ram",
+      "bonus": {
+        "type": "physical_damage",
+        "value": 0.01
+      },
+      "collected": true,
+      "collectedAt": "2026-07-29T12:00:00.000Z",
+      "shrineNodeId": 42
+    }
+  ],
+  "totalCollected": 1,
+  "collectionComplete": false,
+  "bonusActive": false,
+  "collectionBonus": null
+}
+```
+
+On completion, `collectionBonus` contains the `Celestial Wanderer` collection
+title, `allStatsBonus: 0.05`, and `dualBlessingSlots: true`.
+
+---
+
+### 5.12 Get My Discoveries
 
 Get user's discovery progress.
 
@@ -1280,8 +1379,7 @@ WebSocket to keep other participants synchronized.
 | 400 | Not this unit's turn |
 | 400 | Action failed business validation, such as already moved or acted |
 | 403 | You do not control this unit |
-| 404 | Battle not found or participant access denied |
-| 409 | Battle is no longer active |
+| 404 | Battle not found, inactive, or participant access denied |
 | 409 | `commandId` was already used for a different action |
 | 409 | Battle state changed during the command |
 
@@ -1409,6 +1507,131 @@ GET /api/battle/:battleId/state
 `availableActions` is participant-scoped and is `null` when another
 participant or an enemy controls the active unit. The endpoint supports
 conditional requests with `ETag`/`If-None-Match`.
+
+---
+
+### 6.7 Get Available Zodiac Abilities
+
+Get the unused signature abilities attached to one of the authenticated
+participant's characters in an active battle.
+
+```
+GET /api/battle/:battleId/zodiac-abilities/:characterId
+```
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response (200 OK):**
+```json
+{
+  "characterId": 37,
+  "availableAbilities": [
+    {
+      "key": "venom_sting",
+      "zodiacSign": "scorpio",
+      "name": "Venom Sting",
+      "description": "Apply 3% HP poison for 4 turns",
+      "element": "water",
+      "needsTarget": true,
+      "expiresAt": "2026-07-29T18:00:00.000Z"
+    }
+  ],
+  "usedAbilities": []
+}
+```
+
+Only `venom_sting` and `dreamwave` require a target. Availability is derived
+from the authoritative battle snapshot; a world blessing expiring after the
+battle starts does not remove it from that battle.
+
+**Errors:**
+
+| Code | Message |
+|------|---------|
+| 400 | Character not found in battle or not controlled by you |
+| 404 | Battle is missing, inactive, or participant access is denied |
+
+---
+
+### 6.8 Use Zodiac Signature Ability
+
+Use an available signature ability as a free action. It does not consume the
+unit's MOVE or ACT allowance, so it remains usable after a normal action, but
+only the authenticated participant's authoritative active character may use
+it. The owning party gets one use of each active signature per battle.
+
+```
+POST /api/battle/:battleId/zodiac-ability
+```
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Request Body:**
+```json
+{
+  "characterId": 37,
+  "abilityKey": "venom_sting",
+  "targetUnitId": "enemy_2",
+  "commandId": "zodiac-018f6f66-63f7-7d5d-a4c4-6f0ec5bc0f15",
+  "stateRevision": 18,
+  "actionSequence": 48
+}
+```
+
+`targetUnitId` is required for Venom Sting and Dreamwave. It must identify a
+living opponent within the source unit's current basic-attack range. Other
+signature abilities target the active character or resolve their documented
+area effect. `commandId` is the durable identity of this exact intent and
+`stateRevision` is the authoritative revision on which it was chosen. An
+ambiguous network retry must reuse both values; `actionSequence` is optional
+process-local telemetry and is not the replay identity.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Venom Sting activated! Bog Wraith is poisoned for 4 turns.",
+  "effects": [
+    {
+      "type": "debuff",
+      "target": "enemy_2",
+      "targetName": "Bog Wraith",
+      "effect": "zodiac_poison",
+      "duration": 4
+    }
+  ],
+  "abilityUsed": true,
+  "abilityKey": "venom_sting",
+  "abilityName": "Venom Sting",
+  "availableActions": { ... },
+  "state": { ... },
+  "stateRevision": 19,
+  "commandId": "zodiac-018f6f66-63f7-7d5d-a4c4-6f0ec5bc0f15"
+}
+```
+
+The response state is authoritative and the committed update plus a readable
+`zodiac_ability` presentation event are broadcast to battle participants.
+`availableActions` is recalculated from that same committed signature state,
+so free effects such as Celestial Arrow immediately update normal attack
+targeting. Replays return the identical participant-scoped availability.
+Rejected targeting or validation attempts do not consume the ability. A retry
+with the same command and intent returns the originally stored result and
+state without rerolling random effects or broadcasting the action twice.
+
+**Errors:**
+
+| Code | Message |
+|------|---------|
+| 400 | Character not found in battle or not controlled by you |
+| 400 | Zodiac abilities can only be used by your active character |
+| 400 | Ability unavailable, already used, target invalid, allied, or out of range |
+| 400 | Invalid command ID or state revision |
+| 404 | Battle not found or participant access denied |
+| 409 | Battle is inactive, the base revision changed, or the command ID was used for a different intent |
+
+Conflict responses include the latest participant-safe `state`,
+`stateRevision`, and `availableActions` for immediate reconciliation.
 
 ---
 
@@ -3935,3 +4158,4 @@ GET /api/feedback/my
 | 2.7 | Feb 2026 | - | Added garrison endpoints (Section 10) for castle recruit system with regional race/class bias. Added garrison WebSocket events (Section 7.10). Updated starting gold to 1000 (was 100). Renumbered sections 10-28 to accommodate new garrison section. |
 | 2.8 | Feb 2026 | - | Updated guild and garrison recruit price examples to reflect new pricing formula: base 400g + trait rarity costs + skill costs + stat variance bonus. Added price calculation notes with cross-reference to ECONOMY_SYSTEM.md. |
 | 2.9 | Feb 2026 | - | Added coliseum:match_result WebSocket event (Section 7.11) for PvP match completion with detailed payload schema including unit stats, battle summary, and rating information. |
+| 3.0 | Jul 2026 | - | Completed private shrine map state and activation contracts, plus authoritative Zodiac signature discovery and free-action battle endpoints. |

@@ -11,8 +11,31 @@ import {
   calculateCTGain,
   calculateInitialCT
 } from '../../../../shared/battleMath.js';
-import { resetTurnState } from './statusEffectManager.js';
+import {
+  finalizeStatusEffects,
+  processStatusEffects,
+  resetTurnState
+} from './statusEffectManager.js';
 import { createBattleVisualIdentity } from './visualIdentityService.js';
+
+function getUnitTeamId(unit) {
+  return unit.teamId !== undefined
+    ? unit.teamId
+    : unit.type === 'enemy' ? 2 : 1;
+}
+
+function getLivingTeamIds(state) {
+  return new Set(
+    state.units
+      .filter(unit => unit.hp > 0)
+      .map(getUnitTeamId)
+  );
+}
+
+function clearActiveActor(state) {
+  state.activeUnitId = null;
+  state.activeUnitIndex = -1;
+}
 
 /**
  * Calculate initiative for turn order
@@ -180,21 +203,31 @@ export function predictTurnOrder(state, count = 10) {
  * Updates state.activeUnitId to the next actor and resets their turn state
  */
 export function advanceToNextActor(state) {
-  // First, advance CT until someone is ready
-  advanceCTUntilReady(state);
+  while (getLivingTeamIds(state).size > 1) {
+    // Advance CT until an alive unit is ready.
+    advanceCTUntilReady(state);
+    const nextActor = getNextActor(state);
+    if (!nextActor) break;
 
-  // Get the next actor
-  const nextActor = getNextActor(state);
-
-  if (nextActor) {
-    state.activeUnitId = nextActor.id;
-    // Also update activeUnitIndex for backwards compatibility
-    state.activeUnitIndex = state.units.findIndex(u => u.id === nextActor.id);
-    // Reset turn state for the new actor (two-action system)
     resetTurnState(nextActor);
+    nextActor.turnStartEffects = processStatusEffects(nextActor);
+
+    // Periodic damage can defeat the selected actor. Finalize its expiring
+    // effects immediately and continue without exposing a dead active turn.
+    if (nextActor.hp <= 0) {
+      nextActor.turnStartEffects.push(...finalizeStatusEffects(nextActor));
+      continue;
+    }
+
+    state.activeUnitId = nextActor.id;
+    state.activeUnitIndex = state.units.findIndex(
+      unit => unit.id === nextActor.id
+    );
+    return nextActor;
   }
 
-  return nextActor;
+  clearActiveActor(state);
+  return null;
 }
 
 /**
@@ -206,6 +239,7 @@ export function advanceToNextActorWithCT(state) {
   // Consume CT for the unit that just acted
   const currentActor = state.units.find(u => u.id === state.activeUnitId);
   if (currentActor) {
+    currentActor.turnEndEffects = finalizeStatusEffects(currentActor);
     consumeCT(currentActor);
 
     // Decrement skill cooldowns for the actor whose turn just ended

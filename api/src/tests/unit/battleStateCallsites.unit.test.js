@@ -103,6 +103,14 @@ describe('battle route enemy-turn revision handoff', () => {
     );
     assert.match(
       startRoute,
+      /loadZodiacCollectionBonus\(\s*req\.user\.userId,\s*\{\s*client\s*\}\s*\)/
+    );
+    assert.match(
+      startRoute,
+      /zodiacCollectionBonus\s*\}/
+    );
+    assert.match(
+      startRoute,
       /enemyService\.generateEncounter\(\s*currentNodeId,\s*selectedParty,\s*authoritativeCharacterIds,\s*\{\s*client\s*\}\s*\)/
     );
   });
@@ -181,6 +189,10 @@ describe('battle route enemy-turn revision handoff', () => {
     );
     assert.match(
       actionRoute,
+      /advanceToNextActorWithCT\(state\);[\s\S]*battleEndResult = battleService\.checkBattleEnd\(state\);[\s\S]*battleStatus = battleService\.getBattleStatusString\(battleEndResult\)/
+    );
+    assert.match(
+      actionRoute,
       /advanceToNextActorWithCT\(state\);[\s\S]*availableActions = getParticipantAvailableActions\(\s*battle,\s*state,\s*req\.user\.userId\s*\);[\s\S]*replayMetadata = \{[\s\S]*availableActions[\s\S]*commitBattleActionState\(/
     );
     assert.match(
@@ -211,6 +223,86 @@ describe('battle route enemy-turn revision handoff', () => {
     assert.match(actionRoute, /stateRevision:\s*completion\?\.stateRevision \?\? committedRevision/);
     assert.doesNotMatch(actionRoute, /UPDATE battles/);
     assert.ok(commitIndex >= 0 && launchIndex > commitIndex);
+  });
+
+  it('checks terminal turn-start damage before committing an active successor', async () => {
+    const [manager, turnTimer, reconnection] = await Promise.all([
+      readCallsite('services/battleTurnManager.js'),
+      readCallsite('services/coliseum/turnTimer.js'),
+      readCallsite('services/battleReconnection.js')
+    ]);
+    const enemyLoop = manager.slice(
+      manager.indexOf('async function processEnemyTurnsFromState'),
+      manager.indexOf('async function processEnemyTurnWithVisualization')
+    );
+
+    assert.match(
+      enemyLoop,
+      /advanceToNextActorWithCT\(state\);[\s\S]*battleStatus = battleService\.checkBattleEnd\(state\);[\s\S]*if \(battleStatus\.status !== 'active'\) \{[\s\S]*break;[\s\S]*updateBattleState\(/
+    );
+    assert.match(
+      turnTimer,
+      /advanceToNextActorWithCT\(state\);[\s\S]*const battleEndResult = battleService\.checkBattleEnd\(state\);[\s\S]*if \(battleEndResult\.status !== 'active'\) \{[\s\S]*completeBattleTerminalTransition\(\{[\s\S]*return \{ outcome: 'terminal'/
+    );
+    assert.match(
+      reconnection,
+      /advanceToNextActorWithCT\(state\);[\s\S]*const battleEndResult = battleService\.checkBattleEnd\(state\);[\s\S]*if \(battleEndResult\.status !== 'active'\) \{[\s\S]*completeBattleTerminalTransition\(\{[\s\S]*return \{[\s\S]*outcome: 'terminal'/
+    );
+  });
+
+  it('keeps timed terminal transitions outside active commits and turn presentation', async () => {
+    const [route, turnTimer, reconnection, transition] = await Promise.all([
+      readCallsite('routes/battle.js'),
+      readCallsite('services/coliseum/turnTimer.js'),
+      readCallsite('services/battleReconnection.js'),
+      readCallsite('services/battle/BattleTerminalTransition.js')
+    ]);
+
+    const timeoutTerminalBranch = turnTimer.slice(
+      turnTimer.indexOf("if (battleEndResult.status !== 'active')"),
+      turnTimer.indexOf('const commit = await', turnTimer.indexOf(
+        "if (battleEndResult.status !== 'active')"
+      ))
+    );
+    const abandonTerminalBranch = reconnection.slice(
+      reconnection.indexOf("if (battleEndResult.status !== 'active')"),
+      reconnection.indexOf('autoWaitedUnit = activeUnit')
+    );
+
+    assert.doesNotMatch(timeoutTerminalBranch, /commitBattleState|broadcastTurnStart|turn_skipped/);
+    assert.doesNotMatch(abandonTerminalBranch, /commitBattleState|broadcastTurnStart|broadcastActionExecuted/);
+    assert.match(transition, /expectedRevision/);
+    assert.match(transition, /idempotencyKey/);
+    assert.match(transition, /terminalCompletionHandler\(\{/);
+    assert.match(
+      route,
+      /setBattleTerminalCompletionHandler\(async \(\{[\s\S]*handleBattleEnd\([\s\S]*expectedRevision,[\s\S]*commandIdentity:\s*idempotencyKey,[\s\S]*publish:\s*true[\s\S]*publishColiseumMatchResultEvents/
+    );
+  });
+
+  it('guards delayed reconnect timers with captured revision and active ownership', async () => {
+    const [route, reconnection, timer] = await Promise.all([
+      readCallsite('routes/battle.js'),
+      readCallsite('services/battleReconnection.js'),
+      readCallsite('services/coliseum/turnTimer.js')
+    ]);
+
+    assert.match(
+      route,
+      /const expectedTimerRevision = battleEnvelope\.stateRevision;[\s\S]*startTurnTimerIfCurrent\(\s*battleId,\s*req\.user\.userId,\s*false,\s*expectedTimerRevision\s*\)/
+    );
+    assert.match(
+      reconnection,
+      /const expectedRevision = battleState\.stateRevision;[\s\S]*startTurnTimerIfCurrent\(\s*battleId,\s*playerId,\s*false,\s*expectedRevision\s*\)/
+    );
+    assert.match(
+      timer,
+      /battle\.stateRevision !== expectedRevision[\s\S]*activeUnit\?\.type !== 'player'[\s\S]*String\(activeUnit\.ownerId\) !== String\(playerId\)[\s\S]*if \(turnTimers\.has\(battleId\)\)/
+    );
+    assert.match(
+      timer,
+      /export function handlePlayerReconnect[\s\S]*startTurnTimerIfCurrent\(\s*battleId,\s*playerId,\s*false,\s*battle\.stateRevision\s*\)/
+    );
   });
 
   it('gates the post-action launcher on the committed successor type', async () => {
@@ -275,6 +367,31 @@ describe('battle route enemy-turn revision handoff', () => {
     assert.match(stateRoute, /turnPhase:\s*activeUnit\?\.turnPhase/);
     assert.match(stateRoute, /hasActed:\s*activeUnit\?\.hasActed/);
     assert.match(stateRoute, /availableActions:\s*participantAvailableActions/);
+  });
+
+  it('resolves zodiac actions through stable character identity', async () => {
+    const route = await readCallsite('routes/battle.js');
+    const zodiacRoute = route.slice(
+      route.indexOf("router.post('/:battleId/zodiac-ability'"),
+      route.indexOf('export default router')
+    );
+
+    assert.match(
+      route,
+      /Number\(unit\.characterId \?\? unit\.id\) === normalizedCharacterId/
+    );
+    assert.match(
+      zodiacRoute,
+      /findOwnedPlayerUnitByCharacterId\(\s*state,\s*characterId,\s*req\.user\.userId\s*\)/
+    );
+    assert.match(
+      zodiacRoute,
+      /const activeUnit = findActiveBattleUnit\(state\)/
+    );
+    assert.match(
+      zodiacRoute,
+      /String\(activeUnit\.id\) !== String\(sourceUnit\.id\)/
+    );
   });
 
   it('threads the settled revision into player turn recovery events', async () => {

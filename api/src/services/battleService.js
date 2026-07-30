@@ -22,6 +22,7 @@ export {
   checkHit,
   // Status effects
   processStatusEffects,
+  finalizeStatusEffects,
   canUnitAct,
   canUnitMove,
   canUnitUseSkills,
@@ -59,6 +60,7 @@ export {
   getAlliedUnits,
   areOpponents,
   areAllies,
+  isForcedMovementImmune,
   // AoE system
   getAoETiles,
   // Charge time system
@@ -75,6 +77,9 @@ export {
   consumeCT,
   predictTurnOrder,
   advanceToNextActor,
+  // Background terminal transition handoff
+  setBattleTerminalCompletionHandler,
+  completeBattleTerminalTransition,
   // Initiative (legacy)
   calculateInitiative,
   sortByInitiative,

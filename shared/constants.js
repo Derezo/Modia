@@ -259,7 +259,7 @@ export const SHRINE_COOLDOWN_HOURS = 6;
 export const ZODIAC_SHRINE_BUFFS = {
   aries: {
     name: "Ram's Charge",
-    description: 'First attack +25% crit chance',
+    description: 'Next basic attack gains +25 percentage points of crit chance',
     signatureAbility: 'rams_charge',
     element: 'fire',
     duration: 4 // hours
@@ -273,7 +273,7 @@ export const ZODIAC_SHRINE_BUFFS = {
   },
   gemini: {
     name: 'Twin Strike',
-    description: 'Next attack hits twice at 60% damage',
+    description: 'Next basic attack hits twice at 60% damage',
     signatureAbility: 'twin_strike',
     element: 'air',
     duration: 4
@@ -301,7 +301,7 @@ export const ZODIAC_SHRINE_BUFFS = {
   },
   libra: {
     name: 'Balance',
-    description: 'Heal equal to damage dealt (once)',
+    description: 'Next basic attack heals for the actual damage dealt',
     signatureAbility: 'balance',
     element: 'air',
     duration: 4
@@ -315,14 +315,14 @@ export const ZODIAC_SHRINE_BUFFS = {
   },
   sagittarius: {
     name: 'Celestial Arrow',
-    description: '+2 range on next attack',
+    description: '+2 range on the next basic attack',
     signatureAbility: 'celestial_arrow',
     element: 'fire',
     duration: 4
   },
   capricorn: {
     name: "Mountain's Endurance",
-    description: '+25% defense for 2 turns',
+    description: '+25% physical and magical defense for 2 turns',
     signatureAbility: 'mountains_endurance',
     element: 'earth',
     duration: 4

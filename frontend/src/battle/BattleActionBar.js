@@ -23,6 +23,8 @@ export class BattleActionBar {
     this.canAct = true;
     this.canWait = true;
     this.currentUnitMp = 0;
+    this.zodiacAbilities = [];
+    this.canUseZodiac = false;
 
     // Callbacks
     this.callbacks = {};
@@ -93,6 +95,15 @@ export class BattleActionBar {
             <span class="dropdown-arrow">▼</span>
           </button>
 
+          <button class="action-btn has-dropdown" data-action="zodiac"
+                  aria-haspopup="menu" aria-controls="zodiac-dropdown"
+                  title="Zodiac signature ability (Z)">
+            <span class="btn-icon">♈</span>
+            <span class="btn-label">Zodiac</span>
+            <span class="btn-key">Z</span>
+            <span class="dropdown-arrow">▼</span>
+          </button>
+
           <div class="action-divider"></div>
 
           <button class="action-btn action-btn-wait" data-action="wait" title="Wait (W)">
@@ -110,6 +121,11 @@ export class BattleActionBar {
         <div class="dropdown-panel" id="item-dropdown">
           <div class="dropdown-header">Items</div>
           <div class="dropdown-content" id="item-list"></div>
+        </div>
+
+        <div class="dropdown-panel" id="zodiac-dropdown" role="menu" aria-label="Zodiac signature abilities">
+          <div class="dropdown-header">Zodiac Signature</div>
+          <div class="dropdown-content" id="zodiac-list"></div>
         </div>
       </div>
     `;
@@ -380,6 +396,21 @@ export class BattleActionBar {
         background: rgba(139, 115, 85, 0.2);
       }
 
+      button.zodiac-dropdown-item {
+        width: 100%;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        text-align: left;
+      }
+
+      button.zodiac-dropdown-item:focus-visible {
+        outline: 2px solid #6b4488;
+        outline-offset: -2px;
+        background: rgba(107, 68, 136, 0.15);
+      }
+
       .dropdown-item.disabled {
         opacity: 0.5;
         cursor: not-allowed;
@@ -446,9 +477,9 @@ export class BattleActionBar {
         }
 
         .action-btn {
-          min-width: 60px;
+          min-width: 48px;
           height: 50px;
-          padding: 6px 8px;
+          padding: 6px 5px;
           border-radius: 6px;
         }
 
@@ -457,7 +488,7 @@ export class BattleActionBar {
         .btn-key { display: none; } /* Hide keyboard shortcuts on mobile */
 
         .action-buttons {
-          gap: 6px;
+          gap: 4px;
         }
 
         .turn-state-text { font-size: 11px; }
@@ -499,8 +530,9 @@ export class BattleActionBar {
       /* Extra small screens */
       @media (max-width: 400px) {
         .action-btn {
-          min-width: 52px;
+          min-width: 43px;
           height: 48px;
+          padding-inline: 3px;
         }
 
         .btn-label { font-size: 10px; }
@@ -557,6 +589,9 @@ export class BattleActionBar {
       case 'item':
         this.toggleDropdown('item');
         break;
+      case 'zodiac':
+        this.toggleDropdown('zodiac');
+        break;
       case 'wait':
         this.callbacks.onWait?.();
         break;
@@ -584,9 +619,16 @@ export class BattleActionBar {
       this.populateSkillList(list);
     } else if (type === 'item') {
       this.populateItemList(list);
+    } else if (type === 'zodiac') {
+      this.populateZodiacList(list);
     }
 
     panel.classList.add('open');
+    this.element.querySelector(`[data-action="${type}"]`)
+      ?.setAttribute('aria-expanded', 'true');
+    if (type === 'zodiac') {
+      panel.querySelector('.zodiac-dropdown-item')?.focus();
+    }
   }
 
   /**
@@ -599,6 +641,8 @@ export class BattleActionBar {
     if (panel) {
       panel.classList.remove('open');
     }
+    this.element.querySelector(`[data-action="${this.activeDropdown}"]`)
+      ?.setAttribute('aria-expanded', 'false');
     this.activeDropdown = null;
   }
 
@@ -687,6 +731,49 @@ export class BattleActionBar {
   }
 
   /**
+   * Populate the free, once-per-battle Zodiac signature ability list.
+   */
+  populateZodiacList(container) {
+    const abilities = this.callbacks.getZodiacAbilities?.() || this.zodiacAbilities;
+
+    if (abilities.length === 0) {
+      container.innerHTML = '<div class="dropdown-empty">No Zodiac ability available</div>';
+      return;
+    }
+
+    container.innerHTML = abilities.map(ability => {
+      const icon = renderAbilityIcon({
+        ...ability,
+        id: ability.id || ability.key,
+        source: 'zodiac'
+      }, { size: 'sm' });
+      return `
+        <button type="button" class="dropdown-item zodiac-dropdown-item"
+                role="menuitem" data-ability-key="${escapeHtmlAttribute(ability.key)}">
+          <span class="dropdown-item-icon">${icon}</span>
+          <div class="dropdown-item-info">
+            <div class="dropdown-item-name">${escapeHtml(ability.name)}</div>
+            <div class="dropdown-item-desc">${escapeHtml(ability.description || 'Free signature action')}</div>
+          </div>
+          <span class="dropdown-item-cost">FREE</span>
+        </button>
+      `;
+    }).join('');
+
+    container.querySelectorAll('.dropdown-item').forEach(item => {
+      item.addEventListener('click', () => {
+        if (this.callbacks.canUseAction &&
+            !this.callbacks.canUseAction('zodiac')) {
+          this.closeDropdown();
+          return;
+        }
+        this.closeDropdown();
+        this.callbacks.onZodiacSelect?.(item.dataset.abilityKey);
+      });
+    });
+  }
+
+  /**
    * Get icon for skill
    */
   getSkillIcon(skill) {
@@ -705,6 +792,27 @@ export class BattleActionBar {
    */
   handleKeydown(e) {
     if (!this.isVisible) return;
+
+    if (this.activeDropdown === 'zodiac') {
+      const items = Array.from(
+        this.element.querySelectorAll('.zodiac-dropdown-item')
+      );
+      const focusedIndex = items.indexOf(document.activeElement);
+      if (['ArrowDown', 'ArrowUp'].includes(e.key) && items.length > 0) {
+        e.preventDefault();
+        const direction = e.key === 'ArrowDown' ? 1 : -1;
+        const nextIndex = focusedIndex < 0
+          ? 0
+          : (focusedIndex + direction + items.length) % items.length;
+        items[nextIndex].focus();
+        return;
+      }
+      if ((e.key === 'Enter' || e.key === ' ') && focusedIndex >= 0) {
+        e.preventDefault();
+        items[focusedIndex].click();
+        return;
+      }
+    }
 
     const key = e.key.toLowerCase();
 
@@ -725,6 +833,10 @@ export class BattleActionBar {
         e.preventDefault();
         this.handleActionClick('item');
         break;
+      case 'z':
+        e.preventDefault();
+        this.handleActionClick('zodiac');
+        break;
       case 'w':
         e.preventDefault();
         this.handleActionClick('wait');
@@ -732,7 +844,9 @@ export class BattleActionBar {
       case 'escape':
         if (this.activeDropdown) {
           e.preventDefault();
+          const activeDropdown = this.activeDropdown;
           this.closeDropdown();
+          this.element.querySelector(`[data-action="${activeDropdown}"]`)?.focus();
         } else {
           this.callbacks.onCancel?.();
         }
@@ -768,6 +882,7 @@ export class BattleActionBar {
     const attackBtn = this.element.querySelector('[data-action="attack"]');
     const skillBtn = this.element.querySelector('[data-action="skill"]');
     const itemBtn = this.element.querySelector('[data-action="item"]');
+    const zodiacBtn = this.element.querySelector('[data-action="zodiac"]');
     const waitBtn = this.element.querySelector('[data-action="wait"]');
 
     // Move button
@@ -780,6 +895,8 @@ export class BattleActionBar {
       btn.classList.toggle('used', !canAct && this.isVisible);
     });
     waitBtn.disabled = !canWait;
+    zodiacBtn.disabled = !this.canUseZodiac;
+    zodiacBtn.classList.toggle('used', !this.canUseZodiac && this.isVisible);
 
     // Update pips
     const movePip = this.element.querySelector('.pip-move');
@@ -805,6 +922,19 @@ export class BattleActionBar {
       stateText.textContent = 'End Turn';
     } else {
       stateText.textContent = 'Turn Complete';
+    }
+  }
+
+  updateZodiacState(abilities = [], enabled = false) {
+    this.zodiacAbilities = Array.isArray(abilities) ? abilities : [];
+    this.canUseZodiac = enabled && this.zodiacAbilities.length > 0;
+    const button = this.element?.querySelector('[data-action="zodiac"]');
+    if (button) {
+      button.disabled = !this.canUseZodiac;
+      button.classList.toggle('used', !this.canUseZodiac && this.isVisible);
+    }
+    if (!this.canUseZodiac && this.activeDropdown === 'zodiac') {
+      this.closeDropdown();
     }
   }
 

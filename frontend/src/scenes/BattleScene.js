@@ -149,6 +149,7 @@ export class BattleScene extends Scene {
     this.selectedSkillId = null;
     this.selectedItemId = null;
     this.selectedInventoryId = null;
+    this.selectedZodiacAbilityKey = null;
     this.lockedTarget = null; // { tile: {x,y}, unit: <unit or null> } - prevents tile cycling during targeting
 
     // Mobile/touch support for terrain preview
@@ -171,7 +172,15 @@ export class BattleScene extends Scene {
     this.isActionSubmitting = false;
     this.stateRevision = null;
     this.retryableActionIntent = null;
+    this.retryableZodiacIntent = null;
+    this.zodiacIntentGeneration = 0;
     this.processedCommandIds = new Set();
+    this.zodiacAbilities = [];
+    this.zodiacAvailabilityLoading = false;
+    this.zodiacAvailabilityKey = null;
+    this.zodiacAvailabilityRequestId = 0;
+    this.zodiacAvailabilityController = null;
+    this.zodiacSubmissionRequestId = 0;
 
     // Turn transition tracking
     this.lastActiveUnitId = null;
@@ -235,7 +244,17 @@ export class BattleScene extends Scene {
     this.inputEnabled = false;
     this.isActionSubmitting = false;
     this.retryableActionIntent = null;
+    this.retryableZodiacIntent = null;
+    this.zodiacIntentGeneration =
+      (Number(this.zodiacIntentGeneration) || 0) + 1;
     this.processedCommandIds.clear();
+    this.zodiacAbilities = [];
+    this.zodiacAvailabilityLoading = false;
+    this.zodiacAvailabilityKey = null;
+    this.zodiacAvailabilityRequestId++;
+    this.zodiacSubmissionRequestId++;
+    this.zodiacAvailabilityController?.abort();
+    this.zodiacAvailabilityController = null;
     this.applyAuthoritativeAvailability(this.serverAvailableActions);
     this.initialEnemyActions = data.initialEnemyActions || null;
     this.battleType = data.battleType || 'pve'; // 'pve', 'pvp', 'pvp_coliseum', 'pve_coop'
@@ -429,6 +448,7 @@ export class BattleScene extends Scene {
       onSelectSkill: (skillId) => this.startSkillAction(skillId),
       onItem: () => this.showItemMenu(),
       onSelectItem: (itemData) => this.startItemAction(itemData),
+      onSelectZodiacAbility: (abilityKey) => this.startZodiacAbility(abilityKey),
       onWait: () => this.submitAction('wait'),
       onConfirm: () => this.confirmAction(),
       onCancel: () => this.cancelAction(),
@@ -451,8 +471,14 @@ export class BattleScene extends Scene {
       onCancel: () => this.cancelAction(),
       onSkillSelect: (skillId) => this.startSkillAction(skillId),
       onItemSelect: (itemData) => this.startItemAction(itemData),
+      onZodiacSelect: (abilityKey) => this.startZodiacAbility(abilityKey),
       getSkills: () => this.getActiveUnitSkillsForRadial(),
-      getItems: () => this.getActiveUnitItemsForRadial()
+      getItems: () => this.getActiveUnitItemsForRadial(),
+      getZodiacAbilities: () => this.zodiacAbilities,
+      canUseAction: (actionType, { notify = true } = {}) =>
+        actionType === 'zodiac'
+          ? this.canSubmitZodiacAbility({ notify })
+          : this.canSubmitAction(actionType, { notify })
     });
 
     // Initialize persistent action bar (always visible during player turn)
@@ -464,10 +490,14 @@ export class BattleScene extends Scene {
       onCancel: () => this.cancelAction(),
       onSkillSelect: (skillId) => this.startSkillAction(skillId),
       onItemSelect: (itemData) => this.startItemAction(itemData),
+      onZodiacSelect: (abilityKey) => this.startZodiacAbility(abilityKey),
       getSkills: () => this.getActiveUnitSkillsForRadial(),
       getItems: () => this.getActiveUnitItemsForRadial(),
+      getZodiacAbilities: () => this.zodiacAbilities,
       canUseAction: (actionType, { notify = true } = {}) =>
-        this.canSubmitAction(actionType, { notify })
+        actionType === 'zodiac'
+          ? this.canSubmitZodiacAbility({ notify })
+          : this.canSubmitAction(actionType, { notify })
     });
 
     // Initialize FFT-style context menu (shown on right-click or unit click on desktop)
@@ -479,10 +509,14 @@ export class BattleScene extends Scene {
       onCancel: () => this.cancelAction(),
       onSkillSelect: (skillId) => this.startSkillAction(skillId),
       onItemSelect: (itemData) => this.startItemAction(itemData),
+      onZodiacSelect: (abilityKey) => this.startZodiacAbility(abilityKey),
       getSkills: () => this.getActiveUnitSkillsForRadial(),
       getItems: () => this.getActiveUnitItemsForRadial(),
+      getZodiacAbilities: () => this.zodiacAbilities,
       canUseAction: (actionType, { notify = true } = {}) =>
-        this.canSubmitAction(actionType, { notify })
+        actionType === 'zodiac'
+          ? this.canSubmitZodiacAbility({ notify })
+          : this.canSubmitAction(actionType, { notify })
     });
 
     // Initialize grid cursor for keyboard navigation
@@ -580,6 +614,16 @@ export class BattleScene extends Scene {
    * Exit the battle scene
    */
   exit() {
+    this.zodiacAvailabilityRequestId++;
+    this.zodiacSubmissionRequestId++;
+    this.zodiacAvailabilityController?.abort();
+    this.zodiacAvailabilityController = null;
+    this.zodiacAvailabilityLoading = false;
+    this.zodiacAvailabilityKey = null;
+    this.zodiacAbilities = [];
+    this.retryableZodiacIntent = null;
+    this.zodiacIntentGeneration =
+      (Number(this.zodiacIntentGeneration) || 0) + 1;
     // Clean up responsive subscription
     if (this._responsiveUnsubscribe) {
       this._responsiveUnsubscribe();
@@ -835,9 +879,12 @@ export class BattleScene extends Scene {
    */
   isLocalActiveUnit(unit = this.getActiveUnit()) {
     if (!unit) return false;
-    return this.isPvP
-      ? unit.isLocalPlayerUnit(this.game.localUserId)
-      : unit.type === 'player';
+    if (this.isPvP) return unit.isLocalPlayerUnit(this.game.localUserId);
+    if (unit.type !== 'player') return false;
+    if (unit.ownerId != null && this.game.localUserId != null) {
+      return String(unit.ownerId) === String(this.game.localUserId);
+    }
+    return true;
   }
 
   /**
@@ -861,8 +908,14 @@ export class BattleScene extends Scene {
     if (!this.serverAvailableActions) return false;
     if (actionType === 'move') return this.canMove;
     if (['attack', 'skill', 'item'].includes(actionType)) return this.canAct;
+    if (actionType === 'zodiac' || actionType === 'zodiac_target') {
+      return (this.zodiacAbilities?.length || 0) > 0;
+    }
     if (actionType === 'wait') return this.canWait;
-    if (actionType === 'any') return this.canMove || this.canAct || this.canWait;
+    if (actionType === 'any') {
+      return this.canMove || this.canAct || this.canWait ||
+        (this.zodiacAbilities?.length || 0) > 0;
+    }
     return false;
   }
 
@@ -871,6 +924,9 @@ export class BattleScene extends Scene {
    * and the final network submission.
    */
   canSubmitAction(actionType, { notify = false } = {}) {
+    if (actionType === 'zodiac' || actionType === 'zodiac_target') {
+      return this.canSubmitZodiacAbility({ notify });
+    }
     const activeUnit = this.getActiveUnit();
     let message = null;
 
@@ -897,6 +953,139 @@ export class BattleScene extends Scene {
     return !message;
   }
 
+  canSubmitZodiacAbility({ notify = false, abilityKey = null } = {}) {
+    const activeUnit = this.getActiveUnit();
+    const abilities = this.zodiacAbilities || [];
+    const selectedAbility = abilityKey
+      ? abilities.find(ability => ability.key === abilityKey)
+      : abilities[0];
+    let message = null;
+
+    if (!this.battleId || this.battleEnded ||
+        (this.battleState?.status ?? 'active') !== 'active') {
+      message = 'This battle is no longer active';
+    } else if (!activeUnit || !this.isLocalActiveUnit(activeUnit)) {
+      message = 'Wait for your active unit';
+    } else if (!this.inputEnabled) {
+      message = 'Battle state is still synchronizing';
+    } else if (this.isActionSubmitting) {
+      message = 'Your previous action is still being submitted';
+    } else if (this.zodiacAvailabilityLoading) {
+      message = 'Zodiac ability availability is still loading';
+    } else if (!selectedAbility) {
+      message = abilityKey
+        ? 'That Zodiac ability is no longer available'
+        : 'No Zodiac ability is available';
+    }
+
+    if (message && notify) {
+      parchmentToast.warning('Zodiac Unavailable', message);
+    }
+    return !message;
+  }
+
+  getActiveBattleUnitState(activeUnit = this.getActiveUnit()) {
+    if (!activeUnit) return null;
+    return this.battleState?.units?.find(
+      unit => String(unit.id) === String(activeUnit.id)
+    ) || null;
+  }
+
+  getActiveCharacterId(activeUnit = this.getActiveUnit()) {
+    const unitState = this.getActiveBattleUnitState(activeUnit);
+    return unitState?.characterId ?? activeUnit?.characterId ?? activeUnit?.id ?? null;
+  }
+
+  getZodiacAvailabilityIdentity(activeUnit = this.getActiveUnit()) {
+    if (!activeUnit || !this.isLocalActiveUnit(activeUnit) ||
+        !this.battleId || (this.battleState?.status ?? 'active') !== 'active') {
+      return null;
+    }
+    const characterId = this.getActiveCharacterId(activeUnit);
+    if (characterId == null) return null;
+    return {
+      battleId: this.battleId,
+      unitId: activeUnit.id,
+      characterId,
+      revision: this.stateRevision ?? this.battleState?.stateRevision ?? 'unversioned'
+    };
+  }
+
+  async refreshZodiacAvailability({ force = false } = {}) {
+    const identity = this.getZodiacAvailabilityIdentity();
+    if (!identity ||
+        typeof this.game.api?.getAvailableZodiacAbilities !== 'function') {
+      this.zodiacAvailabilityRequestId++;
+      this.zodiacAvailabilityController?.abort();
+      this.zodiacAvailabilityController = null;
+      this.zodiacAvailabilityLoading = false;
+      this.zodiacAvailabilityKey = null;
+      this.zodiacAbilities = [];
+      this.updateZodiacControls();
+      return false;
+    }
+
+    const key = [
+      identity.battleId,
+      identity.unitId,
+      identity.characterId,
+      identity.revision
+    ].map(String).join(':');
+    if (!force && this.zodiacAvailabilityKey === key) return true;
+
+    const requestId = ++this.zodiacAvailabilityRequestId;
+    this.zodiacAvailabilityController?.abort();
+    const controller = new AbortController();
+    this.zodiacAvailabilityController = controller;
+    this.zodiacAvailabilityKey = key;
+    this.zodiacAvailabilityLoading = true;
+    this.zodiacAbilities = [];
+    this.updateZodiacControls();
+
+    try {
+      const response = await this.game.api.getAvailableZodiacAbilities(
+        identity.battleId,
+        identity.characterId,
+        { signal: controller.signal }
+      );
+      const currentIdentity = this.getZodiacAvailabilityIdentity();
+      const isCurrent = requestId === this.zodiacAvailabilityRequestId &&
+        currentIdentity &&
+        String(currentIdentity.battleId) === String(identity.battleId) &&
+        String(currentIdentity.unitId) === String(identity.unitId) &&
+        String(currentIdentity.characterId) === String(identity.characterId) &&
+        String(currentIdentity.revision) === String(identity.revision);
+      if (!isCurrent) return false;
+
+      this.zodiacAbilities = Array.isArray(response?.availableAbilities)
+        ? response.availableAbilities
+        : [];
+      return true;
+    } catch (error) {
+      if (error?.name !== 'AbortError' &&
+          requestId === this.zodiacAvailabilityRequestId) {
+        this.zodiacAvailabilityKey = null;
+        console.warn('[Battle] Unable to load Zodiac abilities:', error.message);
+      }
+      return false;
+    } finally {
+      if (requestId === this.zodiacAvailabilityRequestId) {
+        this.zodiacAvailabilityLoading = false;
+        this.zodiacAvailabilityController = null;
+        this.updateZodiacControls();
+      }
+    }
+  }
+
+  updateZodiacControls() {
+    const enabled = this.canSubmitZodiacAbility();
+    this.actionBar?.updateZodiacState?.(this.zodiacAbilities, enabled);
+    this.radialMenu?.setSegmentEnabled?.('zodiac', enabled);
+    if (!enabled && this.contextMenu?.submenuType === 'zodiac') {
+      this.contextMenu.closeSubmenu();
+    }
+  }
+
   isStaleStateRevision(revision) {
     if (revision === null || revision === undefined ||
         this.stateRevision === null || this.stateRevision === undefined) {
@@ -910,10 +1099,29 @@ export class BattleScene extends Scene {
   noteStateRevision(revision) {
     if (revision === null || revision === undefined) return;
     if (!this.isStaleStateRevision(revision)) {
+      const incomingRevision = Number(revision);
+      const currentRevision = Number(this.stateRevision);
+      const advancesRevision = Number.isFinite(incomingRevision) && (
+        this.stateRevision === null ||
+        this.stateRevision === undefined ||
+        !Number.isFinite(currentRevision) ||
+        incomingRevision > currentRevision
+      );
+      if (advancesRevision) {
+        this.zodiacIntentGeneration =
+          (Number(this.zodiacIntentGeneration) || 0) + 1;
+      }
       const retryBaseRevision = this.retryableActionIntent?.baseRevision;
       if (retryBaseRevision !== null && retryBaseRevision !== undefined &&
           Number(revision) > Number(retryBaseRevision)) {
         this.retryableActionIntent = null;
+      }
+      const zodiacRetryBaseRevision =
+        this.retryableZodiacIntent?.baseRevision;
+      if (zodiacRetryBaseRevision !== null &&
+          zodiacRetryBaseRevision !== undefined &&
+          Number(revision) > Number(zodiacRetryBaseRevision)) {
+        this.retryableZodiacIntent = null;
       }
       this.stateRevision = revision;
       if (this.battleState) this.battleState.stateRevision = revision;
@@ -928,11 +1136,13 @@ export class BattleScene extends Scene {
     this.selectedSkillId = null;
     this.selectedItemId = null;
     this.selectedInventoryId = null;
+    this.selectedZodiacAbilityKey = null;
     this.selectedMoveTile = null;
     this.hideRadialMenu();
     this.ui?.hideConfirmation?.();
     this.ui?.hideSkillPanel?.();
     this.ui?.hideItemPanel?.();
+    this.ui?.hideZodiacPanel?.();
     this.ui?.hideTargetingMode?.();
     this.ui?.clearTargetSticky?.();
     this.ui?.hideActiveUnitPreview?.();
@@ -951,6 +1161,8 @@ export class BattleScene extends Scene {
         controlsEnabled && this.canWait
       );
     }
+    this.updateZodiacControls();
+    void this.refreshZodiacAvailability();
   }
 
   /**
@@ -971,6 +1183,9 @@ export class BattleScene extends Scene {
       // A new authoritative local turn supersedes any ambiguous identity left
       // over from an earlier turn; an exact duplicate notification does not.
       this.retryableActionIntent = null;
+      this.retryableZodiacIntent = null;
+      this.zodiacIntentGeneration =
+        (Number(this.zodiacIntentGeneration) || 0) + 1;
     }
     this.battleState.status ??= 'active';
     this.battleState.activeUnitId = unitId;
@@ -1124,6 +1339,24 @@ export class BattleScene extends Scene {
       } else {
         this.ui.showConfirmation(`Use ${skill?.name || 'skill'} on tile?`);
       }
+    } else if (this.currentAction === 'zodiac_target' && isValidTile) {
+      const target = this.getUnitAt(x, y);
+      const ability = this.zodiacAbilities.find(
+        candidate => candidate.key === this.selectedZodiacAbilityKey
+      );
+      if (!target || !this.isOpposingUnit(activeUnit, target)) {
+        parchmentToast.warning('Invalid Target', 'Choose a living opponent');
+        return;
+      }
+      this.pendingAction = {
+        type: 'zodiac',
+        abilityKey: ability?.key,
+        targetUnitId: target.id,
+        targetTile: { x, y },
+        target
+      };
+      this.lockedTarget = { tile: { x, y }, unit: target };
+      this.ui.showConfirmation(`Use ${ability?.name || 'Zodiac ability'} on ${target.name}?`);
     } else if (this.currentAction === 'item' && isValidTile) {
       // Item targeting (allies only)
       const target = this.getUnitAt(x, y);
@@ -1463,6 +1696,10 @@ export class BattleScene extends Scene {
     this.radialMenu.setSegmentEnabled('attack', this.canAct);
     this.radialMenu.setSegmentEnabled('skill', this.canAct);
     this.radialMenu.setSegmentEnabled('item', this.canAct);
+    this.radialMenu.setSegmentEnabled(
+      'zodiac',
+      this.canSubmitZodiacAbility()
+    );
 
     // Show radial menu above the unit
     this.radialMenu.show(overlayPos.x, overlayPos.y, activeUnit.mp);
@@ -1758,6 +1995,117 @@ export class BattleScene extends Scene {
     parchmentToast.info(skill.name, 'Click to confirm or press Escape to cancel');
   }
 
+  isOpposingUnit(sourceUnit, candidate) {
+    if (!sourceUnit || !candidate || !candidate.isAlive()) return false;
+    const sourceTeam = sourceUnit.teamId ??
+      (sourceUnit.type === 'enemy' ? 2 : 1);
+    const candidateTeam = candidate.teamId ??
+      (candidate.type === 'enemy' ? 2 : 1);
+    return sourceTeam !== candidateTeam;
+  }
+
+  zodiacAbilityNeedsTarget(ability) {
+    if (typeof ability?.needsTarget === 'boolean') return ability.needsTarget;
+    return ['venom_sting', 'dreamwave'].includes(ability?.key);
+  }
+
+  getEffectiveBasicAttackRange(activeUnit = this.getActiveUnit()) {
+    const authoritativeRange = Number(
+      this.serverAvailableActions?.attacks?.range
+    );
+    if (Number.isFinite(authoritativeRange) && authoritativeRange > 0) {
+      return authoritativeRange;
+    }
+
+    const unitState = this.getActiveBattleUnitState(activeUnit);
+    const baseRangeValue = Number(
+      unitState?.attackRange ?? activeUnit?.attackRange
+    );
+    const baseRange = Number.isFinite(baseRangeValue) && baseRangeValue > 0
+      ? baseRangeValue
+      : 1;
+    const pendingRangeValue = Number(
+      unitState?.nextAttackRangeBonus ?? activeUnit?.nextAttackRangeBonus
+    );
+    const pendingRangeBonus = Number.isFinite(pendingRangeValue)
+      ? pendingRangeValue
+      : 0;
+
+    return Math.max(1, baseRange + pendingRangeBonus);
+  }
+
+  startZodiacAbility(abilityKey) {
+    if (!this.canSubmitZodiacAbility({ notify: true, abilityKey })) return;
+    const activeUnit = this.getActiveUnit();
+    const ability = this.zodiacAbilities.find(
+      candidate => candidate.key === abilityKey
+    );
+    if (!activeUnit || !ability) return;
+
+    this.hideRadialMenu();
+    this.contextMenu?.hide();
+    this.actionBar?.closeDropdown();
+    this.ui?.hideZodiacPanel();
+    this.selectedZodiacAbilityKey = abilityKey;
+
+    if (!this.zodiacAbilityNeedsTarget(ability)) {
+      this.currentAction = 'zodiac';
+      this.validTiles = [{
+        x: activeUnit.gridX,
+        y: activeUnit.gridY,
+        unitId: activeUnit.id,
+        isSelf: true
+      }];
+      this.pendingAction = {
+        type: 'zodiac',
+        abilityKey,
+        targetTile: { x: activeUnit.gridX, y: activeUnit.gridY },
+        target: activeUnit,
+        isSelfTarget: true
+      };
+      this.lockedTarget = {
+        tile: { x: activeUnit.gridX, y: activeUnit.gridY },
+        unit: activeUnit
+      };
+      this.ui.setActionsEnabled(false);
+      this.ui.showTargetingMode();
+      this.ui.showConfirmation(`Use ${ability.name}?`);
+      return;
+    }
+
+    const range = this.getEffectiveBasicAttackRange(activeUnit);
+    const attackableTiles = this.pathfinding.getAttackableTiles(
+      activeUnit.gridX,
+      activeUnit.gridY,
+      range
+    );
+    const opponentsByPosition = new Map(
+      Array.from(this.units.values())
+        .filter(unit => this.isOpposingUnit(activeUnit, unit))
+        .map(unit => [`${unit.gridX}:${unit.gridY}`, unit])
+    );
+    this.validTiles = attackableTiles
+      .filter(tile => opponentsByPosition.has(`${tile.x}:${tile.y}`))
+      .map(tile => ({
+        ...tile,
+        unitId: opponentsByPosition.get(`${tile.x}:${tile.y}`).id
+      }));
+    this.currentAction = 'zodiac_target';
+    this.pendingAction = null;
+    this.lockedTarget = null;
+    this.ui.setActionsEnabled(false);
+    this.ui.showTargetingMode();
+
+    if (this.validTiles.length === 0) {
+      parchmentToast.warning(
+        ability.name,
+        `No living opponents are within ${range} tiles`
+      );
+    } else {
+      parchmentToast.info(ability.name, 'Choose a highlighted opponent');
+    }
+  }
+
   /**
    * Show item selection menu
    */
@@ -1843,6 +2191,177 @@ export class BattleScene extends Scene {
     return unit.skills.find(s => s.id === 'throw_item');
   }
 
+  presentZodiacAbility(actor, result = {}, target = null) {
+    const abilityKey = result.abilityKey || result.key;
+    this.audioManager?.playSkillSound?.({
+      id: abilityKey,
+      key: abilityKey,
+      source: 'zodiac'
+    }, actor);
+
+    for (const effect of result.effects || []) {
+      const effectTarget = effect.target === 'self'
+        ? actor
+        : this.units.get(effect.target) || target;
+      if (!effectTarget) continue;
+      if (effect.type === 'heal' && Number(effect.value) > 0) {
+        this.animations?.addHealNumber?.(
+          effectTarget.screenX,
+          effectTarget.screenY - 40,
+          Number(effect.value)
+        );
+        continue;
+      }
+      const label = String(effect.effect || effect.type || '').trim();
+      if (!label) continue;
+      this.animations?.addStatusEffect?.(
+        effectTarget.screenX,
+        effectTarget.screenY - 74,
+        label.toUpperCase()
+      );
+      this.audioManager?.playStatusEffectSound?.(label);
+    }
+  }
+
+  async submitZodiacAbility({ abilityKey, targetUnitId = undefined } = {}) {
+    const activeUnit = this.getActiveUnit();
+    if (!activeUnit ||
+        !this.canSubmitZodiacAbility({ notify: true, abilityKey })) {
+      return false;
+    }
+    const ability = this.zodiacAbilities.find(
+      candidate => candidate.key === abilityKey
+    );
+    if (!ability) return false;
+
+    const submittedBattleId = this.battleId;
+    const submittedUnitId = activeUnit.id;
+    const submissionRequestId =
+      (Number(this.zodiacSubmissionRequestId) || 0) + 1;
+    this.zodiacSubmissionRequestId = submissionRequestId;
+    const characterId = this.getActiveCharacterId(activeUnit);
+    const intentSignature = JSON.stringify({
+      battleId: String(submittedBattleId),
+      characterId: String(characterId),
+      abilityKey,
+      targetUnitId: targetUnitId === undefined || targetUnitId === null
+        ? null
+        : String(targetUnitId)
+    });
+    const retryIntent =
+      this.retryableZodiacIntent?.signature === intentSignature
+        ? this.retryableZodiacIntent
+        : null;
+    if (!retryIntent) this.retryableZodiacIntent = null;
+    const commandId = retryIntent?.commandId ?? createBattleCommandId();
+    const actionSequence = retryIntent?.actionSequence ??
+      this.wsManager?.getNextActionSequence();
+    const commandBaseRevision =
+      retryIntent?.baseRevision ?? this.stateRevision;
+    const intentGeneration = Number(this.zodiacIntentGeneration) || 0;
+    this.isActionSubmitting = true;
+    this.refreshActionControls();
+
+    try {
+      const result = await this.game.api.useZodiacAbility({
+        battleId: submittedBattleId,
+        characterId,
+        abilityKey,
+        targetUnitId,
+        actionSequence,
+        commandId,
+        stateRevision: commandBaseRevision
+      });
+      if (String(this.battleId) !== String(submittedBattleId) ||
+          submissionRequestId !== this.zodiacSubmissionRequestId) {
+        return false;
+      }
+
+      const alreadyProcessed = this.processedCommandIds.has(commandId);
+      const accepted = this.reconcileAuthoritativePayload(result);
+      const target = targetUnitId != null ? this.units.get(targetUnitId) : null;
+      if (accepted) {
+        this.clearActionTargetingState();
+        this.zodiacAbilities = [];
+        this.zodiacAvailabilityKey = null;
+      } else if (
+        this.selectedZodiacAbilityKey === abilityKey &&
+        ['zodiac', 'zodiac_target'].includes(this.currentAction)
+      ) {
+        // The newer authoritative revision already won. Clear only the
+        // submitted Zodiac intent, never unrelated targeting from that state.
+        this.clearActionTargetingState();
+      }
+
+      if (accepted && !alreadyProcessed &&
+          String(this.getActiveUnit()?.id) === String(submittedUnitId)) {
+        const presentationResult = {
+          ...result,
+          abilityKey,
+          abilityName: result.abilityName || ability.name
+        };
+        this.presentZodiacAbility(activeUnit, presentationResult, target);
+        this.addBattleLogEntry(
+          activeUnit,
+          'zodiac_ability',
+          target,
+          presentationResult
+        );
+        parchmentToast.success(
+          result.abilityName || ability.name,
+          result.message || 'Zodiac signature ability activated'
+        );
+      }
+      if (accepted) this.processedCommandIds.add(commandId);
+      if (this.retryableZodiacIntent?.commandId === commandId) {
+        this.retryableZodiacIntent = null;
+      }
+      void this.refreshZodiacAvailability({ force: accepted });
+      return true;
+    } catch (error) {
+      if (String(this.battleId) !== String(submittedBattleId) ||
+          submissionRequestId !== this.zodiacSubmissionRequestId) {
+        return false;
+      }
+      const responsePayload = error.data || error.response;
+      const hasAuthoritativeRecovery = !!responsePayload && (
+        responsePayload.state !== undefined ||
+        responsePayload.snapshot !== undefined ||
+        responsePayload.availableActions !== undefined ||
+        responsePayload.stateRevision !== undefined
+      );
+      if (hasAuthoritativeRecovery) {
+        this.reconcileAuthoritativePayload(responsePayload);
+        this.retryableZodiacIntent = null;
+      } else {
+        const currentActiveUnit = this.getActiveUnit();
+        const sameTurnIdentity = currentActiveUnit &&
+          String(currentActiveUnit.id) === String(submittedUnitId) &&
+          String(this.getActiveCharacterId(currentActiveUnit)) ===
+            String(characterId);
+        if ((Number(this.zodiacIntentGeneration) || 0) === intentGeneration &&
+            sameTurnIdentity) {
+          this.retryableZodiacIntent = {
+            signature: intentSignature,
+            commandId,
+            actionSequence,
+            baseRevision: commandBaseRevision
+          };
+        } else {
+          this.retryableZodiacIntent = null;
+        }
+      }
+      parchmentToast.error('Zodiac Ability Failed', error.message);
+      return false;
+    } finally {
+      if (submissionRequestId === this.zodiacSubmissionRequestId &&
+          String(this.battleId) === String(submittedBattleId)) {
+        this.isActionSubmitting = false;
+        this.refreshActionControls();
+      }
+    }
+  }
+
   /**
    * Confirm pending action
    */
@@ -1859,6 +2378,24 @@ export class BattleScene extends Scene {
       parchmentToast.warning('Target Defeated', 'The target was defeated');
       this.cancelAction();
       return false;
+    }
+    if (this.pendingAction.type === 'zodiac') {
+      const pendingAction = this.pendingAction;
+      const submitted = await this.submitZodiacAbility({
+        abilityKey: pendingAction.abilityKey,
+        targetUnitId: pendingAction.targetUnitId
+      });
+      if (!submitted && this.pendingAction === pendingAction) {
+        const ability = this.zodiacAbilities.find(
+          candidate => candidate.key === pendingAction.abilityKey
+        );
+        this.ui.showConfirmation(
+          pendingAction.target
+            ? `Use ${ability?.name || 'Zodiac ability'} on ${pendingAction.target.name}?`
+            : `Use ${ability?.name || 'Zodiac ability'}?`
+        );
+      }
+      return submitted;
     }
     const submitted = await this.submitAction(
       this.pendingAction.type,
@@ -1880,10 +2417,12 @@ export class BattleScene extends Scene {
     this.selectedSkillId = null;
     this.selectedItemId = null;
     this.selectedInventoryId = null;
+    this.selectedZodiacAbilityKey = null;
     this.selectedMoveTile = null; // Clear mobile two-tap selection
     this.ui.hideConfirmation();
     this.ui.hideSkillPanel();
     this.ui.hideItemPanel();
+    this.ui.hideZodiacPanel();
     this.ui.hideTargetingMode();
     this.refreshActionControls();
 
@@ -3034,6 +3573,7 @@ export class BattleScene extends Scene {
         : activeUnit.type === 'player';
 
       if (isLocalPlayerTurn) {
+        void this.refreshZodiacAvailability();
         // Two-action system: update available actions for new turn
         this.ui.updateAvailableActions(this.canMove, this.canAct);
         const controlsEnabled = this.canSubmitAction('any');
@@ -3071,6 +3611,7 @@ export class BattleScene extends Scene {
           this.ui.hideOpponentTurnIndicator();
         }
       } else {
+        void this.refreshZodiacAvailability();
         this.hideRadialMenu();
         this.ui.hideActionMenu();
         // Hide action bar during enemy/opponent turns

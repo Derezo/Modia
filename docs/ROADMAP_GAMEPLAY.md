@@ -4,8 +4,8 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 7.0 |
-| Last Updated | January 2026 |
+| Version | 10.1 |
+| Last Updated | July 2026 |
 | Focus | Features, mechanics, UX, content |
 
 ---
@@ -33,7 +33,7 @@
 - [x] `advancement_quest_templates` - Quest definitions (020_guild_quest_system.sql)
 - [x] `character_quests` - Quest progress with JSONB tracking
 - [x] `guildmaster_templates` - Guildmaster boss templates (021_guildmaster_bosses.sql)
-- [ ] `character_titles` - Earned titles (deferred to v1.1)
+- [x] `character_titles` - Earned title entitlements (020_guild_quest_system.sql)
 
 #### Quest System (Implemented)
 - [x] Material collection quest requirements
@@ -371,7 +371,7 @@ Per ITEM_SYSTEM.md specifications:
 
 #### Node Types
 - [x] Chest nodes - One-time gold rewards (scaling with distance)
-- [x] Shrine nodes - Timed buffs with 24-hour cooldown
+- [x] Shrine nodes - Four-hour timed buffs with six-hour per-shrine cooldown
 - [x] Discovery nodes - Lore unlocks (revisitable)
 - [x] Degree-2 reward sites preferred; configurable minority (~15%) retained as
   true degree-1 dead ends
@@ -482,6 +482,10 @@ Per ITEM_SYSTEM.md specifications:
 - [x] Relic collection modal (RelicCollectionModal.js)
 - [x] Zodiac indicator HUD element (ZodiacIndicator.js)
 - [x] Shrine tooltip with crystal status (NodeHoverTooltip.js)
+- [x] World-map "Receive Blessing" action with activation feedback and live cooldown
+- [x] User-scoped shrine identity, active-buff, and cooldown state in world APIs
+- [x] Server-enforced stamina, battle XP, and battle gold shrine effects
+- [x] Permanent crystal combat bonuses and two-slot collection reward
 
 #### Guild Distribution Enhancement
 - [x] 3 guilds per region (up from 1)
@@ -517,7 +521,8 @@ Per ITEM_SYSTEM.md specifications:
 - [x] Remove old auto-advancement from skills.js
 - [x] Guild hall advancement via quests (advancementQuest.js)
 - [x] Quest chain completion required
-- [ ] Title system (deferred to v1.1)
+- [x] Earned title entitlements and active-title persistence
+- [ ] Player-facing title equip/display selection UI (deferred to v1.1)
 
 ### 5.2.1 Skill System Overhaul (Complete - v8.1)
 
@@ -668,6 +673,7 @@ Recent implementations:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 10.1 | Jul 2026 | Shrine Completion: Added the world-map activation action, private live cooldown state, server-enforced stamina/XP/gold blessings, canonical Zodiac slot rules, permanent crystal combat bonuses across PvE/advancement/Coliseum, and synchronized shrine documentation. |
 | 10.0 | Jan 2026 | Battle Consumable Item System (v10.8): Marked consumable items complete in Combat System (Section 2.1). Fixed 5 interconnected bugs preventing battle items from working. Added item branch to WebSocket action processing with sprite arc animations. Added AI item scoring with urgency-based healing evaluation. Updated Combat System completion to 100%. |
 | 9.1 | Jan 2026 | World Generation Quality (v9.7): Global guild same-type spacing (~100 units between same guild types). Battle terrain anti-clustering (prevent 3+ same-type nodes clustering). Zodiac shrine validation (exactly 12 or fail). Removed unused GAP_INFILL_CONFIG. Section 5.1.3 now complete. |
 | 9.0 | Jan 2026 | Documentation Audit: Marked enemy ability execution as deferred. Updated Advanced Item System with implementation status. Updated Tavern 2.0 section noting TavernScene exists. Added BATTLE_MODES.md reference for PvP modes. |

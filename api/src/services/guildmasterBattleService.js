@@ -25,8 +25,9 @@ import {
   selectBattleMapGenerationVersion
 } from './battle/battleMapGenerationService.js';
 import { deriveEncounterTerrainSeed } from './battle/encounterService.js';
-// createPlayerBattleUnit could be used for future multi-character guildmaster battles
-// import { createPlayerBattleUnit } from './battleUnitFactory.js';
+import { createPlayerBattleUnit } from './battleUnitFactory.js';
+import { loadActiveZodiacAbilities } from './zodiacAbilityService.js';
+import { loadZodiacCollectionBonus } from './zodiacCollectionBonusService.js';
 import * as bossService from './bossService.js';
 
 const BASE_CLASSES = ['warrior', 'wizard', 'monk', 'chemist'];
@@ -211,16 +212,18 @@ export async function generateGuildmasterBattle(
     bossConfig = null,
     advancementQuestId = null,
     clientCapabilities = null,
-    allowV2 = isBattleMapV2EnabledForMode('guild')
+    allowV2 = isBattleMapV2EnabledForMode('guild'),
+    client = null
   } = {}
 ) {
+  const executeQuery = client ? client.query.bind(client) : query;
   const opponentClass = resolveGuildmasterOpponentClass(
     targetClass,
     bossConfig
   );
 
   // Get guildmaster template from database
-  const templateResult = await query(
+  const templateResult = await executeQuery(
     'SELECT * FROM guildmaster_templates WHERE guild_class = $1',
     [opponentClass]
   );
@@ -236,7 +239,7 @@ export async function generateGuildmasterBattle(
   const tier = guildmasterTemplate.guild_tier;
 
   // Create player battle unit (solo - just the one character)
-  const playerUnit = await createSoloPlayerUnit(character);
+  const playerUnit = await createSoloPlayerUnit(character, { client });
 
   // Create guildmaster unit scaled to challenger level
   const guildmaster = createGuildmasterUnit(guildmasterTemplate, character.level);
@@ -322,9 +325,11 @@ export async function generateGuildmasterBattle(
 /**
  * Create a solo player battle unit
  */
-async function createSoloPlayerUnit(character) {
+export async function createSoloPlayerUnit(character, { client = null } = {}) {
+  const executeQuery = client ? client.query.bind(client) : query;
+
   // Get full character data with equipment
-  const charResult = await query(
+  const charResult = await executeQuery(
     `SELECT c.*, r.name as race_name
      FROM characters c
      LEFT JOIN races r ON c.race = r.id::text
@@ -335,7 +340,7 @@ async function createSoloPlayerUnit(character) {
   const char = charResult.rows[0] || character;
 
   // Get equipped items for stat bonuses
-  const equipResult = await query(
+  const equipResult = await executeQuery(
     `SELECT ci.*, it.stat_bonuses, it.equipment_slot
      FROM character_items ci
      JOIN item_templates it ON ci.item_template_id = it.id
@@ -347,47 +352,49 @@ async function createSoloPlayerUnit(character) {
   const equipmentBonuses = calculateEquipmentBonuses(equipResult.rows);
 
   // Get character skills
-  const skillsResult = await query(
+  const skillsResult = await executeQuery(
     'SELECT skill_id, level FROM character_skills WHERE character_id = $1',
     [character.id]
   );
 
   const skills = resolveAdvancementSkills(char.class, skillsResult.rows);
-
-  return withBattleVisualIdentity({
-    id: `player_${character.id}`,
-    characterId: character.id,
-    type: 'player',
-    name: char.name,
-    class: char.class,
-    race: char.race,
-    gender: char.gender || 'other',
-    level: char.level,
-    hp: char.hp_current || char.hp_max,
-    maxHp: char.hp_max + (equipmentBonuses.hp || 0),
-    mp: char.mp_current || char.mp_max,
-    maxMp: char.mp_max + (equipmentBonuses.mp || 0),
-    strength: char.strength + (equipmentBonuses.strength || 0),
-    intelligence: char.intelligence + (equipmentBonuses.intelligence || 0),
-    agility: char.agility + (equipmentBonuses.agility || 0),
-    vitality: char.vitality + (equipmentBonuses.vitality || 0),
-    luck: char.luck || 10,
-    attack: (equipmentBonuses.attack || 0),
-    defense: (equipmentBonuses.defense || 0),
-    magicAttack: (equipmentBonuses.magicAttack || 0),
-    magicDefense: (equipmentBonuses.magicDefense || 0),
-    movement: CLASS_MOVEMENT[char.class] || 3,
-    skills,
-    ct: 0,
-    statusEffects: [],
-    moveUsed: false,
-    actUsed: false,
-    tileX: 0,
-    tileY: 0
-  }, {
-    kind: 'player',
-    id: character.id
+  const zodiacCollectionBonus = await loadZodiacCollectionBonus(
+    char.user_id,
+    { client }
+  );
+  const zodiacAbilities = await loadActiveZodiacAbilities(
+    char.user_id,
+    { client }
+  );
+  const unit = createPlayerBattleUnit({
+    ...char,
+    user_id: char.user_id,
+    hp_current: char.hp_current || char.hp_max,
+    mp_current: char.mp_current || char.mp_max,
+    luck: char.luck ?? 10,
+    equip_hp: equipmentBonuses.hp || 0,
+    equip_mp: equipmentBonuses.mp || 0,
+    equip_strength: equipmentBonuses.strength || 0,
+    equip_intelligence: equipmentBonuses.intelligence || 0,
+    equip_agility: equipmentBonuses.agility || 0,
+    equip_vitality: equipmentBonuses.vitality || 0,
+    equip_luck: 0,
+    equip_attack: equipmentBonuses.attack || 0,
+    equip_defense: equipmentBonuses.defense || 0,
+    equip_magic_attack: equipmentBonuses.magicAttack || 0,
+    equip_magic_defense: equipmentBonuses.magicDefense || 0
+  }, null, skills, {
+    defaultX: 0,
+    defaultY: 0,
+    zodiacAbilities,
+    zodiacCollectionBonus
   });
+
+  // Preserve the advancement battle's established encounter ID and explicit
+  // character reference while sharing the canonical player snapshot builder.
+  unit.id = `player_${character.id}`;
+  unit.characterId = character.id;
+  return unit;
 }
 
 /**

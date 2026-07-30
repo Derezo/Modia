@@ -20,6 +20,7 @@ import {
   getAlliedUnits,
   areOpponents,
   areAllies,
+  isForcedMovementImmune,
   getReachableTiles,
   calculatePathCost,
   getManhattanDistance
@@ -131,6 +132,49 @@ describe('getAttackRange', () => {
     // Note: 0 || 1 = 1, so this tests that behavior
     const range = getAttackRange(unit);
     assert.strictEqual(range, 1, '0 attackRange defaults to 1');
+  });
+
+  test('uses materialized Eagle Eye range without applying the trait twice', () => {
+    const unit = createMockPlayerUnit({
+      attackRange: 2,
+      traits: [{
+        name: 'Eagle Eye',
+        effectType: 'range_bonus',
+        effectValue: 1
+      }]
+    });
+
+    assert.strictEqual(getAttackRange(unit), 2);
+  });
+
+  test('adds Celestial Arrow to materialized Eagle Eye range only once', () => {
+    const unit = createMockPlayerUnit({
+      attackRange: 2,
+      traits: [{
+        name: 'Eagle Eye',
+        effectType: 'range_bonus',
+        effectValue: 1
+      }],
+      nextAttackRangeBonus: 2
+    });
+
+    assert.strictEqual(getAttackRange(unit), 4);
+    delete unit.nextAttackRangeBonus;
+    assert.strictEqual(getAttackRange(unit), 2);
+  });
+});
+
+describe('isForcedMovementImmune', () => {
+  test('recognizes Unmovable without affecting ordinary movement rules', () => {
+    const unit = createMockPlayerUnit({
+      statusEffects: [{ type: 'unmovable', duration: 999 }]
+    });
+
+    assert.strictEqual(isForcedMovementImmune(unit), true);
+    assert.ok(getMovementRange(unit) > 0);
+    assert.strictEqual(isForcedMovementImmune(
+      createMockPlayerUnit({ statusEffects: [] })
+    ), false);
   });
 });
 

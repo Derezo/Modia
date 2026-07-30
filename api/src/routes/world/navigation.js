@@ -19,6 +19,7 @@ import presenceService from '../../services/presenceService.js';
 import * as staminaService from '../../services/staminaService.js';
 import * as dailyQuestService from '../../services/dailyQuestService.js';
 import { parseIntOrThrow } from '../../utils/validateNumericParam.js';
+import { SHRINE_COOLDOWN_HOURS } from '../../../../shared/constants.js';
 import {
   getBlockedNodes,
   getVisitedNodes,
@@ -43,6 +44,47 @@ const worldRouteConnectionSelect = WORLD_ROUTE_CONNECTION_COLUMNS
   .map((column) => `wnc.${column}`)
   .join(', ');
 
+const shrineCooldownIntervalSql = `(${SHRINE_COOLDOWN_HOURS} * INTERVAL '1 hour')`;
+
+/**
+ * User-scoped shrine state projected onto a world node response.
+ *
+ * The visit join must always use the authenticated user's parameter. Keeping
+ * the timing fields flat matches the existing snake_case world-node contract.
+ */
+function shrineStatusSelect() {
+  return `wn.shrine_buff_type,
+          wn.zodiac_sign,
+          CASE
+            WHEN wn.node_type = 'shrine' AND usv.expires_at > NOW() THEN true
+            ELSE false
+          END AS shrine_buff_active,
+          CASE
+            WHEN wn.node_type = 'shrine'
+             AND usv.last_visited_at + ${shrineCooldownIntervalSql} > NOW()
+              THEN true
+            ELSE false
+          END AS shrine_on_cooldown,
+          CASE
+            WHEN wn.node_type = 'shrine'
+             AND (
+               usv.last_visited_at IS NULL
+               OR usv.last_visited_at + ${shrineCooldownIntervalSql} <= NOW()
+             )
+              THEN true
+            ELSE false
+          END AS shrine_available,
+          CASE
+            WHEN wn.node_type = 'shrine' THEN usv.expires_at
+            ELSE NULL
+          END AS shrine_buff_expires_at,
+          CASE
+            WHEN wn.node_type = 'shrine' AND usv.last_visited_at IS NOT NULL
+              THEN usv.last_visited_at + ${shrineCooldownIntervalSql}
+            ELSE NULL
+          END AS shrine_cooldown_until`;
+}
+
 /**
  * Build the interactions offered at a world node.
  *
@@ -60,6 +102,15 @@ export function buildAvailableNodeActions(node) {
 
   if (node?.node_type === 'chest' && !node.chest_claimed) {
     actions.push({ type: 'claim_chest', name: 'Claim Treasure' });
+  }
+
+  if (node?.node_type === 'shrine') {
+    actions.push({
+      type: 'visit_shrine',
+      name: 'Receive Blessing',
+      enabled: node.shrine_available !== false,
+      cooldown_until: node.shrine_cooldown_until ?? null
+    });
   }
 
   if (['forest', 'cave', 'mountain', 'bridge'].includes(node?.node_type)) {
@@ -355,6 +406,7 @@ router.get('/nodes', authenticate, asyncHandler(async (req, res) => {
     `SELECT wn.id, wn.node_type, wn.name, wn.x_coord, wn.y_coord, wn.distance_from_center,
             wn.features, wn.guild_class, wn.local_seed, wn.difficulty_tier,
             wn.region_id, wn.region_race, wn.ring_distance,
+            ${shrineStatusSelect()},
             und.discovered_at,
             und.discovery_method,
             CASE WHEN und.discovery_method = 'travel' THEN true ELSE false END as visited,
@@ -368,6 +420,7 @@ router.get('/nodes', authenticate, asyncHandler(async (req, res) => {
      INNER JOIN user_node_discovery und ON wn.id = und.node_id
      LEFT JOIN user_node_clearance unc ON wn.id = unc.node_id AND unc.user_id = $1
      LEFT JOIN user_chest_claims ucc ON wn.id = ucc.node_id AND ucc.user_id = $1
+     LEFT JOIN user_shrine_visits usv ON wn.id = usv.node_id AND usv.user_id = $1
      WHERE und.user_id = $1
      ORDER BY wn.distance_from_center ASC`,
     [userId]
@@ -397,11 +450,13 @@ router.get('/nodes/:id', authenticate, asyncHandler(async (req, res) => {
     `SELECT wn.id, wn.node_type, wn.name, wn.x_coord, wn.y_coord, wn.distance_from_center,
             wn.features, wn.guild_class, wn.local_seed, wn.difficulty_tier,
             wn.region_id, wn.region_race, wn.ring_distance,
+            ${shrineStatusSelect()},
             wr.race as region_name, wr.dominant_terrain as region_terrain,
             CASE WHEN ucc.node_id IS NOT NULL THEN true ELSE false END as chest_claimed
      FROM world_nodes wn
      LEFT JOIN world_regions wr ON wr.id = wn.region_id
      LEFT JOIN user_chest_claims ucc ON wn.id = ucc.node_id AND ucc.user_id = $2
+     LEFT JOIN user_shrine_visits usv ON wn.id = usv.node_id AND usv.user_id = $2
      WHERE wn.id = $1
        AND EXISTS (
          SELECT 1
@@ -684,9 +739,11 @@ router.post('/travel', authenticate, travelLimiter, asyncHandler(async (req, res
   const nodeResult = await query(
     `SELECT wn.id, wn.node_type, wn.name, wn.features, wn.guild_class,
             wn.local_seed, wn.difficulty_tier, wn.region_id,
+            ${shrineStatusSelect()},
             CASE WHEN ucc.node_id IS NOT NULL THEN true ELSE false END as chest_claimed
      FROM world_nodes wn
      LEFT JOIN user_chest_claims ucc ON wn.id = ucc.node_id AND ucc.user_id = $2
+     LEFT JOIN user_shrine_visits usv ON wn.id = usv.node_id AND usv.user_id = $2
      WHERE wn.id = $1`,
     [targetNodeId, req.user.userId]
   );
@@ -792,6 +849,7 @@ router.get('/current', authenticate, asyncHandler(async (req, res) => {
     `SELECT wn.id, wn.node_type, wn.name, wn.x_coord, wn.y_coord, wn.features, wn.guild_class,
             wn.local_seed, wn.difficulty_tier,
             wn.region_id, wn.region_race, wn.ring_distance,
+            ${shrineStatusSelect()},
             wr.race as region_name, wr.dominant_terrain as region_terrain,
             wr.castle_node_id as region_castle_id,
             CASE WHEN ucc.node_id IS NOT NULL THEN true ELSE false END as chest_claimed,
@@ -803,6 +861,7 @@ router.get('/current', authenticate, asyncHandler(async (req, res) => {
      LEFT JOIN world_regions wr ON wr.id = wn.region_id
      LEFT JOIN user_node_clearance unc ON wn.id = unc.node_id AND unc.user_id = $1
      LEFT JOIN user_chest_claims ucc ON wn.id = ucc.node_id AND ucc.user_id = $1
+     LEFT JOIN user_shrine_visits usv ON wn.id = usv.node_id AND usv.user_id = $1
      WHERE c.user_id = $1 AND c.party_slot = 1`,
     [req.user.userId]
   );

@@ -43,6 +43,7 @@ export {
 
   // Turn timer
   startTurnTimer,
+  startTurnTimerIfCurrent,
   cancelTurnTimer,
   handlePlayerDisconnect,
   handlePlayerReconnect,

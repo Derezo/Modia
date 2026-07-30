@@ -22,6 +22,63 @@ import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { PartyInviteModal } from '../components/PartyInviteModal.js';
 import { responsive } from '../core/Responsive.js';
 import { RACE_TO_REGION } from '../audio/AudioAssets.js';
+import { SHRINE_COOLDOWN_HOURS } from '@modia/shared/constants';
+
+const SHRINE_COOLDOWN_MS = SHRINE_COOLDOWN_HOURS * 60 * 60 * 1000;
+
+function toTimestamp(value) {
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value !== 'string' || value.length === 0) return null;
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+function getShrineCooldownUntil(result, visitedAt = Date.now()) {
+  const absoluteValue = result?.shrine_cooldown_until
+    ?? result?.shrineCooldownUntil
+    ?? result?.cooldown_until
+    ?? result?.cooldownUntil
+    ?? result?.cooldown_expires_at
+    ?? result?.cooldownExpiresAt
+    ?? result?.next_available_at
+    ?? result?.nextAvailableAt;
+  const absoluteTimestamp = toTimestamp(absoluteValue);
+  if (absoluteTimestamp !== null) return absoluteTimestamp;
+
+  const relativeMs = result?.cooldown_ms ?? result?.cooldownMs;
+  if (Number.isFinite(relativeMs) && relativeMs > 0) {
+    return visitedAt + relativeMs;
+  }
+
+  const relativeSeconds = result?.cooldown_seconds ?? result?.cooldownSeconds;
+  if (Number.isFinite(relativeSeconds) && relativeSeconds > 0) {
+    return visitedAt + (relativeSeconds * 1000);
+  }
+
+  const relativeHours = result?.cooldown_hours ?? result?.cooldownHours;
+  if (Number.isFinite(relativeHours) && relativeHours > 0) {
+    return visitedAt + (relativeHours * 60 * 60 * 1000);
+  }
+
+  const serverVisitTime = toTimestamp(result?.visited_at ?? result?.visitedAt);
+  return (serverVisitTime ?? visitedAt) + SHRINE_COOLDOWN_MS;
+}
+
+function getAuthUserId(scene) {
+  return scene.game?.state?.get?.('user')?.id ?? null;
+}
+
+function isSceneSessionCurrent(scene, sessionEpoch, authUserId) {
+  return (scene.sceneSessionEpoch ?? 0) === sessionEpoch
+    && getAuthUserId(scene) === authUserId;
+}
+
+function isTravelRequestCurrent(scene, context) {
+  if (!context) return true;
+  return context.requestId === scene.travelRequestId
+    && isSceneSessionCurrent(scene, context.sessionEpoch, context.authUserId);
+}
 
 export class WorldMapScene extends Scene {
   constructor(game) {
@@ -80,6 +137,8 @@ export class WorldMapScene extends Scene {
 
     // Travel state
     this.isTraveling = false;
+    this.travelPending = false;
+    this.travelRequestId = 0;
     this.cameraSettling = false; // Camera continues smooth follow after travel ends
 
     // Path system (handles preview, caching, reachability)
@@ -100,6 +159,8 @@ export class WorldMapScene extends Scene {
     // Node action menu (positioned near current node)
     this.nodeActionMenu = null;
     this.chestClaimPending = false;
+    this.shrineVisitPending = false;
+    this.shrineVisitRequestId = 0;
 
     // Node hover tooltip (for non-current nodes)
     this.nodeHoverTooltip = null;
@@ -119,6 +180,8 @@ export class WorldMapScene extends Scene {
 
     // Zodiac collection data cache for tooltip display
     this.zodiacCollectionData = null;
+    this.zodiacCollectionRefreshId = 0;
+    this.sceneSessionEpoch = 0;
 
     // DOM-based fog of war overlay (replaces canvas-based fog rendering)
     this.fogOverlay = null;
@@ -153,6 +216,8 @@ export class WorldMapScene extends Scene {
           this.startBattle();
         } else if (feature === 'claim_chest') {
           return this.claimCurrentChest();
+        } else if (feature === 'visit_shrine') {
+          return this.visitCurrentShrine();
         } else if (feature === 'debug_clear') {
           // Debug mode: node was auto-cleared, refresh the map
           this.refreshNodes();
@@ -231,7 +296,7 @@ export class WorldMapScene extends Scene {
   /**
    * Refresh stamina from the server
    */
-  async refreshStamina() {
+  async refreshStamina(requestContext = null) {
     try {
       const characters = this.game.state.get('characters') || [];
       console.log('refreshStamina - characters from state:', characters.length);
@@ -240,6 +305,16 @@ export class WorldMapScene extends Scene {
       if (partyLeader) {
         console.log('refreshStamina - fetching for character:', partyLeader.id, partyLeader.name);
         const result = await this.game.api.getCharacterStamina(partyLeader.id);
+        if (
+          requestContext
+          && !isSceneSessionCurrent(
+            this,
+            requestContext.sessionEpoch,
+            requestContext.authUserId
+          )
+        ) {
+          return;
+        }
         console.log('refreshStamina - API result:', result);
         if (result.stamina) {
           this.hudPanel.setStamina(result.stamina);
@@ -287,12 +362,34 @@ export class WorldMapScene extends Scene {
   async refreshZodiacCollection() {
     if (!this.hudPanel) return;
 
+    const sessionEpoch = this.sceneSessionEpoch ?? 0;
+    const authUserId = getAuthUserId(this);
+    const refreshId = (this.zodiacCollectionRefreshId ?? 0) + 1;
+    this.zodiacCollectionRefreshId = refreshId;
+
     try {
       const result = await this.game.api.get('/world/zodiac-collection');
+
+      // Scene entry starts this request in the background. A shrine visit may
+      // commit and request newer collection data before that first call
+      // returns, so only the latest request may update the HUD and cache.
+      if (
+        refreshId !== this.zodiacCollectionRefreshId
+        || !isSceneSessionCurrent(this, sessionEpoch, authUserId)
+        || !this.hudPanel
+      ) {
+        return;
+      }
+
       this.hudPanel.setZodiacCollection(result);
       this.zodiacCollectionData = result; // Cache for tooltip use
     } catch (err) {
-      console.warn('Failed to refresh zodiac collection:', err);
+      if (
+        refreshId === this.zodiacCollectionRefreshId
+        && isSceneSessionCurrent(this, sessionEpoch, authUserId)
+      ) {
+        console.warn('Failed to refresh zodiac collection:', err);
+      }
     }
   }
 
@@ -547,6 +644,18 @@ export class WorldMapScene extends Scene {
   }
 
   exit() {
+    // Scene instances are reused. Invalidate all async work before tearing down
+    // UI so a response from this session cannot update a later entry.
+    this.sceneSessionEpoch = (this.sceneSessionEpoch ?? 0) + 1;
+    this.zodiacCollectionRefreshId = (this.zodiacCollectionRefreshId ?? 0) + 1;
+    this.shrineVisitRequestId = (this.shrineVisitRequestId ?? 0) + 1;
+    this.travelRequestId = (this.travelRequestId ?? 0) + 1;
+    this.zodiacCollectionData = null;
+    this.shrineVisitPending = false;
+    this.travelPending = false;
+    this.isTraveling = false;
+    this.cameraSettling = false;
+
     // SceneManager reuses this scene instance and does not await async enter().
     // Release the initialized minimap so it cannot render retained node data
     // against the fresh effects state while the next entry is still loading.
@@ -635,7 +744,7 @@ export class WorldMapScene extends Scene {
     }
   }
 
-  async loadWorldData() {
+  async loadWorldData(requestContext = null) {
     try {
       // Get world nodes, current position, and terrain obstacles
       const [worldData, currentData, obstaclesData] = await Promise.all([
@@ -643,6 +752,17 @@ export class WorldMapScene extends Scene {
         this.game.api.getCurrentNode(),
         this.game.api.getWorldObstacles().catch(() => ({ obstacles: [] }))  // Gracefully handle if not yet available
       ]);
+
+      if (
+        requestContext
+        && !isSceneSessionCurrent(
+          this,
+          requestContext.sessionEpoch,
+          requestContext.authUserId
+        )
+      ) {
+        return false;
+      }
 
       this.nodes = worldData.nodes;
       this.obstacles = obstaclesData.obstacles || [];
@@ -725,13 +845,35 @@ export class WorldMapScene extends Scene {
       // Check if current node is a watchtower and fetch extended view
       if (this.currentNode?.node_type === 'watchtower') {
         await this.fetchWatchtowerView(this.currentNode.id);
+        if (
+          requestContext
+          && !isSceneSessionCurrent(
+            this,
+            requestContext.sessionEpoch,
+            requestContext.authUserId
+          )
+        ) {
+          return false;
+        }
       } else {
         // Clear watchtower view when not at a watchtower
         this.watchtowerView = null;
       }
+      return true;
     } catch (err) {
+      if (
+        requestContext
+        && !isSceneSessionCurrent(
+          this,
+          requestContext.sessionEpoch,
+          requestContext.authUserId
+        )
+      ) {
+        return false;
+      }
       console.error('Failed to load world:', err);
       parchmentToast.error('World Data Error', 'Failed to load world data. Please try again.');
+      return true;
     }
   }
 
@@ -739,8 +881,21 @@ export class WorldMapScene extends Scene {
    * Refresh nodes data and update the UI
    * Used after node state changes (e.g., clearing a node via debug)
    */
-  async refreshNodes() {
-    await this.loadWorldData();
+  async refreshNodes(requestContext = null) {
+    const loaded = await this.loadWorldData(requestContext);
+    if (
+      loaded === false
+      || (
+        requestContext
+        && !isSceneSessionCurrent(
+          this,
+          requestContext.sessionEpoch,
+          requestContext.authUserId
+        )
+      )
+    ) {
+      return;
+    }
 
     // Update node action menu with refreshed node data
     if (this.currentNode && this.nodeActionMenu) {
@@ -1057,6 +1212,194 @@ export class WorldMapScene extends Scene {
     }
   }
 
+  /**
+   * Receive the temporary blessing offered by the current shrine.
+   */
+  async visitCurrentShrine() {
+    if (
+      this.shrineVisitPending
+      || this.travelPending
+      || this.isTraveling
+      || !this.currentNode
+      || this.currentNode.node_type !== 'shrine'
+    ) {
+      return;
+    }
+
+    const sessionEpoch = this.sceneSessionEpoch ?? 0;
+    const authUserId = getAuthUserId(this);
+    const requestContext = { sessionEpoch, authUserId };
+    const requestId = (this.shrineVisitRequestId ?? 0) + 1;
+    this.shrineVisitRequestId = requestId;
+    const shrineNodeId = this.currentNode.id;
+    const existingCooldown = toTimestamp(
+      this.currentNode.shrine_cooldown_until
+      ?? this.currentNode.shrineCooldownUntil
+      ?? this.currentNode.cooldown_expires_at
+      ?? this.currentNode.cooldownExpiresAt
+      ?? this.currentNode.next_available_at
+      ?? this.currentNode.nextAvailableAt
+    );
+    if (existingCooldown !== null && existingCooldown > Date.now()) {
+      return;
+    }
+
+    this.shrineVisitPending = true;
+    this.nodeActionMenu?.setActionPending('visit_shrine', true);
+
+    try {
+      const visitedAt = Date.now();
+      const result = await this.game.api.visitShrine(shrineNodeId);
+      if (!isSceneSessionCurrent(this, sessionEpoch, authUserId)) {
+        return;
+      }
+      const cooldownUntil = getShrineCooldownUntil(result, visitedAt);
+      const cooldownIso = new Date(cooldownUntil).toISOString();
+      const buffExpiresAt = result.shrine_buff_expires_at
+        ?? result.shrineBuffExpiresAt
+        ?? result.expires_at
+        ?? result.expiresAt
+        ?? null;
+      const localShrineState = {
+        shrine_buff_active: result.shrine_buff_active ?? result.shrineBuffActive ?? true,
+        shrine_buff_expires_at: buffExpiresAt,
+        shrine_on_cooldown: true,
+        shrine_available: false,
+        shrine_cooldown_until: cooldownIso
+      };
+
+      // Apply the personalized state immediately, before the authoritative
+      // world refresh completes, so the committed action never looks reusable.
+      this.nodes = this.nodes.map(node => (
+        node.id === shrineNodeId
+          ? { ...node, ...localShrineState }
+          : node
+      ));
+      this.game.state.set('worldNodes', this.nodes);
+
+      if (this.currentNode?.id === shrineNodeId) {
+        this.currentNode = {
+          ...this.currentNode,
+          ...localShrineState
+        };
+        this.game.state.set('currentNode', this.currentNode);
+        this.nodeActionMenu?.rebuildActions(this.currentNode);
+        this.nodeActionMenu?.setShrineCooldown(cooldownUntil);
+      }
+
+      this.game.audio?.playInteraction('shrine_activate');
+
+      const crystalAwarded = result.crystalAwarded ?? result.crystal_awarded ?? false;
+      const buffName = result.buff_name ?? result.buffName;
+      parchmentToast.success(
+        crystalAwarded ? 'Blessing & Crystal Received' : 'Blessing Received',
+        result.message || (buffName
+          ? `You received the blessing: ${buffName}!`
+          : 'The shrine’s blessing is now active.')
+      );
+
+      const isZodiacShrine = Boolean(
+        this.nodes.find(node => node.id === shrineNodeId)?.zodiac_sign
+        || result.isZodiacShrine
+        || result.is_zodiac_shrine
+        || result.zodiacSign
+        || result.zodiac_sign
+      );
+      if (isZodiacShrine) {
+        await this.refreshZodiacCollection();
+        if (!isSceneSessionCurrent(this, sessionEpoch, authUserId)) {
+          return;
+        }
+      }
+
+      const buffType = result.buff_type ?? result.buffType;
+      if (buffType === 'stamina_regen') {
+        try {
+          await this.refreshStamina(requestContext);
+          if (!isSceneSessionCurrent(this, sessionEpoch, authUserId)) {
+            return;
+          }
+        } catch (staminaRefreshError) {
+          if (isSceneSessionCurrent(this, sessionEpoch, authUserId)) {
+            console.warn('Shrine activated, but stamina HUD refresh failed:', staminaRefreshError);
+          }
+        }
+        if (!isSceneSessionCurrent(this, sessionEpoch, authUserId)) {
+          return;
+        }
+      }
+
+      // Reconcile the local marker with the user-scoped shrine status now
+      // returned by world nodes. If this refresh fails, the committed local
+      // cooldown above remains in place and the successful visit stays usable.
+      try {
+        await this.refreshNodes(requestContext);
+        if (!isSceneSessionCurrent(this, sessionEpoch, authUserId)) {
+          return;
+        }
+      } catch (refreshError) {
+        if (isSceneSessionCurrent(this, sessionEpoch, authUserId)) {
+          console.warn('Shrine activated, but world state refresh failed:', refreshError);
+        }
+      }
+    } catch (error) {
+      if (!isSceneSessionCurrent(this, sessionEpoch, authUserId)) {
+        return;
+      }
+      const errorData = error.data ?? error.response;
+      const cooldownUntil = toTimestamp(
+        errorData?.shrine_cooldown_until
+        ?? errorData?.shrineCooldownUntil
+        ?? errorData?.cooldown_until
+        ?? errorData?.cooldownUntil
+      );
+
+      if (cooldownUntil !== null && cooldownUntil > Date.now()) {
+        const cooldownIso = new Date(cooldownUntil).toISOString();
+        this.nodes = this.nodes.map(node => (
+          node.id === shrineNodeId
+            ? {
+              ...node,
+              shrine_on_cooldown: true,
+              shrine_available: false,
+              shrine_cooldown_until: cooldownIso
+            }
+            : node
+        ));
+        this.game.state.set('worldNodes', this.nodes);
+
+        if (this.currentNode?.id === shrineNodeId) {
+          this.currentNode = {
+            ...this.currentNode,
+            shrine_on_cooldown: true,
+            shrine_available: false,
+            shrine_cooldown_until: cooldownIso
+          };
+          this.game.state.set('currentNode', this.currentNode);
+          this.nodeActionMenu?.rebuildActions(this.currentNode);
+          this.nodeActionMenu?.setShrineCooldown(cooldownUntil);
+        }
+
+        parchmentToast.warning(
+          'Shrine Restoring',
+          error.message || 'This shrine is still restoring its power.'
+        );
+      } else {
+        parchmentToast.error(
+          'Blessing Unavailable',
+          error.message || 'Unable to receive this blessing. Please try again.'
+        );
+      }
+    } finally {
+      if (requestId === this.shrineVisitRequestId) {
+        this.shrineVisitPending = false;
+        if (isSceneSessionCurrent(this, sessionEpoch, authUserId)) {
+          this.nodeActionMenu?.setActionPending('visit_shrine', false);
+        }
+      }
+    }
+  }
+
   async openRuinsPuzzle() {
     // Dynamically import the modal to avoid circular dependencies
     const { RuinsPuzzleModal } = await import('../modals/RuinsPuzzleModal.js');
@@ -1324,7 +1667,12 @@ export class WorldMapScene extends Scene {
     // World-location mutations are mutually exclusive. The server also locks
     // the party leader during a chest claim, but avoiding the race here keeps
     // the map interaction predictable while that request is pending.
-    if (this.isTraveling || this.chestClaimPending) return;
+    if (
+      this.travelPending
+      || this.isTraveling
+      || this.chestClaimPending
+      || this.shrineVisitPending
+    ) return;
 
     // Check if this is the current node
     if (this.currentNode && node.id === this.currentNode.id) {
@@ -1343,15 +1691,27 @@ export class WorldMapScene extends Scene {
       return;
     }
 
+    const sessionEpoch = this.sceneSessionEpoch ?? 0;
+    const authUserId = getAuthUserId(this);
+    const requestId = (this.travelRequestId ?? 0) + 1;
+    this.travelRequestId = requestId;
+    this.travelPending = true;
+
     try {
       const previousNodeId = this.currentNode?.id;
 
       // Call the travel API (now supports multi-node travel)
       const result = await this.game.api.travel(node.id);
+      if (!isSceneSessionCurrent(this, sessionEpoch, authUserId)) {
+        return;
+      }
 
       // Ensure map character is initialized for animation
       if (this.mapCharacter && !this.mapCharacter.character) {
         await this.initMapCharacter();
+        if (!isSceneSessionCurrent(this, sessionEpoch, authUserId)) {
+          return;
+        }
       }
 
       // Check if we can animate (have path and character)
@@ -1362,7 +1722,9 @@ export class WorldMapScene extends Scene {
 
       if (canAnimate) {
         this.isTraveling = true;
+        this.travelPending = false;
         this.cameraSettling = true; // Keep camera following smoothly after travel ends
+        const travelContext = { requestId, sessionEpoch, authUserId };
 
         // Collapse node action menu during travel
         if (this.nodeActionMenu) {
@@ -1394,21 +1756,41 @@ export class WorldMapScene extends Scene {
 
         // Start walking animation
         this.mapCharacter.startWalking(walkPath, () => {
-          this.onTravelComplete(result, previousNodeId);
+          if (isTravelRequestCurrent(this, travelContext)) {
+            void this.onTravelComplete(result, previousNodeId, travelContext);
+          }
         });
       } else {
         // No animation - complete immediately
-        this.onTravelComplete(result, previousNodeId);
+        this.travelPending = false;
+        await this.onTravelComplete(result, previousNodeId, {
+          requestId,
+          sessionEpoch,
+          authUserId
+        });
       }
     } catch (err) {
-      parchmentToast.error('Travel Failed', err.message || 'Unable to travel to this location.');
+      if (isSceneSessionCurrent(this, sessionEpoch, authUserId)) {
+        parchmentToast.error('Travel Failed', err.message || 'Unable to travel to this location.');
+      }
+    } finally {
+      if (
+        requestId === this.travelRequestId
+        && !this.isTraveling
+      ) {
+        this.travelPending = false;
+      }
     }
   }
 
   /**
    * Handle travel completion (after animation finishes)
    */
-  async onTravelComplete(result, previousNodeId) {
+  async onTravelComplete(result, previousNodeId, travelContext = null) {
+    if (!isTravelRequestCurrent(this, travelContext)) {
+      return;
+    }
+
     this.isTraveling = false;
 
     // Play arrival sound
@@ -1435,6 +1817,9 @@ export class WorldMapScene extends Scene {
 
     // Reload world data to get newly discovered nodes (fog of war reveal)
     await this.loadWorldData();
+    if (!isTravelRequestCurrent(this, travelContext)) {
+      return;
+    }
 
     // Update minimap with latest castle nodes
     if (this.minimap) {
@@ -1453,7 +1838,10 @@ export class WorldMapScene extends Scene {
       this.nodeActionMenu.setNode(this.currentNode, position);
       // Small delay before expanding for smoother animation sequence
       setTimeout(() => {
-        if (this.nodeActionMenu) {
+        if (
+          isTravelRequestCurrent(this, travelContext)
+          && this.nodeActionMenu
+        ) {
           this.nodeActionMenu.expand();
         }
       }, 50);

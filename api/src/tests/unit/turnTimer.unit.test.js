@@ -787,6 +787,84 @@ describe('Integration with Match Lifecycle', () => {
       'handleSurrender should be exported as a function'
     );
   });
+
+  it('hands terminal turn-start poison to atomic completion without an active commit', async () => {
+    const { skipPlayerTurn } = await import('../../services/coliseum/turnTimer.js');
+    const {
+      setBattleTerminalCompletionHandler
+    } = await import('../../services/battle/BattleTerminalTransition.js');
+    const battleStateRepository = (
+      await import('../../services/battle/BattleStateRepository.js')
+    ).default;
+    const originalCommit = battleStateRepository.commitBattleState;
+    const completions = [];
+
+    battleStateRepository.commitBattleState = async () => {
+      assert.fail('Terminal turn-start damage must not be committed as active');
+    };
+    setBattleTerminalCompletionHandler(async payload => {
+      completions.push(payload);
+      return { stateRevision: payload.expectedRevision + 1 };
+    });
+
+    const battleEnvelope = {
+      battleId: 733,
+      battleType: 'pvp_coliseum',
+      stateRevision: 9,
+      state: {
+        battleType: 'pvp_coliseum',
+        activeUnitId: 'player-a',
+        activeUnitIndex: 0,
+        units: [
+          {
+            id: 'player-a',
+            type: 'player',
+            teamId: 1,
+            ownerId: 11,
+            hp: 100,
+            maxHp: 100,
+            ct: 100,
+            agility: 10,
+            statusEffects: []
+          },
+          {
+            id: 'player-b',
+            type: 'player',
+            teamId: 2,
+            ownerId: 22,
+            hp: 3,
+            maxHp: 100,
+            ct: 100,
+            agility: 10,
+            statusEffects: [
+              { type: 'zodiac_poison', damagePercent: 0.03, duration: 1 }
+            ]
+          }
+        ]
+      }
+    };
+
+    try {
+      const result = await skipPlayerTurn(
+        battleEnvelope.battleId,
+        11,
+        false,
+        battleEnvelope
+      );
+
+      assert.equal(result.outcome, 'terminal');
+      assert.equal(result.battleEndResult.winningTeamId, 1);
+      assert.equal(completions.length, 1);
+      assert.equal(completions[0].expectedRevision, 9);
+      assert.equal(completions[0].finalState.units[1].hp, 0);
+      assert.equal(completions[0].finalState.activeUnitId, null);
+      assert.equal(completions[0].reason, 'turn_timeout');
+      assert.equal(completions[0].commandType, 'turn_timeout_terminal');
+    } finally {
+      battleStateRepository.commitBattleState = originalCommit;
+      setBattleTerminalCompletionHandler(null);
+    }
+  });
 });
 
 // =============================================================================

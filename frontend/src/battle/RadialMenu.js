@@ -23,23 +23,24 @@ export class RadialMenu {
     // Menu configuration
     this.segments = [
       { id: 'move', label: 'Move', icon: 'M', color: '#4a90d9', angle: -90 },
-      { id: 'attack', label: 'Attack', icon: 'A', color: '#d94a4a', angle: -18 },
-      { id: 'skill', label: 'Skill', icon: 'S', color: '#9c27b0', angle: 54 },
-      { id: 'item', label: 'Item', icon: 'I', color: '#4caf50', angle: 126 },
-      { id: 'wait', label: 'Wait', icon: 'W', color: '#607d8b', angle: 198 }
+      { id: 'attack', label: 'Attack', icon: 'A', color: '#d94a4a', angle: -30 },
+      { id: 'skill', label: 'Skill', icon: 'S', color: '#9c27b0', angle: 30 },
+      { id: 'item', label: 'Item', icon: 'I', color: '#4caf50', angle: 90 },
+      { id: 'zodiac', label: 'Zodiac', icon: 'Z', color: '#8b6fc0', angle: 150 },
+      { id: 'wait', label: 'Wait', icon: 'W', color: '#607d8b', angle: 210 }
     ];
 
     // Geometry
     this.outerRadius = 80;
     this.innerRadius = 25;
-    this.segmentAngle = 72; // degrees per segment (360 / 5)
+    this.segmentAngle = 60; // degrees per segment (360 / 6)
 
     // Position (updated on show)
     this.centerX = 0;
     this.centerY = 0;
 
     // State
-    this.enabledSegments = new Set(['move', 'attack', 'skill', 'item', 'wait']);
+    this.enabledSegments = new Set(['move', 'attack', 'skill', 'item', 'zodiac', 'wait']);
     this.hoveredSegment = null;
     this.currentUnitMp = 0;
 
@@ -245,11 +246,15 @@ export class RadialMenu {
    */
   selectSegment(action) {
     if (!this.enabledSegments.has(action)) return;
+    if (this.callbacks.canUseAction &&
+        !this.callbacks.canUseAction(action)) return;
 
     if (action === 'skill') {
       this.openSubmenu('skill');
     } else if (action === 'item') {
       this.openSubmenu('item');
+    } else if (action === 'zodiac') {
+      this.openSubmenu('zodiac');
     } else {
       const callbackName = `on${this.capitalize(action)}`;
       this.callbacks[callbackName]?.();
@@ -277,6 +282,7 @@ export class RadialMenu {
       a: 'attack',
       s: 'skill',
       i: 'item',
+      z: 'zodiac',
       w: 'wait',
       Escape: 'cancel'
     };
@@ -313,10 +319,11 @@ export class RadialMenu {
     this.submenuType = type;
 
     // Request data from callback
-    const items =
-      type === 'skill'
-        ? this.callbacks.getSkills?.() || []
-        : this.callbacks.getItems?.() || [];
+    const items = type === 'skill'
+      ? this.callbacks.getSkills?.() || []
+      : type === 'item'
+        ? this.callbacks.getItems?.() || []
+        : this.callbacks.getZodiacAbilities?.() || [];
 
     this.renderSubmenu(items, type);
   }
@@ -345,7 +352,11 @@ export class RadialMenu {
       overflow-y: auto;
     `;
 
-    const title = type === 'skill' ? 'Select Skill' : 'Select Item';
+    const title = type === 'skill'
+      ? 'Select Skill'
+      : type === 'item'
+        ? 'Select Item'
+        : 'Select Zodiac Ability';
     submenu.innerHTML = `
       <div style="color: #ffd700; font-weight: bold; margin-bottom: 10px; font-size: 12px; text-align: center;">
         ${title}
@@ -380,15 +391,18 @@ export class RadialMenu {
           transition: background 0.15s;
         `;
 
-        const icon = type === 'skill'
-          ? renderAbilityIcon(item, { size: 'sm' })
-          : renderBattleItemIcon(item, { size: 'sm' });
-        const costOrQty =
-          type === 'skill'
-            ? onCooldown
-              ? `<span style="color: #f88; margin-left: 6px;">${item.currentCooldown}⏱</span>`
-              : `<span style="color: ${disabled ? '#446' : '#6af'}; margin-left: 6px;">${item.mpCost}MP</span>`
-            : `<span style="color: #8f8; margin-left: 6px;">x${item.quantity}</span>`;
+        const icon = type === 'item'
+          ? renderBattleItemIcon(item, { size: 'sm' })
+          : renderAbilityIcon(type === 'zodiac'
+            ? { ...item, id: item.id || item.key, source: 'zodiac' }
+            : item, { size: 'sm' });
+        const costOrQty = type === 'skill'
+          ? onCooldown
+            ? `<span style="color: #f88; margin-left: 6px;">${item.currentCooldown}⏱</span>`
+            : `<span style="color: ${disabled ? '#446' : '#6af'}; margin-left: 6px;">${item.mpCost}MP</span>`
+          : type === 'item'
+            ? `<span style="color: #8f8; margin-left: 6px;">x${escapeHtml(String(item.quantity ?? 1))}</span>`
+            : '<span style="color: #ffd700; margin-left: 6px;">FREE</span>';
 
         btn.innerHTML = `
           <span>${icon} ${escapeHtml(item.name)}</span>
@@ -405,8 +419,10 @@ export class RadialMenu {
           btn.addEventListener('click', () => {
             if (type === 'skill') {
               this.callbacks.onSkillSelect?.(item.id);
-            } else {
+            } else if (type === 'item') {
               this.callbacks.onItemSelect?.({ itemId: item.itemId, inventoryId: item.inventoryId });
+            } else {
+              this.callbacks.onZodiacSelect?.(item.key);
             }
             this.closeSubmenu();
             this.hide();

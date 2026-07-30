@@ -11,7 +11,8 @@ import {
   canUnitMove,
   canUnitUseSkills,
   applyStatusEffect,
-  initializeTurnState
+  initializeTurnState,
+  checkMoonshield
 } from './statusEffectManager.js';
 import {
   getMovementRange,
@@ -33,6 +34,91 @@ import {
   CURE_POISON_EFFECTS,
   CURE_ALL_EFFECTS
 } from '../../../../shared/battleMath.js';
+import { applyHealingReceivedBonus } from '../zodiacCollectionBonusService.js';
+
+function applyDamageInstance(attacker, target, incomingDamage) {
+  if (target.hp <= 0 || incomingDamage <= 0) {
+    return {
+      damage: 0,
+      incomingDamage: Math.max(0, incomingDamage),
+      blocked: false,
+      killed: false,
+      deathSaveTrigger: false
+    };
+  }
+
+  const shieldResult = checkMoonshield(target, incomingDamage);
+  if (shieldResult.blocked) {
+    return {
+      damage: 0,
+      incomingDamage,
+      blocked: true,
+      blockedBy: 'moonshield',
+      killed: false,
+      deathSaveTrigger: false
+    };
+  }
+
+  const hpBefore = target.hp;
+  const wouldKill = hpBefore - shieldResult.damage <= 0;
+  let deathSaveTrigger = false;
+  if (wouldKill && traitService.checkDeathSave(target)) {
+    target.hp = 1;
+    deathSaveTrigger = true;
+  } else {
+    target.hp = Math.max(0, hpBefore - shieldResult.damage);
+  }
+
+  const damage = hpBefore - target.hp;
+  const killed = hpBefore > 0 && target.hp <= 0;
+  attacker.damageDealt = (attacker.damageDealt || 0) + damage;
+  target.damageTaken = (target.damageTaken || 0) + damage;
+  if (killed) {
+    attacker.kills = (attacker.kills || 0) + 1;
+    target.deaths = (target.deaths || 0) + 1;
+  }
+
+  return {
+    damage,
+    incomingDamage,
+    blocked: false,
+    killed,
+    deathSaveTrigger
+  };
+}
+
+function getBasicAttackEffects(unit) {
+  const twinStrike = unit.nextAttackHitsTwice === true;
+  return {
+    critChanceBonus: Number.isFinite(unit.nextAttackCritBonus)
+      ? unit.nextAttackCritBonus
+      : 0,
+    hits: twinStrike ? 2 : 1,
+    damageMultiplier: twinStrike &&
+      Number.isFinite(unit.twinStrikeDamageMultiplier)
+      ? unit.twinStrikeDamageMultiplier
+      : twinStrike ? 0.6 : 1,
+    balance: unit.nextAttackLifesteal === true,
+    rangeBonus: Number.isFinite(unit.nextAttackRangeBonus)
+      ? unit.nextAttackRangeBonus
+      : 0
+  };
+}
+
+function consumeBasicAttackEffects(unit, effects) {
+  const consumed = [];
+  if (effects.critChanceBonus) consumed.push('rams_charge');
+  if (effects.hits === 2) consumed.push('twin_strike');
+  if (effects.balance) consumed.push('balance');
+  if (effects.rangeBonus) consumed.push('celestial_arrow');
+
+  delete unit.nextAttackCritBonus;
+  delete unit.nextAttackHitsTwice;
+  delete unit.twinStrikeDamageMultiplier;
+  delete unit.nextAttackLifesteal;
+  delete unit.nextAttackRangeBonus;
+  return consumed;
+}
 
 function hasOffensiveSkillComponent(skill) {
   return Number(skill?.power) > 0 &&
@@ -106,7 +192,10 @@ function applySelfSkillEffects(unit, skill, result, applyBuff = true) {
   if (skill.healPercent > 0 &&
       skill.targetAlly !== true &&
       skill.targetAllAllies !== true) {
-    const healAmount = Math.floor(unit.maxHp * skill.healPercent / 100);
+    const healAmount = applyHealingReceivedBonus(
+      unit,
+      Math.floor(unit.maxHp * skill.healPercent / 100)
+    );
     const actualHeal = Math.min(healAmount, Math.max(0, unit.maxHp - unit.hp));
     unit.hp = Math.min(unit.maxHp, unit.hp + healAmount);
     unit.healingDone = (unit.healingDone || 0) + actualHeal;
@@ -164,7 +253,7 @@ export function getAvailableActions(unit, state) {
     actions.canAct = true;
 
     // Basic attack
-    const attackRange = unit.attackRange || getAttackRange(unit);
+    const attackRange = getAttackRange(unit);
     const attackTargets = getTargetsInRange(unit, state, attackRange, 'opponent');
     actions.attacks = {
       range: attackRange,
@@ -356,6 +445,7 @@ function processAttackAction(state, unit, targetTile) {
     return result;
   }
 
+  const basicAttackEffects = getBasicAttackEffects(unit);
   const target = state.units.find(u =>
     u.tileX === targetTile.x && u.tileY === targetTile.y && u.hp > 0
   );
@@ -364,38 +454,72 @@ function processAttackAction(state, unit, targetTile) {
     // Attack target at tile
     const hits = checkHit(unit, target);
     if (hits) {
-      const damageResult = calculatePhysicalDamage(unit, target);
-      const actualDamage = damageResult.damage;
+      result.hitResults = [];
+      result.attemptedHits = basicAttackEffects.hits;
+      for (let hitIndex = 0;
+        hitIndex < basicAttackEffects.hits && target.hp > 0;
+        hitIndex++) {
+        const damageResult = calculatePhysicalDamage(
+          unit,
+          target,
+          basicAttackEffects.damageMultiplier * 100,
+          null,
+          { critChanceBonus: basicAttackEffects.critChanceBonus }
+        );
+        const instanceResult = applyDamageInstance(
+          unit,
+          target,
+          damageResult.damage
+        );
+        result.hitResults.push({
+          hit: hitIndex + 1,
+          ...instanceResult,
+          isCritical: damageResult.isCritical
+        });
+      }
 
-      // Apply damage to target (check for death save first)
-      const wouldKill = target.hp - actualDamage <= 0;
-      if (wouldKill && traitService.checkDeathSave(target)) {
-        // Death save triggered - survive with 1 HP
-        target.hp = 1;
+      const actualDamage = result.hitResults.reduce(
+        (total, hitResult) => total + hitResult.damage,
+        0
+      );
+      result.damage = actualDamage;
+      result.incomingDamage = result.hitResults.reduce(
+        (total, hitResult) => total + hitResult.incomingDamage,
+        0
+      );
+      result.hits = result.hitResults.length;
+      result.isCritical = result.hitResults.some(hit => hit.isCritical);
+      result.criticalHits = result.hitResults.filter(
+        hit => hit.isCritical
+      ).length;
+      result.blockedHits = result.hitResults.filter(hit => hit.blocked).length;
+      if (result.hitResults.some(hit => hit.deathSaveTrigger)) {
         result.deathSaveTrigger = true;
         result.deathSaveUnitId = target.id;
-      } else {
-        target.hp = Math.max(0, target.hp - actualDamage);
       }
-
-      // Track battle statistics
-      unit.damageDealt = (unit.damageDealt || 0) + actualDamage;
-      target.damageTaken = (target.damageTaken || 0) + actualDamage;
-      if (target.hp <= 0) {
-        unit.kills = (unit.kills || 0) + 1;
-        target.deaths = (target.deaths || 0) + 1;
-      }
-
-      result.damage = actualDamage;
-      result.isCritical = damageResult.isCritical;
       result.targetId = target.id;
       result.targetType = target.type;
 
       // Apply lifesteal trait (heal attacker for % of damage dealt)
-      const lifestealAmount = traitService.calculateLifesteal(unit, actualDamage);
+      const lifestealAmount = applyHealingReceivedBonus(
+        unit,
+        traitService.calculateLifesteal(unit, actualDamage)
+      );
       if (lifestealAmount > 0) {
         unit.hp = Math.min(unit.maxHp, unit.hp + lifestealAmount);
         result.lifestealAmount = lifestealAmount;
+      }
+
+      if (basicAttackEffects.balance) {
+        const balanceHeal = applyHealingReceivedBonus(unit, actualDamage);
+        const actualBalanceHeal = Math.min(
+          balanceHeal,
+          Math.max(0, unit.maxHp - unit.hp)
+        );
+        unit.hp = Math.min(unit.maxHp, unit.hp + balanceHeal);
+        unit.healingDone = (unit.healingDone || 0) + actualBalanceHeal;
+        result.balanceHealing = actualBalanceHeal;
+        result.balanceHealingRequested = balanceHeal;
       }
     } else {
       result.missed = true;
@@ -407,6 +531,10 @@ function processAttackAction(state, unit, targetTile) {
     result.targetTile = targetTile;
   }
 
+  result.zodiacEffectsConsumed = consumeBasicAttackEffects(
+    unit,
+    basicAttackEffects
+  );
   unit.actUsed = true;
   return result;
 }
@@ -547,7 +675,10 @@ function processSkillAction(state, unit, targetTile, skillId) {
 
     for (const recipient of recipients) {
       if (skill.healPercent) {
-        const healAmount = Math.floor(recipient.maxHp * skill.healPercent / 100);
+        const healAmount = applyHealingReceivedBonus(
+          recipient,
+          Math.floor(recipient.maxHp * skill.healPercent / 100)
+        );
         const actualHeal = Math.min(healAmount, recipient.maxHp - recipient.hp);
         recipient.hp = Math.min(recipient.maxHp, recipient.hp + healAmount);
         totalHealing += actualHeal;
@@ -605,7 +736,10 @@ function processSkillAction(state, unit, targetTile, skillId) {
   // Handle ally-targeting skills (heals, buffs)
   if (isAllyTargetingSkill) {
     if (skill.healPercent) {
-      const healAmount = Math.floor(target.maxHp * skill.healPercent / 100);
+      const healAmount = applyHealingReceivedBonus(
+        target,
+        Math.floor(target.maxHp * skill.healPercent / 100)
+      );
       const actualHeal = Math.min(healAmount, target.maxHp - target.hp);
       target.hp = Math.min(target.maxHp, target.hp + healAmount);
       // Track healing statistics
@@ -714,42 +848,48 @@ function processAoESkill(state, unit, targetTile, skill, skillId, result) {
 
       // Handle absorb (element heals instead of damages)
       if (damageResult.isAbsorb) {
-        const healAmount = damageResult.damage;
+        const healAmount = applyHealingReceivedBonus(
+          affectedUnit,
+          damageResult.damage
+        );
         affectedUnit.hp = Math.min(affectedUnit.maxHp, affectedUnit.hp + healAmount);
         targetResult.healing = healAmount;
         targetResult.isAbsorb = true;
       } else {
-        // Apply damage (multiply by hits if multi-hit skill)
-        let totalDamage = 0;
-        for (let i = 0; i < hits; i++) {
-          totalDamage += damageResult.damage;
+        const totalIncomingDamage = Math.floor(
+          damageResult.damage * hits * (isCenter ? 1 : 0.75)
+        );
+        const damagePerHit = Math.floor(totalIncomingDamage / hits);
+        let remainder = totalIncomingDamage % hits;
+        const hitResults = [];
+        for (let hitIndex = 0;
+          hitIndex < hits && affectedUnit.hp > 0;
+          hitIndex++) {
+          const incomingDamage = damagePerHit + (remainder-- > 0 ? 1 : 0);
+          hitResults.push({
+            hit: hitIndex + 1,
+            ...applyDamageInstance(unit, affectedUnit, incomingDamage)
+          });
         }
-
-        // Reduce damage for non-center targets (75% damage at edges)
-        if (!isCenter) {
-          totalDamage = Math.floor(totalDamage * 0.75);
-        }
-
-        // Apply damage with death save check
-        const wouldKill = affectedUnit.hp - totalDamage <= 0;
-        if (wouldKill && traitService.checkDeathSave(affectedUnit)) {
-          affectedUnit.hp = 1;
-        } else {
-          affectedUnit.hp = Math.max(0, affectedUnit.hp - totalDamage);
-        }
-
-        // Track battle statistics for AoE
-        unit.damageDealt = (unit.damageDealt || 0) + totalDamage;
-        affectedUnit.damageTaken = (affectedUnit.damageTaken || 0) + totalDamage;
-        if (affectedUnit.hp <= 0) {
-          unit.kills = (unit.kills || 0) + 1;
-          affectedUnit.deaths = (affectedUnit.deaths || 0) + 1;
-        }
+        const totalDamage = hitResults.reduce(
+          (sum, hitResult) => sum + hitResult.damage,
+          0
+        );
 
         totalAoEDamage += totalDamage;
         targetResult.damage = totalDamage;
+        targetResult.incomingDamage = hitResults.reduce(
+          (sum, hitResult) => sum + hitResult.incomingDamage,
+          0
+        );
+        targetResult.hitResults = hitResults;
+        targetResult.blockedHits = hitResults.filter(
+          hitResult => hitResult.blocked
+        ).length;
         targetResult.isCritical = damageResult.isCritical;
-        targetResult.deathSaveTrigger = wouldKill && affectedUnit.hp === 1;
+        targetResult.deathSaveTrigger = hitResults.some(
+          hitResult => hitResult.deathSaveTrigger
+        );
       }
     }
 
@@ -788,7 +928,10 @@ function processAoESkill(state, unit, targetTile, skill, skillId, result) {
   }
 
   // Apply lifesteal for total AoE damage dealt
-  const lifestealAmount = traitService.calculateLifesteal(unit, totalAoEDamage);
+  const lifestealAmount = applyHealingReceivedBonus(
+    unit,
+    traitService.calculateLifesteal(unit, totalAoEDamage)
+  );
   if (lifestealAmount > 0) {
     unit.hp = Math.min(unit.maxHp, unit.hp + lifestealAmount);
     result.lifestealAmount = lifestealAmount;
@@ -874,7 +1017,7 @@ function processSingleTargetSkill(state, unit, target, skill, skillId, result) {
 
   // Handle absorb (element heals instead of damages)
   if (damageResult.isAbsorb) {
-    const healAmount = damageResult.damage;
+    const healAmount = applyHealingReceivedBonus(target, damageResult.damage);
     target.hp = Math.min(target.maxHp, target.hp + healAmount);
     result.healing = healAmount;
     result.isAbsorb = true;
@@ -890,39 +1033,42 @@ function processSingleTargetSkill(state, unit, target, skill, skillId, result) {
     return result;
   }
 
-  // Apply damage (multiply by hits if multi-hit skill)
+  // Apply each hit independently so Moonshield blocks exactly one instance.
   const hits = skill.hits || 1;
-  let totalDamage = 0;
-  for (let i = 0; i < hits; i++) {
-    totalDamage += damageResult.damage;
+  const hitResults = [];
+  for (let hitIndex = 0; hitIndex < hits && target.hp > 0; hitIndex++) {
+    hitResults.push({
+      hit: hitIndex + 1,
+      ...applyDamageInstance(unit, target, damageResult.damage)
+    });
   }
-
-  // Apply damage with death save check
-  const wouldKill = target.hp - totalDamage <= 0;
-  if (wouldKill && traitService.checkDeathSave(target)) {
-    target.hp = 1;
+  const totalDamage = hitResults.reduce(
+    (sum, hitResult) => sum + hitResult.damage,
+    0
+  );
+  if (hitResults.some(hitResult => hitResult.deathSaveTrigger)) {
     result.deathSaveTrigger = true;
     result.deathSaveUnitId = target.id;
-  } else {
-    target.hp = Math.max(0, target.hp - totalDamage);
-  }
-
-  // Track battle statistics
-  unit.damageDealt = (unit.damageDealt || 0) + totalDamage;
-  target.damageTaken = (target.damageTaken || 0) + totalDamage;
-  if (target.hp <= 0) {
-    unit.kills = (unit.kills || 0) + 1;
-    target.deaths = (target.deaths || 0) + 1;
   }
 
   result.damage = totalDamage;
-  result.hits = hits;
+  result.incomingDamage = hitResults.reduce(
+    (sum, hitResult) => sum + hitResult.incomingDamage,
+    0
+  );
+  result.hits = hitResults.length;
+  result.attemptedHits = hits;
+  result.hitResults = hitResults;
+  result.blockedHits = hitResults.filter(hitResult => hitResult.blocked).length;
   result.isCritical = damageResult.isCritical;
   result.targetId = target.id;
   result.targetType = target.type;
 
   // Apply lifesteal trait
-  const lifestealAmount = traitService.calculateLifesteal(unit, totalDamage);
+  const lifestealAmount = applyHealingReceivedBonus(
+    unit,
+    traitService.calculateLifesteal(unit, totalDamage)
+  );
   if (lifestealAmount > 0) {
     unit.hp = Math.min(unit.maxHp, unit.hp + lifestealAmount);
     result.lifestealAmount = lifestealAmount;
@@ -1115,8 +1261,9 @@ function processItemAction(state, unit, targetTile, itemId) {
 
   // Handle different effect types (effectValue is absolute HP/MP, not percentage)
   if (effectType === 'heal_hp') {
-    const healAmount = Math.min(effectValue, itemTarget.maxHp - itemTarget.hp);
-    itemTarget.hp = Math.min(itemTarget.maxHp, itemTarget.hp + effectValue);
+    const boostedEffectValue = applyHealingReceivedBonus(itemTarget, effectValue);
+    const healAmount = Math.min(boostedEffectValue, itemTarget.maxHp - itemTarget.hp);
+    itemTarget.hp = Math.min(itemTarget.maxHp, itemTarget.hp + boostedEffectValue);
     // Track healing statistics
     unit.healingDone = (unit.healingDone || 0) + healAmount;
     result.healing = healAmount;
@@ -1131,9 +1278,10 @@ function processItemAction(state, unit, targetTile, itemId) {
   }
 
   if (effectType === 'heal_both') {
-    const healAmount = Math.min(effectValue, itemTarget.maxHp - itemTarget.hp);
+    const boostedEffectValue = applyHealingReceivedBonus(itemTarget, effectValue);
+    const healAmount = Math.min(boostedEffectValue, itemTarget.maxHp - itemTarget.hp);
     const mpAmount = Math.min(Math.floor(effectValue / 2), itemTarget.maxMp - itemTarget.mp);
-    itemTarget.hp = Math.min(itemTarget.maxHp, itemTarget.hp + effectValue);
+    itemTarget.hp = Math.min(itemTarget.maxHp, itemTarget.hp + boostedEffectValue);
     itemTarget.mp = Math.min(itemTarget.maxMp, itemTarget.mp + Math.floor(effectValue / 2));
     // Track healing statistics
     unit.healingDone = (unit.healingDone || 0) + healAmount;
@@ -1156,7 +1304,10 @@ function processItemAction(state, unit, targetTile, itemId) {
     // Guard above ensures itemTarget.hp <= 0
     // Apply effectiveness to revive HP percentage
     const revivePercent = baseEffectValue * effectiveness;
-    const reviveHp = Math.floor(itemTarget.maxHp * revivePercent / 100);
+    const reviveHp = applyHealingReceivedBonus(
+      itemTarget,
+      Math.floor(itemTarget.maxHp * revivePercent / 100)
+    );
     itemTarget.hp = reviveHp;
     // Track healing statistics (revive counts as healing)
     unit.healingDone = (unit.healingDone || 0) + reviveHp;

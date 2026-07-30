@@ -10,6 +10,9 @@ import { describe, it, mock } from 'node:test';
 import assert from 'node:assert';
 import {
   calculateCurrentStamina,
+  calculateStaminaState,
+  getStaminaInfo,
+  mergeStaminaRegenWindows,
   REGEN_INTERVAL_MS,
   DEFAULT_MAX_STAMINA
 } from '../../services/staminaService.js';
@@ -253,5 +256,134 @@ describe('Constants', () => {
   it('should have sensible DEFAULT_MAX_STAMINA', () => {
     assert.ok(DEFAULT_MAX_STAMINA > 0, 'Default max should be positive');
     assert.ok(DEFAULT_MAX_STAMINA <= 100, 'Default max should be reasonable');
+  });
+});
+
+describe('stamina shrine regeneration', () => {
+  const nowMs = Date.parse('2026-07-29T12:00:00.000Z');
+
+  function makeCharacter(elapsedIntervals, stamina = 0) {
+    return {
+      stamina,
+      max_stamina: 20,
+      stamina_updated_at: new Date(
+        nowMs - (elapsedIntervals * REGEN_INTERVAL_MS)
+      ).toISOString()
+    };
+  }
+
+  it('regenerates 50% faster only while the blessing is active', () => {
+    const character = makeCharacter(2);
+    const state = calculateStaminaState(character, {
+      now: nowMs,
+      regenWindows: [{
+        startsAt: character.stamina_updated_at,
+        expiresAt: new Date(nowMs + REGEN_INTERVAL_MS)
+      }]
+    });
+
+    assert.equal(state.current, 3);
+    assert.equal(state.staminaRegenBonusActive, true);
+    assert.equal(
+      state.regenIntervalSeconds,
+      REGEN_INTERVAL_MS / 1.5 / 1000
+    );
+  });
+
+  it('does not retroactively accelerate time before shrine activation', () => {
+    const character = makeCharacter(2);
+    const state = calculateStaminaState(character, {
+      now: nowMs,
+      regenWindows: [{
+        startsAt: new Date(nowMs - REGEN_INTERVAL_MS),
+        expiresAt: new Date(nowMs + REGEN_INTERVAL_MS)
+      }]
+    });
+
+    assert.equal(state.current, 2);
+  });
+
+  it('does not stack overlapping same-type blessings', () => {
+    const character = makeCharacter(2);
+    const sharedStart = new Date(nowMs - (2 * REGEN_INTERVAL_MS));
+    const sharedEnd = new Date(nowMs + REGEN_INTERVAL_MS);
+    const state = calculateStaminaState(character, {
+      now: nowMs,
+      regenWindows: [
+        { startsAt: sharedStart, expiresAt: sharedEnd },
+        { startsAt: sharedStart, expiresAt: sharedEnd }
+      ]
+    });
+
+    assert.equal(state.current, 3);
+    assert.deepEqual(
+      mergeStaminaRegenWindows([
+        { startsAt: sharedStart, expiresAt: sharedEnd },
+        { startsAt: sharedStart, expiresAt: sharedEnd }
+      ]),
+      [{ startsAt: sharedStart.getTime(), expiresAt: sharedEnd.getTime() }]
+    );
+  });
+
+  it('preserves stamina earned before expiry without continuing the bonus', () => {
+    const character = makeCharacter(4);
+    const state = calculateStaminaState(character, {
+      now: nowMs,
+      regenWindows: [{
+        startsAt: new Date(nowMs - (4 * REGEN_INTERVAL_MS)),
+        expiresAt: new Date(nowMs - (2 * REGEN_INTERVAL_MS))
+      }]
+    });
+
+    assert.equal(state.current, 5);
+    assert.equal(state.staminaRegenBonusActive, false);
+    assert.equal(state.regenIntervalSeconds, REGEN_INTERVAL_MS / 1000);
+    assert.equal(
+      Date.parse(state.nextRegenAt) - nowMs,
+      REGEN_INTERVAL_MS
+    );
+  });
+
+  it('uses the boosted rate for the next-regeneration countdown', () => {
+    const character = makeCharacter(0, 3);
+    const state = calculateStaminaState(character, {
+      now: nowMs,
+      regenWindows: [{
+        startsAt: new Date(nowMs),
+        expiresAt: new Date(nowMs + REGEN_INTERVAL_MS)
+      }]
+    });
+
+    assert.ok(
+      Math.abs(
+        (Date.parse(state.nextRegenAt) - nowMs) -
+        (REGEN_INTERVAL_MS / 1.5)
+      ) < 1
+    );
+  });
+
+  it('resolves the character owner before loading their blessing windows', async () => {
+    const character = makeCharacter(2);
+    const calls = [];
+    const state = await getStaminaInfo(99, {
+      now: new Date(nowMs),
+      queryFn: async (sql, params) => {
+        calls.push({ sql, params });
+        if (sql.includes('FROM characters')) {
+          return { rows: [{ ...character, user_id: 17 }] };
+        }
+        return {
+          rows: [{
+            last_visited_at: character.stamina_updated_at,
+            expires_at: new Date(nowMs + REGEN_INTERVAL_MS).toISOString()
+          }]
+        };
+      }
+    });
+
+    assert.equal(state.current, 3);
+    assert.deepEqual(calls[0].params, [99]);
+    assert.equal(calls[1].params[0], 17);
+    assert.match(calls[1].sql, /buff_type = 'stamina_regen'/);
   });
 });

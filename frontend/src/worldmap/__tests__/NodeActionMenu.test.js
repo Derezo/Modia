@@ -176,3 +176,87 @@ describe('NodeActionMenu chest actions', () => {
     );
   });
 });
+
+describe('NodeActionMenu shrine actions', () => {
+  it('shows a shrine blessing as the primary action', () => {
+    const menu = createMenu();
+
+    menu.rebuildActions({
+      id: 84,
+      node_type: 'shrine',
+      features: []
+    });
+
+    const button = menu.actionsInner.querySelector('[data-action="visit_shrine"]');
+    assert.ok(button);
+    assert.equal(button.classList.contains('node-action-menu__button--primary'), true);
+    assert.equal(button.disabled, false);
+    assert.equal(
+      button.querySelector('[data-action-label="visit_shrine"]').textContent,
+      'Receive Blessing'
+    );
+  });
+
+  it('communicates pending state and prevents another activation', () => {
+    const menu = createMenu();
+    menu.rebuildActions({
+      id: 84,
+      node_type: 'shrine',
+      features: []
+    });
+
+    menu.setActionPending('visit_shrine', true);
+
+    const button = menu.actionsInner.querySelector('[data-action="visit_shrine"]');
+    assert.equal(button.disabled, true);
+    assert.equal(button.classList.contains('node-action-menu__button--pending'), true);
+    assert.equal(
+      button.querySelector('[data-action-label="visit_shrine"]').textContent,
+      'Receiving…'
+    );
+  });
+
+  it('keeps the action visible and intelligible during snake-case cooldown state', () => {
+    const menu = createMenu();
+    const cooldownUntil = Date.now() + (2 * 60 * 60 * 1000) + (15 * 60 * 1000);
+
+    menu.rebuildActions({
+      id: 84,
+      node_type: 'shrine',
+      shrine_cooldown_until: new Date(cooldownUntil).toISOString(),
+      features: []
+    });
+
+    const button = menu.actionsInner.querySelector('[data-action="visit_shrine"]');
+    assert.ok(button);
+    assert.equal(button.disabled, true);
+    assert.equal(button.classList.contains('node-action-menu__button--cooldown'), true);
+    assert.match(
+      button.querySelector('[data-action-label="visit_shrine"]').textContent,
+      /^Ready in 2h 1[45]m$/
+    );
+  });
+
+  it('accepts camel-case cooldown state and restores the ready action after expiry', () => {
+    const menu = createMenu();
+
+    menu.rebuildActions({
+      id: 84,
+      node_type: 'shrine',
+      shrineCooldownUntil: new Date(Date.now() + 60000).toISOString(),
+      features: []
+    });
+
+    const button = menu.actionsInner.querySelector('[data-action="visit_shrine"]');
+    assert.equal(button.disabled, true);
+
+    menu.updateShrineActionState(button, Date.now() + 120000);
+
+    assert.equal(button.disabled, false);
+    assert.equal(button.classList.contains('node-action-menu__button--cooldown'), false);
+    assert.equal(
+      button.querySelector('[data-action-label="visit_shrine"]').textContent,
+      'Receive Blessing'
+    );
+  });
+});

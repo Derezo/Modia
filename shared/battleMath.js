@@ -75,7 +75,7 @@ export const CURE_POISON_EFFECTS = Object.freeze(['poison']);
 /** Status effects removed by cure_all items */
 export const CURE_ALL_EFFECTS = Object.freeze(['poison', 'blind', 'silence', 'slow', 'burn']);
 /** Status effects removed by purify skills (superset of cure_all) */
-export const PURIFY_EFFECTS = Object.freeze(['poison', 'burn', 'blind', 'silence', 'slow', 'stun', 'freeze', 'root']);
+export const PURIFY_EFFECTS = Object.freeze(['poison', 'zodiac_poison', 'burn', 'blind', 'silence', 'slow', 'stun', 'freeze', 'root']);
 /** Explicit status effects preserved by general cleanse skills */
 export const BENEFICIAL_STATUS_EFFECTS = Object.freeze([
   'rage',

@@ -281,19 +281,30 @@ export function getMovementRange(unit) {
 
 /**
  * Get attack range for a unit (melee = 1, ranged classes may have more)
- * Includes trait bonus (Eagle Eye: +1 range)
+ * unit.attackRange is the materialized effective base range, including traits.
  * @param {Object} unit - The unit
  * @returns {number} Maximum attack distance (Manhattan distance)
  */
 export function getAttackRange(unit) {
-  // Base attack range (can be extended based on equipped weapon type)
+  // Effective base range is materialized when the battle unit is created.
   let baseRange = unit.attackRange || DEFAULT_ATTACK_RANGE;
 
-  // Apply trait range bonus (Eagle Eye: +1 tile)
-  const traitRangeBonus = traitService.getRangeBonus(unit);
-  baseRange += traitRangeBonus;
+  // Celestial Arrow is consumed only by a valid basic attack action.
+  baseRange += Number.isFinite(unit.nextAttackRangeBonus)
+    ? unit.nextAttackRangeBonus
+    : 0;
 
   return baseRange;
+}
+
+/**
+ * Whether a unit is immune to push, pull, and other forced movement.
+ * No forced-movement executor exists yet; callers can use this guard when one
+ * is introduced without conflating it with voluntary movement.
+ */
+export function isForcedMovementImmune(unit) {
+  return unit?.statusEffects?.some(effect => effect.type === 'unmovable') ||
+    false;
 }
 
 /**

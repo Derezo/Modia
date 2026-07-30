@@ -1,18 +1,75 @@
 /**
  * Zodiac Ability Service - Load and manage zodiac signature abilities for battles
  *
- * Zodiac signature abilities are special once-per-battle abilities that players
- * can use after visiting zodiac shrines in the world.
+ * Zodiac signature abilities are account-level blessings that remain
+ * available for every battle during their world-map duration. Battle state
+ * tracks the single use allowed to the owning party in each battle.
  */
 
 import { query } from '../config/database.js';
 import { ZODIAC_SHRINE_BUFFS } from '../../../shared/constants.js';
 
+const TARGETED_ZODIAC_ABILITIES = new Set([
+  'venom_sting',
+  'dreamwave'
+]);
+const ZODIAC_SIGNS = Object.freeze(Object.keys(ZODIAC_SHRINE_BUFFS));
+const COMPLETE_COLLECTION_SIZE = ZODIAC_SIGNS.length;
+
+function mapZodiacAbilityRow(row) {
+  const signInfo = ZODIAC_SHRINE_BUFFS[row.zodiac_sign];
+  if (
+    !signInfo
+    || signInfo.signatureAbility !== row.signature_ability
+  ) {
+    return null;
+  }
+
+  return {
+    key: row.signature_ability,
+    zodiacSign: row.zodiac_sign,
+    name: signInfo.name,
+    description: signInfo.description,
+    element: signInfo.element,
+    needsTarget: TARGETED_ZODIAC_ABILITIES.has(row.signature_ability),
+    expiresAt: row.expires_at instanceof Date
+      ? row.expires_at.toISOString()
+      : row.expires_at
+  };
+}
+
+function getZodiacBlessingSlotCount(row) {
+  const canonicalCrystalCount = Number(row?.canonical_crystal_count) || 0;
+  return canonicalCrystalCount >= COMPLETE_COLLECTION_SIZE ? 2 : 1;
+}
+
+/**
+ * Rows arrive newest-first. Keep only canonical, unique abilities within the
+ * account's current one/two-slot entitlement. This read-time guard prevents
+ * legacy over-cap visits from leaking extra signatures into a new battle
+ * before the player next activates a shrine.
+ */
+function selectEntitledZodiacAbilities(rows) {
+  const slotCount = getZodiacBlessingSlotCount(rows[0]);
+  const selected = [];
+  const seenAbilities = new Set();
+
+  for (const row of rows) {
+    const ability = mapZodiacAbilityRow(row);
+    if (!ability || seenAbilities.has(ability.key)) continue;
+    selected.push(ability);
+    seenAbilities.add(ability.key);
+    if (selected.length >= slotCount) break;
+  }
+
+  return selected;
+}
+
 /**
  * Load active zodiac abilities for a user
  * Returns abilities that:
  * 1. Have not expired (buff_expires_at > NOW())
- * 2. Have not been used this battle (signature_used = FALSE)
+ * 2. Fit the account's current one/two-slot Zodiac entitlement
  *
  * @param {number} userId - User ID to load abilities for
  * @param {{client?: Object|null}} [options] - Optional transaction client
@@ -24,27 +81,26 @@ export async function loadActiveZodiacAbilities(userId, { client = null } = {}) 
       ? client.query.bind(client)
       : query;
     const result = await executeQuery(
-      `SELECT wn.zodiac_sign, usv.signature_ability, usv.buff_type, usv.expires_at
+      `WITH canonical_crystals AS (
+         SELECT COUNT(DISTINCT zodiac_sign) AS canonical_crystal_count
+         FROM user_zodiac_crystals
+         WHERE user_id = $1
+           AND zodiac_sign = ANY($2::varchar[])
+       )
+       SELECT wn.zodiac_sign, usv.signature_ability, usv.buff_type,
+              usv.expires_at, usv.last_visited_at, usv.node_id,
+              canonical_crystals.canonical_crystal_count
        FROM user_shrine_visits usv
        JOIN world_nodes wn ON usv.node_id = wn.id
+       CROSS JOIN canonical_crystals
        WHERE usv.user_id = $1
          AND usv.expires_at > NOW()
          AND usv.signature_ability IS NOT NULL
-         AND usv.signature_used = FALSE`,
-      [userId]
+       ORDER BY usv.last_visited_at DESC NULLS LAST, usv.node_id DESC`,
+      [userId, ZODIAC_SIGNS]
     );
 
-    return result.rows.map(row => {
-      const signInfo = ZODIAC_SHRINE_BUFFS[row.zodiac_sign] || {};
-      return {
-        key: row.signature_ability,
-        zodiacSign: row.zodiac_sign,
-        name: signInfo.name || row.signature_ability,
-        description: signInfo.description || '',
-        element: signInfo.element || 'neutral',
-        expiresAt: row.expires_at
-      };
-    });
+    return selectEntitledZodiacAbilities(result.rows);
   } catch (err) {
     // Handle case where zodiac_sign column doesn't exist yet (migration not run)
     if (err.code === '42703') { // PostgreSQL column does not exist error
@@ -66,14 +122,30 @@ export async function loadZodiacAbilitiesForUsers(userIds) {
   }
 
   const result = await query(
-    `SELECT usv.user_id, wn.zodiac_sign, usv.signature_ability, usv.expires_at
+    `WITH canonical_crystals AS (
+       SELECT user_id,
+              COUNT(DISTINCT zodiac_sign) AS canonical_crystal_count
+       FROM user_zodiac_crystals
+       WHERE user_id = ANY($1)
+         AND zodiac_sign = ANY($2::varchar[])
+       GROUP BY user_id
+     )
+     SELECT usv.user_id, wn.zodiac_sign, usv.signature_ability,
+            usv.expires_at, usv.last_visited_at, usv.node_id,
+            COALESCE(
+              canonical_crystals.canonical_crystal_count,
+              0
+            ) AS canonical_crystal_count
      FROM user_shrine_visits usv
      JOIN world_nodes wn ON usv.node_id = wn.id
+     LEFT JOIN canonical_crystals
+       ON canonical_crystals.user_id = usv.user_id
      WHERE usv.user_id = ANY($1)
        AND usv.expires_at > NOW()
        AND usv.signature_ability IS NOT NULL
-       AND usv.signature_used = FALSE`,
-    [userIds]
+     ORDER BY usv.user_id, usv.last_visited_at DESC NULLS LAST,
+              usv.node_id DESC`,
+    [userIds, ZODIAC_SIGNS]
   );
 
   const abilitiesByUser = {};
@@ -81,54 +153,19 @@ export async function loadZodiacAbilitiesForUsers(userIds) {
     abilitiesByUser[userId] = [];
   }
 
+  const rowsByUser = new Map();
   for (const row of result.rows) {
-    const signInfo = ZODIAC_SHRINE_BUFFS[row.zodiac_sign] || {};
-    abilitiesByUser[row.user_id].push({
-      key: row.signature_ability,
-      zodiacSign: row.zodiac_sign,
-      name: signInfo.name || row.signature_ability,
-      description: signInfo.description || '',
-      element: signInfo.element || 'neutral',
-      expiresAt: row.expires_at
-    });
+    const key = String(row.user_id);
+    if (!rowsByUser.has(key)) rowsByUser.set(key, []);
+    rowsByUser.get(key).push(row);
+  }
+  for (const userId of userIds) {
+    abilitiesByUser[userId] = selectEntitledZodiacAbilities(
+      rowsByUser.get(String(userId)) || []
+    );
   }
 
   return abilitiesByUser;
-}
-
-/**
- * Mark zodiac abilities as used after a battle ends
- * This prevents the ability from being used in future battles until
- * the player visits the shrine again.
- *
- * @param {number} userId - User ID
- * @param {Array<string>} usedAbilityKeys - Array of ability keys that were used
- */
-export async function markAbilitiesUsedInBattle(userId, usedAbilityKeys) {
-  if (!usedAbilityKeys || usedAbilityKeys.length === 0) {
-    return;
-  }
-
-  // Get zodiac signs for the used abilities
-  const zodiacSigns = usedAbilityKeys.map(key => {
-    return Object.keys(ZODIAC_SHRINE_BUFFS).find(
-      sign => ZODIAC_SHRINE_BUFFS[sign].signatureAbility === key
-    );
-  }).filter(Boolean);
-
-  if (zodiacSigns.length === 0) {
-    return;
-  }
-
-  await query(
-    `UPDATE user_shrine_visits usv
-     SET signature_used = TRUE
-     FROM world_nodes wn
-     WHERE usv.node_id = wn.id
-       AND usv.user_id = $1
-       AND wn.zodiac_sign = ANY($2)`,
-    [userId, zodiacSigns]
-  );
 }
 
 /**
@@ -139,26 +176,12 @@ export async function markAbilitiesUsedInBattle(userId, usedAbilityKeys) {
  * @returns {Promise<boolean>}
  */
 export async function hasAvailableAbility(userId, abilityKey) {
-  const zodiacSign = Object.keys(ZODIAC_SHRINE_BUFFS).find(
+  if (!ZODIAC_SIGNS.some(
     sign => ZODIAC_SHRINE_BUFFS[sign].signatureAbility === abilityKey
-  );
+  )) return false;
 
-  if (!zodiacSign) {
-    return false;
-  }
-
-  const result = await query(
-    `SELECT 1 FROM user_shrine_visits usv
-     JOIN world_nodes wn ON usv.node_id = wn.id
-     WHERE usv.user_id = $1
-       AND wn.zodiac_sign = $2
-       AND usv.expires_at > NOW()
-       AND usv.signature_used = FALSE
-     LIMIT 1`,
-    [userId, zodiacSign]
-  );
-
-  return result.rows.length > 0;
+  const abilities = await loadActiveZodiacAbilities(userId);
+  return abilities.some(ability => ability.key === abilityKey);
 }
 
 /**
@@ -176,6 +199,7 @@ export function getAllZodiacAbilities() {
       name: info.name,
       description: info.description,
       element: info.element,
+      needsTarget: TARGETED_ZODIAC_ABILITIES.has(info.signatureAbility),
       duration: info.duration
     };
   }
@@ -186,7 +210,6 @@ export function getAllZodiacAbilities() {
 export default {
   loadActiveZodiacAbilities,
   loadZodiacAbilitiesForUsers,
-  markAbilitiesUsedInBattle,
   hasAvailableAbility,
   getAllZodiacAbilities
 };

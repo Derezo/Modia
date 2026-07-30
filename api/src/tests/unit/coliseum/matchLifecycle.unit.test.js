@@ -16,6 +16,7 @@ import { describe, it, before, after, beforeEach, afterEach, mock } from 'node:t
 import assert from 'node:assert';
 import { pool } from '../../../config/database.js';
 import battleStateRepository from '../../../services/battle/BattleStateRepository.js';
+import { ZODIAC_CRYSTALS } from '../../../../../shared/constants.js';
 
 // =============================================================================
 // MOCK TRACKING
@@ -353,6 +354,7 @@ describe('Coliseum battle snapshot transaction', () => {
     const matchId = constants.matchIdCounter.value++;
     const transactionEvents = [];
     const validationCalls = [];
+    const zodiacSigns = Object.keys(ZODIAC_CRYSTALS);
     let createBattleInput = null;
     let updateCount = 0;
 
@@ -494,6 +496,32 @@ describe('Coliseum battle snapshot transaction', () => {
             rowCount: 1
           };
         }
+        if (sql.includes('FROM user_shrine_visits')) {
+          transactionEvents.push(`hydrateZodiacAbilities:${params[0]}`);
+          assert.deepStrictEqual(params[1], zodiacSigns);
+          return {
+            rows: [{
+              zodiac_sign: params[0] === player1Id ? 'aries' : 'taurus',
+              signature_ability: params[0] === player1Id
+                ? 'rams_charge'
+                : 'unmovable',
+              expires_at: new Date('2026-07-30T12:00:00.000Z'),
+              canonical_crystal_count: params[0] === player1Id
+                ? zodiacSigns.length
+                : 0
+            }],
+            rowCount: 1
+          };
+        }
+        if (sql.includes('FROM user_zodiac_crystals')) {
+          transactionEvents.push(`hydrateZodiac:${params[0]}`);
+          return {
+            rows: params[0] === player1Id
+              ? zodiacSigns.map(zodiac_sign => ({ zodiac_sign }))
+              : [],
+            rowCount: params[0] === player1Id ? zodiacSigns.length : 0
+          };
+        }
         if (sql.includes('UPDATE characters SET in_battle = true')) {
           updateCount += 1;
           transactionEvents.push(`updateInBattle:${params[0]}`);
@@ -568,11 +596,44 @@ describe('Coliseum battle snapshot transaction', () => {
 
     const player1Snapshot = createBattleInput.initialMutableState.units
       .find(unit => unit.id === player1CharacterId);
-    assert.equal(player1Snapshot.strength, 47);
-    assert.equal(player1Snapshot.maxHp, 150);
+    const player2Snapshot = createBattleInput.initialMutableState.units
+      .find(unit => unit.id === player2CharacterId);
+    assert.equal(player1Snapshot.ownerId, player1Id);
+    assert.equal(player1Snapshot.strength, 49);
+    assert.equal(player1Snapshot.maxHp, 157);
     assert.equal(player1Snapshot.attack, 11);
     assert.equal(player1Snapshot.skills[0].id, 'power_strike');
     assert.equal(player1Snapshot.skills[0].level, 3);
+    assert.equal(player1Snapshot.zodiacCollectionBonus.collectionComplete, true);
+    assert.deepStrictEqual(
+      player1Snapshot.zodiacCollectionBonus.collectedSigns,
+      zodiacSigns
+    );
+    assert.deepStrictEqual(
+      player1Snapshot.zodiacAbilities.map(ability => ability.key),
+      ['rams_charge']
+    );
+    assert.equal(player2Snapshot.ownerId, player2Id);
+    assert.equal(player2Snapshot.strength, 37);
+    assert.equal(player2Snapshot.maxHp, 100);
+    assert.equal(player2Snapshot.zodiacCollectionBonus.collectionComplete, false);
+    assert.deepStrictEqual(player2Snapshot.zodiacCollectionBonus.collectedSigns, []);
+    assert.deepStrictEqual(
+      player2Snapshot.zodiacAbilities.map(ability => ability.key),
+      ['unmovable']
+    );
+    assert.equal(
+      player2Snapshot.zodiacAbilities.some(ability => ability.key === 'rams_charge'),
+      false
+    );
+    assert.ok(
+      transactionEvents.indexOf(`hydrateSkills:${player2CharacterId}`)
+        < transactionEvents.indexOf(`hydrateZodiac:${player1Id}`)
+    );
+    assert.ok(
+      transactionEvents.indexOf(`hydrateZodiacAbilities:${player2Id}`)
+        < transactionEvents.indexOf('createBattle')
+    );
     assert.equal(constants.activeMatches.has(matchId), false);
   });
 });

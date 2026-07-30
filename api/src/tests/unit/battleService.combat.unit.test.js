@@ -660,17 +660,25 @@ describe('processStatusEffects', () => {
     assert.strictEqual(unit.statusEffects[0].duration, 2, 'Duration should decrement');
   });
 
-  test('should remove expired effects', () => {
+  test('should retain an expiring effect through its final owner turn', () => {
     const unit = createMockPlayerUnit({
       hp: 100,
       maxHp: 100,
       statusEffects: [{ type: 'poison', duration: 1 }]
     });
 
-    const results = battleService.processStatusEffects(unit);
+    const turnStartResults = battleService.processStatusEffects(unit);
 
-    assert.strictEqual(unit.statusEffects.length, 0, 'Expired effect should be removed');
-    assert.ok(results.some(r => r.type === 'effect_expired' && r.effect === 'poison'),
+    assert.strictEqual(unit.statusEffects.length, 1,
+      'Effect should remain authoritative until the turn ends');
+    assert.strictEqual(unit.statusEffects[0].expiresAfterTurn, true);
+    assert.ok(!turnStartResults.some(r => r.type === 'effect_expired'),
+      'Turn start should not report expiry before action validation');
+
+    const turnEndResults = battleService.finalizeStatusEffects(unit);
+
+    assert.strictEqual(unit.statusEffects.length, 0, 'Expired effect should be removed at turn end');
+    assert.ok(turnEndResults.some(r => r.type === 'effect_expired' && r.effect === 'poison'),
       'Should return expired effect result');
   });
 

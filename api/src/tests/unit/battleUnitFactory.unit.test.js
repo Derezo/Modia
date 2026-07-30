@@ -17,6 +17,11 @@ import {
   isAlive,
   getAliveUnitsOfType
 } from '../../services/battleUnitFactory.js';
+import { aggregateZodiacCollectionBonuses } from '../../services/zodiacCollectionBonusService.js';
+import { initializeTraitEffects } from '../../services/traits/index.js';
+import { ZODIAC_CRYSTALS } from '../../../../shared/constants.js';
+
+initializeTraitEffects();
 
 // ============================================================================
 // Mock Factories
@@ -140,12 +145,71 @@ function createMockFormation(tileX = 5, tileY = 12) {
 // ============================================================================
 
 describe('createPlayerBattleUnit', () => {
+  describe('zodiac collection bonuses', () => {
+    it('attaches the aggregate and applies the completion bonus to battle stats', () => {
+      const character = createMockCharacter({
+        hp_current: 80,
+        hp_max: 100,
+        mp_current: 40,
+        mp_max: 100,
+        strength: 100,
+        intelligence: 100,
+        agility: 100,
+        vitality: 100,
+        luck: 100,
+        equip_attack: 100,
+        equip_defense: 100,
+        equip_magic_attack: 100,
+        equip_magic_defense: 100
+      });
+      const zodiacCollectionBonus = aggregateZodiacCollectionBonuses(
+        Object.keys(ZODIAC_CRYSTALS)
+      );
+
+      const unit = createPlayerBattleUnit(character, null, [], {
+        zodiacCollectionBonus
+      });
+
+      assert.strictEqual(unit.hp, 84);
+      assert.strictEqual(unit.maxHp, 105);
+      assert.strictEqual(unit.mp, 42);
+      assert.strictEqual(unit.maxMp, 105);
+      assert.strictEqual(unit.strength, 105);
+      assert.strictEqual(unit.intelligence, 105);
+      assert.strictEqual(unit.agility, 105);
+      assert.strictEqual(unit.vitality, 105);
+      assert.strictEqual(unit.luck, 105);
+      assert.strictEqual(unit.attack, 105);
+      assert.strictEqual(unit.defense, 105);
+      assert.strictEqual(unit.magicAttack, 105);
+      assert.strictEqual(unit.magicDefense, 105);
+      assert.deepStrictEqual(unit.zodiacCollectionBonus, zodiacCollectionBonus);
+    });
+
+    it('preserves every existing stat when the player has no crystals', () => {
+      const character = createMockCharacterWithEquipment();
+      const baseline = createPlayerBattleUnit(character);
+      const explicitEmpty = createPlayerBattleUnit(character, null, [], {
+        zodiacCollectionBonus: aggregateZodiacCollectionBonuses([])
+      });
+
+      for (const stat of [
+        'hp', 'maxHp', 'mp', 'maxMp',
+        'strength', 'intelligence', 'agility', 'vitality', 'luck',
+        'attack', 'defense', 'magicAttack', 'magicDefense'
+      ]) {
+        assert.strictEqual(explicitEmpty[stat], baseline[stat], stat);
+      }
+    });
+  });
+
   describe('basic unit creation', () => {
     it('creates a player unit with correct identity fields', () => {
       const character = createMockCharacter();
       const unit = createPlayerBattleUnit(character);
 
       assert.strictEqual(unit.id, 1);
+      assert.strictEqual(unit.characterId, 1);
       assert.strictEqual(unit.type, 'player');
       assert.strictEqual(unit.name, 'TestHero');
       assert.strictEqual(unit.class, 'warrior');
@@ -356,6 +420,20 @@ describe('createPlayerBattleUnit', () => {
 
       assert.strictEqual(unit.traits.length, 1);
       assert.strictEqual(unit.traits[0].name, 'Iron Will');
+    });
+
+    it('materializes Eagle Eye into the player attack range', () => {
+      const character = createMockCharacter();
+      const traits = [{
+        id: 2,
+        name: 'Eagle Eye',
+        effectType: 'range_bonus',
+        effectValue: 1
+      }];
+
+      const unit = createPlayerBattleUnit(character, null, [], { traits });
+
+      assert.strictEqual(unit.attackRange, 2);
     });
 
     it('assigns zodiac abilities from options', () => {

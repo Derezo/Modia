@@ -27,6 +27,8 @@ export function getActionName(actionType, result) {
       return 'Wait';
     case 'item':
       return result?.itemName || 'Item';
+    case 'zodiac_ability':
+      return result?.abilityName || result?.name || 'Zodiac Ability';
     default:
       return actionType;
   }

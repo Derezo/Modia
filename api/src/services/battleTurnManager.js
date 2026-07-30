@@ -137,6 +137,10 @@ async function processEnemyTurnsFromState(
     if (!activeUnit) {
       console.log('[AsyncTurnManager] No active unit found, advancing');
       battleService.advanceToNextActorWithCT(state);
+      battleStatus = battleService.checkBattleEnd(state);
+      if (battleStatus.status !== 'active') {
+        break;
+      }
       iterations++;
       continue;
     }
@@ -194,6 +198,13 @@ async function processEnemyTurnsFromState(
 
     // Advance to next unit
     battleService.advanceToNextActorWithCT(state);
+    battleStatus = battleService.checkBattleEnd(state);
+    if (battleStatus.status !== 'active') {
+      // Turn-start damage is part of the still-uncommitted enemy-turn
+      // successor. Return it to the route's normal terminal completion path
+      // instead of first committing an impossible active lifecycle.
+      break;
+    }
 
     // Update state in database
     const commitResult = await updateBattleState(battleId, state, stateRevision, {

@@ -19,4 +19,21 @@ describe('ApiClient world activities', () => {
       body: undefined
     });
   });
+
+  it('visits a shrine at the selected node', async () => {
+    const client = new ApiClient('/api');
+    let request;
+
+    client.post = async (endpoint, body) => {
+      request = { endpoint, body };
+      return { success: true };
+    };
+
+    await client.visitShrine(84);
+
+    assert.deepEqual(request, {
+      endpoint: '/world/nodes/84/visit-shrine',
+      body: undefined
+    });
+  });
 });

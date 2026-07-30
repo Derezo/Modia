@@ -26,8 +26,8 @@ describe('battleRewardService', () => {
     it('should have correct function signatures', async () => {
       const service = await import('../../services/battleRewardService.js');
 
-      // computeRewards(state, battleId)
-      assert.strictEqual(service.computeRewards.length, 2);
+      // computeRewards(state, battleId, userId)
+      assert.strictEqual(service.computeRewards.length, 3);
 
       // distributeRewards(userId, rewardsData, battleId)
       assert.strictEqual(service.distributeRewards.length, 3);
@@ -91,6 +91,7 @@ describe('battleRewardService', () => {
       const expectedRewardsStructure = {
         gold: 'number',
         experience: 'number',
+        appliedBonuses: 'array',
         droppedItems: 'array',
         items: 'array', // Formatted for response
         nodeId: 'number|undefined',

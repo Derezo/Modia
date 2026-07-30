@@ -9,11 +9,13 @@
  */
 
 import battleWebsocket from './battleWebsocket.js';
-import { startTurnTimer } from './coliseumService.js';
+import { startTurnTimerIfCurrent } from './coliseum/turnTimer.js';
 import {
+  BattleStateLifecycleError,
   BattleStateNotFoundError,
   battleStateRepository
 } from './battle/BattleStateRepository.js';
+import { completeBattleTerminalTransition } from './battle/BattleTerminalTransition.js';
 
 // Track disconnected players: Map<battleId, Map<playerId, { disconnectTime, timeout }>>
 const disconnectedPlayers = new Map();
@@ -130,8 +132,19 @@ async function handleReconnect(battleId, playerId, playerName) {
         // Give player a grace period (minimum 5 seconds) to orient themselves
         // after reconnection before their turn timer starts
         const gracePeriodMs = Math.max(5000, RECONNECT_GRACE_PERIOD);
+        const expectedRevision = battleState.stateRevision;
         setTimeout(() => {
-          startTurnTimer(battleId, playerId, false);
+          startTurnTimerIfCurrent(
+            battleId,
+            playerId,
+            false,
+            expectedRevision
+          ).catch(error => {
+            console.error(
+              `Failed to restore guarded turn timer for battle ${battleId}:`,
+              error
+            );
+          });
         }, gracePeriodMs);
 
         console.log(`[Reconnection] PvP turn timer will restart in ${gracePeriodMs}ms for player ${playerId}`);
@@ -175,7 +188,8 @@ async function handleAbandonTimeout(battleId, playerId) {
       requireActive: true
     });
   } catch (error) {
-    if (error instanceof BattleStateNotFoundError) {
+    if (error instanceof BattleStateNotFoundError
+      || error instanceof BattleStateLifecycleError) {
       return;
     }
     throw error;
@@ -188,6 +202,15 @@ async function handleAbandonTimeout(battleId, playerId) {
   const state = structuredClone(battle.state);
   let autoWaitedUnit = null;
   let nextTurn = null;
+
+  // Record abandonment in either the active successor commit or the atomic
+  // terminal completion state.
+  if (!state.abandonedPlayers) {
+    state.abandonedPlayers = [];
+  }
+  if (!state.abandonedPlayers.includes(playerId)) {
+    state.abandonedPlayers.push(playerId);
+  }
 
   // Check if it's the abandoned player's turn
   const activeUnit = state.units?.find(u => u.id === state.activeUnitId);
@@ -202,6 +225,26 @@ async function handleAbandonTimeout(battleId, playerId) {
 
     // Advance to next turn
     battleService.advanceToNextActorWithCT(state);
+    const battleEndResult = battleService.checkBattleEnd(state);
+    if (battleEndResult.status !== 'active') {
+      const completion = await completeBattleTerminalTransition({
+        battleEnvelope: battle,
+        finalState: state,
+        expectedRevision: battle.stateRevision,
+        battleEndResult,
+        actingUserId: playerId,
+        reason: 'disconnect_abandonment',
+        commandType: 'player_abandon_terminal',
+        idempotencyKey:
+          `player-abandon-terminal:${battleId}:${playerId}:${battle.stateRevision}`
+      });
+      cleanupBattle(battleId);
+      return {
+        outcome: 'terminal',
+        battleEndResult,
+        completion
+      };
+    }
 
     autoWaitedUnit = activeUnit;
     const nextUnit = state.units?.find(u => u.id === state.activeUnitId);
@@ -211,14 +254,6 @@ async function handleAbandonTimeout(battleId, playerId) {
         predictions: battleService.predictTurnOrder(state, 10)
       };
     }
-  }
-
-  // Mark player as abandoned in battle state
-  if (!state.abandonedPlayers) {
-    state.abandonedPlayers = [];
-  }
-  if (!state.abandonedPlayers.includes(playerId)) {
-    state.abandonedPlayers.push(playerId);
   }
 
   const commitResult = await battleStateRepository.commitBattleState({
@@ -250,6 +285,11 @@ async function handleAbandonTimeout(battleId, playerId) {
     );
   }
   await battleWebsocket.broadcastStateUpdate(battleId, commitResult.update);
+  return {
+    outcome: autoWaitedUnit ? 'advanced' : 'abandoned',
+    stateRevision: commitResult.stateRevision,
+    update: commitResult.update
+  };
 }
 
 /**

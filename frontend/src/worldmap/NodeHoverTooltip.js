@@ -40,6 +40,23 @@ const SETTLEMENT_NODES = ['castle', 'city', 'village', 'palace', 'keep', 'guild'
 const ACTIVITY_NODES = ['shrine', 'merchant_caravan', 'ruins', 'fishing_spot', 'watchtower'];
 const SPECIAL_NODES = ['chest', 'discovery'];
 
+function parseShrineTimestamp(value) {
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value !== 'string' || value.length === 0) return null;
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+function formatShrineTimeRemaining(timestamp, now = Date.now()) {
+  const totalMinutes = Math.max(1, Math.ceil((timestamp - now) / 60000));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours === 0) return `${minutes}m`;
+  if (minutes === 0) return `${hours}h`;
+  return `${hours}h ${minutes}m`;
+}
+
 // Node type display names and icons
 const NODE_TYPE_INFO = {
   forest: { name: 'Forest', icon: 'terrain', color: '#4a8a4a' },
@@ -746,15 +763,50 @@ export class NodeHoverTooltip {
       }
     } else {
       // Non-zodiac shrine
-      if (node.buff_type) {
+      const buffType = node.shrine_buff_type ?? node.shrineBuffType ?? node.buff_type;
+      if (buffType) {
         const buffNames = {
           stamina_regen: "Pilgrim's Rest",
           exp_bonus: "Scholar's Insight",
           gold_bonus: "Merchant's Fortune"
         };
-        this.addRow('Blessing', buffNames[node.buff_type] || node.buff_type);
+        this.addRow('Blessing', buffNames[buffType] || buffType);
       }
       this.addRow('Type', 'Sacred Shrine');
+    }
+
+    const now = Date.now();
+    const buffExpiresAt = parseShrineTimestamp(
+      node.shrine_buff_expires_at ?? node.shrineBuffExpiresAt
+    );
+    const cooldownUntil = parseShrineTimestamp(
+      node.shrine_cooldown_until
+      ?? node.shrineCooldownUntil
+      ?? node.cooldown_expires_at
+      ?? node.cooldownExpiresAt
+    );
+    const buffActive = buffExpiresAt !== null
+      ? buffExpiresAt > now
+      : Boolean(node.shrine_buff_active ?? node.shrineBuffActive);
+    const onCooldown = cooldownUntil !== null
+      ? cooldownUntil > now
+      : Boolean(node.shrine_on_cooldown ?? node.shrineOnCooldown);
+
+    if (buffActive) {
+      this.addRow('Status', 'Blessing Active', PARCHMENT_COLORS.state.success);
+      if (buffExpiresAt !== null && buffExpiresAt > now) {
+        this.addRow('Active For', formatShrineTimeRemaining(buffExpiresAt, now));
+      }
+    } else if (!onCooldown) {
+      this.addRow('Status', 'Blessing Available', PARCHMENT_COLORS.state.success);
+    }
+
+    if (onCooldown && cooldownUntil !== null && cooldownUntil > now) {
+      this.addRow(
+        'Cooldown',
+        `Ready in ${formatShrineTimeRemaining(cooldownUntil, now)}`,
+        PARCHMENT_COLORS.text.muted
+      );
     }
   }
 

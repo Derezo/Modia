@@ -24,6 +24,176 @@ import {
   calculateRefreshOffset
 } from '../db/templates/caravanItems.js';
 
+const STACKABLE_CARAVAN_ITEM_TYPES = new Set(['consumable', 'material']);
+const EQUIPMENT_SLOTS = new Set([
+  'main_hand',
+  'off_hand',
+  'head',
+  'body',
+  'legs',
+  'feet',
+  'accessory'
+]);
+
+function getCanonicalConsumableEffect(effect) {
+  if (!effect || typeof effect !== 'object') {
+    return { effectType: null, effectValue: null };
+  }
+
+  const hpRestore = Number.isFinite(effect.hp_restore) ? effect.hp_restore : null;
+  const mpRestore = Number.isFinite(effect.mp_restore) ? effect.mp_restore : null;
+
+  if (hpRestore !== null && mpRestore === Math.floor(hpRestore / 2)) {
+    return { effectType: 'heal_both', effectValue: hpRestore };
+  }
+  if (hpRestore !== null) {
+    return { effectType: 'heal_hp', effectValue: hpRestore };
+  }
+  if (mpRestore !== null) {
+    return { effectType: 'heal_mp', effectValue: mpRestore };
+  }
+  if (effect.revive === true && Number.isFinite(effect.hp_percent)) {
+    return { effectType: 'revive', effectValue: effect.hp_percent };
+  }
+  if (effect.cure_all === true) {
+    return { effectType: 'cure_all', effectValue: 0 };
+  }
+
+  return { effectType: null, effectValue: null };
+}
+
+function buildCaravanItemModifications(inventoryItem, catalogKey) {
+  return {
+    caravan_item_id: inventoryItem.itemId,
+    caravan_catalog_key: catalogKey,
+    caravan_item_name: inventoryItem.name,
+    caravan_item_type: inventoryItem.type,
+    effect: inventoryItem.effect || null,
+    equipSlot: inventoryItem.equipSlot || null,
+    statBonuses: inventoryItem.statBonuses || null,
+    levelRequirement: inventoryItem.levelRequirement || 1,
+    basePrice: inventoryItem.basePrice || 0,
+    region: inventoryItem.region || null,
+    sprite_id: inventoryItem.sprite_id || null
+  };
+}
+
+/**
+ * Persist one purchased caravan catalog item into shared inventory.
+ *
+ * The caller must provide a client for the active purchase transaction. The
+ * catalog-key upsert is the cross-worker authority for the canonical template;
+ * processPurchase's user row lock serializes shared-inventory stacking.
+ *
+ * @param {import('pg').PoolClient} client - Active transaction client
+ * @param {number} userId - Purchasing user
+ * @param {Object} inventoryItem - Generated caravan inventory item
+ * @param {number} quantity - Purchased quantity
+ * @returns {Promise<{templateId: number, isStackable: boolean, itemInstanceIds: number[]}>}
+ */
+export async function persistCaravanPurchaseItem(client, userId, inventoryItem, quantity) {
+  const catalogKey = `caravan:${String(inventoryItem.itemId)}`;
+  const isStackable = STACKABLE_CARAVAN_ITEM_TYPES.has(inventoryItem.type);
+  const equipmentSlot = EQUIPMENT_SLOTS.has(inventoryItem.equipSlot)
+    ? inventoryItem.equipSlot
+    : null;
+  const statBonuses = inventoryItem.type === 'consumable'
+    ? { ...(inventoryItem.statBonuses || {}), ...(inventoryItem.effect || {}) }
+    : (inventoryItem.statBonuses || {});
+  const { effectType, effectValue } = inventoryItem.type === 'consumable'
+    ? getCanonicalConsumableEffect(inventoryItem.effect)
+    : { effectType: null, effectValue: null };
+
+  const templateResult = await client.query(
+    `INSERT INTO item_templates
+     (catalog_key, name, description, item_type, equipment_slot, stat_bonuses,
+      level_requirement, effect_type, effect_value, base_price, is_stackable, sprite_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+     ON CONFLICT (catalog_key) DO UPDATE SET
+       name = EXCLUDED.name,
+       description = EXCLUDED.description,
+       item_type = EXCLUDED.item_type,
+       equipment_slot = EXCLUDED.equipment_slot,
+       stat_bonuses = EXCLUDED.stat_bonuses,
+       level_requirement = EXCLUDED.level_requirement,
+       effect_type = EXCLUDED.effect_type,
+       effect_value = EXCLUDED.effect_value,
+       base_price = EXCLUDED.base_price,
+       is_stackable = EXCLUDED.is_stackable,
+       sprite_id = EXCLUDED.sprite_id
+     RETURNING id`,
+    [
+      catalogKey,
+      inventoryItem.name,
+      inventoryItem.description || null,
+      inventoryItem.type,
+      equipmentSlot,
+      JSON.stringify(statBonuses),
+      inventoryItem.levelRequirement || 1,
+      effectType,
+      effectValue,
+      inventoryItem.basePrice || 0,
+      isStackable,
+      inventoryItem.sprite_id || null
+    ]
+  );
+  const templateId = templateResult.rows[0]?.id;
+
+  if (templateId === null || templateId === undefined) {
+    throw new Error(`Failed to resolve item template for caravan item ${inventoryItem.itemId}`);
+  }
+
+  const modifications = JSON.stringify(
+    buildCaravanItemModifications(inventoryItem, catalogKey)
+  );
+  const itemInstanceIds = [];
+
+  if (isStackable) {
+    const existingItem = await client.query(
+      `SELECT id, quantity FROM character_items
+       WHERE user_id = $1
+         AND item_template_id = $2
+         AND character_id IS NULL
+         AND equipped_slot IS NULL
+       LIMIT 1
+       FOR UPDATE`,
+      [userId, templateId]
+    );
+
+    if (existingItem.rows.length > 0) {
+      await client.query(
+        `UPDATE character_items
+         SET quantity = quantity + $1
+         WHERE id = $2`,
+        [quantity, existingItem.rows[0].id]
+      );
+      itemInstanceIds.push(existingItem.rows[0].id);
+    } else {
+      const insertedItem = await client.query(
+        `INSERT INTO character_items
+         (user_id, item_template_id, quantity, modifications)
+         VALUES ($1, $2, $3, $4)
+         RETURNING id`,
+        [userId, templateId, quantity, modifications]
+      );
+      itemInstanceIds.push(insertedItem.rows[0]?.id);
+    }
+  } else {
+    for (let i = 0; i < quantity; i++) {
+      const insertedItem = await client.query(
+        `INSERT INTO character_items
+         (user_id, item_template_id, quantity, modifications)
+         VALUES ($1, $2, 1, $3)
+         RETURNING id`,
+        [userId, templateId, modifications]
+      );
+      itemInstanceIds.push(insertedItem.rows[0]?.id);
+    }
+  }
+
+  return { templateId, isStackable, itemInstanceIds };
+}
+
 /**
  * Generate caravan inventory using seeded randomness
  *
@@ -75,6 +245,7 @@ export function generateCaravanInventory(seed, regionRace) {
       maxQuantity: quantity, // Track original stock for display
       price,
       basePrice: item.basePrice,
+      levelRequirement: item.levelRequirement || 1,
       sprite_id: item.sprite_id || null
     });
   }
@@ -370,50 +541,8 @@ export async function processPurchase(userId, nodeId, itemId, quantity = 1) {
       );
     }
 
-    // Add item to user's inventory
-    // Check if user already has this item (for stackable items like consumables/materials)
-    // Only stack if item is not equipment (no equipSlot)
-    const isStackable = !inventoryItem.equipSlot;
-    let existingItem = { rows: [] };
-
-    if (isStackable) {
-      existingItem = await client.query(
-        `SELECT id, quantity FROM character_items
-         WHERE user_id = $1
-           AND item_template_id IS NULL
-           AND character_id IS NULL
-           AND equipped_slot IS NULL
-           AND modifications->>'caravan_item_id' = $2`,
-        [userId, itemId]
-      );
-    }
-
-    if (existingItem.rows.length > 0) {
-      // Update quantity
-      await client.query(
-        `UPDATE character_items
-         SET quantity = quantity + $1
-         WHERE id = $2`,
-        [quantity, existingItem.rows[0].id]
-      );
-    } else {
-      // Insert new item
-      const modifications = {
-        caravan_item_id: itemId,
-        caravan_item_name: inventoryItem.name,
-        caravan_item_type: inventoryItem.type,
-        effect: inventoryItem.effect,
-        equipSlot: inventoryItem.equipSlot,
-        statBonuses: inventoryItem.statBonuses
-      };
-
-      await client.query(
-        `INSERT INTO character_items
-         (user_id, item_template_id, quantity, modifications)
-         VALUES ($1, NULL, $2, $3)`,
-        [userId, quantity, JSON.stringify(modifications)]
-      );
-    }
+    // Resolve the canonical catalog template and add the item to shared inventory.
+    await persistCaravanPurchaseItem(client, userId, inventoryItem, quantity);
 
     // Get updated gold balance
     const updatedUser = await client.query(
@@ -518,6 +647,7 @@ export async function getCaravanInventoryWithStock(nodeId) {
 
 export default {
   generateCaravanInventory,
+  persistCaravanPurchaseItem,
   getCaravanData,
   refreshCaravanInventory,
   getItemStock,

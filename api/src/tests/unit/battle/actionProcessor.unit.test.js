@@ -9,7 +9,7 @@
  * - getBattleStatusString: Legacy status string conversion
  */
 
-import { describe, it, before } from 'node:test';
+import { describe, it, before, mock } from 'node:test';
 import assert from 'node:assert';
 import { withSeededRandom } from '../../testUtils/index.js';
 
@@ -23,6 +23,20 @@ import {
   calculatePhysicalDamage,
   calculateMagicalDamage
 } from '../../../services/battle/damageCalculator.js';
+
+function withRandomValues(values, callback) {
+  let index = 0;
+  const random = mock.method(
+    Math,
+    'random',
+    () => values[Math.min(index++, values.length - 1)]
+  );
+  try {
+    return callback();
+  } finally {
+    random.mock.restore();
+  }
+}
 
 // =============================================================================
 // checkBattleEnd
@@ -1064,6 +1078,211 @@ describe('processAction - Attack Action', () => {
     assert.strictEqual(attacker.actUsed, true);
   });
 
+  it('consumes and applies all next-basic Zodiac effects on a hit', () => {
+    const attacker = createAttackTestUnit({
+      hp: 100,
+      maxHp: 1000,
+      strength: 100,
+      attack: 0,
+      luck: 0,
+      nextAttackCritBonus: 0.25,
+      nextAttackHitsTwice: true,
+      twinStrikeDamageMultiplier: 0.6,
+      nextAttackLifesteal: true,
+      nextAttackRangeBonus: 2,
+      zodiacCollectionBonus: { healingReceived: 0.03 }
+    });
+    const target = {
+      id: 'target',
+      tileX: 8,
+      tileY: 5,
+      hp: 500,
+      maxHp: 500,
+      type: 'enemy',
+      agility: 0,
+      luck: 0,
+      vitality: 0,
+      defense: 0,
+      statusEffects: []
+    };
+    const state = createAttackTestState({ units: [attacker, target] });
+
+    const result = withRandomValues(
+      [0, 0.5, 0.99, 0.5, 0.99],
+      () => processAction(state, attacker, 'attack', { x: 8, y: 5 })
+    );
+
+    assert.strictEqual(result.damage, 120);
+    assert.strictEqual(result.hits, 2);
+    assert.deepStrictEqual(
+      result.hitResults.map(hit => hit.damage),
+      [60, 60]
+    );
+    assert.strictEqual(target.hp, 380);
+    assert.strictEqual(attacker.hp, 223);
+    assert.strictEqual(result.balanceHealing, 123);
+    assert.strictEqual(attacker.healingDone, 123);
+    assert.deepStrictEqual(result.zodiacEffectsConsumed, [
+      'rams_charge',
+      'twin_strike',
+      'balance',
+      'celestial_arrow'
+    ]);
+    assert.strictEqual(attacker.nextAttackCritBonus, undefined);
+    assert.strictEqual(attacker.nextAttackHitsTwice, undefined);
+    assert.strictEqual(attacker.nextAttackLifesteal, undefined);
+    assert.strictEqual(attacker.nextAttackRangeBonus, undefined);
+  });
+
+  it('consumes next-basic effects on misses and empty-tile attacks', () => {
+    const missAttacker = createAttackTestUnit({
+      nextAttackCritBonus: 0.25,
+      nextAttackHitsTwice: true
+    });
+    const target = {
+      id: 'target',
+      tileX: 6,
+      tileY: 5,
+      hp: 100,
+      maxHp: 100,
+      type: 'enemy',
+      agility: 0,
+      luck: 0,
+      vitality: 0,
+      defense: 0
+    };
+    const missState = createAttackTestState({
+      units: [missAttacker, target]
+    });
+
+    const missResult = withRandomValues(
+      [0.999],
+      () => processAction(
+        missState,
+        missAttacker,
+        'attack',
+        { x: 6, y: 5 }
+      )
+    );
+
+    assert.strictEqual(missResult.missed, true);
+    assert.deepStrictEqual(missResult.zodiacEffectsConsumed, [
+      'rams_charge',
+      'twin_strike'
+    ]);
+
+    const emptyAttacker = createAttackTestUnit({
+      nextAttackLifesteal: true,
+      nextAttackRangeBonus: 2
+    });
+    const emptyState = createAttackTestState({ units: [emptyAttacker] });
+    const emptyResult = processAction(
+      emptyState,
+      emptyAttacker,
+      'attack',
+      { x: 7, y: 5 }
+    );
+
+    assert.strictEqual(emptyResult.attackedEmptyTile, true);
+    assert.deepStrictEqual(emptyResult.zodiacEffectsConsumed, [
+      'balance',
+      'celestial_arrow'
+    ]);
+  });
+
+  it('retains next-basic effects when attack validation fails', () => {
+    const attacker = createAttackTestUnit({
+      nextAttackCritBonus: 0.25,
+      nextAttackHitsTwice: true,
+      twinStrikeDamageMultiplier: 0.6,
+      nextAttackLifesteal: true,
+      nextAttackRangeBonus: 2
+    });
+    const state = createAttackTestState({ units: [attacker] });
+
+    const result = processAction(
+      state,
+      attacker,
+      'attack',
+      { x: 9, y: 5 }
+    );
+
+    assert.match(result.error, /out of attack range/);
+    assert.strictEqual(attacker.nextAttackCritBonus, 0.25);
+    assert.strictEqual(attacker.nextAttackHitsTwice, true);
+    assert.strictEqual(attacker.nextAttackLifesteal, true);
+    assert.strictEqual(attacker.nextAttackRangeBonus, 2);
+  });
+
+  it('Moonshield blocks a basic damage instance without inflating stats', () => {
+    const attacker = createAttackTestUnit({
+      strength: 100,
+      attack: 0,
+      luck: 0
+    });
+    const target = {
+      id: 'target',
+      tileX: 6,
+      tileY: 5,
+      hp: 100,
+      maxHp: 100,
+      type: 'enemy',
+      agility: 0,
+      luck: 0,
+      vitality: 0,
+      defense: 0,
+      damageShield: 1,
+      damageTaken: 0
+    };
+    const state = createAttackTestState({ units: [attacker, target] });
+
+    const result = withRandomValues(
+      [0, 0.5, 0.99],
+      () => processAction(state, attacker, 'attack', { x: 6, y: 5 })
+    );
+
+    assert.strictEqual(result.damage, 0);
+    assert.strictEqual(result.blockedHits, 1);
+    assert.strictEqual(target.hp, 100);
+    assert.strictEqual(target.damageShield, 0);
+    assert.strictEqual(target.damageTaken, 0);
+    assert.strictEqual(attacker.damageDealt, 0);
+  });
+
+  it('tracks only actual HP lost for lethal overkill damage', () => {
+    const attacker = createAttackTestUnit({
+      strength: 100,
+      attack: 0,
+      luck: 0
+    });
+    const target = {
+      id: 'target',
+      tileX: 6,
+      tileY: 5,
+      hp: 10,
+      maxHp: 100,
+      type: 'enemy',
+      agility: 0,
+      luck: 0,
+      vitality: 0,
+      defense: 0,
+      damageTaken: 0,
+      deaths: 0
+    };
+    const state = createAttackTestState({ units: [attacker, target] });
+
+    const result = withRandomValues(
+      [0, 0.5, 0.99],
+      () => processAction(state, attacker, 'attack', { x: 6, y: 5 })
+    );
+
+    assert.strictEqual(result.damage, 10);
+    assert.strictEqual(target.damageTaken, 10);
+    assert.strictEqual(attacker.damageDealt, 10);
+    assert.strictEqual(attacker.kills, 1);
+    assert.strictEqual(target.deaths, 1);
+  });
+
   it('should set turnEnded when both move and act are used', () => {
     const attacker = createAttackTestUnit({ moveUsed: true, actUsed: false });
     const target = {
@@ -1361,6 +1580,39 @@ describe('processAction - Healing Skills', () => {
     assert.strictEqual(result.healing, 10);
     assert.strictEqual(healer.healingDone, 10);
     assert.strictEqual(result.targetId, healer.id);
+  });
+
+  it('applies healing-received crystals to player skill healing', () => {
+    const celestialHeal = {
+      id: 'celestial_heal',
+      name: 'Celestial Heal',
+      type: 'active',
+      targetSelf: true,
+      range: 0,
+      mpCost: 0,
+      healPercent: 5
+    };
+    const healer = createSkillTestUnit({
+      type: 'player',
+      teamId: 1,
+      hp: 50,
+      maxHp: 2000,
+      skills: [celestialHeal],
+      zodiacCollectionBonus: { healingReceived: 0.03 }
+    });
+    const state = createSkillTestState([healer]);
+
+    const result = processAction(
+      state,
+      healer,
+      'skill',
+      { x: healer.tileX, y: healer.tileY },
+      celestialHeal.id
+    );
+
+    assert.strictEqual(healer.hp, 153);
+    assert.strictEqual(result.healing, 103);
+    assert.strictEqual(result.selfHealing, 103);
   });
 
   it('applies both enemy damage and the caster buff for a hybrid skill', () => {
@@ -1967,6 +2219,136 @@ describe('processAction - Healing Skills', () => {
     ));
   });
 
+  it('Moonshield blocks one hit of a multi-hit single-target skill', () => {
+    const doubleSlash = {
+      id: 'test_double_slash',
+      name: 'Double Slash',
+      type: 'active',
+      range: 3,
+      mpCost: 0,
+      power: 100,
+      damageType: 'physical',
+      hits: 2
+    };
+    const caster = createSkillTestUnit({
+      strength: 100,
+      attack: 0,
+      luck: 0,
+      skills: [doubleSlash],
+      nextAttackCritBonus: 0.25,
+      nextAttackHitsTwice: true,
+      nextAttackLifesteal: true,
+      nextAttackRangeBonus: 2
+    });
+    const opponent = createSkillTestUnit({
+      id: 'opponent',
+      type: 'player',
+      teamId: 1,
+      tileX: 7,
+      hp: 300,
+      maxHp: 300,
+      vitality: 0,
+      defense: 0,
+      intelligence: 0,
+      damageShield: 1,
+      skills: []
+    });
+    const state = createSkillTestState([caster, opponent]);
+
+    const result = withRandomValues(
+      [0.5, 0.99],
+      () => processAction(
+        state,
+        caster,
+        'skill',
+        { x: opponent.tileX, y: opponent.tileY },
+        doubleSlash.id
+      )
+    );
+
+    assert.strictEqual(result.damage, 100);
+    assert.strictEqual(result.blockedHits, 1);
+    assert.deepStrictEqual(
+      result.hitResults.map(hit => [hit.blocked, hit.damage]),
+      [[true, 0], [false, 100]]
+    );
+    assert.strictEqual(opponent.hp, 200);
+    assert.strictEqual(opponent.damageShield, 0);
+    assert.strictEqual(caster.nextAttackCritBonus, 0.25);
+    assert.strictEqual(caster.nextAttackHitsTwice, true);
+    assert.strictEqual(caster.nextAttackLifesteal, true);
+    assert.strictEqual(caster.nextAttackRangeBonus, 2);
+  });
+
+  it('Moonshield blocks an AoE damage instance for only its owner', () => {
+    const blast = {
+      id: 'test_blast',
+      name: 'Blast',
+      type: 'active',
+      range: 3,
+      mpCost: 0,
+      power: 100,
+      damageType: 'physical',
+      aoeRadius: 1
+    };
+    const caster = createSkillTestUnit({
+      strength: 100,
+      attack: 0,
+      luck: 0,
+      skills: [blast]
+    });
+    const shielded = createSkillTestUnit({
+      id: 'shielded',
+      type: 'player',
+      teamId: 1,
+      tileX: 7,
+      hp: 200,
+      maxHp: 200,
+      vitality: 0,
+      defense: 0,
+      intelligence: 0,
+      damageShield: 1,
+      skills: []
+    });
+    const unshielded = createSkillTestUnit({
+      id: 'unshielded',
+      type: 'player',
+      teamId: 1,
+      tileX: 8,
+      hp: 200,
+      maxHp: 200,
+      vitality: 0,
+      defense: 0,
+      intelligence: 0,
+      skills: []
+    });
+    const state = createSkillTestState([caster, shielded, unshielded]);
+
+    const result = withRandomValues(
+      [0.5, 0.99, 0.5, 0.99],
+      () => processAction(
+        state,
+        caster,
+        'skill',
+        { x: shielded.tileX, y: shielded.tileY },
+        blast.id
+      )
+    );
+    const shieldedResult = result.aoeTargets.find(
+      target => target.targetId === shielded.id
+    );
+    const unshieldedResult = result.aoeTargets.find(
+      target => target.targetId === unshielded.id
+    );
+
+    assert.strictEqual(shieldedResult.damage, 0);
+    assert.strictEqual(shieldedResult.blockedHits, 1);
+    assert.strictEqual(shielded.hp, 200);
+    assert.strictEqual(shielded.damageShield, 0);
+    assert.ok(unshieldedResult.damage > 0);
+    assert.ok(unshielded.hp < 200);
+  });
+
   it('reports effective healing for injured and full-health ally targets', () => {
     const healer = createSkillTestUnit({ skills: [allyHeal] });
     const ally = createSkillTestUnit({
@@ -2181,6 +2563,30 @@ describe('processAction - Item Action', () => {
     assert.strictEqual(unit.hp, 80);
     assert.strictEqual(result.healing, 30);
     assert.strictEqual(state.consumables[0].quantity, 1);
+  });
+
+  it('applies healing-received crystals to player HP items', () => {
+    const unit = createItemTestUnit({
+      hp: 50,
+      maxHp: 200,
+      zodiacCollectionBonus: { healingReceived: 0.03 }
+    });
+    const state = createItemTestState({
+      units: [unit],
+      consumables: [{
+        itemId: 1,
+        inventoryId: 1,
+        name: 'Potion',
+        quantity: 1,
+        effectType: 'heal_hp',
+        effectValue: 100
+      }]
+    });
+
+    const result = processAction(state, unit, 'item', { x: 5, y: 5 }, 1);
+
+    assert.strictEqual(unit.hp, 153);
+    assert.strictEqual(result.healing, 103);
   });
 
   it('should restore MP with heal_mp item', () => {

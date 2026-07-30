@@ -23,6 +23,10 @@ import battleStateRepository, {
   BattleStateConflictError
 } from './battle/BattleStateRepository.js';
 import { extractBattleMutableState } from './battle/battleMapGenerationService.js';
+import {
+  applyStandardShrineRewardBonuses,
+  loadActiveStandardShrineEffects
+} from './shrineEffectService.js';
 
 /**
  * Clear the authoritative challenger for an advancement battle.
@@ -55,9 +59,10 @@ export async function clearAdvancementChallengerStatus(client, battle) {
  *
  * @param {Object} state - Battle state with units
  * @param {number} battleId - Battle ID for node lookup
+ * @param {number} userId - User receiving the PvE rewards
  * @returns {Promise<Object>} Rewards object with gold, experience, items, nodeId, difficultyTier
  */
-export async function computeRewards(state, battleId) {
+export async function computeRewards(state, battleId, userId) {
   const enemies = state.units.filter(u => u.type === 'enemy');
   const players = state.units.filter(u => u.type === 'player');
   const partyLevel = Math.floor(
@@ -78,8 +83,17 @@ export async function computeRewards(state, battleId) {
   const nodeType = nodeResult.rows[0]?.node_type || 'forest';
 
   // Calculate rewards using service
-  const gold = battleService.calculateGoldReward(enemies, difficultyTier);
-  const exp = battleService.calculateExperienceReward(enemies, partyLevel);
+  const baseGold = battleService.calculateGoldReward(enemies, difficultyTier);
+  const baseExperience = battleService.calculateExperienceReward(enemies, partyLevel);
+  const activeShrineEffects = await loadActiveStandardShrineEffects(userId);
+  const {
+    gold,
+    experience,
+    appliedBonuses
+  } = applyStandardShrineRewardBonuses(
+    { gold: baseGold, experience: baseExperience },
+    activeShrineEffects
+  );
 
   // Roll item drops from each enemy
   const droppedItems = [];
@@ -90,7 +104,8 @@ export async function computeRewards(state, battleId) {
 
   return {
     gold,
-    experience: exp,
+    experience,
+    appliedBonuses,
     droppedItems,
     items: itemDropService.formatDropsForResponse(droppedItems),
     nodeId,
@@ -148,9 +163,23 @@ export async function distributeRewards(
   userId,
   rewardsData,
   battleId,
-  { finalState = null, client = null, battleCommand = null } = {}
+  {
+    finalState = null,
+    expectedRevision = null,
+    client = null,
+    battleCommand = null
+  } = {}
 ) {
-  const { gold, experience, droppedItems, items, nodeId, nodeType, players } = rewardsData;
+  const {
+    gold,
+    experience,
+    appliedBonuses = [],
+    droppedItems,
+    items,
+    nodeId,
+    nodeType,
+    players
+  } = rewardsData;
   const participantCharacterIds = getRewardParticipantCharacterIds(players, userId);
   if (participantCharacterIds.length === 0) {
     throw new Error(`Battle ${battleId} has no reward participants for user ${userId}`);
@@ -160,7 +189,8 @@ export async function distributeRewards(
     const rewardsRecord = {
       gold,
       experience,
-      items
+      items,
+      appliedBonuses
     };
     const battle = await battleStateRepository.loadBattle(battleId, {
       client: transactionClient,
@@ -197,9 +227,28 @@ export async function distributeRewards(
       };
     }
 
+    // finalState was derived from one exact battle revision. Validate that
+    // revision while holding the battle row lock so a stale timeout or
+    // disconnect transition cannot overwrite a concurrently committed action
+    // with its older terminal snapshot.
+    if (
+      expectedRevision !== null
+      && expectedRevision !== undefined
+      && battle.stateRevision !== expectedRevision
+    ) {
+      throw new BattleStateConflictError(
+        `Battle ${battleId} revision ${battle.stateRevision} does not match ${expectedRevision}`,
+        {
+          battleId,
+          expectedRevision,
+          actualRevision: battle.stateRevision
+        }
+      );
+    }
+
     const command = {
       battleId,
-      expectedRevision: battle.stateRevision,
+      expectedRevision: expectedRevision ?? battle.stateRevision,
       commandType: 'battle_rewards',
       idempotencyKey: `battle-rewards:${battleId}:${userId}`,
       ...(battleCommand ?? {}),

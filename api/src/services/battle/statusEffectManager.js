@@ -4,6 +4,7 @@
 
 import * as traitService from '../traitService.js';
 import { PURIFY_EFFECTS, PREVENT_ACTING, PREVENT_MOVEMENT, PREVENT_SKILLS } from '../../../../shared/battleMath.js';
+import { applyHealingReceivedBonus } from '../zodiacCollectionBonusService.js';
 
 /**
  * Process status effects at turn start
@@ -13,7 +14,10 @@ export function processStatusEffects(unit) {
   const results = [];
 
   // Process trait-based HP regen (Regeneration trait: 2% per turn)
-  const traitHPRegen = traitService.calculateHPRegen(unit);
+  const traitHPRegen = applyHealingReceivedBonus(
+    unit,
+    traitService.calculateHPRegen(unit)
+  );
   if (traitHPRegen > 0) {
     unit.hp = Math.min(unit.maxHp, unit.hp + traitHPRegen);
     results.push({ type: 'trait_regen', amount: traitHPRegen });
@@ -23,42 +27,76 @@ export function processStatusEffects(unit) {
     return results;
   }
 
-  for (let i = unit.statusEffects.length - 1; i >= 0; i--) {
-    const effect = unit.statusEffects[i];
+  for (const effect of unit.statusEffects) {
 
     // Apply effect damage/healing
     switch (effect.type) {
       case 'poison': {
         const poisonDamage = Math.floor(unit.maxHp * 0.05);
-        unit.hp = Math.max(0, unit.hp - poisonDamage);
-        results.push({ type: 'poison_damage', damage: poisonDamage });
+        results.push(applyPeriodicDamage(unit, poisonDamage, 'poison_damage'));
         break;
       }
 
       case 'burn': {
         const burnDamage = Math.floor(unit.maxHp * 0.03);
-        unit.hp = Math.max(0, unit.hp - burnDamage);
-        results.push({ type: 'burn_damage', damage: burnDamage });
+        results.push(applyPeriodicDamage(unit, burnDamage, 'burn_damage'));
+        break;
+      }
+
+      case 'zodiac_poison': {
+        const poisonDamage = Math.floor(
+          unit.maxHp * (effect.damagePercent || 0.03)
+        );
+        results.push(applyPeriodicDamage(
+          unit,
+          poisonDamage,
+          'zodiac_poison'
+        ));
         break;
       }
 
       case 'regen': {
-        const healAmount = Math.floor(unit.maxHp * 0.05);
+        if (unit.hp <= 0) break;
+        const healAmount = applyHealingReceivedBonus(
+          unit,
+          Math.floor(unit.maxHp * 0.05)
+        );
         unit.hp = Math.min(unit.maxHp, unit.hp + healAmount);
         results.push({ type: 'regen_heal', amount: healAmount });
         break;
       }
     }
 
-    // Decrement duration
-    effect.duration--;
-    if (effect.duration <= 0) {
-      unit.statusEffects.splice(i, 1);
-      results.push({ type: 'effect_expired', effect: effect.type });
+    // Duration reaches zero at turn start, but the effect remains authoritative
+    // until turn end. This gives restrictive duration-1 effects one full owner
+    // turn instead of removing them before action validation.
+    if (Number.isFinite(effect.duration)) {
+      effect.duration--;
+      if (effect.duration <= 0) {
+        effect.duration = 0;
+        effect.expiresAfterTurn = true;
+      }
     }
   }
 
   return results;
+}
+
+/**
+ * Remove effects whose final owner turn has completed.
+ * @param {Object} unit - Unit whose turn just ended
+ * @returns {Array<Object>} Expiration records
+ */
+export function finalizeStatusEffects(unit) {
+  if (!Array.isArray(unit?.statusEffects)) return [];
+
+  const expired = unit.statusEffects
+    .filter(effect => effect.expiresAfterTurn)
+    .map(effect => ({ type: 'effect_expired', effect: effect.type }));
+  unit.statusEffects = unit.statusEffects.filter(
+    effect => !effect.expiresAfterTurn
+  );
+  return expired;
 }
 
 /**
@@ -120,6 +158,7 @@ export function applyStatusEffect(unit, effectType, duration = 3) {
   if (existing) {
     // Refresh duration
     existing.duration = Math.max(existing.duration, duration);
+    delete existing.expiresAfterTurn;
     return false; // Already had effect
   }
 
@@ -144,7 +183,11 @@ export function initializeTurnState(unit) {
 // ============================================================================
 
 import { ZODIAC_SHRINE_BUFFS } from '../../../../shared/constants.js';
-import { getManhattanDistance } from './movementService.js';
+import {
+  areAllies,
+  getAttackRange,
+  getManhattanDistance
+} from './movementService.js';
 
 /**
  * Check if a unit has an active zodiac signature ability
@@ -208,6 +251,26 @@ export function markZodiacAbilityUsed(unit, abilityKey) {
 }
 
 /**
+ * Return the player units that share one account-level shrine blessing.
+ * Blessings are available once per battle for the owning party, not once for
+ * every character that received the same ability in its battle snapshot.
+ */
+function getZodiacAbilityScopeUnits(battleState, sourceUnit, abilityKey) {
+  if (sourceUnit?.ownerId == null || !Array.isArray(battleState?.units)) {
+    return [sourceUnit];
+  }
+
+  const scopeUnits = battleState.units.filter(unit =>
+    unit?.type === 'player'
+    && unit.ownerId === sourceUnit.ownerId
+    && hasZodiacAbility(unit, abilityKey)
+  );
+  return scopeUnits.includes(sourceUnit)
+    ? scopeUnits
+    : [sourceUnit, ...scopeUnits];
+}
+
+/**
  * Apply zodiac signature ability effect
  * Called when the ability is triggered in battle
  *
@@ -231,11 +294,14 @@ export function applyZodiacAbility(battleState, sourceUnit, abilityKey, targetUn
     return result;
   }
 
-  // Check if already used
-  if (!sourceUnit.usedZodiacAbilities) {
-    sourceUnit.usedZodiacAbilities = [];
-  }
-  if (sourceUnit.usedZodiacAbilities.includes(abilityKey)) {
+  const blessingUnits = getZodiacAbilityScopeUnits(
+    battleState,
+    sourceUnit,
+    abilityKey
+  );
+  if (blessingUnits.some(unit =>
+    unit.usedZodiacAbilities?.includes(abilityKey)
+  )) {
     result.error = 'This zodiac ability has already been used in this battle';
     return result;
   }
@@ -257,7 +323,7 @@ export function applyZodiacAbility(battleState, sourceUnit, abilityKey, targetUn
         effect: 'crit_bonus',
         value: 0.25
       });
-      result.message = "Ram's Charge activated! Next attack has +25% crit chance.";
+      result.message = "Ram's Charge activated! The next basic attack gains +25 percentage points of crit chance.";
       break;
 
     case 'unmovable':
@@ -282,7 +348,7 @@ export function applyZodiacAbility(battleState, sourceUnit, abilityKey, targetUn
         effect: 'twin_strike',
         value: 0.6
       });
-      result.message = 'Twin Strike activated! Next attack hits twice at 60% damage.';
+      result.message = 'Twin Strike activated! The next basic attack hits twice at 60% damage.';
       break;
 
     case 'moonshield':
@@ -300,7 +366,7 @@ export function applyZodiacAbility(battleState, sourceUnit, abilityKey, targetUn
     case 'roar': {
       // Reduce adjacent enemies' CT by 30
       const adjacentEnemies = battleState.units.filter(u => {
-        if (u.type === sourceUnit.type) return false;
+        if (areAllies(u, sourceUnit)) return false;
         if (u.hp <= 0) return false;
         const dist = getManhattanDistance(
           sourceUnit.tileX, sourceUnit.tileY,
@@ -354,7 +420,7 @@ export function applyZodiacAbility(battleState, sourceUnit, abilityKey, targetUn
         target: 'self',
         effect: 'lifesteal'
       });
-      result.message = 'Balance activated! Next attack heals for damage dealt.';
+      result.message = 'Balance activated! The next basic attack heals for the actual damage dealt.';
       break;
 
     case 'venom_sting': {
@@ -363,7 +429,7 @@ export function applyZodiacAbility(battleState, sourceUnit, abilityKey, targetUn
         result.error = 'Venom Sting requires a target';
         return result;
       }
-      if (targetUnit.type === sourceUnit.type) {
+      if (areAllies(targetUnit, sourceUnit)) {
         result.error = 'Cannot poison allies';
         return result;
       }
@@ -376,7 +442,7 @@ export function applyZodiacAbility(battleState, sourceUnit, abilityKey, targetUn
         sourceUnit.tileX, sourceUnit.tileY,
         targetUnit.tileX, targetUnit.tileY
       );
-      if (venomDistance > (sourceUnit.attackRange || 3)) {
+      if (venomDistance > getAttackRange(sourceUnit)) {
         result.error = 'Target is out of range';
         return result;
       }
@@ -414,16 +480,25 @@ export function applyZodiacAbility(battleState, sourceUnit, abilityKey, targetUn
         effect: 'range_bonus',
         value: 2
       });
-      result.message = 'Celestial Arrow activated! Next attack has +2 range.';
+      result.message = 'Celestial Arrow activated! The next basic attack has +2 range.';
       break;
 
     case 'mountains_endurance': {
-      // Add +25% defense for 2 turns
-      applyStatusEffect(sourceUnit, 'defense_up', 2);
-      // Store the bonus value on the effect
+      // Zodiac abilities are free actions used after the active owner's
+      // turn-start status processing. The activation turn is therefore the
+      // first of the advertised two turns, leaving one future owner-turn
+      // countdown to process.
+      applyStatusEffect(sourceUnit, 'defense_up', 1);
+      // Preserve the legacy value while also using the object-form modifiers
+      // consumed by both physical and magical damage formulas.
       const defEffect = sourceUnit.statusEffects.find(e => e.type === 'defense_up');
       if (defEffect) {
         defEffect.value = 0.25;
+        defEffect.modifiers = {
+          ...(defEffect.modifiers || {}),
+          defense: 1.25,
+          magicDefense: 1.25
+        };
       }
       result.effects.push({
         type: 'buff',
@@ -438,7 +513,10 @@ export function applyZodiacAbility(battleState, sourceUnit, abilityKey, targetUn
 
     case 'cascade': {
       // Heal 20% max HP
-      const healAmount = Math.floor(sourceUnit.maxHp * 0.2);
+      const healAmount = applyHealingReceivedBonus(
+        sourceUnit,
+        Math.floor(sourceUnit.maxHp * 0.2)
+      );
       const actualHeal = Math.min(healAmount, sourceUnit.maxHp - sourceUnit.hp);
       sourceUnit.hp = Math.min(sourceUnit.maxHp, sourceUnit.hp + healAmount);
       result.effects.push({
@@ -456,7 +534,7 @@ export function applyZodiacAbility(battleState, sourceUnit, abilityKey, targetUn
         result.error = 'Dreamwave requires a target';
         return result;
       }
-      if (targetUnit.type === sourceUnit.type) {
+      if (areAllies(targetUnit, sourceUnit)) {
         result.error = 'Cannot put allies to sleep';
         return result;
       }
@@ -469,7 +547,7 @@ export function applyZodiacAbility(battleState, sourceUnit, abilityKey, targetUn
         sourceUnit.tileX, sourceUnit.tileY,
         targetUnit.tileX, targetUnit.tileY
       );
-      if (dreamDistance > (sourceUnit.attackRange || 3)) {
+      if (dreamDistance > getAttackRange(sourceUnit)) {
         result.error = 'Target is out of range';
         return result;
       }
@@ -500,8 +578,11 @@ export function applyZodiacAbility(battleState, sourceUnit, abilityKey, targetUn
       return result;
   }
 
-  // Mark ability as used
-  markZodiacAbilityUsed(sourceUnit, abilityKey);
+  // Persist the account-wide, once-per-battle use in every owning unit's
+  // battle snapshot. Other PvP owners retain their own use of the blessing.
+  for (const unit of blessingUnits) {
+    markZodiacAbilityUsed(unit, abilityKey);
+  }
   result.success = true;
   result.abilityName = abilityInfo?.name || abilityKey;
 
@@ -520,15 +601,59 @@ export function processZodiacPoison(unit) {
   if (!zodiacPoison) return null;
 
   const damage = Math.floor(unit.maxHp * (zodiacPoison.damagePercent || 0.03));
-  unit.hp = Math.max(0, unit.hp - damage);
+  const result = applyPeriodicDamage(unit, damage, 'zodiac_poison');
 
-  // Decrement duration
+  // This compatibility helper is not the production turn-start entry point.
+  // Zodiac poison has no restrictive component, so immediate removal remains
+  // safe for direct callers while processStatusEffects owns deferred expiry.
   zodiacPoison.duration--;
   if (zodiacPoison.duration <= 0) {
-    unit.statusEffects = unit.statusEffects.filter(e => e.type !== 'zodiac_poison');
+    unit.statusEffects = unit.statusEffects.filter(
+      effect => effect !== zodiacPoison
+    );
   }
 
-  return { type: 'zodiac_poison', damage };
+  return result;
+}
+
+function applyPeriodicDamage(unit, incomingDamage, type) {
+  if (unit.hp <= 0) {
+    return { type, damage: 0, incomingDamage };
+  }
+
+  const shieldResult = checkMoonshield(unit, incomingDamage);
+  if (shieldResult.blocked) {
+    return {
+      type,
+      damage: 0,
+      incomingDamage,
+      blocked: true,
+      blockedBy: 'moonshield'
+    };
+  }
+
+  const hpBefore = unit.hp;
+  const wouldKill = hpBefore - shieldResult.damage <= 0;
+  let deathSaveTrigger = false;
+  if (wouldKill && traitService.checkDeathSave(unit)) {
+    unit.hp = 1;
+    deathSaveTrigger = true;
+  } else {
+    unit.hp = Math.max(0, hpBefore - shieldResult.damage);
+  }
+
+  const damage = hpBefore - unit.hp;
+  unit.damageTaken = (unit.damageTaken || 0) + damage;
+  if (hpBefore > 0 && unit.hp <= 0) {
+    unit.deaths = (unit.deaths || 0) + 1;
+  }
+
+  return {
+    type,
+    damage,
+    incomingDamage,
+    deathSaveTrigger
+  };
 }
 
 /**
@@ -538,7 +663,7 @@ export function processZodiacPoison(unit) {
  * @returns {Object} { blocked: boolean, damage: number }
  */
 export function checkMoonshield(unit, damage) {
-  if (unit.damageShield && unit.damageShield > 0) {
+  if (damage > 0 && unit.damageShield && unit.damageShield > 0) {
     unit.damageShield--;
     return { blocked: true, damage: 0 };
   }

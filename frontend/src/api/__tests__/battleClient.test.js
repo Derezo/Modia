@@ -3,6 +3,55 @@ import assert from 'node:assert/strict';
 import { ApiClient, ApiError } from '../client.js';
 
 describe('ApiClient battle-map protocol', () => {
+  it('loads Zodiac availability for the authoritative battle character', async () => {
+    const client = new ApiClient('/api');
+    let request;
+    client.get = async (endpoint, options) => {
+      request = { endpoint, options };
+      return { availableAbilities: [] };
+    };
+    const signal = new AbortController().signal;
+
+    await client.getAvailableZodiacAbilities(9, 77, { signal });
+
+    assert.deepEqual(request, {
+      endpoint: '/battle/9/zodiac-abilities/77',
+      options: { signal }
+    });
+  });
+
+  it('submits Zodiac abilities outside the generic action endpoint', async () => {
+    const client = new ApiClient('/api');
+    let request;
+    client.post = async (endpoint, body, options) => {
+      request = { endpoint, body, options };
+      return { success: true };
+    };
+
+    await client.useZodiacAbility({
+      battleId: 9,
+      characterId: 77,
+      abilityKey: 'dreamwave',
+      targetUnitId: 'enemy-2',
+      actionSequence: 6,
+      commandId: 'zodiac-command-123',
+      stateRevision: 12
+    });
+
+    assert.deepEqual(request, {
+      endpoint: '/battle/9/zodiac-ability',
+      body: {
+        characterId: 77,
+        abilityKey: 'dreamwave',
+        targetUnitId: 'enemy-2',
+        actionSequence: 6,
+        commandId: 'zodiac-command-123',
+        stateRevision: 12
+      },
+      options: { timeoutMs: 15000 }
+    });
+  });
+
   it('preserves battle command identity and item inventory identity', async () => {
     const client = new ApiClient('/api');
     let request;

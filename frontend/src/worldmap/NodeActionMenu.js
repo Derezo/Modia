@@ -26,6 +26,29 @@ import { isDevModeEnabled } from '../utils/debugLogger.js';
 
 const STYLE_ID = 'node-action-menu-styles';
 
+function getShrineCooldownUntil(node) {
+  const value = node?.shrine_cooldown_until
+    ?? node?.shrineCooldownUntil
+    ?? node?.cooldown_expires_at
+    ?? node?.cooldownExpiresAt
+    ?? node?.next_available_at
+    ?? node?.nextAvailableAt;
+  const timestamp = value instanceof Date
+    ? value.getTime()
+    : (typeof value === 'number' ? value : Date.parse(value));
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+function formatShrineCooldown(remainingMs) {
+  const totalMinutes = Math.max(1, Math.ceil(remainingMs / 60000));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours === 0) return `Ready in ${minutes}m`;
+  if (minutes === 0) return `Ready in ${hours}h`;
+  return `Ready in ${hours}h ${minutes}m`;
+}
+
 export class NodeActionMenu {
   /**
    * @param {Object} options
@@ -156,9 +179,17 @@ export class NodeActionMenu {
       }
 
       .node-action-menu__button:disabled {
-        cursor: wait;
+        cursor: not-allowed;
         opacity: 0.7;
         transform: none;
+      }
+
+      .node-action-menu__button--pending:disabled {
+        cursor: wait;
+      }
+
+      .node-action-menu__button--cooldown:disabled {
+        opacity: 0.82;
       }
 
       /* Primary button (battle) */
@@ -352,7 +383,7 @@ export class NodeActionMenu {
     this.actionsInner.innerHTML = '';
 
     let features = Array.isArray(node.features)
-      ? node.features.filter(feature => feature !== 'claim_chest')
+      ? node.features.filter(feature => !['claim_chest', 'visit_shrine'].includes(feature))
       : [];
     const chestClaimed = Boolean(node.chest_claimed || node.claimed);
 
@@ -360,6 +391,13 @@ export class NodeActionMenu {
     if (node.node_type === 'chest' && !chestClaimed) {
       const claimBtn = this.createButton('claim_chest', true, node);
       this.actionsInner.appendChild(claimBtn);
+    }
+
+    // Shrines always expose their blessing as the clear primary activity.
+    // The action stays visible while cooling down so its state is understandable.
+    if (node.node_type === 'shrine') {
+      const shrineBtn = this.createButton('visit_shrine', true, node);
+      this.actionsInner.appendChild(shrineBtn);
     }
 
     // Auto-add guild_advancement feature for guild nodes
@@ -480,10 +518,10 @@ export class NodeActionMenu {
    * Create an action button
    * @param {string} feature
    * @param {boolean} isPrimary
-   * @param {Object} _node
+   * @param {Object} node
    * @returns {HTMLButtonElement}
    */
-  createButton(feature, isPrimary, _node) {
+  createButton(feature, isPrimary, node) {
     const btn = document.createElement('button');
     btn.className = `node-action-menu__button${isPrimary ? ' node-action-menu__button--primary' : ''}`;
 
@@ -505,7 +543,8 @@ export class NodeActionMenu {
       fishing: { category: 'menu', name: 'fishing' },
       fast_travel: { category: 'actions', name: 'move' },
       stamina_restore: { category: 'actions', name: 'heal' },
-      garrison: { category: 'menu', name: 'formation' }
+      garrison: { category: 'menu', name: 'formation' },
+      visit_shrine: { category: 'actions', name: 'heal' }
     };
 
     // Get label text
@@ -540,6 +579,9 @@ export class NodeActionMenu {
     if (feature === 'claim_chest') {
       label = 'Collect Treasure';
     }
+    if (feature === 'visit_shrine') {
+      label = 'Receive Blessing';
+    }
 
     // Icon
     const iconContainer = document.createElement('span');
@@ -563,6 +605,13 @@ export class NodeActionMenu {
 
     // Click handler
     btn.dataset.action = feature;
+    if (feature === 'visit_shrine') {
+      const cooldownUntil = getShrineCooldownUntil(node);
+      if (cooldownUntil) {
+        btn.dataset.cooldownUntil = String(cooldownUntil);
+      }
+      this.updateShrineActionState(btn);
+    }
     btn.addEventListener('click', () => {
       if (this.onAction) {
         this.onAction(feature);
@@ -583,8 +632,56 @@ export class NodeActionMenu {
 
     button.disabled = pending;
     const label = button.querySelector(`[data-action-label="${feature}"]`);
+    button.classList.toggle('node-action-menu__button--pending', pending);
     if (label && feature === 'claim_chest') {
       label.textContent = pending ? 'Collecting…' : 'Collect Treasure';
+    } else if (label && feature === 'visit_shrine') {
+      label.textContent = pending ? 'Receiving…' : 'Receive Blessing';
+      if (!pending) {
+        this.updateShrineActionState(button);
+      }
+    }
+  }
+
+  /**
+   * Apply a successful shrine visit's cooldown without waiting for a world refresh.
+   * @param {number|string|Date} cooldownUntil
+   */
+  setShrineCooldown(cooldownUntil) {
+    const button = this.actionsInner.querySelector('[data-action="visit_shrine"]');
+    if (!button) return;
+
+    const timestamp = cooldownUntil instanceof Date
+      ? cooldownUntil.getTime()
+      : (typeof cooldownUntil === 'number' ? cooldownUntil : Date.parse(cooldownUntil));
+    if (Number.isFinite(timestamp)) {
+      button.dataset.cooldownUntil = String(timestamp);
+    }
+    this.updateShrineActionState(button);
+  }
+
+  /**
+   * Refresh the shrine label and disabled state from its local cooldown marker.
+   * @param {HTMLButtonElement} button
+   * @param {number} now
+   */
+  updateShrineActionState(button, now = Date.now()) {
+    if (!button || button.classList.contains('node-action-menu__button--pending')) return;
+
+    const cooldownUntil = Number(button.dataset.cooldownUntil);
+    const remainingMs = cooldownUntil - now;
+    const onCooldown = Number.isFinite(remainingMs) && remainingMs > 0;
+    const label = button.querySelector('[data-action-label="visit_shrine"]');
+
+    button.disabled = onCooldown;
+    button.classList.toggle('node-action-menu__button--cooldown', onCooldown);
+    button.title = onCooldown
+      ? 'This shrine is restoring its power.'
+      : 'Receive this shrine’s blessing.';
+    if (label) {
+      label.textContent = onCooldown
+        ? formatShrineCooldown(remainingMs)
+        : 'Receive Blessing';
     }
   }
 
@@ -597,6 +694,10 @@ export class NodeActionMenu {
    */
   updatePosition(screenX, screenY, nodeSize, canvasHeight) {
     if (!this.isVisible) return;
+
+    this.updateShrineActionState(
+      this.actionsInner.querySelector('[data-action="visit_shrine"]')
+    );
 
     // Position below the node by default
     let posY = screenY + nodeSize + 12;

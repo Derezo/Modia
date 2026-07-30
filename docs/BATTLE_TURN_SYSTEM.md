@@ -5,8 +5,8 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 1.0 |
-| Last Updated | January 2026 |
+| Version | 1.3 |
+| Last Updated | July 2026 |
 | System Type | CT-Based Turn Order with WebSocket Sync |
 
 ---
@@ -1130,7 +1130,7 @@ Units can gain temporary zodiac buffs by visiting Zodiac Shrine nodes on the wor
 
 | Zodiac | Ability Name | Effect | Targeting |
 |--------|--------------|--------|-----------|
-| Aries | Ram's Charge | +25% crit chance on next attack | Self |
+| Aries | Ram's Charge | +25 percentage points of crit chance on next basic attack | Self |
 | Taurus | Unmovable | Immune to push/pull effects (battle-long) | Self |
 | Gemini | Twin Strike | Next attack hits twice at 60% damage | Self |
 | Cancer | Moonshield | Block next instance of damage | Self |
@@ -1139,7 +1139,7 @@ Units can gain temporary zodiac buffs by visiting Zodiac Shrine nodes on the wor
 | Libra | Balance | Next attack heals for damage dealt | Self |
 | Scorpio | Venom Sting | Apply 3% HP poison for 4 turns | Target (attack range) |
 | Sagittarius | Celestial Arrow | +2 range on next attack | Self |
-| Capricorn | Mountain's Endurance | +25% defense for 2 turns | Self |
+| Capricorn | Mountain's Endurance | +25% physical and magical defense for 2 turns | Self |
 | Aquarius | Cascade | Heal self for 20% of max HP | Self |
 | Pisces | Dreamwave | 50% chance to sleep target 1 turn | Target (attack range) |
 
@@ -1147,10 +1147,24 @@ Units can gain temporary zodiac buffs by visiting Zodiac Shrine nodes on the wor
 
 ### 13.3 Ability Usage Rules
 
-- Each ability can only be used **once per battle**
-- Abilities are tracked via `unit.usedZodiacAbilities` array
+- Each active ability can only be used **once per battle across the owning
+  party**, not once per character
+- Usage is persisted in the battle snapshot via each owning unit's
+  `usedZodiacAbilities` array
+- A new battle receives a fresh use while the four-hour world blessing remains
+  active
 - Abilities require the unit to have the zodiac buff active (`unit.zodiacAbilities`)
 - Buff duration on world map: 4 hours (does not decrement in battle)
+- A signature is a free action: it does not consume MOVE or ACT and may be used
+  after the unit's normal action
+- Only the authoritative active character may activate a signature; it cannot
+  interrupt another unit's turn
+- Venom Sting and Dreamwave require a living opposing target in the source
+  unit's current basic-attack range. Failed validation does not consume the use
+- In PvP, each account has its own once-per-battle use
+- Activation uses a durable command ID plus base state revision. Exact retries
+  replay the stored outcome; random effects are not rerolled and presentation
+  is emitted only for the winning commit
 
 ### 13.4 Ability Application Flow
 
@@ -1174,22 +1188,33 @@ applyZodiacAbility(battleState, sourceUnit, 'moonshield');
 
 ### 13.5 Special Mechanics
 
-**Moonshield Damage Check:**
-```javascript
-// Called when unit takes damage
-const shieldResult = checkMoonshield(unit, incomingDamage);
-if (shieldResult.blocked) {
-  // Damage was blocked, shield consumed
-  return 0;
-}
-```
+**Next-basic-attack effects:**
 
-**Zodiac Poison (Venom Sting):**
-```javascript
-// Processed at turn start, separate from regular poison
-const poisonResult = processZodiacPoison(unit);
-// Deals 3% max HP per turn for 4 turns
-```
+- Ram's Charge adds 25 percentage points to the next basic attack's critical
+  rolls.
+- Twin Strike changes the next basic attack into two independent 60%-damage
+  hits.
+- Balance heals for the actual HP damage dealt by that basic attack, including
+  the target's healing-received crystal modifier.
+- Celestial Arrow adds two tiles of range to the next basic attack.
+- These effects are consumed by a valid basic-attack attempt, including a miss
+  or an empty-tile swing. Invalid input does not consume them, and skills never
+  consume them.
+
+**Damage and duration mechanics:**
+
+- Moonshield blocks and consumes itself on exactly the next positive damage
+  instance. A hit in a multi-hit skill, an area hit, poison, and burn are each
+  separate instances; later hits resolve normally.
+- Venom Sting deals 3% of maximum HP at the start of each of the target's next
+  four owner turns. Purify can remove it.
+- Dreamwave sleep with duration one remains restrictive for the target's full
+  owner turn, then expires at turn end.
+- Mountain's Endurance raises both physical and magical defense by 25% for two
+  full owner turns.
+- Turn-start damage can defeat a unit. Defeated actors are skipped, and a
+  last-team defeat enters the normal authoritative battle-completion flow
+  without granting an extra turn.
 
 ---
 
@@ -1425,6 +1450,7 @@ WHERE id = $2;
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 1.3 | Jul 2026 | - | Completed Zodiac signature execution, targeting, once-per-party battle use, next-attack effects, full-turn status durations, and terminal turn-start damage handling. |
 | 1.2 | Jan 2026 | - | Added sections 11-15: Two-action state machine, formation system, zodiac abilities, boss phases, trait modifiers |
 | 1.1 | Jan 2026 | - | Fixed CT formula: documented diminishing returns formula `5 + (AGI/10)`, updated initial CT formula, corrected haste/slow modifiers |
 | 1.0 | Jan 2026 | - | Initial document: CT system, turn state machine, WebSocket protocol |

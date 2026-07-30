@@ -15,6 +15,7 @@
 import * as battleService from '../battleService.js';
 import * as battleWebsocket from '../battleWebsocket.js';
 import battleStateRepository from '../battle/BattleStateRepository.js';
+import { completeBattleTerminalTransition } from '../battle/BattleTerminalTransition.js';
 import {
   recordDisconnect as recordDisconnectEvent,
   forgiveDisconnect,
@@ -52,7 +53,9 @@ export function startTurnTimer(battleId, playerId, isPvE = false) {
   cancelTurnTimer(battleId);
 
   const timerId = setTimeout(() => {
-    handleTurnTimeout(battleId, playerId, isPvE);
+    handleTurnTimeout(battleId, playerId, isPvE, timerId).catch(error => {
+      console.error(`Failed to process turn timeout for battle ${battleId}:`, error);
+    });
   }, PVP_TURN_TIMEOUT);
 
   turnTimers.set(battleId, {
@@ -82,6 +85,57 @@ export function startTurnTimer(battleId, playerId, isPvE = false) {
 }
 
 /**
+ * Install a delayed/reconnection timer only if the captured turn is still the
+ * authoritative turn and no timer generation is already installed.
+ */
+export async function startTurnTimerIfCurrent(
+  battleId,
+  playerId,
+  isPvE,
+  expectedRevision
+) {
+  if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0) {
+    throw new TypeError('expectedRevision must be a nonnegative safe integer');
+  }
+  if (turnTimers.has(battleId)) {
+    return { installed: false, reason: 'timer_already_active' };
+  }
+
+  let battle;
+  try {
+    battle = await battleStateRepository.loadBattle(battleId, {
+      requireActive: true
+    });
+  } catch (error) {
+    if (error?.code === 'BATTLE_NOT_FOUND'
+      || error?.code === 'BATTLE_LIFECYCLE_CONFLICT'
+      || error?.code === 'BATTLE_STATE_LIFECYCLE_ERROR') {
+      return { installed: false, reason: 'battle_inactive' };
+    }
+    throw error;
+  }
+
+  if (battle.stateRevision !== expectedRevision) {
+    return { installed: false, reason: 'stale_revision' };
+  }
+  const activeUnit = battle.state.units?.find(
+    unit => unit.id === battle.state.activeUnitId
+  );
+  if (activeUnit?.type !== 'player'
+    || String(activeUnit.ownerId) !== String(playerId)) {
+    return { installed: false, reason: 'turn_changed' };
+  }
+
+  // No await occurs between this final generation check and installation.
+  // A successor installed while the repository read was pending wins.
+  if (turnTimers.has(battleId)) {
+    return { installed: false, reason: 'timer_already_active' };
+  }
+  startTurnTimer(battleId, playerId, isPvE);
+  return { installed: true, reason: 'current_turn' };
+}
+
+/**
  * Cancel the turn timer for a battle
  * @param {number} battleId - Battle ID
  */
@@ -93,31 +147,138 @@ export function cancelTurnTimer(battleId) {
   }
 }
 
+function cancelTurnTimerIfCurrent(battleId, expectedTimerId) {
+  const timer = turnTimers.get(battleId);
+  if (!timer || (expectedTimerId !== undefined
+    && timer.timerId !== expectedTimerId)) {
+    return false;
+  }
+  clearTimeout(timer.timerId);
+  turnTimers.delete(battleId);
+  return true;
+}
+
+function claimTurnTimerGeneration(battleId, expectedTimerId) {
+  const timer = turnTimers.get(battleId);
+  if (!timer
+    || timer.timerId !== expectedTimerId
+    || timer.claimed === true) {
+    return null;
+  }
+  timer.claimed = true;
+  return timer;
+}
+
+function isStaleTimeoutTransitionError(error) {
+  return error?.code === 'BATTLE_STATE_CONFLICT'
+    || error?.code === 'BATTLE_LIFECYCLE_CONFLICT'
+    || error?.code === 'COLISEUM_BATTLE_ALREADY_TERMINAL';
+}
+
 /**
  * Handle turn timeout (player didn't act in time)
  * @param {number} battleId - Battle ID
  * @param {number} playerId - Player who timed out
  * @param {boolean} isPvE - Whether this is a PvE battle (no forfeit penalties in PvE)
+ * @param {*} expectedTimerId - Exact timer handle that initiated this callback
  */
-async function handleTurnTimeout(battleId, playerId, isPvE = false) {
-  const counts = turnTimeoutCounts.get(battleId) || {};
-  counts[playerId] = (counts[playerId] || 0) + 1;
-  turnTimeoutCounts.set(battleId, counts);
+export async function handleTurnTimeout(
+  battleId,
+  playerId,
+  isPvE = false,
+  expectedTimerId = undefined
+) {
+  // A canceled/replaced timer may already be queued in the event loop. Only
+  // the currently registered timer is allowed to mutate timeout counts or the
+  // battle lifecycle.
+  const timer = turnTimers.get(battleId);
+  if (!timer
+    || (expectedTimerId !== undefined && timer.timerId !== expectedTimerId)
+    || String(timer.playerId) !== String(playerId)
+    || timer.isPvE !== isPvE) {
+    return { outcome: 'stale_timer' };
+  }
 
-  const timeoutsRemaining = MAX_TURN_TIMEOUTS - counts[playerId];
+  let authoritativeBattle;
+  try {
+    authoritativeBattle = await battleStateRepository.loadBattle(battleId, {
+      requireActive: true
+    });
+  } catch (error) {
+    if (error?.code === 'BATTLE_NOT_FOUND'
+      || error?.code === 'BATTLE_LIFECYCLE_CONFLICT'
+      || error?.code === 'BATTLE_STATE_LIFECYCLE_ERROR') {
+      cancelTurnTimerIfCurrent(battleId, timer.timerId);
+      return { outcome: 'stale_battle' };
+    }
+    throw error;
+  }
+  const authoritativeActiveUnit = authoritativeBattle.state.units.find(
+    unit => unit.id === authoritativeBattle.state.activeUnitId
+  );
+  if (String(authoritativeActiveUnit?.ownerId) !== String(playerId)) {
+    cancelTurnTimerIfCurrent(battleId, timer.timerId);
+    return { outcome: 'stale_turn' };
+  }
+  if (!claimTurnTimerGeneration(battleId, timer.timerId)) {
+    return { outcome: 'stale_timer' };
+  }
+
+  const counts = turnTimeoutCounts.get(battleId) || {};
+  const nextTimeoutCount = (counts[playerId] || 0) + 1;
+  const timeoutsRemaining = MAX_TURN_TIMEOUTS - nextTimeoutCount;
 
   // In PvP, third timeout = forfeit; in PvE, just skip turns indefinitely
-  if (!isPvE && counts[playerId] >= MAX_TURN_TIMEOUTS) {
+  if (!isPvE && nextTimeoutCount >= MAX_TURN_TIMEOUTS) {
     // Third timeout = forfeit (PvP only)
     console.log(`[Coliseum] Player ${playerId} forfeited battle ${battleId} due to timeout`);
-    await endMatchByForfeit(battleId, playerId, 'timeout_forfeit');
+    try {
+      await endMatchByForfeit(
+        battleId,
+        playerId,
+        'timeout_forfeit',
+        true,
+        { expectedRevision: authoritativeBattle.stateRevision }
+      );
+    } catch (error) {
+      if (!isStaleTimeoutTransitionError(error)) throw error;
+      cancelTurnTimerIfCurrent(battleId, timer.timerId);
+      return { outcome: 'stale_transition' };
+    }
+    return { outcome: 'forfeit' };
   } else {
     // Skip turn and notify
     const logPrefix = isPvE ? '[Battle]' : '[Coliseum]';
     console.log(`${logPrefix} Skipping turn for player ${playerId} in battle ${battleId} (${timeoutsRemaining} remaining)`);
 
     // Skip the turn by ending it
-    await skipPlayerTurn(battleId, playerId, isPvE);
+    let transition;
+    try {
+      transition = await skipPlayerTurn(
+        battleId,
+        playerId,
+        isPvE,
+        authoritativeBattle
+      );
+    } catch (error) {
+      if (!isStaleTimeoutTransitionError(error)) throw error;
+      cancelTurnTimerIfCurrent(battleId, timer.timerId);
+      return { outcome: 'stale_transition' };
+    }
+    if (transition.outcome !== 'advanced') {
+      if (transition.outcome === 'terminal') {
+        cancelTurnTimerIfCurrent(battleId, timer.timerId);
+        turnTimeoutCounts.delete(battleId);
+        disconnectTracking.delete(battleId);
+      }
+      return transition;
+    }
+    // If the successor is not another timed player turn, retire the expired
+    // source timer. If startTurnTimer already installed a successor, the token
+    // guard preserves it.
+    cancelTurnTimerIfCurrent(battleId, timer.timerId);
+    counts[playerId] = nextTimeoutCount;
+    turnTimeoutCounts.set(battleId, counts);
 
     // Notify players
     const ws = await getWebsocket();
@@ -130,6 +291,7 @@ async function handleTurnTimeout(battleId, playerId, isPvE = false) {
         reason: 'timeout'
       }
     });
+    return transition;
   }
 }
 
@@ -139,24 +301,48 @@ async function handleTurnTimeout(battleId, playerId, isPvE = false) {
  * @param {number} playerId - Player whose turn to skip
  * @param {boolean} isPvE - Whether this is a PvE battle
  */
-async function skipPlayerTurn(battleId, playerId, isPvE = false) {
-  let battle;
-  try {
-    battle = await battleStateRepository.loadBattle(battleId, {
-      requireActive: true
-    });
-  } catch (error) {
-    if (error?.code === 'BATTLE_NOT_FOUND' || error?.code === 'BATTLE_STATE_LIFECYCLE_ERROR') {
-      return;
+export async function skipPlayerTurn(
+  battleId,
+  playerId,
+  isPvE = false,
+  loadedBattle = null
+) {
+  let battle = loadedBattle;
+  if (!battle) {
+    try {
+      battle = await battleStateRepository.loadBattle(battleId, {
+        requireActive: true
+      });
+    } catch (error) {
+      if (error?.code === 'BATTLE_NOT_FOUND'
+        || error?.code === 'BATTLE_LIFECYCLE_CONFLICT'
+        || error?.code === 'BATTLE_STATE_LIFECYCLE_ERROR') {
+        return { outcome: 'stale_battle' };
+      }
+      throw error;
     }
-    throw error;
   }
   const state = JSON.parse(JSON.stringify(battle.state));
   const activeUnit = state.units.find(u => u.id === state.activeUnitId);
 
-  if (activeUnit && activeUnit.ownerId === playerId) {
+  if (activeUnit && String(activeUnit.ownerId) === String(playerId)) {
     // End this unit's turn
     battleService.advanceToNextActorWithCT(state);
+    const battleEndResult = battleService.checkBattleEnd(state);
+    if (battleEndResult.status !== 'active') {
+      const completion = await completeBattleTerminalTransition({
+        battleEnvelope: battle,
+        finalState: state,
+        expectedRevision: battle.stateRevision,
+        battleEndResult,
+        actingUserId: playerId,
+        reason: 'turn_timeout',
+        commandType: 'turn_timeout_terminal',
+        idempotencyKey:
+          `turn-timeout-terminal:${battleId}:${battle.stateRevision}:${playerId}`
+      });
+      return { outcome: 'terminal', battleEndResult, completion };
+    }
 
     const commit = await battleStateRepository.commitBattleState({
       battleId,
@@ -170,13 +356,16 @@ async function skipPlayerTurn(battleId, playerId, isPvE = false) {
     await battleWebsocket.broadcastStateUpdate(battleId, commit.update);
 
     // Broadcast turn advanced
-    const nextUnit = state.units.find(u => u.id === state.activeUnitId);
+    const committedState = commit.envelope?.state ?? state;
+    const nextUnit = committedState.units.find(
+      u => u.id === committedState.activeUnitId
+    );
     if (nextUnit) {
       await battleWebsocket.broadcastTurnStart(battleId, {
         id: nextUnit.id,
         name: nextUnit.name,
         position: { x: nextUnit.tileX, y: nextUnit.tileY }
-      }, nextUnit.type, battleService.predictTurnOrder(state, 10),
+      }, nextUnit.type, battleService.predictTurnOrder(committedState, 10),
       commit.stateRevision);
 
       // Start new turn timer if it's a player's turn
@@ -184,7 +373,13 @@ async function skipPlayerTurn(battleId, playerId, isPvE = false) {
         startTurnTimer(battleId, nextUnit.ownerId, isPvE);
       }
     }
+    return {
+      outcome: 'advanced',
+      stateRevision: commit.stateRevision,
+      update: commit.update
+    };
   }
+  return { outcome: 'stale_turn' };
 }
 
 /**
@@ -264,11 +459,18 @@ export function handlePlayerReconnect(battleId, playerId) {
         const state = battle.state;
         const activeUnit = state.units.find(u => u.id === state.activeUnitId);
         if (activeUnit && activeUnit.ownerId === playerId) {
-          startTurnTimer(battleId, playerId);
+          return startTurnTimerIfCurrent(
+            battleId,
+            playerId,
+            false,
+            battle.stateRevision
+          );
         }
+        return null;
       })
       .catch(error => {
         if (error?.code !== 'BATTLE_NOT_FOUND'
+          && error?.code !== 'BATTLE_LIFECYCLE_CONFLICT'
           && error?.code !== 'BATTLE_STATE_LIFECYCLE_ERROR') {
           console.error('Failed to restore turn timer after reconnect:', error);
         }
@@ -282,8 +484,16 @@ export function handlePlayerReconnect(battleId, playerId) {
  * @param {number} forfeiterId - Player who forfeited
  * @param {string} reason - Reason for forfeit
  * @param {boolean} applyPenalty - Whether to apply rating penalty
+ * @param {Object} options - Optional atomic completion constraints
+ * @param {number|null} options.expectedRevision - Revision the forfeit must win from
  */
-export async function endMatchByForfeit(battleId, forfeiterId, reason, applyPenalty = true) {
+export async function endMatchByForfeit(
+  battleId,
+  forfeiterId,
+  reason,
+  applyPenalty = true,
+  { expectedRevision = null } = {}
+) {
   let battle;
   try {
     battle = await battleStateRepository.loadBattle(battleId);
@@ -296,14 +506,25 @@ export async function endMatchByForfeit(battleId, forfeiterId, reason, applyPena
     : battle.player1Id;
   const loserId = forfeiterId;
 
-  // Clean up timers
-  cancelTurnTimer(battleId);
-  turnTimeoutCounts.delete(battleId);
-  disconnectTracking.delete(battleId);
-
   // Complete the match with forfeit reason
   if (completeMatchFn) {
-    await completeMatchFn(battleId, winnerId, loserId, reason, applyPenalty);
+    await completeMatchFn(
+      battleId,
+      winnerId,
+      loserId,
+      reason,
+      applyPenalty,
+      {
+        expectedRevision,
+        actingUserId: forfeiterId,
+        publish: true
+      }
+    );
+    // Cleanup follows successful atomic completion. A losing stale timeout
+    // must not cancel the timer installed for a newer committed successor.
+    cancelTurnTimer(battleId);
+    turnTimeoutCounts.delete(battleId);
+    disconnectTracking.delete(battleId);
   } else {
     console.error('[Coliseum] completeMatch function not set - cannot complete forfeit');
   }

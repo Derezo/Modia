@@ -4,8 +4,8 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 1.0 |
-| Last Updated | January 2026 |
+| Version | 1.1 |
+| Last Updated | July 2026 |
 | Status | Complete |
 
 ---
@@ -301,6 +301,19 @@ Final Gold = baseGold +/- variance
 
 Provide temporary buffs with 6-hour cooldown between uses.
 
+#### World Map Interaction
+
+- The player must travel to the shrine before activating it.
+- The current-node action menu presents **Receive Blessing** as the primary
+  action.
+- Activating the shrine immediately identifies the blessing and its effect.
+  Zodiac activations also report any newly collected crystal.
+- After activation, the action remains visible but disabled with a live
+  cooldown countdown. It becomes available again when the 6-hour cooldown
+  expires.
+- Shrine activation, cooldown state, and active-buff timing are private to each
+  user. Reloading the map restores the authoritative state from the server.
+
 #### Standard Shrine Buffs
 
 | Buff Type | Name | Effect | Duration |
@@ -309,21 +322,31 @@ Provide temporary buffs with 6-hour cooldown between uses.
 | `exp_bonus` | Scholar's Insight | +10% battle XP | 4 hours |
 | `gold_bonus` | Merchant's Fortune | +15% battle gold | 4 hours |
 
+These effects are applied by the server: stamina recovery accounts for the
+portion of each regeneration window covered by Pilgrim's Rest, and completed
+battle rewards include the active XP and gold modifiers.
+
 #### Zodiac Shrine Buffs (12 Signs)
 
-Zodiac shrines provide unique signature abilities and permanent crystal collectibles.
+Zodiac shrines provide unique signature abilities and permanent crystal
+collectibles. Active signature abilities are loaded into every battle during
+the four-hour blessing window and can each trigger once per battle across the
+owning party. A new battle receives a fresh use while the blessing remains
+active. A signature is selected from the battle action controls on the
+blessing owner's active-character turn. It is a free action, so it does not
+consume that turn's movement or normal act allowance.
 
 | Sign | Ability Name | Effect | Element |
 |------|--------------|--------|---------|
-| Aries | Ram's Charge | First attack +25% crit chance | Fire |
+| Aries | Ram's Charge | Next basic attack +25 percentage points crit chance | Fire |
 | Taurus | Unmovable | Immune to push/pull effects | Earth |
-| Gemini | Twin Strike | Next attack hits twice at 60% damage | Air |
+| Gemini | Twin Strike | Next basic attack hits twice at 60% damage | Air |
 | Cancer | Moonshield | Block next instance of damage | Water |
 | Leo | Roar | Adjacent enemies lose 30 CT | Fire |
 | Virgo | Purify | Remove 1 debuff from self | Earth |
-| Libra | Balance | Heal equal to damage dealt (once) | Air |
+| Libra | Balance | Next basic attack heals for actual damage dealt | Air |
 | Scorpio | Venom Sting | Apply 3% HP poison for 4 turns | Water |
-| Sagittarius | Celestial Arrow | +2 range on next attack | Fire |
+| Sagittarius | Celestial Arrow | +2 range on next basic attack | Fire |
 | Capricorn | Mountain's Endurance | +25% defense for 2 turns | Earth |
 | Aquarius | Cascade | Heal self for 20% of max HP | Air |
 | Pisces | Dreamwave | 50% chance to sleep target 1 turn | Water |
@@ -332,23 +355,38 @@ Zodiac shrines provide unique signature abilities and permanent crystal collecti
 
 First visit to each zodiac shrine awards a permanent crystal:
 
-| Crystal | Bonus Type | Bonus Value |
-|---------|------------|-------------|
-| Crystal of the Ram | Physical Damage | +1% |
-| Crystal of the Bull | Defense | +1% |
-| Crystal of the Twins | Crit Chance | +1% |
-| Crystal of the Crab | Healing Received | +1% |
-| ... (12 total) | ... | ... |
+| Signs | Bonus Type | Value per Crystal | Maximum |
+|-------|------------|-------------------|---------|
+| Aries, Leo, Sagittarius | Physical Damage | +1% | +3% |
+| Taurus, Virgo, Capricorn | Physical and Magical Defense | +1% | +3% |
+| Gemini, Libra, Aquarius | Critical Chance | +1 percentage point | +3 points |
+| Cancer, Scorpio, Pisces | Healing Received | +1% | +3% |
+
+Crystal bonuses are account-wide, cumulative, and automatically applied to
+player units when PvE, advancement, or Coliseum battle state is created. They
+never apply to enemy units.
 
 **Collection Completion Bonus:**
-- Title: "Celestial Wanderer"
-- +5% all stats
-- Can hold 2 active blessings simultaneously
+
+- Character title: "Celestial Wanderer" (granted without replacing the
+  currently displayed title)
+- +5% HP, MP, core attributes, and equipment combat stats
+- Two simultaneous active Zodiac blessings
+
+Before completing the collection, a user can hold one active Zodiac blessing.
+Activating a different Zodiac shrine at capacity expires the oldest Zodiac
+blessing and reports which blessing faded. Completion raises the capacity to
+two. Standard shrine buffs do not consume these slots.
+Battle creation also enforces this entitlement newest-first, so legacy
+over-cap visit records cannot grant extra signature abilities.
 
 #### Shrine Cooldown
+
 - 6 hours between visits to same shrine
 - Cooldown is per-user, per-shrine
 - Buff duration: 4 hours (can expire before cooldown ends)
+- The API returns both the buff expiration and the later cooldown expiration so
+  clients can present the two states independently.
 
 #### API Endpoints
 

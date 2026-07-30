@@ -13,6 +13,7 @@ import {
 } from '../testUtils/index.js';
 import {
   processStatusEffects,
+  finalizeStatusEffects,
   canUnitAct,
   canUnitMove,
   canUnitUseSkills,
@@ -60,6 +61,161 @@ describe('initializeTurnState', () => {
     assert.strictEqual(unit.moveUsed, true);
     assert.strictEqual(unit.actUsed, true);
     assert.strictEqual(unit.turnPhase, 'done');
+  });
+});
+
+describe('zodiac healing received', () => {
+  test('boosts player regeneration status healing', () => {
+    const unit = createMockPlayerUnit({
+      hp: 50,
+      maxHp: 2000,
+      zodiacCollectionBonus: { healingReceived: 0.03 },
+      statusEffects: [{ type: 'regen', duration: 2 }]
+    });
+
+    const results = processStatusEffects(unit);
+
+    assert.strictEqual(unit.hp, 153);
+    assert.ok(results.some(result =>
+      result.type === 'regen_heal' && result.amount === 103
+    ));
+  });
+
+  test('does not boost enemy regeneration even if enemy state has a modifier', () => {
+    const unit = createMockEnemyUnit({
+      hp: 50,
+      maxHp: 2000,
+      zodiacCollectionBonus: { healingReceived: 0.50 },
+      statusEffects: [{ type: 'regen', duration: 2 }]
+    });
+
+    processStatusEffects(unit);
+
+    assert.strictEqual(unit.hp, 150);
+  });
+});
+
+describe('authoritative owner-turn status lifecycle', () => {
+  test('processes poison, burn, regeneration, and zodiac poison together', () => {
+    const unit = createMockPlayerUnit({
+      hp: 1000,
+      maxHp: 1000,
+      statusEffects: [
+        { type: 'poison', duration: 2 },
+        { type: 'burn', duration: 2 },
+        { type: 'regen', duration: 2 },
+        { type: 'zodiac_poison', duration: 2, damagePercent: 0.03 }
+      ]
+    });
+
+    const results = processStatusEffects(unit);
+
+    assert.strictEqual(unit.hp, 940);
+    assert.deepStrictEqual(
+      results.map(result => [result.type, result.damage ?? result.amount]),
+      [
+        ['poison_damage', 50],
+        ['burn_damage', 30],
+        ['regen_heal', 50],
+        ['zodiac_poison', 30]
+      ]
+    );
+  });
+
+  test('keeps duration-1 restrictions active until owner turn finalization', () => {
+    const unit = createMockPlayerUnit({
+      statusEffects: [{ type: 'stun', duration: 1 }]
+    });
+
+    processStatusEffects(unit);
+
+    assert.strictEqual(canUnitAct(unit), false);
+    assert.strictEqual(unit.statusEffects[0].duration, 0);
+    assert.strictEqual(unit.statusEffects[0].expiresAfterTurn, true);
+
+    const expired = finalizeStatusEffects(unit);
+    assert.deepStrictEqual(expired, [{
+      type: 'effect_expired',
+      effect: 'stun'
+    }]);
+    assert.strictEqual(canUnitAct(unit), true);
+  });
+
+  test('applies zodiac poison for exactly four owner turns', () => {
+    const unit = createMockPlayerUnit({
+      hp: 100,
+      maxHp: 100,
+      statusEffects: [{
+        type: 'zodiac_poison',
+        duration: 4,
+        damagePercent: 0.03
+      }]
+    });
+
+    for (let turn = 1; turn <= 4; turn++) {
+      processStatusEffects(unit);
+      assert.strictEqual(unit.hp, 100 - (turn * 3));
+      if (turn < 4) {
+        assert.strictEqual(finalizeStatusEffects(unit).length, 0);
+        assert.strictEqual(unit.statusEffects.length, 1);
+      }
+    }
+
+    assert.strictEqual(unit.statusEffects[0].expiresAfterTurn, true);
+    finalizeStatusEffects(unit);
+    assert.strictEqual(unit.statusEffects.length, 0);
+  });
+
+  test('Moonshield blocks only the first periodic damage instance', () => {
+    const unit = createMockPlayerUnit({
+      hp: 100,
+      maxHp: 100,
+      damageShield: 1,
+      statusEffects: [
+        { type: 'poison', duration: 2 },
+        { type: 'burn', duration: 2 }
+      ]
+    });
+
+    const results = processStatusEffects(unit);
+
+    assert.strictEqual(unit.hp, 97);
+    assert.strictEqual(unit.damageShield, 0);
+    assert.strictEqual(results[0].blockedBy, 'moonshield');
+    assert.strictEqual(results[0].damage, 0);
+    assert.strictEqual(results[1].damage, 3);
+    assert.strictEqual(unit.damageTaken, 3);
+  });
+
+  test("counts Mountain's Endurance activation turn toward its two turns", () => {
+    const unit = createMockPlayerUnit({
+      zodiacAbilities: [{
+        key: 'mountains_endurance',
+        name: "Mountain's Endurance"
+      }],
+      statusEffects: []
+    });
+    const state = createMockBattleState({
+      activeUnitId: unit.id,
+      units: [unit]
+    });
+
+    // Turn 1 already started before the free Zodiac action is activated.
+    const result = applyZodiacAbility(state, unit, 'mountains_endurance');
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(getDefenseMultiplier(unit), 1.25);
+    assert.strictEqual(finalizeStatusEffects(unit).length, 0);
+    assert.strictEqual(getDefenseMultiplier(unit), 1.25);
+
+    // Turn 2 is the one remaining owner turn.
+    processStatusEffects(unit);
+    assert.strictEqual(getDefenseMultiplier(unit), 1.25);
+    finalizeStatusEffects(unit);
+    assert.strictEqual(getDefenseMultiplier(unit), 1);
+
+    // Turn 3 begins without the buff.
+    processStatusEffects(unit);
+    assert.strictEqual(getDefenseMultiplier(unit), 1);
   });
 });
 
@@ -246,6 +402,51 @@ describe('applyZodiacAbility', () => {
     assert.ok(result.error.includes('already been used'));
   });
 
+  test('allows one use per owning party while preserving another owner use', () => {
+    const ability = [{ key: 'rams_charge', name: "Ram's Charge" }];
+    const firstPartyUnit = createMockPlayerUnit({
+      id: 'party_1',
+      ownerId: 10,
+      zodiacAbilities: ability
+    });
+    const secondPartyUnit = createMockPlayerUnit({
+      id: 'party_2',
+      ownerId: 10,
+      zodiacAbilities: ability
+    });
+    const opposingPlayer = createMockPlayerUnit({
+      id: 'opponent_1',
+      ownerId: 20,
+      zodiacAbilities: ability
+    });
+    const state = createMockBattleState({
+      units: [firstPartyUnit, secondPartyUnit, opposingPlayer]
+    });
+
+    const firstUse = applyZodiacAbility(
+      state,
+      firstPartyUnit,
+      'rams_charge'
+    );
+    const duplicatePartyUse = applyZodiacAbility(
+      state,
+      secondPartyUnit,
+      'rams_charge'
+    );
+    const opposingUse = applyZodiacAbility(
+      state,
+      opposingPlayer,
+      'rams_charge'
+    );
+
+    assert.strictEqual(firstUse.success, true);
+    assert.ok(firstPartyUnit.usedZodiacAbilities.includes('rams_charge'));
+    assert.ok(secondPartyUnit.usedZodiacAbilities.includes('rams_charge'));
+    assert.strictEqual(duplicatePartyUse.success, false);
+    assert.match(duplicatePartyUse.error, /already been used/);
+    assert.strictEqual(opposingUse.success, true);
+  });
+
   test('should apply rams_charge correctly', () => {
     const unit = createMockPlayerUnit({
       zodiacAbilities: [{ key: 'rams_charge', name: "Ram's Charge" }]
@@ -334,7 +535,16 @@ describe('applyZodiacAbility', () => {
     const defenseEffect = unit.statusEffects.find(e => e.type === 'defense_up');
     assert.ok(defenseEffect);
     assert.strictEqual(defenseEffect.value, 0.25);
-    assert.strictEqual(defenseEffect.duration, 2);
+    assert.strictEqual(
+      defenseEffect.duration,
+      1,
+      'activation turn consumes the first advertised turn'
+    );
+    assert.strictEqual(result.effects[0].duration, 2);
+    assert.deepStrictEqual(defenseEffect.modifiers, {
+      defense: 1.25,
+      magicDefense: 1.25
+    });
   });
 
   test('should apply cascade (heal) correctly', () => {
@@ -384,6 +594,67 @@ describe('applyZodiacAbility', () => {
     assert.strictEqual(farEnemy.ct, 80); // Unchanged (too far)
   });
 
+  test('targets opposing Coliseum players by team for offensive abilities', () => {
+    const attacker = createMockPlayerUnit({
+      id: 'pvp_1',
+      ownerId: 10,
+      teamId: 1,
+      tileX: 5,
+      tileY: 5,
+      attackRange: 3,
+      zodiacAbilities: [
+        { key: 'roar', name: 'Roar' },
+        { key: 'venom_sting', name: 'Venom Sting' },
+        { key: 'dreamwave', name: 'Dreamwave' }
+      ]
+    });
+    const ally = createMockPlayerUnit({
+      id: 'pvp_ally',
+      ownerId: 10,
+      teamId: 1,
+      tileX: 4,
+      tileY: 5,
+      hp: 50,
+      ct: 80
+    });
+    const opponent = createMockPlayerUnit({
+      id: 'pvp_2',
+      ownerId: 20,
+      teamId: 2,
+      tileX: 6,
+      tileY: 5,
+      hp: 50,
+      ct: 80,
+      statusEffects: []
+    });
+    const state = createMockBattleState({
+      units: [attacker, ally, opponent]
+    });
+
+    const roarResult = applyZodiacAbility(state, attacker, 'roar');
+    const venomResult = applyZodiacAbility(
+      state,
+      attacker,
+      'venom_sting',
+      opponent
+    );
+    const dreamwaveResult = applyZodiacAbility(
+      state,
+      attacker,
+      'dreamwave',
+      opponent
+    );
+
+    assert.strictEqual(roarResult.success, true);
+    assert.strictEqual(ally.ct, 80);
+    assert.strictEqual(opponent.ct, 50);
+    assert.strictEqual(venomResult.success, true);
+    assert.ok(opponent.statusEffects.some(
+      effect => effect.type === 'zodiac_poison'
+    ));
+    assert.strictEqual(dreamwaveResult.success, true);
+  });
+
   test('should apply purify to remove debuff', () => {
     const unit = createMockPlayerUnit({
       zodiacAbilities: [{ key: 'purify', name: 'Purify' }],
@@ -395,6 +666,24 @@ describe('applyZodiacAbility', () => {
 
     assert.strictEqual(result.success, true);
     assert.strictEqual(unit.statusEffects.length, 0);
+  });
+
+  test('should purify zodiac poison', () => {
+    const unit = createMockPlayerUnit({
+      zodiacAbilities: [{ key: 'purify', name: 'Purify' }],
+      statusEffects: [{
+        type: 'zodiac_poison',
+        duration: 4,
+        damagePercent: 0.03
+      }]
+    });
+    const state = createMockBattleState({ units: [unit] });
+
+    const result = applyZodiacAbility(state, unit, 'purify');
+
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(unit.statusEffects.length, 0);
+    assert.strictEqual(result.effects[0].effect, 'zodiac_poison');
   });
 
   test('should handle purify when no debuffs present', () => {
@@ -509,6 +798,94 @@ describe('applyZodiacAbility', () => {
 
     assert.strictEqual(result.success, false);
     assert.ok(result.error.includes('out of range'));
+  });
+
+  test('uses materialized range for targeted Zodiac abilities without double counting traits', () => {
+    for (const abilityKey of ['venom_sting', 'dreamwave']) {
+      const attacker = createMockPlayerUnit({
+        id: `p1_${abilityKey}`,
+        tileX: 5,
+        tileY: 5,
+        attackRange: 2,
+        traits: [{
+          name: 'Eagle Eye',
+          effectType: 'range_bonus',
+          effectValue: 1
+        }],
+        nextAttackRangeBonus: 2,
+        zodiacAbilities: [{
+          key: abilityKey,
+          name: abilityKey
+        }]
+      });
+      const target = createMockEnemyUnit({
+        id: `e1_${abilityKey}`,
+        tileX: 10,
+        tileY: 5,
+        hp: 50,
+        statusEffects: []
+      });
+      const state = createMockBattleState({ units: [attacker, target] });
+
+      const outOfRange = applyZodiacAbility(
+        state,
+        attacker,
+        abilityKey,
+        target
+      );
+
+      assert.strictEqual(outOfRange.success, false, abilityKey);
+      assert.match(outOfRange.error, /out of range/);
+      target.tileX = 9;
+      target.x = 9;
+
+      const inRange = applyZodiacAbility(
+        state,
+        attacker,
+        abilityKey,
+        target
+      );
+
+      assert.strictEqual(inRange.success, true, abilityKey);
+      assert.strictEqual(
+        attacker.nextAttackRangeBonus,
+        2,
+        `${abilityKey} must not consume Celestial Arrow`
+      );
+    }
+  });
+
+  test('defaults targeted Zodiac abilities to melee range', () => {
+    for (const abilityKey of ['venom_sting', 'dreamwave']) {
+      const attacker = createMockPlayerUnit({
+        id: `p1_${abilityKey}`,
+        tileX: 5,
+        tileY: 5,
+        zodiacAbilities: [{
+          key: abilityKey,
+          name: abilityKey
+        }]
+      });
+      delete attacker.attackRange;
+      const target = createMockEnemyUnit({
+        id: `e1_${abilityKey}`,
+        tileX: 7,
+        tileY: 5,
+        hp: 50,
+        statusEffects: []
+      });
+      const state = createMockBattleState({ units: [attacker, target] });
+
+      const result = applyZodiacAbility(
+        state,
+        attacker,
+        abilityKey,
+        target
+      );
+
+      assert.strictEqual(result.success, false, abilityKey);
+      assert.match(result.error, /out of range/);
+    }
   });
 
   test('should apply dreamwave with 50% success rate', () => {

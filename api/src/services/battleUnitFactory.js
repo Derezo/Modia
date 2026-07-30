@@ -11,6 +11,7 @@ import {
   createBattleVisualIdentity,
   withBattleVisualIdentity
 } from './battle/visualIdentityService.js';
+import { normalizeZodiacCollectionBonus } from './zodiacCollectionBonusService.js';
 
 /**
  * BattleUnit interface (documented for reference):
@@ -68,7 +69,7 @@ import {
  * @param {Object} character - Character from database
  * @param {Object} formation - Formation position data (optional)
  * @param {Array} skills - Loaded skills array
- * @param {Object} options - Additional options (defaultX, defaultY, traits, zodiacAbilities, teamId)
+ * @param {Object} options - Additional options (defaultX, defaultY, traits, zodiacAbilities, zodiacCollectionBonus, teamId)
  * @returns {Object} BattleUnit object
  */
 function createPlayerBattleUnit(character, formation = null, skills = [], options = {}) {
@@ -76,7 +77,26 @@ function createPlayerBattleUnit(character, formation = null, skills = [], option
   const defaultY = options.defaultY ?? 15;
   const traits = options.traits || [];
   const zodiacAbilities = options.zodiacAbilities || [];
+  const zodiacCollectionBonus = normalizeZodiacCollectionBonus(
+    options.zodiacCollectionBonus
+  );
   const teamId = options.teamId ?? 1; // Default to team 1 for player units
+  const applyAllStatsBonus = value => zodiacCollectionBonus.allStats > 0
+    ? Math.floor(value * (1 + zodiacCollectionBonus.allStats))
+    : value;
+
+  const maxHp = applyAllStatsBonus(
+    character.hp_max + (character.equip_hp || 0)
+  );
+  const maxMp = applyAllStatsBonus(
+    character.mp_max + (character.equip_mp || 0)
+  );
+  const currentHp = applyAllStatsBonus(
+    character.hp_current ?? character.hp_max
+  );
+  const currentMp = applyAllStatsBonus(
+    character.mp_current ?? character.mp_max
+  );
 
   const unit = withBattleVisualIdentity({
     // Identity
@@ -90,21 +110,21 @@ function createPlayerBattleUnit(character, formation = null, skills = [], option
     gender: character.gender || 'other',
 
     // Core Stats (with equipment bonuses applied)
-    hp: character.hp_current ?? character.hp_max,
-    maxHp: character.hp_max + (character.equip_hp || 0),
-    mp: character.mp_current ?? character.mp_max,
-    maxMp: character.mp_max + (character.equip_mp || 0),
-    strength: character.strength + (character.equip_strength || 0),
-    intelligence: character.intelligence + (character.equip_intelligence || 0),
-    agility: character.agility + (character.equip_agility || 0),
-    vitality: character.vitality + (character.equip_vitality || 0),
-    luck: character.luck + (character.equip_luck || 0),
+    hp: currentHp,
+    maxHp,
+    mp: currentMp,
+    maxMp,
+    strength: applyAllStatsBonus(character.strength + (character.equip_strength || 0)),
+    intelligence: applyAllStatsBonus(character.intelligence + (character.equip_intelligence || 0)),
+    agility: applyAllStatsBonus(character.agility + (character.equip_agility || 0)),
+    vitality: applyAllStatsBonus(character.vitality + (character.equip_vitality || 0)),
+    luck: applyAllStatsBonus(character.luck + (character.equip_luck || 0)),
 
     // Combat Bonuses (from equipment)
-    attack: character.equip_attack || 0,
-    defense: character.equip_defense || 0,
-    magicAttack: character.equip_magic_attack || 0,
-    magicDefense: character.equip_magic_defense || 0,
+    attack: applyAllStatsBonus(character.equip_attack || 0),
+    defense: applyAllStatsBonus(character.equip_defense || 0),
+    magicAttack: applyAllStatsBonus(character.equip_magic_attack || 0),
+    magicDefense: applyAllStatsBonus(character.equip_magic_defense || 0),
 
     // Position (from formation or defaults)
     tileX: formation?.tileX ?? defaultX,
@@ -131,12 +151,16 @@ function createPlayerBattleUnit(character, formation = null, skills = [], option
     zodiacAbilities: zodiacAbilities,
     usedZodiacAbilities: [],
 
+    // Permanent account-wide zodiac crystal bonuses
+    zodiacCollectionBonus,
+
     // Movement/Range (from class)
     movement: CLASS_MOVEMENT[character.class?.toLowerCase()] || 3,
     attackRange: 1, // Default melee, can be extended by equipment
 
     // Metadata
     ownerId: character.user_id,
+    characterId: character.id,
 
     // Equipment info for rendering/display
     equipment: character.equipment || null,

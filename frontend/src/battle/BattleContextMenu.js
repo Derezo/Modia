@@ -39,6 +39,7 @@ export class BattleContextMenu {
       { id: 'attack', label: 'Attack', key: 'A', color: '#d94a4a', requiresAct: true },
       { id: 'skill', label: 'Skill', key: 'S', color: '#9c27b0', requiresAct: true, hasSubmenu: true },
       { id: 'item', label: 'Item', key: 'I', color: '#4caf50', requiresAct: true, hasSubmenu: true },
+      { id: 'zodiac', label: 'Zodiac', key: 'Z', color: '#8b6fc0', hasSubmenu: true },
       { id: 'wait', label: 'Wait', key: 'W', color: '#607d8b' }
     ];
 
@@ -134,6 +135,12 @@ export class BattleContextMenu {
       .context-menu-item[data-action="item"].selected:not(.disabled) {
         border-left-color: #448844;
         background: rgba(68, 136, 68, 0.15);
+      }
+
+      .context-menu-item[data-action="zodiac"]:hover:not(.disabled),
+      .context-menu-item[data-action="zodiac"].selected:not(.disabled) {
+        border-left-color: #8b6fc0;
+        background: rgba(139, 111, 192, 0.15);
       }
 
       .context-menu-item[data-action="wait"]:hover:not(.disabled),
@@ -247,6 +254,21 @@ export class BattleContextMenu {
 
       .submenu-item:hover:not(.disabled) {
         background: rgba(139, 115, 85, 0.2);
+      }
+
+      button.zodiac-submenu-item {
+        width: 100%;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        text-align: left;
+      }
+
+      button.zodiac-submenu-item:focus-visible {
+        outline: 2px solid #6b4488;
+        outline-offset: -2px;
+        background: rgba(107, 68, 136, 0.15);
       }
 
       .submenu-item.disabled {
@@ -415,7 +437,8 @@ export class BattleContextMenu {
 
       html += `
         <div class="context-menu-item ${disabled ? 'disabled' : ''} ${selected ? 'selected' : ''}"
-             data-action="${item.id}" data-index="${index}">
+             data-action="${item.id}" data-index="${index}" role="menuitem"
+             tabindex="-1" ${item.hasSubmenu ? 'aria-haspopup="menu"' : ''}>
           <div class="item-left">
             <span class="item-label">${item.label}</span>
           </div>
@@ -507,9 +530,9 @@ export class BattleContextMenu {
         this.selectedIndex = index;
         this.updateSelection();
 
-        // Show submenu on hover for skill/item
+        // Show submenu on hover for selectable action collections
         const action = item.dataset.action;
-        if ((action === 'skill' || action === 'item') &&
+        if (['skill', 'item', 'zodiac'].includes(action) &&
             this.canUseAction(action, { notify: false })) {
           this.showSubmenu(action, item);
         } else {
@@ -555,6 +578,13 @@ export class BattleContextMenu {
           this.element.querySelector('[data-action="item"]')
         );
         break;
+      case 'zodiac':
+        this.showSubmenu(
+          'zodiac',
+          this.element.querySelector('[data-action="zodiac"]'),
+          { focus: true }
+        );
+        break;
       case 'wait':
         this.hide();
         this.callbacks.onWait?.();
@@ -569,6 +599,9 @@ export class BattleContextMenu {
     }
     if (action === 'move') return this.canMove;
     if (['attack', 'skill', 'item'].includes(action)) return this.canAct;
+    if (action === 'zodiac') {
+      return (this.callbacks.getZodiacAbilities?.() || []).length > 0;
+    }
     if (action === 'wait') return this.canWait;
     return false;
   }
@@ -576,7 +609,7 @@ export class BattleContextMenu {
   /**
    * Show submenu for skills or items
    */
-  showSubmenu(type, parentItem) {
+  showSubmenu(type, parentItem, { focus = false } = {}) {
     if (this.submenuType === type && this.submenuOpen) return;
 
     this.closeSubmenu();
@@ -585,6 +618,11 @@ export class BattleContextMenu {
 
     this.submenuElement = document.createElement('div');
     this.submenuElement.className = 'context-submenu';
+    this.submenuElement.setAttribute('role', 'menu');
+    this.submenuElement.setAttribute(
+      'aria-label',
+      type === 'zodiac' ? 'Zodiac signature abilities' : `${type} choices`
+    );
 
     // Determine submenu position (left or right based on space)
     const menuRect = this.element.getBoundingClientRect();
@@ -603,10 +641,15 @@ export class BattleContextMenu {
       this.submenuElement.innerHTML = this.generateSkillSubmenuHTML();
     } else if (type === 'item') {
       this.submenuElement.innerHTML = this.generateItemSubmenuHTML();
+    } else if (type === 'zodiac') {
+      this.submenuElement.innerHTML = this.generateZodiacSubmenuHTML();
     }
 
     this.element.appendChild(this.submenuElement);
     this.setupSubmenuEventListeners();
+    if (focus && type === 'zodiac') {
+      this.submenuElement.querySelector('.zodiac-submenu-item')?.focus();
+    }
   }
 
   /**
@@ -688,6 +731,37 @@ export class BattleContextMenu {
     return html;
   }
 
+  generateZodiacSubmenuHTML() {
+    const abilities = this.callbacks.getZodiacAbilities?.() || [];
+
+    if (abilities.length === 0) {
+      return `
+        <div class="submenu-header">Zodiac Signature</div>
+        <div class="submenu-empty">No Zodiac ability available</div>
+      `;
+    }
+
+    const items = abilities.map(ability => {
+      const icon = renderAbilityIcon({
+        ...ability,
+        id: ability.id || ability.key,
+        source: 'zodiac'
+      }, { size: 'sm' });
+      return `
+        <button type="button" class="submenu-item zodiac-submenu-item"
+                role="menuitem" data-ability-key="${escapeHtmlAttribute(ability.key)}">
+          <span class="submenu-item-icon">${icon}</span>
+          <div class="submenu-item-info">
+            <div class="submenu-item-name">${escapeHtml(ability.name)}</div>
+          </div>
+          <span class="submenu-item-cost">FREE</span>
+        </button>
+      `;
+    }).join('');
+
+    return `<div class="submenu-header">Zodiac Signature</div><div class="submenu-content">${items}</div>`;
+  }
+
   /**
    * Setup submenu event listeners
    */
@@ -702,6 +776,7 @@ export class BattleContextMenu {
         const skillId = item.dataset.skillId;
         const itemId = item.dataset.itemId;
         const inventoryId = item.dataset.inventoryId;
+        const abilityKey = item.dataset.abilityKey;
 
         if (skillId) {
           if (!this.canUseAction('skill')) return;
@@ -711,6 +786,10 @@ export class BattleContextMenu {
           if (!this.canUseAction('item')) return;
           this.hide();
           this.callbacks.onItemSelect?.({ itemId, inventoryId });
+        } else if (abilityKey) {
+          if (!this.canUseAction('zodiac')) return;
+          this.hide();
+          this.callbacks.onZodiacSelect?.(abilityKey);
         }
       });
     });
@@ -740,9 +819,31 @@ export class BattleContextMenu {
 
     // If submenu is open, handle differently
     if (this.submenuOpen) {
+      if (this.submenuType === 'zodiac') {
+        const items = Array.from(
+          this.submenuElement?.querySelectorAll('.zodiac-submenu-item') || []
+        );
+        const focusedIndex = items.indexOf(document.activeElement);
+        if (['arrowup', 'arrowdown'].includes(key) && items.length > 0) {
+          e.preventDefault();
+          const direction = key === 'arrowdown' ? 1 : -1;
+          const nextIndex = focusedIndex < 0
+            ? 0
+            : (focusedIndex + direction + items.length) % items.length;
+          items[nextIndex].focus();
+          return;
+        }
+        if ((key === 'enter' || key === ' ') && focusedIndex >= 0) {
+          e.preventDefault();
+          items[focusedIndex].click();
+          return;
+        }
+      }
       if (key === 'escape' || key === 'arrowleft') {
         e.preventDefault();
+        const submenuType = this.submenuType;
         this.closeSubmenu();
+        this.element.querySelector(`[data-action="${submenuType}"]`)?.focus();
         return;
       }
     }
@@ -781,6 +882,10 @@ export class BattleContextMenu {
       case 'i':
         e.preventDefault();
         this.handleActionClick('item');
+        break;
+      case 'z':
+        e.preventDefault();
+        this.handleActionClick('zodiac');
         break;
       case 'w':
         e.preventDefault();

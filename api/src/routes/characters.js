@@ -170,10 +170,16 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
     firstChar.party_slot = 1;
   }
 
-  // Calculate current stamina with regeneration for each character
+  // Calculate current stamina with the user's active shrine regeneration
+  // windows. The batch service keeps this summary consistent with the
+  // dedicated stamina endpoint and world-travel checks.
+  const staminaByCharacter = await staminaService.getPartyStaminaInfo(
+    result.rows.map(character => character.id)
+  );
   const characters = result.rows.map(char => ({
     ...char,
-    stamina_current: staminaService.calculateCurrentStamina(char)
+    stamina_current: staminaByCharacter[char.id]?.current
+      ?? staminaService.calculateCurrentStamina(char)
   }));
 
   // Prevent browser caching to avoid showing stale character lists across sessions
@@ -431,9 +437,10 @@ router.get('/:id', authenticate, asyncHandler(async (req, res) => {
     throw new AppError('Character not found', 404);
   }
 
+  const staminaInfo = await staminaService.getStaminaInfo(parseInt(id, 10));
   const character = {
     ...result.rows[0],
-    stamina_current: staminaService.calculateCurrentStamina(result.rows[0])
+    stamina_current: staminaInfo.current
   };
 
   res.json({ character });

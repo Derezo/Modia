@@ -44,7 +44,9 @@ import { validateFormationPayload } from '../battle/formationValidation.js';
 import { broadcastQueueUpdate } from './queueBroadcaster.js';
 import { captureTeamSnapshots, calculateMatchStats, calculateEnhancedMatchStats, getPlayerRank } from './statistics.js';
 import { setCompleteMatchFn, cancelTurnTimer, startTurnTimer } from './turnTimer.js';
-import { withBattleVisualIdentity } from '../battle/visualIdentityService.js';
+import { createPlayerBattleUnit } from '../battleUnitFactory.js';
+import { loadActiveZodiacAbilities } from '../zodiacAbilityService.js';
+import { loadZodiacCollectionBonus } from '../zodiacCollectionBonusService.js';
 import battleStateRepository from '../battle/BattleStateRepository.js';
 import { battleTerminalOutbox } from '../battle/BattleTerminalOutbox.js';
 import {
@@ -859,6 +861,23 @@ async function startMatchWithFormations(matchId) {
         throw error;
       }
 
+      const player1ZodiacCollectionBonus = await loadZodiacCollectionBonus(
+        match.player1.userId,
+        { client }
+      );
+      const player2ZodiacCollectionBonus = await loadZodiacCollectionBonus(
+        match.player2.userId,
+        { client }
+      );
+      const player1ZodiacAbilities = await loadActiveZodiacAbilities(
+        match.player1.userId,
+        { client }
+      );
+      const player2ZodiacAbilities = await loadActiveZodiacAbilities(
+        match.player2.userId,
+        { client }
+      );
+
       // Build initial battle state
       const initialState = {
         turn: 1,
@@ -882,38 +901,24 @@ async function startMatchWithFormations(matchId) {
         const tileX = 2 + formationPos.tileX * 2;
         const tileY = 27 - formationPos.tileY;
 
-        initialState.units.push(withBattleVisualIdentity({
-          id: char.id,
-          type: 'player',
-          teamId: 1, // Player 1's units are on team 1
-          ownerId: match.player1.userId,
-          name: char.name,
-          class: char.class,
-          level: char.level,
-          race: char.race,
-          gender: char.gender,
-          hp: char.hp_current,
-          maxHp: char.hp_max + (parseInt(char.equip_hp, 10) || 0),
-          mp: char.mp_current,
-          maxMp: char.mp_max + (parseInt(char.equip_mp, 10) || 0),
-          strength: char.strength + (parseInt(char.equip_strength, 10) || 0),
-          intelligence: char.intelligence + (parseInt(char.equip_intelligence, 10) || 0),
-          agility: char.agility + (parseInt(char.equip_agility, 10) || 0),
-          vitality: char.vitality + (parseInt(char.equip_vitality, 10) || 0),
-          luck: char.luck + (parseInt(char.equip_luck, 10) || 0),
-          attack: parseInt(char.equip_attack, 10) || 0,
-          defense: parseInt(char.equip_defense, 10) || 0,
-          magicAttack: parseInt(char.equip_magic_attack, 10) || 0,
-          magicDefense: parseInt(char.equip_magic_defense, 10) || 0,
-          tileX,
-          tileY,
-          ct: 0,
-          hasActed: false,
-          statusEffects: [],
-          skills: char.skills || []
-        }, {
-          kind: 'player',
-          id: char.id
+        initialState.units.push(createPlayerBattleUnit({
+          ...char,
+          user_id: match.player1.userId,
+          equip_hp: parseInt(char.equip_hp, 10) || 0,
+          equip_mp: parseInt(char.equip_mp, 10) || 0,
+          equip_strength: parseInt(char.equip_strength, 10) || 0,
+          equip_intelligence: parseInt(char.equip_intelligence, 10) || 0,
+          equip_agility: parseInt(char.equip_agility, 10) || 0,
+          equip_vitality: parseInt(char.equip_vitality, 10) || 0,
+          equip_luck: parseInt(char.equip_luck, 10) || 0,
+          equip_attack: parseInt(char.equip_attack, 10) || 0,
+          equip_defense: parseInt(char.equip_defense, 10) || 0,
+          equip_magic_attack: parseInt(char.equip_magic_attack, 10) || 0,
+          equip_magic_defense: parseInt(char.equip_magic_defense, 10) || 0
+        }, { tileX, tileY }, char.skills || [], {
+          teamId: 1,
+          zodiacAbilities: player1ZodiacAbilities,
+          zodiacCollectionBonus: player1ZodiacCollectionBonus
         }));
       });
 
@@ -925,38 +930,24 @@ async function startMatchWithFormations(matchId) {
         const tileX = 2 + formationPos.tileX * 2;
         const tileY = 4 + formationPos.tileY;
 
-        initialState.units.push(withBattleVisualIdentity({
-          id: char.id,
-          type: 'player',
-          teamId: 2, // Player 2's units are on team 2
-          ownerId: match.player2.userId,
-          name: char.name,
-          class: char.class,
-          level: char.level,
-          race: char.race,
-          gender: char.gender,
-          hp: char.hp_current,
-          maxHp: char.hp_max + (parseInt(char.equip_hp, 10) || 0),
-          mp: char.mp_current,
-          maxMp: char.mp_max + (parseInt(char.equip_mp, 10) || 0),
-          strength: char.strength + (parseInt(char.equip_strength, 10) || 0),
-          intelligence: char.intelligence + (parseInt(char.equip_intelligence, 10) || 0),
-          agility: char.agility + (parseInt(char.equip_agility, 10) || 0),
-          vitality: char.vitality + (parseInt(char.equip_vitality, 10) || 0),
-          luck: char.luck + (parseInt(char.equip_luck, 10) || 0),
-          attack: parseInt(char.equip_attack, 10) || 0,
-          defense: parseInt(char.equip_defense, 10) || 0,
-          magicAttack: parseInt(char.equip_magic_attack, 10) || 0,
-          magicDefense: parseInt(char.equip_magic_defense, 10) || 0,
-          tileX,
-          tileY,
-          ct: 0,
-          hasActed: false,
-          statusEffects: [],
-          skills: char.skills || []
-        }, {
-          kind: 'player',
-          id: char.id
+        initialState.units.push(createPlayerBattleUnit({
+          ...char,
+          user_id: match.player2.userId,
+          equip_hp: parseInt(char.equip_hp, 10) || 0,
+          equip_mp: parseInt(char.equip_mp, 10) || 0,
+          equip_strength: parseInt(char.equip_strength, 10) || 0,
+          equip_intelligence: parseInt(char.equip_intelligence, 10) || 0,
+          equip_agility: parseInt(char.equip_agility, 10) || 0,
+          equip_vitality: parseInt(char.equip_vitality, 10) || 0,
+          equip_luck: parseInt(char.equip_luck, 10) || 0,
+          equip_attack: parseInt(char.equip_attack, 10) || 0,
+          equip_defense: parseInt(char.equip_defense, 10) || 0,
+          equip_magic_attack: parseInt(char.equip_magic_attack, 10) || 0,
+          equip_magic_defense: parseInt(char.equip_magic_defense, 10) || 0
+        }, { tileX, tileY }, char.skills || [], {
+          teamId: 2,
+          zodiacAbilities: player2ZodiacAbilities,
+          zodiacCollectionBonus: player2ZodiacCollectionBonus
         }));
       });
 

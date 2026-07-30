@@ -19,6 +19,8 @@ import {
   getNextActor,
   consumeCT,
   predictTurnOrder,
+  advanceToNextActor,
+  advanceToNextActorWithCT,
   CT_THRESHOLD
 } from '../../services/battle/turnOrderService.js';
 import { createBattleMutableStateV1 } from '../../../../shared/battleStateProtocol.js';
@@ -347,6 +349,133 @@ describe('consumeCT', () => {
     consumeCT(unit);
 
     assert.strictEqual(unit.ct, 400);
+  });
+});
+
+describe('authoritative turn-start status processing', () => {
+  test('processes all periodic statuses when production selects an actor', () => {
+    const actor = createMockPlayerUnit({
+      id: 'actor',
+      hp: 1000,
+      maxHp: 1000,
+      ct: 100,
+      traits: [],
+      statusEffects: [
+        { type: 'poison', duration: 2 },
+        { type: 'burn', duration: 2 },
+        { type: 'regen', duration: 2 },
+        { type: 'zodiac_poison', duration: 2, damagePercent: 0.03 }
+      ]
+    });
+    const opponent = createMockEnemyUnit({
+      id: 'opponent',
+      hp: 100,
+      ct: 0
+    });
+    const state = { units: [actor, opponent] };
+
+    const selected = advanceToNextActor(state);
+
+    assert.strictEqual(selected, actor);
+    assert.strictEqual(actor.hp, 940);
+    assert.deepStrictEqual(
+      actor.turnStartEffects.map(effect => effect.type),
+      ['poison_damage', 'burn_damage', 'regen_heal', 'zodiac_poison']
+    );
+  });
+
+  test('skips an actor defeated by turn-start damage', () => {
+    const doomed = createMockPlayerUnit({
+      id: 'doomed',
+      hp: 1,
+      maxHp: 100,
+      ct: 200,
+      agility: 50,
+      traits: [],
+      damageTaken: 0,
+      deaths: 0,
+      statusEffects: [{ type: 'poison', duration: 1 }]
+    });
+    const survivor = createMockEnemyUnit({
+      id: 'survivor',
+      hp: 100,
+      ct: 100,
+      agility: 10,
+      statusEffects: []
+    });
+    const teammate = createMockPlayerUnit({
+      id: 'teammate',
+      hp: 100,
+      ct: 0,
+      statusEffects: []
+    });
+    const state = { units: [doomed, survivor, teammate] };
+
+    const selected = advanceToNextActor(state);
+
+    assert.strictEqual(selected, survivor);
+    assert.strictEqual(state.activeUnitId, survivor.id);
+    assert.strictEqual(doomed.hp, 0);
+    assert.strictEqual(doomed.damageTaken, 1);
+    assert.strictEqual(doomed.deaths, 1);
+    assert.strictEqual(doomed.statusEffects.length, 0);
+  });
+
+  test('does not select an opponent after DoT defeats the last team member', () => {
+    const doomed = createMockPlayerUnit({
+      id: 'doomed',
+      hp: 1,
+      maxHp: 100,
+      ct: 200,
+      agility: 50,
+      traits: [],
+      statusEffects: [{ type: 'poison', duration: 1 }]
+    });
+    const opponent = createMockEnemyUnit({
+      id: 'opponent',
+      hp: 100,
+      ct: 100,
+      statusEffects: []
+    });
+    const state = { units: [doomed, opponent] };
+
+    const selected = advanceToNextActor(state);
+
+    assert.strictEqual(selected, null);
+    assert.strictEqual(state.activeUnitId, null);
+    assert.strictEqual(state.activeUnitIndex, -1);
+    assert.strictEqual(opponent.turnStartEffects, undefined);
+  });
+
+  test('finalizes a duration-1 restriction only after the full actor turn', () => {
+    const stunned = createMockPlayerUnit({
+      id: 'stunned',
+      hp: 100,
+      ct: 200,
+      agility: 1,
+      statusEffects: [{ type: 'stun', duration: 1 }]
+    });
+    const opponent = createMockEnemyUnit({
+      id: 'opponent',
+      hp: 100,
+      ct: 100,
+      agility: 50,
+      statusEffects: []
+    });
+    const state = { units: [stunned, opponent] };
+
+    assert.strictEqual(advanceToNextActor(state), stunned);
+    assert.strictEqual(stunned.statusEffects[0].type, 'stun');
+    assert.strictEqual(stunned.statusEffects[0].expiresAfterTurn, true);
+
+    advanceToNextActorWithCT(state);
+
+    assert.strictEqual(stunned.statusEffects.length, 0);
+    assert.deepStrictEqual(stunned.turnEndEffects, [{
+      type: 'effect_expired',
+      effect: 'stun'
+    }]);
+    assert.strictEqual(state.activeUnitId, opponent.id);
   });
 });
 

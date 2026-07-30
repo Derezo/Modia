@@ -56,6 +56,7 @@ import {
 // Turn timer management
 import {
   startTurnTimer,
+  startTurnTimerIfCurrent,
   cancelTurnTimer,
   handlePlayerDisconnect,
   handlePlayerReconnect,
@@ -112,6 +113,7 @@ export {
 
   // Turn timer
   startTurnTimer,
+  startTurnTimerIfCurrent,
   cancelTurnTimer,
   handlePlayerDisconnect,
   handlePlayerReconnect,
@@ -209,6 +211,7 @@ export default {
 
   // Turn timer
   startTurnTimer,
+  startTurnTimerIfCurrent,
   cancelTurnTimer,
 
   // Constants

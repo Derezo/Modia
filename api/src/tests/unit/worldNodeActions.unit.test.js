@@ -25,6 +25,39 @@ describe('buildAvailableNodeActions', () => {
     assert.deepEqual(actions, []);
   });
 
+  it('offers an enabled shrine blessing action when the cooldown is clear', () => {
+    const actions = buildAvailableNodeActions({
+      node_type: 'shrine',
+      features: [],
+      shrine_available: true,
+      shrine_cooldown_until: null
+    });
+
+    assert.deepEqual(actions, [{
+      type: 'visit_shrine',
+      name: 'Receive Blessing',
+      enabled: true,
+      cooldown_until: null
+    }]);
+  });
+
+  it('keeps a cooldowned shrine visible with its authoritative timing', () => {
+    const cooldownUntil = new Date('2026-07-29T18:00:00.000Z');
+    const actions = buildAvailableNodeActions({
+      node_type: 'shrine',
+      features: [],
+      shrine_available: false,
+      shrine_cooldown_until: cooldownUntil
+    });
+
+    assert.deepEqual(actions, [{
+      type: 'visit_shrine',
+      name: 'Receive Blessing',
+      enabled: false,
+      cooldown_until: cooldownUntil
+    }]);
+  });
+
   it('preserves generated feature and battle actions for other node types', () => {
     const featureActions = buildAvailableNodeActions({
       node_type: 'town',

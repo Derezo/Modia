@@ -3,6 +3,10 @@
  */
 
 import { query } from '../config/database.js';
+import {
+  loadStaminaRegenWindows,
+  STANDARD_SHRINE_EFFECTS
+} from './shrineEffectService.js';
 
 // Constants
 const IS_DEVELOPMENT = process.env.NODE_ENV !== 'production';
@@ -10,30 +14,152 @@ const REGEN_INTERVAL_MS = IS_DEVELOPMENT
   ? 5 * 1000           // 5 seconds in development
   : 2 * 60 * 1000;     // 2 minutes in production
 const DEFAULT_MAX_STAMINA = 8;
+const STAMINA_REGEN_BONUS_RATE = STANDARD_SHRINE_EFFECTS.stamina_regen.rate;
+
+function toTimestamp(value, fallback) {
+  const timestamp = new Date(value ?? fallback).getTime();
+  return Number.isFinite(timestamp) ? timestamp : fallback;
+}
+
+/**
+ * Merge and clamp stamina blessing windows so overlapping same-type blessings
+ * increase regeneration only once.
+ */
+export function mergeStaminaRegenWindows(
+  regenWindows = [],
+  periodStartMs = Number.NEGATIVE_INFINITY,
+  periodEndMs = Number.POSITIVE_INFINITY
+) {
+  const normalized = regenWindows
+    .map(window => {
+      const startsAt = toTimestamp(
+        window?.startsAt ?? window?.last_visited_at,
+        Number.NaN
+      );
+      const expiresAt = toTimestamp(
+        window?.expiresAt ?? window?.expires_at,
+        Number.NaN
+      );
+      return {
+        startsAt: Math.max(startsAt, periodStartMs),
+        expiresAt: Math.min(expiresAt, periodEndMs)
+      };
+    })
+    .filter(window =>
+      Number.isFinite(window.startsAt) &&
+      Number.isFinite(window.expiresAt) &&
+      window.expiresAt > window.startsAt
+    )
+    .sort((left, right) => left.startsAt - right.startsAt);
+
+  const merged = [];
+  for (const window of normalized) {
+    const previous = merged[merged.length - 1];
+    if (previous && window.startsAt <= previous.expiresAt) {
+      previous.expiresAt = Math.max(previous.expiresAt, window.expiresAt);
+    } else {
+      merged.push({ ...window });
+    }
+  }
+  return merged;
+}
+
+/**
+ * Calculate the complete lazy-regeneration state for a character.
+ *
+ * Regeneration is expressed as elapsed base-interval progress plus 50% extra
+ * progress only during blessing windows. This preserves progress earned before
+ * activation/expiry and avoids multiplying overlapping blessings.
+ */
+export function calculateStaminaState(
+  character,
+  { now = Date.now(), regenWindows = [] } = {}
+) {
+  const nowMs = toTimestamp(now, Date.now());
+  const storedStamina = Math.max(0, character.stamina ?? DEFAULT_MAX_STAMINA);
+  const maxStamina = character.max_stamina ?? DEFAULT_MAX_STAMINA;
+  const activeWindows = mergeStaminaRegenWindows(
+    regenWindows,
+    nowMs,
+    Number.POSITIVE_INFINITY
+  );
+  const activeWindow = activeWindows.find(
+    window => window.startsAt <= nowMs && window.expiresAt > nowMs
+  );
+  const activeMultiplier = activeWindow
+    ? 1 + STAMINA_REGEN_BONUS_RATE
+    : 1;
+
+  if (storedStamina >= maxStamina) {
+    return {
+      current: maxStamina,
+      max: maxStamina,
+      nextRegenAt: null,
+      regenIntervalSeconds: REGEN_INTERVAL_MS / activeMultiplier / 1000,
+      staminaRegenBonusActive: Boolean(activeWindow)
+    };
+  }
+
+  const updatedAtMs = toTimestamp(character.stamina_updated_at, nowMs);
+  const elapsedMs = Math.max(0, nowMs - updatedAtMs);
+  const mergedWindows = mergeStaminaRegenWindows(
+    regenWindows,
+    updatedAtMs,
+    nowMs
+  );
+  const blessedElapsedMs = mergedWindows.reduce(
+    (total, window) => total + (window.expiresAt - window.startsAt),
+    0
+  );
+  const regenProgress = (
+    elapsedMs + (blessedElapsedMs * STAMINA_REGEN_BONUS_RATE)
+  ) / REGEN_INTERVAL_MS;
+  const regenPoints = Math.floor(regenProgress);
+  const current = Math.min(maxStamina, storedStamina + regenPoints);
+
+  if (current >= maxStamina) {
+    return {
+      current,
+      max: maxStamina,
+      nextRegenAt: null,
+      regenIntervalSeconds: REGEN_INTERVAL_MS / activeMultiplier / 1000,
+      staminaRegenBonusActive: Boolean(activeWindow)
+    };
+  }
+
+  const fractionalProgress = regenProgress - regenPoints;
+  let progressNeededMs = (1 - fractionalProgress) * REGEN_INTERVAL_MS;
+  let msUntilNextRegen;
+
+  if (activeWindow) {
+    const activeRemainingMs = activeWindow.expiresAt - nowMs;
+    const blessedCapacityMs = activeRemainingMs * activeMultiplier;
+    if (progressNeededMs <= blessedCapacityMs) {
+      msUntilNextRegen = progressNeededMs / activeMultiplier;
+    } else {
+      progressNeededMs -= blessedCapacityMs;
+      msUntilNextRegen = activeRemainingMs + progressNeededMs;
+    }
+  } else {
+    msUntilNextRegen = progressNeededMs;
+  }
+
+  return {
+    current,
+    max: maxStamina,
+    nextRegenAt: new Date(nowMs + msUntilNextRegen).toISOString(),
+    regenIntervalSeconds: REGEN_INTERVAL_MS / activeMultiplier / 1000,
+    staminaRegenBonusActive: Boolean(activeWindow)
+  };
+}
 
 /**
  * Calculate current stamina including regeneration since last update
  * @param {Object} character - Character with stamina, stamina_updated_at, max_stamina
  * @returns {number} Current stamina after applying regeneration
  */
-export function calculateCurrentStamina(character) {
-  // Clamp to 0 in case of race condition that caused negative value
-  const storedStamina = Math.max(0, character.stamina ?? DEFAULT_MAX_STAMINA);
-  const maxStamina = character.max_stamina ?? DEFAULT_MAX_STAMINA;
-
-  // If already at max, no regen needed
-  if (storedStamina >= maxStamina) {
-    return maxStamina;
-  }
-
-  const updatedAt = new Date(character.stamina_updated_at || Date.now());
-  const elapsedMs = Date.now() - updatedAt.getTime();
-
-  // Safeguard: If elapsed time is negative (clock skew/timezone issues),
-  // treat as no time passed - don't add negative regen points
-  const regenPoints = elapsedMs < 0 ? 0 : Math.floor(elapsedMs / REGEN_INTERVAL_MS);
-
-  return Math.min(maxStamina, storedStamina + regenPoints);
+export function calculateCurrentStamina(character, options = {}) {
+  return calculateStaminaState(character, options).current;
 }
 
 /**
@@ -41,9 +167,12 @@ export function calculateCurrentStamina(character) {
  * @param {number} characterId - Character ID
  * @returns {Promise<Object>} Stamina info with current, max, and nextRegenAt
  */
-export async function getStaminaInfo(characterId) {
-  const result = await query(
-    `SELECT stamina, stamina_updated_at, max_stamina
+export async function getStaminaInfo(
+  characterId,
+  { queryFn = query, now = new Date() } = {}
+) {
+  const result = await queryFn(
+    `SELECT user_id, stamina, stamina_updated_at, max_stamina
      FROM characters WHERE id = $1`,
     [characterId]
   );
@@ -53,23 +182,15 @@ export async function getStaminaInfo(characterId) {
   }
 
   const character = result.rows[0];
-  const current = calculateCurrentStamina(character);
-  const max = character.max_stamina ?? DEFAULT_MAX_STAMINA;
-
-  // Calculate next regen time
-  let nextRegenAt = null;
-  if (current < max) {
-    const updatedAt = new Date(character.stamina_updated_at || Date.now());
-    const elapsedMs = Date.now() - updatedAt.getTime();
-    const msUntilNextRegen = REGEN_INTERVAL_MS - (elapsedMs % REGEN_INTERVAL_MS);
-    nextRegenAt = new Date(Date.now() + msUntilNextRegen).toISOString();
-  }
+  const periodStart = new Date(character.stamina_updated_at || now);
+  const regenWindows = await loadStaminaRegenWindows(character.user_id, periodStart, {
+    queryFn,
+    now
+  });
+  const staminaState = calculateStaminaState(character, { now, regenWindows });
 
   return {
-    current,
-    max,
-    nextRegenAt,
-    regenIntervalSeconds: REGEN_INTERVAL_MS / 1000,
+    ...staminaState,
     storedStamina: character.stamina  // Raw DB value for atomic updates
   };
 }
@@ -171,31 +292,32 @@ export async function restoreStamina(characterId, amount) {
  * @param {number[]} characterIds - Array of character IDs
  * @returns {Promise<Object>} Map of characterId -> stamina info
  */
-export async function getPartyStaminaInfo(characterIds) {
+export async function getPartyStaminaInfo(
+  characterIds,
+  { queryFn = query, now = new Date() } = {}
+) {
   if (!characterIds.length) {
     return {};
   }
 
-  const result = await query(
-    `SELECT id, stamina, stamina_updated_at, max_stamina
+  const result = await queryFn(
+    `SELECT id, user_id, stamina, stamina_updated_at, max_stamina
      FROM characters WHERE id = ANY($1)`,
     [characterIds]
   );
 
   const staminaMap = {};
   for (const character of result.rows) {
-    const current = calculateCurrentStamina(character);
-    const max = character.max_stamina ?? DEFAULT_MAX_STAMINA;
-
-    let nextRegenAt = null;
-    if (current < max) {
-      const updatedAt = new Date(character.stamina_updated_at || Date.now());
-      const elapsedMs = Date.now() - updatedAt.getTime();
-      const msUntilNextRegen = REGEN_INTERVAL_MS - (elapsedMs % REGEN_INTERVAL_MS);
-      nextRegenAt = new Date(Date.now() + msUntilNextRegen).toISOString();
-    }
-
-    staminaMap[character.id] = { current, max, nextRegenAt };
+    const periodStart = new Date(character.stamina_updated_at || now);
+    const regenWindows = await loadStaminaRegenWindows(
+      character.user_id,
+      periodStart,
+      { queryFn, now }
+    );
+    staminaMap[character.id] = calculateStaminaState(character, {
+      now,
+      regenWindows
+    });
   }
 
   return staminaMap;
@@ -283,7 +405,7 @@ export async function restoreStaminaForGoldWithClient(client, userId, characterI
 
   // Get current stamina info using client
   const staminaResult = await client.query(
-    `SELECT stamina, stamina_updated_at, max_stamina
+    `SELECT user_id, stamina, stamina_updated_at, max_stamina
      FROM characters WHERE id = $1`,
     [characterId]
   );
@@ -293,7 +415,16 @@ export async function restoreStaminaForGoldWithClient(client, userId, characterI
   }
 
   const character = staminaResult.rows[0];
-  const currentStamina = calculateCurrentStamina(character);
+  const now = new Date();
+  const regenWindows = await loadStaminaRegenWindows(
+    character.user_id,
+    new Date(character.stamina_updated_at || now),
+    { queryFn: client.query.bind(client), now }
+  );
+  const currentStamina = calculateCurrentStamina(character, {
+    now,
+    regenWindows
+  });
   const maxStamina = character.max_stamina ?? DEFAULT_MAX_STAMINA;
 
   // Calculate how much stamina can actually be restored (up to max)
@@ -332,32 +463,27 @@ export async function restoreStaminaForGoldWithClient(client, userId, characterI
 
   // Get updated stamina info (using client for consistency within transaction)
   const updatedResult = await client.query(
-    `SELECT stamina, stamina_updated_at, max_stamina
+    `SELECT user_id, stamina, stamina_updated_at, max_stamina
      FROM characters WHERE id = $1`,
     [characterId]
   );
   const updatedChar = updatedResult.rows[0];
-  const updatedCurrent = calculateCurrentStamina(updatedChar);
-  const updatedMax = updatedChar.max_stamina ?? DEFAULT_MAX_STAMINA;
-
-  let nextRegenAt = null;
-  if (updatedCurrent < updatedMax) {
-    const updatedAt = new Date(updatedChar.stamina_updated_at || Date.now());
-    const elapsedMs = Date.now() - updatedAt.getTime();
-    const msUntilNextRegen = REGEN_INTERVAL_MS - (elapsedMs % REGEN_INTERVAL_MS);
-    nextRegenAt = new Date(Date.now() + msUntilNextRegen).toISOString();
-  }
+  const updatedNow = new Date();
+  const updatedRegenWindows = await loadStaminaRegenWindows(
+    updatedChar.user_id,
+    new Date(updatedChar.stamina_updated_at || updatedNow),
+    { queryFn: client.query.bind(client), now: updatedNow }
+  );
+  const updatedStamina = calculateStaminaState(updatedChar, {
+    now: updatedNow,
+    regenWindows: updatedRegenWindows
+  });
 
   return {
     staminaRestored: actualAmount,
     goldSpent: goldCost,
     newGold: goldResult.rows[0].gold,
-    stamina: {
-      current: updatedCurrent,
-      max: updatedMax,
-      nextRegenAt,
-      regenIntervalSeconds: REGEN_INTERVAL_MS / 1000
-    }
+    stamina: updatedStamina
   };
 }
 

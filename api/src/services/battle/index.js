@@ -18,6 +18,7 @@ export {
 // Status effects and turn state
 export {
   processStatusEffects,
+  finalizeStatusEffects,
   canUnitAct,
   canUnitMove,
   canUnitUseSkills,
@@ -48,6 +49,7 @@ export {
   getAlliedUnits,
   areOpponents,
   areAllies,
+  isForcedMovementImmune,
   calculatePathCost,
   getManhattanDistance
 } from './movementService.js';
@@ -65,6 +67,12 @@ export {
   advanceToNextActorWithCT,
   CT_THRESHOLD
 } from './turnOrderService.js';
+
+// Atomic completion handoff for background turn transitions
+export {
+  setBattleTerminalCompletionHandler,
+  completeBattleTerminalTransition
+} from './BattleTerminalTransition.js';
 
 // Charge time system
 export {

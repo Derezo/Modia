@@ -1763,6 +1763,16 @@ export class BattleWebSocketManager {
     // Add entry to battle log
     this.scene.addBattleLogEntry(actor, actionType, target, result);
 
+    if (actionType === 'zodiac_ability') {
+      this.scene.presentZodiacAbility?.(actor, result, target);
+      parchmentToast.info(
+        result?.abilityName || 'Zodiac Ability',
+        result?.message || `${actor?.name || 'A unit'} used a Zodiac signature ability`
+      );
+      await this.scene.waitForAnimation(ANIMATION_TIMING.ACTION_WAIT_SHORT);
+      return;
+    }
+
     // Play attack/skill animation
     if (actionType === 'attack' || actionType === 'skill') {
       const skillId = result.skillId || result.skillUsed || null;

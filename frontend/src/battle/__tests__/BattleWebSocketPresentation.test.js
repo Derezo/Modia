@@ -90,6 +90,7 @@ function createHarness(units) {
     statuses: [],
     skillSounds: [],
     statusSounds: [],
+    zodiacPresentations: [],
     battleEnds: []
   };
   const scene = {
@@ -126,6 +127,9 @@ function createHarness(units) {
           selfTarget: args.result.targetId === args.actor.id && !args.result.isAoE
         }
       };
+    },
+    presentZodiacAbility(...args) {
+      calls.zodiacPresentations.push(args);
     },
     async waitForAnimation(duration) { calls.waits.push(duration); },
     isLocalActiveUnit(unit = this.units.get(this.battleState.activeUnitId)) {
@@ -370,6 +374,34 @@ describe('BattleWebSocketManager local turn recovery', () => {
 });
 
 describe('BattleWebSocketManager action presentation parity', () => {
+  it('presents remote Zodiac actions lightly without generic action presentation', async (t) => {
+    const actor = createUnit('caster');
+    const target = createUnit('target', { teamId: 2 });
+    const { manager, calls, scene } = createHarness([actor, target]);
+    const logs = [];
+    scene.addBattleLogEntry = (...args) => logs.push(args);
+    const previousInfo = parchmentToast.info;
+    parchmentToast.info = () => {};
+    t.after(() => { parchmentToast.info = previousInfo; });
+
+    await manager.processActionExecutedEvent({
+      actorId: actor.id,
+      actionType: 'zodiac_ability',
+      result: {
+        abilityKey: 'dreamwave',
+        abilityName: 'Dreamwave',
+        targetId: target.id,
+        message: 'Dreamwave activated',
+        effects: [{ type: 'debuff', target: target.id, effect: 'sleep' }]
+      }
+    });
+
+    assert.equal(calls.presentations.length, 0);
+    assert.equal(calls.zodiacPresentations.length, 1);
+    assert.equal(logs[0][1], 'zodiac_ability');
+    assert.deepEqual(calls.waits, [600]);
+  });
+
   it('uses the AoE center and applies damage/absorb feedback once per target', async () => {
     const actor = createUnit('caster', { teamId: 1 });
     const damaged = createUnit('damaged', { hp: 80, teamId: 2 });

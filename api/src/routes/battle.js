@@ -31,6 +31,8 @@ import * as bossService from '../services/bossService.js';
 import * as battleTurnManager from '../services/battleTurnManager.js';
 import { getParticipantBattleStatus } from '../services/battleOutcomeService.js';
 import * as zodiacAbilityService from '../services/zodiacAbilityService.js';
+import { loadZodiacCollectionBonus } from
+  '../services/zodiacCollectionBonusService.js';
 import {
   cancelTurnTimer,
   completeMatch as completeColiseumMatch,
@@ -101,6 +103,7 @@ function throwCapabilityError(error) {
 const BATTLE_START_REQUEST_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/;
 const BATTLE_ACTION_COMMAND_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const PLAYER_ACTION_COMMAND_TYPE = 'player_action';
+const ZODIAC_ABILITY_COMMAND_TYPE = 'zodiac_ability';
 const PLAYER_ACTION_TYPES = new Set(['move', 'attack', 'skill', 'item', 'wait']);
 const { notifyPlayerTurnIfCurrent } = createPlayerHandoffCoordinator({
   loadBattle: battleId => battleStateRepository.loadBattle(battleId),
@@ -183,11 +186,81 @@ function createBattleActionRecovery(battle, userId) {
   };
 }
 
+function createZodiacAbilityCommand({
+  battleId,
+  userId,
+  commandId,
+  characterId,
+  abilityKey,
+  targetUnitId,
+  stateRevision
+}) {
+  if (commandId !== undefined && commandId !== null) {
+    if (typeof commandId !== 'string'
+      || !BATTLE_ACTION_COMMAND_ID_PATTERN.test(commandId)) {
+      throw new AppError(
+        'commandId must be 1-128 URL-safe characters',
+        400,
+        { code: 'battle_command_id_invalid' }
+      );
+    }
+  }
+  if (stateRevision !== undefined && stateRevision !== null
+    && (!Number.isSafeInteger(stateRevision) || stateRevision < 0)) {
+    throw new AppError(
+      'stateRevision must be a nonnegative safe integer',
+      400,
+      { code: 'battle_state_revision_invalid' }
+    );
+  }
+
+  const identity = commandId !== undefined && commandId !== null
+    ? `command:${commandId}`
+    : `legacy:${randomUUID()}`;
+  return {
+    commandId: commandId ?? null,
+    commandType: ZODIAC_ABILITY_COMMAND_TYPE,
+    idempotencyKey: `zodiac:${userId}:${identity}`,
+    idempotencyRequest: {
+      battleId: String(battleId),
+      userId: String(userId),
+      characterId,
+      abilityKey,
+      targetUnitId: targetUnitId === undefined || targetUnitId === null
+        ? null
+        : String(targetUnitId),
+      stateRevision: stateRevision ?? null
+    }
+  };
+}
+
 async function materializeBattleActionReceipt(receipt, battle) {
   const state = battle.battleMapSchemaVersion === 2
     ? await battleMapV2ToFlatState(battle.map, receipt.mutableState)
     : { ...receipt.mutableState, ...battle.map };
   return battleService.withBattleStateVisualIdentities(state);
+}
+
+async function sendZodiacAbilityReplay(
+  res,
+  receipt,
+  battle,
+  commandId,
+  userId
+) {
+  const response = receipt.replayMetadata?.response;
+  if (!response) {
+    throw new AppError('Battle command result cannot be replayed', 409, {
+      code: 'battle_command_replay_unavailable',
+      ...createBattleActionRecovery(battle, userId)
+    });
+  }
+  return res.json({
+    ...response,
+    state: await materializeBattleActionReceipt(receipt, battle),
+    stateRevision: receipt.stateRevision,
+    commandId
+  });
 }
 
 async function sendBattleActionReplay(res, receipt, battle, commandId, userId) {
@@ -495,7 +568,11 @@ async function handleBattleEnd(
     // Drop rolling occurs before the transaction, but only the reward record
     // returned by the transaction is ever sent to clients. An ambiguous retry
     // therefore replays the stored outcome instead of a newly rolled response.
-    const rewardsData = await battleRewardService.computeRewards(state, battleId);
+    const rewardsData = await battleRewardService.computeRewards(
+      state,
+      battleId,
+      userId
+    );
     const terminalReplayMetadata = replayMetadata === undefined ? undefined : {
       ...replayMetadata,
       actionResult: {
@@ -503,7 +580,8 @@ async function handleBattleEnd(
         rewards: {
           gold: rewardsData.gold,
           experience: rewardsData.experience,
-          items: rewardsData.items
+          items: rewardsData.items,
+          appliedBonuses: rewardsData.appliedBonuses
         }
       }
     };
@@ -514,6 +592,7 @@ async function handleBattleEnd(
         battleId,
         {
           finalState: state,
+          expectedRevision,
           client,
           battleCommand: idempotencyRequest === undefined ? null : {
             commandType,
@@ -651,6 +730,45 @@ async function handleBattleEnd(
     replayMetadata: commandReceipt?.replayMetadata
   };
 }
+
+// Turn timers and disconnect abandonment advance CT outside an HTTP action.
+// If turn-start damage ends the battle, hand that uncommitted state back to
+// this same mode-aware lifecycle owner so rewards, Coliseum ratings, character
+// cleanup, outbox work, and presentation remain one authoritative transition.
+battleService.setBattleTerminalCompletionHandler(async ({
+  battleId,
+  battleEnvelope,
+  finalState,
+  expectedRevision,
+  battleEndResult,
+  actingUserId,
+  reason,
+  commandType,
+  idempotencyKey
+}) => {
+  const completion = await handleBattleEnd(
+    battleId,
+    battleService.getBattleStatusString(battleEndResult),
+    finalState,
+    actingUserId ?? battleEnvelope.player1Id,
+    battleEndResult,
+    {
+      expectedRevision,
+      commandIdentity: idempotencyKey,
+      commandType,
+      idempotencyRequest: {
+        battleId: String(battleId),
+        actingUserId: actingUserId ?? null,
+        expectedRevision,
+        reason,
+        winningTeamId: battleEndResult.winningTeamId ?? null
+      },
+      publish: true
+    }
+  );
+  await publishColiseumMatchResultEvents(completion.presentationEvents);
+  return completion;
+});
 
 /**
  * Ensure a replayed or freshly committed turn-ending action cannot strand its
@@ -993,6 +1111,10 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
       req.user.userId,
       { client }
     );
+    const zodiacCollectionBonus = await loadZodiacCollectionBonus(
+      req.user.userId,
+      { client }
+    );
     const settingsResult = await client.query(
       'SELECT settings FROM user_settings WHERE user_id = $1',
       [req.user.userId]
@@ -1040,7 +1162,8 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
             defaultX,
             defaultY,
             traits: characterTraits[character.id] || [],
-            zodiacAbilities
+            zodiacAbilities,
+            zodiacCollectionBonus
           }
         );
       })
@@ -1263,10 +1386,21 @@ router.get('/current', authenticate, readLimiter, asyncHandler(async (req, res) 
   const activeUnit = state.units?.find(u => u.id === state.activeUnitId);
   if (isPvP && activeUnit && activeUnit.type === 'player' && activeUnit.ownerId === req.user.userId) {
     // Import coliseumService to restart turn timer with grace period
-    const { startTurnTimer } = await import('../services/coliseumService.js');
+    const { startTurnTimerIfCurrent } = await import('../services/coliseumService.js');
+    const expectedTimerRevision = battleEnvelope.stateRevision;
     // Give player a grace period (5 seconds) to orient themselves after reconnection
     setTimeout(() => {
-      startTurnTimer(battleId, req.user.userId, false);
+      startTurnTimerIfCurrent(
+        battleId,
+        req.user.userId,
+        false,
+        expectedTimerRevision
+      ).catch(error => {
+        console.error(
+          `Failed to restore guarded turn timer for battle ${battleId}:`,
+          error
+        );
+      });
     }, 5000);
     console.log(`[Battle] PvP turn timer will restart in 5s for player ${req.user.userId} (reconnection via /current)`);
   }
@@ -1548,15 +1682,34 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
     }
   }
 
-  // Check if battle ended from player action
-  const battleEndResult = battleService.checkBattleEnd(state);
-  const battleStatus = battleService.getBattleStatusString(battleEndResult);
+  // Check the direct action first, then process the successor's turn-start
+  // effects before deciding which lifecycle to commit. A poison or burn tick
+  // can defeat the last member of a team while CT advances; persisting that
+  // state as active would strand the battle with no legal actor.
+  let battleEndResult = battleService.checkBattleEnd(state);
+  let battleStatus = battleService.getBattleStatusString(battleEndResult);
+  if (battleStatus === 'active' && result.turnEnded) {
+    battleService.advanceToNextActorWithCT(state);
+    battleEndResult = battleService.checkBattleEnd(state);
+    battleStatus = battleService.getBattleStatusString(battleEndResult);
+  }
 
   // Track if turn continues (two-action system: move + act)
   const turnContinues = !result.turnEnded && battleStatus === 'active';
   let availableActions = battleStatus === 'active' && turnContinues
     ? result.availableActions
     : null;
+  if (battleStatus === 'active' && result.turnEnded) {
+    // The action receipt and immediate HTTP response must describe the
+    // successor selected by CT. Scope the details to the acting participant
+    // so a consecutive local turn is immediately actionable without exposing
+    // another player's legal actions.
+    availableActions = getParticipantAvailableActions(
+      battle,
+      state,
+      req.user.userId
+    );
+  }
   let replayMetadata = {
     actionResult: result,
     battleStatus,
@@ -1569,22 +1722,6 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
   let completion = null;
 
   if (battleStatus === 'active') {
-    if (result.turnEnded) {
-      battleService.advanceToNextActorWithCT(state);
-      // The action receipt and immediate HTTP response must describe the
-      // successor selected by CT. Scope the details to the acting participant
-      // so a consecutive local turn is immediately actionable without
-      // exposing another player's legal actions.
-      availableActions = getParticipantAvailableActions(
-        battle,
-        state,
-        req.user.userId
-      );
-      replayMetadata = {
-        ...replayMetadata,
-        availableActions
-      };
-    }
     state.turnPredictions = battleService.predictTurnOrder(state, 10);
 
     try {
@@ -1847,90 +1984,269 @@ function generateETag(state) {
 // ZODIAC SIGNATURE ABILITIES
 // ============================================================================
 
+function findOwnedPlayerUnitByCharacterId(state, characterId, userId) {
+  const normalizedCharacterId = Number(characterId);
+  if (
+    !Number.isSafeInteger(normalizedCharacterId)
+    || normalizedCharacterId <= 0
+  ) {
+    return null;
+  }
+
+  return state.units.find(unit =>
+    unit.type === 'player'
+    && unit.ownerId === userId
+    && Number(unit.characterId ?? unit.id) === normalizedCharacterId
+  ) || null;
+}
+
+function findActiveBattleUnit(state) {
+  const activeUnit = state.units.find(
+    unit => String(unit.id) === String(state.activeUnitId)
+  );
+  return activeUnit ?? state.units[state.activeUnitIndex] ?? null;
+}
+
 /**
  * POST /api/battle/:battleId/zodiac-ability
  * Use a zodiac signature ability during battle
- * Body: { characterId, abilityKey, targetUnitId? }
+ * Body: {
+ *   characterId, abilityKey, targetUnitId?, commandId?, stateRevision?
+ * }
  */
 router.post('/:battleId/zodiac-ability', authenticate, actionLimiter, asyncHandler(async (req, res) => {
   const battleId = parseInt(req.params.battleId, 10);
-  const { characterId, abilityKey, targetUnitId, actionSequence = 0 } = req.body;
+  const {
+    characterId,
+    abilityKey,
+    targetUnitId,
+    actionSequence = 0,
+    commandId,
+    stateRevision
+  } = req.body;
+  const normalizedCharacterId = Number(characterId);
 
-  if (!characterId || !abilityKey) {
+  if (
+    !Number.isSafeInteger(normalizedCharacterId)
+    || normalizedCharacterId <= 0
+    || typeof abilityKey !== 'string'
+    || abilityKey.length === 0
+  ) {
     throw new AppError('characterId and abilityKey are required', 400);
   }
 
-  const battle = await loadParticipantBattleOr404(
+  const zodiacCommand = createZodiacAbilityCommand({
     battleId,
-    req.user.userId,
-    { requireActive: true }
-  );
-  const state = structuredClone(
-    battleService.withBattleStateVisualIdentities(battle.state)
-  );
-
-  // Find the source unit
-  const sourceUnit = state.units.find(u =>
-    u.type === 'player' && u.id === characterId && u.ownerId === req.user.userId
-  );
-
-  if (!sourceUnit) {
-    throw new AppError('Character not found in battle or not controlled by you', 400);
-  }
-
-  if (sourceUnit.hp <= 0) {
-    throw new AppError('Character is defeated', 400);
-  }
-
-  // Find target unit if specified
-  let targetUnit = null;
-  if (targetUnitId) {
-    targetUnit = state.units.find(u => u.id === targetUnitId && u.hp > 0);
-    if (!targetUnit) {
-      throw new AppError('Target unit not found or defeated', 400);
-    }
-  }
-
-  // Apply the zodiac ability
-  const result = battleService.applyZodiacAbility(state, sourceUnit, abilityKey, targetUnit);
-
-  if (!result.success) {
-    throw new AppError(result.error || 'Failed to use zodiac ability', 400);
-  }
-
-  const committed = await battleStateRepository.commitBattleState({
-    battleId,
-    expectedRevision: battle.stateRevision,
-    commandType: 'zodiac_ability',
-    idempotencyKey:
-      `zodiac:${battleId}:${req.user.userId}:${characterId}:${abilityKey}:${actionSequence}`,
-    flatState: state,
-    allowedStatuses: ['active']
+    userId: req.user.userId,
+    commandId,
+    characterId: normalizedCharacterId,
+    abilityKey,
+    targetUnitId,
+    stateRevision
   });
-  if (committed.idempotent) {
-    throw new AppError('Battle state has changed - please retry', 409);
+
+  const initialBattle = await loadParticipantBattleOr404(
+    battleId,
+    req.user.userId
+  );
+  let priorReceipt;
+  try {
+    priorReceipt = await battleStateRepository.findCommandReceipt({
+      battleId,
+      idempotencyKey: zodiacCommand.idempotencyKey,
+      commandType: zodiacCommand.commandType,
+      idempotencyRequest: zodiacCommand.idempotencyRequest
+    });
+  } catch (error) {
+    await throwBattleActionCommitError(error, battleId, req.user.userId);
   }
-  const committedState = committed.envelope.state;
+  if (priorReceipt) {
+    return sendZodiacAbilityReplay(
+      res,
+      priorReceipt,
+      initialBattle,
+      zodiacCommand.commandId,
+      req.user.userId
+    );
+  }
+  if (stateRevision !== undefined
+    && stateRevision !== null
+    && stateRevision !== initialBattle.stateRevision) {
+    throw new AppError('Battle state has changed - please retry', 409, {
+      code: 'battle_state_conflict',
+      ...createBattleActionRecovery(initialBattle, req.user.userId)
+    });
+  }
+  if (initialBattle.status !== 'active') {
+    throw new AppError('Battle is no longer active', 409, {
+      code: 'battle_not_active',
+      ...createBattleActionRecovery(initialBattle, req.user.userId)
+    });
+  }
+
+  let commandResult;
+  try {
+    commandResult = await withTransaction(async client => {
+      // Serialize free Zodiac commands before any random effect is rolled.
+      // A simultaneous retry therefore observes the first durable receipt
+      // instead of applying Dreamwave (or any future random signature) twice.
+      const battle = await battleStateRepository.loadBattle(battleId, {
+        client,
+        forUpdate: true
+      });
+      const receipt = await battleStateRepository.findCommandReceipt({
+        battleId,
+        idempotencyKey: zodiacCommand.idempotencyKey,
+        commandType: zodiacCommand.commandType,
+        idempotencyRequest: zodiacCommand.idempotencyRequest
+      }, { client });
+      if (receipt) {
+        return { replay: true, receipt, battle };
+      }
+      if (stateRevision !== undefined
+        && stateRevision !== null
+        && stateRevision !== battle.stateRevision) {
+        throw new BattleStateConflictError(
+          `Battle ${battleId} revision ${battle.stateRevision} does not match ${stateRevision}`,
+          {
+            battleId,
+            expectedRevision: stateRevision,
+            actualRevision: battle.stateRevision
+          }
+        );
+      }
+      if (battle.status !== 'active') {
+        throw new AppError('Battle is no longer active', 409, {
+          code: 'battle_not_active',
+          ...createBattleActionRecovery(battle, req.user.userId)
+        });
+      }
+
+      const state = structuredClone(
+        battleService.withBattleStateVisualIdentities(battle.state)
+      );
+      const sourceUnit = findOwnedPlayerUnitByCharacterId(
+        state,
+        normalizedCharacterId,
+        req.user.userId
+      );
+      if (!sourceUnit) {
+        throw new AppError(
+          'Character not found in battle or not controlled by you',
+          400
+        );
+      }
+
+      // Signature abilities are free actions, but they still belong to the
+      // authoritative active character's turn.
+      const activeUnit = findActiveBattleUnit(state);
+      if (!activeUnit || String(activeUnit.id) !== String(sourceUnit.id)) {
+        throw new AppError(
+          'Zodiac abilities can only be used by your active character',
+          400
+        );
+      }
+      if (sourceUnit.hp <= 0) {
+        throw new AppError('Character is defeated', 400);
+      }
+
+      let targetUnit = null;
+      if (targetUnitId !== undefined && targetUnitId !== null) {
+        targetUnit = state.units.find(
+          unit => String(unit.id) === String(targetUnitId) && unit.hp > 0
+        );
+        if (!targetUnit) {
+          throw new AppError('Target unit not found or defeated', 400);
+        }
+      }
+
+      const result = battleService.applyZodiacAbility(
+        state,
+        sourceUnit,
+        abilityKey,
+        targetUnit
+      );
+      if (!result.success) {
+        throw new AppError(
+          result.error || 'Failed to use zodiac ability',
+          400
+        );
+      }
+      const response = {
+        success: true,
+        message: result.message,
+        effects: result.effects,
+        abilityUsed: true,
+        abilityKey,
+        abilityName: result.abilityName,
+        // A free signature can change normal-action availability (notably
+        // Celestial Arrow's basic-attack range), so return and persist the
+        // participant-scoped actions from the same committed intent.
+        availableActions: getParticipantAvailableActions(
+          battle,
+          state,
+          req.user.userId
+        )
+      };
+      const committed = await battleStateRepository.commitBattleState({
+        battleId,
+        expectedRevision: battle.stateRevision,
+        commandType: zodiacCommand.commandType,
+        idempotencyKey: zodiacCommand.idempotencyKey,
+        idempotencyRequest: zodiacCommand.idempotencyRequest,
+        replayMetadata: { response },
+        flatState: state,
+        allowedStatuses: ['active']
+      }, { client });
+      if (committed.idempotent) {
+        return { replay: true, receipt: committed, battle };
+      }
+      return {
+        replay: false,
+        battle,
+        committed,
+        response,
+        presentation: {
+          sourceUnitId: sourceUnit.id,
+          sourceUnitName: sourceUnit.name,
+          targetUnitId: targetUnit?.id,
+          targetUnitName: targetUnit?.name,
+          result
+        }
+      };
+    });
+  } catch (error) {
+    await throwBattleActionCommitError(error, battleId, req.user.userId);
+  }
+
+  if (commandResult.replay) {
+    return sendZodiacAbilityReplay(
+      res,
+      commandResult.receipt,
+      commandResult.battle,
+      zodiacCommand.commandId,
+      req.user.userId
+    );
+  }
+
+  const { committed, response, presentation } = commandResult;
+  validateActionSequence(battleId, req.user.userId, actionSequence);
   await battleWebsocket.broadcastStateUpdate(battleId, committed.update);
 
   // Broadcast the ability use via WebSocket
-  await battleWebsocket.broadcastActionExecuted(battleId, sourceUnit.id, 'zodiac_ability', {
-    ...result,
-    unitId: sourceUnit.id,
-    unitName: sourceUnit.name,
-    targetId: targetUnit?.id,
-    targetName: targetUnit?.name
+  await battleWebsocket.broadcastActionExecuted(battleId, presentation.sourceUnitId, 'zodiac_ability', {
+    ...presentation.result,
+    unitId: presentation.sourceUnitId,
+    unitName: presentation.sourceUnitName,
+    targetId: presentation.targetUnitId,
+    targetName: presentation.targetUnitName
   }, req.user.userId);
 
   res.json({
-    success: true,
-    message: result.message,
-    effects: result.effects,
-    abilityUsed: true,
-    abilityKey,
-    abilityName: result.abilityName,
-    state: committedState,
-    stateRevision: committed.envelope.stateRevision
+    ...response,
+    state: committed.envelope.state,
+    stateRevision: committed.envelope.stateRevision,
+    commandId: zodiacCommand.commandId
   });
 }));
 
@@ -1950,8 +2266,10 @@ router.get('/:battleId/zodiac-abilities/:characterId', authenticate, readLimiter
   const state = battle.state;
 
   // Find the unit
-  const unit = state.units.find(u =>
-    u.type === 'player' && u.id === characterId && u.ownerId === req.user.userId
+  const unit = findOwnedPlayerUnitByCharacterId(
+    state,
+    characterId,
+    req.user.userId
   );
 
   if (!unit) {

@@ -303,6 +303,10 @@ export class ApiClient {
     return this.post(`/world/nodes/${nodeId}/claim-chest`);
   }
 
+  visitShrine(nodeId) {
+    return this.post(`/world/nodes/${nodeId}/visit-shrine`);
+  }
+
   getWatchtowerView(nodeId) {
     return this.get(`/world/watchtower-view/${nodeId}`);
   }
@@ -360,6 +364,35 @@ export class ApiClient {
       targetTile,
       skillId,
       inventoryId,
+      actionSequence,
+      commandId,
+      stateRevision
+    }, {
+      ...options,
+      timeoutMs: options.timeoutMs ?? BATTLE_ACTION_TIMEOUT_MS
+    });
+  }
+
+  getAvailableZodiacAbilities(battleId, characterId, options = {}) {
+    return this.get(
+      `/battle/${encodeURIComponent(battleId)}/zodiac-abilities/${encodeURIComponent(characterId)}`,
+      options
+    );
+  }
+
+  useZodiacAbility({
+    battleId,
+    characterId,
+    abilityKey,
+    targetUnitId,
+    actionSequence,
+    commandId,
+    stateRevision
+  }, options = {}) {
+    return this.post(`/battle/${encodeURIComponent(battleId)}/zodiac-ability`, {
+      characterId,
+      abilityKey,
+      targetUnitId,
       actionSequence,
       commandId,
       stateRevision

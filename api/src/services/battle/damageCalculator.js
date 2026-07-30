@@ -17,6 +17,7 @@ import {
   calculateCritMultiplier as sharedCalculateCritMultiplier,
   calculateElementalModifier
 } from '../../../../shared/battleMath.js';
+import { getZodiacCollectionModifier } from '../zodiacCollectionBonusService.js';
 
 /**
  * Combine object-form status modifiers for an effective combat stat.
@@ -44,17 +45,25 @@ function getStatusStatMultiplier(unit, statName) {
  * @param {number} skillPower - Skill power percentage (default 100)
  * @param {string} element - Element type for elemental damage (optional)
  */
-export function calculatePhysicalDamage(attacker, defender, skillPower = 100, element = null) {
+export function calculatePhysicalDamage(
+  attacker,
+  defender,
+  skillPower = 100,
+  element = null,
+  options = {}
+) {
   // Base attack = strength + equipment attack bonus
   const attackPower = (
     (attacker.strength || 0) + (attacker.attack || 0)
-  ) * getStatusStatMultiplier(attacker, 'attack');
+  ) * getStatusStatMultiplier(attacker, 'attack') *
+    (1 + getZodiacCollectionModifier(attacker, 'physicalDamage'));
   const rawDamage = attackPower * (skillPower / 100);
 
   // Defense with diminishing returns: DEF / (DEF + 100)
   const defensePower = (
     (defender.vitality || 0) + (defender.defense || 0)
-  ) * getStatusStatMultiplier(defender, 'defense');
+  ) * getStatusStatMultiplier(defender, 'defense') *
+    (1 + getZodiacCollectionModifier(defender, 'defense'));
   const defenseReduction = calculateDefenseReduction(defensePower, PHYSICAL_DEFENSE_CONSTANT);
 
   // Apply defense reduction
@@ -69,7 +78,11 @@ export function calculatePhysicalDamage(attacker, defender, skillPower = 100, el
 
   // Critical hit check with new formula: 5% base + LCK/300 (max 50%)
   const traitCritBonus = traitService.getCritChanceBonus(attacker);
-  const critChance = sharedCalculateCritChance(attacker, traitCritBonus);
+  const crystalCritBonus = getZodiacCollectionModifier(attacker, 'critChance');
+  const critChance = sharedCalculateCritChance(
+    attacker,
+    traitCritBonus + crystalCritBonus + (options.critChanceBonus || 0)
+  );
   const isCritical = Math.random() < critChance;
 
   // Critical multiplier: 1.5 base + LCK/500 + race bonus (orcs +15%)
@@ -103,7 +116,13 @@ export function calculatePhysicalDamage(attacker, defender, skillPower = 100, el
  * @param {number} skillPower - Skill power percentage (default 100)
  * @param {string} element - Element type for elemental damage (optional)
  */
-export function calculateMagicalDamage(attacker, defender, skillPower = 100, element = null) {
+export function calculateMagicalDamage(
+  attacker,
+  defender,
+  skillPower = 100,
+  element = null,
+  options = {}
+) {
   // Base magic attack = intelligence + equipment magic attack bonus
   const magicAttackPower = (
     (attacker.intelligence || 0) + (attacker.magicAttack || 0)
@@ -114,7 +133,8 @@ export function calculateMagicalDamage(attacker, defender, skillPower = 100, ele
   const defenderInt = defender.intelligence || 0;
   const magicDefensePower = (
     Math.floor(defenderInt / 2) + (defender.magicDefense || 0)
-  ) * getStatusStatMultiplier(defender, 'magicDefense');
+  ) * getStatusStatMultiplier(defender, 'magicDefense') *
+    (1 + getZodiacCollectionModifier(defender, 'defense'));
   const defenseReduction = calculateDefenseReduction(magicDefensePower, MAGIC_DEFENSE_CONSTANT);
 
   // Apply defense reduction
@@ -129,7 +149,11 @@ export function calculateMagicalDamage(attacker, defender, skillPower = 100, ele
 
   // Critical hit check with new formula: 5% base + LCK/300 (max 50%)
   const traitCritBonus = traitService.getCritChanceBonus(attacker);
-  const critChance = sharedCalculateCritChance(attacker, traitCritBonus);
+  const crystalCritBonus = getZodiacCollectionModifier(attacker, 'critChance');
+  const critChance = sharedCalculateCritChance(
+    attacker,
+    traitCritBonus + crystalCritBonus + (options.critChanceBonus || 0)
+  );
   const isCritical = Math.random() < critChance;
 
   // Critical multiplier: 1.5 base + LCK/500 + race bonus
