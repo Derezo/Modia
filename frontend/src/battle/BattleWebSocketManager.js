@@ -112,6 +112,13 @@ export class BattleWebSocketManager {
     // Serialize snapshot/hash verification and revision application so async
     // verification cannot reorder consecutive WebSocket updates.
     this.stateUpdateChain = Promise.resolve();
+
+    // Revisioned map updates are accepted by BattleMapSession as soon as they
+    // arrive, but their mutable state must not snap units ahead of the
+    // semantic camera/intent/action presentation queue. Only the newest
+    // accepted reconciliation needs to be applied when presentation is safe.
+    this.deferredAuthoritativeState = null;
+    this.deferredPolledState = null;
   }
 
   // ===========================================================================
@@ -352,6 +359,8 @@ export class BattleWebSocketManager {
     this.timeoutCount = 0;
     this.battleEndPending = false;
     this.stateUpdateChain = Promise.resolve();
+    this.deferredAuthoritativeState = null;
+    this.deferredPolledState = null;
     this.lastYourTurnUnitId = null;
     if (this.turnRecoveryTimer) {
       clearTimeout(this.turnRecoveryTimer);
@@ -483,6 +492,8 @@ export class BattleWebSocketManager {
     this.turnEventQueue = [];
     this.isProcessingQueue = false;
     this.battleEndPending = false;
+    this.deferredAuthoritativeState = null;
+    this.deferredPolledState = null;
 
     // Reset pending input enable flag
     this.pendingInputEnable = false;
@@ -696,6 +707,12 @@ export class BattleWebSocketManager {
     if (this.scene.isStaleStateRevision?.(payloadRevision)) {
       return { status: 'duplicate', reason: 'stale_revision' };
     }
+    const acceptedSessionRevision = this.mapSession?.current?.stateRevision;
+    if (Number.isSafeInteger(payloadRevision) &&
+        Number.isSafeInteger(acceptedSessionRevision) &&
+        payloadRevision < acceptedSessionRevision) {
+      return { status: 'duplicate', reason: 'stale_revision' };
+    }
 
     let nextState;
     let mapPatch = null;
@@ -745,12 +762,48 @@ export class BattleWebSocketManager {
       return { status: 'duplicate', reason: 'stale_revision' };
     }
 
+    const reconciliation = {
+      nextState,
+      mapPatch,
+      stateRevision,
+      availableActions: payload.availableActions
+    };
+    if (this.shouldDeferAuthoritativeState()) {
+      this.deferredAuthoritativeState = reconciliation;
+      return { status: 'applied', state: nextState, deferred: true };
+    }
+
+    this.applyAcceptedAuthoritativeState(reconciliation);
+    return { status: 'applied', state: nextState };
+  }
+
+  /**
+   * Whether applying an accepted state would interrupt semantic presentation.
+   * BattleMapSession may continue advancing while scene reconciliation waits.
+   */
+  shouldDeferAuthoritativeState() {
+    return this.isProcessingQueue ||
+      this.turnEventQueue.length > 0 ||
+      this.scene.isActionSubmitting === true;
+  }
+
+  /**
+   * Apply a state which has already passed BattleMapSession verification.
+   */
+  applyAcceptedAuthoritativeState({
+    nextState,
+    mapPatch,
+    stateRevision,
+    availableActions
+  }) {
+    if (this.scene.isStaleStateRevision?.(stateRevision)) return false;
+
     this.battleState = nextState;
     if (mapPatch) applyBattleMapPatch(this.scene.grid, mapPatch);
     this.queueAuthoritativeBattleEnd(nextState?.status, nextState?.rewards);
 
-    let synchronizedAvailability = payload.availableActions !== undefined
-      ? payload.availableActions
+    let synchronizedAvailability = availableActions !== undefined
+      ? availableActions
       : nextState?.availableActions;
     if (synchronizedAvailability === undefined) {
       const activeStateUnit = nextState?.units?.find(
@@ -777,7 +830,52 @@ export class BattleWebSocketManager {
 
     // Update poller baseline to prevent false drift detection
     this.updatePollerState();
-    return { status: 'applied', state: nextState };
+    return true;
+  }
+
+  /**
+   * Flush the newest accepted state after remote event presentation or a local
+   * HTTP action presentation has finished.
+   *
+   * BattleScene calls this after clearing isActionSubmitting. The queue also
+   * calls it automatically after its final semantic event.
+   */
+  flushDeferredAuthoritativeState() {
+    if (this.shouldDeferAuthoritativeState()) {
+      return false;
+    }
+    if (!this.deferredAuthoritativeState && !this.deferredPolledState) {
+      this.statePoller?.setCriticalMode(false);
+      return false;
+    }
+
+    const reconciliation = this.deferredAuthoritativeState;
+    let polledState = this.deferredPolledState;
+    this.deferredAuthoritativeState = null;
+    this.deferredPolledState = null;
+
+    const acceptedRevision = reconciliation?.stateRevision;
+    const polledRevision = polledState?.stateRevision;
+    if (Number.isSafeInteger(acceptedRevision) &&
+        Number.isSafeInteger(polledRevision) &&
+        acceptedRevision >= polledRevision) {
+      polledState = null;
+    }
+
+    let applied = reconciliation
+      ? this.applyAcceptedAuthoritativeState(reconciliation)
+      : false;
+    if (polledState) {
+      if (this.shouldDeferAuthoritativeState()) {
+        this.deferredPolledState = polledState;
+      } else {
+        applied = this.applyPolledAuthoritativeState(polledState) || applied;
+      }
+    }
+    if (!this.shouldDeferAuthoritativeState()) {
+      this.statePoller?.setCriticalMode(false);
+    }
+    return applied;
   }
 
   /**
@@ -1011,7 +1109,9 @@ export class BattleWebSocketManager {
 
     if (payload.snapshot || payload.update || payload.delta) {
       const result = await this.queueRemoteStateUpdate(payload);
-      if (result?.status === 'applied') this.scene.updateUI();
+      if (result?.status === 'applied' && !result.deferred) {
+        this.scene.updateUI();
+      }
       return result;
     }
 
@@ -1196,8 +1296,16 @@ export class BattleWebSocketManager {
       // Always reset the flag, even if an error occurred
       this.isProcessingQueue = false;
 
-      // Switch back to normal polling mode (will trigger full sync if needed)
-      this.statePoller?.setCriticalMode(false);
+      // Apply only after the semantic camera/intent/move/action sequence has
+      // completed. A local HTTP presentation may still keep this deferred.
+      this.flushDeferredAuthoritativeState();
+
+      // A flushed terminal state can immediately start a new battle-end queue,
+      // and local HTTP presentation can outlive this remote queue. Keep the
+      // poller in critical mode until every presentation gate is idle.
+      if (!this.shouldDeferAuthoritativeState()) {
+        this.statePoller?.setCriticalMode(false);
+      }
       this.updatePollerState();
     }
   }
@@ -1279,10 +1387,47 @@ export class BattleWebSocketManager {
    * Applies the authoritative server state
    */
   handleStateDrift(serverState) {
+    if (this.isPolledStateStale(serverState)) return false;
+
+    if (this.shouldDeferAuthoritativeState()) {
+      const pendingRevision = this.deferredPolledState?.stateRevision;
+      const serverRevision = serverState?.stateRevision;
+      if (!Number.isSafeInteger(pendingRevision) ||
+          !Number.isSafeInteger(serverRevision) ||
+          serverRevision >= pendingRevision) {
+        this.deferredPolledState = serverState;
+      }
+      console.log('[Battle WS] State drift detected - deferring server state');
+      return false;
+    }
+
+    return this.applyPolledAuthoritativeState(serverState);
+  }
+
+  /**
+   * A lightweight poll response must never supersede a newer state already
+   * accepted by BattleMapSession but not yet presented by the scene.
+   */
+  isPolledStateStale(serverState) {
+    if (this.scene.isStaleStateRevision?.(serverState?.stateRevision)) {
+      return true;
+    }
+    const serverRevision = serverState?.stateRevision;
+    const acceptedRevision = this.mapSession?.current?.stateRevision;
+    return Number.isSafeInteger(serverRevision) &&
+      Number.isSafeInteger(acceptedRevision) &&
+      serverRevision < acceptedRevision;
+  }
+
+  /**
+   * Apply a lightweight poll response through its established reconciliation
+   * path once presentation is safe.
+   */
+  applyPolledAuthoritativeState(serverState) {
+    if (this.isPolledStateStale(serverState)) return false;
     console.warn('[Battle WS] State drift detected - applying server state');
 
-    // Apply the server state to the battle
-    if (!this.applyServerState(serverState)) return;
+    if (!this.applyServerState(serverState)) return false;
     this.queueAuthoritativeBattleEnd(serverState.status, serverState.rewards);
 
     // Reset timeout counter since we've synced
@@ -1293,6 +1438,7 @@ export class BattleWebSocketManager {
 
     // Fix: Update poller baseline so it doesn't detect drift again
     this.updatePollerState();
+    return true;
   }
 
   /**
@@ -1303,6 +1449,13 @@ export class BattleWebSocketManager {
    * @param {Object} serverState - Full server state for reference
    */
   handleCriticalDrift(driftType, serverValue, serverState) {
+    if (this.isCriticalPollCoveredByAcceptedState(serverState)) {
+      debugLog(
+        'battle.stateSync',
+        'Ignoring critical poll already covered by accepted WebSocket state'
+      );
+      return;
+    }
     console.warn(`[Battle WS] Critical drift during animation: ${driftType}`, serverValue);
     if (this.scene.isStaleStateRevision?.(serverState?.stateRevision)) return;
 
@@ -1327,6 +1480,31 @@ export class BattleWebSocketManager {
     if (driftType === 'turn_changed') {
       debugLog('battle.stateSync', 'Turn changed on server while processing animations - queue should sync');
     }
+  }
+
+  /**
+   * Critical polling can observe the same committed revision before its full
+   * WebSocket state is safe to present. That poll must not force-complete the
+   * action/death sequence. Equal-revision polling remains useful when no full
+   * accepted reconciliation is waiting and the scene itself has visual drift.
+   */
+  isCriticalPollCoveredByAcceptedState(serverState) {
+    const serverRevision = serverState?.stateRevision;
+    if (!Number.isSafeInteger(serverRevision)) return false;
+
+    const deferredRevision = this.deferredAuthoritativeState?.stateRevision;
+    if (Number.isSafeInteger(deferredRevision) &&
+        deferredRevision >= serverRevision) {
+      return true;
+    }
+
+    const acceptedRevision = this.mapSession?.current?.stateRevision;
+    const sceneRevision = this.scene.stateRevision ??
+      this.battleState?.stateRevision;
+    return Number.isSafeInteger(acceptedRevision) &&
+      acceptedRevision >= serverRevision &&
+      (!Number.isSafeInteger(sceneRevision) ||
+       sceneRevision < acceptedRevision);
   }
 
   /**
@@ -1401,6 +1579,12 @@ export class BattleWebSocketManager {
       this.battleState.activeUnitId = serverState.activeUnitId;
     }
     if (serverState.turnCount !== undefined) {
+      if (this.battleState) {
+        this.battleState.turn = serverState.turnCount;
+        if (Object.prototype.hasOwnProperty.call(this.battleState, 'turnCount')) {
+          this.battleState.turnCount = serverState.turnCount;
+        }
+      }
       this.scene.battleLogTurnCounter = serverState.turnCount;
     }
     if (serverState.status !== undefined && this.battleState) {
@@ -1434,7 +1618,9 @@ export class BattleWebSocketManager {
     const state = {
       stateRevision: this.scene.stateRevision ?? this.battleState?.stateRevision,
       activeUnitId: this.battleState?.activeUnitId,
-      turnCount: this.battleLogTurnCounter || 0,
+      turnCount: this.battleState?.turn ??
+        this.battleState?.turnCount ??
+        0,
       status: this.battleState?.status || 'active',
       turnPhase: this.scene.turnPhase,
       availableActions: this.scene.serverAvailableActions,

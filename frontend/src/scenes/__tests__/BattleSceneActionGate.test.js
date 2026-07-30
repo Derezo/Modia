@@ -216,6 +216,26 @@ describe('BattleScene authoritative action gate', () => {
     assert.equal(requests[1].inventoryId, 77);
   });
 
+  it('flushes deferred authoritative state after local action presentation', async () => {
+    const { scene } = createSceneHarness();
+    scene.applyAuthoritativeAvailability({ canMove: true, canAct: true });
+    scene.processActionResult = async () => true;
+    scene.game.api = {
+      async submitBattleAction() {
+        return { actionResult: {}, battleStatus: 'active' };
+      }
+    };
+    let flushes = 0;
+    scene.wsManager.flushDeferredAuthoritativeState = () => {
+      flushes++;
+      return true;
+    };
+
+    assert.equal(await scene.submitAction('wait'), true);
+    assert.equal(scene.isActionSubmitting, false);
+    assert.equal(flushes, 1);
+  });
+
   it('recovers a direct local successor from the turn-ending action response', async () => {
     const { scene, unit } = createSceneHarness();
     const successorAvailability = {

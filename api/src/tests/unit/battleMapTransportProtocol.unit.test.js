@@ -125,7 +125,8 @@ describe('API battle-map transport negotiation', () => {
     }];
     const result = createNegotiatedBattleStateSnapshot(
       battle,
-      capabilities({ cachedMaps })
+      capabilities({ cachedMaps }),
+      { referenceDeltaEnabled: false }
     );
 
     assert.equal(result.negotiation.compatible, true);

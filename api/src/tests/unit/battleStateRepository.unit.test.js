@@ -105,6 +105,8 @@ class MutationClient {
     this.commandResults = new Map();
     this.requestHashBackfillCount = 0;
     this.updateCount = 0;
+    this.lastUpdateSql = null;
+    this.updateRowTransform = null;
   }
 
   async query(sql, params) {
@@ -130,6 +132,7 @@ class MutationClient {
       return { rows: [], rowCount: 0 };
     }
     if (sql.includes('UPDATE battles')) {
+      this.lastUpdateSql = sql;
       const expectedRevision = params[12];
       const allowedStatuses = params[13];
       if (this.row.state_revision !== expectedRevision
@@ -152,7 +155,16 @@ class MutationClient {
         battle_map_full_hash: params[10],
         state_revision: this.row.state_revision + 1
       };
-      return { rows: [clone(this.row)], rowCount: 1 };
+      const returnedRow = clone(this.row);
+      delete returnedRow.battle_state;
+      return {
+        rows: [
+          this.updateRowTransform
+            ? this.updateRowTransform(returnedRow)
+            : returnedRow
+        ],
+        rowCount: 1
+      };
     }
     if (sql.includes('FROM battles') && sql.includes('WHERE id = $1')) {
       return { rows: String(params[0]) === String(this.row.id) ? [clone(this.row)] : [] };
@@ -811,6 +823,15 @@ describe('BattleStateRepository', () => {
     row.battle_state = flatState;
     const client = new MutationClient(row);
     const repository = repositoryFor(client);
+    const hydrateEnvelope = repository.envelopeFromRow.bind(repository);
+    let verifiedBaseEnvelope;
+    let hydrationCount = 0;
+    repository.envelopeFromRow = async returnedRow => {
+      const hydrated = await hydrateEnvelope(returnedRow);
+      hydrationCount += 1;
+      verifiedBaseEnvelope ??= hydrated;
+      return hydrated;
+    };
 
     const successor = structuredClone(flatState);
     successor.turn = 2;
@@ -823,9 +844,38 @@ describe('BattleStateRepository', () => {
     });
 
     assert.equal(committed.stateRevision, 1);
+    assert.equal(hydrationCount, 1);
+    assert.equal(committed.envelope.battleId, row.id);
+    assert.equal(committed.envelope.id, row.id);
+    assert.equal(committed.envelope.battleType, row.battle_type);
+    assert.equal(committed.envelope.status, row.status);
+    assert.equal(committed.envelope.nodeId, row.node_id);
+    assert.equal(committed.envelope.player1Id, row.player1_id);
+    assert.equal(committed.envelope.startedAt, row.started_at.toISOString());
+    assert.equal(committed.envelope.stateRevision, 1);
+    assert.equal(committed.envelope.battleMapSchemaVersion, map.battleMapSchemaVersion);
+    assert.equal(
+      committed.envelope.terrainGenerationVersion,
+      map.terrainGenerationVersion
+    );
     assert.equal(committed.envelope.mutableState.turn, 2);
+    assert.strictEqual(committed.envelope.mutableState, committed.mutableState);
     assert.equal(committed.envelope.fullHash, map.diagnostics.hashes.fullHash);
+    assert.strictEqual(committed.envelope.map, verifiedBaseEnvelope.map);
     assert.deepEqual(committed.envelope.map, map);
+    assert.strictEqual(committed.envelope.state, committed.envelope.flatState);
+    assert.equal(
+      committed.envelope.map.diagnostics.hashes.fullHash,
+      committed.envelope.fullHash
+    );
+    assert.equal(Object.isFrozen(committed.envelope), true);
+    assert.equal(Object.isFrozen(committed.envelope.map), true);
+    assert.equal(Object.isFrozen(committed.envelope.mutableState), true);
+    assert.equal(Object.isFrozen(committed.envelope.flatState), true);
+    const returningClause = client.lastUpdateSql.slice(
+      client.lastUpdateSql.indexOf('RETURNING')
+    );
+    assert.doesNotMatch(returningClause, /\bbattle_state\b/);
 
     const tampered = structuredClone(committed.envelope.state);
     tampered.terrain[0][0].movementCost += 1;
@@ -841,6 +891,30 @@ describe('BattleStateRepository', () => {
         && /invalid BattleMapV2 state|immutable BattleMap/.test(error.message)
     );
     assert.equal(client.updateCount, 1);
+  });
+
+  it('rejects conflicting metadata returned by an optimized V1 commit', async () => {
+    const client = new MutationClient(createBattleRow());
+    client.updateRowTransform = returnedRow => ({
+      ...returnedRow,
+      map_width: returnedRow.map_width + 1
+    });
+    const repository = repositoryFor(client);
+    const initial = await repository.loadBattle(41);
+    const successor = structuredClone(initial.mutableState);
+    successor.turn = 2;
+
+    await assert.rejects(
+      repository.commitMutableState({
+        battleId: 41,
+        expectedRevision: 0,
+        commandType: 'player_action',
+        idempotencyKey: 'v1:metadata-conflict',
+        mutableState: successor
+      }),
+      error => error instanceof BattleStateCorruptError
+        && /dimension mirror conflict/.test(error.message)
+    );
   });
 
   it('creates a V2 final map atomically at revision zero and deduplicates its creation key', async () => {

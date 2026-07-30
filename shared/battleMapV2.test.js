@@ -21,8 +21,11 @@ import {
   createMinimalBattleMapV2CandidateFixture,
   createRepresentativeBattleMapV2CandidateFixture,
   createRepresentativeBattleMapV2FinalFixture,
+  deepFreeze,
   finalizeBattleMapV2,
+  loadAndFreezeBattleMapV2Final,
   loadLegacyFlatBattleState,
+  normalizeBattleMapV2Final,
   parseJsonRejectDuplicateKeys,
   splitBattleMapV2FlatState,
   validateBattleMapV2Candidate,
@@ -44,6 +47,28 @@ function reverseObjectKeyOrder(value) {
     );
   }
   return value;
+}
+
+async function trackDigestCalls(run) {
+  const subtle = globalThis.crypto.subtle;
+  const ownDescriptor = Object.getOwnPropertyDescriptor(subtle, 'digest');
+  const originalDigest = subtle.digest;
+  let calls = 0;
+  Object.defineProperty(subtle, 'digest', {
+    configurable: true,
+    writable: true,
+    value(...args) {
+      calls += 1;
+      return Reflect.apply(originalDigest, this, args);
+    }
+  });
+  try {
+    const result = await run();
+    return { calls, result };
+  } finally {
+    if (ownDescriptor) Object.defineProperty(subtle, 'digest', ownDescriptor);
+    else delete subtle.digest;
+  }
 }
 
 test('minimal and representative candidates satisfy the closed candidate schema', () => {
@@ -247,6 +272,116 @@ test('final hash verification fails closed after hashed content changes', async 
     assert.equal(error.code, 'BATTLE_MAP_HASH_MISMATCH');
     return true;
   });
+});
+
+test('only canonical finalized maps reuse hash verification by exact object identity', async () => {
+  const finalized = await createRepresentativeBattleMapV2FinalFixture();
+  const frozenCopy = deepFreeze(clone(finalized));
+  const otherFrozenCopy = deepFreeze(clone(finalized));
+
+  const canonicalResult = await trackDigestCalls(async () => {
+    await battleMapV2ToFlatState(finalized);
+    await battleMapV2ToFlatState(finalized);
+  });
+  assert.equal(canonicalResult.calls, 0);
+
+  const untrustedFrozenResult = await trackDigestCalls(async () => {
+    await battleMapV2ToFlatState(frozenCopy);
+    await battleMapV2ToFlatState(frozenCopy);
+    await battleMapV2ToFlatState(otherFrozenCopy);
+  });
+  assert.equal(untrustedFrozenResult.calls, 9);
+
+  const mutableCopy = clone(finalized);
+  const mutableResult = await trackDigestCalls(async () => {
+    await battleMapV2ToFlatState(mutableCopy);
+    await battleMapV2ToFlatState(mutableCopy);
+  });
+  assert.equal(mutableResult.calls, 6);
+});
+
+test('frozen accessor-backed maps cannot retain verification after their value changes', async () => {
+  const finalized = await createRepresentativeBattleMapV2FinalFixture();
+  const accessorBacked = clone(finalized);
+  let biome = accessorBacked.biome;
+  Object.defineProperty(accessorBacked, 'biome', {
+    enumerable: true,
+    configurable: true,
+    get: () => biome
+  });
+  deepFreeze(accessorBacked);
+
+  assert.equal(await verifyBattleMapV2Final(accessorBacked), true);
+  biome = `${biome}-tampered`;
+  assert.equal(await verifyBattleMapV2Final(accessorBacked), false);
+  await assert.rejects(
+    () => battleMapV2ToFlatState(accessorBacked),
+    /hash verification failed/
+  );
+});
+
+test('flat-state adapter serializes the same accessor snapshot that it verifies', async () => {
+  const finalized = await createRepresentativeBattleMapV2FinalFixture();
+  const accessorBacked = clone(finalized);
+  const verifiedBiome = accessorBacked.biome;
+  let biome = verifiedBiome;
+  let armed = false;
+  let scheduled = false;
+  Object.defineProperty(accessorBacked, 'biome', {
+    enumerable: true,
+    configurable: true,
+    get() {
+      const current = biome;
+      if (armed && !scheduled) {
+        scheduled = true;
+        queueMicrotask(() => {
+          biome = `${verifiedBiome}-tampered`;
+        });
+      }
+      return current;
+    }
+  });
+  deepFreeze(accessorBacked);
+  armed = true;
+
+  const flat = await battleMapV2ToFlatState(accessorBacked, { battleId: 'accessor-race' });
+
+  assert.equal(scheduled, true);
+  assert.equal(biome, `${verifiedBiome}-tampered`);
+  assert.equal(flat.biome, verifiedBiome);
+  assert.deepEqual(flat.diagnostics.hashes, finalized.diagnostics.hashes);
+  const loaded = await battleMapV2FromFlatState(flat);
+  assert.equal(loaded.biome, verifiedBiome);
+  assert.equal(await verifyBattleMapV2Final(loaded), true);
+});
+
+test('final loader verifies only its returned clone and rejects corrupt input', async () => {
+  const finalized = await createRepresentativeBattleMapV2FinalFixture();
+  const incoming = clone(finalized);
+  const { calls, result: loaded } = await trackDigestCalls(
+    () => loadAndFreezeBattleMapV2Final(incoming)
+  );
+
+  assert.equal(calls, 3);
+  assert.notEqual(loaded, incoming);
+  assert.deepEqual(loaded, incoming);
+  assert.equal(Object.isFrozen(loaded.features.routes[0].centerline[0]), true);
+  assert.equal(await normalizeBattleMapV2Final(loaded), loaded);
+  assert.equal(await loadAndFreezeBattleMapV2Final(loaded), loaded);
+
+  const corrupt = clone(finalized);
+  corrupt.terrain[0][0].material = 'stone';
+  await assert.rejects(
+    () => loadAndFreezeBattleMapV2Final(corrupt),
+    /hash verification failed/
+  );
+
+  const structurallyInvalid = clone(finalized);
+  structurallyInvalid.terrain[0][0].unplanned = true;
+  await assert.rejects(
+    () => loadAndFreezeBattleMapV2Final(structurallyInvalid),
+    /validation failed/
+  );
 });
 
 test('flat-state adapter preserves every V2 layer and separates mutable state', async () => {

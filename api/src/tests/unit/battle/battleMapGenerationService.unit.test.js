@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   BATTLE_MAP_V2_ENABLED_MODES_ENV,
+  extractBattleMutableStateForCommit,
   generateBattleMap,
   isBattleMapV2EnabledForMode,
   selectBattleMapGenerationVersion
@@ -21,6 +22,26 @@ const v2Capabilities = createBattleMapCapabilities({
 });
 
 describe('authoritative battle-map generation', () => {
+  it('strictly projects committed flat states without accepting unknown fields', () => {
+    const mutableState = extractBattleMutableStateForCommit({
+      turn: 3,
+      units: [{ id: 'player:1', hp: 12 }],
+      terrain: [[{ material: 'grass' }]]
+    });
+
+    assert.equal(mutableState.turn, 3);
+    assert.deepEqual(mutableState.units, [{ id: 'player:1', hp: 12 }]);
+    assert.equal(Object.hasOwn(mutableState, 'terrain'), false);
+    assert.throws(
+      () => extractBattleMutableStateForCommit({ turn: 3, unexpectedCombatField: true }),
+      /unexpectedCombatField is not part of BattleMutableStateV1/
+    );
+    assert.throws(
+      () => extractBattleMutableStateForCommit({ turn: 3, mapSeed: 99 }),
+      /map alias/
+    );
+  });
+
   it('requires both the canonical rollout gate and V2 client negotiation', () => {
     assert.equal(BATTLE_MAP_V2_ENABLED_MODES_ENV, 'BATTLE_MAP_V2_ENABLED_MODES');
     assert.equal(isBattleMapV2EnabledForMode('pve', ''), false);

@@ -27,12 +27,11 @@ const CREATION_KEY_MAX_LENGTH = 255;
 const COMMAND_KEY_MAX_LENGTH = 255;
 const COMMAND_TYPE_MAX_LENGTH = 96;
 
-const BATTLE_ROW_COLUMNS = `
+const BATTLE_ROW_METADATA_COLUMNS = `
   id,
   battle_type,
   status,
   node_id,
-  battle_state,
   map_seed,
   map_width,
   map_height,
@@ -50,6 +49,11 @@ const BATTLE_ROW_COLUMNS = `
   battle_map_full_hash,
   creation_idempotency_key,
   creation_request_hash
+`;
+
+const BATTLE_ROW_COLUMNS = `
+  ${BATTLE_ROW_METADATA_COLUMNS},
+  battle_state
 `;
 
 const LEGACY_REQUIRED_MAP_FIELDS = Object.freeze([
@@ -303,6 +307,72 @@ function mapReference(map) {
     terrainGenerationVersion: isV2 ? TERRAIN_GENERATION_VERSION : 1,
     fullHash: isV2 ? map.diagnostics.hashes.fullHash : null
   };
+}
+
+function committedEnvelopeFromRow(
+  row,
+  baseEnvelope,
+  nextMutableState,
+  nextFlatState,
+  nextRevision
+) {
+  if (!row) throw new TypeError('row is required');
+  if (row.id !== baseEnvelope.battleId) {
+    throw new BattleStateCorruptError(
+      `Battle ${baseEnvelope.battleId} update returned a conflicting battle id`
+    );
+  }
+  assertRevision(row.state_revision, 'battles.state_revision');
+  if (row.state_revision !== nextRevision) {
+    throw new BattleStateCorruptError(
+      `Battle ${row.id} update returned revision ${row.state_revision}, expected ${nextRevision}`
+    );
+  }
+
+  const reference = mapReference(baseEnvelope.map);
+  if (baseEnvelope.battleMapSchemaVersion !== reference.battleMapSchemaVersion
+    || row.battle_map_schema_version !== reference.battleMapSchemaVersion) {
+    throw new BattleStateCorruptError(`Battle ${row.id} has a map-schema mirror conflict`);
+  }
+  if (baseEnvelope.terrainGenerationVersion !== reference.terrainGenerationVersion
+    || row.terrain_generation_version !== reference.terrainGenerationVersion) {
+    throw new BattleStateCorruptError(`Battle ${row.id} has a generation-version mirror conflict`);
+  }
+  if (baseEnvelope.fullHash !== reference.fullHash
+    || row.battle_map_full_hash !== reference.fullHash) {
+    throw new BattleStateCorruptError(`Battle ${row.id} has a full-hash mirror conflict`);
+  }
+  assertDatabaseMapMirrors(row, nextFlatState, reference.battleMapSchemaVersion);
+  assertLifecycleMirrors(row, nextFlatState, true);
+
+  return deepFreeze({
+    battleId: row.id,
+    id: row.id,
+    battleType: row.battle_type,
+    status: row.status,
+    nodeId: row.node_id ?? null,
+    player1Id: row.player1_id ?? null,
+    player2Id: row.player2_id ?? null,
+    winnerId: row.winner_id ?? null,
+    rewards: row.rewards ?? null,
+    startedAt: dateToJson(row.started_at),
+    endedAt: dateToJson(row.ended_at),
+    isAdvancementBattle: row.is_advancement_battle ?? false,
+    challengerCharacterId: row.challenger_character_id ?? null,
+    stateRevision: row.state_revision,
+    battleMapSchemaVersion: row.battle_map_schema_version,
+    terrainGenerationVersion: row.terrain_generation_version,
+    fullHash: row.battle_map_full_hash ?? null,
+    mapSeed: row.map_seed,
+    mapWidth: row.map_width,
+    mapHeight: row.map_height,
+    creationIdempotencyKey: row.creation_idempotency_key ?? null,
+    creationRequestHash: row.creation_request_hash ?? null,
+    map: baseEnvelope.map,
+    mutableState: nextMutableState,
+    flatState: nextFlatState,
+    state: nextFlatState
+  });
 }
 
 function commandResultFromStored(row) {
@@ -1254,7 +1324,7 @@ export class BattleStateRepository {
        WHERE id = $12
          AND state_revision = $13
          AND status = ANY($14::battle_status[])
-       RETURNING ${BATTLE_ROW_COLUMNS}`,
+       RETURNING ${BATTLE_ROW_METADATA_COLUMNS}`,
       [
         JSON.stringify(nextFlatState),
         nextLifecycle.status,
@@ -1312,7 +1382,13 @@ export class BattleStateRepository {
       ]
     );
 
-    const committedEnvelope = await this.envelopeFromRow(updateResult.rows[0]);
+    const committedEnvelope = committedEnvelopeFromRow(
+      updateResult.rows[0],
+      envelope,
+      nextMutableState,
+      nextFlatState,
+      nextRevision
+    );
     const update = createBattleMutableStateUpdateV1(storedResult);
     return deepFreeze({
       ...storedResult,

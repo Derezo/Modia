@@ -274,7 +274,7 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
       if (isAIDebugEnabled(state)) {
         console.log(`[AI] Action: ${enemy.name} | wait`);
       }
-      battleWebsocket.broadcastActionExecuted(battleId, enemy.id, 'wait', {});
+      await battleWebsocket.broadcastActionExecuted(battleId, enemy.id, 'wait', {});
       await delay(TIMING.TURN_END_BUFFER);
       break;
     }
@@ -288,7 +288,7 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
       // Show movement range highlight
       const movementRange = getMovementRangeTiles(enemy, state, battleService);
       if (movementRange.length > 0) {
-        battleWebsocket.broadcastIntentHighlight(
+        await battleWebsocket.broadcastIntentHighlight(
           battleId,
           enemy.id,
           'movement_range',
@@ -301,7 +301,7 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
       // Show path to target
       const pathTiles = getPathToTarget(enemy, decision.targetTile, state);
       if (pathTiles.length > 0) {
-        battleWebsocket.broadcastIntentHighlight(
+        await battleWebsocket.broadcastIntentHighlight(
           battleId,
           enemy.id,
           'target_path',
@@ -332,7 +332,7 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
           console.log(`[AI] Result: ${enemy.name} | move SUCCESS (${oldPosition.x},${oldPosition.y}) -> (${decision.targetTile.x},${decision.targetTile.y})`);
         }
         // Broadcast unit moved (using saved old position)
-        battleWebsocket.broadcastUnitMoved(
+        await battleWebsocket.broadcastUnitMoved(
           battleId,
           enemy.id,
           oldPosition,
@@ -369,7 +369,7 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
       // Show attack range highlight
       const attackRange = getAttackRangeTiles(enemy, state, battleService);
       if (attackRange.length > 0) {
-        battleWebsocket.broadcastIntentHighlight(
+        await battleWebsocket.broadcastIntentHighlight(
           battleId,
           enemy.id,
           'attack_range',
@@ -380,7 +380,7 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
       }
 
       // Show target tile
-      battleWebsocket.broadcastIntentHighlight(
+      await battleWebsocket.broadcastIntentHighlight(
         battleId,
         enemy.id,
         'target_tile',
@@ -408,7 +408,7 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
           console.log(`[AI] Result: ${enemy.name} | attack -> ${attackResult.targetName || 'target'} | damage: ${attackResult.damage}${isCrit}`);
         }
         // Broadcast action executed
-        battleWebsocket.broadcastActionExecuted(battleId, enemy.id, 'attack', {
+        await battleWebsocket.broadcastActionExecuted(battleId, enemy.id, 'attack', {
           targetTile: decision.targetTile,
           ...attackResult
         });
@@ -441,7 +441,7 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
       // Show skill range (use actual skill range, not attack range)
       const skillRangeTiles = getSkillRangeTiles(enemy, state, decision.skillId);
       if (skillRangeTiles.length > 0) {
-        battleWebsocket.broadcastIntentHighlight(
+        await battleWebsocket.broadcastIntentHighlight(
           battleId,
           enemy.id,
           'attack_range',
@@ -452,7 +452,7 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
       }
 
       // Show target tile(s)
-      battleWebsocket.broadcastIntentHighlight(
+      await battleWebsocket.broadcastIntentHighlight(
         battleId,
         enemy.id,
         'target_tile',
@@ -478,7 +478,7 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
           if (skillResult.statusApplied) effectInfo.push(`status: ${skillResult.statusApplied}`);
           console.log(`[AI] Result: ${enemy.name} | skill:${decision.skillId} | ${effectInfo.join(', ') || 'effect applied'}`);
         }
-        battleWebsocket.broadcastActionExecuted(battleId, enemy.id, 'skill', {
+        await battleWebsocket.broadcastActionExecuted(battleId, enemy.id, 'skill', {
           skillId: decision.skillId,
           targetTile: decision.targetTile,
           ...skillResult
@@ -530,7 +530,7 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
           if (itemResult.statusCured) effectInfo.push(`cured: ${itemResult.statusCured}`);
           console.log(`[AI] Result: ${enemy.name} | item:${decision.itemId} | ${effectInfo.join(', ') || 'used'}`);
         }
-        battleWebsocket.broadcastActionExecuted(battleId, enemy.id, 'item', {
+        await battleWebsocket.broadcastActionExecuted(battleId, enemy.id, 'item', {
           itemId: decision.itemId,
           targetTile: decision.targetTile,
           ...itemResult

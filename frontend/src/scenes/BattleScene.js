@@ -2357,6 +2357,7 @@ export class BattleScene extends Scene {
       if (submissionRequestId === this.zodiacSubmissionRequestId &&
           String(this.battleId) === String(submittedBattleId)) {
         this.isActionSubmitting = false;
+        this.wsManager?.flushDeferredAuthoritativeState?.();
         this.refreshActionControls();
       }
     }
@@ -2543,6 +2544,7 @@ export class BattleScene extends Scene {
       return false;
     } finally {
       this.isActionSubmitting = false;
+      this.wsManager?.flushDeferredAuthoritativeState?.();
       this.refreshActionControls();
     }
   }

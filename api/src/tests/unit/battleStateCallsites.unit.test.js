@@ -86,6 +86,21 @@ describe('battle state repository callsites', () => {
 });
 
 describe('battle route enemy-turn revision handoff', () => {
+  it('commits trusted action successors through the mutable-state hot path', async () => {
+    const route = await readCallsite('routes/battle.js');
+    const helperStart = route.indexOf('async function commitBattleActionState');
+    const commitHelper = route.slice(
+      helperStart,
+      route.indexOf('// ============================================================================', helperStart)
+    );
+
+    assert.match(
+      commitHelper,
+      /battleStateRepository\.commitMutableState\(\{[\s\S]*mutableState:\s*extractBattleMutableStateForCommit\(flatState\)/
+    );
+    assert.doesNotMatch(commitHelper, /commitBattleState/);
+  });
+
   it('keeps lifecycle-locked PvE snapshot reads on the transaction client', async () => {
     const route = await readCallsite('routes/battle.js');
     const startRoute = route.slice(
@@ -177,9 +192,17 @@ describe('battle route enemy-turn revision handoff', () => {
     const commitIndex = actionRoute.indexOf(
       'actionCommit = await commitBattleActionState'
     );
+    const actionEventIndex = actionRoute.indexOf(
+      'await battleWebsocket.broadcastActionExecuted(',
+      commitIndex
+    );
+    const stateUpdateIndex = actionRoute.indexOf(
+      'await battleWebsocket.broadcastStateUpdate(',
+      actionEventIndex
+    );
     const launchIndex = actionRoute.indexOf(
       'await ensureCurrentSuccessorProgress(',
-      commitIndex
+      stateUpdateIndex
     );
 
     assert.match(actionRoute, /loadParticipantBattleOr404/);
@@ -201,7 +224,7 @@ describe('battle route enemy-turn revision handoff', () => {
     );
     assert.match(
       actionRoute,
-      /broadcastStateUpdate\(battleId, actionCommit\.update\)/
+      /const committedUpdate = completion\?\.committedUpdate \?\? actionCommit\?\.update;[\s\S]*broadcastStateUpdate\(battleId, committedUpdate\)/
     );
     assert.match(
       actionRoute,
@@ -223,6 +246,27 @@ describe('battle route enemy-turn revision handoff', () => {
     assert.match(actionRoute, /stateRevision:\s*completion\?\.stateRevision \?\? committedRevision/);
     assert.doesNotMatch(actionRoute, /UPDATE battles/);
     assert.ok(commitIndex >= 0 && launchIndex > commitIndex);
+    assert.ok(
+      actionEventIndex > commitIndex &&
+      stateUpdateIndex > actionEventIndex &&
+      launchIndex > stateUpdateIndex
+    );
+  });
+
+  it('serializes enemy presentation broadcasts before authoritative checkpoints', async () => {
+    const manager = await readCallsite('services/battleTurnManager.js');
+    const functionStart = manager.indexOf(
+      'async function processEnemyTurnWithVisualization'
+    );
+    const enemyPresentation = manager.slice(
+      functionStart,
+      manager.indexOf('/**', functionStart)
+    );
+
+    assert.doesNotMatch(
+      enemyPresentation,
+      /(?<!await )battleWebsocket\.broadcast(?:IntentHighlight|UnitMoved|ActionExecuted)/
+    );
   });
 
   it('checks terminal turn-start damage before committing an active successor', async () => {
@@ -391,6 +435,10 @@ describe('battle route enemy-turn revision handoff', () => {
     assert.match(
       zodiacRoute,
       /String\(activeUnit\.id\) !== String\(sourceUnit\.id\)/
+    );
+    assert.ok(
+      zodiacRoute.indexOf('await battleWebsocket.broadcastActionExecuted(') <
+      zodiacRoute.indexOf('await battleWebsocket.broadcastStateUpdate(')
     );
   });
 

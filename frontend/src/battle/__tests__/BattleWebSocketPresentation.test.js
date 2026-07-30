@@ -30,6 +30,7 @@ const {
   getActionWaitDuration,
   getActorAnimationDurationMs
 } = await import('../BattleWebSocketManager.js');
+const { BattleStatePoller } = await import('../BattleStatePoller.js');
 const { parchmentToast } =
   await import('../../ui/parchment/ParchmentToast.js');
 const { BattleMapSession, clearBattleMapSessionCache } =
@@ -374,6 +375,43 @@ describe('BattleWebSocketManager local turn recovery', () => {
 });
 
 describe('BattleWebSocketManager action presentation parity', () => {
+  it('keeps enemy intent and movement logging map-version independent', async () => {
+    const enemy = createUnit('enemy', { type: 'enemy', ownerId: null });
+    const { manager, scene } = createHarness([enemy]);
+    const highlights = [];
+    const logs = [];
+    const moves = [];
+    scene.grid.showIntentHighlight = (...args) => highlights.push(args);
+    scene.addBattleLogEntry = (...args) => logs.push(args);
+    enemy.moveTo = (x, y) => moves.push({ x, y });
+
+    await manager.processIntentHighlightEvent({
+      unitId: enemy.id,
+      highlightType: 'target_path',
+      tiles: [{ x: 2, y: 2 }, { x: 3, y: 2 }],
+      duration: 400
+    });
+    await manager.processUnitMovedEvent({
+      unitId: enemy.id,
+      from: { x: 1, y: 2 },
+      to: { x: 3, y: 2 }
+    });
+
+    assert.deepEqual(highlights, [[
+      'target_path',
+      [{ x: 2, y: 2 }, { x: 3, y: 2 }],
+      400
+    ]]);
+    assert.deepEqual(moves, [{ x: 3, y: 2 }]);
+    assert.equal(logs.length, 1);
+    assert.equal(logs[0][0], enemy);
+    assert.equal(logs[0][1], 'move');
+    assert.deepEqual(logs[0][3], {
+      from: { x: 1, y: 2 },
+      to: { x: 3, y: 2 }
+    });
+  });
+
   it('presents remote Zodiac actions lightly without generic action presentation', async (t) => {
     const actor = createUnit('caster');
     const target = createUnit('target', { teamId: 2 });
@@ -694,9 +732,452 @@ describe('BattleWebSocketManager authoritative battle end recovery', () => {
     assert.equal(manager.queueAuthoritativeBattleEnd('defeat'), true);
     assert.deepEqual(manager.turnEventQueue.map(event => event.type), ['battle_end']);
   });
+
+  it('defers a pending critical poll recovery while local presentation remains active', async () => {
+    const player = createUnit('player');
+    const { manager, scene } = createHarness([player]);
+    scene.stateRevision = 4;
+    scene.battleState = {
+      status: 'active',
+      activeUnitId: player.id,
+      turn: 4,
+      turnCount: 4
+    };
+    scene.isActionSubmitting = true;
+    const serverState = {
+      stateRevision: 5,
+      status: 'active',
+      activeUnitId: player.id,
+      turnCount: 5,
+      units: [{
+        id: player.id,
+        x: 9,
+        y: 8,
+        hp: 40,
+        mp: 12
+      }]
+    };
+    const poller = {
+      pendingFullSync: true,
+      criticalOnly: true,
+      localState: null,
+      setLocalState(state) { this.localState = state; },
+      setCriticalMode(enabled) {
+        this.criticalOnly = enabled;
+        if (!enabled && this.pendingFullSync) {
+          this.pendingFullSync = false;
+          manager.handleStateDrift(serverState);
+        }
+      }
+    };
+    manager.statePoller = poller;
+    manager.processSingleTurnEventWithTimeout = async () => {};
+    manager.turnEventQueue.push({ type: 'action_executed' });
+
+    await manager.processTurnEventQueue();
+
+    assert.equal(poller.criticalOnly, true,
+      'queue drain must not release a pending full sync during local presentation');
+    assert.equal(poller.pendingFullSync, true);
+    assert.equal(player.gridX, 1);
+    assert.equal(player.gridY, 2);
+    assert.equal(scene.battleState.turn, 4);
+
+    // An already in-flight poll can still complete while presentation is
+    // active, and must use the same deferred application gate.
+    poller.pendingFullSync = false;
+    manager.handleStateDrift(serverState);
+    assert.equal(manager.deferredPolledState, serverState);
+    assert.equal(player.gridX, 1);
+
+    scene.isActionSubmitting = false;
+    assert.equal(manager.flushDeferredAuthoritativeState(), true);
+    assert.equal(poller.criticalOnly, false);
+    assert.equal(player.gridX, 9);
+    assert.equal(player.gridY, 8);
+    assert.equal(scene.battleState.turn, 5);
+    assert.equal(scene.battleState.turnCount, 5);
+    assert.equal(manager.deferredPolledState, null);
+    assert.equal(poller.localState.turnCount, 5);
+  });
+
+  it('updates canonical turn state so poll recovery converges', () => {
+    const player = createUnit('player');
+    const { manager, scene } = createHarness([player]);
+    scene.stateRevision = 7;
+    scene.battleState = {
+      status: 'active',
+      activeUnitId: player.id,
+      turn: 2,
+      turnCount: 2
+    };
+    const poller = new BattleStatePoller(74, () => {}, scene.game);
+    manager.statePoller = poller;
+    const serverState = {
+      stateRevision: 7,
+      status: 'active',
+      activeUnitId: player.id,
+      turnCount: 7,
+      units: [{
+        id: player.id,
+        x: player.gridX,
+        y: player.gridY,
+        hp: player.hp,
+        mp: player.mp
+      }]
+    };
+
+    assert.equal(manager.handleStateDrift(serverState), true);
+    assert.equal(scene.battleState.turn, 7);
+    assert.equal(scene.battleState.turnCount, 7);
+    assert.equal(poller.localState.turnCount, 7);
+    assert.equal(poller.hasStateDrift(serverState), false);
+  });
+
+  it('keeps critical polling active when a deferred terminal state starts a new queue', async () => {
+    const player = createUnit('player');
+    const { manager, scene } = createHarness([player]);
+    scene.stateRevision = 1;
+    scene.battleState = {
+      status: 'active',
+      activeUnitId: player.id,
+      turn: 1,
+      units: []
+    };
+    const criticalModes = [];
+    manager.statePoller = {
+      setCriticalMode(enabled) { criticalModes.push(enabled); },
+      setLocalState() {}
+    };
+    let releaseTerminal;
+    let markTerminalStarted;
+    const terminalBlocked = new Promise(resolve => {
+      releaseTerminal = resolve;
+    });
+    const terminalStarted = new Promise(resolve => {
+      markTerminalStarted = resolve;
+    });
+    manager.processSingleTurnEventWithTimeout = async event => {
+      if (event.type === 'battle_end') {
+        markTerminalStarted();
+        await terminalBlocked;
+      }
+    };
+    manager.deferredAuthoritativeState = {
+      nextState: {
+        ...scene.battleState,
+        status: 'defeat',
+        stateRevision: 2
+      },
+      mapPatch: null,
+      stateRevision: 2,
+      availableActions: null
+    };
+    manager.turnEventQueue.push({ type: 'action_executed' });
+
+    await manager.processTurnEventQueue();
+    await terminalStarted;
+
+    assert.equal(manager.isProcessingQueue, true);
+    assert.equal(criticalModes.at(-1), true,
+      'the completed queue must not disable critical mode for its successor');
+
+    releaseTerminal();
+    await new Promise(resolve => globalThis.setImmediate(resolve));
+    assert.equal(manager.isProcessingQueue, false);
+    assert.equal(criticalModes.at(-1), false);
+  });
 });
 
 describe('BattleWebSocketManager revisioned state updates', () => {
+  it('lets a deferred full terminal state supersede same-revision polling', async () => {
+    clearBattleMapSessionCache();
+    const map = await createMinimalBattleMapV2FinalFixture();
+    const mutable = overrides => createBattleMutableStateV1({
+      turn: 1,
+      turnCount: 1,
+      activeUnitId: 'enemy',
+      status: 'active',
+      units: [{ id: 'enemy', hp: 20, tileX: 0, tileY: 0 }],
+      ...overrides
+    });
+    const session = new BattleMapSession();
+    await session.acceptSnapshot(createBattleStateSnapshotV1({
+      battleId: 85,
+      stateRevision: 2,
+      battleMap: map,
+      mutableState: mutable()
+    }));
+
+    const enemy = createUnit('enemy', { hp: 20, type: 'enemy', ownerId: null });
+    const { manager, scene } = createHarness([enemy]);
+    let criticalNotifications = 0;
+    let forceCompletions = 0;
+    let polledApplications = 0;
+    scene.battleId = 85;
+    scene.mapSession = session;
+    scene.battleState = session.state;
+    scene.stateRevision = 2;
+    scene.isActionSubmitting = true;
+    scene.onCriticalDrift = () => {
+      criticalNotifications++;
+      scene.animations.forceComplete();
+    };
+    scene.animations.forceComplete = () => { forceCompletions++; };
+    scene.onStateSync = () => { polledApplications++; };
+    manager.processTurnEventQueue = () => {};
+
+    const update = createBattleMutableStateUpdateV1({
+      battleId: 85,
+      battleMapSchemaVersion: 2,
+      terrainGenerationVersion: 2,
+      fullHash: map.diagnostics.hashes.fullHash,
+      baseStateRevision: 2,
+      stateRevision: 3,
+      mutableState: mutable({
+        turn: 2,
+        turnCount: 2,
+        status: 'defeat',
+        activeUnitId: null,
+        units: [{ id: 'enemy', hp: 0, tileX: 1, tileY: 0 }]
+      })
+    });
+    const accepted = await manager.handleRemoteStateUpdate({
+      battleId: 85,
+      update
+    });
+    const criticalPoll = {
+      stateRevision: 3,
+      status: 'defeat',
+      activeUnitId: null,
+      turnCount: 2,
+      units: [{ id: 'enemy', x: 1, y: 0, hp: 0, mp: enemy.mp }]
+    };
+
+    assert.equal(accepted.deferred, true);
+    manager.handleStateDrift(criticalPoll);
+    assert.equal(manager.deferredPolledState, criticalPoll);
+    manager.handleCriticalDrift('status_changed', 'defeat', criticalPoll);
+
+    assert.equal(criticalNotifications, 0);
+    assert.equal(forceCompletions, 0);
+    assert.equal(manager.battleEndPending, false);
+    assert.equal(manager.turnEventQueue.length, 0);
+
+    scene.isActionSubmitting = false;
+    assert.equal(manager.flushDeferredAuthoritativeState(), true);
+    assert.equal(scene.battleState.status, 'defeat');
+    assert.equal(polledApplications, 0,
+      'the equal-revision lightweight poll must not apply after full WS state');
+    assert.deepEqual(manager.turnEventQueue.map(event => event.type), [
+      'battle_end'
+    ]);
+  });
+
+  it('keeps V2 scene reconciliation behind queued semantic presentation', async () => {
+    clearBattleMapSessionCache();
+    const map = await createMinimalBattleMapV2FinalFixture();
+    const mutable = overrides => createBattleMutableStateV1({
+      turn: 1,
+      turnCount: 1,
+      activeUnitId: 'enemy',
+      units: [{ id: 'enemy', hp: 20, tileX: 0, tileY: 0 }],
+      ...overrides
+    });
+    const session = new BattleMapSession();
+    await session.acceptSnapshot(createBattleStateSnapshotV1({
+      battleId: 87,
+      stateRevision: 2,
+      battleMap: map,
+      mutableState: mutable()
+    }));
+
+    const enemy = createUnit('enemy', { hp: 20, type: 'enemy', ownerId: null });
+    const { manager, scene } = createHarness([enemy]);
+    const presentationOrder = [];
+    let releaseFirstEvent;
+    const firstEventBlocked = new Promise(resolve => {
+      releaseFirstEvent = resolve;
+    });
+    scene.battleId = 87;
+    scene.mapSession = session;
+    scene.battleState = session.state;
+    scene.stateRevision = 2;
+    scene.syncUnitsWithState = () => presentationOrder.push('state_sync');
+    manager.processSingleTurnEventWithTimeout = async event => {
+      presentationOrder.push({
+        turn_start: 'camera',
+        intent_highlight: 'intent',
+        unit_moved: 'move',
+        action_executed: 'battle_log'
+      }[event.type]);
+      if (event.type === 'turn_start') await firstEventBlocked;
+    };
+    manager.turnEventQueue.push(
+      { type: 'turn_start', unitId: 'enemy' },
+      { type: 'intent_highlight', unitId: 'enemy' },
+      { type: 'unit_moved', unitId: 'enemy' },
+      { type: 'action_executed', actorId: 'enemy' }
+    );
+
+    const queueDrain = manager.processTurnEventQueue();
+    await Promise.resolve();
+    const update = createBattleMutableStateUpdateV1({
+      battleId: 87,
+      battleMapSchemaVersion: 2,
+      terrainGenerationVersion: 2,
+      fullHash: map.diagnostics.hashes.fullHash,
+      baseStateRevision: 2,
+      stateRevision: 3,
+      mutableState: mutable({
+        turn: 2,
+        turnCount: 2,
+        units: [{ id: 'enemy', hp: 20, tileX: 3, tileY: 2 }]
+      })
+    });
+
+    const result = await manager.handleRemoteStateUpdate({
+      battleId: 87,
+      update
+    });
+
+    assert.equal(result.status, 'applied');
+    assert.equal(result.deferred, true);
+    assert.equal(session.current.stateRevision, 3,
+      'the verified map session should advance immediately');
+    assert.equal(scene.battleState.turn, 1,
+      'the scene must stay at the presented revision while events are queued');
+    assert.deepEqual(presentationOrder, ['camera']);
+
+    releaseFirstEvent();
+    await queueDrain;
+
+    assert.deepEqual(presentationOrder, [
+      'camera',
+      'intent',
+      'move',
+      'battle_log',
+      'state_sync'
+    ]);
+    assert.equal(scene.battleState.turn, 2);
+    assert.equal(scene.stateRevision, 3);
+    assert.equal(manager.deferredAuthoritativeState, null);
+  });
+
+  it('retains only the newest accepted update until local presentation ends', async () => {
+    clearBattleMapSessionCache();
+    const map = await createMinimalBattleMapV2FinalFixture();
+    const mutable = turn => createBattleMutableStateV1({
+      turn,
+      turnCount: turn,
+      units: [{ id: 'player', hp: 20, tileX: turn, tileY: 0 }]
+    });
+    const session = new BattleMapSession();
+    await session.acceptSnapshot(createBattleStateSnapshotV1({
+      battleId: 86,
+      stateRevision: 2,
+      battleMap: map,
+      mutableState: mutable(1)
+    }));
+
+    const player = createUnit('player', { hp: 20 });
+    const { manager, scene } = createHarness([player]);
+    const synchronizedTurns = [];
+    scene.battleId = 86;
+    scene.mapSession = session;
+    scene.battleState = session.state;
+    scene.stateRevision = 2;
+    scene.isActionSubmitting = true;
+    scene.syncUnitsWithState = () => {
+      synchronizedTurns.push(scene.battleState.turn);
+    };
+
+    for (const [baseStateRevision, stateRevision, turn] of [
+      [2, 3, 2],
+      [3, 4, 3]
+    ]) {
+      const update = createBattleMutableStateUpdateV1({
+        battleId: 86,
+        battleMapSchemaVersion: 2,
+        terrainGenerationVersion: 2,
+        fullHash: map.diagnostics.hashes.fullHash,
+        baseStateRevision,
+        stateRevision,
+        mutableState: mutable(turn)
+      });
+      const result = await manager.handleRemoteStateUpdate({
+        battleId: 86,
+        update
+      });
+      assert.equal(result.deferred, true);
+    }
+
+    assert.equal(session.current.stateRevision, 4);
+    assert.equal(scene.battleState.turn, 1);
+    manager.handleStateDrift({
+      stateRevision: 3,
+      status: 'defeat',
+      turnCount: 2,
+      units: []
+    });
+    assert.equal(manager.deferredPolledState, null,
+      'a lightweight poll cannot supersede the accepted map session');
+    assert.equal(manager.battleEndPending, false,
+      'a stale polled terminal state must not queue battle end');
+    const staleSnapshot = createBattleStateSnapshotV1({
+      battleId: 86,
+      stateRevision: 3,
+      battleMap: map,
+      mutableState: mutable(2)
+    });
+    assert.deepEqual(
+      await manager.handleRemoteStateUpdate({
+        battleId: 86,
+        snapshot: staleSnapshot
+      }),
+      { status: 'duplicate', reason: 'stale_revision' }
+    );
+    assert.equal(session.current.stateRevision, 4,
+      'a reordered snapshot cannot roll back the accepted session');
+    assert.equal(manager.flushDeferredAuthoritativeState(), false,
+      'a caller cannot flush while local presentation is still active');
+
+    scene.isActionSubmitting = false;
+    assert.equal(manager.flushDeferredAuthoritativeState(), true);
+    assert.equal(scene.battleState.turn, 3);
+    assert.equal(scene.stateRevision, 4);
+    assert.deepEqual(synchronizedTurns, [3]);
+
+    scene.isActionSubmitting = true;
+    manager.deferredAuthoritativeState = { nextState: { turn: 99 } };
+    manager.cleanup();
+    assert.equal(manager.deferredAuthoritativeState, null);
+  });
+
+  it('uses canonical battle state turns for the poller baseline', () => {
+    const player = createUnit('player');
+    const { manager, scene } = createHarness([player]);
+    let baseline;
+    manager.statePoller = {
+      setLocalState(state) { baseline = state; },
+      stop() {}
+    };
+    scene.battleLogTurnCounter = 99;
+    scene.battleState = {
+      status: 'active',
+      activeUnitId: player.id,
+      turn: 7,
+      turnCount: 3
+    };
+
+    manager.updatePollerState();
+    assert.equal(baseline.turnCount, 7);
+
+    delete scene.battleState.turn;
+    manager.updatePollerState();
+    assert.equal(baseline.turnCount, 3);
+  });
+
   it('applies an ordered update once and recovers from gaps and map mismatches', async () => {
     clearBattleMapSessionCache();
     const map = await createMinimalBattleMapV2FinalFixture();

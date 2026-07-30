@@ -23,6 +23,7 @@ import { createPlayerHandoffCoordinator } from
 import { deriveEncounterTerrainSeed } from '../services/battle/encounterService.js';
 import {
   CURRENT_BATTLE_MAP_VERSION,
+  extractBattleMutableStateForCommit,
   generateBattleMap,
   selectBattleMapGenerationVersion
 } from '../services/battle/battleMapGenerationService.js';
@@ -459,10 +460,11 @@ async function commitBattleActionState(command, {
   bossState = null
 } = {}) {
   return withTransaction(async client => {
-    const committed = await battleStateRepository.commitBattleState(
-      command,
-      { client }
-    );
+    const { flatState, ...commit } = command;
+    const committed = await battleStateRepository.commitMutableState({
+      ...commit,
+      mutableState: extractBattleMutableStateForCommit(flatState)
+    }, { client });
     if (committed.idempotent) return committed;
 
     await consumeBattleInventoryItem(client, consumedInventoryId, userId);
@@ -647,14 +649,14 @@ async function handleBattleEnd(
       ? (battleEndResult.winningTeamId === 1 ? state.player1Id : state.player2Id)
       : null;
     const completion = await withTransaction(async client => {
-      const committed = await battleStateRepository.commitBattleState({
+      const committed = await battleStateRepository.commitMutableState({
         battleId,
         expectedRevision,
         commandType,
         idempotencyKey: commandIdentity,
         idempotencyRequest,
         replayMetadata,
-        flatState: state,
+        mutableState: extractBattleMutableStateForCommit(state),
         lifecycle: {
           status: terminalStatus,
           winnerId,
@@ -1762,7 +1764,6 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
 
     // Timers and all presentation events observe only the committed successor.
     cancelTurnTimer(battleId);
-    await battleWebsocket.broadcastStateUpdate(battleId, actionCommit.update);
   } else {
     state.turnPredictions = battleService.predictTurnOrder(state, 10);
     try {
@@ -1801,12 +1802,6 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
       actionResult: result
     };
     cancelTurnTimer(battleId);
-    if (completion.committedUpdate) {
-      await battleWebsocket.broadcastStateUpdate(
-        battleId,
-        completion.committedUpdate
-      );
-    }
   }
 
   // Legacy actionSequence is telemetry only. Recording it
@@ -1840,6 +1835,14 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
     result,
     req.user.userId
   );
+
+  // Keep reconciliation behind semantic presentation events. The client can
+  // then animate camera, intent, movement, and impacts before applying the
+  // authoritative checkpoint for the same committed action.
+  const committedUpdate = completion?.committedUpdate ?? actionCommit?.update;
+  if (committedUpdate) {
+    await battleWebsocket.broadcastStateUpdate(battleId, committedUpdate);
+  }
 
   if (completion) {
     await battleWebsocket.broadcastBattleEnd(
@@ -2188,14 +2191,14 @@ router.post('/:battleId/zodiac-ability', authenticate, actionLimiter, asyncHandl
           req.user.userId
         )
       };
-      const committed = await battleStateRepository.commitBattleState({
+      const committed = await battleStateRepository.commitMutableState({
         battleId,
         expectedRevision: battle.stateRevision,
         commandType: zodiacCommand.commandType,
         idempotencyKey: zodiacCommand.idempotencyKey,
         idempotencyRequest: zodiacCommand.idempotencyRequest,
         replayMetadata: { response },
-        flatState: state,
+        mutableState: extractBattleMutableStateForCommit(state),
         allowedStatuses: ['active']
       }, { client });
       if (committed.idempotent) {
@@ -2231,7 +2234,6 @@ router.post('/:battleId/zodiac-ability', authenticate, actionLimiter, asyncHandl
 
   const { committed, response, presentation } = commandResult;
   validateActionSequence(battleId, req.user.userId, actionSequence);
-  await battleWebsocket.broadcastStateUpdate(battleId, committed.update);
 
   // Broadcast the ability use via WebSocket
   await battleWebsocket.broadcastActionExecuted(battleId, presentation.sourceUnitId, 'zodiac_ability', {
@@ -2241,6 +2243,7 @@ router.post('/:battleId/zodiac-ability', authenticate, actionLimiter, asyncHandl
     targetId: presentation.targetUnitId,
     targetName: presentation.targetUnitName
   }, req.user.userId);
+  await battleWebsocket.broadcastStateUpdate(battleId, committed.update);
 
   res.json({
     ...response,

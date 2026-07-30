@@ -12,7 +12,10 @@ import {
   createBattleMutableStateV1,
   negotiateBattleMapCapabilities
 } from '../../../../shared/battleStateProtocol.js';
-import { battleMapV2ToFlatState } from '../../../../shared/battleMap/BattleMapAdapter.js';
+import {
+  BATTLE_MAP_V2_FLAT_FIELDS,
+  battleMapV2ToFlatState
+} from '../../../../shared/battleMap/BattleMapAdapter.js';
 import {
   recordBattleMapGenerationFailed,
   recordBattleMapGenerationStarted,
@@ -84,6 +87,22 @@ export function extractBattleMutableState(initialState = {}) {
   for (const field of BATTLE_MUTABLE_STATE_V1_FIELDS) {
     if (Object.prototype.hasOwnProperty.call(initialState, field)) {
       mutableInput[field] = initialState[field];
+    }
+  }
+  return createBattleMutableStateV1(mutableInput);
+}
+
+/**
+ * Project a trusted flat engine successor into the closed mutable protocol.
+ * Declared map fields are deliberately omitted, while every other unknown key
+ * remains visible to createBattleMutableStateV1 and therefore fails closed.
+ */
+export function extractBattleMutableStateForCommit(flatState = {}) {
+  assertPlainObject(flatState, 'flatState');
+  const mutableInput = {};
+  for (const [field, value] of Object.entries(flatState)) {
+    if (!BATTLE_MAP_V2_FLAT_FIELDS.includes(field)) {
+      mutableInput[field] = value;
     }
   }
   return createBattleMutableStateV1(mutableInput);

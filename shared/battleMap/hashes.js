@@ -23,6 +23,8 @@ export const BATTLE_MAP_HASH_DOMAINS = Object.freeze({
   fullHash: 'battle-map-full-v2'
 });
 
+const verifiedFrozenFinalMaps = new WeakSet();
+
 function exactObject(value, path, keys) {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
     throw new TypeError(`${path} must be an object`);
@@ -294,7 +296,9 @@ export async function finalizeBattleMapV2(candidate) {
   if (!hashesEqual(hashes, independentlyComputed)) {
     throw new Error('BattleMapV2 hash verification failed during finalization');
   }
-  return deepFreeze(candidateClone);
+  const finalMap = deepFreeze(candidateClone);
+  verifiedFrozenFinalMaps.add(finalMap);
+  return finalMap;
 }
 
 function hashesEqual(left, right) {
@@ -304,6 +308,7 @@ function hashesEqual(left, right) {
 }
 
 export async function verifyBattleMapV2Final(finalMap) {
+  if (verifiedFrozenFinalMaps.has(finalMap)) return true;
   assertBattleMapV2Final(finalMap);
   const candidate = candidateFromFinal(finalMap);
   assertBattleMapV2Candidate(candidate);
@@ -321,12 +326,24 @@ export async function assertVerifiedBattleMapV2Final(finalMap) {
 }
 
 /**
- * Final wire/persistence gate: verify a closed final value, then recursively
- * freeze a canonical clone so callers cannot mutate hashed state.
+ * Returns a trusted immutable snapshot of a final map. Only identities created
+ * by finalization or this normalizer may take the fast path. Every other input
+ * is cloned before the first await so verification and later serialization
+ * cannot observe different values from an accessor-backed source object.
  */
-export async function loadAndFreezeBattleMapV2Final(finalMap) {
-  await assertVerifiedBattleMapV2Final(finalMap);
+export async function normalizeBattleMapV2Final(finalMap) {
+  if (verifiedFrozenFinalMaps.has(finalMap)) return finalMap;
   const clone = deepCloneJsonValue(finalMap);
   await assertVerifiedBattleMapV2Final(clone);
-  return deepFreeze(clone);
+  const frozenClone = deepFreeze(clone);
+  verifiedFrozenFinalMaps.add(frozenClone);
+  return frozenClone;
+}
+
+/**
+ * Final wire/persistence gate. Canonical inputs retain their exact identity;
+ * untrusted inputs become a verified, recursively frozen canonical snapshot.
+ */
+export async function loadAndFreezeBattleMapV2Final(finalMap) {
+  return normalizeBattleMapV2Final(finalMap);
 }

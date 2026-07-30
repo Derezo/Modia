@@ -4,8 +4,8 @@ import {
   TERRAIN_GENERATION_VERSION
 } from './schema.js';
 import {
-  assertVerifiedBattleMapV2Final,
-  loadAndFreezeBattleMapV2Final
+  loadAndFreezeBattleMapV2Final,
+  normalizeBattleMapV2Final
 } from './hashes.js';
 import {
   deepCloneJsonValue,
@@ -41,9 +41,9 @@ function pickMapFields(flatState) {
  * representation. Mutable fields cannot shadow any map field.
  */
 export async function battleMapV2ToFlatState(finalMap, mutableState = {}) {
-  await assertVerifiedBattleMapV2Final(finalMap);
+  const normalizedMap = await normalizeBattleMapV2Final(finalMap);
   assertNoMapFields(mutableState, 'mutableState');
-  return deepFreeze(deepCloneJsonValue({ ...mutableState, ...finalMap }));
+  return deepFreeze(deepCloneJsonValue({ ...mutableState, ...normalizedMap }));
 }
 
 /**
