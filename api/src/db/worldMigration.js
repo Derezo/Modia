@@ -35,8 +35,8 @@ import {
   mergeDiscoveryRecords,
   remapNodeProgress,
 } from './worldMigrationMapping.js';
+import { WORLD_MIGRATION_LOCK_KEY } from './worldMigrationLock.js';
 
-const MIGRATION_LOCK_KEY = 'modia:player-preserving-world-migration:v1';
 const COMBAT_TYPES = new Set(['forest', 'cave', 'mountain', 'bridge']);
 
 const GRAPH_REFERENCES = new Set([
@@ -68,6 +68,7 @@ export const HANDLED_WORLD_NODE_REFERENCES = Object.freeze([
   'public.user_shrine_visits.node_id',
   'public.user_discoveries.node_id',
   'public.user_fishing_catches.node_id',
+  'public.user_fishing_sessions.node_id',
   'public.user_ruins_completions.node_id',
   'public.user_watchtower_activations.node_id',
   'public.user_caravan_transactions.node_id',
@@ -95,6 +96,7 @@ const TYPE_RESTRICTED_REFERENCES = Object.freeze({
   'public.user_shrine_visits.node_id': new Set(['shrine']),
   'public.user_discoveries.node_id': new Set(['discovery']),
   'public.user_fishing_catches.node_id': new Set(['fishing_spot']),
+  'public.user_fishing_sessions.node_id': new Set(['fishing_spot']),
   'public.user_ruins_completions.node_id': new Set(['ruins']),
   'public.user_watchtower_activations.node_id': new Set(['watchtower']),
   'public.user_caravan_transactions.node_id': new Set([
@@ -1428,7 +1430,7 @@ export async function planPlayerPreservingWorldMigration({
 async function lockMigrationTables(client, references) {
   await client.query(
     'SELECT pg_advisory_xact_lock(hashtext($1))',
-    [MIGRATION_LOCK_KEY]
+    [WORLD_MIGRATION_LOCK_KEY]
   );
   const publicTables = await client.query(`
     SELECT table_name

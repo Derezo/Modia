@@ -18,6 +18,8 @@ import { createPlayerBattleUnit } from '../services/battleUnitFactory.js';
 import { validateFormationPayload } from '../services/battle/formationValidation.js';
 import { getParticipantAvailableActions } from
   '../services/battle/participantActionAvailability.js';
+import { createPlayerHandoffCoordinator } from
+  '../services/battle/playerHandoffCoordinator.js';
 import { deriveEncounterTerrainSeed } from '../services/battle/encounterService.js';
 import {
   CURRENT_BATTLE_MAP_VERSION,
@@ -100,6 +102,10 @@ const BATTLE_START_REQUEST_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/;
 const BATTLE_ACTION_COMMAND_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const PLAYER_ACTION_COMMAND_TYPE = 'player_action';
 const PLAYER_ACTION_TYPES = new Set(['move', 'attack', 'skill', 'item', 'wait']);
+const { notifyPlayerTurnIfCurrent } = createPlayerHandoffCoordinator({
+  loadBattle: battleId => battleStateRepository.loadBattle(battleId),
+  notifyPlayerTurn: (...args) => battleTurnManager.notifyPlayerTurn(...args)
+});
 
 function createBattleCreationKey(requestId, userId, nodeId) {
   const normalizedRequestId = requestId ?? randomUUID();
@@ -647,6 +653,70 @@ async function handleBattleEnd(
 }
 
 /**
+ * Ensure a replayed or freshly committed turn-ending action cannot strand its
+ * authoritative successor. Partial-turn and terminal receipts intentionally
+ * have no successor work.
+ */
+async function ensureCurrentSuccessorProgress(battleId, receipt, userId) {
+  const replayMetadata = receipt?.replayMetadata;
+  if (replayMetadata?.battleStatus !== 'active' ||
+    replayMetadata.turnContinues !== false) {
+    return { ensured: false, reason: 'no_active_successor' };
+  }
+
+  const expectedState = receipt.envelope?.state ?? receipt.mutableState;
+  if (!expectedState || !Number.isSafeInteger(receipt.stateRevision)) {
+    return { ensured: false, reason: 'receipt_state_unavailable' };
+  }
+
+  const authoritativeBattle = await battleStateRepository.loadBattle(battleId);
+  if (authoritativeBattle.status !== 'active' ||
+    authoritativeBattle.stateRevision !== receipt.stateRevision ||
+    String(authoritativeBattle.state.activeUnitId) !==
+      String(expectedState.activeUnitId)) {
+    return { ensured: false, reason: 'receipt_superseded' };
+  }
+
+  const successor = authoritativeBattle.state.units?.find(
+    unit => unit.id === authoritativeBattle.state.activeUnitId
+  );
+  if (successor?.type === 'player') {
+    const notification = await notifyPlayerTurnIfCurrent(
+      battleId,
+      expectedState,
+      receipt.stateRevision
+    );
+    return {
+      ensured: notification.notified,
+      reason: notification.notified ? 'player_notified' : 'receipt_superseded'
+    };
+  }
+
+  // Enemy and unknown successors both enter the authoritative turn loop. The
+  // manager reloads once more when this callback runs and deduplicates jobs by
+  // battle ID, covering concurrent fresh/replay triggers.
+  setImmediate(async () => {
+    try {
+      const enemyTurnResult = await battleTurnManager.processEnemyTurnsAsync(
+        battleId,
+        authoritativeBattle.state,
+        aiService,
+        battleService,
+        authoritativeBattle.stateRevision
+      );
+      await handleProcessedEnemyTurns(
+        battleId,
+        enemyTurnResult,
+        userId
+      );
+    } catch (error) {
+      console.error('Async enemy turn processing error:', error);
+    }
+  });
+  return { ensured: true, reason: 'enemy_processing_scheduled' };
+}
+
+/**
  * Consume the revisioned enemy-turn result and complete terminal state through
  * the repository before publishing lifecycle side effects.
  */
@@ -695,30 +765,13 @@ async function handleProcessedEnemyTurns(
     // state. A second identical "settle" commit created an actionable window in
     // which a fast player action could advance the revision and make this
     // handoff fail. Re-read only to ensure we do not publish a stale turn notice.
-    const authoritativeBattle = await battleStateRepository.loadBattle(battleId);
-    const authoritativeState = authoritativeBattle.state;
-    const authoritativeUnit = authoritativeState.units?.find(
-      unit => unit.id === authoritativeState.activeUnitId
+    const handoff = await notifyPlayerTurnIfCurrent(
+      battleId,
+      state,
+      stateRevision
     );
-    const handoffIsCurrent = authoritativeBattle.status === 'active' &&
-      authoritativeBattle.stateRevision === stateRevision &&
-      String(authoritativeState.activeUnitId) === String(state.activeUnitId) &&
-      authoritativeUnit?.type === 'player';
-
-    state = authoritativeState;
-    stateRevision = authoritativeBattle.stateRevision;
-    if (handoffIsCurrent) {
-      await battleTurnManager.notifyPlayerTurn(
-        battleId,
-        state,
-        stateRevision
-      );
-    } else {
-      console.log(
-        '[AsyncTurnManager] Player handoff was superseded before notification for battle',
-        battleId
-      );
-    }
+    state = handoff.state;
+    stateRevision = handoff.stateRevision;
   }
 
   return {
@@ -1379,6 +1432,11 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
     await throwBattleActionCommitError(error, battleId, req.user.userId);
   }
   if (priorReceipt) {
+    await ensureCurrentSuccessorProgress(
+      battleId,
+      priorReceipt,
+      req.user.userId
+    );
     return sendBattleActionReplay(
       res,
       priorReceipt,
@@ -1496,7 +1554,7 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
 
   // Track if turn continues (two-action system: move + act)
   const turnContinues = !result.turnEnded && battleStatus === 'active';
-  const availableActions = battleStatus === 'active' && turnContinues
+  let availableActions = battleStatus === 'active' && turnContinues
     ? result.availableActions
     : null;
   let replayMetadata = {
@@ -1506,17 +1564,29 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
     availableActions
   };
 
-  let committedPlayerState = null;
   let committedRevision = null;
+  let actionCommit = null;
   let completion = null;
 
   if (battleStatus === 'active') {
     if (result.turnEnded) {
       battleService.advanceToNextActorWithCT(state);
+      // The action receipt and immediate HTTP response must describe the
+      // successor selected by CT. Scope the details to the acting participant
+      // so a consecutive local turn is immediately actionable without
+      // exposing another player's legal actions.
+      availableActions = getParticipantAvailableActions(
+        battle,
+        state,
+        req.user.userId
+      );
+      replayMetadata = {
+        ...replayMetadata,
+        availableActions
+      };
     }
     state.turnPredictions = battleService.predictTurnOrder(state, 10);
 
-    let actionCommit;
     try {
       actionCommit = await commitBattleActionState({
         battleId,
@@ -1537,6 +1607,11 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
       await throwBattleActionCommitError(error, battleId, req.user.userId);
     }
     if (actionCommit.idempotent) {
+      await ensureCurrentSuccessorProgress(
+        battleId,
+        actionCommit,
+        req.user.userId
+      );
       return sendBattleActionReplay(
         res,
         actionCommit,
@@ -1546,7 +1621,6 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
       );
     }
     state = structuredClone(actionCommit.envelope.state);
-    committedPlayerState = state;
     committedRevision = actionCommit.envelope.stateRevision;
 
     // Timers and all presentation events observe only the committed successor.
@@ -1644,25 +1718,11 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
     }
     cleanupBattleSequences(battleId);
   } else if (result.turnEnded) {
-    // Process enemy turns asynchronously from the exact committed revision.
-    setImmediate(async () => {
-      try {
-        const enemyTurnResult = await battleTurnManager.processEnemyTurnsAsync(
-          battleId,
-          committedPlayerState,
-          aiService,
-          battleService,
-          committedRevision
-        );
-        await handleProcessedEnemyTurns(
-          battleId,
-          enemyTurnResult,
-          req.user.userId
-        );
-      } catch (error) {
-        console.error('Async enemy turn processing error:', error);
-      }
-    });
+    await ensureCurrentSuccessorProgress(
+      battleId,
+      actionCommit,
+      req.user.userId
+    );
   }
 
   res.json({
@@ -1671,7 +1731,7 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
     battleStatus,
     // Two-action turn system: indicate if turn continues
     turnContinues,
-    availableActions,
+    availableActions: replayMetadata.availableActions,
     stateRevision: completion?.stateRevision ?? committedRevision,
     commandId: actionCommand.commandId
   });

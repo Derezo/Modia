@@ -519,20 +519,24 @@ export class ApiClient {
     return this.post(`/fishing/${nodeId}/start`);
   }
 
-  registerCatch(nodeId) {
-    return this.post(`/fishing/${nodeId}/catch`);
+  registerCatch(nodeId, sessionId) {
+    return this.post(`/fishing/${nodeId}/catch`, { sessionId });
   }
 
-  claimBigOne(nodeId) {
-    return this.post(`/fishing/${nodeId}/big-one`);
+  claimBigOne(nodeId, sessionId) {
+    return this.post(`/fishing/${nodeId}/big-one`, { sessionId });
   }
 
-  endFishing(nodeId) {
-    return this.post(`/fishing/${nodeId}/end`);
+  endFishing(nodeId, sessionId) {
+    return this.post(`/fishing/${nodeId}/end`, { sessionId });
   }
 
   getFishingStatus(nodeId) {
     return this.get(`/fishing/${nodeId}/status`);
+  }
+
+  getActiveFishingStatus() {
+    return this.get('/fishing/status');
   }
 
   // Marketplace endpoints

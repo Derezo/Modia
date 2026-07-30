@@ -13,10 +13,20 @@ import {
   registerCatch,
   claimBigOne,
   endSession,
+  getActiveSessionStatus,
   getSessionStatus
 } from '../services/fishingService.js';
 
 const router = Router();
+
+/**
+ * GET /fishing/status
+ * Find the user's active session so the client can restore it after refresh.
+ */
+router.get('/status', authenticate, asyncHandler(async (req, res) => {
+  const status = await getActiveSessionStatus(req.user.userId);
+  res.json(status || { active: false });
+}));
 
 /**
  * POST /fishing/:nodeId/start
@@ -36,9 +46,10 @@ router.post('/:nodeId/start', authenticate, asyncHandler(async (req, res) => {
  */
 router.post('/:nodeId/catch', authenticate, asyncHandler(async (req, res) => {
   const { nodeId } = req.params;
+  const { sessionId } = req.body || {};
   const userId = req.user.userId;
 
-  const result = await registerCatch(userId, parseInt(nodeId, 10));
+  const result = await registerCatch(userId, parseInt(nodeId, 10), sessionId);
   res.json(result);
 }));
 
@@ -48,9 +59,10 @@ router.post('/:nodeId/catch', authenticate, asyncHandler(async (req, res) => {
  */
 router.post('/:nodeId/big-one', authenticate, asyncHandler(async (req, res) => {
   const { nodeId } = req.params;
+  const { sessionId } = req.body || {};
   const userId = req.user.userId;
 
-  const result = await claimBigOne(userId, parseInt(nodeId, 10));
+  const result = await claimBigOne(userId, parseInt(nodeId, 10), sessionId);
   res.json(result);
 }));
 
@@ -60,9 +72,10 @@ router.post('/:nodeId/big-one', authenticate, asyncHandler(async (req, res) => {
  */
 router.post('/:nodeId/end', authenticate, asyncHandler(async (req, res) => {
   const { nodeId } = req.params;
+  const { sessionId } = req.body || {};
   const userId = req.user.userId;
 
-  const result = await endSession(userId, parseInt(nodeId, 10));
+  const result = await endSession(userId, parseInt(nodeId, 10), sessionId);
   res.json(result);
 }));
 
@@ -70,17 +83,17 @@ router.post('/:nodeId/end', authenticate, asyncHandler(async (req, res) => {
  * GET /fishing/:nodeId/status
  * Get current session status
  */
-router.get('/:nodeId/status', authenticate, (req, res) => {
+router.get('/:nodeId/status', authenticate, asyncHandler(async (req, res) => {
   const { nodeId } = req.params;
   const userId = req.user.userId;
 
-  const status = getSessionStatus(userId, parseInt(nodeId, 10));
+  const status = await getSessionStatus(userId, parseInt(nodeId, 10));
 
   if (!status) {
     res.json({ active: false });
   } else {
     res.json(status);
   }
-});
+}));
 
 export default router;

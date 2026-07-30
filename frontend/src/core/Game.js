@@ -308,8 +308,23 @@ export class Game {
           // Active battle found - restore to battle scene
           this.scenes.switchTo('battle', battleData);
         } catch (battleErr) {
-          // No active battle (404) or other error - go to world map
-          this.scenes.switchTo('worldMap');
+          // Fishing sessions remain authoritative on the server. Restore the
+          // scene after a browser refresh instead of attempting a second start.
+          try {
+            const fishingStatus = await this.api.getActiveFishingStatus();
+            if (fishingStatus.active) {
+              this.scenes.switchTo('fishing', {
+                nodeId: fishingStatus.nodeId,
+                nodeName: fishingStatus.nodeName,
+                session: fishingStatus
+              });
+            } else {
+              this.scenes.switchTo('worldMap');
+            }
+          } catch (fishingErr) {
+            // No restorable fishing session (or an older API) - use the map.
+            this.scenes.switchTo('worldMap');
+          }
         }
       } catch (err) {
         // Distinguish between auth failures and network failures

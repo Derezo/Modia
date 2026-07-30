@@ -98,6 +98,7 @@ Fish Value = baseValue * sizeMultiplier * (isBigOne ? 2.0 : 1.0)
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
+| `/api/fishing/status` | GET | Restore the user's active session |
 | `/api/fishing/:nodeId/start` | POST | Start fishing session |
 | `/api/fishing/:nodeId/catch` | POST | Register a catch |
 | `/api/fishing/:nodeId/big-one` | POST | Claim Big One |
@@ -397,6 +398,7 @@ Lore unlock locations that reveal world history and secrets.
 
 | Table | Purpose |
 |-------|---------|
+| `user_fishing_sessions` | Resumable fishing state and exactly-once collection receipts |
 | `user_fishing_catches` | Fish catch history |
 | `user_ruins_completions` | Puzzle completion tracking |
 | `user_caravan_transactions` | Caravan purchase records |

@@ -216,6 +216,46 @@ describe('BattleScene authoritative action gate', () => {
     assert.equal(requests[1].inventoryId, 77);
   });
 
+  it('recovers a direct local successor from the turn-ending action response', async () => {
+    const { scene, unit } = createSceneHarness();
+    const successorAvailability = {
+      canMove: true,
+      canAct: true,
+      canWait: true,
+      turnPhase: 'ready'
+    };
+    scene.inEnemySequence = false;
+    scene.updateUI = () => {};
+    scene.addBattleLogEntry = () => {};
+    scene.playActionPresentation = () => null;
+    scene.syncUnitsWithState = () => {};
+    scene.ui.clearTargetSticky = () => {};
+
+    const processed = await scene.processActionResult({
+      stateRevision: 4,
+      state: {
+        status: 'active',
+        activeUnitId: unit.id,
+        units: [{ id: unit.id }]
+      },
+      actionResult: {},
+      battleStatus: 'active',
+      turnContinues: false,
+      availableActions: successorAvailability
+    }, {
+      type: 'wait',
+      unitId: unit.id
+    });
+
+    assert.equal(processed, true);
+    assert.equal(scene.stateRevision, 4);
+    assert.equal(scene.battleState.activeUnitId, unit.id);
+    assert.deepEqual(scene.serverAvailableActions, successorAvailability);
+    assert.equal(scene.inputEnabled, true);
+    assert.equal(scene.inEnemySequence, false);
+    assert.equal(scene.wsManager.lastYourTurnUnitId, unit.id);
+  });
+
   it('does not let an HTTP result become stale during presentation and overwrite a recovered local turn', async () => {
     const { scene, unit } = createSceneHarness();
     const enemy = {

@@ -2390,10 +2390,10 @@ export class BattleScene extends Scene {
       }
     }
 
-    // Update battle state SELECTIVELY - don't override activeUnitId from HTTP response
-    // WebSocket turn_start is authoritative for turn transitions (prevents duplicate camera panning)
-    // HTTP response arrives before WebSocket, so if we set activeUnitId here, updateUI() triggers
-    // camera pan, then turn_start arrives and triggers it AGAIN
+    // Update battle state selectively. WebSocket turn_start owns camera
+    // presentation, while the direct-local handoff below may still update the
+    // logical active unit. HTTP and WebSocket delivery are intentionally
+    // treated as unordered.
     console.log('[Camera] processActionResult - syncing unit data only (activeUnitId stays:', this.battleState?.activeUnitId, ')');
     this.syncUnitsWithState(state?.units || []);
 
@@ -2434,20 +2434,50 @@ export class BattleScene extends Scene {
       // Update UI to show remaining options
       this.updateUIForPartialTurn();
     } else {
-      // Turn complete: remain logically locked until an authoritative local
-      // turn recovery arrives via your_turn, turn_start, or synchronization.
-      this.applyAuthoritativeAvailability(null);
-      this.inputEnabled = false;
-      if (this.wsManager) this.wsManager.lastYourTurnUnitId = null;
+      const responseActiveUnit = state?.units?.find(
+        unit => String(unit.id) === String(state.activeUnitId)
+      );
+      const renderedActiveUnit = responseActiveUnit
+        ? this.units.get(responseActiveUnit.id)
+        : null;
+      const hasAuthoritativeLocalHandoff = !!availableActions &&
+        !!renderedActiveUnit &&
+        this.isLocalActiveUnit(renderedActiveUnit);
 
-      // Mark that we're entering enemy sequence (prevents camera drift to player)
-      // This flag is set BEFORE WebSocket events arrive, preventing the race condition
-      this.inEnemySequence = true;
-      console.log('[Camera] Turn complete, entering enemy sequence (camera will wait for queue)');
+      if (hasAuthoritativeLocalHandoff) {
+        // CT can hand a completed turn directly to another local character (or
+        // back to the same fast character) without an intervening enemy. The
+        // server sends that successor in this HTTP response as well as over
+        // WebSocket. Recover logical control from the response so an earlier
+        // turn_start/your_turn cannot be overwritten by response ordering.
+        this.recoverLocalTurn({
+          unitId: responseActiveUnit.id,
+          availableActions,
+          stateRevision: responseRevision
+        });
+        if (this.wsManager) {
+          this.wsManager.lastYourTurnUnitId = responseActiveUnit.id;
+        }
+        console.log(
+          '[Battle] Turn complete, recovered direct local handoff:',
+          responseActiveUnit.id
+        );
+      } else {
+        // An enemy or remote player owns the committed successor. Remain
+        // logically locked while WebSocket presentation advances the turn.
+        this.applyAuthoritativeAvailability(null);
+        this.inputEnabled = false;
+        if (this.wsManager) this.wsManager.lastYourTurnUnitId = null;
 
-      // Don't call updateUI() here - let the queue system handle turn transitions
-      // The queue will process enemy turn_start events, then player turn_start,
-      // which will call updateUI() at the appropriate time
+        // Mark that we're entering enemy sequence (prevents camera drift to player)
+        // This flag is set BEFORE WebSocket events arrive, preventing the race condition
+        this.inEnemySequence = true;
+        console.log('[Camera] Turn complete, entering enemy sequence (camera will wait for queue)');
+
+        // Don't call updateUI() here - let the queue system handle turn transitions
+        // The queue will process enemy turn_start events, then player turn_start,
+        // which will call updateUI() at the appropriate time
+      }
     }
     return true;
   }

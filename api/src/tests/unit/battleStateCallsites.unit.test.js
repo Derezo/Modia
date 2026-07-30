@@ -112,7 +112,7 @@ describe('battle route enemy-turn revision handoff', () => {
     const calls = [
       /processEnemyTurnsAsync\(\s*battleId,\s*battleState,\s*aiService,\s*battleService,\s*stateRevision\s*\)/,
       /processEnemyTurnsAsync\(\s*battleId,\s*state,\s*aiService,\s*battleService,\s*battleEnvelope\.stateRevision\s*\)/,
-      /processEnemyTurnsAsync\(\s*battleId,\s*committedPlayerState,\s*aiService,\s*battleService,\s*committedRevision\s*\)/
+      /processEnemyTurnsAsync\(\s*battleId,\s*authoritativeBattle\.state,\s*aiService,\s*battleService,\s*authoritativeBattle\.stateRevision\s*\)/
     ];
 
     for (const call of calls) {
@@ -169,7 +169,10 @@ describe('battle route enemy-turn revision handoff', () => {
     const commitIndex = actionRoute.indexOf(
       'actionCommit = await commitBattleActionState'
     );
-    const launchIndex = actionRoute.indexOf('setImmediate(async () => {', commitIndex);
+    const launchIndex = actionRoute.indexOf(
+      'await ensureCurrentSuccessorProgress(',
+      commitIndex
+    );
 
     assert.match(actionRoute, /loadParticipantBattleOr404/);
     assert.match(
@@ -178,7 +181,11 @@ describe('battle route enemy-turn revision handoff', () => {
     );
     assert.match(
       actionRoute,
-      /committedPlayerState = state;[\s\S]*committedRevision = actionCommit\.envelope\.stateRevision/
+      /advanceToNextActorWithCT\(state\);[\s\S]*availableActions = getParticipantAvailableActions\(\s*battle,\s*state,\s*req\.user\.userId\s*\);[\s\S]*replayMetadata = \{[\s\S]*availableActions[\s\S]*commitBattleActionState\(/
+    );
+    assert.match(
+      actionRoute,
+      /state = structuredClone\(actionCommit\.envelope\.state\);[\s\S]*committedRevision = actionCommit\.envelope\.stateRevision/
     );
     assert.match(
       actionRoute,
@@ -193,9 +200,66 @@ describe('battle route enemy-turn revision handoff', () => {
       /commandType:\s*actionCommand\.commandType,[\s\S]*idempotencyKey:\s*actionCommand\.idempotencyKey,[\s\S]*replayMetadata/
     );
     assert.match(actionRoute, /return sendBattleActionReplay\(/);
+    assert.match(
+      actionRoute,
+      /availableActions:\s*replayMetadata\.availableActions/
+    );
+    assert.match(
+      actionRoute,
+      /res\.json\(\{[\s\S]*availableActions,[\s\S]*stateRevision:\s*completion\?\.stateRevision \?\? committedRevision/
+    );
     assert.match(actionRoute, /stateRevision:\s*completion\?\.stateRevision \?\? committedRevision/);
     assert.doesNotMatch(actionRoute, /UPDATE battles/);
     assert.ok(commitIndex >= 0 && launchIndex > commitIndex);
+  });
+
+  it('gates the post-action launcher on the committed successor type', async () => {
+    const route = await readCallsite('routes/battle.js');
+    const actionRoute = route.slice(
+      route.indexOf("router.post('/action'"),
+      route.indexOf("router.get('/rewards/:battleId'")
+    );
+    const helperStart = route.indexOf(
+      'async function ensureCurrentSuccessorProgress'
+    );
+    const helper = route.slice(
+      helperStart,
+      route.indexOf('/**', helperStart + 1)
+    );
+
+    assert.ok(helperStart >= 0);
+    assert.match(
+      helper,
+      /replayMetadata\?\.battleStatus !== 'active'[\s\S]*replayMetadata\.turnContinues !== false/
+    );
+    assert.match(
+      helper,
+      /battleStateRepository\.loadBattle\(battleId\)[\s\S]*authoritativeBattle\.stateRevision !== receipt\.stateRevision/
+    );
+    assert.match(
+      helper,
+      /if \(successor\?\.type === 'player'\) \{[\s\S]*notifyPlayerTurnIfCurrent\(\s*battleId,\s*expectedState,\s*receipt\.stateRevision\s*\)/
+    );
+    assert.match(
+      helper,
+      /setImmediate\(async \(\) => \{[\s\S]*processEnemyTurnsAsync\(\s*battleId,\s*authoritativeBattle\.state,\s*aiService,\s*battleService,\s*authoritativeBattle\.stateRevision\s*\)[\s\S]*handleProcessedEnemyTurns\(\s*battleId,\s*enemyTurnResult,\s*userId/
+    );
+    assert.doesNotMatch(
+      helper,
+      /Battle successor progress error|progress_check_failed/
+    );
+    assert.match(
+      actionRoute,
+      /if \(priorReceipt\) \{[\s\S]*ensureCurrentSuccessorProgress\(\s*battleId,\s*priorReceipt,\s*req\.user\.userId\s*\);[\s\S]*return sendBattleActionReplay\(/
+    );
+    assert.match(
+      actionRoute,
+      /if \(actionCommit\.idempotent\) \{[\s\S]*ensureCurrentSuccessorProgress\(\s*battleId,\s*actionCommit,\s*req\.user\.userId\s*\);[\s\S]*return sendBattleActionReplay\(/
+    );
+    assert.match(
+      actionRoute,
+      /\} else if \(result\.turnEnded\) \{[\s\S]*ensureCurrentSuccessorProgress\(\s*battleId,\s*actionCommit,\s*req\.user\.userId\s*\);/
+    );
   });
 
   it('serves actionable revision data from the defensive polling endpoint', async () => {
@@ -214,15 +278,20 @@ describe('battle route enemy-turn revision handoff', () => {
   });
 
   it('threads the settled revision into player turn recovery events', async () => {
-    const [route, turnManager, websocket] = await Promise.all([
+    const [route, coordinator, turnManager, websocket] = await Promise.all([
       readCallsite('routes/battle.js'),
+      readCallsite('services/battle/playerHandoffCoordinator.js'),
       readCallsite('services/battleTurnManager.js'),
       readCallsite('services/battleWebsocket.js')
     ]);
 
     assert.match(
       route,
-      /await battleTurnManager\.notifyPlayerTurn\(\s*battleId,\s*state,\s*stateRevision\s*\)/
+      /createPlayerHandoffCoordinator\(\{[\s\S]*loadBattle:[\s\S]*battleStateRepository\.loadBattle\(battleId\)[\s\S]*notifyPlayerTurn:[\s\S]*battleTurnManager\.notifyPlayerTurn/
+    );
+    assert.match(
+      coordinator,
+      /await notifyPlayerTurn\(\s*battleId,\s*authoritativeState,\s*authoritativeBattle\.stateRevision\s*\)/
     );
     assert.match(
       turnManager,
@@ -291,30 +360,40 @@ describe('battle route enemy-turn revision handoff', () => {
   });
 
   it('uses the committed enemy advance as the player handoff boundary', async () => {
-    const route = await readCallsite('routes/battle.js');
-    const helperStart = route.indexOf('async function handleProcessedEnemyTurns');
-    const helper = route.slice(
-      helperStart,
-      route.indexOf('// ============================================================================', helperStart)
-    );
-    const endIndex = helper.indexOf('await handleBattleEnd(');
-
-    assert.match(
-      helper,
-      /if \(battleStatus !== 'active'\) \{[\s\S]*await handleBattleEnd\(/
-    );
-    assert.match(helper, /expectedRevision:\s*stateRevision/);
-    assert.match(
-      helper,
-      /const authoritativeBattle = await battleStateRepository\.loadBattle\(battleId\)/
+    const coordinator = await readCallsite(
+      'services/battle/playerHandoffCoordinator.js'
     );
     assert.match(
-      helper,
-      /authoritativeBattle\.stateRevision === stateRevision[\s\S]*await battleTurnManager\.notifyPlayerTurn\(\s*battleId,\s*state,\s*stateRevision\s*\)/
+      coordinator,
+      /const authoritativeBattle = await loadBattle\(battleId\)/
     );
-    assert.doesNotMatch(helper, /enemy_turn_settle/);
-    assert.doesNotMatch(helper, /UPDATE battles/);
-    assert.ok(endIndex >= 0);
+    assert.match(
+      coordinator,
+      /authoritativeBattle\.stateRevision === expectedRevision[\s\S]*await notifyPlayerTurn\(\s*battleId,\s*authoritativeState,\s*authoritativeBattle\.stateRevision\s*\)/
+    );
+    assert.match(coordinator, /activeNotifications\.get\(activeJobKey\)/);
+    assert.match(
+      coordinator,
+      /activeNotifications\.set\(activeJobKey, notification\)/
+    );
+    assert.match(
+      coordinator,
+      /pruneCompletedNotifications\(\s*battleId,\s*authoritativeBattle\.stateRevision\s*\)/
+    );
+    assert.match(
+      coordinator,
+      /completedNotifications\.has\(jobKey\)[\s\S]*duplicate:\s*true/
+    );
+    assert.match(
+      coordinator,
+      /await notifyPlayerTurn\([\s\S]*rememberCompletedNotification\(jobKey/
+    );
+    assert.match(
+      coordinator,
+      /DEFAULT_MAX_COMPLETED_NOTIFICATIONS = 512[\s\S]*while \(completedNotifications\.size > maxCompletedNotifications\)[\s\S]*completedNotifications\.delete\(oldestJobKey\)/
+    );
+    assert.doesNotMatch(coordinator, /enemy_turn_settle/);
+    assert.doesNotMatch(coordinator, /UPDATE battles/);
   });
 
   it('reloads authoritative state and rejects overlapping enemy processors', async () => {

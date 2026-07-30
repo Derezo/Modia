@@ -21,6 +21,12 @@ import { escapeHtml } from '../utils/escapeHtml.js';
 
 const P = PARCHMENT_COLORS;
 
+const DEFAULT_FISHING_CONFIG = {
+  minCatchInterval: 20000,
+  maxCatchInterval: 45000,
+  bigOneWindowMs: 5000
+};
+
 // Rarity colors for fish display
 const RARITY_COLORS = {
   common: '#9e9e9e',
@@ -43,14 +49,18 @@ export class FishingScene extends Scene {
     this.isActive = false;
 
     // Session state
+    this.sessionId = null;
     this.catches = [];
     this.totalValue = 0;
     this.sessionStartTime = null;
+    this.sessionLifecycle = 0;
+    this.endInFlight = null;
 
     // Timers
     this.catchTimer = null;
     this.catchInterval = null;
     this.updateInterval = null;
+    this.nextCatchTime = null;
 
     // Big One state
     this.bigOneActive = false;
@@ -59,20 +69,26 @@ export class FishingScene extends Scene {
     this.bigOneTimer = null;
 
     // Config from API
-    this.config = {
-      minCatchInterval: 20000,
-      maxCatchInterval: 45000,
-      bigOneWindowMs: 5000
-    };
+    this.config = { ...DEFAULT_FISHING_CONFIG };
   }
 
   async enter(data = {}) {
+    this.stopTimers();
+    // A previous collection response may still be in flight if another scene
+    // transition re-entered this singleton. Detach it from the new lifecycle;
+    // its completion is ownership-checked before it can mutate this scene.
+    this.endInFlight = null;
+    this.sessionLifecycle += 1;
+    const lifecycle = this.sessionLifecycle;
+    this.resetLocalSession();
+
     this.nodeId = data.nodeId;
     this.nodeName = data.nodeName || 'Fishing Spot';
 
     this.addStyles();
     this.createUI();
     this.setupEventListeners();
+    this.setActionButtonsDisabled(true);
 
     this.responsiveUnsubscribe = responsive.onChange(() => this.onBreakpointChange());
 
@@ -82,11 +98,13 @@ export class FishingScene extends Scene {
     }
     this.game.audio?.playAmbient('fishing_water');
 
-    // Start fishing session
-    await this.startFishing();
+    // Restore an existing session after refresh, or start a genuinely new one.
+    await this.startFishing(lifecycle, data.session);
   }
 
   exit() {
+    this.sessionLifecycle += 1;
+    this.isActive = false;
     this.stopTimers();
 
     // Stop ambient sounds
@@ -104,6 +122,19 @@ export class FishingScene extends Scene {
       this.uiElement.remove();
       this.uiElement = null;
     }
+  }
+
+  resetLocalSession() {
+    this.isActive = false;
+    this.sessionId = null;
+    this.catches = [];
+    this.totalValue = 0;
+    this.sessionStartTime = null;
+    this.nextCatchTime = null;
+    this.bigOneActive = false;
+    this.bigOneExpires = null;
+    this.bigOneFish = null;
+    this.config = { ...DEFAULT_FISHING_CONFIG };
   }
 
   stopTimers() {
@@ -126,6 +157,24 @@ export class FishingScene extends Scene {
     if (this.uiElement) {
       const prevCatches = [...this.catches];
       const prevTotal = this.totalValue;
+      const bigOneExpiresIn = this.bigOneActive
+        ? Math.max(0, this.bigOneExpires - Date.now())
+        : 0;
+      const activeBigOne = bigOneExpiresIn > 0 ? {
+        ...this.bigOneFish,
+        active: true,
+        expiresIn: bigOneExpiresIn
+      } : null;
+
+      if (this.bigOneTimer) {
+        clearInterval(this.bigOneTimer);
+        this.bigOneTimer = null;
+      }
+      if (this.bigOneActive && !activeBigOne) {
+        this.bigOneActive = false;
+        this.bigOneExpires = null;
+        this.bigOneFish = null;
+      }
 
       this.uiElement.remove();
       this.createUI();
@@ -135,6 +184,10 @@ export class FishingScene extends Scene {
       this.totalValue = prevTotal;
       this.renderCatches();
       this.updateStats();
+      this.setActionButtonsDisabled(!this.isActive || Boolean(this.endInFlight));
+      if (activeBigOne) {
+        this.showBigOne(activeBigOne, false);
+      }
     }
   }
 
@@ -490,6 +543,11 @@ export class FishingScene extends Scene {
         transition: all 0.2s;
       }
 
+      .fishing-btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+
       .fishing-btn-primary {
         background: linear-gradient(to bottom, ${P.state.success}, #3a5538);
         border: 2px solid #2a4028;
@@ -595,40 +653,112 @@ export class FishingScene extends Scene {
     }, opts);
   }
 
-  async startFishing() {
+  setActionButtonsDisabled(disabled) {
+    if (!this.uiElement) return;
+
+    for (const button of this.uiElement.querySelectorAll('.fishing-actions button')) {
+      button.disabled = disabled;
+    }
+  }
+
+  async startFishing(lifecycle = this.sessionLifecycle, initialStatus = null) {
     try {
-      const result = await this.game.api.startFishing(this.nodeId);
+      const status = initialStatus?.active
+        ? initialStatus
+        : await this.game.api.getFishingStatus(this.nodeId);
+      if (lifecycle !== this.sessionLifecycle) return;
 
-      this.isActive = true;
-      this.config = result.config;
-      this.sessionStartTime = Date.now();
-
-      // Update status
-      const statusEl = this.uiElement.querySelector('#fishing-status');
-      if (statusEl) {
-        statusEl.classList.remove('inactive');
-        statusEl.innerHTML = '<span>Fishing...</span>';
+      let result = status;
+      let resumed = status.active === true;
+      if (!status.active) {
+        result = await this.game.api.startFishing(this.nodeId);
+        if (lifecycle !== this.sessionLifecycle) return;
+        resumed = result.resumed === true;
       }
 
-      // Start catch timer
-      this.scheduleCatch();
+      this.hydrateSession(result, lifecycle);
 
-      // Start update interval
-      this.updateInterval = setInterval(() => {
-        this.updateSessionTime();
-        this.updateCatchCountdown();
-      }, 1000);
-
-      parchmentToast.success('Cast Line', 'Your line is in the water!');
-
+      parchmentToast.success(
+        resumed ? 'Fishing Restored' : 'Cast Line',
+        resumed ? 'Your fishing session has been restored.' : 'Your line is in the water!'
+      );
     } catch (err) {
+      if (lifecycle !== this.sessionLifecycle) return;
+
       console.error('Failed to start fishing:', err);
       parchmentToast.error('Error', err.message || 'Failed to start fishing');
       this.game.scenes.switchTo('worldMap');
     }
   }
 
+  hydrateSession(result, lifecycle = this.sessionLifecycle) {
+    if (lifecycle !== this.sessionLifecycle) return;
+
+    const session = result.session || result.status || result;
+    const sessionId = session.sessionId || result.sessionId;
+    if (!sessionId) {
+      throw new Error('Fishing session response did not include a session ID');
+    }
+
+    this.sessionId = sessionId;
+    // The API stores catches oldest-first; the basket displays newest-first.
+    this.catches = Array.isArray(session.catches) ? [...session.catches].reverse() : [];
+    this.totalValue = Number(session.totalValue ?? session.sessionStats?.totalValue ?? 0);
+    this.sessionStartTime = this.normalizeSessionStartTime(session.startTime);
+    this.config = {
+      ...DEFAULT_FISHING_CONFIG,
+      ...(session.config || result.config || {})
+    };
+    this.isActive = true;
+
+    this.renderCatches();
+    this.updateStats();
+    this.updateSessionTime();
+
+    const statusEl = this.uiElement?.querySelector('#fishing-status');
+    if (statusEl) {
+      statusEl.classList.remove('inactive');
+      statusEl.innerHTML = '<span>Fishing...</span>';
+    }
+
+    this.setActionButtonsDisabled(false);
+    this.scheduleCatch();
+    this.updateInterval = setInterval(() => {
+      this.updateSessionTime();
+      this.updateCatchCountdown();
+    }, 1000);
+
+    const bigOne = this.normalizeBigOne(session);
+    if (bigOne) {
+      this.showBigOne(bigOne);
+    }
+  }
+
+  normalizeSessionStartTime(startTime) {
+    const parsed = typeof startTime === 'number' ? startTime : Date.parse(startTime);
+    if (!Number.isFinite(parsed)) return Date.now();
+    return parsed < 1e12 ? parsed * 1000 : parsed;
+  }
+
+  normalizeBigOne(session) {
+    if (session.bigOne?.active) {
+      return session.bigOne;
+    }
+    if (!session.bigOneActive || !(session.bigOneExpiresIn > 0)) {
+      return null;
+    }
+
+    return {
+      active: true,
+      expiresIn: session.bigOneExpiresIn,
+      fishName: session.bigOneFish?.fishName || session.bigOneFish?.name || '',
+      rarity: session.bigOneFish?.rarity || ''
+    };
+  }
+
   scheduleCatch() {
+    if (!this.isActive || this.endInFlight) return;
+
     // Random interval between min and max
     const interval = this.config.minCatchInterval +
       (Math.random() * (this.config.maxCatchInterval - this.config.minCatchInterval));
@@ -641,10 +771,21 @@ export class FishingScene extends Scene {
   }
 
   async triggerCatch() {
-    if (!this.isActive) return;
+    if (!this.isActive || this.endInFlight || !this.sessionId) return;
+
+    const lifecycle = this.sessionLifecycle;
+    const sessionId = this.sessionId;
 
     try {
-      const result = await this.game.api.registerCatch(this.nodeId);
+      const result = await this.game.api.registerCatch(this.nodeId, sessionId);
+      if (
+        !this.isActive ||
+        this.endInFlight ||
+        lifecycle !== this.sessionLifecycle ||
+        sessionId !== this.sessionId
+      ) {
+        return;
+      }
 
       // Play fish catch sound
       this.game.audio?.playInteraction('fishing_catch');
@@ -664,6 +805,15 @@ export class FishingScene extends Scene {
       this.scheduleCatch();
 
     } catch (err) {
+      if (
+        !this.isActive ||
+        this.endInFlight ||
+        lifecycle !== this.sessionLifecycle ||
+        sessionId !== this.sessionId
+      ) {
+        return;
+      }
+
       console.error('Failed to register catch:', err);
       // Session may have expired
       if (err.message?.includes('expired')) {
@@ -677,13 +827,17 @@ export class FishingScene extends Scene {
     }
   }
 
-  showBigOne(bigOneData) {
+  showBigOne(bigOneData, playSound = true) {
+    if (!this.isActive || this.endInFlight) return;
+
     this.bigOneActive = true;
     this.bigOneFish = bigOneData;
     this.bigOneExpires = Date.now() + bigOneData.expiresIn;
 
     // Play big one alert sound
-    this.game.audio?.playInteraction('fishing_big_one');
+    if (playSound) {
+      this.game.audio?.playInteraction('fishing_big_one');
+    }
 
     const mainPanel = this.uiElement.querySelector('#main-panel');
     if (!mainPanel) return;
@@ -732,10 +886,21 @@ export class FishingScene extends Scene {
   }
 
   async claimBigOne() {
-    if (!this.bigOneActive) return;
+    if (!this.bigOneActive || !this.isActive || this.endInFlight || !this.sessionId) return;
+
+    const lifecycle = this.sessionLifecycle;
+    const sessionId = this.sessionId;
 
     try {
-      const result = await this.game.api.claimBigOne(this.nodeId);
+      const result = await this.game.api.claimBigOne(this.nodeId, sessionId);
+      if (
+        !this.isActive ||
+        this.endInFlight ||
+        lifecycle !== this.sessionLifecycle ||
+        sessionId !== this.sessionId
+      ) {
+        return;
+      }
 
       // Add big one catch
       this.catches.unshift(result.catch);
@@ -747,6 +912,15 @@ export class FishingScene extends Scene {
       this.hideBigOne(true);
 
     } catch (err) {
+      if (
+        !this.isActive ||
+        this.endInFlight ||
+        lifecycle !== this.sessionLifecycle ||
+        sessionId !== this.sessionId
+      ) {
+        return;
+      }
+
       console.error('Failed to claim big one:', err);
       parchmentToast.warning('Too Slow!', err.message);
       this.hideBigOne(false);
@@ -821,10 +995,44 @@ export class FishingScene extends Scene {
   }
 
   async endFishing() {
-    this.stopTimers();
+    if (this.endInFlight) return this.endInFlight;
+
+    const request = this.finishFishing();
+    this.endInFlight = request;
 
     try {
-      const result = await this.game.api.endFishing(this.nodeId);
+      return await request;
+    } finally {
+      if (this.endInFlight === request) {
+        this.endInFlight = null;
+      }
+    }
+  }
+
+  async finishFishing() {
+    const nodeId = this.nodeId;
+    const sessionId = this.sessionId;
+
+    this.isActive = false;
+    this.sessionLifecycle += 1;
+    const lifecycle = this.sessionLifecycle;
+    this.stopTimers();
+    this.setActionButtonsDisabled(true);
+    let shouldReturnToMap = false;
+
+    try {
+      if (!sessionId) {
+        shouldReturnToMap = lifecycle === this.sessionLifecycle;
+        return;
+      }
+
+      const result = await this.game.api.endFishing(nodeId, sessionId);
+      if (
+        lifecycle !== this.sessionLifecycle ||
+        sessionId !== this.sessionId
+      ) {
+        return result;
+      }
 
       // Update player gold
       this.game.state.set('user', {
@@ -833,12 +1041,20 @@ export class FishingScene extends Scene {
       });
 
       parchmentToast.success('Session Complete', result.message);
+      this.resetLocalSession();
+      shouldReturnToMap = true;
 
     } catch (err) {
       console.error('Failed to end fishing:', err);
+      shouldReturnToMap = (
+        lifecycle === this.sessionLifecycle &&
+        sessionId === this.sessionId
+      );
+    } finally {
+      if (shouldReturnToMap) {
+        this.game.scenes.switchTo('worldMap');
+      }
     }
-
-    this.game.scenes.switchTo('worldMap');
   }
 
   update(_deltaTime) {

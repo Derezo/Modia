@@ -18,6 +18,7 @@
 
 import { describe, it, before, after, beforeEach, afterEach, mock } from 'node:test';
 import assert from 'node:assert';
+import { pool } from '../../config/database.js';
 import {
   FISH_TYPES,
   FISHING_CONFIG,
@@ -310,8 +311,9 @@ describe('Fishing Service Unit Tests', () => {
   });
 
   describe('getSessionStatus (pure function)', () => {
-    it('should return null for non-existent session', () => {
-      const status = fishingService.getSessionStatus(99999, 99999);
+    it('should return null for non-existent session', async (t) => {
+      t.mock.method(pool, 'query', async () => ({ rows: [] }));
+      const status = await fishingService.getSessionStatus(99999, 99999);
       assert.strictEqual(status, null);
     });
   });
