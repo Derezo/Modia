@@ -130,12 +130,13 @@ export const discoveryLimiter = createLimiter({
 /**
  * Fishing activity rate limiter
  * Fishing earns fish that can be sold for gold
- * Base: 30/min - fishing involves repeated casts
+ * Base: 90/min - one attempt includes cast/release/hook, up to four cue
+ * actions, and resolve. Phase validation is the primary anti-spam boundary.
  */
 export const fishingLimiter = createLimiter({
   name: 'economy:fishing',
   windowMs: 60 * 1000,       // 1 minute
-  maxRequests: 30,           // Base: 30, Prod: 60, Dev: 150
+  maxRequests: 90,           // Base: 90, Prod: 180, Dev: 450
   message: 'Too many fishing actions. Please wait a moment.',
   useUserKey: true
 });

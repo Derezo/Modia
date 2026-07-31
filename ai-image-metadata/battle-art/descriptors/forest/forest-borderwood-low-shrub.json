@@ -1,0 +1,93 @@
+{
+  "schemaVersion": "battle-art-family-descriptor-v2",
+  "id": "forest-borderwood-low-shrub",
+  "theme": "forest",
+  "category": "nonblocking-decoration",
+  "familyGroup": "forest-borderwood-low-shrub",
+  "variantId": "dense",
+  "capabilities": {
+    "direction": null,
+    "routeTopology": null,
+    "surfaceVariant": null,
+    "ecologyProfile": "forest-iron-depths-borderwood",
+    "tierBands": [
+      1
+    ],
+    "heightDeltas": [
+      0
+    ]
+  },
+  "status": "compiled",
+  "promptProfile": {
+    "id": "battle-art-family-v2",
+    "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+    "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+  },
+  "styleReferences": [
+    {
+      "id": "forest-source-template-01",
+      "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+      "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+    }
+  ],
+  "generationPrompt": "Create exactly one seam-safe orthographic isometric forest nonblocking-decoration asset named forest-borderwood-low-shrub for ecology profile forest-iron-depths-borderwood; tier band 1. Author the declared orientation directly, preserve continuous neighboring materials and edge alignment, and include only the declared family content. Regional visual vocabulary: Iron Depths Borderwood uses a coherent mixed forest of rugged ironpine conifers, pale birch, and sparse ancient broadleaf trees; cool olive moss and ferns; slate-gray stones; muted russet soil; and weathered exposed roots. Keep this species mix, material palette, scale, and lighting consistent across every directional edge and transition. Depict the literal regional subject forest borderwood low shrub as a restrained, grounded isometric detail that adds ecological variety without reading as a wall, large tree, or blocking object. Do not add a baked backdrop, black void, unrelated terrain wall, or presentation frame.",
+  "rasterContract": {
+    "schemaVersion": "battle-art-raster-contract-v1",
+    "kind": "transparent-cutout",
+    "minimumCoveredPermille": 10,
+    "maximumCoveredPermille": 850
+  },
+  "canvas": {
+    "width": 128,
+    "height": 192
+  },
+  "placement": {
+    "pivot": {
+      "x": 64,
+      "y": 160
+    },
+    "anchor": {
+      "x": 64,
+      "y": 160
+    },
+    "footprint": {
+      "x": 0,
+      "y": 0,
+      "width": 1,
+      "height": 1
+    },
+    "collision": {
+      "kind": "none",
+      "cells": []
+    },
+    "drawBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 128,
+      "height": 192
+    },
+    "occlusionBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
+    },
+    "stratum": "decoration"
+  },
+  "content": {
+    "version": 1,
+    "sourceSha256": "sha256:aec5eef808a7c5e5418d57da7fe58299377519834e8423357d255cea44be5657",
+    "runtimeSha256": "sha256:c0e15ecb82a7ea6e0294e3b41e5ca3f806fdef6c52ccfee75ac357986b51585c",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v6/forest/nonblocking-decoration/forest-borderwood-low-shrub/v1/c0e15ecb82a7ea6e0294e3b41e5ca3f806fdef6c52ccfee75ac357986b51585c.webp"
+  },
+  "source": {
+    "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-borderwood-low-shrub/result.json",
+    "imagePath": "ai-image-metadata/battle-art/sources/forest/forest-borderwood-low-shrub/v1/aec5eef808a7c5e5418d57da7fe58299377519834e8423357d255cea44be5657.png",
+    "imageSha256": "sha256:aec5eef808a7c5e5418d57da7fe58299377519834e8423357d255cea44be5657",
+    "width": 128,
+    "height": 192,
+    "format": "png",
+    "reviewer": "codex",
+    "approvedAt": "2026-07-31T02:31:07.667Z"
+  }
+}

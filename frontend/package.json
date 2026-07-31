@@ -5,7 +5,9 @@
   "description": "Modia Game Client",
   "type": "module",
   "scripts": {
+    "predev": "node ../scripts/ai-images/compile-fishing-assets.mjs",
     "dev": "vite",
+    "prebuild": "node ../scripts/ai-images/compile-fishing-assets.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint src/",

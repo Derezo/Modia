@@ -1,8 +1,17 @@
 # AI Image Generation Pipeline
 
-This document describes Modia's hybrid image-asset pipeline. Portraits and selected source art may use local or hosted generative models; canonical player references, player animation strips, battle terrain, abilities, and runtime item completions use deterministic compilers with explicit validation contracts.
+This document describes Modia's hybrid image-asset pipeline. Portraits and
+selected source art may use generative models; reviewed sources then enter
+deterministic, hash-pinned compilers with explicit validation contracts.
 
-> **Terrain boundary:** Battle floor, wall, and slope tiles moved to the deterministic `iso64-retina-v3` material compiler. They do not use ComfyUI, HuggingFace, LoRA, or AI post-processing; metadata prompt text is only a deterministic material hint. See [ISOMETRIC_TILE_SYSTEM.md](ISOMETRIC_TILE_SYSTEM.md). The old AI tile workflow is historical; `ai:generate:tiles` remains only as a compatibility alias to the deterministic compiler.
+> **Terrain boundary:** Legacy/V2 floor, wall, and slope tiles use the
+> deterministic material compiler described in
+> [ISOMETRIC_TILE_SYSTEM.md](ISOMETRIC_TILE_SYSTEM.md). Battle Map V3 regional
+> surfaces, topology routes, directional connections, boundaries, obstacles,
+> and decorations use the separate review-gated `npm run battle-art:*`
+> lifecycle. Its one-image workers create candidates only; explicit approval
+> and deterministic lossless compilation produce runtime assets. See
+> [BATTLE_MAP_V3_ART_LIFECYCLE.md](BATTLE_MAP_V3_ART_LIFECYCLE.md).
 
 > **Player-character boundary:** Canonical race/gender/class references and temporal battle strips are deterministic compiler outputs. The registry-wide fallback path is wholly procedural. The higher-quality authored path starts with nondeterministic generated reference and pose-atlas candidates, but only manually approved, tracked, hash-pinned RGBA sources can enter deterministic compilation for one explicit identity. See [Canonical Player Character Pipeline](#canonical-player-character-pipeline).
 
@@ -15,6 +24,8 @@ The AI image generation pipeline integrates with the external `image-generator` 
 - **Item sprites** - Equipment and consumable icons
 - **UI icons** - Action, status, menu, and augment icons
 - **World map nodes** - Landmark icons for the overworld
+- **Battle Map V3 regional art candidates** - Reviewed biome/ecology/tier
+  surfaces, routes, connections, boundaries, obstacles, and decorations
 
 Repository-owned deterministic compilers create the canonical full-body player references and eight-frame animation strips. Compilation does not require a diffusion backend; authored source-candidate creation is a separate, deliberately nondeterministic review step.
 

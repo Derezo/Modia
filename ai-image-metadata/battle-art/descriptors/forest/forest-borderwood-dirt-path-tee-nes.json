@@ -1,0 +1,93 @@
+{
+  "schemaVersion": "battle-art-family-descriptor-v2",
+  "id": "forest-borderwood-dirt-path-tee-nes",
+  "theme": "forest",
+  "category": "route-transition",
+  "familyGroup": "forest-borderwood-dirt-path",
+  "variantId": "tee-nes",
+  "capabilities": {
+    "direction": null,
+    "routeTopology": "tee-nes",
+    "surfaceVariant": null,
+    "ecologyProfile": "forest-iron-depths-borderwood",
+    "tierBands": [
+      1
+    ],
+    "heightDeltas": [
+      0
+    ]
+  },
+  "status": "compiled",
+  "promptProfile": {
+    "id": "battle-art-family-v2",
+    "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+    "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+  },
+  "styleReferences": [
+    {
+      "id": "forest-source-template-01",
+      "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+      "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+    }
+  ],
+  "generationPrompt": "Create exactly one seam-safe orthographic isometric forest route-transition asset named forest-borderwood-dirt-path-tee-nes for ecology profile forest-iron-depths-borderwood; tier band 1; exact route topology tee-nes. Author the declared orientation directly, preserve continuous neighboring materials and edge alignment, and include only the declared family content. Regional visual vocabulary: Iron Depths Borderwood uses a coherent mixed forest of rugged ironpine conifers, pale birch, and sparse ancient broadleaf trees; cool olive moss and ferns; slate-gray stones; muted russet soil; and weathered exposed roots. Keep this species mix, material palette, scale, and lighting consistent across every directional edge and transition. Depict only a naturally worn path overlay with loose soil, tiny stones, leaf litter, and soft irregular grass feathering. Connect exactly the sides named by tee-nes; In the 2:1 isometric diamond, N meets the upper-right edge, E the lower-right edge, S the lower-left edge, and W the upper-left edge. Join the path at (128,64). The four precise edge-band targets are N=(192,32), E=(192,96), S=(64,96), and W=(64,32) on this 256x128 source raster. Carry the path into a 20-pixel neighborhood of every named target and keep every unnamed target neighborhood free of dirt. Use a 28–36 pixel worn core with a further 6–10 pixel irregular grass-and-leaf feather on each side. Join branches through one broad, rounded central wear area; corner roles need a continuous generous-radius bend with no pointed chevron, acute V, square elbow, or polygonal cusp. Keep every connection centered and equal width at the tile edge, with no opaque ground diamond and no hard polygonal border. Do not add a baked backdrop, black void, unrelated terrain wall, or presentation frame.",
+  "rasterContract": {
+    "schemaVersion": "battle-art-raster-contract-v1",
+    "kind": "transparent-cutout",
+    "minimumCoveredPermille": 10,
+    "maximumCoveredPermille": 850
+  },
+  "canvas": {
+    "width": 256,
+    "height": 128
+  },
+  "placement": {
+    "pivot": {
+      "x": 128,
+      "y": 64
+    },
+    "anchor": {
+      "x": 128,
+      "y": 64
+    },
+    "footprint": {
+      "x": 0,
+      "y": 0,
+      "width": 1,
+      "height": 1
+    },
+    "collision": {
+      "kind": "none",
+      "cells": []
+    },
+    "drawBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 128
+    },
+    "occlusionBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
+    },
+    "stratum": "route"
+  },
+  "content": {
+    "version": 1,
+    "sourceSha256": "sha256:df2801951c33f3a31c947e38d4051483e7e924c34d6dc0a42d4bdabad38b17d1",
+    "runtimeSha256": "sha256:381ffb8153b2e947c26cda482a35fb6723b0237eafa0a87622d4edd4713073c0",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v6/forest/route-transition/forest-borderwood-dirt-path-tee-nes/v1/381ffb8153b2e947c26cda482a35fb6723b0237eafa0a87622d4edd4713073c0.webp"
+  },
+  "source": {
+    "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-borderwood-dirt-path-tee-nes/result.json",
+    "imagePath": "ai-image-metadata/battle-art/sources/forest/forest-borderwood-dirt-path-tee-nes/v1/df2801951c33f3a31c947e38d4051483e7e924c34d6dc0a42d4bdabad38b17d1.png",
+    "imageSha256": "sha256:df2801951c33f3a31c947e38d4051483e7e924c34d6dc0a42d4bdabad38b17d1",
+    "width": 256,
+    "height": 128,
+    "format": "png",
+    "reviewer": "codex",
+    "approvedAt": "2026-07-31T02:31:04.410Z"
+  }
+}

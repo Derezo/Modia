@@ -77,7 +77,7 @@ describe('advancement battle terminal cleanup', () => {
     assert.match(defeatTransaction, /withTransaction\(async client =>/);
     assert.match(
       defeatTransaction,
-      /commitBattleState[\s\S]*clearAdvancementChallengerStatus\([\s\S]*client,[\s\S]*committed\.envelope/
+      /commitMutableState[\s\S]*clearAdvancementChallengerStatus\([\s\S]*client,[\s\S]*committed\.envelope/
     );
     assert.match(
       defeatTransaction,

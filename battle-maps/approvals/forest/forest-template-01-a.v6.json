@@ -1,0 +1,57 @@
+{
+  "schemaVersion": "battle-map-v3-visual-approval-v1",
+  "decision": "approved",
+  "reviewer": "codex",
+  "checklistVersion": 1,
+  "theme": "forest",
+  "templateId": "forest-template-01",
+  "contentId": "forest-template-01-a",
+  "contentVersion": 6,
+  "mapPath": "battle-maps/compiled/forest/forest-template-01-a.v6.json",
+  "hashes": {
+    "authoritativeHash": "sha256:7362fd60899a0d2423a22d2391c3afd631de432f820f7e7ad8d575ab84a21edf",
+    "fullHash": "sha256:8b670e5506fee8d1e833de1be181a36a60a1bc9de08f962deab1458ebf46dafb",
+    "visualHash": "sha256:3040f2004eda5286f649efcc10b2027d1c42a206295a7d848c2392e82eb89291"
+  },
+  "sourceSidecar": {
+    "path": "ai-image-metadata/battle-maps/templates/forest/forest-template-01.json",
+    "fullHash": "sha256:158b3450b0795699c4e6dadae461ee84b4afbc16d7a6b2a19c779ad73a27c63e"
+  },
+  "blueprint": {
+    "id": "forest-template-01-a",
+    "fullHash": "sha256:5893a6bdbc032f8dfd5eacb0cbd26b12dfabd6d527b72d3cb8cb456e353a7cf9",
+    "approvalIndexFullHash": "sha256:7eca340fbb5a055aa439ba262171e3e240f930666b7eda5e3817b2afd83854e6"
+  },
+  "renderProfile": {
+    "id": "forest-v3",
+    "path": "battle-maps/render-profiles/forest.json",
+    "fullHash": "sha256:f47c9ca8a125d6e8ce34dffd9f2b704dbb15a4818af9685be3e33a39c71a76cf"
+  },
+  "tileCatalog": {
+    "id": "forest-v3-tiles",
+    "version": 1,
+    "path": "battle-maps/tile-catalogs/forest.json",
+    "fullHash": "sha256:5b5f20e3158e4d5e65de71b41cef1dd4dc4c972166d4bc15bb8a0fa4920adecc"
+  },
+  "assetBundle": {
+    "id": "battle-art-descriptors-2026-07-30",
+    "version": 2,
+    "path": "ai-image-metadata/battle-art/releases/battle-art-descriptors-2026-07-30.v2.json",
+    "manifestFullHash": "sha256:f39414741c93a48e63aed40abede9d9159e77975a27b52b1bdeb5b22039a0d3d"
+  },
+  "capabilityReport": {
+    "schemaVersion": "battle-map-v3-capability-report-v1",
+    "mapFullHash": "sha256:8b670e5506fee8d1e833de1be181a36a60a1bc9de08f962deab1458ebf46dafb",
+    "bossCapable": true,
+    "competitiveParity": false,
+    "parityCases": null
+  },
+  "screenshot": {
+    "path": "ai-image-metadata/battle-maps/review/forest/forest-template-01/forest-template-01-a/forest-template-01-a.v6.8b670e5506fe.png",
+    "bytes": 556401,
+    "width": 1088,
+    "height": 703,
+    "format": "png",
+    "sha256": "sha256:14f1faf6193ab15f1a1d78a8ea2455a0cf84c2cc8500e010aa8600860d187866"
+  }
+}

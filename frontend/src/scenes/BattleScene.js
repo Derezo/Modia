@@ -30,7 +30,10 @@
  * @see BattleCamera.js - Viewport and follow behavior
  */
 import { Scene } from './Scene.js';
-import { BattleGrid } from '../battle/BattleGrid.js';
+import {
+  BattleGrid,
+  renderBattleSceneBackdrop
+} from '../battle/BattleGrid.js';
 import { BattleUnit } from '../battle/BattleUnit.js';
 import { BattleUI } from '../battle/BattleUI.js';
 import { BattleAnimations, ANIMATION_TIMING } from '../battle/BattleAnimations.js';
@@ -49,8 +52,12 @@ import { BattleMapSession } from '../battle/BattleMapSession.js';
 import { BattleInputHandler } from '../battle/BattleInputHandler.js';
 import { BattleAudioManager } from '../battle/BattleAudioManager.js';
 import {
+  assertBattleMapV3RuntimeManifestSupportsMap,
   collectBattleMapAssetManifest
 } from '../battle/BattleMapAssets.js';
+import {
+  applyBattleMapV3RenderAdapter
+} from '../battle/BattleMapV3RenderAdapter.js';
 import { applyBattleMapPatch } from '../battle/mergeBattleState.js';
 import {
   transitionFromBattleIfCurrent,
@@ -220,6 +227,7 @@ export class BattleScene extends Scene {
     this.assetLoadError = null;
     this.assetLoadRetryData = null;
     this.assetLoadRetryInProgress = false;
+    this.battleMapAssetsReady = true;
   }
 
   /**
@@ -233,6 +241,9 @@ export class BattleScene extends Scene {
     this.mapSession = new BattleMapSession();
     data = await this.mapSession.hydrateResponse(data);
     const requiresExactV2Assets = data.state?.battleMapSchemaVersion === 2;
+    const requiresExactV3Assets = data.state?.battleMapSchemaVersion === 3;
+    const requiresExactMapAssets =
+      requiresExactV2Assets || requiresExactV3Assets;
     this.battleId = data.battleId;
     this.mapSeed = data.mapSeed;
     this.battleState = data.state;
@@ -242,6 +253,7 @@ export class BattleScene extends Scene {
     this.serverAvailableActions = data.availableActions || null;
     this.stateRevision = data.stateRevision ?? data.state?.stateRevision ?? null;
     this.inputEnabled = false;
+    this.battleMapAssetsReady = false;
     this.isActionSubmitting = false;
     this.retryableActionIntent = null;
     this.retryableZodiacIntent = null;
@@ -279,7 +291,11 @@ export class BattleScene extends Scene {
     // Initialize grid with asset loader for sprite rendering
     this.grid = new BattleGrid(this.game.canvas, data.mapWidth || 32, data.mapHeight || 32);
     this.grid.setAssetLoader(this.game.assetLoader);
-    if (data.state?.battleMapSchemaVersion === 2) {
+    if (requiresExactV3Assets) {
+      // V3 is a fully compiled, verified map. Its renderer contract never
+      // enters procedural terrain generation or legacy/V2 asset resolution.
+      applyBattleMapV3RenderAdapter(this.grid, data.state);
+    } else if (requiresExactV2Assets) {
       // V2 is fully server-authored and hash-verified by BattleMapSession. Never
       // regenerate it locally, even as a visual fallback.
       applyBattleMapPatch(this.grid, data.state);
@@ -349,16 +365,34 @@ export class BattleScene extends Scene {
 
     // AWAIT preload to ensure terrain sprites are cached before rendering
     try {
+      if (requiresExactV3Assets) {
+        assertBattleMapV3RuntimeManifestSupportsMap(data.state);
+      }
+      const mapPreloads = requiresExactV3Assets
+        ? [
+          this.game.assetLoader.preloadBattleMapV3Assets(obstacleAssets, {
+            onProgress: progress.track(
+              'map-assets',
+              'Verifying map assets...'
+            )
+          })
+        ]
+        : [
+          this.game.assetLoader.preloadTerrainSet(nodeType, {
+            onProgress: progress.track('terrain', 'Loading terrain...'),
+            requireV2Assets: requiresExactV2Assets
+          }),
+          this.game.assetLoader.preloadObstacles({
+            obstacles: obstacleAssets,
+            onProgress: progress.track(
+              'map-assets',
+              'Loading map assets...'
+            ),
+            requireV2Assets: requiresExactV2Assets
+          })
+        ];
       await Promise.all([
-        this.game.assetLoader.preloadTerrainSet(nodeType, {
-          onProgress: progress.track('terrain', 'Loading terrain...'),
-          requireV2Assets: requiresExactV2Assets
-        }),
-        this.game.assetLoader.preloadObstacles({
-          obstacles: obstacleAssets,
-          onProgress: progress.track('map-assets', 'Loading map assets...'),
-          requireV2Assets: requiresExactV2Assets
-        }),
+        ...mapPreloads,
         ...enemyVisuals.map((identity, index) =>
           this.game.assetLoader.preloadEnemies(identity.primaryBiome, [identity.visualId], {
             onProgress: progress.track(`enemy:${index}`, 'Loading enemies...')
@@ -379,8 +413,8 @@ export class BattleScene extends Scene {
       }
     } catch (err) {
       console.warn('[BattleScene] Asset preload failed:', err.message);
-      if (requiresExactV2Assets) {
-        // A V2 map's authored records are authoritative. Entering combat with
+      if (requiresExactMapAssets) {
+        // Authored records are authoritative. Entering combat with
         // fallback diamonds would make blocking geometry invisible or
         // misleading, so retain the loading state until a retry succeeds.
         this.assetLoadError = err;
@@ -403,6 +437,7 @@ export class BattleScene extends Scene {
 
     this.assetLoadError = null;
     this.assetLoadRetryData = null;
+    this.battleMapAssetsReady = true;
     this.isLoadingAssets = false;
     this.loadingScreen.hide();
 
@@ -557,7 +592,8 @@ export class BattleScene extends Scene {
   }
 
   /**
-   * Retry an exact V2 asset preload without ever revealing the incomplete map.
+   * Retry an exact authored-map asset preload without revealing an incomplete
+   * V2 or V3 map.
    * @returns {Promise<boolean>} Whether the scene entered successfully
    */
   async retryAssetLoading() {
@@ -935,7 +971,7 @@ export class BattleScene extends Scene {
       message = 'This battle is no longer active';
     } else if (!activeUnit || !this.isLocalActiveUnit(activeUnit)) {
       message = 'Wait for your active unit';
-    } else if (!this.inputEnabled) {
+    } else if (this.battleMapAssetsReady === false || !this.inputEnabled) {
       message = 'Battle state is still synchronizing';
     } else if (this.isActionSubmitting) {
       message = 'Your previous action is still being submitted';
@@ -966,7 +1002,7 @@ export class BattleScene extends Scene {
       message = 'This battle is no longer active';
     } else if (!activeUnit || !this.isLocalActiveUnit(activeUnit)) {
       message = 'Wait for your active unit';
-    } else if (!this.inputEnabled) {
+    } else if (this.battleMapAssetsReady === false || !this.inputEnabled) {
       message = 'Battle state is still synchronizing';
     } else if (this.isActionSubmitting) {
       message = 'Your previous action is still being submitted';
@@ -3755,9 +3791,13 @@ export class BattleScene extends Scene {
    * Render the battle scene
    */
   render(ctx) {
-    // Clear background (context is DPR-pre-scaled, so use logical dims)
-    ctx.fillStyle = '#0a0a1a';
-    ctx.fillRect(0, 0, this.game.targetWidth, this.game.targetHeight);
+    // Screen-space production backdrop must precede camera transforms. V3
+    // scene data is map-pinned; legacy maps retain the historical dark fill.
+    renderBattleSceneBackdrop(ctx, {
+      width: this.game.targetWidth,
+      height: this.game.targetHeight,
+      scene: this.grid?.battleMapV3RenderData?.scene ?? null
+    });
 
     // Render loading screen overlay if visible
     if (this.loadingScreen) {

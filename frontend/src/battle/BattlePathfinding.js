@@ -119,7 +119,7 @@ export class BattlePathfinding {
       attackRange,
       this.grid.width,
       this.grid.height
-    );
+    ).filter(tile => this.grid.isPlayable(tile.x, tile.y));
   }
 
   /**
@@ -351,7 +351,7 @@ export class BattlePathfinding {
         break;
     }
 
-    return tiles;
+    return tiles.filter(tile => this.grid.isPlayable(tile.x, tile.y));
   }
 
   /**

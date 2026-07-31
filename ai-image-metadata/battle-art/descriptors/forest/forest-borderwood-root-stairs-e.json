@@ -1,0 +1,102 @@
+{
+  "schemaVersion": "battle-art-family-descriptor-v2",
+  "id": "forest-borderwood-root-stairs-e",
+  "theme": "forest",
+  "category": "connection-stairs",
+  "familyGroup": "forest-borderwood-root-stairs",
+  "variantId": "grade-1-e",
+  "capabilities": {
+    "direction": "e",
+    "routeTopology": null,
+    "surfaceVariant": null,
+    "ecologyProfile": "forest-iron-depths-borderwood",
+    "tierBands": [
+      1
+    ],
+    "heightDeltas": [
+      1
+    ]
+  },
+  "status": "compiled",
+  "promptProfile": {
+    "id": "battle-art-family-v2",
+    "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+    "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+  },
+  "styleReferences": [
+    {
+      "id": "forest-source-template-01",
+      "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+      "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+    }
+  ],
+  "generationPrompt": "Create exactly one seam-safe orthographic isometric forest connection-stairs asset named forest-borderwood-root-stairs-e for ecology profile forest-iron-depths-borderwood; tier band 1; final authored direction e; height magnitude 1. Author the declared orientation directly, preserve continuous neighboring materials and edge alignment, and include only the declared family content. Regional visual vocabulary: Iron Depths Borderwood uses a coherent mixed forest of rugged ironpine conifers, pale birch, and sparse ancient broadleaf trees; cool olive moss and ferns; slate-gray stones; muted russet soil; and weathered exposed roots. Keep this species mix, material palette, scale, and lighting consistent across every directional edge and transition. Depict forest borderwood root stairs e as one coherent two-cell climb rising from the low cell toward e. In the 2:1 isometric diamond, N meets the upper-right edge, E the lower-right edge, S the lower-left edge, and W the upper-left edge. Use roots, embedded stones, and packed earth steps that meet both surfaces cleanly; the low endpoint is (128,128) and the required high-end canvas target is (255,191). The connected climb must visibly reach both 16-pixel endpoint neighborhoods and no other directional canvas endpoint. Do not add a dark vertical block, floating steps, or a second direction. Do not add a baked backdrop, black void, unrelated terrain wall, or presentation frame.",
+  "rasterContract": {
+    "schemaVersion": "battle-art-raster-contract-v1",
+    "kind": "transparent-cutout",
+    "minimumCoveredPermille": 10,
+    "maximumCoveredPermille": 850
+  },
+  "canvas": {
+    "width": 256,
+    "height": 192
+  },
+  "placement": {
+    "pivot": {
+      "x": 128,
+      "y": 128
+    },
+    "anchor": {
+      "x": 128,
+      "y": 128
+    },
+    "footprint": {
+      "x": 0,
+      "y": 0,
+      "width": 2,
+      "height": 1
+    },
+    "collision": {
+      "kind": "connection",
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 0
+        }
+      ]
+    },
+    "drawBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 192
+    },
+    "occlusionBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 144
+    },
+    "stratum": "connection"
+  },
+  "content": {
+    "version": 1,
+    "sourceSha256": "sha256:b79f43a5c628698703b2083292d790010952355e38de0a771499b423a439c05e",
+    "runtimeSha256": "sha256:064d0ebe5d8df43fd63e74b7d6802ff1337a88118020e86cb1d979eba1f7ef13",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v6/forest/connection-stairs/forest-borderwood-root-stairs-e/v1/064d0ebe5d8df43fd63e74b7d6802ff1337a88118020e86cb1d979eba1f7ef13.webp"
+  },
+  "source": {
+    "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-borderwood-root-stairs-e/result.json",
+    "imagePath": "ai-image-metadata/battle-art/sources/forest/forest-borderwood-root-stairs-e/v1/b79f43a5c628698703b2083292d790010952355e38de0a771499b423a439c05e.png",
+    "imageSha256": "sha256:b79f43a5c628698703b2083292d790010952355e38de0a771499b423a439c05e",
+    "width": 256,
+    "height": 192,
+    "format": "png",
+    "reviewer": "codex",
+    "approvedAt": "2026-07-31T02:31:09.322Z"
+  }
+}

@@ -6,7 +6,8 @@ import { describe, it } from 'node:test';
 
 import {
   BATTLE_MAP_HASH_VERSION,
-  createMinimalBattleMapV2FinalFixture
+  createMinimalBattleMapV2FinalFixture,
+  createMinimalBattleMapV3FinalFixture
 } from '../../../../shared/battleMap/index.js';
 import {
   createBattleMapCapabilities,
@@ -23,6 +24,14 @@ import { stopCleanupInterval } from '../../services/messageReliability.js';
 function v2Capabilities() {
   return createBattleMapCapabilities({
     supportedBattleMapSchemaVersions: [1, 2],
+    supportedHashVersions: [BATTLE_MAP_HASH_VERSION],
+    supportedMutableStateProtocolVersions: [1]
+  });
+}
+
+function v3Capabilities() {
+  return createBattleMapCapabilities({
+    supportedBattleMapSchemaVersions: [1, 2, 3],
     supportedHashVersions: [BATTLE_MAP_HASH_VERSION],
     supportedMutableStateProtocolVersions: [1]
   });
@@ -138,6 +147,29 @@ describe('battle entry-path capability propagation', () => {
     assert.equal(response.snapshot.battleMapSchemaVersion, 2);
     assert.deepEqual(response.snapshot.battleMap, map);
     assert.equal(response.snapshot.stateRevision, 3);
+  });
+
+  it('returns V3 only through its verified full snapshot', async () => {
+    const map = await createMinimalBattleMapV3FinalFixture();
+    const battle = {
+      battleId: 43,
+      battleMapSchemaVersion: 3,
+      terrainGenerationVersion: 3,
+      stateRevision: 2,
+      map,
+      mutableState: mutableState(),
+      state: { raw: 'must not be returned for V3' }
+    };
+    const response = createAdvancementBattleTransportResponse(
+      { battleId: battle.battleId, state: battle.state },
+      battle,
+      v3Capabilities()
+    );
+
+    assert.equal(response.state, undefined);
+    assert.equal(response.snapshot.battleMapSchemaVersion, 3);
+    assert.equal(response.snapshot.mapDelivery, 'full');
+    assert.equal(response.snapshot.fullHash, map.hashes.fullHash);
   });
 
   it('invokes the Coliseum surrender lifecycle exactly once and makes retries idempotent', async () => {

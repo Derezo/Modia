@@ -3,6 +3,47 @@ import { getBattleMapCapabilities } from '../battle/BattleMapSession.js';
 
 const BATTLE_ACTION_TIMEOUT_MS = 15000;
 
+export function createFishingActionId() {
+  if (globalThis.crypto?.randomUUID) {
+    return globalThis.crypto.randomUUID();
+  }
+
+  const bytes = new Uint8Array(16);
+  if (globalThis.crypto?.getRandomValues) {
+    globalThis.crypto.getRandomValues(bytes);
+  } else {
+    for (let index = 0; index < bytes.length; index += 1) {
+      bytes[index] = Math.floor(Math.random() * 256);
+    }
+  }
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = [...bytes].map(value => value.toString(16).padStart(2, '0'));
+  return [
+    hex.slice(0, 4).join(''),
+    hex.slice(4, 6).join(''),
+    hex.slice(6, 8).join(''),
+    hex.slice(8, 10).join(''),
+    hex.slice(10).join('')
+  ].join('-');
+}
+
+function normalizeFishingStatusEnvelope(result) {
+  if (!result || typeof result !== 'object' || result.active !== undefined) {
+    return result;
+  }
+  return {
+    ...result,
+    active: result.session?.active === true,
+    collectable: Boolean(
+      result.session &&
+      (result.session.expired === true || result.session.status === 'expired')
+    ),
+    nodeId: result.nodeId ?? result.session?.nodeId,
+    nodeName: result.nodeName ?? result.session?.nodeName
+  };
+}
+
 function createBattleStartRequestId() {
   if (globalThis.crypto?.randomUUID) {
     return globalThis.crypto.randomUUID();
@@ -548,28 +589,86 @@ export class ApiClient {
   }
 
   // Fishing endpoints
-  startFishing(nodeId) {
-    return this.post(`/fishing/${nodeId}/start`);
+  getFishingSetup(nodeId) {
+    return this.get(`/fishing/${nodeId}/setup`);
   }
 
-  registerCatch(nodeId, sessionId) {
-    return this.post(`/fishing/${nodeId}/catch`, { sessionId });
+  startFishing(nodeId, actionId = createFishingActionId(), rodKey = null) {
+    return this.post(`/fishing/${nodeId}/start`, {
+      actionId,
+      ...(rodKey ? { rodKey } : {})
+    });
   }
 
-  claimBigOne(nodeId, sessionId) {
-    return this.post(`/fishing/${nodeId}/big-one`, { sessionId });
+  updateFishingGear(
+    nodeId,
+    sessionId,
+    { rodKey = null, tackleKey = null } = {},
+    actionId = createFishingActionId()
+  ) {
+    return this.post(`/fishing/${nodeId}/gear`, {
+      actionId,
+      sessionId,
+      rodKey,
+      tackleKey
+    });
   }
 
-  endFishing(nodeId, sessionId) {
-    return this.post(`/fishing/${nodeId}/end`, { sessionId });
+  beginFishingCast(nodeId, sessionId, actionId = createFishingActionId()) {
+    return this.post(`/fishing/${nodeId}/cast`, { actionId, sessionId });
   }
 
-  getFishingStatus(nodeId) {
-    return this.get(`/fishing/${nodeId}/status`);
+  releaseFishingCast(nodeId, sessionId, attemptId, actionId = createFishingActionId()) {
+    return this.post(`/fishing/${nodeId}/casts/${attemptId}/release`, {
+      actionId,
+      sessionId
+    });
   }
 
-  getActiveFishingStatus() {
-    return this.get('/fishing/status');
+  hookFishingCast(nodeId, sessionId, attemptId, actionId = createFishingActionId()) {
+    return this.post(`/fishing/${nodeId}/casts/${attemptId}/hook`, {
+      actionId,
+      sessionId
+    });
+  }
+
+  reelFishingCast(
+    nodeId,
+    sessionId,
+    attemptId,
+    direction,
+    cueIndex,
+    actionId = createFishingActionId()
+  ) {
+    return this.post(`/fishing/${nodeId}/casts/${attemptId}/reel`, {
+      actionId,
+      sessionId,
+      direction,
+      cueIndex
+    });
+  }
+
+  resolveFishingCast(nodeId, sessionId, attemptId, actionId = createFishingActionId()) {
+    return this.post(`/fishing/${nodeId}/casts/${attemptId}/resolve`, {
+      actionId,
+      sessionId
+    });
+  }
+
+  endFishing(nodeId, sessionId, actionId = createFishingActionId()) {
+    return this.post(`/fishing/${nodeId}/end`, { actionId, sessionId });
+  }
+
+  async getFishingStatus(nodeId) {
+    return normalizeFishingStatusEnvelope(
+      await this.get(`/fishing/${nodeId}/status`)
+    );
+  }
+
+  async getActiveFishingStatus() {
+    return normalizeFishingStatusEnvelope(
+      await this.get('/fishing/status')
+    );
   }
 
   // Marketplace endpoints

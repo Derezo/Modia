@@ -1,18 +1,24 @@
 import {
   BATTLE_MAP_SCHEMA_VERSION,
   BATTLE_MAP_V2_FLAT_FIELDS,
+  BATTLE_MAP_V3_SCHEMA_VERSION,
   BATTLE_STATE_BYTE_BUDGETS,
   TERRAIN_GENERATION_VERSION,
   assertBattleMapV2Final,
+  assertBattleMapV3Final,
+  assertBattleMapV3SelectionProvenance,
   assertWithinUncompressedBudget,
   battleMapV2ToFlatState,
+  battleMapV3ToFlatState,
   canonicalizeJson,
   createBattleMutableStateUpdateV1,
   createBattleMutableStateV1,
   deepCloneJsonValue,
   deepFreeze,
   loadLegacyFlatBattleState,
-  splitBattleMapV2FlatState
+  resolveBattleMapVersionDescriptor,
+  splitBattleMapV2FlatState,
+  splitBattleMapV3FlatState
 } from '../../../../shared/index.js';
 import { createHash } from 'node:crypto';
 import {
@@ -47,6 +53,13 @@ const BATTLE_ROW_METADATA_COLUMNS = `
   battle_map_schema_version,
   terrain_generation_version,
   battle_map_full_hash,
+  battle_map_content_id,
+  battle_map_content_version,
+  battle_map_catalog_release_id,
+  battle_map_theme,
+  battle_map_tier,
+  battle_map_selection_band,
+  battle_map_selection_provenance,
   creation_idempotency_key,
   creation_request_hash
 `;
@@ -227,7 +240,7 @@ function assertLifecycleMirrors(row, flatState, strict) {
   }
 }
 
-function assertDatabaseMapMirrors(row, flatState, schemaVersion) {
+function assertDatabaseMapMirrors(row, flatState, schemaVersion, selectionProvenance = null) {
   const stateSchemaVersion = flatState.battleMapSchemaVersion
     ?? (schemaVersion === 1 ? 1 : undefined);
   const stateGenerationVersion = flatState.terrainGenerationVersion
@@ -240,11 +253,21 @@ function assertDatabaseMapMirrors(row, flatState, schemaVersion) {
   if (stateGenerationVersion !== row.terrain_generation_version) {
     throw new BattleStateCorruptError(`Battle ${row.id} has a generation-version mirror conflict`);
   }
-  if (flatState.terrainSeed !== row.map_seed) {
-    throw new BattleStateCorruptError(`Battle ${row.id} has a map-seed mirror conflict`);
-  }
-  if (flatState.mapWidth !== row.map_width || flatState.mapHeight !== row.map_height) {
-    throw new BattleStateCorruptError(`Battle ${row.id} has a map-dimension mirror conflict`);
+  if (schemaVersion === BATTLE_MAP_V3_SCHEMA_VERSION) {
+    if (selectionProvenance?.encounterSeed !== row.map_seed) {
+      throw new BattleStateCorruptError(`Battle ${row.id} has a V3 encounter-seed mirror conflict`);
+    }
+    if (flatState.dimensions?.width !== row.map_width
+      || flatState.dimensions?.height !== row.map_height) {
+      throw new BattleStateCorruptError(`Battle ${row.id} has a map-dimension mirror conflict`);
+    }
+  } else {
+    if (flatState.terrainSeed !== row.map_seed) {
+      throw new BattleStateCorruptError(`Battle ${row.id} has a map-seed mirror conflict`);
+    }
+    if (flatState.mapWidth !== row.map_width || flatState.mapHeight !== row.map_height) {
+      throw new BattleStateCorruptError(`Battle ${row.id} has a map-dimension mirror conflict`);
+    }
   }
 }
 
@@ -300,12 +323,100 @@ function flattenLegacyState(map, mutableState) {
   return deepFreeze(deepCloneJsonValue({ ...mutableState, ...map }));
 }
 
+function v3SelectionProvenanceFromRow(row) {
+  const provenance = parseJson(
+    row.battle_map_selection_provenance ?? null,
+    'battles.battle_map_selection_provenance'
+  );
+  if (row.battle_map_schema_version !== BATTLE_MAP_V3_SCHEMA_VERSION) {
+    const legacyColumns = [
+      row.battle_map_content_id,
+      row.battle_map_content_version,
+      row.battle_map_catalog_release_id,
+      row.battle_map_theme,
+      row.battle_map_tier,
+      row.battle_map_selection_band,
+      provenance
+    ];
+    if (legacyColumns.some(value => value !== null && value !== undefined)) {
+      throw new BattleStateCorruptError(
+        `Battle ${row.id} has V3 provenance on a legacy map version`
+      );
+    }
+    return null;
+  }
+  try {
+    assertBattleMapV3SelectionProvenance(provenance);
+  } catch (error) {
+    throw new BattleStateCorruptError(
+      `Battle ${row.id} has invalid V3 selection provenance`,
+      { cause: error }
+    );
+  }
+  const expectedColumns = {
+    battle_map_content_id: provenance.mapContentId,
+    battle_map_content_version: provenance.mapContentVersion,
+    battle_map_catalog_release_id: provenance.catalogReleaseId,
+    battle_map_theme: provenance.theme,
+    battle_map_tier: provenance.sourceTier,
+    battle_map_selection_band: provenance.selectionBand
+  };
+  for (const [column, expected] of Object.entries(expectedColumns)) {
+    if ((row[column] ?? null) !== (expected ?? null)) {
+      throw new BattleStateCorruptError(
+        `Battle ${row.id} has a V3 ${column} mirror conflict`
+      );
+    }
+  }
+  return deepFreeze(deepCloneJsonValue(provenance));
+}
+
+function assertV3MapSelectionMirrors(map, provenance, battleId = 'new') {
+  if (provenance === null) {
+    throw new BattleStateCorruptError(`Battle ${battleId} is missing V3 selection provenance`);
+  }
+  const expected = {
+    contentId: provenance.mapContentId,
+    contentVersion: provenance.mapContentVersion,
+    theme: provenance.theme,
+    fullHash: provenance.mapFullHash
+  };
+  if (map.contentId !== expected.contentId
+    || map.contentVersion !== expected.contentVersion
+    || map.theme !== expected.theme
+    || map.hashes.fullHash !== expected.fullHash) {
+    throw new BattleStateCorruptError(
+      `Battle ${battleId} has a V3 map/selection provenance conflict`
+    );
+  }
+}
+
 function mapReference(map) {
-  const isV2 = map.battleMapSchemaVersion === BATTLE_MAP_SCHEMA_VERSION;
+  const descriptor = resolveBattleMapVersionDescriptor(map);
+  const schemaVersion = descriptor.battleMapSchemaVersion;
   return {
-    battleMapSchemaVersion: isV2 ? BATTLE_MAP_SCHEMA_VERSION : 1,
-    terrainGenerationVersion: isV2 ? TERRAIN_GENERATION_VERSION : 1,
-    fullHash: isV2 ? map.diagnostics.hashes.fullHash : null
+    battleMapSchemaVersion: schemaVersion,
+    terrainGenerationVersion: descriptor.terrainGenerationVersion,
+    fullHash: schemaVersion === BATTLE_MAP_SCHEMA_VERSION
+      ? map.diagnostics.hashes.fullHash
+      : schemaVersion === BATTLE_MAP_V3_SCHEMA_VERSION
+        ? map.hashes.fullHash
+        : null
+  };
+}
+
+function databaseMapMirrors(map, selectionProvenance = null) {
+  if (map.battleMapSchemaVersion === BATTLE_MAP_V3_SCHEMA_VERSION) {
+    return {
+      mapSeed: selectionProvenance.encounterSeed,
+      mapWidth: map.dimensions.width,
+      mapHeight: map.dimensions.height
+    };
+  }
+  return {
+    mapSeed: map.terrainSeed,
+    mapWidth: map.mapWidth,
+    mapHeight: map.mapHeight
   };
 }
 
@@ -342,7 +453,16 @@ function committedEnvelopeFromRow(
     || row.battle_map_full_hash !== reference.fullHash) {
     throw new BattleStateCorruptError(`Battle ${row.id} has a full-hash mirror conflict`);
   }
-  assertDatabaseMapMirrors(row, nextFlatState, reference.battleMapSchemaVersion);
+  const selectionProvenance = v3SelectionProvenanceFromRow(row);
+  if (!jsonEqual(selectionProvenance, baseEnvelope.selectionProvenance)) {
+    throw new BattleStateCorruptError(`Battle ${row.id} has a V3 selection-provenance conflict`);
+  }
+  assertDatabaseMapMirrors(
+    row,
+    nextFlatState,
+    reference.battleMapSchemaVersion,
+    selectionProvenance
+  );
   assertLifecycleMirrors(row, nextFlatState, true);
 
   return deepFreeze({
@@ -363,6 +483,13 @@ function committedEnvelopeFromRow(
     battleMapSchemaVersion: row.battle_map_schema_version,
     terrainGenerationVersion: row.terrain_generation_version,
     fullHash: row.battle_map_full_hash ?? null,
+    contentId: row.battle_map_content_id ?? null,
+    contentVersion: row.battle_map_content_version ?? null,
+    catalogReleaseId: row.battle_map_catalog_release_id ?? null,
+    theme: row.battle_map_theme ?? null,
+    tier: row.battle_map_tier ?? null,
+    selectionBand: row.battle_map_selection_band ?? null,
+    selectionProvenance,
     mapSeed: row.map_seed,
     mapWidth: row.map_width,
     mapHeight: row.map_height,
@@ -446,12 +573,19 @@ export class BattleStateRepository {
     }
     assertRevision(row.state_revision, 'battles.state_revision');
     const schemaVersion = row.battle_map_schema_version;
-    if (schemaVersion !== 1 && schemaVersion !== BATTLE_MAP_SCHEMA_VERSION) {
+    try {
+      resolveBattleMapVersionDescriptor({
+        battleMapSchemaVersion: schemaVersion,
+        terrainGenerationVersion: row.terrain_generation_version
+      });
+    } catch (error) {
       throw new BattleStateCorruptError(
-        `Battle ${row.id} has unsupported map schema ${schemaVersion}`
+        `Battle ${row.id} has an unsupported map version pair`,
+        { cause: error }
       );
     }
-    assertDatabaseMapMirrors(row, flatState, schemaVersion);
+    const selectionProvenance = v3SelectionProvenanceFromRow(row);
+    assertDatabaseMapMirrors(row, flatState, schemaVersion, selectionProvenance);
 
     let map;
     let mutableState;
@@ -484,6 +618,33 @@ export class BattleStateRepository {
           cause: error
         });
       }
+    } else if (schemaVersion === BATTLE_MAP_V3_SCHEMA_VERSION) {
+      if (!HASH_PATTERN.test(row.battle_map_full_hash ?? '')) {
+        throw new BattleStateCorruptError(`Battle ${row.id} has an invalid V3 full-hash mirror`);
+      }
+      try {
+        const split = await splitBattleMapV3FlatState(flatState);
+        map = split.map;
+        assertWithinUncompressedBudget(
+          map,
+          BATTLE_STATE_BYTE_BUDGETS.persistedMapUncompressed,
+          'Persisted BattleMapV3'
+        );
+        if (map.hashes.fullHash !== row.battle_map_full_hash) {
+          throw new BattleStateCorruptError(`Battle ${row.id} has a full-hash mirror conflict`);
+        }
+        assertV3MapSelectionMirrors(map, selectionProvenance, row.id);
+        assertLifecycleMirrors(row, split.mutableState, true);
+        mutableState = createBattleMutableStateV1(
+          split.mutableState,
+          lifecycleFromRow(row, split.mutableState)
+        );
+      } catch (error) {
+        if (error instanceof BattleStateRepositoryError) throw error;
+        throw new BattleStateCorruptError(`Battle ${row.id} contains an invalid BattleMapV3`, {
+          cause: error
+        });
+      }
     } else {
       if (row.terrain_generation_version !== 1 || row.battle_map_full_hash !== null) {
         throw new BattleStateCorruptError(`Battle ${row.id} has invalid V1 version/hash mirrors`);
@@ -501,7 +662,9 @@ export class BattleStateRepository {
 
     const normalizedFlatState = schemaVersion === BATTLE_MAP_SCHEMA_VERSION
       ? await battleMapV2ToFlatState(map, mutableState)
-      : flattenLegacyState(map, mutableState);
+      : schemaVersion === BATTLE_MAP_V3_SCHEMA_VERSION
+        ? await battleMapV3ToFlatState(map, mutableState)
+        : flattenLegacyState(map, mutableState);
 
     return deepFreeze({
       battleId: row.id,
@@ -521,6 +684,13 @@ export class BattleStateRepository {
       battleMapSchemaVersion: schemaVersion,
       terrainGenerationVersion: row.terrain_generation_version,
       fullHash: row.battle_map_full_hash ?? null,
+      contentId: row.battle_map_content_id ?? null,
+      contentVersion: row.battle_map_content_version ?? null,
+      catalogReleaseId: row.battle_map_catalog_release_id ?? null,
+      theme: row.battle_map_theme ?? null,
+      tier: row.battle_map_tier ?? null,
+      selectionBand: row.battle_map_selection_band ?? null,
+      selectionProvenance,
       mapSeed: row.map_seed,
       mapWidth: row.map_width,
       mapHeight: row.map_height,
@@ -742,7 +912,8 @@ export class BattleStateRepository {
     creationIdempotencyKey,
     finalMap = null,
     legacyFlatState = null,
-    initialMutableState = {}
+    initialMutableState = {},
+    selectionProvenance = null
   }, { client = null } = {}) {
     assertNonEmptyString(
       creationIdempotencyKey,
@@ -758,6 +929,7 @@ export class BattleStateRepository {
     let map;
     let flatState;
     let mutableState;
+    let normalizedSelectionProvenance = null;
     const lifecycle = {
       status,
       battleType,
@@ -770,16 +942,35 @@ export class BattleStateRepository {
       challengerCharacterId
     };
     if (finalMap !== null) {
-      assertBattleMapV2Final(finalMap);
+      if (finalMap.battleMapSchemaVersion === BATTLE_MAP_SCHEMA_VERSION) {
+        assertBattleMapV2Final(finalMap);
+        if (selectionProvenance !== null) {
+          throw new TypeError('BattleMapV2 creation cannot carry V3 selection provenance');
+        }
+      } else if (finalMap.battleMapSchemaVersion === BATTLE_MAP_V3_SCHEMA_VERSION) {
+        assertBattleMapV3Final(finalMap);
+        assertBattleMapV3SelectionProvenance(selectionProvenance);
+        normalizedSelectionProvenance = deepFreeze(
+          deepCloneJsonValue(selectionProvenance)
+        );
+        assertV3MapSelectionMirrors(finalMap, normalizedSelectionProvenance);
+      } else {
+        throw new TypeError('finalMap must be an explicit final BattleMapV2 or BattleMapV3');
+      }
       map = finalMap;
       assertWithinUncompressedBudget(
         map,
         BATTLE_STATE_BYTE_BUDGETS.persistedMapUncompressed,
-        'Persisted BattleMapV2'
+        `Persisted BattleMapV${map.battleMapSchemaVersion}`
       );
       mutableState = createBattleMutableStateV1(initialMutableState, lifecycle);
-      flatState = await battleMapV2ToFlatState(map, mutableState);
+      flatState = map.battleMapSchemaVersion === BATTLE_MAP_V3_SCHEMA_VERSION
+        ? await battleMapV3ToFlatState(map, mutableState)
+        : await battleMapV2ToFlatState(map, mutableState);
     } else {
+      if (selectionProvenance !== null) {
+        throw new TypeError('BattleMapV1 creation cannot carry V3 selection provenance');
+      }
       assertPlainObject(legacyFlatState, 'legacyFlatState');
       map = legacyMapFromFlatState(legacyFlatState);
       const legacyMutable = {};
@@ -793,6 +984,7 @@ export class BattleStateRepository {
       flatState = flattenLegacyState(map, mutableState);
     }
     const reference = mapReference(map);
+    const mirrors = databaseMapMirrors(map, normalizedSelectionProvenance);
     assertWithinUncompressedBudget(
       flatState,
       BATTLE_STATE_BYTE_BUDGETS.initialSnapshotUncompressed,
@@ -807,7 +999,8 @@ export class BattleStateRepository {
       isAdvancementBattle,
       challengerCharacterId: challengerCharacterId ?? null,
       map,
-      mutableState
+      mutableState,
+      selectionProvenance: normalizedSelectionProvenance
     });
 
     return this.inTransaction(client, async transactionClient => {
@@ -827,6 +1020,7 @@ export class BattleStateRepository {
             player2Id,
             nodeId,
             map,
+            selectionProvenance: normalizedSelectionProvenance,
             creationRequestHash
           }
         );
@@ -849,12 +1043,20 @@ export class BattleStateRepository {
            battle_map_schema_version,
            terrain_generation_version,
            battle_map_full_hash,
+           battle_map_content_id,
+           battle_map_content_version,
+           battle_map_catalog_release_id,
+           battle_map_theme,
+           battle_map_tier,
+           battle_map_selection_band,
+           battle_map_selection_provenance,
            creation_idempotency_key,
            creation_request_hash
          )
          VALUES (
            $1, $2, $3, $4, $5, $6, $7, $8,
-           $9, $10, $11, 0, $12, $13, $14, $15, $16
+           $9, $10, $11, 0, $12, $13, $14, $15, $16,
+           $17, $18, $19, $20, $21, $22, $23
          )
          ON CONFLICT (creation_idempotency_key)
            WHERE creation_idempotency_key IS NOT NULL
@@ -865,9 +1067,9 @@ export class BattleStateRepository {
           status,
           nodeId,
           JSON.stringify(flatState),
-          map.terrainSeed,
-          map.mapWidth,
-          map.mapHeight,
+          mirrors.mapSeed,
+          mirrors.mapWidth,
+          mirrors.mapHeight,
           player1Id,
           player2Id,
           isAdvancementBattle,
@@ -875,6 +1077,15 @@ export class BattleStateRepository {
           reference.battleMapSchemaVersion,
           reference.terrainGenerationVersion,
           reference.fullHash,
+          normalizedSelectionProvenance?.mapContentId ?? null,
+          normalizedSelectionProvenance?.mapContentVersion ?? null,
+          normalizedSelectionProvenance?.catalogReleaseId ?? null,
+          normalizedSelectionProvenance?.theme ?? null,
+          normalizedSelectionProvenance?.sourceTier ?? null,
+          normalizedSelectionProvenance?.selectionBand ?? null,
+          normalizedSelectionProvenance === null
+            ? null
+            : JSON.stringify(normalizedSelectionProvenance),
           creationIdempotencyKey,
           creationRequestHash
         ]
@@ -899,6 +1110,7 @@ export class BattleStateRepository {
             player2Id,
             nodeId,
             map,
+            selectionProvenance: normalizedSelectionProvenance,
             creationRequestHash
           }
         );
@@ -919,7 +1131,8 @@ export class BattleStateRepository {
       && envelope.player1Id === (expected.player1Id ?? null)
       && envelope.player2Id === (expected.player2Id ?? null)
       && envelope.nodeId === (expected.nodeId ?? null)
-      && jsonEqual(envelope.map, expected.map);
+      && jsonEqual(envelope.map, expected.map)
+      && jsonEqual(envelope.selectionProvenance, expected.selectionProvenance ?? null);
     if (!same) {
       throw new BattleStateIdempotencyError(
         `Creation key ${envelope.creationIdempotencyKey} was reused for another battle`
@@ -1051,7 +1264,7 @@ export class BattleStateRepository {
         forUpdate: true
       });
       if (envelope.battleMapSchemaVersion !== 1) {
-        throw new TypeError('commitLegacyState cannot mutate a BattleMapV2 battle');
+        throw new TypeError('commitLegacyState accepts only a BattleMapV1 battle');
       }
       const suppliedMap = legacyMapFromFlatState(flatState);
       if (!jsonEqual(suppliedMap, envelope.map)) {
@@ -1122,6 +1335,19 @@ export class BattleStateRepository {
         } catch (error) {
           throw new BattleStateConflictError(
             `Command ${commandType} supplied an invalid BattleMapV2 state`,
+            { cause: error }
+          );
+        }
+        suppliedMap = split.map;
+        suppliedMutable = split.mutableState;
+        requestMutableState = split.mutableState;
+      } else if (envelope.battleMapSchemaVersion === BATTLE_MAP_V3_SCHEMA_VERSION) {
+        let split;
+        try {
+          split = await splitBattleMapV3FlatState(flatState);
+        } catch (error) {
+          throw new BattleStateConflictError(
+            `Command ${commandType} supplied an invalid BattleMapV3 state`,
             { cause: error }
           );
         }
@@ -1305,7 +1531,9 @@ export class BattleStateRepository {
 
     const nextFlatState = envelope.battleMapSchemaVersion === BATTLE_MAP_SCHEMA_VERSION
       ? await battleMapV2ToFlatState(envelope.map, nextMutableState)
-      : flattenLegacyState(envelope.map, nextMutableState);
+      : envelope.battleMapSchemaVersion === BATTLE_MAP_V3_SCHEMA_VERSION
+        ? await battleMapV3ToFlatState(envelope.map, nextMutableState)
+        : flattenLegacyState(envelope.map, nextMutableState);
     const nextRevision = expectedRevision + 1;
     const updateResult = await transactionClient.query(
       `UPDATE battles

@@ -34,7 +34,9 @@ class FakePurchaseClient {
         effectValue: params[8],
         basePrice: params[9],
         isStackable: params[10],
-        spriteId: params[11]
+        isTradeable: params[11] ?? true,
+        rarity: params[12] ?? 1,
+        spriteId: params[13]
       });
       return { rows: [{ id: template.id }] };
     }
@@ -103,6 +105,8 @@ describe('caravan purchase persistence', () => {
       effectValue: null,
       basePrice: 320,
       isStackable: true,
+      isTradeable: true,
+      rarity: 1,
       spriteId: 'material_starlight_essence'
     });
     assert.equal(client.items.length, 1);
@@ -191,5 +195,33 @@ describe('caravan purchase persistence', () => {
     assert.equal(template.effectType, 'heal_hp');
     assert.equal(template.effectValue, 150);
     assert.deepEqual(template.statBonuses, { hp_restore: 150 });
+  });
+
+  it('materializes fishing gear under the seeded non-tradeable catalog identity', async () => {
+    const client = new FakePurchaseClient();
+
+    await persistCaravanPurchaseItem(client, 29, {
+      itemId: 'runebound_rod',
+      catalogKey: 'fishing:rod:runebound',
+      name: 'Runebound Rod',
+      type: 'key_item',
+      description: 'An enchanted fishing rod.',
+      statBonuses: { fishing_tool: 'rod', big_catch_rate: 0.85 },
+      rarityId: 5,
+      isTradeable: false,
+      basePrice: 5000,
+      sprite_id: 'fishing_rod_runebound'
+    }, 1);
+
+    const template = client.templates.get('fishing:rod:runebound');
+    assert.equal(template.itemType, 'key_item');
+    assert.equal(template.isStackable, false);
+    assert.equal(template.isTradeable, false);
+    assert.equal(template.rarity, 5);
+    assert.deepEqual(template.statBonuses, {
+      fishing_tool: 'rod',
+      big_catch_rate: 0.85
+    });
+    assert.equal(client.templates.has('caravan:runebound_rod'), false);
   });
 });

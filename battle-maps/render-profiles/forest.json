@@ -1,0 +1,463 @@
+{
+  "schemaVersion": "battle-map-render-profile-v2",
+  "id": "forest-iron-depths-borderwood-v4",
+  "theme": "forest",
+  "ecologyProfile": "forest-iron-depths-borderwood",
+  "assetBundleId": "battle-art-descriptors-2026-07-30",
+  "scene": {
+    "silhouette": "organic-island",
+    "exterior": "forest-canopy",
+    "backdrop": {
+      "kind": "sky-gradient",
+      "topColor": "#4E6F8B",
+      "horizonColor": "#9DB8C4",
+      "bottomColor": "#D7C5A9",
+      "hazeColor": "#C9D8D8"
+    }
+  },
+  "surfaceVariantCount": 4,
+  "elevationFaceSymbols": {
+    "ground": "earth-face"
+  },
+  "assetBindings": [
+    {
+      "category": "surface",
+      "symbol": "ground",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "surfaceVariant": 0
+      },
+      "assetKey": "forest-borderwood-moss-ground-0"
+    },
+    {
+      "category": "surface",
+      "symbol": "ground",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "surfaceVariant": 1
+      },
+      "assetKey": "forest-borderwood-moss-ground-1"
+    },
+    {
+      "category": "surface",
+      "symbol": "ground",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "surfaceVariant": 2
+      },
+      "assetKey": "forest-borderwood-moss-ground-2"
+    },
+    {
+      "category": "surface",
+      "symbol": "ground",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "surfaceVariant": 3
+      },
+      "assetKey": "forest-borderwood-moss-ground-3"
+    },
+    {
+      "category": "route",
+      "symbol": "path",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "routeTopology": "end-n"
+      },
+      "assetKey": "forest-borderwood-dirt-path-end-n"
+    },
+    {
+      "category": "route",
+      "symbol": "path",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "routeTopology": "end-e"
+      },
+      "assetKey": "forest-borderwood-dirt-path-end-e"
+    },
+    {
+      "category": "route",
+      "symbol": "path",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "routeTopology": "end-s"
+      },
+      "assetKey": "forest-borderwood-dirt-path-end-s"
+    },
+    {
+      "category": "route",
+      "symbol": "path",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "routeTopology": "end-w"
+      },
+      "assetKey": "forest-borderwood-dirt-path-end-w"
+    },
+    {
+      "category": "route",
+      "symbol": "path",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "routeTopology": "straight-ns"
+      },
+      "assetKey": "forest-borderwood-dirt-path-straight-ns"
+    },
+    {
+      "category": "route",
+      "symbol": "path",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "routeTopology": "straight-ew"
+      },
+      "assetKey": "forest-borderwood-dirt-path-straight-ew"
+    },
+    {
+      "category": "route",
+      "symbol": "path",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "routeTopology": "corner-ne"
+      },
+      "assetKey": "forest-borderwood-dirt-path-corner-ne"
+    },
+    {
+      "category": "route",
+      "symbol": "path",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "routeTopology": "corner-es"
+      },
+      "assetKey": "forest-borderwood-dirt-path-corner-es"
+    },
+    {
+      "category": "route",
+      "symbol": "path",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "routeTopology": "corner-sw"
+      },
+      "assetKey": "forest-borderwood-dirt-path-corner-sw"
+    },
+    {
+      "category": "route",
+      "symbol": "path",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "routeTopology": "corner-wn"
+      },
+      "assetKey": "forest-borderwood-dirt-path-corner-wn"
+    },
+    {
+      "category": "route",
+      "symbol": "path",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "routeTopology": "tee-nes"
+      },
+      "assetKey": "forest-borderwood-dirt-path-tee-nes"
+    },
+    {
+      "category": "route",
+      "symbol": "path",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "routeTopology": "tee-esw"
+      },
+      "assetKey": "forest-borderwood-dirt-path-tee-esw"
+    },
+    {
+      "category": "route",
+      "symbol": "path",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "routeTopology": "tee-nsw"
+      },
+      "assetKey": "forest-borderwood-dirt-path-tee-nsw"
+    },
+    {
+      "category": "route",
+      "symbol": "path",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "routeTopology": "tee-wne"
+      },
+      "assetKey": "forest-borderwood-dirt-path-tee-wne"
+    },
+    {
+      "category": "route",
+      "symbol": "path",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "routeTopology": "cross"
+      },
+      "assetKey": "forest-borderwood-dirt-path-cross"
+    },
+    {
+      "category": "route",
+      "symbol": "path",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "routeTopology": "isolated"
+      },
+      "assetKey": "forest-borderwood-dirt-path-isolated"
+    },
+    {
+      "category": "connection",
+      "symbol": "stairs",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "direction": "n",
+        "heightDelta": 1
+      },
+      "assetKey": "forest-borderwood-root-stairs-n"
+    },
+    {
+      "category": "connection",
+      "symbol": "stairs",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "direction": "e",
+        "heightDelta": 1
+      },
+      "assetKey": "forest-borderwood-root-stairs-e"
+    },
+    {
+      "category": "connection",
+      "symbol": "stairs",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "direction": "s",
+        "heightDelta": 1
+      },
+      "assetKey": "forest-borderwood-root-stairs-s"
+    },
+    {
+      "category": "connection",
+      "symbol": "stairs",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "direction": "w",
+        "heightDelta": 1
+      },
+      "assetKey": "forest-borderwood-root-stairs-w"
+    },
+    {
+      "category": "connection",
+      "symbol": "slope",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "direction": "n",
+        "heightDelta": 1
+      },
+      "assetKey": "forest-borderwood-earth-ramp-n"
+    },
+    {
+      "category": "connection",
+      "symbol": "slope",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "direction": "e",
+        "heightDelta": 1
+      },
+      "assetKey": "forest-borderwood-earth-ramp-e"
+    },
+    {
+      "category": "connection",
+      "symbol": "slope",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "direction": "s",
+        "heightDelta": 1
+      },
+      "assetKey": "forest-borderwood-earth-ramp-s"
+    },
+    {
+      "category": "connection",
+      "symbol": "slope",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "direction": "w",
+        "heightDelta": 1
+      },
+      "assetKey": "forest-borderwood-earth-ramp-w"
+    },
+    {
+      "category": "boundary",
+      "symbol": "forest-edge",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "direction": "n",
+        "heightDelta": 1
+      },
+      "assetKey": "forest-borderwood-canopy-edge-n"
+    },
+    {
+      "category": "boundary",
+      "symbol": "forest-edge",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "direction": "e",
+        "heightDelta": 1
+      },
+      "assetKey": "forest-borderwood-canopy-edge-e"
+    },
+    {
+      "category": "boundary",
+      "symbol": "forest-edge",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "direction": "s",
+        "heightDelta": 1
+      },
+      "assetKey": "forest-borderwood-canopy-edge-s"
+    },
+    {
+      "category": "boundary",
+      "symbol": "forest-edge",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "direction": "w",
+        "heightDelta": 1
+      },
+      "assetKey": "forest-borderwood-canopy-edge-w"
+    },
+    {
+      "category": "boundary",
+      "symbol": "earth-face",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "direction": "n",
+        "heightDelta": 1
+      },
+      "assetKey": "forest-borderwood-earth-face-n"
+    },
+    {
+      "category": "boundary",
+      "symbol": "earth-face",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "direction": "e",
+        "heightDelta": 1
+      },
+      "assetKey": "forest-borderwood-earth-face-e"
+    },
+    {
+      "category": "boundary",
+      "symbol": "earth-face",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "direction": "s",
+        "heightDelta": 1
+      },
+      "assetKey": "forest-borderwood-earth-face-s"
+    },
+    {
+      "category": "boundary",
+      "symbol": "earth-face",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1,
+        "direction": "w",
+        "heightDelta": 1
+      },
+      "assetKey": "forest-borderwood-earth-face-w"
+    },
+    {
+      "category": "obstacle",
+      "symbol": "ancient-tree",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1
+      },
+      "assetKey": "forest-borderwood-ancient-tree"
+    },
+    {
+      "category": "obstacle",
+      "symbol": "ironpine",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1
+      },
+      "assetKey": "forest-borderwood-ironpine"
+    },
+    {
+      "category": "obstacle",
+      "symbol": "moss-boulder",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1
+      },
+      "assetKey": "forest-borderwood-moss-boulder"
+    },
+    {
+      "category": "obstacle",
+      "symbol": "pale-birch",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1
+      },
+      "assetKey": "forest-borderwood-pale-birch"
+    },
+    {
+      "category": "decoration",
+      "symbol": "accent",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1
+      },
+      "assetKey": "forest-borderwood-fern-cluster"
+    },
+    {
+      "category": "decoration",
+      "symbol": "fallen-branch",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1
+      },
+      "assetKey": "forest-borderwood-fallen-branch"
+    },
+    {
+      "category": "decoration",
+      "symbol": "low-shrub",
+      "match": {
+        "ecologyProfile": "forest-iron-depths-borderwood",
+        "tier": 1
+      },
+      "assetKey": "forest-borderwood-low-shrub"
+    }
+  ]
+}

@@ -19,10 +19,9 @@ import {
 import { withBattleVisualIdentity } from './battle/visualIdentityService.js';
 import battleStateRepository from './battle/BattleStateRepository.js';
 import {
+  AUTHORED_BATTLE_MAP_VERSION,
   extractBattleMutableState,
-  generateBattleMap,
-  isBattleMapV2EnabledForMode,
-  selectBattleMapGenerationVersion
+  generateBattleMap
 } from './battle/battleMapGenerationService.js';
 import { deriveEncounterTerrainSeed } from './battle/encounterService.js';
 import { createPlayerBattleUnit } from './battleUnitFactory.js';
@@ -212,7 +211,6 @@ export async function generateGuildmasterBattle(
     bossConfig = null,
     advancementQuestId = null,
     clientCapabilities = null,
-    allowV2 = isBattleMapV2EnabledForMode('guild'),
     client = null
   } = {}
 ) {
@@ -253,18 +251,10 @@ export async function generateGuildmasterBattle(
   // Position units on map
   positionUnits([playerUnit], enemies, 32, 32);
 
-  // The seed and creation input are stable across retries of the same
-  // advancement trial. Version selection is repeated by generateBattleMap and
-  // must produce the same result for the same rollout/capabilities.
-  const terrainGenerationVersion = selectBattleMapGenerationVersion({
-    mode: 'guild',
-    allowV2,
-    clientCapabilities
-  });
   const mapSeed = deriveEncounterTerrainSeed(
     nodeId,
     'guild',
-    terrainGenerationVersion
+    AUTHORED_BATTLE_MAP_VERSION
   );
 
   // Build mutable combat state; the generation boundary appends the immutable
@@ -289,12 +279,13 @@ export async function generateGuildmasterBattle(
     mapWidth: 32,
     mapHeight: 32,
     mode: 'guild',
+    guildTier: tier,
     playerCount: 1,
     enemyCount: enemies.length,
     enemyCapacity: enemies.length,
     existingUnits: initialMutableState.units,
     initialMutableState,
-    allowV2,
+    requireBossCapable: true,
     clientCapabilities
   });
 
@@ -307,6 +298,7 @@ export async function generateGuildmasterBattle(
     mutableState: generatedMap.mutableState,
     finalMap: generatedMap.finalMap,
     legacyFlatState: generatedMap.legacyFlatState,
+    selectionProvenance: generatedMap.selectionProvenance,
     battleMapSchemaVersion: generatedMap.battleMapSchemaVersion,
     terrainGenerationVersion: generatedMap.terrainGenerationVersion,
     guildmaster,
@@ -662,6 +654,7 @@ export async function createGuildmasterBattleRecord(battleConfig, userId) {
     mutableState: generatedMutableState,
     finalMap,
     legacyFlatState,
+    selectionProvenance,
     isAdvancementBattle,
     advancementQuestId,
     targetClass,
@@ -697,7 +690,8 @@ export async function createGuildmasterBattleRecord(battleConfig, userId) {
       creationIdempotencyKey,
       finalMap,
       legacyFlatState,
-      initialMutableState: mutableState
+      initialMutableState: mutableState,
+      selectionProvenance
     }, { client });
     await persistAdvancementBattleIdentity(
       client,

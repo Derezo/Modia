@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "battle-map-v3-active-release-pin-v1",
+  "catalogReleaseId": "battle-map-v3-forest-pilot-2026-07-30-r6",
+  "catalogPath": "battle-maps/catalog/releases/battle-map-v3-forest-pilot-2026-07-30-r6.json",
+  "catalogFullHash": "sha256:76af233bcb30c9716e1e07652134fbb9efdc928a83888f956ee321ad8d7cc85e",
+  "maps": [
+    {
+      "contentId": "forest-template-01-b",
+      "contentVersion": 12,
+      "path": "battle-maps/compiled/forest/forest-template-01-b.v12.json",
+      "fullHash": "sha256:cad472a23e3ff4cc3549076b0a4715df4611ee91f87cb095d7c699ffe1d372f8"
+    }
+  ]
+}

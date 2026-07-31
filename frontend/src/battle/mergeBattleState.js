@@ -70,6 +70,16 @@ export function applyBattleMapPatch(grid, statePatch) {
   if (Array.isArray(statePatch.elevationConnections)) {
     grid.setElevationConnections(statePatch.elevationConnections);
   }
+  if (Array.isArray(statePatch.renderMask) ||
+      Array.isArray(statePatch.playableMask)) {
+    if (!Array.isArray(statePatch.renderMask) ||
+        !Array.isArray(statePatch.playableMask)) {
+      throw new TypeError(
+        'V3 battle-map hydration requires renderMask and playableMask together'
+      );
+    }
+    grid.setMasks(statePatch.renderMask, statePatch.playableMask);
+  }
   if (Array.isArray(statePatch.transitions)) {
     grid.setTransitions(statePatch.transitions);
   }

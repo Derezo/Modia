@@ -146,6 +146,24 @@ npm run tiles:rebuild                    # Full rebuild and legacy-file pruning
 npm run tiles:check                      # Compiler tests plus strict live validation
 ```
 
+### Battle Map V3 Regional Art
+
+```bash
+npm run battle-art:matrix                # Reviewed biome/ecology/tier readiness
+npm run battle-art:scaffold -- --theme forest --ecology-profile forest-heartlands-woodland --tier 1 --category surface
+npm run battle-art:generate -- --theme forest --ecology-profile forest-heartlands-woodland --tier 1 --resume --keep-going
+npm run battle-art:preview -- --theme forest --ecology-profile forest-heartlands-woodland --tier 1
+npm run battle-art:approve -- --theme forest --family <id> --reviewer <name> --decision approved
+npm run battle-art:compile
+npm run battle-art:archive
+npm run battle-art:check
+```
+
+Candidate generation is available only through these npm commands. See
+[BATTLE_MAP_V3_ART_LIFECYCLE.md](BATTLE_MAP_V3_ART_LIFECYCLE.md) for regional
+species/geology direction, topology and slope contracts, manual review, and
+catalog activation.
+
 ### AI Image Generation
 
 ```bash

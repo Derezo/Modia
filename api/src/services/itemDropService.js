@@ -4,6 +4,7 @@
 
 import { query } from '../config/database.js';
 import { SeededRandom } from '../config/constants.js';
+import { getFishingGearByCatalogKey } from '../db/templates/fishingGear.js';
 
 // Rarity definitions
 const RARITIES = {
@@ -220,20 +221,20 @@ const AUGMENTS = { ...PREFIX_AUGMENTS, ...SUFFIX_AUGMENTS };
  */
 async function rollDrops(enemy, difficultyTier, _terrainType) {
   const dropTable = enemy.dropTable || {};
-  const drops = [];
+  const drops = rollFixedDrops(enemy);
 
-  // Check if anything drops at all
-  const dropChance = dropTable.dropChance || 0.5;
+  // Fixed drops are independent. Only ordinary loot uses difficulty bonuses.
+  const dropChance = dropTable.dropChance ?? 0.5;
   const difficultyBonus = (difficultyTier - 1) * 0.05; // +5% per tier above 1
   const adjustedDropChance = Math.min(1.0, dropChance + difficultyBonus);
 
   if (Math.random() > adjustedDropChance) {
-    return drops; // No drops this time
+    return drops;
   }
 
   // Determine number of items to drop
-  const minItems = dropTable.minItems || 0;
-  const maxItems = dropTable.maxItems || 1;
+  const minItems = dropTable.minItems ?? 0;
+  const maxItems = dropTable.maxItems ?? 1;
   const itemCount = Math.floor(Math.random() * (maxItems - minItems + 1)) + minItems;
 
   if (itemCount === 0 || !dropTable.itemPool || dropTable.itemPool.length === 0) {
@@ -256,6 +257,59 @@ async function rollDrops(enemy, difficultyTier, _terrainType) {
     if (item) {
       drops.push(item);
     }
+  }
+
+  return drops;
+}
+
+/**
+ * Roll canonical fixed drops without procedural rarity, augments, or tier bonuses.
+ *
+ * @param {Object} enemy - Enemy unit with a dropTable
+ * @param {Function} random - Injectable random source for deterministic tests
+ * @returns {Array<Object>} Fixed drop reward records
+ */
+function rollFixedDrops(enemy, random = Math.random) {
+  const fixedDrops = enemy?.dropTable?.fixedDrops;
+  if (!Array.isArray(fixedDrops)) return [];
+
+  const drops = [];
+  for (const fixedDrop of fixedDrops) {
+    const gear = getFishingGearByCatalogKey(fixedDrop?.catalogKey);
+    const chance = Number(fixedDrop?.chance);
+    if (!gear || !Number.isFinite(chance) || chance <= 0) continue;
+    if (Number(random()) >= Math.min(1, chance)) continue;
+
+    const rarityName = getRarityName(gear.rarityId);
+    const rarity = RARITIES[rarityName];
+    drops.push({
+      templateId: null,
+      catalogKey: gear.catalogKey,
+      fixedDrop: true,
+      templateName: gear.name,
+      generatedName: gear.name,
+      itemType: gear.itemType,
+      equipmentSlot: null,
+      rarity: rarityName,
+      rarityId: rarity.id,
+      rarityColor: rarity.color,
+      levelRequirement: 1,
+      baseStats: {},
+      bonusStats: {},
+      augments: [],
+      material: null,
+      quality: null,
+      generationSeed: null,
+      value: gear.basePrice,
+      spriteId: gear.sprite_id,
+      modifications: {
+        catalogKey: gear.catalogKey,
+        fishingTackleKey: gear.key,
+        fixedDrop: true,
+        generatedName: gear.name,
+        spriteId: gear.sprite_id
+      }
+    });
   }
 
   return drops;
@@ -591,6 +645,76 @@ function capitalizeFirst(str) {
 async function storeDroppedItem(userId, item, client) {
   const queryFn = client ? client.query.bind(client) : query;
 
+  if (item.fixedDrop && item.catalogKey) {
+    const gear = getFishingGearByCatalogKey(item.catalogKey);
+    if (!gear || gear.itemType !== 'material') {
+      throw new Error(`Unknown fixed drop catalog key: ${item.catalogKey}`);
+    }
+
+    const templateResult = await queryFn(
+      `INSERT INTO item_templates
+       (catalog_key, name, description, item_type, equipment_slot, stat_bonuses,
+        level_requirement, effect_type, effect_value, base_price, is_stackable,
+        is_tradeable, rarity, sprite_id)
+       VALUES ($1, $2, $3, $4, NULL, $5, 1, NULL, NULL, $6, TRUE, FALSE, $7, $8)
+       ON CONFLICT (catalog_key) DO UPDATE SET
+         name = EXCLUDED.name,
+         description = EXCLUDED.description,
+         item_type = EXCLUDED.item_type,
+         equipment_slot = EXCLUDED.equipment_slot,
+         stat_bonuses = EXCLUDED.stat_bonuses,
+         level_requirement = EXCLUDED.level_requirement,
+         effect_type = EXCLUDED.effect_type,
+         effect_value = EXCLUDED.effect_value,
+         base_price = EXCLUDED.base_price,
+         is_stackable = EXCLUDED.is_stackable,
+         is_tradeable = EXCLUDED.is_tradeable,
+         rarity = EXCLUDED.rarity,
+         sprite_id = EXCLUDED.sprite_id
+       RETURNING id`,
+      [
+        gear.catalogKey,
+        gear.name,
+        gear.description,
+        gear.itemType,
+        JSON.stringify(gear.statBonuses),
+        gear.basePrice,
+        gear.rarityId,
+        gear.sprite_id
+      ]
+    );
+    const templateId = templateResult.rows[0]?.id;
+    if (templateId === null || templateId === undefined) {
+      throw new Error(`Failed to resolve fixed drop template: ${item.catalogKey}`);
+    }
+
+    item.templateId = templateId;
+    const existing = await queryFn(
+      `SELECT id FROM character_items
+       WHERE user_id = $1
+         AND item_template_id = $2
+         AND character_id IS NULL
+         AND equipped_slot IS NULL
+       LIMIT 1
+       FOR UPDATE`,
+      [userId, templateId]
+    );
+
+    if (existing.rows.length > 0) {
+      await queryFn(
+        'UPDATE character_items SET quantity = quantity + 1 WHERE id = $1',
+        [existing.rows[0].id]
+      );
+    } else {
+      await queryFn(
+        `INSERT INTO character_items (user_id, item_template_id, quantity, modifications)
+         VALUES ($1, $2, 1, $3)`,
+        [userId, templateId, JSON.stringify(item.modifications)]
+      );
+    }
+    return;
+  }
+
   await queryFn(
     `INSERT INTO character_items (user_id, item_template_id, quantity, modifications)
      VALUES ($1, $2, 1, $3)`,
@@ -628,6 +752,7 @@ function formatDropsForResponse(drops) {
 
 export {
   rollDrops,
+  rollFixedDrops,
   generateItem,
   storeDroppedItem,
   calculateDropChance,

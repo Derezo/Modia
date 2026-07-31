@@ -1,0 +1,88 @@
+{
+  "schemaVersion": "battle-art-family-descriptor-v1",
+  "id": "forest-root-stairs",
+  "theme": "forest",
+  "category": "connection-stairs",
+  "status": "compiled",
+  "promptProfile": {
+    "id": "battle-art-family-v2",
+    "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+    "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+  },
+  "styleReferences": [
+    {
+      "id": "forest-source-template-01",
+      "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+      "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+    }
+  ],
+  "generationPrompt": "Create one low-angle orthographic-isometric north-south 1x2 traversable forest staircase, matching the camera angle of the reference battle map rather than a straight top-down ladder. Show a broad lower landing in the foreground, four or five wide earthen treads reinforced by thick gnarled roots, and a visibly higher rear landing. The connected silhouette must run diagonally upward through pivot/anchor (128,128), with readable tread faces and enough width for combat units. Keep all pixels inside drawBounds and the exterior transparent. No narrow ladder, repeated oval rungs, perfectly vertical top-down strip, opaque backing rectangle, bridge, cliff wall, isolated roots, freestanding prop, or cast shadow.",
+  "rasterContract": {
+    "schemaVersion": "battle-art-raster-contract-v1",
+    "kind": "transparent-cutout",
+    "minimumCoveredPermille": 100,
+    "maximumCoveredPermille": 750
+  },
+  "canvas": {
+    "width": 256,
+    "height": 192
+  },
+  "placement": {
+    "pivot": {
+      "x": 128,
+      "y": 128
+    },
+    "anchor": {
+      "x": 128,
+      "y": 128
+    },
+    "footprint": {
+      "x": 0,
+      "y": 0,
+      "width": 1,
+      "height": 2
+    },
+    "collision": {
+      "kind": "connection",
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0,
+          "y": 1
+        }
+      ]
+    },
+    "drawBounds": {
+      "x": 0,
+      "y": 16,
+      "width": 256,
+      "height": 176
+    },
+    "occlusionBounds": {
+      "x": 48,
+      "y": 32,
+      "width": 160,
+      "height": 96
+    },
+    "stratum": "connection"
+  },
+  "content": {
+    "version": 2,
+    "sourceSha256": "sha256:6bb6e98ae5d77b2f863a6d8045e179e888bea86ab90a8500846c563a41958ffc",
+    "runtimeSha256": "sha256:99dbf911c2e27d4a00be57afda06dec6351ac3ec2fe08f868557f7fa3ac8c643",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v6/forest/connection-stairs/forest-root-stairs/v2/99dbf911c2e27d4a00be57afda06dec6351ac3ec2fe08f868557f7fa3ac8c643.webp"
+  },
+  "source": {
+    "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-root-stairs/result.json",
+    "imagePath": "ai-image-metadata/battle-art/sources/forest/forest-root-stairs/v2/6bb6e98ae5d77b2f863a6d8045e179e888bea86ab90a8500846c563a41958ffc.png",
+    "imageSha256": "sha256:6bb6e98ae5d77b2f863a6d8045e179e888bea86ab90a8500846c563a41958ffc",
+    "width": 256,
+    "height": 192,
+    "format": "png",
+    "reviewer": "codex",
+    "approvedAt": "2026-07-30T09:44:40.233Z"
+  }
+}

@@ -2170,6 +2170,139 @@ describe('processAction - Healing Skills', () => {
     ));
   });
 
+  it('rejects a V3 skill centered on a visible but non-playable tile', () => {
+    const smokeBomb = {
+      id: 'test_masked_smoke_bomb',
+      name: 'Test Masked Smoke Bomb',
+      type: 'active',
+      range: 3,
+      mpCost: 10,
+      power: 0,
+      aoeRadius: 1,
+      effect: 'blind',
+      effectChance: 1
+    };
+    const caster = createSkillTestUnit({ skills: [smokeBomb] });
+    const opponent = createSkillTestUnit({
+      id: 'opponent',
+      type: 'player',
+      teamId: 1,
+      tileX: 7,
+      statusEffects: [],
+      skills: []
+    });
+    const playableMask = Array.from(
+      { length: 32 },
+      () => Array(32).fill(true)
+    );
+    playableMask[opponent.tileY][opponent.tileX] = false;
+    const state = {
+      ...createSkillTestState([caster, opponent]),
+      playableMask
+    };
+
+    const result = processAction(
+      state,
+      caster,
+      'skill',
+      { x: opponent.tileX, y: opponent.tileY },
+      smokeBomb.id
+    );
+
+    assert.strictEqual(result.error, 'Target tile is not playable');
+    assert.strictEqual(caster.mp, 50);
+    assert.strictEqual(caster.actUsed, false);
+    assert.deepStrictEqual(opponent.statusEffects, []);
+  });
+
+  it('filters non-playable V3 cells from AoE tiles and effects', () => {
+    const smokeBomb = {
+      id: 'test_masked_smoke_bomb',
+      name: 'Test Masked Smoke Bomb',
+      type: 'active',
+      range: 3,
+      mpCost: 0,
+      power: 0,
+      aoeRadius: 1,
+      effect: 'blind',
+      effectDuration: 2,
+      effectChance: 1
+    };
+    const caster = createSkillTestUnit({ skills: [smokeBomb] });
+    const centerTarget = createSkillTestUnit({
+      id: 'center-target',
+      type: 'player',
+      teamId: 1,
+      tileX: 6,
+      tileY: 5,
+      statusEffects: [],
+      skills: []
+    });
+    const maskedTarget = createSkillTestUnit({
+      id: 'masked-target',
+      type: 'player',
+      teamId: 1,
+      tileX: 7,
+      tileY: 5,
+      statusEffects: [],
+      skills: []
+    });
+    const playableTarget = createSkillTestUnit({
+      id: 'playable-target',
+      type: 'player',
+      teamId: 1,
+      tileX: 6,
+      tileY: 6,
+      statusEffects: [],
+      skills: []
+    });
+    const playableMask = Array.from(
+      { length: 32 },
+      () => Array(32).fill(true)
+    );
+    playableMask[maskedTarget.tileY][maskedTarget.tileX] = false;
+    const state = {
+      ...createSkillTestState([
+        caster,
+        centerTarget,
+        maskedTarget,
+        playableTarget
+      ]),
+      playableMask
+    };
+
+    const result = processAction(
+      state,
+      caster,
+      'skill',
+      { x: centerTarget.tileX, y: centerTarget.tileY },
+      smokeBomb.id
+    );
+
+    assert.strictEqual(result.error, undefined);
+    assert.ok(result.aoeTiles.some(tile =>
+      tile.x === playableTarget.tileX && tile.y === playableTarget.tileY
+    ));
+    assert.ok(!result.aoeTiles.some(tile =>
+      tile.x === maskedTarget.tileX && tile.y === maskedTarget.tileY
+    ));
+    assert.ok(result.aoeTargets.some(target =>
+      target.targetId === playableTarget.id
+    ));
+    assert.ok(!result.aoeTargets.some(target =>
+      target.targetId === maskedTarget.id
+    ));
+    assert.deepStrictEqual(centerTarget.statusEffects, [{
+      type: 'blind',
+      duration: 2
+    }]);
+    assert.deepStrictEqual(playableTarget.statusEffects, [{
+      type: 'blind',
+      duration: 2
+    }]);
+    assert.deepStrictEqual(maskedTarget.statusEffects, []);
+  });
+
   it('applies a damage-free single-target debuff without fallback damage', () => {
     const frozenTomb = {
       id: 'test_frozen_tomb',
@@ -2981,20 +3114,22 @@ describe('Battle Statistics Tracking', () => {
       });
       const attacker = state.units[0];
 
-      // First attack
-      processAction(state, attacker, 'attack', { x: 1, y: 0 });
-      const damageAfterFirst = attacker.damageDealt;
+      withRandomValues([0.5], () => {
+        // First attack
+        processAction(state, attacker, 'attack', { x: 1, y: 0 });
+        const damageAfterFirst = attacker.damageDealt;
 
-      // Reset for second attack
-      attacker.actUsed = false;
+        // Reset for second attack
+        attacker.actUsed = false;
 
-      // Second attack
-      processAction(state, attacker, 'attack', { x: 1, y: 0 });
+        // Second attack
+        processAction(state, attacker, 'attack', { x: 1, y: 0 });
 
-      assert.ok(
-        attacker.damageDealt > damageAfterFirst,
-        'damageDealt should accumulate across attacks'
-      );
+        assert.ok(
+          attacker.damageDealt > damageAfterFirst,
+          'damageDealt should accumulate across attacks'
+        );
+      });
     });
   });
 

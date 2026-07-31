@@ -92,7 +92,7 @@ function buildCaravanItemModifications(inventoryItem, catalogKey) {
  * @returns {Promise<{templateId: number, isStackable: boolean, itemInstanceIds: number[]}>}
  */
 export async function persistCaravanPurchaseItem(client, userId, inventoryItem, quantity) {
-  const catalogKey = `caravan:${String(inventoryItem.itemId)}`;
+  const catalogKey = inventoryItem.catalogKey || `caravan:${String(inventoryItem.itemId)}`;
   const isStackable = STACKABLE_CARAVAN_ITEM_TYPES.has(inventoryItem.type);
   const equipmentSlot = EQUIPMENT_SLOTS.has(inventoryItem.equipSlot)
     ? inventoryItem.equipSlot
@@ -107,8 +107,10 @@ export async function persistCaravanPurchaseItem(client, userId, inventoryItem, 
   const templateResult = await client.query(
     `INSERT INTO item_templates
      (catalog_key, name, description, item_type, equipment_slot, stat_bonuses,
-      level_requirement, effect_type, effect_value, base_price, is_stackable, sprite_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      level_requirement, effect_type, effect_value, base_price, is_stackable,
+      is_tradeable, rarity, sprite_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
+             COALESCE($12, TRUE), COALESCE($13, 1), $14)
      ON CONFLICT (catalog_key) DO UPDATE SET
        name = EXCLUDED.name,
        description = EXCLUDED.description,
@@ -120,6 +122,14 @@ export async function persistCaravanPurchaseItem(client, userId, inventoryItem, 
        effect_value = EXCLUDED.effect_value,
        base_price = EXCLUDED.base_price,
        is_stackable = EXCLUDED.is_stackable,
+       is_tradeable = CASE
+         WHEN $12 IS NULL THEN item_templates.is_tradeable
+         ELSE EXCLUDED.is_tradeable
+       END,
+       rarity = CASE
+         WHEN $13 IS NULL THEN item_templates.rarity
+         ELSE EXCLUDED.rarity
+       END,
        sprite_id = EXCLUDED.sprite_id
      RETURNING id`,
     [
@@ -134,6 +144,8 @@ export async function persistCaravanPurchaseItem(client, userId, inventoryItem, 
       effectValue,
       inventoryItem.basePrice || 0,
       isStackable,
+      inventoryItem.isTradeable ?? null,
+      inventoryItem.rarityId ?? null,
       inventoryItem.sprite_id || null
     ]
   );
@@ -207,13 +219,20 @@ export function generateCaravanInventory(seed, regionRace) {
 
   // Get items available in this region
   const availableItems = getItemsForRegion(regionRace);
+  const policyItems = availableItems.filter(item =>
+    item.alwaysStock === true || Number.isFinite(item.inclusionChance)
+  );
+  const ordinaryItems = availableItems.filter(item => !policyItems.includes(item));
 
-  // Shuffle items for variety (deterministic based on seed)
-  const shuffledItems = rng.shuffle(availableItems);
+  // Explicit policies are rolled independently of the legacy subset policy.
+  const selectedItems = policyItems.filter(item =>
+    item.alwaysStock === true || rng.next() < item.inclusionChance
+  );
 
-  // Select a subset of items to stock (70-90% of available items)
+  // Shuffle ordinary items for variety (deterministic based on seed).
+  const shuffledItems = rng.shuffle(ordinaryItems);
   const itemCount = Math.floor(shuffledItems.length * (0.7 + rng.next() * 0.2));
-  const selectedItems = shuffledItems.slice(0, itemCount);
+  selectedItems.push(...shuffledItems.slice(0, itemCount));
 
   // Ensure at least one regional item is always included if available
   const regionalItems = getRegionalItems(regionRace);
@@ -227,7 +246,12 @@ export function generateCaravanInventory(seed, regionRace) {
   // Generate stock for each selected item
   for (const item of selectedItems) {
     const stockLimits = getStockLimits(item.id, item.type);
-    const quantity = rng.nextInt(stockLimits.min, stockLimits.max);
+    const unlimitedStock = item.unlimitedStock === true;
+    const quantity = unlimitedStock
+      ? null
+      : (Number.isInteger(item.stock)
+        ? item.stock
+        : rng.nextInt(stockLimits.min, stockLimits.max));
 
     // Apply caravan pricing premium
     const price = Math.floor(item.basePrice * CARAVAN_PRICE_MODIFIER);
@@ -243,6 +267,10 @@ export function generateCaravanInventory(seed, regionRace) {
       region: item.region || null,
       quantity,
       maxQuantity: quantity, // Track original stock for display
+      catalogKey: item.catalogKey || `caravan:${item.id}`,
+      alwaysStock: item.alwaysStock === true,
+      unlimitedStock,
+      inclusionChance: Number.isFinite(item.inclusionChance) ? item.inclusionChance : null,
       price,
       basePrice: item.basePrice,
       levelRequirement: item.levelRequirement || 1,
@@ -257,7 +285,7 @@ export function generateCaravanInventory(seed, regionRace) {
     if (!a.region && b.region) return 1;
 
     // Then by type
-    const typeOrder = ['consumable', 'weapon', 'armor', 'accessory', 'material'];
+    const typeOrder = ['consumable', 'key_item', 'weapon', 'armor', 'accessory', 'material'];
     const typeA = typeOrder.indexOf(a.type);
     const typeB = typeOrder.indexOf(b.type);
     if (typeA !== typeB) return typeA - typeB;
@@ -404,11 +432,22 @@ export async function refreshCaravanInventory(nodeId) {
  *
  * @param {number} nodeId - Caravan node ID
  * @param {string} itemId - Item ID to check
- * @param {number} maxQuantity - Maximum stock from generation
+ * @param {number|null} maxQuantity - Maximum stock from generation
  * @param {Date} lastRefresh - Last inventory refresh time
- * @returns {Promise<number>} Current available stock
+ * @param {boolean} unlimitedStock - Whether purchases do not deplete stock
+ * @returns {Promise<number|null>} Current available stock, or null when unlimited
  */
-export async function getItemStock(nodeId, itemId, maxQuantity, lastRefresh) {
+export async function getItemStock(
+  nodeId,
+  itemId,
+  maxQuantity,
+  lastRefresh,
+  unlimitedStock = false
+) {
+  if (unlimitedStock) {
+    return null;
+  }
+
   if (!lastRefresh) {
     return maxQuantity;
   }
@@ -500,10 +539,11 @@ export async function processPurchase(userId, nodeId, itemId, quantity = 1) {
       nodeId,
       itemId,
       inventoryItem.maxQuantity,
-      caravanData.lastRefresh
+      caravanData.lastRefresh,
+      inventoryItem.unlimitedStock
     );
 
-    if (currentStock < quantity) {
+    if (!inventoryItem.unlimitedStock && currentStock < quantity) {
       throw new Error(`Insufficient stock. Only ${currentStock} available.`);
     }
 
@@ -557,7 +597,7 @@ export async function processPurchase(userId, nodeId, itemId, quantity = 1) {
       quantity,
       totalPrice,
       remainingGold: updatedUser.rows[0].gold,
-      remainingStock: currentStock - quantity
+      remainingStock: inventoryItem.unlimitedStock ? null : currentStock - quantity
     };
   });
 }
@@ -628,13 +668,14 @@ export async function getCaravanInventoryWithStock(nodeId) {
         nodeId,
         item.itemId,
         item.maxQuantity,
-        caravanData.lastRefresh
+        caravanData.lastRefresh,
+        item.unlimitedStock
       );
 
       return {
         ...item,
         quantity: currentStock,
-        inStock: currentStock > 0
+        inStock: item.unlimitedStock || currentStock > 0
       };
     })
   );

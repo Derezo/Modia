@@ -1,10 +1,14 @@
 import { after, before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
-import { ApiClient } from '../../api/client.js';
+import { FishingState } from '../fishing/FishingState.js';
+import { FishingController } from '../fishing/FishingController.js';
+import { FishingRenderer } from '../fishing/FishingRenderer.js';
 
 let server;
 let FishingScene;
+let FishingUI;
 let parchmentToast;
 
 before(async () => {
@@ -15,7 +19,11 @@ before(async () => {
   globalThis.window = {
     innerWidth: 1280,
     innerHeight: 720,
-    matchMedia: () => ({ matches: false }),
+    matchMedia: () => ({
+      matches: false,
+      addEventListener() {},
+      removeEventListener() {}
+    }),
     addEventListener() {},
     removeEventListener() {}
   };
@@ -31,14 +39,14 @@ before(async () => {
     head: { appendChild() {} },
     body: { appendChild() {} }
   };
-
   server = await createServer({
-    configFile: './vite.config.js',
+    root: fileURLToPath(new URL('../../../', import.meta.url)),
+    configFile: fileURLToPath(new URL('../../../vite.config.js', import.meta.url)),
     server: { middlewareMode: true },
     appType: 'custom'
   });
-
   ({ FishingScene } = await server.ssrLoadModule('/src/scenes/FishingScene.js'));
+  ({ FishingUI } = await server.ssrLoadModule('/src/scenes/fishing/FishingUI.js'));
   ({ parchmentToast } = await server.ssrLoadModule('/src/ui/parchment/ParchmentToast.js'));
 });
 
@@ -46,433 +54,1133 @@ after(async () => {
   await server?.close();
 });
 
-function createScene(fields = {}) {
-  return Object.assign(Object.create(FishingScene.prototype), {
-    nodeId: 42,
-    nodeName: 'Quiet Pond',
-    sessionId: null,
-    sessionLifecycle: 1,
-    endInFlight: null,
-    isActive: false,
-    catches: [],
-    totalValue: 0,
-    sessionStartTime: null,
-    catchTimer: null,
-    updateInterval: null,
-    bigOneTimer: null,
-    bigOneActive: false,
-    bigOneExpires: null,
-    bigOneFish: null,
-    config: {},
-    uiElement: null,
-    ...fields
+function commonState(overrides = {}) {
+  return {
+    serverTime: 1_700_000_000_000,
+    active: true,
+    session: {
+      active: true,
+      sessionId: 'session-1',
+      nodeId: 42,
+      nodeName: 'Quiet Pond',
+      startTime: 1_699_999_000_000,
+      expiresAt: 1_700_000_800_000,
+      basket: {
+        value: 17,
+        catches: [{ fishName: 'Bass', rarity: 'common', value: 3 }]
+      }
+    },
+    selectedRod: {
+      catalogKey: 'weathered_rod',
+      name: 'Weathered Rod',
+      bigCatchRate: 0.1
+    },
+    ownedRods: [{ catalogKey: 'weathered_rod', name: 'Weathered Rod' }],
+    ownedTackle: [{ catalogKey: 'earthworm', name: 'Earthworm', count: 3 }],
+    publicFish: [{ name: 'Bass', rarity: 'common' }],
+    ...overrides
+  };
+}
+
+function bigCatchEscapeResponse(overrides = {}) {
+  return commonState({
+    message: 'The Big Catch broke free. No fallback fish was awarded.',
+    attempt: {
+      attemptId: 'attempt-big-escape',
+      phase: 'resolved',
+      revision: 9,
+      reel: {
+        cues: ['left', 'up', 'right', 'down'],
+        nextCueIndex: 4,
+        hits: 4,
+        misses: 0,
+        requiredHits: 4
+      },
+      outcome: {
+        result: 'big_catch_escaped',
+        awarded: false,
+        isBigCatch: true,
+        rodKey: 'runebound_rod',
+        landingRate: 0.85,
+        resolvedAt: 1_700_000_000_000
+      }
+    },
+    ...overrides
   });
 }
 
-describe('ApiClient fishing session identity', () => {
-  it('sends the session ID with every session mutation and exposes active status', async () => {
-    const client = new ApiClient('/api');
-    const requests = [];
-    client.post = async (endpoint, body) => requests.push({ method: 'POST', endpoint, body });
-    client.get = async endpoint => requests.push({ method: 'GET', endpoint });
+describe('FishingState authoritative hydration', () => {
+  it('hydrates basket, gear, catalog, server clock, and a reconnectable bite deadline', () => {
+    let now = 1_699_999_999_500;
+    const state = new FishingState(() => now);
+    const snapshot = state.apply(commonState({
+      attempt: {
+        attemptId: 'attempt-1',
+        phase: 'wait',
+        revision: 4,
+        biteAt: 1_700_000_000_000,
+        hookDeadline: 1_700_000_003_000
+      }
+    }));
 
-    await client.registerCatch(42, 'session-7');
-    await client.claimBigOne(42, 'session-7');
-    await client.endFishing(42, 'session-7');
-    await client.getActiveFishingStatus();
+    assert.equal(snapshot.sessionId, 'session-1');
+    assert.equal(snapshot.phase, 'bite');
+    assert.equal(snapshot.basket.value, 17);
+    assert.equal(snapshot.selectedRod.catalogKey, 'weathered_rod');
+    assert.deepEqual(snapshot.publicFish, [{ name: 'Bass', rarity: 'common' }]);
+    assert.equal(snapshot.remainingMs, 3000);
 
-    assert.deepEqual(requests, [
-      {
-        method: 'POST',
-        endpoint: '/fishing/42/catch',
-        body: { sessionId: 'session-7' }
-      },
-      {
-        method: 'POST',
-        endpoint: '/fishing/42/big-one',
-        body: { sessionId: 'session-7' }
-      },
-      {
-        method: 'POST',
-        endpoint: '/fishing/42/end',
-        body: { sessionId: 'session-7' }
-      },
-      { method: 'GET', endpoint: '/fishing/status' }
-    ]);
+    now += 1500;
+    assert.equal(state.remainingMs(), 1500);
+  });
+
+  it('restores reel cues without exposing or inventing a catch outcome', () => {
+    const state = new FishingState(() => 1_700_000_000_000);
+    const snapshot = state.apply(commonState({
+      attempt: {
+        attemptId: 'attempt-2',
+        phase: 'reeling',
+        revision: 7,
+        reelDeadline: 1_700_000_006_000,
+        reel: {
+          cues: ['left', 'up', 'right'],
+          requiredHits: 2,
+          cueWindowMs: 2000,
+          nextCueIndex: 1,
+          hits: 1,
+          startedAt: 1_699_999_997_500
+        }
+      }
+    }));
+
+    assert.equal(snapshot.phase, 'reel');
+    assert.equal(snapshot.attempt.cues[1].direction, 'up');
+    assert.equal(snapshot.attempt.requiredHits, 2);
+    assert.equal(snapshot.currentCueIndex, 1);
+    assert.equal(snapshot.lastResult, null);
+  });
+
+  it('does not expose the next tension cue before its server window starts', () => {
+    const state = new FishingState(() => 1_700_000_000_000);
+    const snapshot = state.apply(commonState({
+      attempt: {
+        attemptId: 'attempt-answered',
+        phase: 'reel',
+        revision: 4,
+        reelDeadline: 1_700_000_004_000,
+        reel: {
+          cues: ['left', 'up', 'right'],
+          requiredHits: 2,
+          cueWindowMs: 2000,
+          nextCueIndex: 1,
+          hits: 1,
+          startedAt: 1_699_999_999_000
+        }
+      }
+    }));
+
+    assert.equal(snapshot.currentCueIndex, null);
+  });
+
+  it('persists explicit no-fish feedback when a fully reeled Big Catch escapes', () => {
+    const state = new FishingState(() => 1_700_000_000_000);
+    const snapshot = state.apply(bigCatchEscapeResponse());
+
+    assert.equal(snapshot.attempt.hits, 4);
+    assert.equal(snapshot.attempt.requiredHits, 4);
+    assert.equal(snapshot.terminalResult.kind, 'big_catch_escaped');
+    assert.equal(snapshot.terminalResult.title, 'Big Catch Escaped');
+    assert.equal(snapshot.terminalResult.noCatch, true);
+    assert.match(snapshot.resultMessage, /No fish was added to your basket/i);
+    assert.match(snapshot.resultMessage, /no fallback fish/i);
+
+    const repeated = state.apply({ serverTime: 1_700_000_000_100 });
+    assert.equal(repeated.resultMessage, snapshot.resultMessage);
+  });
+
+  it('reconstructs terminal feedback from the immutable outcome after reconnect', () => {
+    const reconnectState = new FishingState(() => 1_700_000_000_000);
+    const response = bigCatchEscapeResponse();
+    delete response.message;
+
+    const restored = reconnectState.apply(response);
+
+    assert.equal(restored.terminalResult.identity, 'attempt-big-escape:big_catch_escaped');
+    assert.match(restored.resultMessage, /Big Catch broke free/i);
+    assert.match(restored.resultMessage, /No fish was added/i);
+
+    const nextAttempt = reconnectState.apply(commonState({
+      attempt: {
+        attemptId: 'attempt-next',
+        phase: 'cast',
+        revision: 1
+      }
+    }));
+    assert.equal(nextAttempt.terminalResult, null);
+    assert.equal(nextAttempt.resultMessage, null);
   });
 });
 
-describe('FishingScene session lifecycle', () => {
-  it('clears singleton session data before a genuinely new entry', () => {
-    const scene = createScene({
-      isActive: true,
-      sessionId: 'session-complete',
-      catches: [{ fishName: 'Old Trout', value: 8 }],
-      totalValue: 8,
-      sessionStartTime: 1_700_000_000_000,
-      nextCatchTime: 1_700_000_005_000,
-      bigOneActive: true,
-      bigOneExpires: 1_700_000_003_000,
-      bigOneFish: { fishName: 'Old Carp' }
+describe('FishingController action receipts and controls', () => {
+  it('hydrates setup plus status without starting a second restored session', async () => {
+    let starts = 0;
+    const changes = [];
+    const api = {
+      async getFishingSetup() {
+        return commonState({ session: undefined, active: false });
+      },
+      async getFishingStatus() {
+        return commonState({
+          attempt: { attemptId: 'attempt-wait', phase: 'wait', revision: 1 }
+        });
+      },
+      async startFishing() {
+        starts += 1;
+      }
+    };
+    const controller = new FishingController({
+      api,
+      nodeId: 42,
+      now: () => 1_700_000_000_000,
+      onChange: state => changes.push(state.phase)
     });
 
-    scene.resetLocalSession();
+    const state = await controller.initialize();
 
-    assert.equal(scene.isActive, false);
-    assert.equal(scene.sessionId, null);
-    assert.deepEqual(scene.catches, []);
-    assert.equal(scene.totalValue, 0);
-    assert.equal(scene.sessionStartTime, null);
-    assert.equal(scene.nextCatchTime, null);
-    assert.equal(scene.bigOneActive, false);
-    assert.equal(scene.bigOneExpires, null);
-    assert.equal(scene.bigOneFish, null);
+    assert.equal(starts, 0);
+    assert.equal(state.phase, 'wait');
+    assert.deepEqual(changes, ['idle', 'wait']);
   });
 
-  it('hydrates the authoritative active session, including catches and Big One', () => {
-    const calls = {
-      rendered: 0,
-      stats: 0,
-      scheduled: 0,
-      disabled: [],
-      bigOne: null
+  it('restores an expired basket for packing without starting another session', async () => {
+    let starts = 0;
+    const expired = commonState({
+      active: false,
+      collectable: true,
+      session: {
+        active: false,
+        expired: true,
+        status: 'expired',
+        sessionId: 'session-expired',
+        nodeId: 42,
+        nodeName: 'Quiet Pond',
+        startTime: 1_699_998_000_000,
+        expiresAt: 1_699_999_800_000,
+        catches: [{ fishName: 'Bass', rarity: 'common', value: 3 }],
+        totalValue: 3
+      }
+    });
+    const api = {
+      async getFishingSetup() {
+        return expired;
+      },
+      async getFishingStatus() {
+        throw new Error('initial collectable status should be reused');
+      },
+      async startFishing() {
+        starts += 1;
+      }
     };
-    const statusElement = {
-      classList: { remove() {} },
-      innerHTML: ''
-    };
-    const scene = createScene({
-      uiElement: {
-        querySelector(selector) {
-          return selector === '#fishing-status' ? statusElement : null;
+    const controller = new FishingController({
+      api,
+      nodeId: 42,
+      now: () => 1_700_000_000_000
+    });
+
+    const state = await controller.initialize(expired);
+
+    assert.equal(starts, 0);
+    assert.equal(state.active, false);
+    assert.equal(state.sessionId, 'session-expired');
+    assert.equal(state.basket.value, 3);
+  });
+
+  it('reuses the release action ID after an ambiguous response', async () => {
+    const releaseIds = [];
+    let releaseCalls = 0;
+    const api = {
+      async beginFishingCast(_nodeId, sessionId, _actionId) {
+        assert.equal(sessionId, 'session-1');
+        return commonState({
+          attempt: { attemptId: 'attempt-retry', phase: 'cast', revision: 1 }
+        });
+      },
+      async releaseFishingCast(_nodeId, sessionId, _attemptId, actionId) {
+        assert.equal(sessionId, 'session-1');
+        releaseIds.push(actionId);
+        releaseCalls += 1;
+        if (releaseCalls === 1) {
+          const error = new Error('lost response');
+          error.isNetworkError = true;
+          throw error;
         }
-      },
-      renderCatches() {
-        calls.rendered += 1;
-      },
-      updateStats() {
-        calls.stats += 1;
-      },
-      updateSessionTime() {},
-      updateCatchCountdown() {},
-      scheduleCatch() {
-        calls.scheduled += 1;
-      },
-      setActionButtonsDisabled(disabled) {
-        calls.disabled.push(disabled);
-      },
-      showBigOne(bigOne) {
-        calls.bigOne = bigOne;
+        return commonState({
+          attempt: { attemptId: 'attempt-retry', phase: 'wait', revision: 2 }
+        });
       }
-    });
-    const oldest = { fishName: 'Minnow', value: 2 };
-    const newest = { fishName: 'Trout', value: 7 };
-    const responseCatches = [oldest, newest];
-
-    scene.hydrateSession({
-      active: true,
-      sessionId: 'session-restored',
-      startTime: 1_700_000_000_000,
-      catches: responseCatches,
-      totalValue: 9,
-      config: {
-        minCatchInterval: 1000,
-        maxCatchInterval: 2000,
-        bigOneWindowMs: 3000
-      },
-      bigOne: {
-        active: true,
-        expiresIn: 2500,
-        fishName: 'Golden Carp',
-        rarity: 'legendary'
-      }
-    }, 1);
-
-    clearInterval(scene.updateInterval);
-    assert.equal(scene.isActive, true);
-    assert.equal(scene.sessionId, 'session-restored');
-    assert.equal(scene.sessionStartTime, 1_700_000_000_000);
-    assert.equal(scene.totalValue, 9);
-    assert.deepEqual(scene.catches, [newest, oldest]);
-    assert.deepEqual(responseCatches, [oldest, newest]);
-    assert.equal(scene.config.bigOneWindowMs, 3000);
-    assert.equal(statusElement.innerHTML, '<span>Fishing...</span>');
-    assert.equal(calls.rendered, 1);
-    assert.equal(calls.stats, 1);
-    assert.equal(calls.scheduled, 1);
-    assert.deepEqual(calls.disabled, [false]);
-    assert.equal(calls.bigOne.fishName, 'Golden Carp');
-  });
-
-  it('uses a restored startup session without starting or re-querying', async () => {
-    const restored = {
-      active: true,
-      sessionId: 'session-startup',
-      catches: [],
-      totalValue: 0
     };
-    let getStatusCalls = 0;
-    let startCalls = 0;
-    let hydrated;
-    const scene = createScene({
-      game: {
-        api: {
-          async getFishingStatus() {
-            getStatusCalls += 1;
-          },
-          async startFishing() {
-            startCalls += 1;
-          }
-        }
-      },
-      hydrateSession(result) {
-        hydrated = result;
-      }
+    const controller = new FishingController({
+      api,
+      nodeId: 42,
+      onError() {}
     });
-    parchmentToast.success = () => {};
+    controller.state.apply(commonState());
 
-    await scene.startFishing(1, restored);
+    await controller.beginCast();
+    await assert.rejects(controller.releaseCast(), /lost response/);
+    await controller.releaseCast();
 
-    assert.equal(hydrated, restored);
-    assert.equal(getStatusCalls, 0);
-    assert.equal(startCalls, 0);
+    assert.equal(releaseIds.length, 2);
+    assert.equal(releaseIds[0], releaseIds[1]);
+    assert.equal(controller.state.phase(), 'wait');
   });
 
-  it('starts when status is inactive and hydrates an idempotently resumed response', async () => {
-    const resumed = {
-      active: true,
-      resumed: true,
-      sessionId: 'session-resumed',
-      catches: [{ fishName: 'Perch', value: 4 }],
-      totalValue: 4
+  it('submits non-color directional cue input and leaves resolution to the scene', async () => {
+    const calls = [];
+    const api = {
+      async reelFishingCast(_nodeId, sessionId, attemptId, direction, cueIndex, actionId) {
+        assert.equal(sessionId, 'session-1');
+        calls.push({ type: 'reel', attemptId, direction, cueIndex, actionId });
+        return commonState({
+          attempt: {
+            attemptId,
+            phase: 'resolve',
+            revision: 5,
+            canResolve: true
+          }
+        });
+      }
     };
-    let hydrated;
-    const scene = createScene({
-      game: {
-        api: {
-          async getFishingStatus() {
-            return { active: false };
-          },
-          async startFishing() {
-            return resumed;
-          }
+    const controller = new FishingController({ api, nodeId: 42 });
+    controller.state.apply(commonState({
+      attempt: {
+        attemptId: 'attempt-cue',
+        phase: 'reel',
+        revision: 4,
+        cues: ['left'],
+        requiredHits: 1
+      }
+    }));
+
+    await controller.reel('LEFT', 0);
+
+    assert.deepEqual(calls.map(call => [call.type, call.direction, call.cueIndex]), [
+      ['reel', 'left', 0]
+    ]);
+    assert.equal(controller.state.phase(), 'resolve');
+  });
+
+  it('reuses a resolve action ID after an ambiguous response', async () => {
+    const actionIds = [];
+    const reportedActions = [];
+    let calls = 0;
+    const api = {
+      async resolveFishingCast(_nodeId, sessionId, attemptId, actionId) {
+        assert.equal(sessionId, 'session-1');
+        assert.equal(attemptId, 'attempt-resolve-retry');
+        actionIds.push(actionId);
+        calls += 1;
+        if (calls === 1) {
+          const error = new Error('lost resolve response');
+          error.isTimeout = true;
+          throw error;
         }
-      },
-      hydrateSession(result) {
-        hydrated = result;
+        return commonState({
+          attempt: {
+            attemptId,
+            phase: 'resolved',
+            revision: 9,
+            outcome: {
+              result: 'caught',
+              awarded: true,
+              catch: { fishName: 'Bass', value: 3 }
+            }
+          }
+        });
+      }
+    };
+    const controller = new FishingController({
+      api,
+      nodeId: 42,
+      onError(_error, action) {
+        reportedActions.push(action);
       }
     });
-    const successCalls = [];
-    parchmentToast.success = (...args) => successCalls.push(args);
+    controller.state.apply(commonState({
+      attempt: {
+        attemptId: 'attempt-resolve-retry',
+        phase: 'resolve',
+        revision: 8
+      }
+    }));
 
-    await scene.startFishing(1);
+    await assert.rejects(controller.resolve(), /lost resolve response/);
+    await controller.resolve();
 
-    assert.equal(hydrated, resumed);
-    assert.deepEqual(successCalls, [[
-      'Fishing Restored',
-      'Your fishing session has been restored.'
-    ]]);
+    assert.equal(actionIds.length, 2);
+    assert.equal(actionIds[0], actionIds[1]);
+    assert.deepEqual(reportedActions, [{
+      key: 'resolve:attempt-resolve-retry',
+      actionId: actionIds[0]
+    }]);
+    assert.equal(controller.state.phase(), 'resolved');
+  });
+});
+
+describe('FishingUI terminal result feedback', () => {
+  function element(overrides = {}) {
+    return {
+      dataset: {},
+      style: {},
+      hidden: false,
+      disabled: false,
+      textContent: '',
+      innerHTML: '',
+      value: '',
+      ...overrides
+    };
+  }
+
+  function uiHarness() {
+    const elements = {
+      '#fishing-phase': element(),
+      '#fishing-session-time': element(),
+      '#fishing-cast-button': element(),
+      '#fishing-hook-button': element(),
+      '#fishing-cues': element(),
+      '#fishing-instruction': element(),
+      '#fishing-result': element(),
+      '#fishing-result-title': element(),
+      '#fishing-result-message': element(),
+      '#fishing-rod-select': element(),
+      '#fishing-tackle-select': element(),
+      '#fishing-power-fill': element(),
+      '#fishing-countdown-fill': element()
+    };
+    const ui = new FishingUI({ overlay: null, nodeName: 'Quiet Pond' });
+    ui.root = {
+      querySelector: selector => elements[selector],
+      remove() {}
+    };
+    ui.renderGear = () => {};
+    ui.renderCatalog = () => {};
+    ui.renderBasket = () => {};
+    return { ui, elements };
+  }
+
+  it('shows an accessible no-fish banner after a successful reel loses the rod roll', () => {
+    const state = new FishingState(() => 1_700_000_000_000);
+    const snapshot = state.apply(bigCatchEscapeResponse());
+    const { ui, elements } = uiHarness();
+
+    ui.render(snapshot);
+
+    assert.equal(elements['#fishing-result'].hidden, false);
+    assert.equal(elements['#fishing-result'].dataset.outcome, 'big_catch_escaped');
+    assert.equal(elements['#fishing-result-title'].textContent, 'Big Catch Escaped');
+    assert.match(elements['#fishing-result-message'].textContent, /No fish was added/i);
+    assert.equal(
+      elements['#fishing-instruction'].textContent,
+      'Cast again when ready.'
+    );
+    assert.match(FishingUI.prototype.mount.toString(), /role="status"/);
+    assert.match(FishingUI.prototype.mount.toString(), /aria-live="polite"/);
   });
 
-  it('ignores a late catch response after the session begins ending', async () => {
-    let resolveCatch;
-    let request;
-    let renderCalls = 0;
-    let scheduleCalls = 0;
-    const catchResponse = new Promise(resolve => {
-      resolveCatch = resolve;
-    });
-    const scene = createScene({
-      isActive: true,
-      sessionId: 'session-old',
-      game: {
-        api: {
-          registerCatch(nodeId, sessionId) {
-            request = { nodeId, sessionId };
-            return catchResponse;
-          }
-        },
-        audio: {}
-      },
-      renderCatches() {
-        renderCalls += 1;
-      },
-      updateStats() {},
-      scheduleCatch() {
-        scheduleCalls += 1;
+  it('hides stale terminal feedback when a new cast begins', () => {
+    const state = new FishingState(() => 1_700_000_000_000);
+    state.apply(bigCatchEscapeResponse());
+    const active = state.apply(commonState({
+      attempt: {
+        attemptId: 'attempt-new-cast',
+        phase: 'cast',
+        revision: 1,
+        castStartedAt: 1_700_000_000_000
+      }
+    }));
+    const { ui, elements } = uiHarness();
+
+    ui.render(active);
+
+    assert.equal(elements['#fishing-result'].hidden, true);
+    assert.equal(elements['#fishing-result-title'].textContent, '');
+    assert.equal(elements['#fishing-result-message'].textContent, '');
+  });
+});
+
+describe('FishingRenderer fallback and motion safety', () => {
+  function createContext() {
+    const calls = [];
+    const gradient = { addColorStop(offset, color) { calls.push(['stop', offset, color]); } };
+    return {
+      calls,
+      save() {},
+      restore() {},
+      translate(x, y) { calls.push(['translate', x, y]); },
+      createLinearGradient() { return gradient; },
+      drawImage(...args) { calls.push(['drawImage', ...args]); },
+      fillRect(...args) { calls.push(['fillRect', ...args]); },
+      beginPath() { calls.push(['beginPath']); },
+      moveTo(...args) { calls.push(['moveTo', ...args]); },
+      lineTo(...args) { calls.push(['lineTo', ...args]); },
+      quadraticCurveTo(...args) { calls.push(['quadraticCurveTo', ...args]); },
+      stroke() { calls.push(['stroke']); },
+      arc(...args) { calls.push(['arc', ...args]); },
+      ellipse(...args) { calls.push(['ellipse', ...args]); },
+      fill() { calls.push(['fill']); },
+      set fillStyle(_value) {},
+      set strokeStyle(_value) {},
+      set lineWidth(_value) {},
+      set lineCap(_value) {}
+    };
+  }
+
+  function installImageMock() {
+    const originalImage = globalThis.Image;
+    const images = [];
+    globalThis.Image = class MockImage {
+      constructor() {
+        this.naturalWidth = 512;
+        this.naturalHeight = 512;
+        this.onload = null;
+        this.onerror = null;
+        images.push(this);
+      }
+
+      set src(value) {
+        this._src = value;
+      }
+
+      get src() {
+        return this._src;
+      }
+    };
+    return {
+      images,
+      restore() {
+        if (originalImage === undefined) delete globalThis.Image;
+        else globalThis.Image = originalImage;
+      }
+    };
+  }
+
+  it('draws a biome gradient when artwork is absent', () => {
+    const renderer = new FishingRenderer({ reducedMotion: true, now: () => 1000 });
+    renderer.setState({ biome: 'Shadowmere', backgroundPath: null, phase: 'idle' });
+    const context = createContext();
+
+    renderer.render(context, 800, 600);
+
+    assert.ok(context.calls.some(call => call[0] === 'fillRect'));
+    assert.ok(context.calls.some(call => call[0] === 'stop' && call[2] === '#343352'));
+  });
+
+  it('suppresses Big Catch shake when reduced motion is requested', () => {
+    const renderer = new FishingRenderer({ reducedMotion: true, now: () => 1000 });
+    renderer.setState({ biome: 'Heartlands', phase: 'caught' });
+    renderer.triggerSuccess(true);
+    const context = createContext();
+
+    renderer.render(context, 800, 600);
+
+    assert.deepEqual(
+      context.calls.find(call => call[0] === 'translate'),
+      ['translate', 0, 0]
+    );
+  });
+
+  it('loads each selected rod from its approved original asset and caches prior selections', () => {
+    const imageMock = installImageMock();
+    const renderer = new FishingRenderer({ reducedMotion: true, now: () => 1000 });
+    const selections = [
+      [{ key: 'fishing:rod:weathered' }, 'fishing_rod_weathered'],
+      [{ spriteId: 'fishing_rod_riverwood' }, 'fishing_rod_riverwood'],
+      [{ catalogKey: 'silverline_rod' }, 'fishing_rod_silverline'],
+      [{ catalog_key: 'fishing:rod:runebound' }, 'fishing_rod_runebound']
+    ];
+
+    try {
+      for (const [selectedRod, spriteId] of selections) {
+        renderer.setState({ selectedRod, phase: 'idle' });
+        assert.equal(
+          imageMock.images.at(-1).src,
+          `/assets/items/originals/consumables/${spriteId}.webp`
+        );
+      }
+      assert.equal(imageMock.images.length, 4);
+
+      renderer.setState({ selectedRod: selections[0][0], phase: 'idle' });
+      assert.equal(imageMock.images.length, 4);
+      assert.equal(renderer.rodPath, '/assets/items/originals/consumables/fishing_rod_weathered.webp');
+    } finally {
+      renderer.destroy();
+      imageMock.restore();
+    }
+  });
+
+  it('draws the high-resolution rod and starts the line at its exact rendered tip', () => {
+    const imageMock = installImageMock();
+    const renderer = new FishingRenderer({ reducedMotion: true, now: () => 1000 });
+
+    try {
+      renderer.setState({
+        selectedRod: { spriteId: 'fishing_rod_weathered' },
+        phase: 'wait',
+        attempt: { castPower: 50 }
+      });
+      imageMock.images[0].onload();
+      const context = createContext();
+
+      renderer.render(context, 800, 600);
+
+      const drawCall = context.calls.find(call => call[0] === 'drawImage');
+      assert.ok(drawCall);
+      assert.equal(drawCall[1], imageMock.images[0]);
+      const expectedTip = [
+        drawCall[2] + (drawCall[4] * (473 / 512)),
+        drawCall[3] + (drawCall[5] * (42 / 512))
+      ];
+      assert.equal(drawCall[4], drawCall[5]);
+      assert.deepEqual(expectedTip, [
+        (800 * 0.37) - (drawCall[4] * 0.15),
+        600 * 0.22
+      ]);
+      assert.ok(Math.abs(expectedTip[0] - 240.2) < Number.EPSILON * 240.2);
+      const curveIndex = context.calls.findIndex(call => call[0] === 'quadraticCurveTo');
+      assert.ok(curveIndex > 0);
+      assert.deepEqual(context.calls[curveIndex - 1], ['moveTo', ...expectedTip]);
+    } finally {
+      renderer.destroy();
+      imageMock.restore();
+    }
+  });
+
+  it('places a released bobber using authoritative cast power instead of elapsed cast time', () => {
+    const renderer = new FishingRenderer({ reducedMotion: true, now: () => 10_000 });
+    renderer.setState({
+      selectedRod: { key: 'fishing:rod:weathered' },
+      phase: 'wait',
+      serverNow: 10_000,
+      attempt: {
+        castPower: 25,
+        timestamps: { castStartedAt: 1_000 }
       }
     });
+    const context = createContext();
 
-    const catchRequest = scene.triggerCatch();
-    scene.isActive = false;
-    scene.sessionLifecycle += 1;
-    resolveCatch({
-      catch: { fishName: 'Stale Salmon', value: 50 },
-      sessionStats: { totalValue: 50 }
-    });
-    await catchRequest;
+    renderer.render(context, 800, 600);
 
-    assert.deepEqual(request, { nodeId: 42, sessionId: 'session-old' });
-    assert.deepEqual(scene.catches, []);
-    assert.equal(scene.totalValue, 0);
-    assert.equal(renderCalls, 0);
-    assert.equal(scheduleCalls, 0);
+    const bodyArc = context.calls.find(call => call[0] === 'arc' && call[3] === 10);
+    assert.ok(bodyArc);
+    assert.equal(bodyArc[1], 800 * (0.46 + (0.25 * 0.26)));
   });
 
-  it('guards duplicate collection and clears local state after success', async () => {
-    let resolveEnd;
-    let endCalls = 0;
-    let switchCalls = 0;
-    const disabledStates = [];
-    const stateUpdates = [];
-    const endResponse = new Promise(resolve => {
-      resolveEnd = resolve;
+  it('draws a detailed bite bobber with sections, eyelet, reflection, ripples, and pulse', () => {
+    const renderer = new FishingRenderer({ reducedMotion: false, now: () => 2_400 });
+    renderer.setState({
+      selectedRod: { key: 'fishing:rod:weathered' },
+      phase: 'bite',
+      attempt: { castPower: 60 }
     });
-    const scene = createScene({
-      isActive: true,
-      sessionId: 'session-end',
-      catches: [{ fishName: 'Bass', value: 6 }],
-      totalValue: 6,
-      game: {
-        api: {
-          endFishing(nodeId, sessionId) {
-            endCalls += 1;
-            assert.equal(nodeId, 42);
-            assert.equal(sessionId, 'session-end');
-            return endResponse;
-          }
-        },
+    const context = createContext();
+
+    renderer.render(context, 800, 600);
+
+    assert.ok(context.calls.filter(call => call[0] === 'arc' && call[3] === 10).length >= 3);
+    assert.ok(context.calls.some(call => call[0] === 'arc' && call[3] === 3.2));
+    assert.ok(context.calls.some(call => call[0] === 'arc' && call[3] > 16));
+    assert.ok(context.calls.filter(call => call[0] === 'ellipse').length >= 3);
+    assert.ok(context.calls.some(call => (
+      call[0] === 'fillRect' && call[4] === 4
+    )));
+
+    const eyelet = context.calls.find(call => call[0] === 'arc' && call[3] === 3.2);
+    const lineCurve = context.calls.find(call => (
+      call[0] === 'quadraticCurveTo' &&
+      call.at(-2) === eyelet[1] &&
+      call.at(-1) === eyelet[2]
+    ));
+    assert.ok(lineCurve);
+  });
+
+  it('keeps bite geometry static across frames when reduced motion is requested', () => {
+    let now = 1_000;
+    const renderer = new FishingRenderer({ reducedMotion: true, now: () => now });
+    renderer.setState({
+      selectedRod: { key: 'fishing:rod:weathered' },
+      phase: 'bite',
+      attempt: { castPower: 60 }
+    });
+    const first = createContext();
+    const second = createContext();
+
+    renderer.render(first, 800, 600);
+    now = 1_950;
+    renderer.render(second, 800, 600);
+
+    assert.deepEqual(second.calls, first.calls);
+  });
+
+  it('uses a static success highlight across reduced-motion frames', () => {
+    let now = 1_000;
+    const renderer = new FishingRenderer({ reducedMotion: true, now: () => now });
+    renderer.setState({ biome: 'Heartlands', phase: 'caught' });
+    renderer.triggerSuccess(true);
+    const first = createContext();
+    const second = createContext();
+
+    now = 1_050;
+    renderer.render(first, 800, 600);
+    now = 1_150;
+    renderer.render(second, 800, 600);
+
+    assert.deepEqual(second.calls, first.calls);
+    assert.ok(first.calls.some(call => (
+      call[0] === 'ellipse' &&
+      call[1] === 800 * 0.60 &&
+      call[2] === 600 * 0.62 &&
+      call[3] === 44 &&
+      call[4] === 15
+    )));
+  });
+
+  it('cleans all cached rod image handlers when destroyed', () => {
+    const imageMock = installImageMock();
+    const renderer = new FishingRenderer();
+
+    try {
+      renderer.setState({
+        selectedRod: { key: 'fishing:rod:weathered' },
+        phase: 'idle'
+      });
+      renderer.setState({
+        selectedRod: { key: 'fishing:rod:riverwood' },
+        phase: 'idle'
+      });
+      assert.equal(typeof imageMock.images[0].onload, 'function');
+      assert.equal(typeof imageMock.images[1].onerror, 'function');
+
+      renderer.destroy();
+
+      assert.equal(imageMock.images[0].onload, null);
+      assert.equal(imageMock.images[0].onerror, null);
+      assert.equal(imageMock.images[1].onload, null);
+      assert.equal(imageMock.images[1].onerror, null);
+      assert.equal(renderer.rodImages.size, 0);
+    } finally {
+      imageMock.restore();
+    }
+  });
+});
+
+describe('Fishing input accessibility', () => {
+  function eventTarget() {
+    const listeners = {};
+    return {
+      disabled: false,
+      dataset: {},
+      value: '',
+      listeners,
+      addEventListener(type, listener) {
+        listeners[type] = listener;
+      },
+      setPointerCapture() {}
+    };
+  }
+
+  it('treats a touch pointer hold/release as one cast interaction', () => {
+    const cast = eventTarget();
+    const hook = eventTarget();
+    const cues = eventTarget();
+    const rod = eventTarget();
+    const tackle = eventTarget();
+    const pack = eventTarget();
+    const back = eventTarget();
+    const elements = {
+      '#fishing-cast-button': cast,
+      '#fishing-hook-button': hook,
+      '#fishing-cues': cues,
+      '#fishing-rod-select': rod,
+      '#fishing-tackle-select': tackle,
+      '#fishing-pack-button': pack,
+      '#fishing-back-button': back
+    };
+    const actions = [];
+    const ui = new FishingUI({
+      overlay: null,
+      nodeName: 'Pond',
+      handlers: {
+        onCastStart: () => actions.push('start'),
+        onCastRelease: () => actions.push('release')
+      }
+    });
+    ui.root = {
+      querySelector: selector => elements[selector],
+      querySelectorAll: () => [],
+      remove() {}
+    };
+    ui.bind();
+    const pointerEvent = {
+      pointerId: 9,
+      pointerType: 'touch',
+      preventDefault() {}
+    };
+
+    cast.listeners.pointerdown(pointerEvent);
+    cast.listeners.pointerup(pointerEvent);
+    cast.listeners.lostpointercapture(pointerEvent);
+    cast.dataset.mode = 'release';
+    cast.listeners.pointerdown(pointerEvent);
+
+    assert.deepEqual(actions, ['start', 'release', 'release']);
+    ui.destroy();
+  });
+
+  it('maps Space hold/release and arrow keys to cast and reel controls', () => {
+    const listeners = {};
+    const originalWindow = globalThis.window;
+    globalThis.window = {
+      addEventListener(type, listener) {
+        listeners[type] = listener;
+      }
+    };
+    const actions = [];
+    const scene = Object.assign(Object.create(FishingScene.prototype), {
+      castKeyHeld: false,
+      controller: {
         state: {
-          get() {
-            return { gold: 10 };
-          },
-          set(key, value) {
-            stateUpdates.push([key, value]);
-          }
-        },
-        scenes: {
-          switchTo(sceneName) {
-            assert.equal(sceneName, 'worldMap');
-            switchCalls += 1;
-          }
+          phase: () => 'idle',
+          currentCue: () => ({ index: 2 })
         }
       },
-      stopTimers() {},
-      setActionButtonsDisabled(disabled) {
-        disabledStates.push(disabled);
-      }
+      currentPhaseAllowsCast: () => true,
+      beginCast: () => actions.push('start'),
+      releaseCast: () => actions.push('release'),
+      reel: (direction, cueIndex) => actions.push(`${direction}:${cueIndex}`)
     });
-    parchmentToast.success = () => {};
+    scene.setupKeyboard();
+    const event = {
+      code: 'Space',
+      key: ' ',
+      repeat: false,
+      target: { tagName: 'BODY' },
+      preventDefault() {}
+    };
 
-    const firstEnd = scene.endFishing();
-    const secondEnd = scene.endFishing();
+    listeners.keydown(event);
+    listeners.keyup(event);
+    scene.controller.state.phase = () => 'reel';
+    listeners.keydown({ ...event, code: 'ArrowLeft', key: 'ArrowLeft' });
+    scene.controller.state.phase = () => 'cast';
+    scene.castKeyHeld = false;
+    listeners.keydown(event);
 
-    assert.equal(scene.isActive, false);
-    assert.equal(endCalls, 1);
-    assert.deepEqual(disabledStates, [true]);
+    assert.deepEqual(actions, ['start', 'release', 'left:2', 'release']);
+    scene.keyboardAbortController.abort();
+    globalThis.window = originalWindow;
+  });
+});
 
-    resolveEnd({
-      newGold: 16,
-      message: 'Collected once'
+describe('FishingScene lifecycle cleanup', () => {
+  it('shows one visible warning when an all-cues-correct Big Catch escapes', () => {
+    const state = new FishingState(() => 1_700_000_000_000);
+    const response = bigCatchEscapeResponse();
+    const snapshot = state.apply(response);
+    const warnings = [];
+    const announcements = [];
+    const originalWarning = parchmentToast.warning;
+    parchmentToast.warning = (...args) => warnings.push(args);
+    const scene = Object.assign(Object.create(FishingScene.prototype), {
+      sessionLifecycle: 6,
+      controller: {},
+      renderer: { setState() {} },
+      ui: {
+        render() {},
+        announce: message => announcements.push(message)
+      },
+      game: { audio: {} },
+      lastCatchIdentity: null,
+      lastTerminalOutcomeIdentity: null,
+      lastPhase: 'reel'
     });
-    await Promise.all([firstEnd, secondEnd]);
 
-    assert.equal(switchCalls, 1);
-    assert.equal(scene.sessionId, null);
-    assert.deepEqual(scene.catches, []);
-    assert.equal(scene.totalValue, 0);
-    assert.equal(scene.endInFlight, null);
-    assert.deepEqual(stateUpdates, [['user', { gold: 16 }]]);
+    try {
+      scene.onStateChange(snapshot, response, 6);
+      scene.onStateChange(snapshot, response, 6);
+
+      assert.deepEqual(warnings, [[
+        'Big Catch Escaped',
+        snapshot.resultMessage
+      ]]);
+      assert.deepEqual(announcements, [snapshot.resultMessage]);
+      assert.match(warnings[0][1], /No fish was added/i);
+    } finally {
+      parchmentToast.warning = originalWarning;
+    }
   });
 
-  it('does not let an old collection completion clear a re-entered session', async () => {
-    let resolveEnd;
-    let switchCalls = 0;
-    const stateUpdates = [];
-    const endResponse = new Promise(resolve => {
-      resolveEnd = resolve;
-    });
-    const scene = createScene({
-      isActive: true,
-      sessionId: 'session-old',
-      game: {
-        api: {
-          endFishing() {
-            return endResponse;
-          }
-        },
+  it('idempotently resumes an authoritative resolve phase after refresh', () => {
+    let resolves = 0;
+    const scene = Object.assign(Object.create(FishingScene.prototype), {
+      sessionLifecycle: 4,
+      lastPhase: 'reel',
+      deadlineSyncKey: null,
+      resolveSync: null,
+      controller: {
         state: {
-          get() {
-            return { gold: 10 };
-          },
-          set(key, value) {
-            stateUpdates.push([key, value]);
-          }
+          snapshot: () => ({
+            phase: 'resolve',
+            attempt: {
+              attemptId: 'attempt-resolve',
+              phase: 'resolve',
+              revision: 8
+            }
+          })
         },
-        scenes: {
-          switchTo() {
-            switchCalls += 1;
-          }
+        resolve: () => {
+          resolves += 1;
+          return Promise.resolve();
         }
       },
-      stopTimers() {},
-      setActionButtonsDisabled() {}
+      renderer: { setState() {} },
+      ui: { render() {} },
+      handleActionError() {}
     });
 
-    const oldEnd = scene.endFishing();
+    scene.refreshTimeState(4);
+    scene.refreshTimeState(4);
 
-    // Model a new enter while the old HTTP request is still pending.
-    scene.endInFlight = null;
-    scene.sessionLifecycle += 1;
-    scene.sessionId = 'session-new';
-    scene.isActive = true;
-    scene.catches = [{ fishName: 'New Trout', value: 9 }];
-    scene.totalValue = 9;
-
-    resolveEnd({ newGold: 16, message: 'Old session collected' });
-    await oldEnd;
-
-    assert.equal(scene.sessionId, 'session-new');
-    assert.equal(scene.isActive, true);
-    assert.deepEqual(scene.catches, [{ fishName: 'New Trout', value: 9 }]);
-    assert.equal(scene.totalValue, 9);
-    assert.equal(switchCalls, 0);
-    assert.deepEqual(stateUpdates, []);
+    assert.equal(resolves, 1);
   });
 
-  it('rebuilds an unexpired Big One overlay after a breakpoint change', () => {
-    const oldTimer = setInterval(() => {}, 1000);
-    const shown = [];
-    const scene = createScene({
-      isActive: true,
-      uiElement: { remove() {} },
-      catches: [{ fishName: 'Bass', value: 6 }],
-      totalValue: 6,
-      bigOneActive: true,
-      bigOneExpires: Date.now() + 3000,
-      bigOneFish: {
-        fishName: 'Golden Carp',
-        rarity: 'legendary'
-      },
-      bigOneTimer: oldTimer,
-      createUI() {
-        this.uiElement = {};
-      },
-      setupEventListeners() {},
-      renderCatches() {},
-      updateStats() {},
-      setActionButtonsDisabled() {},
-      showBigOne(bigOne, playSound) {
-        shown.push({ bigOne, playSound });
+  it('deduplicates a final-cue resolve after a deterministic rejection', async () => {
+    const error = new Error('deterministic conflict');
+    const snapshot = {
+      phase: 'resolve',
+      attempt: {
+        attemptId: 'attempt-final-cue',
+        phase: 'resolve',
+        revision: 8
+      }
+    };
+    let resolves = 0;
+    let refreshes = 0;
+    let notifications = 0;
+    const scene = Object.assign(Object.create(FishingScene.prototype), {
+      sessionLifecycle: 7,
+      lastPhase: 'reel',
+      lastCatchIdentity: null,
+      lastTerminalOutcomeIdentity: null,
+      deadlineSyncKey: null,
+      resolveSync: null,
+      controller: null,
+      renderer: { setState() {} },
+      ui: { render() {} },
+      game: { audio: {} },
+      handleActionError: () => {
+        notifications += 1;
       }
     });
+    scene.controller = {
+      state: { snapshot: () => snapshot },
+      resolve() {
+        resolves += 1;
+        // FishingController invokes its configured onError before rejecting.
+        scene.handleActionError(error, 7);
+        return Promise.reject(error);
+      },
+      refresh() {
+        refreshes += 1;
+        return Promise.resolve(snapshot);
+      }
+    };
 
-    scene.onBreakpointChange();
+    scene.onStateChange(snapshot, { message: 'Reeling complete.' }, 7);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    for (let tick = 0; tick < 5; tick += 1) {
+      scene.refreshTimeState(7);
+    }
+    await new Promise(resolve => setTimeout(resolve, 0));
 
-    assert.equal(scene.bigOneTimer, null);
-    assert.equal(shown.length, 1);
-    assert.equal(shown[0].bigOne.fishName, 'Golden Carp');
-    assert.ok(shown[0].bigOne.expiresIn > 0);
-    assert.equal(shown[0].playSound, false);
+    assert.equal(resolves, 1);
+    assert.equal(refreshes, 1);
+    assert.equal(notifications, 1);
+    assert.equal(scene.resolveSync.key, 'attempt-final-cue:8:resolve');
+  });
+
+  it('reconciles and retries an ambiguous resolve only once', async () => {
+    const error = Object.assign(
+      new Error('network interrupted'),
+      { isNetworkError: true }
+    );
+    let snapshot = {
+      phase: 'resolve',
+      attempt: {
+        attemptId: 'attempt-network',
+        phase: 'resolve',
+        revision: 8
+      }
+    };
+    let resolves = 0;
+    let refreshes = 0;
+    let notifications = 0;
+    const scene = Object.assign(Object.create(FishingScene.prototype), {
+      sessionLifecycle: 8,
+      lastPhase: 'reel',
+      lastCatchIdentity: null,
+      lastTerminalOutcomeIdentity: null,
+      deadlineSyncKey: null,
+      resolveSync: null,
+      controller: null,
+      renderer: { setState() {} },
+      ui: { render() {} },
+      game: { audio: {} },
+      handleActionError: () => {
+        notifications += 1;
+      }
+    });
+    scene.controller = {
+      state: { snapshot: () => snapshot },
+      resolve() {
+        resolves += 1;
+        if (resolves === 1) {
+          scene.handleActionError(error, 8);
+          return Promise.reject(error);
+        }
+        snapshot = {
+          phase: 'resolved',
+          attempt: {
+            attemptId: 'attempt-network',
+            phase: 'resolved',
+            revision: 9,
+            outcome: { result: 'caught', awarded: true }
+          }
+        };
+        return Promise.resolve(snapshot);
+      },
+      refresh() {
+        refreshes += 1;
+        return Promise.resolve(snapshot);
+      }
+    };
+
+    scene.onStateChange(snapshot, { message: 'Reeling complete.' }, 8);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    await new Promise(resolve => setTimeout(resolve, 0));
+    for (let tick = 0; tick < 5; tick += 1) {
+      scene.refreshTimeState(8);
+    }
+
+    assert.equal(resolves, 2);
+    assert.equal(refreshes, 1);
+    assert.equal(notifications, 1);
+    assert.equal(scene.resolveSync.ambiguousRetries, 1);
+  });
+
+  it('reports one warning when the bounded ambiguous retry also fails', async () => {
+    const error = Object.assign(
+      new Error('network interrupted'),
+      { isTimeout: true }
+    );
+    const snapshot = {
+      phase: 'resolve',
+      attempt: {
+        attemptId: 'attempt-outage',
+        phase: 'resolve',
+        revision: 8
+      }
+    };
+    const warnings = [];
+    let resolves = 0;
+    let refreshes = 0;
+    const originalWarning = parchmentToast.warning;
+    parchmentToast.warning = (...args) => warnings.push(args);
+    const scene = Object.assign(Object.create(FishingScene.prototype), {
+      sessionLifecycle: 9,
+      lastPhase: 'reel',
+      lastCatchIdentity: null,
+      lastTerminalOutcomeIdentity: null,
+      lastReportedResolveErrorKey: null,
+      deadlineSyncKey: null,
+      resolveSync: null,
+      controller: null,
+      renderer: { setState() {} },
+      ui: { render() {} },
+      game: { audio: {} }
+    });
+    scene.controller = {
+      state: { snapshot: () => snapshot },
+      resolve() {
+        resolves += 1;
+        scene.handleActionError(error, 9, {
+          key: 'resolve:attempt-outage',
+          actionId: 'stable-action-id'
+        });
+        return Promise.reject(error);
+      },
+      refresh() {
+        refreshes += 1;
+        return Promise.resolve(snapshot);
+      }
+    };
+
+    try {
+      scene.onStateChange(snapshot, { message: 'Reeling complete.' }, 9);
+      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise(resolve => setTimeout(resolve, 0));
+      for (let tick = 0; tick < 5; tick += 1) {
+        scene.refreshTimeState(9);
+      }
+
+      assert.equal(resolves, 2);
+      assert.equal(refreshes, 1);
+      assert.deepEqual(warnings, [[
+        'Connection Interrupted',
+        'The result is uncertain. Fishing will safely reconcile it; reopen this spot if the prompt remains.'
+      ]]);
+    } finally {
+      parchmentToast.warning = originalWarning;
+    }
+  });
+
+  it('destroys controller, renderer, UI, listeners, and animation timer on exit', () => {
+    const calls = [];
+    const timer = setInterval(() => {}, 1000);
+    const scene = Object.assign(Object.create(FishingScene.prototype), {
+      game: { audio: { stopAmbient: () => calls.push('ambient') } },
+      sessionLifecycle: 3,
+      updateTimer: timer,
+      responsiveUnsubscribe: () => calls.push('responsive'),
+      keyboardAbortController: { abort: () => calls.push('keyboard') },
+      motionQuery: { removeEventListener: () => calls.push('motion') },
+      motionListener() {},
+      controller: { destroy: () => calls.push('controller') },
+      renderer: { destroy: () => calls.push('renderer') },
+      ui: { destroy: () => calls.push('ui') },
+      endInFlight: null,
+      resolveSync: { key: 'attempt:8:resolve' },
+      lastReportedResolveErrorKey: 'resolve:attempt',
+      lastTerminalOutcomeIdentity: 'attempt:big_catch_escaped'
+    });
+
+    scene.exit();
+
+    assert.equal(scene.sessionLifecycle, 4);
+    assert.equal(scene.updateTimer, null);
+    assert.equal(scene.controller, null);
+    assert.equal(scene.renderer, null);
+    assert.equal(scene.ui, null);
+    assert.equal(scene.resolveSync, null);
+    assert.equal(scene.lastReportedResolveErrorKey, null);
+    assert.equal(scene.lastTerminalOutcomeIdentity, null);
+    assert.deepEqual(calls, [
+      'responsive',
+      'keyboard',
+      'motion',
+      'controller',
+      'renderer',
+      'ui',
+      'ambient'
+    ]);
   });
 });

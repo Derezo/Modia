@@ -1,6 +1,11 @@
 # Isometric Tile System
 
-Modia's battle terrain uses a deterministic material compiler, not an image-generation model. The compiler turns the canonical tile metadata into one lossless WebP set whose projection, alpha, palette, and edges are guaranteed to agree with the renderer.
+Modia's legacy/V2 battle terrain uses a deterministic material compiler, not
+an image-generation model. The compiler turns canonical tile metadata into one
+lossless WebP set whose projection, alpha, palette, and edges agree with the
+renderer. Battle Map V3 regional art is a separate reviewed-source lifecycle
+with the same `iso64-retina-v3` geometry; see
+[BATTLE_MAP_V3_ART_LIFECYCLE.md](BATTLE_MAP_V3_ART_LIFECYCLE.md).
 
 The source of truth is split deliberately:
 

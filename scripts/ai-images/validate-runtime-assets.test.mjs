@@ -403,6 +403,7 @@ test('item categories match the ItemIcon runtime routing contract', () => {
   assert.equal(getRuntimeItemSubcategory('shield'), 'armor');
   assert.equal(getRuntimeItemSubcategory('accessory'), 'accessories');
   assert.equal(getRuntimeItemSubcategory('material'), 'consumables');
+  assert.equal(getRuntimeItemSubcategory('key_item'), 'consumables');
   assert.equal(getRuntimeItemSubcategory('unknown-future-type'), 'weapons');
 });
 

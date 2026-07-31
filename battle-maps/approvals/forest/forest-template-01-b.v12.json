@@ -1,0 +1,57 @@
+{
+  "schemaVersion": "battle-map-v3-visual-approval-v1",
+  "decision": "approved",
+  "reviewer": "codex",
+  "checklistVersion": 1,
+  "theme": "forest",
+  "templateId": "forest-template-02",
+  "contentId": "forest-template-01-b",
+  "contentVersion": 12,
+  "mapPath": "battle-maps/compiled/forest/forest-template-01-b.v12.json",
+  "hashes": {
+    "authoritativeHash": "sha256:cc8e1df29384a1c18f8c048e9d8086c9eba76f78f72690ace360075f9191f736",
+    "fullHash": "sha256:cad472a23e3ff4cc3549076b0a4715df4611ee91f87cb095d7c699ffe1d372f8",
+    "visualHash": "sha256:3770d8989eab1cac3bddecf6a408b09c15752d9e7335b38cf76e13f17458bb71"
+  },
+  "sourceSidecar": {
+    "path": "ai-image-metadata/battle-maps/templates/forest/forest-template-02.json",
+    "fullHash": "sha256:691360d5775a4a3b402fdb96af1bb2ce4c94780a1222111c7f36833ed394149f"
+  },
+  "blueprint": {
+    "id": "forest-template-02-b",
+    "fullHash": "sha256:5a57be4de15eaa2035c83899288ac1972a592a3bfe2eeeafef44fb0514630772",
+    "approvalIndexFullHash": "sha256:8c485f6c885ca274f8113bdd8afdbd9f5a6988e3ad99a0c987e8280080884768"
+  },
+  "renderProfile": {
+    "id": "forest-iron-depths-borderwood-v5",
+    "path": "battle-maps/render-profiles/forest-borderwood-v5.json",
+    "fullHash": "sha256:e35459e124e6bcc16e6008d796f5feb1fcfc76b9d0f9b1a5c11e9f1c54ecd40e"
+  },
+  "tileCatalog": {
+    "id": "forest-borderwood-v5-tiles",
+    "version": 1,
+    "path": "battle-maps/tile-catalogs/forest-borderwood-v5.json",
+    "fullHash": "sha256:9c32448ffa019e2fd90442deb8b91545211e0ee5d4e8f8b8f2f5abe9aad7c1d7"
+  },
+  "assetBundle": {
+    "id": "battle-art-descriptors-2026-07-30",
+    "version": 6,
+    "path": "ai-image-metadata/battle-art/releases/battle-art-descriptors-2026-07-30.v6.json",
+    "manifestFullHash": "sha256:485641dbc09df96dc3067b2fc6fe490cb6493da8da5dfda8775d4f4ef37a9819"
+  },
+  "capabilityReport": {
+    "schemaVersion": "battle-map-v3-capability-report-v1",
+    "mapFullHash": "sha256:cad472a23e3ff4cc3549076b0a4715df4611ee91f87cb095d7c699ffe1d372f8",
+    "bossCapable": true,
+    "competitiveParity": false,
+    "parityCases": null
+  },
+  "screenshot": {
+    "path": "ai-image-metadata/battle-maps/review/forest/forest-template-02/forest-template-01-b/v12-approved/forest-template-01-b.v12.cad472a23e3f.png",
+    "bytes": 703520,
+    "width": 1088,
+    "height": 703,
+    "format": "png",
+    "sha256": "sha256:57e293713af954576ec3c2ed8a7e218255f26ac0b6b8834390e986bb2b385c56"
+  }
+}

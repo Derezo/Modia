@@ -6,7 +6,7 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "test": "node --test *.test.js mapgen/*.test.js mapgen/v2/*.test.js"
+    "test": "node --test *.test.js battleMap/*.test.js battleMap/v3/*.test.js mapgen/*.test.js mapgen/v2/*.test.js"
   },
   "exports": {
     ".": "./index.js",
@@ -15,6 +15,7 @@
     "./terrain": "./terrain.js",
     "./mapGeneration": "./mapGeneration.js",
     "./battleMap": "./battleMap/index.js",
+    "./battleMap/v3": "./battleMap/v3/index.js",
     "./battleStateProtocol": "./battleStateProtocol.js",
     "./pathfinding": "./pathfinding.js",
     "./traversal": "./traversal.js",

@@ -75,6 +75,7 @@ ai-images-temp/
 ai-audio-temp/
 ai-image-backups/
 tmp/codex-imagegen/
+tmp/battle-map-polish/
 scripts/ai-images/player-sprite-generation-record.json
 *-temp/
 *.tmp
@@ -84,6 +85,14 @@ scripts/ai-images/player-sprite-generation-record.json
 ai-image-metadata/**
 !ai-image-metadata/**/
 !ai-image-metadata/**/*.json
+!ai-image-metadata/fishing/sources/**/*.webp
+
+# Battle-map model output remains local until an explicit promotion step.
+# These later rules override the broad JSON metadata exception above so a
+# candidate or review log cannot become tracked merely because it is JSON.
+ai-image-metadata/battle-maps/candidates/**
+ai-image-metadata/battle-maps/review/**
+ai-image-metadata/battle-art/candidates/**
 
 # Playwright test artifacts
 playwright-report/

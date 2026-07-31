@@ -20,6 +20,8 @@ import {
   recordBattleMapGenerationStarted,
   recordBattleMapGenerationFailed,
   recordBattleMapGenerationSucceeded,
+  recordAuthoredMapCatalogCoverage,
+  recordAuthoredMapCatalogSelectionFailed,
   recordBattleMapResyncRequest,
   recordBattleMapSchemaOrHashRejection,
   recordBattleMapWebsocketDelivery,
@@ -467,6 +469,42 @@ describe('Battle-map operational controls', () => {
         errorCode: 'ATTEMPT_BUDGET_EXHAUSTED',
         attemptedCandidates: 1
       }
+    );
+  });
+
+  it('records V3 generation and catalog coverage without cardinality-bearing labels', () => {
+    recordAuthoredMapCatalogCoverage('selected');
+    recordAuthoredMapCatalogCoverage('absent');
+    recordAuthoredMapCatalogSelectionFailed();
+    recordBattleMapGenerationStarted({ version: 3 });
+    recordBattleMapGenerationSucceeded({
+      version: 3,
+      ...request,
+      durationMs: 4,
+      map: {
+        battleMapSchemaVersion: 3,
+        hashes: {
+          authoritativeHash: 'sha256:v3-authoritative',
+          visualHash: 'sha256:v3-visual',
+          fullHash: 'sha256:v3-full'
+        }
+      }
+    });
+
+    const metrics = getBattleMapOperationalMetrics();
+    assert.equal(metrics.counters.v3CatalogSelected, 1);
+    assert.equal(metrics.counters.v3CatalogCoverageAbsent, 1);
+    assert.equal(metrics.counters.v3CatalogSelectionFailed, 1);
+    assert.equal(metrics.counters.generationActiveV3Started, 1);
+    assert.equal(metrics.counters.generationActiveV3Succeeded, 1);
+    const diagnostic =
+      getBattleMapOperationalDiagnostics().recentGenerationDiagnostics[0];
+    assert.equal(diagnostic.activeVersion, 3);
+    assert.equal(diagnostic.mapSchemaVersion, 3);
+    assert.equal(diagnostic.fullHash, 'sha256:v3-full');
+    assert.throws(
+      () => recordAuthoredMapCatalogCoverage('corrupt'),
+      /Unknown authored-map catalog coverage state/
     );
   });
 

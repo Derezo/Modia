@@ -1,0 +1,93 @@
+{
+  "schemaVersion": "battle-art-family-descriptor-v2",
+  "id": "forest-borderwood-fallen-branch",
+  "theme": "forest",
+  "category": "nonblocking-decoration",
+  "familyGroup": "forest-borderwood-fallen-branch",
+  "variantId": "weathered",
+  "capabilities": {
+    "direction": null,
+    "routeTopology": null,
+    "surfaceVariant": null,
+    "ecologyProfile": "forest-iron-depths-borderwood",
+    "tierBands": [
+      1
+    ],
+    "heightDeltas": [
+      0
+    ]
+  },
+  "status": "compiled",
+  "promptProfile": {
+    "id": "battle-art-family-v2",
+    "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+    "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+  },
+  "styleReferences": [
+    {
+      "id": "forest-source-template-01",
+      "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+      "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+    }
+  ],
+  "generationPrompt": "Create exactly one seam-safe orthographic isometric forest nonblocking-decoration asset named forest-borderwood-fallen-branch for ecology profile forest-iron-depths-borderwood; tier band 1. Author the declared orientation directly, preserve continuous neighboring materials and edge alignment, and include only the declared family content. Regional visual vocabulary: Iron Depths Borderwood uses a coherent mixed forest of rugged ironpine conifers, pale birch, and sparse ancient broadleaf trees; cool olive moss and ferns; slate-gray stones; muted russet soil; and weathered exposed roots. Keep this species mix, material palette, scale, and lighting consistent across every directional edge and transition. Depict the literal regional subject forest borderwood fallen branch as a restrained, grounded isometric detail that adds ecological variety without reading as a wall, large tree, or blocking object. Do not add a baked backdrop, black void, unrelated terrain wall, or presentation frame.",
+  "rasterContract": {
+    "schemaVersion": "battle-art-raster-contract-v1",
+    "kind": "transparent-cutout",
+    "minimumCoveredPermille": 10,
+    "maximumCoveredPermille": 850
+  },
+  "canvas": {
+    "width": 128,
+    "height": 192
+  },
+  "placement": {
+    "pivot": {
+      "x": 64,
+      "y": 160
+    },
+    "anchor": {
+      "x": 64,
+      "y": 160
+    },
+    "footprint": {
+      "x": 0,
+      "y": 0,
+      "width": 1,
+      "height": 1
+    },
+    "collision": {
+      "kind": "none",
+      "cells": []
+    },
+    "drawBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 128,
+      "height": 192
+    },
+    "occlusionBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
+    },
+    "stratum": "decoration"
+  },
+  "content": {
+    "version": 1,
+    "sourceSha256": "sha256:81f841d76179f077b14c72fd7fd207628f9d32569495c98b438016f13d275e8a",
+    "runtimeSha256": "sha256:de945b71debae0d83e90e23be06abf26e8e782d1cb9739efde510393e6836542",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v6/forest/nonblocking-decoration/forest-borderwood-fallen-branch/v1/de945b71debae0d83e90e23be06abf26e8e782d1cb9739efde510393e6836542.webp"
+  },
+  "source": {
+    "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-borderwood-fallen-branch/result.json",
+    "imagePath": "ai-image-metadata/battle-art/sources/forest/forest-borderwood-fallen-branch/v1/81f841d76179f077b14c72fd7fd207628f9d32569495c98b438016f13d275e8a.png",
+    "imageSha256": "sha256:81f841d76179f077b14c72fd7fd207628f9d32569495c98b438016f13d275e8a",
+    "width": 128,
+    "height": 192,
+    "format": "png",
+    "reviewer": "codex",
+    "approvedAt": "2026-07-31T02:31:07.024Z"
+  }
+}

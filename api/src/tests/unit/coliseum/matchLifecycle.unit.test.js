@@ -17,6 +17,20 @@ import assert from 'node:assert';
 import { pool } from '../../../config/database.js';
 import battleStateRepository from '../../../services/battle/BattleStateRepository.js';
 import { ZODIAC_CRYSTALS } from '../../../../../shared/constants.js';
+import { BATTLE_MAP_HASH_VERSION } from '../../../../../shared/battleMap/index.js';
+import { createBattleMapCapabilities } from '../../../../../shared/battleStateProtocol.js';
+import {
+  AUTHORED_BATTLE_MAP_VERSION
+} from '../../../services/battle/battleMapGenerationService.js';
+import {
+  deriveEncounterTerrainSeed
+} from '../../../services/battle/encounterService.js';
+
+const authoredBattleMapCapabilities = createBattleMapCapabilities({
+  supportedBattleMapSchemaVersions: [1, 2, 3],
+  supportedHashVersions: [BATTLE_MAP_HASH_VERSION],
+  supportedMutableStateProtocolVersions: [1]
+});
 
 // =============================================================================
 // MOCK TRACKING
@@ -356,6 +370,7 @@ describe('Coliseum battle snapshot transaction', () => {
     const validationCalls = [];
     const zodiacSigns = Object.keys(ZODIAC_CRYSTALS);
     let createBattleInput = null;
+    let creationError = null;
     let updateCount = 0;
 
     const characterRows = new Map([
@@ -439,7 +454,11 @@ describe('Coliseum battle snapshot transaction', () => {
         }
       };
     });
-    t.mock.method(console, 'error', () => {});
+    t.mock.method(console, 'error', (message, details) => {
+      if (message === 'Failed to create PvP battle:') {
+        creationError = details?.error ?? 'Unknown creation error';
+      }
+    });
 
     const client = {
       async query(sql, params) {
@@ -544,13 +563,13 @@ describe('Coliseum battle snapshot transaction', () => {
         userId: player1Id,
         username: 'Player One',
         ready: true,
-        battleMapCapabilities: null
+        battleMapCapabilities: authoredBattleMapCapabilities
       },
       player2: {
         userId: player2Id,
         username: 'Player Two',
         ready: true,
-        battleMapCapabilities: null
+        battleMapCapabilities: authoredBattleMapCapabilities
       }
     });
     constants.pendingFormations.set(matchId, {});
@@ -584,7 +603,8 @@ describe('Coliseum battle snapshot transaction', () => {
     );
     assert.ok(
       transactionEvents.indexOf(`hydrateSkills:${player2CharacterId}`)
-        < transactionEvents.indexOf('createBattle')
+        < transactionEvents.indexOf('createBattle'),
+      creationError ?? 'Battle creation should follow participant hydration'
     );
     assert.deepStrictEqual(transactionEvents.slice(-4), [
       `updateInBattle:${player1Id}`,
@@ -593,6 +613,23 @@ describe('Coliseum battle snapshot transaction', () => {
       'release'
     ]);
     assert.ok(!transactionEvents.includes('COMMIT'));
+    const expectedMapSeed = deriveEncounterTerrainSeed(
+      123456 + matchId,
+      'arena',
+      AUTHORED_BATTLE_MAP_VERSION
+    );
+    assert.equal(
+      createBattleInput.selectionProvenance?.encounterSeed
+        ?? createBattleInput.finalMap.terrainSeed,
+      expectedMapSeed
+    );
+    assert.equal(
+      Object.hasOwn(createBattleInput, 'selectionProvenance'),
+      true
+    );
+    if (createBattleInput.selectionProvenance !== null) {
+      assert.equal(createBattleInput.selectionProvenance.selectionBand, '1v1');
+    }
 
     const player1Snapshot = createBattleInput.initialMutableState.units
       .find(unit => unit.id === player1CharacterId);

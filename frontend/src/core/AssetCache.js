@@ -102,6 +102,67 @@ export class AssetCache {
   }
 
   /**
+   * Fetch and verify an immutable BattleMapV3 asset as raw bytes.
+   *
+   * Unlike the legacy cache-first path, bytes are never persisted until their
+   * WebCrypto SHA-256 digest matches the authoritative asset reference.
+   * Corrupt persistent entries are evicted and retried from the network.
+   *
+   * @param {{immutableUrl: string, contentHash: string}} asset
+   * @returns {Promise<Uint8Array>}
+   */
+  async fetchVerifiedBytes(asset) {
+    const { immutableUrl, contentHash } = asset ?? {};
+    if (typeof immutableUrl !== 'string' || immutableUrl.length === 0 ||
+        !/^sha256:[a-f0-9]{64}$/.test(contentHash ?? '')) {
+      throw new TypeError('BattleMapV3 asset reference is invalid');
+    }
+
+    const verifyResponse = async response => {
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      await verifyBattleMapV3Sha256(bytes, contentHash, immutableUrl);
+      return bytes;
+    };
+
+    if (this.available && this.cache) {
+      const cachedResponse = await this.cache.match(immutableUrl);
+      if (cachedResponse) {
+        try {
+          return await verifyResponse(cachedResponse);
+        } catch (error) {
+          await this.cache.delete(immutableUrl);
+          if (!(error instanceof BattleMapV3AssetIntegrityError)) throw error;
+        }
+      }
+    }
+
+    const networkResponse = await fetch(immutableUrl, { cache: 'no-store' });
+    if (!networkResponse.ok) {
+      throw new Error(
+        `BattleMapV3 asset request failed (${networkResponse.status}): ${immutableUrl}`
+      );
+    }
+
+    const bytes = await verifyResponse(networkResponse);
+    if (this.available && this.cache) {
+      const headers = new Headers(networkResponse.headers);
+      try {
+        await this.cache.put(
+          immutableUrl,
+          new Response(bytes, { status: 200, headers })
+        );
+      } catch (error) {
+        console.warn(
+          '[AssetCache] Failed to cache verified BattleMapV3 asset:',
+          immutableUrl,
+          error.message
+        );
+      }
+    }
+    return bytes;
+  }
+
+  /**
    * Clear old cache versions
    * Removes any caches with 'modia-assets-' prefix but different version number
    * @returns {Promise<void>}
@@ -214,6 +275,33 @@ export class AssetCache {
    */
   isAvailable() {
     return this.available && this.cache !== null;
+  }
+}
+
+export class BattleMapV3AssetIntegrityError extends Error {
+  constructor(url, expected, actual) {
+    super(
+      `BattleMapV3 asset integrity check failed for ${url}: ` +
+      `expected ${expected}, received ${actual}`
+    );
+    this.name = 'BattleMapV3AssetIntegrityError';
+    this.code = 'BATTLE_MAP_V3_ASSET_INTEGRITY_FAILED';
+    this.url = url;
+    this.expected = expected;
+    this.actual = actual;
+  }
+}
+
+async function verifyBattleMapV3Sha256(bytes, expected, url) {
+  if (!globalThis.crypto?.subtle) {
+    throw new Error('WebCrypto SHA-256 is required for BattleMapV3 assets');
+  }
+  const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
+  const actual = 'sha256:' + Array.from(new Uint8Array(digest), byte =>
+    byte.toString(16).padStart(2, '0')
+  ).join('');
+  if (actual !== expected) {
+    throw new BattleMapV3AssetIntegrityError(url, expected, actual);
   }
 }
 

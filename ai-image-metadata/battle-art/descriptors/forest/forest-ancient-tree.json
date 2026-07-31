@@ -1,0 +1,84 @@
+{
+  "schemaVersion": "battle-art-family-descriptor-v1",
+  "id": "forest-ancient-tree",
+  "theme": "forest",
+  "category": "blocking-obstacle",
+  "status": "compiled",
+  "promptProfile": {
+    "id": "battle-art-family-v2",
+    "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+    "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+  },
+  "styleReferences": [
+    {
+      "id": "forest-source-template-01",
+      "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+      "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+    }
+  ],
+  "generationPrompt": "Create one isolated asymmetric old-growth twin-trunk forest cluster as a blocking obstacle. Two offset gnarled trunks must diverge from one compact fused root base centered exactly on anchor (96,224); the shared base and intertwined roots must make the declared one-tile collision unmistakably solid, with no pass-through gap between the trunks at ground level. Make the overall silhouette wider and less vertically symmetrical than the previous single-tree form, approximately x=10 through x=182 and y=24 through y=228, but keep the root footprint visually compact around the anchor. Build a layered canopy from several irregular leaf masses of different sizes and heights, with airy transparent gaps between outer boughs, one subtly broken branch, and an uneven outline rather than a round umbrella. Keep the outer canopy sparse enough that nearby routes and units remain readable, and keep y=168 through y=224 mostly trunks, roots, and transparent space rather than low foliage. Match the forest Battle Map V3 crisp 16-bit pixel-isometric scale, cool deep evergreen and moss tones, muted ancient bark, clustered edge pixels, and soft upper-left light. The complete silhouette must remain inside drawBounds with a transparent/chroma-safe exterior. No second detached tree, oversized canopy blob, cropped crown, ground tile, soil patch, rectangular backing, detached bush, hollow trunk doorway, character, sign, route, staircase, cast floor shadow, background card, or presentation framing.",
+  "rasterContract": {
+    "schemaVersion": "battle-art-raster-contract-v1",
+    "kind": "transparent-cutout",
+    "minimumCoveredPermille": 100,
+    "maximumCoveredPermille": 800
+  },
+  "canvas": {
+    "width": 192,
+    "height": 256
+  },
+  "placement": {
+    "pivot": {
+      "x": 96,
+      "y": 224
+    },
+    "anchor": {
+      "x": 96,
+      "y": 224
+    },
+    "footprint": {
+      "x": 0,
+      "y": 0,
+      "width": 1,
+      "height": 1
+    },
+    "collision": {
+      "kind": "solid",
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ]
+    },
+    "drawBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 192,
+      "height": 256
+    },
+    "occlusionBounds": {
+      "x": 16,
+      "y": 8,
+      "width": 160,
+      "height": 216
+    },
+    "stratum": "obstacle"
+  },
+  "content": {
+    "version": 3,
+    "sourceSha256": "sha256:503ddf0523c8debbdb2b1a727259d9f386a1decf69dd197010f403e0ae27d123",
+    "runtimeSha256": "sha256:63c1e497edc121005da1a521a094cb3c613137369086c235d11101db46944bb5",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v6/forest/blocking-obstacle/forest-ancient-tree/v3/63c1e497edc121005da1a521a094cb3c613137369086c235d11101db46944bb5.webp"
+  },
+  "source": {
+    "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-ancient-tree/result.json",
+    "imagePath": "ai-image-metadata/battle-art/sources/forest/forest-ancient-tree/v3/503ddf0523c8debbdb2b1a727259d9f386a1decf69dd197010f403e0ae27d123.png",
+    "imageSha256": "sha256:503ddf0523c8debbdb2b1a727259d9f386a1decf69dd197010f403e0ae27d123",
+    "width": 192,
+    "height": 256,
+    "format": "png",
+    "reviewer": "codex",
+    "approvedAt": "2026-07-30T19:00:53.842Z"
+  }
+}

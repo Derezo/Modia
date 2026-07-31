@@ -1,6 +1,20 @@
 import { defineConfig, loadEnv } from 'vite';
 import { fileURLToPath, URL } from 'node:url';
 
+const STATIC_ASSET_EXTENSION_PATTERN =
+  /\.(png|jpg|jpeg|gif|svg|webp|mp3|ogg|wav|json)$/i;
+
+export function isStaticAssetRequest(requestUrl) {
+  if (typeof requestUrl !== 'string') return false;
+  try {
+    return STATIC_ASSET_EXTENSION_PATTERN.test(
+      new URL(requestUrl, 'http://localhost').pathname
+    );
+  } catch {
+    return false;
+  }
+}
+
 export default defineConfig(({ mode }) => {
   const projectRoot = fileURLToPath(new URL('..', import.meta.url));
   const env = loadEnv(mode, projectRoot, ['VITE_', 'PORT']);
@@ -48,9 +62,9 @@ export default defineConfig(({ mode }) => {
         name: 'return-404-for-missing-assets',
         configureServer(server) {
           server.middlewares.use((req, res, next) => {
-            // Check if request is for a static asset (images, audio, etc.)
-            const assetExtensions = /\.(png|jpg|jpeg|gif|svg|webp|mp3|ogg|wav|json)$/i;
-            if (assetExtensions.test(req.url)) {
+            // Classify only the request pathname. Query values can legitimately
+            // name JSON artifacts while the requested resource is still HTML.
+            if (isStaticAssetRequest(req.url)) {
               // Let Vite try to serve it; if it fails, it will 404
               // This middleware ensures we don't fall through to SPA handler for assets
               const originalEnd = res.end;

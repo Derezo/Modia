@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   battleMapV2ToFlatState,
+  battleMapV3ToFlatState,
   createBattleMutableStateV1,
+  createMinimalBattleMapV3FinalFixture,
   createRepresentativeBattleMapV2CandidateFixture,
   createRepresentativeBattleMapV2FinalFixture
 } from '../../../../shared/index.js';
@@ -95,7 +97,70 @@ function createBattleRow({
     battle_map_schema_version: map.battleMapSchemaVersion,
     terrain_generation_version: map.terrainGenerationVersion,
     battle_map_full_hash: fullHash,
+    battle_map_content_id: null,
+    battle_map_content_version: null,
+    battle_map_catalog_release_id: null,
+    battle_map_theme: null,
+    battle_map_tier: null,
+    battle_map_selection_band: null,
+    battle_map_selection_provenance: null,
     creation_idempotency_key: creationIdempotencyKey
+  };
+}
+
+function createV3SelectionProvenance(map, overrides = {}) {
+  return {
+    catalogReleaseId: 'catalog:forest-v1',
+    catalogFullHash: `sha256:${'d'.repeat(64)}`,
+    selectorVersion: 1,
+    selectorDigest: `sha256:${'e'.repeat(64)}`,
+    encounterSeed: 731,
+    theme: map.theme,
+    sourceTier: 1,
+    selectionBand: 'tier-1',
+    mode: 'pve',
+    partyCapacityBand: 'players-1-5',
+    opposingRosterCapacityBand: 'opponents-1-7',
+    selectedEntryId: 'entry:forest:fixture',
+    mapContentId: map.contentId,
+    mapContentVersion: map.contentVersion,
+    mapFullHash: map.hashes.fullHash,
+    ...overrides
+  };
+}
+
+async function createV3BattleRow({
+  id = 43,
+  map = null,
+  mutableState = createMutable(),
+  stateRevision = 0,
+  selectionProvenance = null
+} = {}) {
+  const finalMap = map ?? await createMinimalBattleMapV3FinalFixture();
+  const provenance = selectionProvenance ?? createV3SelectionProvenance(finalMap);
+  return {
+    ...createBattleRow({
+      id,
+      map: createLegacyMap(),
+      mutableState,
+      stateRevision,
+      fullHash: finalMap.hashes.fullHash,
+      creationIdempotencyKey: 'fixture:v3:create'
+    }),
+    battle_state: await battleMapV3ToFlatState(finalMap, mutableState),
+    map_seed: provenance.encounterSeed,
+    map_width: finalMap.dimensions.width,
+    map_height: finalMap.dimensions.height,
+    battle_map_schema_version: 3,
+    terrain_generation_version: 3,
+    battle_map_full_hash: finalMap.hashes.fullHash,
+    battle_map_content_id: provenance.mapContentId,
+    battle_map_content_version: provenance.mapContentVersion,
+    battle_map_catalog_release_id: provenance.catalogReleaseId,
+    battle_map_theme: provenance.theme,
+    battle_map_tier: provenance.sourceTier,
+    battle_map_selection_band: provenance.selectionBand,
+    battle_map_selection_provenance: provenance
   };
 }
 
@@ -185,7 +250,7 @@ class CreationClient {
       return { rows: matches ? [clone(this.row)] : [] };
     }
     if (sql.includes('INSERT INTO battles')) {
-      if (this.row?.creation_idempotency_key === params[14]) {
+      if (this.row?.creation_idempotency_key === params[21]) {
         return { rows: [], rowCount: 0 };
       }
       this.insertCount += 1;
@@ -211,8 +276,17 @@ class CreationClient {
         battle_map_schema_version: params[11],
         terrain_generation_version: params[12],
         battle_map_full_hash: params[13],
-        creation_idempotency_key: params[14],
-        creation_request_hash: params[15]
+        battle_map_content_id: params[14],
+        battle_map_content_version: params[15],
+        battle_map_catalog_release_id: params[16],
+        battle_map_theme: params[17],
+        battle_map_tier: params[18],
+        battle_map_selection_band: params[19],
+        battle_map_selection_provenance: params[20] === null
+          ? null
+          : JSON.parse(params[20]),
+        creation_idempotency_key: params[21],
+        creation_request_hash: params[22]
       };
       return { rows: [{ id: this.row.id }], rowCount: 1 };
     }
@@ -249,6 +323,47 @@ describe('BattleStateRepository', () => {
       repositoryFor(new MutationClient(corrupt)).loadBattle(corrupt.id),
       error => error instanceof BattleStateCorruptError
         && /dimension mirror conflict/.test(error.message)
+    );
+  });
+
+  it('loads and commits V3 only through the verified 3/3 adapter with exact provenance', async () => {
+    const row = await createV3BattleRow();
+    const client = new MutationClient(row);
+    const repository = repositoryFor(client);
+    const envelope = await repository.loadBattle(row.id);
+
+    assert.equal(envelope.battleMapSchemaVersion, 3);
+    assert.equal(envelope.terrainGenerationVersion, 3);
+    assert.equal(envelope.fullHash, row.battle_map_full_hash);
+    assert.equal(envelope.map.hashes.fullHash, row.battle_map_full_hash);
+    assert.equal(envelope.catalogReleaseId, row.battle_map_catalog_release_id);
+    assert.deepEqual(envelope.selectionProvenance, row.battle_map_selection_provenance);
+
+    const nextState = structuredClone(envelope.state);
+    nextState.turn = 2;
+    const committed = await repository.commitBattleState({
+      battleId: row.id,
+      expectedRevision: 0,
+      commandType: 'player_action',
+      idempotencyKey: 'v3:player-action:1',
+      flatState: nextState
+    });
+    assert.equal(committed.update.battleMapSchemaVersion, 3);
+    assert.equal(committed.update.fullHash, row.battle_map_full_hash);
+    assert.deepEqual(
+      committed.envelope.selectionProvenance,
+      row.battle_map_selection_provenance
+    );
+
+    const corrupt = await createV3BattleRow();
+    corrupt.battle_map_selection_provenance = {
+      ...corrupt.battle_map_selection_provenance,
+      mapFullHash: `sha256:${'f'.repeat(64)}`
+    };
+    await assert.rejects(
+      repositoryFor(new MutationClient(corrupt)).loadBattle(corrupt.id),
+      error => error instanceof BattleStateCorruptError
+        && /map\/selection provenance conflict/.test(error.message)
     );
   });
 
@@ -952,6 +1067,52 @@ describe('BattleStateRepository', () => {
     await assert.rejects(
       repository.createBattle({ ...command, player1Id: 99 }),
       error => error instanceof BattleStateIdempotencyError
+    );
+  });
+
+  it('creates V3 with immutable selection provenance and binds retries to it', async () => {
+    const map = await createMinimalBattleMapV3FinalFixture();
+    const selectionProvenance = createV3SelectionProvenance(map);
+    const client = new CreationClient();
+    const repository = repositoryFor(client);
+    const command = {
+      battleType: 'pve',
+      nodeId: 9,
+      player1Id: 11,
+      creationIdempotencyKey: 'v3:pve:request:abc',
+      finalMap: map,
+      selectionProvenance,
+      initialMutableState: { turn: 1, units: [] }
+    };
+
+    const created = await repository.createBattle(command);
+    assert.equal(created.battleMapSchemaVersion, 3);
+    assert.equal(created.fullHash, map.hashes.fullHash);
+    assert.equal(created.mapSeed, selectionProvenance.encounterSeed);
+    assert.equal(created.mapWidth, map.dimensions.width);
+    assert.deepEqual(created.selectionProvenance, selectionProvenance);
+
+    const duplicate = await repository.createBattle(command);
+    assert.equal(duplicate.idempotent, true);
+    assert.equal(client.insertCount, 1);
+
+    await assert.rejects(
+      repository.createBattle({
+        ...command,
+        selectionProvenance: {
+          ...selectionProvenance,
+          selectorDigest: `sha256:${'c'.repeat(64)}`
+        }
+      }),
+      error => error instanceof BattleStateIdempotencyError
+    );
+    await assert.rejects(
+      repository.createBattle({
+        ...command,
+        creationIdempotencyKey: 'v3:missing-provenance',
+        selectionProvenance: null
+      }),
+      /SelectionProvenance/
     );
   });
 

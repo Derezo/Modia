@@ -1,0 +1,80 @@
+{
+  "schemaVersion": "battle-art-family-descriptor-v1",
+  "id": "forest-dirt-route",
+  "theme": "forest",
+  "category": "route-transition",
+  "status": "compiled",
+  "promptProfile": {
+    "id": "battle-art-family-v2",
+    "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+    "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+  },
+  "styleReferences": [
+    {
+      "id": "forest-source-template-01",
+      "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+      "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+    }
+  ],
+  "generationPrompt": "Create one quiet, professional, seamless flat 2:1 isometric packed-earth material tile whose exact alpha silhouette is the full canvas diamond. Fill every required diamond pixel edge-to-edge with matte warm ochre-brown forest soil, softly compacted and subtly worn. Generate generous packed-earth overscan so every pixel of the eventual exact diamond contains soil color before the deterministic alpha mask is applied; no transparent or #ff00ff key-color padding may touch or intrude into that required diamond. Use broad low-frequency tonal variation, faint irregular scuffs, and a very small amount of subdued fine grit, tiny embedded root fiber, and leaf dust. Keep contrast restrained and the surface visually calm so repeated cells form one continuous organic route after 4:1 downscaling. The image must read unmistakably as perfectly flat packed dirt, never masonry or a raised platform. Do not depict cobblestones, bricks, pavers, flagstones, individual outlined stones, repeating bands, ruts, plank lines, grid patterns, diagonal stripes, a center seam, edge bands, false perspective depth, or a directional path shape. It must join neighboring route cells in any grid direction without a material seam. There must be no moss border, grass border, transparent seam margin, black edge, dark outline, raised rim, bevel, lip, trench, cliff, bridge, stair, wall, prop, cast shadow, text, watermark, or content outside the diamond. Deterministically apply the exact opaque diamond alpha mask after generation.",
+  "rasterContract": {
+    "schemaVersion": "battle-art-raster-contract-v1",
+    "kind": "opaque-tile-diamond",
+    "alphaThreshold": 240,
+    "minimumCoveredPermille": 1000,
+    "maximumExteriorCoveredPermille": 5
+  },
+  "canvas": {
+    "width": 256,
+    "height": 128
+  },
+  "placement": {
+    "pivot": {
+      "x": 128,
+      "y": 64
+    },
+    "anchor": {
+      "x": 128,
+      "y": 64
+    },
+    "footprint": {
+      "x": 0,
+      "y": 0,
+      "width": 1,
+      "height": 1
+    },
+    "collision": {
+      "kind": "none",
+      "cells": []
+    },
+    "drawBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 128
+    },
+    "occlusionBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
+    },
+    "stratum": "route"
+  },
+  "content": {
+    "version": 3,
+    "sourceSha256": "sha256:c1cae0450b5219fae7bb993532efca966fe57968e981a29ee4ffc873867f325a",
+    "runtimeSha256": "sha256:1e087c9ddb662ea3dc854d6da6c359ee69f0c5fa035ac8798060c1d768e78a9c",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v6/forest/route-transition/forest-dirt-route/v3/1e087c9ddb662ea3dc854d6da6c359ee69f0c5fa035ac8798060c1d768e78a9c.webp"
+  },
+  "source": {
+    "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-dirt-route/result.json",
+    "imagePath": "ai-image-metadata/battle-art/sources/forest/forest-dirt-route/v3/c1cae0450b5219fae7bb993532efca966fe57968e981a29ee4ffc873867f325a.png",
+    "imageSha256": "sha256:c1cae0450b5219fae7bb993532efca966fe57968e981a29ee4ffc873867f325a",
+    "width": 256,
+    "height": 128,
+    "format": "png",
+    "reviewer": "codex",
+    "approvedAt": "2026-07-30T18:00:07.571Z"
+  }
+}

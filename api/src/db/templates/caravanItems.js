@@ -24,6 +24,8 @@
  * @property {number} basePrice - Base gold cost
  */
 
+import { FISHING_GEAR_ITEMS } from './fishingGear.js';
+
 export const CARAVAN_ITEMS = [
   // ============================================
   // Rare Consumables (more potent than apothecary)
@@ -564,7 +566,10 @@ export const CARAVAN_ITEMS = [
     statBonuses: { strength: 2, agility: 2, intelligence: 2, vitality: 2, luck: 2 },
     basePrice: 600,
     sprite_id: 'emblem_palace'
-  }
+  },
+
+  // Fishing gear uses explicit deterministic inclusion policies.
+  ...FISHING_GEAR_ITEMS
 ];
 
 /**
@@ -574,6 +579,7 @@ export const CARAVAN_ITEMS = [
 export const CARAVAN_STOCK = {
   consumable: { min: 3, max: 5 },
   material: { min: 5, max: 10 },
+  key_item: { min: 1, max: 1 },
   weapon: { min: 1, max: 2 },
   armor: { min: 1, max: 2 },
   accessory: { min: 1, max: 2 }
@@ -584,6 +590,10 @@ export const CARAVAN_STOCK = {
  * Overrides the type-based defaults
  */
 export const CARAVAN_ITEM_STOCK_OVERRIDES = {
+  riverwood_rod: { min: 3, max: 3 },
+  silverline_rod: { min: 2, max: 2 },
+  runebound_rod: { min: 1, max: 1 },
+
   // Mystery boxes (ultra-rare)
   mystery_box: { min: 1, max: 1 },
   mystery_box_premium: { min: 1, max: 1 },

@@ -916,6 +916,126 @@
         "128": "/assets/items/128/consumables/token_merchant.webp",
         "original": "/assets/items/originals/consumables/token_merchant.webp"
       }
+    },
+    {
+      "id": "fishing_rod_weathered",
+      "name": "Weathered Rod",
+      "prompt": "weathered crooked wooden fishing rod with twine grip and a small iron reel",
+      "generated": true,
+      "generatedAt": "2026-07-30T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "built-in-imagegen-chroma-key-removal",
+      "assetPaths": {
+        "32": "/assets/items/32/consumables/fishing_rod_weathered.webp",
+        "64": "/assets/items/64/consumables/fishing_rod_weathered.webp",
+        "128": "/assets/items/128/consumables/fishing_rod_weathered.webp",
+        "original": "/assets/items/originals/consumables/fishing_rod_weathered.webp"
+      }
+    },
+    {
+      "id": "fishing_rod_riverwood",
+      "name": "Riverwood Rod",
+      "prompt": "refined reddish riverwood fishing rod with brass fittings and reel",
+      "generated": true,
+      "generatedAt": "2026-07-30T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "built-in-imagegen-chroma-key-removal",
+      "assetPaths": {
+        "32": "/assets/items/32/consumables/fishing_rod_riverwood.webp",
+        "64": "/assets/items/64/consumables/fishing_rod_riverwood.webp",
+        "128": "/assets/items/128/consumables/fishing_rod_riverwood.webp",
+        "original": "/assets/items/originals/consumables/fishing_rod_riverwood.webp"
+      }
+    },
+    {
+      "id": "fishing_rod_silverline",
+      "name": "Silverline Rod",
+      "prompt": "elegant silver fishing rod with navy grip precision reel and blue gemstone",
+      "generated": true,
+      "generatedAt": "2026-07-30T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "built-in-imagegen-chroma-key-removal",
+      "assetPaths": {
+        "32": "/assets/items/32/consumables/fishing_rod_silverline.webp",
+        "64": "/assets/items/64/consumables/fishing_rod_silverline.webp",
+        "128": "/assets/items/128/consumables/fishing_rod_silverline.webp",
+        "original": "/assets/items/originals/consumables/fishing_rod_silverline.webp"
+      }
+    },
+    {
+      "id": "fishing_rod_runebound",
+      "name": "Runebound Rod",
+      "prompt": "legendary black ironwood fishing rod with gold fittings and violet rune inlays",
+      "generated": true,
+      "generatedAt": "2026-07-30T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "built-in-imagegen-chroma-key-removal",
+      "assetPaths": {
+        "32": "/assets/items/32/consumables/fishing_rod_runebound.webp",
+        "64": "/assets/items/64/consumables/fishing_rod_runebound.webp",
+        "128": "/assets/items/128/consumables/fishing_rod_runebound.webp",
+        "original": "/assets/items/originals/consumables/fishing_rod_runebound.webp"
+      }
+    },
+    {
+      "id": "fishing_tackle_earthworm",
+      "name": "Earthworm",
+      "prompt": "plump curled earthworm bait in warm brown and muted rose segments",
+      "generated": true,
+      "generatedAt": "2026-07-30T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "built-in-imagegen-chroma-key-removal",
+      "assetPaths": {
+        "32": "/assets/items/32/consumables/fishing_tackle_earthworm.webp",
+        "64": "/assets/items/64/consumables/fishing_tackle_earthworm.webp",
+        "128": "/assets/items/128/consumables/fishing_tackle_earthworm.webp",
+        "original": "/assets/items/originals/consumables/fishing_tackle_earthworm.webp"
+      }
+    },
+    {
+      "id": "fishing_tackle_slime_slug",
+      "name": "Slime Slug",
+      "prompt": "small opaque emerald slime slug bait with jade highlights",
+      "generated": true,
+      "generatedAt": "2026-07-30T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "built-in-imagegen-chroma-key-removal",
+      "assetPaths": {
+        "32": "/assets/items/32/consumables/fishing_tackle_slime_slug.webp",
+        "64": "/assets/items/64/consumables/fishing_tackle_slime_slug.webp",
+        "128": "/assets/items/128/consumables/fishing_tackle_slime_slug.webp",
+        "original": "/assets/items/originals/consumables/fishing_tackle_slime_slug.webp"
+      }
+    },
+    {
+      "id": "fishing_tackle_gilded_spinner",
+      "name": "Gilded Spinner",
+      "prompt": "ornate fishing spinner with hammered gold blade copper swivel and steel hook",
+      "generated": true,
+      "generatedAt": "2026-07-30T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "built-in-imagegen-chroma-key-removal",
+      "assetPaths": {
+        "32": "/assets/items/32/consumables/fishing_tackle_gilded_spinner.webp",
+        "64": "/assets/items/64/consumables/fishing_tackle_gilded_spinner.webp",
+        "128": "/assets/items/128/consumables/fishing_tackle_gilded_spinner.webp",
+        "original": "/assets/items/originals/consumables/fishing_tackle_gilded_spinner.webp"
+      }
+    },
+    {
+      "id": "fishing_tackle_abyssal_lure",
+      "name": "Abyssal Lure",
+      "prompt": "black-violet obsidian squid lure with bronze eyelet cyan runes and steel hook",
+      "generated": true,
+      "generatedAt": "2026-07-30T00:00:00.000Z",
+      "needsRegeneration": false,
+      "generationMethod": "built-in-imagegen-chroma-key-removal",
+      "assetPaths": {
+        "32": "/assets/items/32/consumables/fishing_tackle_abyssal_lure.webp",
+        "64": "/assets/items/64/consumables/fishing_tackle_abyssal_lure.webp",
+        "128": "/assets/items/128/consumables/fishing_tackle_abyssal_lure.webp",
+        "original": "/assets/items/originals/consumables/fishing_tackle_abyssal_lure.webp"
+      }
     }
   ]
 }

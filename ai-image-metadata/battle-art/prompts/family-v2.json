@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "battle-art-prompt-profile-v1",
+  "id": "battle-art-family-v2",
+  "frozen": true,
+  "background": {
+    "mode": "chroma-or-transparent",
+    "chroma": "#ff00ff",
+    "tolerance": 24
+  },
+  "prompt": "Create one production-ready orthographic isometric Battle Map V3 raster family matching the frozen descriptor and family art direction. Preserve the declared footprint, pivot, anchor, draw bounds, occlusion bounds, stratum, and rasterContract. Match the supplied style reference for palette, material language, crisp 16-bit edge treatment, scale, and upper-left lighting without copying its map composition. The rasterContract is a hard release requirement. Use a transparent background when supported; otherwise use one perfectly flat #ff00ff chroma background with no shadow, texture, gradient, floor plane, or magenta spill. Green forest materials belong only to the subject.",
+  "negativeConstraints": [
+    "No text, labels, UI, borders, watermarks, signatures, presentation cards, color swatches, or alternate variants.",
+    "No rectangular backdrop, opaque panel, horizon, floor plane, streak, cast shadow, or scenery outside the declared family silhouette.",
+    "No perspective or camera angle that conflicts with the orthographic isometric battle-map view.",
+    "No cropped geometry, detached fragments, photorealism, smooth painterly rendering, or detail too fine to survive 4:1 runtime downscaling.",
+    "No extra props outside this descriptor family and no content from another battle-art category."
+  ]
+}

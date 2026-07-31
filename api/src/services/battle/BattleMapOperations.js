@@ -68,6 +68,9 @@ function createCounters() {
     generationActiveV2Started: 0,
     generationActiveV2Succeeded: 0,
     generationActiveV2Failed: 0,
+    generationActiveV3Started: 0,
+    generationActiveV3Succeeded: 0,
+    generationActiveV3Failed: 0,
     generationSelectedNonzeroAttempt: 0,
     shadowSampled: 0,
     shadowSucceeded: 0,
@@ -93,7 +96,10 @@ function createCounters() {
     stateRevisionGap: 0,
     stateRevisionConflict: 0,
     mapReferenceMismatch: 0,
-    mapHashMismatch: 0
+    mapHashMismatch: 0,
+    v3CatalogSelected: 0,
+    v3CatalogCoverageAbsent: 0,
+    v3CatalogSelectionFailed: 0
   };
 }
 
@@ -143,6 +149,11 @@ function safeInteger(value) {
   return Number.isSafeInteger(number) ? number : null;
 }
 
+function normalizeGenerationVersion(version) {
+  const numericVersion = Number(version);
+  return numericVersion === 2 || numericVersion === 3 ? numericVersion : 1;
+}
+
 function errorCode(error) {
   if (typeof error?.code === 'string' && error.code.length > 0) {
     return error.code.slice(0, 80);
@@ -175,9 +186,9 @@ function reproductionContext({
   successful = true,
   map = null
 }) {
-  const numericVersion = Number(version) === 2 ? 2 : 1;
+  const numericVersion = normalizeGenerationVersion(version);
   const resolvedRecipe = map?.diagnostics?.resolvedRecipe;
-  const hashes = map?.diagnostics?.hashes;
+  const hashes = map?.hashes ?? map?.diagnostics?.hashes;
   return {
     terrainSeed: safeInteger(map?.terrainSeed ?? terrainSeed),
     mode: normalizeMode(mode),
@@ -367,7 +378,7 @@ export function shouldSampleBattleMapV2Shadow(
 }
 
 export function recordBattleMapGenerationStarted({ version }) {
-  const suffix = Number(version) === 2 ? 'V2' : 'V1';
+  const suffix = `V${normalizeGenerationVersion(version)}`;
   state.counters[`generationActive${suffix}Started`] += 1;
 }
 
@@ -381,7 +392,7 @@ export function recordBattleMapGenerationSucceeded({
   durationMs,
   map
 }) {
-  const numericVersion = Number(version) === 2 ? 2 : 1;
+  const numericVersion = normalizeGenerationVersion(version);
   state.counters[`generationActiveV${numericVersion}Succeeded`] += 1;
   observe(`generation.active.v${numericVersion}.durationMs`, durationMs);
 
@@ -437,7 +448,7 @@ export function recordBattleMapGenerationFailed({
   durationMs,
   error
 }) {
-  const numericVersion = Number(version) === 2 ? 2 : 1;
+  const numericVersion = normalizeGenerationVersion(version);
   const context = reproductionContext({
     version: numericVersion,
     mode,
@@ -459,6 +470,20 @@ export function recordBattleMapGenerationFailed({
     errorCode: errorCode(error),
     attemptedCandidates: Array.isArray(error?.attempts) ? error.attempts.length : null
   });
+}
+
+export function recordAuthoredMapCatalogCoverage(coverage) {
+  if (coverage === 'selected') {
+    state.counters.v3CatalogSelected += 1;
+  } else if (coverage === 'absent') {
+    state.counters.v3CatalogCoverageAbsent += 1;
+  } else {
+    throw new TypeError(`Unknown authored-map catalog coverage state ${coverage}`);
+  }
+}
+
+export function recordAuthoredMapCatalogSelectionFailed() {
+  state.counters.v3CatalogSelectionFailed += 1;
 }
 
 /**

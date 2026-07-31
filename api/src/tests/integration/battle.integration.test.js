@@ -14,9 +14,37 @@ import {
   BASE_URL
 } from '../testHelper.js';
 import {
-  TERRAIN_GENERATION_VERSION,
   deriveEncounterTerrainSeed
 } from '../../services/battle/encounterService.js';
+import {
+  BATTLE_MAP_HASH_VERSION,
+  BATTLE_MAP_SCHEMA_VERSION,
+  BATTLE_MAP_V3_HASH_VERSION,
+  BATTLE_MAP_V3_SCHEMA_VERSION,
+  BATTLE_MAP_V3_TERRAIN_GENERATION_VERSION
+} from '../../../../shared/battleMap/index.js';
+import {
+  BATTLE_MUTABLE_STATE_PROTOCOL_VERSION,
+  createBattleMapCapabilities
+} from '../../../../shared/battleStateProtocol.js';
+
+const supportedBattleMapCapabilities = createBattleMapCapabilities({
+  supportedBattleMapSchemaVersions: [
+    1,
+    BATTLE_MAP_SCHEMA_VERSION,
+    BATTLE_MAP_V3_SCHEMA_VERSION
+  ],
+  supportedHashVersions: [
+    BATTLE_MAP_HASH_VERSION,
+    BATTLE_MAP_V3_HASH_VERSION
+  ],
+  supportedMutableStateProtocolVersions: [
+    BATTLE_MUTABLE_STATE_PROTOCOL_VERSION
+  ]
+});
+const supportedBattleMapCapabilityHeaders = Object.freeze({
+  'x-battle-map-capabilities': JSON.stringify(supportedBattleMapCapabilities)
+});
 
 /**
  * Extended request helper that supports custom headers and returns response headers
@@ -123,7 +151,8 @@ describe('Battle API', () => {
     // This bypasses travel restrictions for test setup
     const battleNodeResult = await query(
       `SELECT id, node_type, local_seed FROM world_nodes
-       WHERE node_type IN ('forest', 'cave', 'mountain')
+       WHERE node_type = 'forest' AND difficulty_tier = 1
+       ORDER BY id
        LIMIT 1`
     );
 
@@ -341,6 +370,7 @@ describe('Battle API', () => {
 
         const payload = {
           battleStartRequestId: requestId,
+          battleMapCapabilities: supportedBattleMapCapabilities,
           formation: {
             [staleCharacter.id]: { tileX: 2, tileY: 1 }
           }
@@ -561,16 +591,28 @@ describe('Battle API', () => {
       const res = await request(
         'POST',
         '/api/battle/start',
-        { formation },
+        {
+          formation,
+          battleMapCapabilities: supportedBattleMapCapabilities
+        },
         user.accessToken
       );
 
       assert.strictEqual(res.status, 201);
       assert.ok(res.body.battleId);
-      assert.ok(res.body.state);
-      assert.ok(res.body.state.units);
+      assert.equal(
+        res.body.battleMapCapabilities.selectedBattleMapSchemaVersion,
+        BATTLE_MAP_V3_SCHEMA_VERSION
+      );
+      assert.ok(res.body.snapshot);
+      assert.ok(res.body.snapshot.battleMap);
+      assert.ok(res.body.snapshot.mutableState.units);
       assert.ok(res.body.mapWidth);
       assert.ok(res.body.mapHeight);
+      assert.deepStrictEqual(res.body.snapshot.battleMap.dimensions, {
+        width: res.body.mapWidth,
+        height: res.body.mapHeight
+      });
       // nodeType is critical for frontend terrain generation to match server
       assert.ok(res.body.nodeType, 'nodeType must be included for terrain sync');
       assert.equal(
@@ -578,38 +620,44 @@ describe('Battle API', () => {
         deriveEncounterTerrainSeed(
           battleNode.local_seed,
           battleNode.node_type,
-          TERRAIN_GENERATION_VERSION
+          BATTLE_MAP_V3_TERRAIN_GENERATION_VERSION
         ),
         'battle map seed must derive from the current world node'
       );
-      assert.equal(res.body.state.terrainSeed, res.body.mapSeed);
-      assert.equal(res.body.state.terrainGenerationVersion, TERRAIN_GENERATION_VERSION);
+      assert.equal(
+        res.body.snapshot.terrainGenerationVersion,
+        BATTLE_MAP_V3_TERRAIN_GENERATION_VERSION
+      );
       assert.deepStrictEqual(
-        res.body.state.units.filter(unit => unit.type === 'player').map(unit => unit.id),
+        res.body.snapshot.mutableState.units
+          .filter(unit => unit.type === 'player')
+          .map(unit => unit.id),
         [selectedCharacter.id]
       );
 
-      battle = res.body;
+      battle = {
+        ...res.body,
+        state: res.body.snapshot.mutableState
+      };
 
       const persisted = await query(
         'SELECT battle_state, map_seed FROM battles WHERE id = $1',
         [battle.battleId]
       );
       assert.equal(persisted.rows[0].map_seed, battle.mapSeed);
-      assert.equal(persisted.rows[0].battle_state.terrainSeed, battle.mapSeed);
       assert.deepStrictEqual(
         persisted.rows[0].battle_state.units
           .filter(unit => unit.type === 'player')
           .map(unit => unit.id),
         [selectedCharacter.id]
       );
-      assert.deepStrictEqual(persisted.rows[0].battle_state.terrain, battle.state.terrain);
-      assert.deepStrictEqual(persisted.rows[0].battle_state.elevation, battle.state.elevation);
-      assert.deepStrictEqual(persisted.rows[0].battle_state.obstacles, battle.state.obstacles);
-      assert.deepStrictEqual(persisted.rows[0].battle_state.variants, battle.state.variants);
       assert.equal(
         persisted.rows[0].battle_state.terrainGenerationVersion,
-        TERRAIN_GENERATION_VERSION
+        BATTLE_MAP_V3_TERRAIN_GENERATION_VERSION
+      );
+      assert.equal(
+        persisted.rows[0].battle_state.hashes.fullHash,
+        battle.snapshot.fullHash
       );
 
       const battleFlags = await query(
@@ -621,22 +669,24 @@ describe('Battle API', () => {
         [selectedCharacter.id]
       );
 
-      const rejoin = await request(
+      const rejoin = await requestWithHeaders(
         'GET',
         `/api/battle/${battle.battleId}/rejoin`,
         null,
-        user.accessToken
+        user.accessToken,
+        supportedBattleMapCapabilityHeaders
       );
       assert.equal(rejoin.status, 200);
       assert.equal(rejoin.body.mapSeed, persisted.rows[0].map_seed);
-      assert.equal(rejoin.body.state.terrainSeed, persisted.rows[0].battle_state.terrainSeed);
-      assert.deepStrictEqual(rejoin.body.state.terrain, persisted.rows[0].battle_state.terrain);
-      assert.deepStrictEqual(rejoin.body.state.elevation, persisted.rows[0].battle_state.elevation);
-      assert.deepStrictEqual(rejoin.body.state.obstacles, persisted.rows[0].battle_state.obstacles);
-      assert.deepStrictEqual(rejoin.body.state.variants, persisted.rows[0].battle_state.variants);
       assert.equal(
-        rejoin.body.state.terrainGenerationVersion,
-        TERRAIN_GENERATION_VERSION
+        rejoin.body.snapshot.fullHash,
+        persisted.rows[0].battle_state.hashes.fullHash
+      );
+      assert.deepStrictEqual(
+        rejoin.body.snapshot.mutableState.units
+          .filter(unit => unit.type === 'player')
+          .map(unit => unit.id),
+        [selectedCharacter.id]
       );
     });
 
@@ -666,10 +716,20 @@ describe('Battle API', () => {
         return;
       }
 
-      const res = await request('GET', '/api/battle/current', null, user.accessToken);
+      const res = await requestWithHeaders(
+        'GET',
+        '/api/battle/current',
+        null,
+        user.accessToken,
+        supportedBattleMapCapabilityHeaders
+      );
 
       assert.strictEqual(res.status, 200);
-      assert.ok(res.body.battle || res.body.state);
+      assert.ok(res.body.snapshot);
+      assert.equal(
+        res.body.snapshot.battleMapSchemaVersion,
+        BATTLE_MAP_V3_SCHEMA_VERSION
+      );
     });
 
     it('should return 404 when no active battle', async () => {
@@ -869,11 +929,12 @@ describe('Battle API', () => {
       assert.strictEqual(first.status, 200, JSON.stringify(first.body));
       assert.strictEqual(first.body.commandId, null);
 
-      const rejoin = await request(
+      const rejoin = await requestWithHeaders(
         'GET',
         `/api/battle/${battle.battleId}/rejoin`,
         null,
-        user.accessToken
+        user.accessToken,
+        supportedBattleMapCapabilityHeaders
       );
       assert.strictEqual(rejoin.status, 200, JSON.stringify(rejoin.body));
       assert.strictEqual(rejoin.body.stateRevision, first.body.stateRevision);
@@ -1317,19 +1378,26 @@ describe('Battle API', () => {
       }
 
       // Call rejoin endpoint - this should reset the sequence tracking
-      const rejoinRes = await request(
+      const rejoinRes = await requestWithHeaders(
         'GET',
         `/api/battle/${battle.battleId}/rejoin`,
         null,
-        user.accessToken
+        user.accessToken,
+        supportedBattleMapCapabilityHeaders
       );
 
       assert.strictEqual(rejoinRes.status, 200, 'Rejoin should succeed');
-      assert.ok(rejoinRes.body.state, 'Rejoin should return battle state');
+      assert.ok(
+        rejoinRes.body.snapshot?.mutableState,
+        'Rejoin should return a battle snapshot'
+      );
 
       // After rejoin, a low sequence number should be accepted
-      const activeUnit = rejoinRes.body.state?.activeUnitId;
-      const playerUnit = rejoinRes.body.state?.units?.find(u => u.id === activeUnit && u.isPlayer);
+      const rejoinedState = rejoinRes.body.snapshot.mutableState;
+      const activeUnit = rejoinedState.activeUnitId;
+      const playerUnit = rejoinedState.units?.find(
+        unit => unit.id === activeUnit && unit.isPlayer
+      );
 
       if (!playerUnit) {
         return;

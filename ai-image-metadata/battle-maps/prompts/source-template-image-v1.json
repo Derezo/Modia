@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "battle-map-source-prompt-profile-v1",
+  "id": "source-template-image-v1",
+  "purpose": "Frozen composition prompt for source-template image generation through the isolated battle-map image runner.",
+  "frozen": true,
+  "prompt": "Create a square compositional reference for a low-tier forest tactical battle scene. Show an organic network of two main clearings and one smaller elevated lookout connected by curved dirt paths. Integrate gradual terraces, a small number of readable stairs, rock and root formations, and dense forest that naturally owns the outer boundary. Leave two opposing formation opportunities inside the environment, each connected by more than one approach, without drawing units, spawn markers, a tactical grid, or a flat cleared edge strip. The image is visual inspiration for later 32 by 32 isometric map authoring, not a literal tile map.",
+  "negativeConstraints": [
+    "symmetric arena geometry",
+    "random freestanding walls",
+    "checkerboard materials",
+    "isolated height spikes",
+    "text, labels, or UI",
+    "units, spawn markers, or a tactical grid",
+    "perspective that hides walkable surfaces",
+    "flat full-height cleared edge strips"
+  ]
+}

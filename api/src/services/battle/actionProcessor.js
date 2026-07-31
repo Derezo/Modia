@@ -21,10 +21,12 @@ import {
   getTargetsInRange,
   findAdjacentTileToTarget,
   calculatePathCost,
-  getManhattanDistance
+  getManhattanDistance,
+  createBattleTraversalView
 } from './movementService.js';
 import { getSkillDefinition } from './skillDefinitionService.js';
 import { getAoETiles, getUnitsInAoE } from './aoeService.js';
+import { isTraversalCellPlayable } from '../../../../shared/pathfinding.js';
 import {
   normalizeLegacyNpcSkill,
   isExecutableLegacyNpcSkill
@@ -605,8 +607,24 @@ function processSkillAction(state, unit, targetTile, skillId) {
   const isCasterCenteredSkill = isSelfTargetingSkill ||
     isAllAlliesTargetingSkill ||
     isCasterCenteredAoE;
+  const targetingTraversalView = Array.isArray(state.playableMask) &&
+    state.playableMask.length > 0
+    ? createBattleTraversalView(state)
+    : null;
 
   if (!isCasterCenteredSkill) {
+    if (targetingTraversalView) {
+      if (!Number.isInteger(targetTile.x) ||
+          !Number.isInteger(targetTile.y)) {
+        result.error = 'Target tile coordinates must be finite integers';
+        return result;
+      }
+      if (!isTraversalCellPlayable(targetingTraversalView, targetTile)) {
+        result.error = 'Target tile is not playable';
+        return result;
+      }
+    }
+
     const skillDistance = getManhattanDistance(unit.tileX, unit.tileY, targetTile.x, targetTile.y);
 
     if (skillDistance > skillRange) {
@@ -774,7 +792,15 @@ function processSkillAction(state, unit, targetTile, skillId) {
 
   // Check if this is an AoE skill
   if (skill.aoeRadius && skill.aoeRadius > 0) {
-    return processAoESkill(state, unit, targetTile, skill, skillId, result);
+    return processAoESkill(
+      state,
+      unit,
+      targetTile,
+      skill,
+      skillId,
+      result,
+      targetingTraversalView
+    );
   }
 
   // Single-target skill
@@ -798,7 +824,25 @@ function processSkillAction(state, unit, targetTile, skillId) {
 /**
  * Process an AoE skill
  */
-function processAoESkill(state, unit, targetTile, skill, skillId, result) {
+function processAoESkill(
+  state,
+  unit,
+  targetTile,
+  skill,
+  skillId,
+  result,
+  targetingTraversalView
+) {
+  const aoeTiles = getAoETiles(
+    targetTile.x,
+    targetTile.y,
+    skill.aoeRadius,
+    skill.aoePattern || 'circle'
+  ).filter(tile =>
+    !targetingTraversalView ||
+    isTraversalCellPlayable(targetingTraversalView, tile)
+  );
+
   // Get all units in the AoE area (includes allies - friendly fire!)
   const affectedUnits = getUnitsInAoE(
     state.units,
@@ -806,17 +850,18 @@ function processAoESkill(state, unit, targetTile, skill, skillId, result) {
     targetTile.y,
     skill.aoeRadius,
     skill.aoePattern || 'circle'
+  ).filter(({ unit: affectedUnit }) =>
+    !targetingTraversalView ||
+    isTraversalCellPlayable(targetingTraversalView, {
+      x: affectedUnit.tileX,
+      y: affectedUnit.tileY
+    })
   );
 
   // Track AoE results
   result.isAoE = true;
   result.aoeTargets = [];
-  result.aoeTiles = getAoETiles(
-    targetTile.x,
-    targetTile.y,
-    skill.aoeRadius,
-    skill.aoePattern || 'circle'
-  );
+  result.aoeTiles = aoeTiles;
 
   const isOffensive = hasOffensiveSkillComponent(skill);
   const appliesBuffInArea = !isOffensive && Boolean(skill.selfBuff);

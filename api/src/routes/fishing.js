@@ -1,99 +1,174 @@
 /**
- * Fishing Routes - Idle/passive fishing at fishing_spot nodes
+ * Fishing routes.
  *
- * Players can start fishing sessions and periodically catch fish.
- * "Big One" events occasionally occur for bonus catches.
+ * All mutations carry a UUID actionId and are protected by both the economy
+ * limiter and the service's durable phase/idempotency checks.
  */
 
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
-import { asyncHandler } from '../middleware/errorHandler.js';
+import { fishingLimiter } from '../middleware/economyRateLimiter.js';
+import { AppError, asyncHandler } from '../middleware/errorHandler.js';
 import {
-  startSession,
-  registerCatch,
-  claimBigOne,
   endSession,
   getActiveSessionStatus,
-  getSessionStatus
+  getSessionStatus,
+  getSetup,
+  hookBite,
+  releaseCast,
+  resolveAttempt,
+  selectGear,
+  startCast,
+  startSession,
+  submitReelCue
 } from '../services/fishingService.js';
 
 const router = Router();
 
-/**
- * GET /fishing/status
- * Find the user's active session so the client can restore it after refresh.
- */
+function nodeIdFrom(req) {
+  const nodeId = Number(req.params.nodeId);
+  if (!Number.isSafeInteger(nodeId) || nodeId <= 0) {
+    throw new AppError('Fishing node ID is invalid', 400);
+  }
+  return nodeId;
+}
+
+function bodyFrom(req) {
+  return req.body && typeof req.body === 'object' ? req.body : {};
+}
+
 router.get('/status', authenticate, asyncHandler(async (req, res) => {
   const status = await getActiveSessionStatus(req.user.userId);
-  res.json(status || { active: false });
+  res.json(status || { active: false, session: null });
 }));
 
-/**
- * POST /fishing/:nodeId/start
- * Start a new fishing session
- */
-router.post('/:nodeId/start', authenticate, asyncHandler(async (req, res) => {
-  const { nodeId } = req.params;
-  const userId = req.user.userId;
-
-  const result = await startSession(userId, parseInt(nodeId, 10));
-  res.json(result);
+router.get('/:nodeId/setup', authenticate, asyncHandler(async (req, res) => {
+  res.json(await getSetup(req.user.userId, nodeIdFrom(req)));
 }));
 
-/**
- * POST /fishing/:nodeId/catch
- * Register a catch (called by client timer)
- */
-router.post('/:nodeId/catch', authenticate, asyncHandler(async (req, res) => {
-  const { nodeId } = req.params;
-  const { sessionId } = req.body || {};
-  const userId = req.user.userId;
+router.post(
+  '/:nodeId/start',
+  authenticate,
+  fishingLimiter,
+  asyncHandler(async (req, res) => {
+    res.json(await startSession(
+      req.user.userId,
+      nodeIdFrom(req),
+      bodyFrom(req)
+    ));
+  })
+);
 
-  const result = await registerCatch(userId, parseInt(nodeId, 10), sessionId);
-  res.json(result);
-}));
+router.post(
+  '/:nodeId/gear',
+  authenticate,
+  fishingLimiter,
+  asyncHandler(async (req, res) => {
+    res.json(await selectGear(
+      req.user.userId,
+      nodeIdFrom(req),
+      bodyFrom(req)
+    ));
+  })
+);
 
-/**
- * POST /fishing/:nodeId/big-one
- * Claim a Big One event catch
- */
-router.post('/:nodeId/big-one', authenticate, asyncHandler(async (req, res) => {
-  const { nodeId } = req.params;
-  const { sessionId } = req.body || {};
-  const userId = req.user.userId;
+router.post(
+  '/:nodeId/cast',
+  authenticate,
+  fishingLimiter,
+  asyncHandler(async (req, res) => {
+    res.json(await startCast(
+      req.user.userId,
+      nodeIdFrom(req),
+      bodyFrom(req)
+    ));
+  })
+);
 
-  const result = await claimBigOne(userId, parseInt(nodeId, 10), sessionId);
-  res.json(result);
-}));
+router.post(
+  '/:nodeId/casts/:attemptId/release',
+  authenticate,
+  fishingLimiter,
+  asyncHandler(async (req, res) => {
+    res.json(await releaseCast(
+      req.user.userId,
+      nodeIdFrom(req),
+      req.params.attemptId,
+      bodyFrom(req)
+    ));
+  })
+);
 
-/**
- * POST /fishing/:nodeId/end
- * End fishing session and collect rewards
- */
-router.post('/:nodeId/end', authenticate, asyncHandler(async (req, res) => {
-  const { nodeId } = req.params;
-  const { sessionId } = req.body || {};
-  const userId = req.user.userId;
+router.post(
+  '/:nodeId/casts/:attemptId/hook',
+  authenticate,
+  fishingLimiter,
+  asyncHandler(async (req, res) => {
+    res.json(await hookBite(
+      req.user.userId,
+      nodeIdFrom(req),
+      req.params.attemptId,
+      bodyFrom(req)
+    ));
+  })
+);
 
-  const result = await endSession(userId, parseInt(nodeId, 10), sessionId);
-  res.json(result);
-}));
+router.post(
+  '/:nodeId/casts/:attemptId/reel',
+  authenticate,
+  fishingLimiter,
+  asyncHandler(async (req, res) => {
+    res.json(await submitReelCue(
+      req.user.userId,
+      nodeIdFrom(req),
+      req.params.attemptId,
+      bodyFrom(req)
+    ));
+  })
+);
 
-/**
- * GET /fishing/:nodeId/status
- * Get current session status
- */
+router.post(
+  '/:nodeId/casts/:attemptId/resolve',
+  authenticate,
+  fishingLimiter,
+  asyncHandler(async (req, res) => {
+    res.json(await resolveAttempt(
+      req.user.userId,
+      nodeIdFrom(req),
+      req.params.attemptId,
+      bodyFrom(req)
+    ));
+  })
+);
+
+router.post(
+  '/:nodeId/end',
+  authenticate,
+  fishingLimiter,
+  asyncHandler(async (req, res) => {
+    const body = bodyFrom(req);
+    res.json(await endSession(
+      req.user.userId,
+      nodeIdFrom(req),
+      body.sessionId,
+      body
+    ));
+  })
+);
+
 router.get('/:nodeId/status', authenticate, asyncHandler(async (req, res) => {
-  const { nodeId } = req.params;
-  const userId = req.user.userId;
-
-  const status = await getSessionStatus(userId, parseInt(nodeId, 10));
-
-  if (!status) {
-    res.json({ active: false });
-  } else {
-    res.json(status);
-  }
+  const status = await getSessionStatus(req.user.userId, nodeIdFrom(req));
+  res.json(status || { active: false, session: null });
 }));
+
+const gone = asyncHandler(async (_req, _res) => {
+  throw new AppError(
+    'This legacy fishing endpoint is gone. Upgrade to the cast protocol.',
+    410
+  );
+});
+
+router.post('/:nodeId/catch', authenticate, fishingLimiter, gone);
+router.post('/:nodeId/big-one', authenticate, fishingLimiter, gone);
 
 export default router;

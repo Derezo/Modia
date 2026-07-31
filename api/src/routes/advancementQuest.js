@@ -94,7 +94,7 @@ export function createAdvancementBattleTransportResponse(
     battleMapCapabilities: negotiated.negotiation,
     snapshot: negotiated.snapshot
   };
-  if (battle.battleMapSchemaVersion === 2) delete response.state;
+  if (battle.battleMapSchemaVersion !== 1) delete response.state;
   return response;
 }
 

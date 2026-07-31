@@ -9,8 +9,10 @@ import {
   getReachableTilesForTraversal,
   calculateTraversalPathCost,
   canEnterTile,
-  getManhattanDistance
+  getManhattanDistance,
+  isTraversalCellPlayable
 } from '../../../../shared/pathfinding.js';
+import { createTraversalObstacleGrid } from '../../../../shared/traversal.js';
 import {
   discretizeElevation,
   normalizeElevationGrid
@@ -141,7 +143,7 @@ function toConnectionGrid(layer, width, height, elevation) {
     grid[record.from.y][record.from.x] ||= {};
     grid[record.from.y][record.from.x][direction] = connection;
 
-    if (record.bidirectional) {
+    if (record.bidirectional || record.traversable === false) {
       const reverse = reverseDirection(direction);
       grid[record.to.y][record.to.x] ||= {};
       grid[record.to.y][record.to.x][reverse] = {
@@ -227,9 +229,9 @@ export function createBattleTraversalView(state, movementPolicy = {}) {
   const terrainRecords = toRowMajorLayer(state.terrain, width, height, {
     emptyValue: 'grass'
   });
-  const obstacleRecords = toRowMajorLayer(state.obstacles, width, height, {
-    optional: true
-  });
+  const obstacleRecords = Array.isArray(state.obstacles)
+    ? createTraversalObstacleGrid(state.obstacles, dimensions)
+    : null;
 
   return createTraversalView({
     terrain: terrainRecords.map(row => row.map(normalizeTerrainCell)),
@@ -244,6 +246,7 @@ export function createBattleTraversalView(state, movementPolicy = {}) {
       height,
       pathfindingElevation
     ),
+    playableMask: state.playableMask ?? null,
     units: Array.isArray(state.units) ? state.units : [],
     dimensions,
     movementPolicy: adaptMovementPolicy(
@@ -342,10 +345,16 @@ export function getReachableTiles(unit, state) {
 export function getTargetsInRange(unit, state, range, targetType) {
   const targets = [];
   const unitTeamId = getUnitTeamId(unit);
+  const hasPlayableMask = Array.isArray(state.playableMask) &&
+    state.playableMask.length > 0;
 
   for (const other of state.units) {
     if (other.hp <= 0) continue;
     if (other.id === unit.id) continue; // Can't target self for attacks
+    if (hasPlayableMask &&
+        state.playableMask?.[other.tileY]?.[other.tileX] !== true) {
+      continue;
+    }
 
     const otherTeamId = getUnitTeamId(other);
 
@@ -392,7 +401,6 @@ export function findAdjacentTileToTarget(state, unit, targetTile) {
     // the elevation crossed by the special movement.
     canTraverseElevation: () => true
   });
-  const { width: mapWidth, height: mapHeight } = traversalView.dimensions;
 
   // Cardinal directions first (most natural landing spots), then diagonals
   const directions = [
@@ -423,27 +431,26 @@ export function findAdjacentTileToTarget(state, unit, targetTile) {
     const adjX = targetTile.x + dir.x;
     const adjY = targetTile.y + dir.y;
 
-    // Check bounds
-    if (adjX < 0 || adjX >= mapWidth || adjY < 0 || adjY >= mapHeight) {
+    const landing = { x: adjX, y: adjY };
+    if (!isTraversalCellPlayable(traversalView, landing)) {
       continue;
     }
 
     // canEnterTile is cardinal-step based. Use an adjacent probe solely to
     // evaluate the landing cell; the policy above intentionally ignores the
     // leap's elevation delta while retaining terrain, obstacle, and occupancy.
-    const probe = adjX > 0
-      ? { x: adjX - 1, y: adjY }
-      : adjX + 1 < mapWidth
-        ? { x: adjX + 1, y: adjY }
-        : adjY > 0
-          ? { x: adjX, y: adjY - 1 }
-          : { x: adjX, y: adjY + 1 };
-    if (!canEnterTile(
+    const probes = [
+      { x: adjX - 1, y: adjY },
+      { x: adjX + 1, y: adjY },
+      { x: adjX, y: adjY - 1 },
+      { x: adjX, y: adjY + 1 }
+    ].filter(point => isTraversalCellPlayable(traversalView, point));
+    if (!probes.some(probe => canEnterTile(
       traversalView,
       probe,
-      { x: adjX, y: adjY },
+      landing,
       { start: { x: unit.tileX, y: unit.tileY } }
-    )) continue;
+    ))) continue;
 
     return { x: adjX, y: adjY };
   }

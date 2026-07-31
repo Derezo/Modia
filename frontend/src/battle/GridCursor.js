@@ -14,8 +14,9 @@ export class GridCursor {
     this.grid = grid;
 
     // Cursor position (grid coordinates)
-    this.x = 0;
-    this.y = 0;
+    const initial = this.findNearestPlayable(0, 0);
+    this.x = initial?.x ?? 0;
+    this.y = initial?.y ?? 0;
 
     // State
     this.isVisible = false;
@@ -53,8 +54,46 @@ export class GridCursor {
    */
   setPosition(x, y) {
     // Clamp to grid bounds
-    this.x = Math.max(0, Math.min(this.grid.width - 1, x));
-    this.y = Math.max(0, Math.min(this.grid.height - 1, y));
+    const clampedX = Math.max(0, Math.min(this.grid.width - 1, x));
+    const clampedY = Math.max(0, Math.min(this.grid.height - 1, y));
+    const next = this.grid.isPlayable?.(clampedX, clampedY)
+      ? { x: clampedX, y: clampedY }
+      : this.findNearestPlayable(clampedX, clampedY);
+    if (!next) return false;
+    this.x = next.x;
+    this.y = next.y;
+    return true;
+  }
+
+  findNearestPlayable(originX, originY) {
+    const candidates = [];
+    for (let y = 0; y < this.grid.height; y++) {
+      for (let x = 0; x < this.grid.width; x++) {
+        if (this.grid.isPlayable?.(x, y) === false) continue;
+        candidates.push({
+          x,
+          y,
+          distance: Math.abs(x - originX) + Math.abs(y - originY)
+        });
+      }
+    }
+    candidates.sort((left, right) =>
+      left.distance - right.distance ||
+      left.y - right.y ||
+      left.x - right.x
+    );
+    return candidates[0] ?? null;
+  }
+
+  findPlayableInDirection(dx, dy) {
+    let x = this.x + dx;
+    let y = this.y + dy;
+    while (x >= 0 && y >= 0 && x < this.grid.width && y < this.grid.height) {
+      if (this.grid.isPlayable?.(x, y) !== false) return { x, y };
+      x += dx;
+      y += dy;
+    }
+    return null;
   }
 
   /**
@@ -64,8 +103,11 @@ export class GridCursor {
     const now = Date.now();
     if (now - this.lastMoveTime < this.moveCooldown) return false;
 
+    const next = this.findPlayableInDirection(dx, dy);
+    if (!next) return false;
     this.lastMoveTime = now;
-    this.setPosition(this.x + dx, this.y + dy);
+    this.x = next.x;
+    this.y = next.y;
     this.activate();
 
     // Notify callback
@@ -134,7 +176,7 @@ export class GridCursor {
         break;
       case 'Enter':
       case ' ':
-        if (this.isActive) {
+        if (this.isActive && this.grid.isPlayable?.(this.x, this.y) !== false) {
           e.preventDefault();
           this.callbacks.onSelect?.(this.x, this.y);
           handled = true;
@@ -174,6 +216,7 @@ export class GridCursor {
    */
   render(ctx, camera) {
     if (!this.isVisible || this.opacity < 0.1) return;
+    if (this.grid.isPlayable?.(this.x, this.y) === false) return;
 
     // Get screen position for cursor tile
     const worldPos = this.grid.gridToScreenWorld(this.x, this.y);

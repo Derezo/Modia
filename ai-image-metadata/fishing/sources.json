@@ -1,0 +1,73 @@
+{
+  "version": "1.0.0",
+  "compilerVersion": 1,
+  "backgrounds": [
+    {
+      "id": "bloodplains",
+      "source": "ai-image-metadata/fishing/sources/backgrounds/bloodplains.webp",
+      "sha256": "a35c8a618bf525868afe3f25e013a95728c0912a0737bafc5e00860c560f881c"
+    },
+    {
+      "id": "heartlands",
+      "source": "ai-image-metadata/fishing/sources/backgrounds/heartlands.webp",
+      "sha256": "2ea7949b16b8bad9f8ba089d2cc6848da5b437e81066cbf3f47753fc40740d99"
+    },
+    {
+      "id": "iron_depths",
+      "source": "ai-image-metadata/fishing/sources/backgrounds/iron_depths.webp",
+      "sha256": "4e7eb3dd9b23c5dcc2bdaf223404f01301914c8e5e3e7787d930a5c43f8624fa"
+    },
+    {
+      "id": "shadowmere",
+      "source": "ai-image-metadata/fishing/sources/backgrounds/shadowmere.webp",
+      "sha256": "21efed050606ec0ba807d1110a6e309b1b966925b49c3828984874cdb937a516"
+    },
+    {
+      "id": "sylvan_reaches",
+      "source": "ai-image-metadata/fishing/sources/backgrounds/sylvan_reaches.webp",
+      "sha256": "da11c2120226201d4cd51e2f07eb87b3a30fc2f615aaa9a169ec212ddc07d0c7"
+    }
+  ],
+  "gear": [
+    {
+      "id": "fishing_rod_riverwood",
+      "source": "ai-image-metadata/fishing/sources/gear/fishing_rod_riverwood.webp",
+      "sha256": "db5384a338bccee05852a91f33113763d4f591089c7467ab9847f4c26a92b554"
+    },
+    {
+      "id": "fishing_rod_runebound",
+      "source": "ai-image-metadata/fishing/sources/gear/fishing_rod_runebound.webp",
+      "sha256": "222eb15b4d747887de5efa834e6d42d67be5f5e1b15e3a5427321b26940d5f97"
+    },
+    {
+      "id": "fishing_rod_silverline",
+      "source": "ai-image-metadata/fishing/sources/gear/fishing_rod_silverline.webp",
+      "sha256": "41aa589e26f9f9896e03186914702843f89005f117ade99ff28d646802109044"
+    },
+    {
+      "id": "fishing_rod_weathered",
+      "source": "ai-image-metadata/fishing/sources/gear/fishing_rod_weathered.webp",
+      "sha256": "ee9c2db85348fd6c551df1d94060a0778d8f8d96fbac491ce16a183786e42820"
+    },
+    {
+      "id": "fishing_tackle_abyssal_lure",
+      "source": "ai-image-metadata/fishing/sources/gear/fishing_tackle_abyssal_lure.webp",
+      "sha256": "8caeb170254cb302fa17acc7430261b8e680172e8b34cb07f789f07bb3ac93cf"
+    },
+    {
+      "id": "fishing_tackle_earthworm",
+      "source": "ai-image-metadata/fishing/sources/gear/fishing_tackle_earthworm.webp",
+      "sha256": "0b6a6715c49c42f2af09c24ecce65e390d8fae56f42146e688d9027071456f4a"
+    },
+    {
+      "id": "fishing_tackle_gilded_spinner",
+      "source": "ai-image-metadata/fishing/sources/gear/fishing_tackle_gilded_spinner.webp",
+      "sha256": "1ae709acf958d989c29e8abf1f8e25dd6851687e89a0f913e2f130f203d0ef40"
+    },
+    {
+      "id": "fishing_tackle_slime_slug",
+      "source": "ai-image-metadata/fishing/sources/gear/fishing_tackle_slime_slug.webp",
+      "sha256": "04cf0e0b242cad4ca935a3ea138dcbb568179896715a3182ef158bd26b051e9a"
+    }
+  ]
+}

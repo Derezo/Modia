@@ -1,0 +1,27 @@
+{
+  "version": "1.0.0",
+  "category": "fishing",
+  "description": "Generated fishing gameplay backgrounds and gear icons",
+  "generationMethod": "built-in-imagegen",
+  "generatedAt": "2026-07-30",
+  "backgrounds": "backgrounds.json",
+  "gearIcons": "gear-icons.json",
+  "sources": "sources.json",
+  "compiler": "scripts/ai-images/compile-fishing-assets.mjs",
+  "backgroundContract": {
+    "format": "webp",
+    "width": 800,
+    "height": 600,
+    "maximumBytes": 153600
+  },
+  "gearIconContract": {
+    "format": "webp",
+    "transparent": true,
+    "sizes": [
+      32,
+      64,
+      128
+    ],
+    "category": "consumables"
+  }
+}

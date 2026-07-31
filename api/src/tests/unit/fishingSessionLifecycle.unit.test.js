@@ -1,296 +1,133 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { pool } from '../../config/database.js';
-import {
-  endSession,
-  getActiveSessionStatus,
-  getSessionStatus,
-  registerCatch,
-  startSession
-} from '../../services/fishingService.js';
+import { readFile } from 'node:fs/promises';
+import { describe, it } from 'node:test';
 
-function installDatabaseHarness(t, { startingGold = 1000 } = {}) {
-  const sessions = new Map();
-  let gold = startingGold;
-  let goldCreditCount = 0;
-  let userLockTail = Promise.resolve();
+const servicePath = new URL('../../services/fishingService.js', import.meta.url);
+const routePath = new URL('../../routes/fishing.js', import.meta.url);
+const travelGuardPath = new URL('../../services/fishingTravelGuard.js', import.meta.url);
+const travelPath = new URL('../../routes/world/navigation.js', import.meta.url);
+const fastTravelPath = new URL('../../routes/world/progression.js', import.meta.url);
 
-  const cloneRow = row => structuredClone(row);
-  const activeForUser = userId => [...sessions.values()]
-    .filter(row => row.user_id === userId && row.status === 'active')
-    .sort((a, b) => b.started_at.getTime() - a.started_at.getTime());
-
-  function sessionRows(sql, params) {
-    if (sql.includes('session_id = $1')) {
-      const row = sessions.get(params[0]);
-      return row && row.user_id === params[1] && row.node_id === params[2]
-        ? [cloneRow(row)]
-        : [];
-    }
-
-    const rows = activeForUser(params[0]);
-    if (sql.includes('node_id = $2')) {
-      return rows
-        .filter(row => row.node_id === params[1])
-        .map(cloneRow);
-    }
-    return rows.map(cloneRow);
-  }
-
-  function createClient() {
-    let releaseUserLock = null;
-
-    return {
-      async query(sql, params = []) {
-        const command = sql.trim();
-        if (command === 'BEGIN') return { rows: [] };
-        if (command === 'COMMIT' || command === 'ROLLBACK') {
-          releaseUserLock?.();
-          releaseUserLock = null;
-          return { rows: [] };
-        }
-
-        if (sql.includes('pg_advisory_xact_lock_shared')) {
-          return { rows: [{}] };
-        }
-
-        if (
-          sql.includes('SELECT id FROM users') &&
-          sql.includes('FOR NO KEY UPDATE')
-        ) {
-          let release;
-          const previous = userLockTail;
-          userLockTail = new Promise(resolve => {
-            release = resolve;
-          });
-          await previous;
-          releaseUserLock = release;
-          return { rows: [{ id: params[0] }] };
-        }
-
-        if (sql.includes('SELECT id, name, node_type FROM world_nodes')) {
-          return {
-            rows: [{
-              id: params[0],
-              name: `Regression Lake ${params[0]}`,
-              node_type: 'fishing_spot'
-            }]
-          };
-        }
-
-        if (sql.includes('FROM user_fishing_sessions')) {
-          return { rows: sessionRows(sql, params) };
-        }
-
-        if (sql.includes('INSERT INTO user_fishing_sessions')) {
-          sessions.set(params[0], {
-            session_id: params[0],
-            user_id: params[1],
-            node_id: params[2],
-            node_name: params[3],
-            status: 'active',
-            started_at: params[4],
-            last_catch_at: null,
-            catches: [],
-            total_value: 0,
-            big_one_active: false,
-            big_one_expires_at: null,
-            big_one_fish: null,
-            collection_result: null,
-            collected_at: null
-          });
-          return { rows: [], rowCount: 1 };
-        }
-
-        if (
-          sql.includes('UPDATE user_fishing_sessions') &&
-          sql.includes('SET catches =')
-        ) {
-          const isBigOneClaim = sql.includes('big_one_active = FALSE');
-          const sessionId = params[isBigOneClaim ? 2 : 6];
-          const row = sessions.get(sessionId);
-          row.catches = JSON.parse(params[0]);
-          row.total_value = params[1];
-          if (isBigOneClaim) {
-            row.big_one_active = false;
-            row.big_one_expires_at = null;
-            row.big_one_fish = null;
-          } else {
-            row.last_catch_at = params[2];
-            row.big_one_active = params[3];
-            row.big_one_expires_at = params[4];
-            row.big_one_fish = params[5] ? JSON.parse(params[5]) : null;
-          }
-          return { rows: [], rowCount: 1 };
-        }
-
-        if (
-          sql.includes('UPDATE user_fishing_sessions') &&
-          sql.includes("status = 'collected'")
-        ) {
-          const row = sessions.get(params[1]);
-          row.status = 'collected';
-          row.collection_result = JSON.parse(params[0]);
-          row.collected_at = new Date();
-          return { rows: [], rowCount: 1 };
-        }
-
-        if (sql.includes('INSERT INTO user_fishing_catches')) {
-          return { rows: [], rowCount: 1 };
-        }
-
-        if (sql.includes('UPDATE users') && sql.includes('RETURNING gold')) {
-          goldCreditCount++;
-          gold = Math.min(gold + params[0], params[1]);
-          return { rows: [{ gold }], rowCount: 1 };
-        }
-
-        if (sql.includes('SELECT gold FROM users')) {
-          return { rows: [{ gold }] };
-        }
-
-        throw new Error(`Unexpected transaction query in fishing test: ${sql}`);
-      },
-      release() {
-        releaseUserLock?.();
-        releaseUserLock = null;
-      }
-    };
-  }
-
-  t.mock.method(pool, 'connect', async () => createClient());
-  t.mock.method(pool, 'query', async (sql, params = []) => {
-    if (sql.includes('FROM user_fishing_sessions')) {
-      return { rows: sessionRows(sql, params) };
-    }
-    if (sql.includes('SELECT id FROM characters')) {
-      return { rows: [] };
-    }
-    if (
-      sql.includes('UPDATE user_fishing_sessions') &&
-      sql.includes("status = 'expired'")
-    ) {
-      return { rows: [], rowCount: 0 };
-    }
-    throw new Error(`Unexpected pool query in fishing test: ${sql}`);
+describe('authoritative fishing lifecycle wiring', () => {
+  it('uses database time and cryptographic randomness, never client reward fields', async () => {
+    const source = await readFile(servicePath, 'utf8');
+    assert.match(source, /SELECT clock_timestamp\(\) AS now/);
+    assert.match(source, /randomInt\(/);
+    assert.doesNotMatch(source, /options\.(fish|rarity|value|success|biome)/);
   });
 
-  return {
-    sessions,
-    get gold() {
-      return gold;
-    },
-    get goldCreditCount() {
-      return goldCreditCount;
-    }
-  };
-}
+  it('locks user, party leader, session, attempt, then tackle inventory', async () => {
+    const source = await readFile(servicePath, 'utf8');
+    const mutationStart = source.indexOf('async function withFishingMutation');
+    const userLock = source.indexOf('lockUser(client', mutationStart);
+    const leaderLock = source.indexOf('lockPartyLeader(client', mutationStart);
+    const sessionLock = source.indexOf('loadSessionForUpdate', leaderLock);
+    const attemptLock = source.indexOf('loadAttemptForUpdate', sessionLock);
+    const inventoryLock = source.indexOf('consumeTackle', attemptLock);
+    assert.ok(userLock > mutationStart);
+    assert.ok(leaderLock > userLock);
+    assert.ok(sessionLock > leaderLock);
+    assert.ok(attemptLock > sessionLock);
+    assert.ok(inventoryLock > attemptLock);
+  });
 
-describe('fishing session lifecycle', () => {
-  it('durably resumes full state and isolates a new session from collected catches', async (t) => {
-    const userId = 91001;
-    const nodeId = 92001;
-    installDatabaseHarness(t);
+  it('consumes tackle only while transitioning a locked cast to wait', async () => {
+    const source = await readFile(servicePath, 'utf8');
+    const releaseStart = source.indexOf('export async function releaseCast');
+    const releaseEnd = source.indexOf('export async function hookBite');
+    const release = source.slice(releaseStart, releaseEnd);
+    assert.match(release, /attempt\.phase !== 'cast'/);
+    assert.match(release, /await consumeTackle/);
+    assert.match(release, /SET phase = 'wait'/);
+  });
 
-    const started = await startSession(userId, nodeId);
-    const caught = await registerCatch(userId, nodeId, started.sessionId);
-    const resumed = await startSession(userId, nodeId);
-    const status = await getSessionStatus(userId, nodeId);
-
-    assert.equal(resumed.resumed, true);
-    assert.equal(resumed.sessionId, started.sessionId);
-    assert.deepEqual(resumed.catches, [caught.catch]);
-    assert.equal(status.sessionId, started.sessionId);
-    assert.equal(status.nodeId, nodeId);
-    assert.deepEqual(status.catches, [caught.catch]);
-    assert.equal((await getActiveSessionStatus(userId)).sessionId, started.sessionId);
-
-    await endSession(userId, nodeId, started.sessionId);
-    const fresh = await startSession(userId, nodeId);
-
-    assert.notEqual(fresh.sessionId, started.sessionId);
-    assert.equal(fresh.totalCatches, 0);
-    assert.equal(fresh.totalValue, 0);
-    assert.deepEqual(fresh.catches, []);
-    await assert.rejects(
-      registerCatch(userId, nodeId, started.sessionId),
-      /no longer active/i
+  it('casts shared phase placeholders consistently during timed hydration transitions', async () => {
+    const source = await readFile(servicePath, 'utf8');
+    const transitionStart = source.indexOf('async function writeAttemptPhase');
+    const transitionEnd = source.indexOf('async function advanceTimedAttempt');
+    const transition = source.slice(transitionStart, transitionEnd);
+    assert.match(transition, /SET phase = \$1::VARCHAR\(16\)/);
+    assert.match(
+      transition,
+      /WHEN \$1::VARCHAR\(16\) IN \('resolved', 'cancelled'\)/
     );
-
-    await endSession(userId, nodeId, fresh.sessionId);
-    assert.equal(await getActiveSessionStatus(userId), null);
   });
 
-  it('credits concurrent and later collection replays exactly once', async (t) => {
-    const userId = 91002;
-    const nodeId = 92002;
-    const database = installDatabaseHarness(t, { startingGold: 500 });
+  it('does not append new catches to legacy session JSON', async () => {
+    const source = await readFile(servicePath, 'utf8');
+    const resolveStart = source.indexOf('export async function resolveAttempt');
+    const resolveEnd = source.indexOf('export async function endSession');
+    const resolve = source.slice(resolveStart, resolveEnd);
+    assert.match(resolve, /INSERT INTO user_fishing_catches/);
+    assert.match(
+      resolve,
+      /ON CONFLICT \(attempt_id\) WHERE attempt_id IS NOT NULL DO NOTHING/
+    );
+    assert.doesNotMatch(resolve, /SET catches =/);
+  });
 
-    const started = await startSession(userId, nodeId);
-    const caught = await registerCatch(userId, nodeId, started.sessionId);
-    const expectedValue = caught.sessionStats.totalValue;
+  it('updates catch and credited-gold quests within the committing transaction', async () => {
+    const source = await readFile(servicePath, 'utf8');
+    assert.match(source, /updateProgressWithClient\(\s*client,\s*leader\.id,\s*'fish_catches'/s);
+    assert.match(source, /updateProgressWithClient\(\s*client,\s*leader\.id,\s*'gold_earned'/s);
+    assert.doesNotMatch(source, /fireFishCatchProgress/);
+  });
 
-    const [first, concurrent] = await Promise.all([
-      endSession(userId, nodeId, started.sessionId),
-      endSession(userId, nodeId, started.sessionId)
+  it('reports basket, credited, and gold-cap overflow independently', async () => {
+    const source = await readFile(servicePath, 'utf8');
+    assert.match(source, /basketValue/);
+    assert.match(source, /creditedGold/);
+    assert.match(source, /overflowLost/);
+    assert.match(source, /MAX_GOLD - startingGold/);
+  });
+
+  it('restores unsettled baskets while allowing battle-safe remote packing', async () => {
+    const [service, travelGuard] = await Promise.all([
+      readFile(servicePath, 'utf8'),
+      readFile(travelGuardPath, 'utf8')
     ]);
-
-    assert.equal(database.goldCreditCount, 1);
-    assert.equal(database.gold, 500 + expectedValue);
-    assert.equal(first.summary.totalValue, expectedValue);
-    assert.deepEqual(concurrent.summary, first.summary);
-
-    const retry = await endSession(userId, nodeId, started.sessionId);
-    assert.equal(retry.idempotent, true);
-    assert.equal(retry.summary.totalValue, expectedValue);
-    assert.equal(database.goldCreditCount, 1);
-    assert.equal(await getSessionStatus(userId, nodeId), null);
+    const endStart = service.indexOf('export async function endSession');
+    const statusStart = service.indexOf('async function readSessionStatus', endStart);
+    const end = service.slice(endStart, statusStart);
+    assert.match(end, /requireLocation: false/);
+    assert.match(end, /await assertNotInBattle\(client, userId, leader\)/);
+    assert.match(travelGuard, /status IN \('active', 'expired'\)/);
   });
 
-  it('enforces one active node per user', async (t) => {
-    const userId = 91003;
-    installDatabaseHarness(t);
-
-    const started = await startSession(userId, 92003);
-    await assert.rejects(
-      startSession(userId, 92004),
-      /already have an active fishing session/i
-    );
-    assert.equal((await getActiveSessionStatus(userId)).sessionId, started.sessionId);
-    await endSession(userId, 92003, started.sessionId);
+  it('exposes every new route and permanently retires insecure endpoints', async () => {
+    const source = await readFile(routePath, 'utf8');
+    for (const route of [
+      '/:nodeId/setup',
+      '/:nodeId/start',
+      '/:nodeId/gear',
+      '/:nodeId/cast',
+      '/:nodeId/casts/:attemptId/release',
+      '/:nodeId/casts/:attemptId/hook',
+      '/:nodeId/casts/:attemptId/reel',
+      '/:nodeId/casts/:attemptId/resolve',
+      '/:nodeId/end'
+    ]) {
+      assert.ok(source.includes(route), `missing ${route}`);
+    }
+    assert.match(source, /router\.post\('\/:nodeId\/catch'.*gone\)/s);
+    assert.match(source, /router\.post\('\/:nodeId\/big-one'.*gone\)/s);
+    assert.match(source, /410/);
   });
 
-  it('gives racing starts after collection the same fresh session', async (t) => {
-    const userId = 91004;
-    const nodeId = 92005;
-    installDatabaseHarness(t);
-
-    const oldSession = await startSession(userId, nodeId);
-    const [ended, firstStart, secondStart] = await Promise.all([
-      endSession(userId, nodeId, oldSession.sessionId),
-      startSession(userId, nodeId),
-      startSession(userId, nodeId)
-    ]);
-
-    assert.equal(ended.success, true);
-    assert.notEqual(firstStart.sessionId, oldSession.sessionId);
-    assert.equal(secondStart.sessionId, firstStart.sessionId);
+  it('applies the fishing limiter to every mutation including cue actions', async () => {
+    const source = await readFile(routePath, 'utf8');
+    const mutationCount = (source.match(/fishingLimiter/g) || []).length - 1;
+    assert.ok(mutationCount >= 10);
   });
 
-  it('requires the caller to identify the active session', async (t) => {
-    const userId = 91005;
-    const nodeId = 92006;
-    installDatabaseHarness(t);
-
-    const started = await startSession(userId, nodeId);
-    await assert.rejects(
-      registerCatch(userId, nodeId),
-      /session ID is required/
-    );
-    await assert.rejects(
-      endSession(userId, nodeId, 'different-session'),
-      /session ID is invalid/
-    );
-    await endSession(userId, nodeId, started.sessionId);
+  it('makes normal and fast travel share the fishing lock guard', async () => {
+    const normal = await readFile(travelPath, 'utf8');
+    const fast = await readFile(fastTravelPath, 'utf8');
+    for (const source of [normal, fast]) {
+      assert.match(source, /withTransaction/);
+      assert.match(source, /assertNoUnsettledFishingSession/);
+      assert.match(source, /SELECT id.*FROM users.*FOR UPDATE/s);
+      assert.match(source, /party_slot = 1.*FOR UPDATE/s);
+    }
   });
 });

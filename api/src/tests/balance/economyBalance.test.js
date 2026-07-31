@@ -17,6 +17,14 @@ import {
   MAX_CHARACTER_LEVEL,
   TIER_MULTIPLIERS
 } from './balanceTestUtils.js';
+import {
+  RODS,
+  TACKLE,
+  calculateFishValue,
+  getWaitDurationMs,
+  selectFishForCatch
+} from '../../db/templates/fish.js';
+import { CARAVAN_PRICE_MODIFIER } from '../../db/templates/caravanItems.js';
 
 // Gold economy constants (from game design)
 const GOLD_REWARDS = {
@@ -390,81 +398,126 @@ describe('Time Investment Balance', () => {
 // ============================================================================
 
 describe('Fishing Income Balance', () => {
-  // Import fish data inline to avoid import issues with templates
-  const FISH_DATA = [
-    { id: 'bass', rarity: 'common', baseValue: 5 },
-    { id: 'carp', rarity: 'common', baseValue: 6 },
-    { id: 'trout', rarity: 'common', baseValue: 8 },
-    { id: 'perch', rarity: 'common', baseValue: 7 },
-    { id: 'bream', rarity: 'common', baseValue: 6 },
-    { id: 'salmon', rarity: 'uncommon', baseValue: 20 },
-    { id: 'pike', rarity: 'uncommon', baseValue: 25 },
-    { id: 'catfish', rarity: 'uncommon', baseValue: 22 },
-    { id: 'eel', rarity: 'uncommon', baseValue: 28 },
-    { id: 'golden_koi', rarity: 'rare', baseValue: 75 },
-    { id: 'electric_eel', rarity: 'rare', baseValue: 85 },
-    { id: 'moonfish', rarity: 'rare', baseValue: 90 },
-    { id: 'sea_dragon', rarity: 'epic', baseValue: 300 },
-    { id: 'ancient_carp', rarity: 'epic', baseValue: 350 },
-    { id: 'leviathan_scale', rarity: 'legendary', baseValue: 1000 }
+  const BIOMES = [
+    'heartlands',
+    'sylvan_reaches',
+    'iron_depths',
+    'shadowmere',
+    'bloodplains'
   ];
+  const ATTEMPTS = 120_000;
 
-  it('should have all fish with positive sell prices', () => {
-    for (const fish of FISH_DATA) {
-      assert.ok(fish.baseValue > 0,
-        `Fish ${fish.id} should have positive base value, got ${fish.baseValue}`);
+  function seededRandom(seed) {
+    let state = seed >>> 0;
+    return () => {
+      state = ((1664525 * state) + 1013904223) >>> 0;
+      return state / 2 ** 32;
+    };
+  }
+
+  function simulate({
+    biome = 'heartlands',
+    rod = RODS[0],
+    tackle = null,
+    difficultyTier = 1,
+    seed = 0x4d4f4449
+  } = {}) {
+    const random = seededRandom(seed);
+    let elapsedMs = 0;
+    let grossGold = 0;
+
+    for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
+      const power = random() * 100;
+      const depth = power < 40 ? 'near' : power < 75 ? 'mid' : 'deep';
+      const isBigCatch = random() < 0.20;
+      const waitMs = getWaitDurationMs(tackle?.catalogKey || null, random);
+      const hardReel = depth === 'deep' || isBigCatch;
+      elapsedMs += 1600 + waitMs + 300 + (hardReel ? 8000 : 6000);
+
+      const landed = !isBigCatch || random() < rod.bigCatchLandingRate;
+      if (!landed) continue;
+      const fish = selectFishForCatch({
+        biome,
+        depth,
+        isBigCatch,
+        random
+      });
+      const minSize = isBigCatch ? 1.3 : 0.8;
+      const maxSize = isBigCatch ? 1.7 : 1.5;
+      const size = minSize + (random() * (maxSize - minSize));
+      grossGold += calculateFishValue(
+        fish,
+        size,
+        isBigCatch,
+        difficultyTier
+      );
+    }
+
+    const hours = elapsedMs / 3_600_000;
+    const castsPerHour = ATTEMPTS / hours;
+    const grossGoldPerHour = grossGold / hours;
+    const tackleUnitPrice = tackle
+      ? Math.floor(tackle.basePrice * CARAVAN_PRICE_MODIFIER)
+      : 0;
+    return {
+      castsPerHour,
+      grossGoldPerHour,
+      tackleCostPerHour: castsPerHour * tackleUnitPrice,
+      netGoldPerHour: grossGoldPerHour - (castsPerHour * tackleUnitPrice)
+    };
+  }
+
+  // Runtime battle rewards default to 10-30g per tier-1 enemy. A normal
+  // three-enemy encounter at ten battles/hour therefore expects 600g/hour.
+  const equivalentTierBattleIncome = 3 * 20 * BATTLES_PER_HOUR;
+
+  it('keeps basic no-tackle fishing at 50-80% of equivalent battle income', () => {
+    for (const biome of BIOMES) {
+      const income = simulate({ biome }).grossGoldPerHour;
+      const ratio = income / equivalentTierBattleIncome;
+      assert.ok(
+        ratio >= 0.50 && ratio <= 0.80,
+        `${biome} basic fishing ratio ${ratio.toFixed(3)} outside 0.50-0.80`
+      );
     }
   });
 
-  it('should have rarer fish worth more than common fish', () => {
-    const commonAvg = FISH_DATA
-      .filter(f => f.rarity === 'common')
-      .reduce((sum, f) => sum + f.baseValue, 0) / 5;
-
-    const uncommonAvg = FISH_DATA
-      .filter(f => f.rarity === 'uncommon')
-      .reduce((sum, f) => sum + f.baseValue, 0) / 4;
-
-    const rareAvg = FISH_DATA
-      .filter(f => f.rarity === 'rare')
-      .reduce((sum, f) => sum + f.baseValue, 0) / 3;
-
-    assert.ok(uncommonAvg > commonAvg,
-      `Uncommon fish avg (${uncommonAvg.toFixed(0)}g) should exceed common (${commonAvg.toFixed(0)}g)`);
-    assert.ok(rareAvg > uncommonAvg,
-      `Rare fish avg (${rareAvg.toFixed(0)}g) should exceed uncommon (${uncommonAvg.toFixed(0)}g)`);
+  it('normalizes expected regional income within ±10%', () => {
+    const incomes = BIOMES.map(biome =>
+      simulate({ biome }).grossGoldPerHour
+    );
+    const average = incomes.reduce((sum, value) => sum + value, 0) / incomes.length;
+    for (let index = 0; index < incomes.length; index++) {
+      const deviation = Math.abs(incomes[index] - average) / average;
+      assert.ok(
+        deviation <= 0.10,
+        `${BIOMES[index]} deviates ${(deviation * 100).toFixed(2)}%`
+      );
+    }
   });
 
-  it('should have fishing income be supplemental (less than battle income per hour)', () => {
-    // Weighted average fish value using rarity weights
-    const rarityWeights = { common: 50, uncommon: 30, rare: 15, epic: 4, legendary: 1 };
-    const totalWeight = Object.values(rarityWeights).reduce((a, b) => a + b, 0);
-
-    let weightedSum = 0;
-    for (const [rarity, weight] of Object.entries(rarityWeights)) {
-      const fishOfRarity = FISH_DATA.filter(f => f.rarity === rarity);
-      if (fishOfRarity.length === 0) continue;
-      const avgValue = fishOfRarity.reduce((sum, f) => sum + f.baseValue, 0) / fishOfRarity.length;
-      weightedSum += avgValue * weight;
+  it('keeps absolute rod landing progression strictly monotonic', () => {
+    const incomes = RODS.map(rod =>
+      simulate({ rod }).grossGoldPerHour
+    );
+    for (let index = 1; index < incomes.length; index++) {
+      assert.ok(
+        incomes[index] > incomes[index - 1],
+        `${RODS[index].name} must outperform ${RODS[index - 1].name}`
+      );
     }
-    const expectedFishValue = weightedSum / totalWeight;
+  });
 
-    // ~2 fish per minute (20-45s interval), so ~120 fish per hour max
-    // But session is capped at 30 min, so estimate ~60 fish per session
-    const fishPerHour = 60;
-    const fishingIncomePerHour = expectedFishValue * fishPerHour;
-
-    // Battle income at tier 3 for comparison
-    const tier3BattleIncome = calculateGoldPerHour({
-      goldPerBattle: (20 + 50) / 2, // tier 3 avg
-      battlesPerHour: BATTLES_PER_HOUR
-    });
-
-    console.log(`Estimated fishing income: ${fishingIncomePerHour.toFixed(0)}g/hr (avg fish value: ${expectedFishValue.toFixed(1)}g)`);
-    console.log(`Tier 3 battle income: ${tier3BattleIncome}g/hr`);
-
-    // Fishing should be supplemental, not replace battling
-    assert.ok(fishingIncomePerHour > 0, 'Fishing income should be positive');
+  it('charges purchased tackle on every cast when evaluating net income', () => {
+    for (const tackle of TACKLE) {
+      const result = simulate({ tackle });
+      assert.ok(result.tackleCostPerHour > 0);
+      assert.ok(result.netGoldPerHour < result.grossGoldPerHour);
+      assert.ok(
+        result.netGoldPerHour <= equivalentTierBattleIncome * 0.80,
+        `${tackle.name} net income exceeds the supplemental ceiling`
+      );
+    }
   });
 });
 

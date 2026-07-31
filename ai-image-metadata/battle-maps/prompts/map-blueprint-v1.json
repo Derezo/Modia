@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "battle-map-blueprint-prompt-profile-v1",
+  "id": "map-blueprint-v1",
+  "purpose": "Frozen symbolic Battle Map V3 blueprint authoring instructions for isolated Codex candidate workers.",
+  "frozen": true,
+  "variantBriefs": {
+    "a": "Emphasize a curved route network with two genuinely distinct approaches and asymmetric formation clearings.",
+    "b": "Emphasize broad terraces, readable elevation changes, and a secondary lateral staging area.",
+    "c": "Emphasize a biome-owned landmark, flanking route, and irregular rendered silhouette without reducing spawn access."
+  },
+  "prompt": "Author exactly one symbolic TemplateMapBlueprint JSON object. Treat the approved source image only as a compositional and style reference. The reviewed source sidecar is the gameplay authority. Use only the closed keys and symbolic values described by the attached contract; do not provide runtime URLs, hashes, movement costs, executable content, Markdown, validation claims, or prose outside the JSON document. The result must be 32 by 32, use an irregular render mask and a playable mask contained by it, preserve all required semantic areas, include biome-owned routes/boundaries/features, provide five ordered player slots, exactly the approved opposing candidate-pool capacity with diverse tactical-role tags, and support the approved maximum simultaneous opponents. Every spawn must be playable, passable after compilation, locally clear, mutually reachable, and connected through the required number of independent approaches. Integer elevation levels must obey the sidecar range. Every traversable elevation change must be declared as a cardinal slope or stair; larger changes must be blocked cliffs. Each obstacle record using the fixed landmark family represents exactly one one-tile collision footprint, and its anchor must be that same cell; repeat the family in separate uniquely identified records to form a larger visual cluster. Expected asset families must exactly equal the symbolic families actually referenced.",
+  "negativeConstraints": [
+    "literal image tracing or pixel-derived coordinates",
+    "full-width or full-height cleared spawn strips",
+    "rectangular arena walls or repeated straight boundaries",
+    "detached spawn pads or a formation with one choke point",
+    "unexplained one-cell peaks or undeclared elevation edges",
+    "checkerboard materials or ambiguous movement surfaces",
+    "multi-cell obstacle records or obstacle anchors outside their one-tile collision cell",
+    "runtime asset paths, content hashes, movement costs, or database fields",
+    "filesystem traversal, symbolic links, or writes outside candidate.json and last-message.txt",
+    "approval records, compiled maps, catalogs, runtime assets, or edits to tracked project content",
+    "Markdown fences, comments, executable code, or prose outside the JSON object"
+  ]
+}

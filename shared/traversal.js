@@ -52,10 +52,95 @@ function assertGrid(name, grid, width, height, { nullable = false } = {}) {
   }
 }
 
+function assertPlayableMask(mask, width, height) {
+  assertGrid('playableMask', mask, width, height, { nullable: true });
+  if (mask == null) return;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (typeof mask[y][x] !== 'boolean') {
+        throw new TypeError(`playableMask[${y}][${x}] must be a boolean`);
+      }
+    }
+  }
+}
+
 function assertPoint(name, point) {
   if (!point || !Number.isInteger(point.x) || !Number.isInteger(point.y)) {
     throw new TypeError(`${name} must contain integer x and y coordinates`);
   }
+}
+
+function invalidV3Obstacle(message) {
+  const error = new TypeError(message);
+  error.code = 'INVALID_BATTLE_MAP_V3_TOPOLOGY';
+  throw error;
+}
+
+/**
+ * Normalize legacy row-major/coordinate obstacle layers and V3 multi-cell
+ * obstacle records into the collision grid consumed by traversal.
+ *
+ * Legacy coordinate records retain their existing last-record-wins behavior.
+ * V3 `cells` are authoritative footprints and therefore fail closed when a
+ * cell is invalid or shared by another obstacle.
+ */
+export function createTraversalObstacleGrid(
+  layer,
+  { width, height }
+) {
+  if (layer == null || (Array.isArray(layer) && layer.length === 0)) return null;
+  if (!Array.isArray(layer)) {
+    throw new TypeError('obstacles must be a row-major grid or record array');
+  }
+  if (layer.some(Array.isArray)) {
+    assertGrid('obstacles', layer, width, height);
+    return layer;
+  }
+
+  const grid = Array.from({ length: height }, () => Array(width).fill(null));
+  const v3Cells = new Set();
+  for (const record of layer) {
+    if (Array.isArray(record?.cells)) {
+      if (record.cells.length === 0) {
+        invalidV3Obstacle(`V3 obstacle ${record.id ?? '<unknown>'} has no collision cells`);
+      }
+      const collisionRecord = typeof record.blocking === 'boolean'
+        ? {
+          ...record,
+          type: record.type ?? record.kind,
+          passable: !record.blocking
+        }
+        : record;
+      for (const cell of record.cells) {
+        if (!cell || !Number.isInteger(cell.x) || !Number.isInteger(cell.y) ||
+            cell.x < 0 || cell.y < 0 || cell.x >= width || cell.y >= height) {
+          invalidV3Obstacle(
+            `V3 obstacle ${record.id ?? '<unknown>'} has invalid collision cell`
+          );
+        }
+        const key = `${cell.x},${cell.y}`;
+        if (grid[cell.y][cell.x] !== null || v3Cells.has(key)) {
+          invalidV3Obstacle(
+            `multiple blocking obstacles occupy ${cell.x},${cell.y}`
+          );
+        }
+        grid[cell.y][cell.x] = collisionRecord;
+        v3Cells.add(key);
+      }
+      continue;
+    }
+
+    const x = record?.x ?? record?.tileX ?? record?.gridX;
+    const y = record?.y ?? record?.tileY ?? record?.gridY;
+    if (Number.isInteger(x) && Number.isInteger(y) &&
+        x >= 0 && y >= 0 && x < width && y < height) {
+      if (v3Cells.has(`${x},${y}`)) {
+        invalidV3Obstacle(`multiple blocking obstacles occupy ${x},${y}`);
+      }
+      grid[y][x] = record;
+    }
+  }
+  return grid;
 }
 
 function resolvePolicy(policy = {}) {
@@ -98,6 +183,8 @@ export function createTraversalView({
   obstacles = null,
   elevation = null,
   elevationConnections = null,
+  elevationFormat = 'normalized',
+  playableMask = null,
   units = [],
   dimensions,
   movementPolicy = {}
@@ -110,7 +197,11 @@ export function createTraversalView({
 
   const { width, height } = dimensions;
   assertGrid('terrain', terrain, width, height);
-  assertGrid('obstacles', obstacles, width, height, { nullable: true });
+  const obstacleGrid = createTraversalObstacleGrid(
+    obstacles,
+    { width, height }
+  );
+  assertGrid('obstacles', obstacleGrid, width, height, { nullable: true });
   assertGrid('elevation', elevation, width, height, { nullable: true });
   assertGrid(
     'elevationConnections',
@@ -119,6 +210,10 @@ export function createTraversalView({
     height,
     { nullable: true }
   );
+  if (!['normalized', 'discrete'].includes(elevationFormat)) {
+    throw new TypeError('elevationFormat must be normalized or discrete');
+  }
+  assertPlayableMask(playableMask, width, height);
 
   if (!Array.isArray(units)) {
     throw new TypeError('units must be an array');
@@ -126,9 +221,11 @@ export function createTraversalView({
 
   return Object.freeze({
     terrain,
-    obstacles,
+    obstacles: obstacleGrid,
     elevation,
     elevationConnections,
+    elevationFormat,
+    ...(playableMask === null ? {} : { playableMask }),
     units,
     dimensions: Object.freeze({ width, height }),
     movementPolicy: resolvePolicy(movementPolicy)
@@ -147,6 +244,18 @@ export function isWithinTraversalBounds(view, point) {
   assertPoint('point', point);
   const { width, height } = view.dimensions;
   return point.x >= 0 && point.y >= 0 && point.x < width && point.y < height;
+}
+
+/**
+ * Return whether a coordinate belongs to the gameplay surface.
+ *
+ * V1/V2 views omit playableMask and therefore retain their existing
+ * dimensions-as-playable behavior. V3 supplies the compiler-authored mask so
+ * visible scene cells can never become valid gameplay cells by accident.
+ */
+export function isTraversalCellPlayable(view, point) {
+  if (!isWithinTraversalBounds(view, point)) return false;
+  return view.playableMask?.[point.y]?.[point.x] ?? true;
 }
 
 export function getTraversalOccupant(view, point, { exclude } = {}) {
@@ -170,11 +279,26 @@ export function getElevationConnection(view, from, to) {
     candidate.dx === dx && candidate.dy === dy
   );
   if (!step) return null;
-  return view.elevationConnections?.[from.y]?.[from.x]?.[step.direction] ?? null;
+  const direct =
+    view.elevationConnections?.[from.y]?.[from.x]?.[step.direction] ?? null;
+  const reverseDirection = {
+    n: 's',
+    e: 'w',
+    s: 'n',
+    w: 'e'
+  }[step.direction];
+  const reverse =
+    view.elevationConnections?.[to.y]?.[to.x]?.[reverseDirection] ?? null;
+  if (direct?.traversable === false) return direct;
+  if (reverse?.traversable === false) return reverse;
+  return direct;
 }
 
 function getElevationAt(view, point) {
-  return discretizeElevation(view.elevation?.[point.y]?.[point.x] ?? 0);
+  const elevation = view.elevation?.[point.y]?.[point.x] ?? 0;
+  return view.elevationFormat === 'discrete'
+    ? Math.round(elevation)
+    : discretizeElevation(elevation);
 }
 
 function getConnectionCost(connection, baseCost) {
@@ -206,6 +330,9 @@ function evaluateStep(view, from, to, {
   if (!isWithinTraversalBounds(view, from) || !isWithinTraversalBounds(view, to)) {
     return { canEnter: false, cost: Infinity, reason: 'out_of_bounds' };
   }
+  if (!isTraversalCellPlayable(view, from) || !isTraversalCellPlayable(view, to)) {
+    return { canEnter: false, cost: Infinity, reason: 'non_playable' };
+  }
   if (Math.abs(to.x - from.x) + Math.abs(to.y - from.y) !== 1) {
     return { canEnter: false, cost: Infinity, reason: 'non_cardinal_step' };
   }
@@ -232,7 +359,6 @@ function evaluateStep(view, from, to, {
     effectiveConnectionType,
     { maxClimb: policy.maxClimb, maxDrop: policy.maxDrop }
   );
-
   const context = {
     view,
     from,
@@ -251,6 +377,14 @@ function evaluateStep(view, from, to, {
     toElevation,
     elevationTraversal
   };
+  if (connection?.traversable === false) {
+    return {
+      canEnter: false,
+      cost: Infinity,
+      reason: 'elevation',
+      context
+    };
+  }
 
   const terrainPassable = resolveHook(
     policy.canTraverseTerrain,
@@ -333,6 +467,9 @@ function validateSearch(view, start, goal, maxCost) {
   if (!isWithinTraversalBounds(view, start) ||
       (goal && !isWithinTraversalBounds(view, goal))) {
     throw new RangeError('start and goal must be within traversal dimensions');
+  }
+  if (!isTraversalCellPlayable(view, start)) {
+    throw new RangeError('start must be a playable traversal cell');
   }
   if (typeof maxCost !== 'number' || Number.isNaN(maxCost) || maxCost < 0) {
     throw new TypeError('maxCost/range must be a non-negative number');

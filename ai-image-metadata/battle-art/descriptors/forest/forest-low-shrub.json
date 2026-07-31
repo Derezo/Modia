@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "battle-art-family-descriptor-v1",
+  "id": "forest-low-shrub",
+  "theme": "forest",
+  "category": "nonblocking-decoration",
+  "status": "compiled",
+  "promptProfile": {
+    "id": "battle-art-family-v2",
+    "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+    "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+  },
+  "styleReferences": [
+    {
+      "id": "forest-source-template-01",
+      "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+      "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+    }
+  ],
+  "generationPrompt": "Create one low, soft woodland broadleaf shrub and young sapling cluster as walkable forest-floor decoration. Use several rounded oak-like leaves on short flexible stems with one subtle sapling shoot; make it visually distinct from the existing pointed fern-frond asset. It must read as light brush that a character can walk through, never as a solid bush, hedge, tree, trunk, wall, or collision obstacle. Keep the silhouette small, airy, and broad rather than tall, with all stems meeting at a stable base centered exactly on anchor (64,160). Match the existing forest Battle Map V3 crisp 16-bit pixel-isometric scale, clustered edge pixels, cool deep greens with restrained lighter leaf tips, muted stem browns, and soft upper-left light. Keep the entire exterior transparent and use no magenta, pink, purple, or fuchsia pixels anywhere in the subject or edge matte. No fern fronds, flowers, berries, ground tile, dirt patch, pot, rock, cast ground shadow, disconnected second cluster, panel, text, or presentation framing.",
+  "rasterContract": {
+    "schemaVersion": "battle-art-raster-contract-v1",
+    "kind": "transparent-cutout",
+    "minimumCoveredPermille": 25,
+    "maximumCoveredPermille": 450
+  },
+  "canvas": {
+    "width": 128,
+    "height": 192
+  },
+  "placement": {
+    "pivot": {
+      "x": 64,
+      "y": 160
+    },
+    "anchor": {
+      "x": 64,
+      "y": 160
+    },
+    "footprint": {
+      "x": 0,
+      "y": 0,
+      "width": 1,
+      "height": 1
+    },
+    "collision": {
+      "kind": "none",
+      "cells": []
+    },
+    "drawBounds": {
+      "x": 12,
+      "y": 72,
+      "width": 104,
+      "height": 96
+    },
+    "occlusionBounds": {
+      "x": 24,
+      "y": 88,
+      "width": 80,
+      "height": 64
+    },
+    "stratum": "decoration"
+  },
+  "content": {
+    "version": 1,
+    "sourceSha256": "sha256:748e975af08457f3a2455d028fb086fbf8c21c0d218a35f319602d6d5d727418",
+    "runtimeSha256": "sha256:626be37dc766e914eaff29b529152c785713ef0d95b06dae06e7200a615f6b95",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v6/forest/nonblocking-decoration/forest-low-shrub/v1/626be37dc766e914eaff29b529152c785713ef0d95b06dae06e7200a615f6b95.webp"
+  },
+  "source": {
+    "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-low-shrub/result.json",
+    "imagePath": "ai-image-metadata/battle-art/sources/forest/forest-low-shrub/v1/748e975af08457f3a2455d028fb086fbf8c21c0d218a35f319602d6d5d727418.png",
+    "imageSha256": "sha256:748e975af08457f3a2455d028fb086fbf8c21c0d218a35f319602d6d5d727418",
+    "width": 128,
+    "height": 192,
+    "format": "png",
+    "reviewer": "codex",
+    "approvedAt": "2026-07-30T18:34:58.792Z"
+  }
+}

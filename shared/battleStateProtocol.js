@@ -2,8 +2,14 @@ import {
   BATTLE_MAP_HASH_VERSION,
   BATTLE_MAP_SCHEMA_VERSION,
   BATTLE_MAP_V2_FLAT_FIELDS,
+  BATTLE_MAP_V3_HASH_VERSION,
+  BATTLE_MAP_V3_SCHEMA_VERSION,
+  BATTLE_MAP_V3_TERRAIN_GENERATION_VERSION,
+  BattleMapV3RecordShapes,
   TERRAIN_GENERATION_VERSION,
-  assertBattleMapV2Final
+  assertBattleMapV2Final,
+  assertBattleMapV3Final,
+  resolveBattleMapVersionDescriptor
 } from './battleMap/index.js';
 import { deepCloneJsonValue, deepFreeze } from './battleMap/canonicalJson.js';
 
@@ -153,7 +159,11 @@ export function assertWithinUncompressedBudget(value, budget, label) {
 
 function assertNoImmutableMapFields(value, label) {
   assertPlainObject(value, label);
-  for (const key of BATTLE_MAP_V2_FLAT_FIELDS) {
+  const immutableFields = new Set([
+    ...BATTLE_MAP_V2_FLAT_FIELDS,
+    ...BattleMapV3RecordShapes.final
+  ]);
+  for (const key of immutableFields) {
     if (own(value, key)) throw new TypeError(`${label}.${key} is immutable map data`);
   }
   if (own(value, 'mapSeed') || own(value, 'collision') || own(value, 'map')) {
@@ -303,15 +313,15 @@ export function assertBattleMutableStateUpdateV1(value) {
   if (value.stateRevision !== value.baseStateRevision + 1) {
     throw new TypeError('BattleMutableStateUpdateV1.stateRevision must equal baseStateRevision + 1');
   }
-  if (value.battleMapSchemaVersion !== 1 && value.battleMapSchemaVersion !== BATTLE_MAP_SCHEMA_VERSION) {
-    throw new TypeError('BattleMutableStateUpdateV1.battleMapSchemaVersion is unsupported');
-  }
-  if (value.terrainGenerationVersion !== 1 && value.terrainGenerationVersion !== TERRAIN_GENERATION_VERSION) {
-    throw new TypeError('BattleMutableStateUpdateV1.terrainGenerationVersion is unsupported');
-  }
-  if (value.battleMapSchemaVersion === 2) {
+  const descriptor = resolveBattleMapVersionDescriptor({
+    battleMapSchemaVersion: value.battleMapSchemaVersion,
+    terrainGenerationVersion: value.terrainGenerationVersion
+  });
+  if (descriptor.hashRequirements.required) {
     if (typeof value.fullHash !== 'string' || !HASH_PATTERN.test(value.fullHash)) {
-      throw new TypeError('BattleMutableStateUpdateV1.fullHash must be a V2 sha256 hash');
+      throw new TypeError(
+        `BattleMutableStateUpdateV1.fullHash must be a V${descriptor.battleMapSchemaVersion} sha256 hash`
+      );
     }
   } else if (value.fullHash !== null) {
     throw new TypeError('BattleMutableStateUpdateV1.fullHash must be null for V1 maps');
@@ -400,6 +410,12 @@ export function assertBattleMapCapabilities(value) {
     if (!HASH_PATTERN.test(entry.fullHash)) {
       throw new TypeError(`battleMapCapabilities.cachedMaps[${index}].fullHash must be a sha256 hash`);
     }
+    const descriptor = resolveBattleMapVersionDescriptor(entry);
+    if (descriptor.battleMapSchemaVersion !== BATTLE_MAP_SCHEMA_VERSION) {
+      throw new TypeError(
+        `battleMapCapabilities.cachedMaps[${index}] is not a cacheable V2 map reference`
+      );
+    }
   });
   return value;
 }
@@ -425,13 +441,20 @@ export function negotiateBattleMapCapabilities({
   existingMap = null,
   allowNewV2 = false
 }) {
+  const existingDescriptor = existingMap === null
+    ? null
+    : resolveBattleMapVersionDescriptor(existingMap);
+
   if (clientCapabilities === undefined || clientCapabilities === null) {
-    if (existingMap?.battleMapSchemaVersion === 2) {
+    if (existingDescriptor?.battleMapSchemaVersion !== undefined
+      && existingDescriptor.battleMapSchemaVersion !== 1) {
       return deepFreeze({
         compatible: false,
         code: 'battle_map_upgrade_required',
-        requiredBattleMapSchemaVersion: 2,
-        requiredHashVersion: BATTLE_MAP_HASH_VERSION,
+        requiredBattleMapSchemaVersion: existingDescriptor.battleMapSchemaVersion,
+        requiredHashVersion: existingDescriptor.battleMapSchemaVersion === BATTLE_MAP_V3_SCHEMA_VERSION
+          ? BATTLE_MAP_V3_HASH_VERSION
+          : BATTLE_MAP_HASH_VERSION,
         requiredMutableStateProtocolVersion: 1
       });
     }
@@ -445,12 +468,16 @@ export function negotiateBattleMapCapabilities({
   }
 
   assertBattleMapCapabilities(clientCapabilities);
-  const requestedVersion = existingMap?.battleMapSchemaVersion
+  const requestedVersion = existingDescriptor?.battleMapSchemaVersion
     ?? (allowNewV2 && clientCapabilities.supportedBattleMapSchemaVersions.includes(2) ? 2 : 1);
-  const hashVersion = requestedVersion === 2 ? BATTLE_MAP_HASH_VERSION : null;
+  const hashVersion = requestedVersion === BATTLE_MAP_V3_SCHEMA_VERSION
+    ? BATTLE_MAP_V3_HASH_VERSION
+    : requestedVersion === BATTLE_MAP_SCHEMA_VERSION
+      ? BATTLE_MAP_HASH_VERSION
+      : null;
   const compatible = clientCapabilities.supportedBattleMapSchemaVersions.includes(requestedVersion)
     && clientCapabilities.supportedMutableStateProtocolVersions.includes(1)
-    && (requestedVersion !== 2 || clientCapabilities.supportedHashVersions.includes(hashVersion));
+    && (hashVersion === null || clientCapabilities.supportedHashVersions.includes(hashVersion));
   if (!compatible) {
     return deepFreeze({
       compatible: false,
@@ -462,7 +489,7 @@ export function negotiateBattleMapCapabilities({
   }
 
   let mapDelivery = 'full';
-  if (requestedVersion === 2 && existingMap) {
+  if (requestedVersion === BATTLE_MAP_SCHEMA_VERSION && existingMap) {
     const cached = clientCapabilities.cachedMaps.some(entry => (
       entry.battleMapSchemaVersion === existingMap.battleMapSchemaVersion
       && entry.terrainGenerationVersion === existingMap.terrainGenerationVersion
@@ -501,15 +528,28 @@ export function createBattleStateSnapshotV1({
   if (mapDelivery !== 'full' && mapDelivery !== 'cached') {
     throw new TypeError('mapDelivery must be full or cached');
   }
-  const isV2 = battleMap?.battleMapSchemaVersion === 2;
-  if (isV2) assertBattleMapV2Final(battleMap);
+  const descriptor = resolveBattleMapVersionDescriptor(battleMap);
+  const schemaVersion = descriptor.battleMapSchemaVersion;
+  if (schemaVersion === BATTLE_MAP_SCHEMA_VERSION) {
+    assertBattleMapV2Final(battleMap);
+  } else if (schemaVersion === BATTLE_MAP_V3_SCHEMA_VERSION) {
+    assertBattleMapV3Final(battleMap);
+    if (mapDelivery !== 'full') {
+      throw new TypeError('BattleMapV3 snapshots require full map delivery');
+    }
+  }
+  const fullHash = schemaVersion === BATTLE_MAP_SCHEMA_VERSION
+    ? battleMap.diagnostics.hashes.fullHash
+    : schemaVersion === BATTLE_MAP_V3_SCHEMA_VERSION
+      ? battleMap.hashes.fullHash
+      : null;
   const snapshot = {
     protocolVersion: 1,
     battleId,
     stateRevision,
-    battleMapSchemaVersion: isV2 ? 2 : 1,
-    terrainGenerationVersion: isV2 ? battleMap.terrainGenerationVersion : 1,
-    fullHash: isV2 ? battleMap.diagnostics.hashes.fullHash : null,
+    battleMapSchemaVersion: schemaVersion,
+    terrainGenerationVersion: descriptor.terrainGenerationVersion,
+    fullHash,
     mapDelivery,
     battleMap: mapDelivery === 'full' ? battleMap : null,
     mutableState
@@ -533,7 +573,11 @@ export function assertBattleStateSnapshotV1(value) {
   if (value.mapDelivery === 'cached' && value.battleMap !== null) {
     throw new TypeError('A cached-map snapshot must not resend battleMap');
   }
-  if (value.battleMapSchemaVersion === 2) {
+  const descriptor = resolveBattleMapVersionDescriptor({
+    battleMapSchemaVersion: value.battleMapSchemaVersion,
+    terrainGenerationVersion: value.terrainGenerationVersion
+  });
+  if (descriptor.battleMapSchemaVersion === BATTLE_MAP_SCHEMA_VERSION) {
     if (!HASH_PATTERN.test(value.fullHash)) throw new TypeError('V2 snapshot fullHash is invalid');
     if (value.mapDelivery === 'full') {
       assertBattleMapV2Final(value.battleMap);
@@ -541,8 +585,27 @@ export function assertBattleStateSnapshotV1(value) {
         throw new TypeError('V2 snapshot map/hash reference mismatch');
       }
     }
-  } else if (value.battleMapSchemaVersion !== 1 || value.fullHash !== null) {
-    throw new TypeError('BattleStateSnapshotV1 has an unsupported map reference');
+  } else if (descriptor.battleMapSchemaVersion === BATTLE_MAP_V3_SCHEMA_VERSION) {
+    if (value.mapDelivery !== 'full') {
+      throw new TypeError('BattleMapV3 snapshots require full map delivery');
+    }
+    if (!HASH_PATTERN.test(value.fullHash)) throw new TypeError('V3 snapshot fullHash is invalid');
+    assertBattleMapV3Final(value.battleMap);
+    if (value.battleMap.hashes.fullHash !== value.fullHash) {
+      throw new TypeError('V3 snapshot map/hash reference mismatch');
+    }
+  } else {
+    if (value.fullHash !== null) {
+      throw new TypeError('V1 snapshot fullHash must be null');
+    }
+    if (value.mapDelivery !== 'full' || !isPlainObject(value.battleMap)) {
+      throw new TypeError('V1 snapshots require full map delivery');
+    }
+    resolveBattleMapVersionDescriptor(value.battleMap);
+    if (value.battleMap.battleMapSchemaVersion !== 1
+      || value.battleMap.terrainGenerationVersion !== 1) {
+      throw new TypeError('V1 snapshot map/reference mismatch');
+    }
   }
   assertBattleMutableStateV1(value.mutableState);
   return value;

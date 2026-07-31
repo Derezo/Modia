@@ -6,7 +6,8 @@ import { describe, it } from 'node:test';
 
 import {
   BATTLE_MAP_HASH_VERSION,
-  createMinimalBattleMapV2FinalFixture
+  createMinimalBattleMapV2FinalFixture,
+  createMinimalBattleMapV3FinalFixture
 } from '../../../../shared/battleMap/index.js';
 import {
   createBattleMapCapabilities,
@@ -55,6 +56,19 @@ async function v2Envelope() {
     map,
     mutableState: mutableState(),
     state: { turn: 4, units: [] }
+  };
+}
+
+async function v3Envelope() {
+  const map = await createMinimalBattleMapV3FinalFixture();
+  return {
+    battleId: 12,
+    stateRevision: 4,
+    battleMapSchemaVersion: 3,
+    terrainGenerationVersion: 3,
+    map,
+    mutableState: mutableState(),
+    state: { raw: 'must never be transported as legacy V3 state' }
   };
 }
 
@@ -133,6 +147,24 @@ describe('API battle-map transport negotiation', () => {
     assert.equal(result.negotiation.mapDelivery, 'full');
     assert.deepEqual(result.snapshot.battleMap, battle.map);
     assert.equal(result.snapshot.fullHash, cachedMaps[0].fullHash);
+  });
+
+  it('requires declared V3 support and always sends a full verified V3 snapshot', async () => {
+    const battle = await v3Envelope();
+    const absent = createNegotiatedBattleStateSnapshot(battle, undefined);
+    assert.equal(absent.negotiation.code, 'battle_map_upgrade_required');
+    assert.equal(absent.snapshot, null);
+
+    const result = createNegotiatedBattleStateSnapshot(
+      battle,
+      capabilities({ versions: [1, 2, 3] }),
+      { referenceDeltaEnabled: true }
+    );
+    assert.equal(result.negotiation.compatible, true);
+    assert.equal(result.negotiation.selectedBattleMapSchemaVersion, 3);
+    assert.equal(result.negotiation.mapDelivery, 'full');
+    assert.equal(result.snapshot.battleMap.hashes.fullHash, battle.map.hashes.fullHash);
+    assert.equal(result.snapshot.fullHash, battle.map.hashes.fullHash);
   });
 
   it('fails closed for incompatible and malformed declarations', async () => {

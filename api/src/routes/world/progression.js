@@ -16,6 +16,7 @@ import { fastTravelLimiter } from '../../middleware/economyRateLimiter.js';
 import { asyncHandler, AppError } from '../../middleware/errorHandler.js';
 import presenceService from '../../services/presenceService.js';
 import * as staminaService from '../../services/staminaService.js';
+import { assertNoUnsettledFishingSession } from '../../services/fishingTravelGuard.js';
 
 const router = express.Router();
 
@@ -161,20 +162,41 @@ router.post('/', authenticate, fastTravelLimiter, asyncHandler(async (req, res) 
 
   // Perform all database mutations in a transaction
   const { newGold } = await withTransaction(async (client) => {
-    // Check and deduct gold
+    // Match fishing's user -> party leader -> session lock order so fast
+    // travel cannot race a cast, resolution, or basket collection.
+    const userResult = await client.query(
+      'SELECT id, gold FROM users WHERE id = $1 FOR UPDATE',
+      [userId]
+    );
+    if (!userResult.rows[0]) throw new AppError('User not found', 404);
+    const leaderResult = await client.query(
+      `SELECT id, current_node_id, in_battle
+       FROM characters
+       WHERE user_id = $1 AND party_slot = 1
+       FOR UPDATE`,
+      [userId]
+    );
+    const lockedLeader = leaderResult.rows[0];
+    if (!lockedLeader) throw new AppError('No active party character', 400);
+    if (Number(lockedLeader.current_node_id) !== Number(character.current_node_id)) {
+      throw new AppError('Your location changed; try fast travel again', 409);
+    }
+    if (lockedLeader.in_battle) {
+      throw new AppError('Cannot fast travel while in battle', 400);
+    }
+    await assertNoUnsettledFishingSession(client, userId);
+
+    const currentGold = Number(userResult.rows[0].gold) || 0;
+    if (currentGold < goldCost) {
+      throw new AppError(`Insufficient gold. Need ${goldCost}, have ${currentGold}`, 400);
+    }
     const goldResult = await client.query(
       `UPDATE users
        SET gold = gold - $1
-       WHERE id = $2 AND gold >= $1
+       WHERE id = $2
        RETURNING gold`,
       [goldCost, userId]
     );
-
-    if (goldResult.rows.length === 0) {
-      const userGold = await client.query('SELECT gold FROM users WHERE id = $1', [userId]);
-      const currentGold = userGold.rows[0]?.gold || 0;
-      throw new AppError(`Insufficient gold. Need ${goldCost}, have ${currentGold}`, 400);
-    }
 
     // Move all party characters to destination
     await client.query(

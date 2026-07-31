@@ -1,0 +1,80 @@
+{
+  "schemaVersion": "battle-art-family-descriptor-v1",
+  "id": "forest-moss-surface",
+  "theme": "forest",
+  "category": "surface",
+  "status": "compiled",
+  "promptProfile": {
+    "id": "battle-art-family-v2",
+    "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+    "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+  },
+  "styleReferences": [
+    {
+      "id": "forest-source-template-01",
+      "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+      "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+    }
+  ],
+  "generationPrompt": "Create one quiet, professional, seamless flat 2:1 isometric forest-floor material tile whose exact alpha silhouette is the full canvas diamond. Fill every required diamond pixel edge-to-edge with an organic blend of muted moss, short forest grass, and compact dark forest earth. Generate generous forest-floor overscan so every pixel of the eventual exact diamond contains ground color before the deterministic alpha mask is applied; no transparent or #ff00ff key-color padding may touch or intrude into that required diamond. Use broad low-frequency tonal mottling and gently irregular natural patches so the surface feels varied but calm when repeated across a large map. Add only a few subtle, low-contrast fragments of fine root and softened leaf litter; keep most of the surface visually restful, with no dense micro-detail. Texture must remain continuous and edge-safe when neighboring tiles touch, with no obvious repeating motif, directional stripe, checker pattern, isolated centerpiece, or high-contrast speckle noise. The tile must read as a perfectly flat ground material after 4:1 downscaling. There must be no transparent seam margin, dark outline, raised rim, bevel, cliff face, route, grid line, tile border, cast shadow, unique landmark, text, watermark, or content outside the diamond. Deterministically apply the exact opaque diamond alpha mask after generation.",
+  "rasterContract": {
+    "schemaVersion": "battle-art-raster-contract-v1",
+    "kind": "opaque-tile-diamond",
+    "alphaThreshold": 240,
+    "minimumCoveredPermille": 1000,
+    "maximumExteriorCoveredPermille": 5
+  },
+  "canvas": {
+    "width": 256,
+    "height": 128
+  },
+  "placement": {
+    "pivot": {
+      "x": 128,
+      "y": 64
+    },
+    "anchor": {
+      "x": 128,
+      "y": 64
+    },
+    "footprint": {
+      "x": 0,
+      "y": 0,
+      "width": 1,
+      "height": 1
+    },
+    "collision": {
+      "kind": "none",
+      "cells": []
+    },
+    "drawBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 128
+    },
+    "occlusionBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
+    },
+    "stratum": "surface"
+  },
+  "content": {
+    "version": 3,
+    "sourceSha256": "sha256:1465eb6142a6d9f7da210632b018eb9695684891423fb7a3ed2b9f5b03c0b6cb",
+    "runtimeSha256": "sha256:d56b908781bea09895d54f4f0f4502d69c9049f658cf58104c087fc6aad6e1e2",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v6/forest/surface/forest-moss-surface/v3/d56b908781bea09895d54f4f0f4502d69c9049f658cf58104c087fc6aad6e1e2.webp"
+  },
+  "source": {
+    "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-moss-surface/result.json",
+    "imagePath": "ai-image-metadata/battle-art/sources/forest/forest-moss-surface/v3/1465eb6142a6d9f7da210632b018eb9695684891423fb7a3ed2b9f5b03c0b6cb.png",
+    "imageSha256": "sha256:1465eb6142a6d9f7da210632b018eb9695684891423fb7a3ed2b9f5b03c0b6cb",
+    "width": 256,
+    "height": 128,
+    "format": "png",
+    "reviewer": "codex",
+    "approvedAt": "2026-07-30T18:00:03.971Z"
+  }
+}

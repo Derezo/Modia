@@ -1,8 +1,11 @@
 import {
   BATTLE_MAP_HASH_VERSION,
   BATTLE_MAP_SCHEMA_VERSION,
-  TERRAIN_GENERATION_VERSION,
-  loadAndFreezeBattleMapV2Final
+  BATTLE_MAP_V3_HASH_VERSION,
+  BATTLE_MAP_V3_SCHEMA_VERSION,
+  loadAndFreezeBattleMapV2Final,
+  loadAndFreezeBattleMapV3Final,
+  resolveBattleMapVersionDescriptor
 } from '../../../shared/battleMap/index.js';
 import {
   BATTLE_MUTABLE_STATE_PROTOCOL_VERSION,
@@ -10,6 +13,7 @@ import {
   assertBattleStateSnapshotV1,
   createBattleMapCapabilities
 } from '../../../shared/battleStateProtocol.js';
+import { isBattleMapV3RuntimeReady } from './BattleMapAssets.js';
 
 const verifiedMapCache = new Map();
 export const MAX_VERIFIED_BATTLE_MAP_CACHE_ENTRIES = 32;
@@ -48,8 +52,15 @@ function v2Reference(map) {
   };
 }
 
-function assertMatchingV2Reference(snapshot, map) {
-  const reference = v2Reference(map);
+function v3Reference(map) {
+  return {
+    battleMapSchemaVersion: map.battleMapSchemaVersion,
+    terrainGenerationVersion: map.terrainGenerationVersion,
+    fullHash: map.hashes.fullHash
+  };
+}
+
+function assertMatchingReference(snapshot, map, reference) {
   if (snapshot.battleMapSchemaVersion !== reference.battleMapSchemaVersion
     || snapshot.terrainGenerationVersion !== reference.terrainGenerationVersion
     || snapshot.fullHash !== reference.fullHash) {
@@ -81,9 +92,17 @@ export function clearBattleMapSessionCache() {
 }
 
 export function getBattleMapCapabilities({ includeCachedMaps = true } = {}) {
+  const v3Ready = isBattleMapV3RuntimeReady();
   return createBattleMapCapabilities({
-    supportedBattleMapSchemaVersions: [1, BATTLE_MAP_SCHEMA_VERSION],
-    supportedHashVersions: [BATTLE_MAP_HASH_VERSION],
+    supportedBattleMapSchemaVersions: [
+      1,
+      BATTLE_MAP_SCHEMA_VERSION,
+      ...(v3Ready ? [BATTLE_MAP_V3_SCHEMA_VERSION] : [])
+    ],
+    supportedHashVersions: [
+      BATTLE_MAP_HASH_VERSION,
+      ...(v3Ready ? [BATTLE_MAP_V3_HASH_VERSION] : [])
+    ],
     supportedMutableStateProtocolVersions: [BATTLE_MUTABLE_STATE_PROTOCOL_VERSION],
     cachedMaps: includeCachedMaps
       ? Array.from(verifiedMapCache.values(), v2Reference)
@@ -135,9 +154,15 @@ export class BattleMapSession {
         battleId: response.battleId ?? response.snapshot.battleId,
         state: accepted.state,
         mapSeed: accepted.map?.terrainSeed ?? response.mapSeed,
-        mapWidth: accepted.map?.mapWidth ?? response.mapWidth,
-        mapHeight: accepted.map?.mapHeight ?? response.mapHeight,
-        nodeType: accepted.map?.nodeType ?? response.nodeType
+        mapWidth: accepted.map?.mapWidth ??
+          accepted.map?.dimensions?.width ??
+          response.mapWidth,
+        mapHeight: accepted.map?.mapHeight ??
+          accepted.map?.dimensions?.height ??
+          response.mapHeight,
+        nodeType: accepted.map?.nodeType ??
+          accepted.map?.theme ??
+          response.nodeType
       };
     }
 
@@ -145,12 +170,18 @@ export class BattleMapSession {
     if (!state || typeof state !== 'object') {
       throw new TypeError('Battle response must include state or snapshot');
     }
-    if (state.battleMapSchemaVersion === BATTLE_MAP_SCHEMA_VERSION
-      || state.terrainGenerationVersion === TERRAIN_GENERATION_VERSION) {
-      throw new BattleMapSessionError(
-        'battle_map_snapshot_required',
-        'BattleMapV2 state must be delivered in a verified snapshot'
-      );
+    if (state.battleMapSchemaVersion !== undefined
+      || state.terrainGenerationVersion !== undefined) {
+      const descriptor = resolveBattleMapVersionDescriptor({
+        battleMapSchemaVersion: state.battleMapSchemaVersion,
+        terrainGenerationVersion: state.terrainGenerationVersion
+      });
+      if (descriptor.battleMapSchemaVersion !== 1) {
+        throw new BattleMapSessionError(
+          'battle_map_snapshot_required',
+          `BattleMapV${descriptor.battleMapSchemaVersion} state must be delivered in a verified snapshot`
+        );
+      }
     }
 
     this.battleId = response.battleId ?? this.battleId;
@@ -196,7 +227,7 @@ export class BattleMapSession {
             { cause: error }
           );
         }
-        assertMatchingV2Reference(snapshot, map);
+        assertMatchingReference(snapshot, map, v2Reference(map));
         cacheVerifiedMap(snapshot, map);
       } else {
         map = getCachedMap(snapshot);
@@ -206,8 +237,25 @@ export class BattleMapSession {
             'The server referenced a battle map that is not cached locally'
           );
         }
-        assertMatchingV2Reference(snapshot, map);
+        assertMatchingReference(snapshot, map, v2Reference(map));
       }
+    } else if (snapshot.battleMapSchemaVersion === BATTLE_MAP_V3_SCHEMA_VERSION) {
+      if (snapshot.mapDelivery !== 'full') {
+        throw new BattleMapSessionError(
+          'battle_map_v3_full_snapshot_required',
+          'BattleMapV3 must be delivered as a complete verified map'
+        );
+      }
+      try {
+        map = await loadAndFreezeBattleMapV3Final(snapshot.battleMap);
+      } catch (error) {
+        throw new BattleMapSessionError(
+          'battle_map_verification_failed',
+          'The authoritative BattleMapV3 payload failed verification',
+          { cause: error }
+        );
+      }
+      assertMatchingReference(snapshot, map, v3Reference(map));
     } else {
       if (snapshot.mapDelivery !== 'full' || !snapshot.battleMap) {
         throw new BattleMapSessionError(

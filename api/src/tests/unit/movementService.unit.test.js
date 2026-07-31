@@ -23,8 +23,10 @@ import {
   isForcedMovementImmune,
   getReachableTiles,
   calculatePathCost,
-  getManhattanDistance
+  getManhattanDistance,
+  createBattleTraversalView
 } from '../../services/battle/movementService.js';
+import { canEnterTile } from '../../../../shared/pathfinding.js';
 
 // =============================================================================
 // MOVEMENT RANGE TESTS
@@ -312,6 +314,33 @@ describe('getTargetsInRange', () => {
 
     assert.strictEqual(targets[0].unitName, 'Goblin');
   });
+
+  test('filters V3 targets outside the playable mask', () => {
+    const attacker = createMockPlayerUnit({ id: 'p1', tileX: 0, tileY: 0 });
+    const sceneOnlyEnemy = createMockEnemyUnit({
+      id: 'e1',
+      tileX: 1,
+      tileY: 0,
+      hp: 50
+    });
+    const playableEnemy = createMockEnemyUnit({
+      id: 'e2',
+      tileX: 2,
+      tileY: 0,
+      hp: 50
+    });
+    const state = createMockBattleState({
+      units: [attacker, sceneOnlyEnemy, playableEnemy],
+      mapWidth: 3,
+      mapHeight: 1,
+      playableMask: [[true, false, true]]
+    });
+
+    assert.deepStrictEqual(
+      getTargetsInRange(attacker, state, 3, 'enemy').map(target => target.unitId),
+      ['e2']
+    );
+  });
 });
 
 // =============================================================================
@@ -517,6 +546,31 @@ describe('findAdjacentTileToTarget', () => {
       result,
       { x: 4, y: 4 },
       'A corpse tile remains reserved even though paths may cross it'
+    );
+  });
+
+  test('uses a playable cardinal probe for leap landing on an irregular V3 mask', () => {
+    const unit = createMockPlayerUnit({ id: 'p1', tileX: 5, tileY: 3 });
+    const terrain = Array.from({ length: 8 }, () => Array(8).fill('grass'));
+    const playableMask = Array.from(
+      { length: 8 },
+      () => Array(8).fill(false)
+    );
+    playableMask[3][5] = true;
+    playableMask[4][5] = true;
+    playableMask[4][6] = true;
+    playableMask[5][5] = true;
+    const state = createMockBattleState({
+      units: [unit],
+      terrain,
+      playableMask,
+      mapWidth: 8,
+      mapHeight: 8
+    });
+
+    assert.deepStrictEqual(
+      findAdjacentTileToTarget(state, unit, { x: 5, y: 5 }),
+      { x: 5, y: 4 }
     );
   });
 });
@@ -805,6 +859,29 @@ describe('calculatePathCost', () => {
     );
   });
 
+  test('rejects rendered V3 scene cells outside the playable mask', () => {
+    const unit = createMockPlayerUnit({ id: 'p1', tileX: 0, tileY: 0 });
+    const state = createMockBattleState({
+      units: [unit],
+      terrain: [['grass', 'grass', 'grass']],
+      playableMask: [[true, false, true]],
+      mapWidth: 3,
+      mapHeight: 1
+    });
+
+    assert.strictEqual(
+      calculatePathCost(0, 0, 1, 0, state, 10),
+      Infinity,
+      'a visible scene-only cell is not a legal destination'
+    );
+    assert.strictEqual(
+      calculatePathCost(0, 0, 2, 0, state, 10),
+      Infinity,
+      'pathfinding cannot cross a scene-only cell'
+    );
+    assert.deepStrictEqual(getReachableTiles(unit, state), []);
+  });
+
   test('should traverse a defeated unit at normal cost but reject its tile as a goal', () => {
     const unit = createMockPlayerUnit({
       id: 'p1',
@@ -847,6 +924,72 @@ describe('calculatePathCost', () => {
     });
 
     assert.strictEqual(calculatePathCost(0, 0, 1, 0, state, 10), 2);
+  });
+
+  test('expands V3 obstacle footprints and rejects overlapping collision cells', () => {
+    const unit = createMockPlayerUnit({ id: 'p1', tileX: 0, tileY: 0 });
+    const obstacle = {
+      id: 'obstacle:fallen-tree',
+      kind: 'fallen-tree',
+      cells: [{ x: 1, y: 0 }, { x: 2, y: 0 }],
+      blocking: true,
+      movementCost: 0,
+      anchor: { x: 2, y: 0 }
+    };
+    const state = createMockBattleState({
+      units: [unit],
+      terrain: [['grass', 'grass', 'grass', 'grass']],
+      obstacles: [obstacle],
+      mapWidth: 4,
+      mapHeight: 1
+    });
+
+    assert.strictEqual(calculatePathCost(0, 0, 1, 0, state, 10), Infinity);
+    assert.strictEqual(calculatePathCost(3, 0, 2, 0, state, 10), Infinity);
+    assert.throws(
+      () => createBattleTraversalView({
+        ...state,
+        obstacles: [
+          obstacle,
+          {
+            ...obstacle,
+            id: 'obstacle:rock',
+            cells: [{ x: 2, y: 0 }]
+          }
+        ]
+      }),
+      error => (
+        error.code === 'INVALID_BATTLE_MAP_V3_TOPOLOGY' &&
+        /multiple blocking obstacles occupy 2,0/.test(error.message)
+      )
+    );
+  });
+
+  test('enforces V3 traversable:false connections in both directions', () => {
+    const state = createMockBattleState({
+      units: [],
+      terrain: [['grass', 'grass']],
+      elevation: [[0, 2]],
+      elevationFormat: 'discrete',
+      elevationConnections: [{
+        id: 'connection:cliff',
+        from: { x: 0, y: 0 },
+        to: { x: 1, y: 0 },
+        direction: 'e',
+        kind: 'cliff',
+        heightDelta: 2,
+        traversable: false,
+        bidirectional: false
+      }],
+      mapWidth: 2,
+      mapHeight: 1
+    });
+    const view = createBattleTraversalView(state, {
+      canTraverseElevation: () => true
+    });
+
+    assert.strictEqual(canEnterTile(view, { x: 0, y: 0 }, { x: 1, y: 0 }), false);
+    assert.strictEqual(canEnterTile(view, { x: 1, y: 0 }, { x: 0, y: 0 }), false);
   });
 
   test('should adapt BattleMapV2 movement records without losing semantics', () => {

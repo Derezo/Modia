@@ -1,0 +1,380 @@
+{
+  "schemaVersion": "battle-art-release-v1",
+  "id": "battle-art-descriptors-2026-07-30",
+  "version": 1,
+  "bundle": {
+    "schemaVersion": "battle-art-runtime-bundle-v1",
+    "renderProfile": {
+      "id": "iso64-retina-v3",
+      "sourcePixelScale": 4,
+      "tileWidth": 64,
+      "tileHeight": 32,
+      "elevationStep": 16
+    },
+    "id": "battle-art-descriptors-2026-07-30",
+    "version": 1,
+    "manifestFullHash": "sha256:c7869d99c1e1824d3106b8e99901f4faa38e0ecd8a5c0f6f0653942bf11dce8e",
+    "rendererManifestFullHash": "sha256:f1ad09d9d01ded8b368b3285020d44a449cc954ba61ab44eb9ee5c6580d1325e",
+    "assets": [
+      {
+        "key": "forest-ancient-tree",
+        "contentVersion": 1,
+        "contentHash": "sha256:9ddb40ea00c0b4be6694e7c4744e5ebb7bdc4af747ef0f48eae51e44b4286515",
+        "immutableUrl": "/assets/battle-map-v3/forest/blocking-obstacle/forest-ancient-tree/v1/9ddb40ea00c0b4be6694e7c4744e5ebb7bdc4af747ef0f48eae51e44b4286515.webp"
+      },
+      {
+        "key": "forest-dirt-route",
+        "contentVersion": 1,
+        "contentHash": "sha256:6f531a92a46aec7c511df723124b5c6a91211b3f281c5effd8a9adc563ca1b85",
+        "immutableUrl": "/assets/battle-map-v3/forest/route-transition/forest-dirt-route/v1/6f531a92a46aec7c511df723124b5c6a91211b3f281c5effd8a9adc563ca1b85.webp"
+      },
+      {
+        "key": "forest-fern-cluster",
+        "contentVersion": 1,
+        "contentHash": "sha256:d311191eab34a903464a08d9514c8396272a9b3fc1b0b26b47ecbbb6e1bcb1fd",
+        "immutableUrl": "/assets/battle-map-v3/forest/nonblocking-decoration/forest-fern-cluster/v1/d311191eab34a903464a08d9514c8396272a9b3fc1b0b26b47ecbbb6e1bcb1fd.webp"
+      },
+      {
+        "key": "forest-moss-surface",
+        "contentVersion": 1,
+        "contentHash": "sha256:3d678c1915c2938e80f120289d60b69d86ec35ca1874c97385e284f85d27ca26",
+        "immutableUrl": "/assets/battle-map-v3/forest/surface/forest-moss-surface/v1/3d678c1915c2938e80f120289d60b69d86ec35ca1874c97385e284f85d27ca26.webp"
+      },
+      {
+        "key": "forest-rock-boundary",
+        "contentVersion": 1,
+        "contentHash": "sha256:d97691d8cca02a191b57a24dbeba10e075cdc07cd547d0b6db1e5c9886717550",
+        "immutableUrl": "/assets/battle-map-v3/forest/exposed-face-boundary/forest-rock-boundary/v1/d97691d8cca02a191b57a24dbeba10e075cdc07cd547d0b6db1e5c9886717550.webp"
+      },
+      {
+        "key": "forest-root-stairs",
+        "contentVersion": 1,
+        "contentHash": "sha256:f48db83c76510fea8a2b567a801de8b01324e0867dffa72836fee4c2abeb309a",
+        "immutableUrl": "/assets/battle-map-v3/forest/connection-stairs/forest-root-stairs/v1/f48db83c76510fea8a2b567a801de8b01324e0867dffa72836fee4c2abeb309a.webp"
+      }
+    ],
+    "renderers": [
+      {
+        "id": "forest-ancient-tree",
+        "theme": "forest",
+        "category": "blocking-obstacle",
+        "contentVersion": 1,
+        "sha256": "sha256:9ddb40ea00c0b4be6694e7c4744e5ebb7bdc4af747ef0f48eae51e44b4286515",
+        "immutableUrl": "/assets/battle-map-v3/forest/blocking-obstacle/forest-ancient-tree/v1/9ddb40ea00c0b4be6694e7c4744e5ebb7bdc4af747ef0f48eae51e44b4286515.webp",
+        "width": 192,
+        "height": 256,
+        "pivot": {
+          "x": 96,
+          "y": 224
+        },
+        "anchor": {
+          "x": 96,
+          "y": 224
+        },
+        "footprint": {
+          "x": 0,
+          "y": 0,
+          "width": 1,
+          "height": 1
+        },
+        "collision": {
+          "kind": "solid",
+          "cells": [
+            {
+              "x": 0,
+              "y": 0
+            }
+          ]
+        },
+        "drawBounds": {
+          "x": 0,
+          "y": 0,
+          "width": 192,
+          "height": 256
+        },
+        "occlusionBounds": {
+          "x": 16,
+          "y": 8,
+          "width": 160,
+          "height": 216
+        },
+        "stratum": "obstacle"
+      },
+      {
+        "id": "forest-dirt-route",
+        "theme": "forest",
+        "category": "route-transition",
+        "contentVersion": 1,
+        "sha256": "sha256:6f531a92a46aec7c511df723124b5c6a91211b3f281c5effd8a9adc563ca1b85",
+        "immutableUrl": "/assets/battle-map-v3/forest/route-transition/forest-dirt-route/v1/6f531a92a46aec7c511df723124b5c6a91211b3f281c5effd8a9adc563ca1b85.webp",
+        "width": 256,
+        "height": 128,
+        "pivot": {
+          "x": 128,
+          "y": 64
+        },
+        "anchor": {
+          "x": 128,
+          "y": 64
+        },
+        "footprint": {
+          "x": 0,
+          "y": 0,
+          "width": 1,
+          "height": 1
+        },
+        "collision": {
+          "kind": "none",
+          "cells": []
+        },
+        "drawBounds": {
+          "x": 0,
+          "y": 0,
+          "width": 256,
+          "height": 128
+        },
+        "occlusionBounds": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "stratum": "route"
+      },
+      {
+        "id": "forest-fern-cluster",
+        "theme": "forest",
+        "category": "nonblocking-decoration",
+        "contentVersion": 1,
+        "sha256": "sha256:d311191eab34a903464a08d9514c8396272a9b3fc1b0b26b47ecbbb6e1bcb1fd",
+        "immutableUrl": "/assets/battle-map-v3/forest/nonblocking-decoration/forest-fern-cluster/v1/d311191eab34a903464a08d9514c8396272a9b3fc1b0b26b47ecbbb6e1bcb1fd.webp",
+        "width": 128,
+        "height": 192,
+        "pivot": {
+          "x": 64,
+          "y": 160
+        },
+        "anchor": {
+          "x": 64,
+          "y": 160
+        },
+        "footprint": {
+          "x": 0,
+          "y": 0,
+          "width": 1,
+          "height": 1
+        },
+        "collision": {
+          "kind": "none",
+          "cells": []
+        },
+        "drawBounds": {
+          "x": 8,
+          "y": 16,
+          "width": 112,
+          "height": 176
+        },
+        "occlusionBounds": {
+          "x": 24,
+          "y": 48,
+          "width": 80,
+          "height": 112
+        },
+        "stratum": "decoration"
+      },
+      {
+        "id": "forest-moss-surface",
+        "theme": "forest",
+        "category": "surface",
+        "contentVersion": 1,
+        "sha256": "sha256:3d678c1915c2938e80f120289d60b69d86ec35ca1874c97385e284f85d27ca26",
+        "immutableUrl": "/assets/battle-map-v3/forest/surface/forest-moss-surface/v1/3d678c1915c2938e80f120289d60b69d86ec35ca1874c97385e284f85d27ca26.webp",
+        "width": 256,
+        "height": 128,
+        "pivot": {
+          "x": 128,
+          "y": 64
+        },
+        "anchor": {
+          "x": 128,
+          "y": 64
+        },
+        "footprint": {
+          "x": 0,
+          "y": 0,
+          "width": 1,
+          "height": 1
+        },
+        "collision": {
+          "kind": "none",
+          "cells": []
+        },
+        "drawBounds": {
+          "x": 0,
+          "y": 0,
+          "width": 256,
+          "height": 128
+        },
+        "occlusionBounds": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "stratum": "surface"
+      },
+      {
+        "id": "forest-rock-boundary",
+        "theme": "forest",
+        "category": "exposed-face-boundary",
+        "contentVersion": 1,
+        "sha256": "sha256:d97691d8cca02a191b57a24dbeba10e075cdc07cd547d0b6db1e5c9886717550",
+        "immutableUrl": "/assets/battle-map-v3/forest/exposed-face-boundary/forest-rock-boundary/v1/d97691d8cca02a191b57a24dbeba10e075cdc07cd547d0b6db1e5c9886717550.webp",
+        "width": 256,
+        "height": 256,
+        "pivot": {
+          "x": 128,
+          "y": 192
+        },
+        "anchor": {
+          "x": 128,
+          "y": 192
+        },
+        "footprint": {
+          "x": 0,
+          "y": 0,
+          "width": 1,
+          "height": 1
+        },
+        "collision": {
+          "kind": "boundary",
+          "cells": [
+            {
+              "x": 0,
+              "y": 0
+            }
+          ]
+        },
+        "drawBounds": {
+          "x": 0,
+          "y": 0,
+          "width": 256,
+          "height": 256
+        },
+        "occlusionBounds": {
+          "x": 32,
+          "y": 16,
+          "width": 192,
+          "height": 176
+        },
+        "stratum": "boundary"
+      },
+      {
+        "id": "forest-root-stairs",
+        "theme": "forest",
+        "category": "connection-stairs",
+        "contentVersion": 1,
+        "sha256": "sha256:f48db83c76510fea8a2b567a801de8b01324e0867dffa72836fee4c2abeb309a",
+        "immutableUrl": "/assets/battle-map-v3/forest/connection-stairs/forest-root-stairs/v1/f48db83c76510fea8a2b567a801de8b01324e0867dffa72836fee4c2abeb309a.webp",
+        "width": 256,
+        "height": 192,
+        "pivot": {
+          "x": 128,
+          "y": 128
+        },
+        "anchor": {
+          "x": 128,
+          "y": 128
+        },
+        "footprint": {
+          "x": 0,
+          "y": 0,
+          "width": 1,
+          "height": 2
+        },
+        "collision": {
+          "kind": "connection",
+          "cells": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 0,
+              "y": 1
+            }
+          ]
+        },
+        "drawBounds": {
+          "x": 0,
+          "y": 16,
+          "width": 256,
+          "height": 176
+        },
+        "occlusionBounds": {
+          "x": 48,
+          "y": 32,
+          "width": 160,
+          "height": 96
+        },
+        "stratum": "connection"
+      }
+    ]
+  },
+  "sources": [
+    {
+      "familyId": "forest-ancient-tree",
+      "contentVersion": 1,
+      "path": "ai-image-metadata/battle-art/sources/forest/forest-ancient-tree/v1/44b46f5089a51885f6a1a635422214ef12d6629cb95a3ce92ce8bf0c9ef158a0.png",
+      "sha256": "sha256:44b46f5089a51885f6a1a635422214ef12d6629cb95a3ce92ce8bf0c9ef158a0",
+      "width": 192,
+      "height": 256,
+      "format": "png"
+    },
+    {
+      "familyId": "forest-dirt-route",
+      "contentVersion": 1,
+      "path": "ai-image-metadata/battle-art/sources/forest/forest-dirt-route/v1/6a6b1cc785c8992515a31568b555782695e72b37ef77195669c1a4380699df0e.png",
+      "sha256": "sha256:6a6b1cc785c8992515a31568b555782695e72b37ef77195669c1a4380699df0e",
+      "width": 256,
+      "height": 128,
+      "format": "png"
+    },
+    {
+      "familyId": "forest-fern-cluster",
+      "contentVersion": 1,
+      "path": "ai-image-metadata/battle-art/sources/forest/forest-fern-cluster/v1/bc1baa9ad4cf1f1c464a108bc90645f072bc4d58ed95090e0118bc8de1478fe2.png",
+      "sha256": "sha256:bc1baa9ad4cf1f1c464a108bc90645f072bc4d58ed95090e0118bc8de1478fe2",
+      "width": 128,
+      "height": 192,
+      "format": "png"
+    },
+    {
+      "familyId": "forest-moss-surface",
+      "contentVersion": 1,
+      "path": "ai-image-metadata/battle-art/sources/forest/forest-moss-surface/v1/9630059b749a5836c9f939174de6f23b43145f32fee984160d63c08115e5659e.png",
+      "sha256": "sha256:9630059b749a5836c9f939174de6f23b43145f32fee984160d63c08115e5659e",
+      "width": 256,
+      "height": 128,
+      "format": "png"
+    },
+    {
+      "familyId": "forest-rock-boundary",
+      "contentVersion": 1,
+      "path": "ai-image-metadata/battle-art/sources/forest/forest-rock-boundary/v1/18c446d706702f90ecf1d1e18b3513fe2608b44fc95f1ec7859eac137ef60fd9.png",
+      "sha256": "sha256:18c446d706702f90ecf1d1e18b3513fe2608b44fc95f1ec7859eac137ef60fd9",
+      "width": 256,
+      "height": 256,
+      "format": "png"
+    },
+    {
+      "familyId": "forest-root-stairs",
+      "contentVersion": 1,
+      "path": "ai-image-metadata/battle-art/sources/forest/forest-root-stairs/v1/a7c41c45267a751076fbd1b9a72d48e5052b8dc838c8d1c28fce84a1b9d2021f.png",
+      "sha256": "sha256:a7c41c45267a751076fbd1b9a72d48e5052b8dc838c8d1c28fce84a1b9d2021f",
+      "width": 256,
+      "height": 192,
+      "format": "png"
+    }
+  ]
+}

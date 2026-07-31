@@ -11,7 +11,7 @@
  * @see ../world.js - Main router that composes this module
  */
 import express from 'express';
-import { query } from '../../config/database.js';
+import { query, withTransaction } from '../../config/database.js';
 import { authenticate } from '../../middleware/auth.js';
 import { travelLimiter } from '../../middleware/gameplayRateLimiter.js';
 import { asyncHandler, AppError } from '../../middleware/errorHandler.js';
@@ -25,6 +25,7 @@ import {
   getVisitedNodes,
   findWorldPath
 } from '../../services/world/pathfindingService.js';
+import { assertNoUnsettledFishingSession } from '../../services/fishingTravelGuard.js';
 
 const router = express.Router();
 
@@ -697,43 +698,79 @@ router.post('/travel', authenticate, travelLimiter, asyncHandler(async (req, res
   }
 
   const travelCost = pathResult.distance;
-
-  // Check and deduct stamina
-  const hasStamina = await staminaService.hasEnoughStamina(characterId, travelCost);
-  if (!hasStamina) {
-    const staminaInfo = await staminaService.getStaminaInfo(characterId);
-    throw new AppError(
-      `Insufficient stamina: have ${staminaInfo.current}, need ${travelCost}`,
-      400
-    );
-  }
-
-  // Deduct stamina
-  await staminaService.deductStamina(characterId, travelCost);
-
-  // Move all party characters to destination
-  await query(
-    `UPDATE characters SET current_node_id = $1
-     WHERE user_id = $2 AND party_slot IS NOT NULL`,
-    [targetNodeId, req.user.userId]
-  );
-
-  // Discover all intermediate nodes and their adjacents (player "travels through")
-  const newDiscoveries = [];
-  for (const nodeId of pathResult.path) {
-    const beforeCount = await query(
-      'SELECT COUNT(*) as count FROM user_node_discovery WHERE user_id = $1',
+  const { newDiscoveries } = await withTransaction(async client => {
+    // Fishing uses the same user -> leader -> session lock order. Whichever
+    // operation wins the user lock determines whether travel or fishing starts;
+    // the loser then revalidates the committed state.
+    const userLock = await client.query(
+      'SELECT id FROM users WHERE id = $1 FOR UPDATE',
       [req.user.userId]
     );
-    await query('SELECT discover_node_and_adjacent($1, $2)', [req.user.userId, nodeId]);
-    const afterCount = await query(
-      'SELECT COUNT(*) as count FROM user_node_discovery WHERE user_id = $1',
+    if (!userLock.rows[0]) throw new AppError('User not found', 404);
+
+    const leaderLock = await client.query(
+      `SELECT id, current_node_id, in_battle
+       FROM characters
+       WHERE user_id = $1 AND party_slot = 1
+       FOR UPDATE`,
       [req.user.userId]
     );
-    if (parseInt(afterCount.rows[0].count) > parseInt(beforeCount.rows[0].count)) {
-      newDiscoveries.push(nodeId);
+    const lockedLeader = leaderLock.rows[0];
+    if (!lockedLeader) throw new AppError('No active party character', 400);
+    if (Number(lockedLeader.current_node_id) !== Number(currentNodeId)) {
+      throw new AppError('Your location changed; preview the route again', 409);
     }
-  }
+    if (lockedLeader.in_battle) {
+      throw new AppError('Cannot travel while in battle', 400);
+    }
+    await assertNoUnsettledFishingSession(client, req.user.userId);
+
+    const queryFn = client.query.bind(client);
+    const lockedStamina = await staminaService.getStaminaInfo(
+      lockedLeader.id,
+      { queryFn, now: new Date() }
+    );
+    if (lockedStamina.current < travelCost) {
+      throw new AppError(
+        `Insufficient stamina: have ${lockedStamina.current}, need ${travelCost}`,
+        400
+      );
+    }
+    await client.query(
+      `UPDATE characters
+       SET stamina = $1, stamina_updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2`,
+      [lockedStamina.current - travelCost, lockedLeader.id]
+    );
+    await client.query(
+      `UPDATE characters SET current_node_id = $1
+       WHERE user_id = $2 AND party_slot IS NOT NULL`,
+      [targetNodeId, req.user.userId]
+    );
+
+    const discoveries = [];
+    for (const pathNodeId of pathResult.path) {
+      const beforeCount = await client.query(
+        'SELECT COUNT(*) as count FROM user_node_discovery WHERE user_id = $1',
+        [req.user.userId]
+      );
+      await client.query(
+        'SELECT discover_node_and_adjacent($1, $2)',
+        [req.user.userId, pathNodeId]
+      );
+      const afterCount = await client.query(
+        'SELECT COUNT(*) as count FROM user_node_discovery WHERE user_id = $1',
+        [req.user.userId]
+      );
+      if (
+        parseInt(afterCount.rows[0].count, 10) >
+        parseInt(beforeCount.rows[0].count, 10)
+      ) {
+        discoveries.push(pathNodeId);
+      }
+    }
+    return { newDiscoveries: discoveries };
+  });
 
   // Get new node details (including region for quest tracking)
   const nodeResult = await query(

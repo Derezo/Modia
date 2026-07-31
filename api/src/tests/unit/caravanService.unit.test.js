@@ -102,11 +102,15 @@ describe('generateCaravanInventory', () => {
 
     it('should select 70-90% of available items', () => {
       const region = 'human';
-      const availableItems = getItemsForRegion(region);
+      const availableItems = getItemsForRegion(region).filter(
+        item => !item.alwaysStock && !Number.isFinite(item.inclusionChance)
+      );
 
       // Test multiple seeds to verify range
       for (let seed = 1; seed <= 10; seed++) {
-        const inventory = generateCaravanInventory(seed * 100, region);
+        const inventory = generateCaravanInventory(seed * 100, region).filter(
+          item => !item.alwaysStock && !Number.isFinite(item.inclusionChance)
+        );
         const ratio = inventory.length / availableItems.length;
 
         // Allow some tolerance for the guaranteed regional item addition
@@ -161,6 +165,10 @@ describe('generateCaravanInventory', () => {
       const inventory = generateCaravanInventory(seed, region);
 
       for (const item of inventory) {
+        if (item.unlimitedStock) {
+          assert.strictEqual(item.quantity, null);
+          continue;
+        }
         const limits = getStockLimits(item.itemId, item.type);
         assert.ok(
           item.quantity >= limits.min && item.quantity <= limits.max,
@@ -216,8 +224,14 @@ describe('generateCaravanInventory', () => {
         assert.ok(item.itemId, 'Item should have itemId');
         assert.ok(item.name, 'Item should have name');
         assert.ok(item.type, 'Item should have type');
-        assert.ok(typeof item.quantity === 'number', 'Item should have quantity');
-        assert.ok(typeof item.maxQuantity === 'number', 'Item should have maxQuantity');
+        assert.ok(
+          typeof item.quantity === 'number' || (item.unlimitedStock && item.quantity === null),
+          'Item should have finite or explicitly unlimited quantity'
+        );
+        assert.ok(
+          typeof item.maxQuantity === 'number' || (item.unlimitedStock && item.maxQuantity === null),
+          'Item should have finite or explicitly unlimited maximum quantity'
+        );
         assert.ok(typeof item.price === 'number', 'Item should have price');
         assert.ok(typeof item.basePrice === 'number', 'Item should have basePrice');
       }
@@ -279,7 +293,7 @@ describe('generateCaravanInventory', () => {
       const region = 'dwarf';
 
       const inventory = generateCaravanInventory(seed, region);
-      const typeOrder = ['consumable', 'weapon', 'armor', 'accessory', 'material'];
+      const typeOrder = ['consumable', 'key_item', 'weapon', 'armor', 'accessory', 'material'];
 
       // Check non-regional items are sorted by type
       const nonRegional = inventory.filter(i => !i.region);
@@ -322,7 +336,7 @@ describe('Caravan Service Constants', () => {
 
   describe('CARAVAN_STOCK', () => {
     it('should have stock limits for all item types', () => {
-      const types = ['consumable', 'material', 'weapon', 'armor', 'accessory'];
+      const types = ['consumable', 'material', 'key_item', 'weapon', 'armor', 'accessory'];
       for (const type of types) {
         assert.ok(CARAVAN_STOCK[type], `Should have stock limits for ${type}`);
         assert.ok(CARAVAN_STOCK[type].min > 0, `${type} min should be positive`);
@@ -350,7 +364,7 @@ describe('Caravan Service Constants', () => {
     });
 
     it('should have valid types', () => {
-      const validTypes = ['consumable', 'material', 'weapon', 'armor', 'accessory'];
+      const validTypes = ['consumable', 'material', 'key_item', 'weapon', 'armor', 'accessory'];
       for (const item of CARAVAN_ITEMS) {
         assert.ok(
           validTypes.includes(item.type),

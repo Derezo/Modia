@@ -5,6 +5,7 @@ import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import { RACES, CLASSES, GENDERS, MAX_PARTY_SIZE, calculateStats, STARTING_EXPERIENCE, RACE_BASE_STATS } from '../config/constants.js';
 import { validateCharacterName } from '../utils/nameValidation.js';
 import * as staminaService from '../services/staminaService.js';
+import { assertNoUnsettledFishingSession } from '../services/fishingTravelGuard.js';
 import { discoverNodeAndAdjacent } from '../services/world/discoveryService.js';
 import {
   characterCreateLimiter,
@@ -42,12 +43,20 @@ export async function respawnPartyWithClient(client, userId) {
     throw new TypeError('respawnPartyWithClient requires a pg client');
   }
 
+  const userResult = await client.query(
+    'SELECT id FROM users WHERE id = $1 FOR UPDATE',
+    [userId]
+  );
+  if (!userResult.rows[0]) {
+    throw new AppError('User not found', 404);
+  }
+
   const charactersResult = await client.query(
     `SELECT c.id, c.party_slot, c.home_region_id, wr.castle_node_id, c.in_battle
      FROM characters c
      LEFT JOIN world_regions wr ON c.home_region_id = wr.id
      WHERE c.user_id = $1
-     ORDER BY c.id
+     ORDER BY CASE WHEN c.party_slot = 1 THEN 0 ELSE 1 END, c.id
      FOR UPDATE OF c`,
     [userId]
   );
@@ -79,6 +88,7 @@ export async function respawnPartyWithClient(client, userId) {
   ) {
     throw new AppError('Cannot respawn while in battle', 400);
   }
+  await assertNoUnsettledFishingSession(client, userId);
 
   if (!leader.home_region_id || !leader.castle_node_id) {
     throw new AppError('Character has no home region set', 400);

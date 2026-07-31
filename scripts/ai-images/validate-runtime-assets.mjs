@@ -37,7 +37,7 @@ const ITEM_CATEGORY_TYPES = Object.freeze({
   weapons: new Set(['weapon', 'sword', 'axe', 'staff', 'wand', 'bow', 'dagger', 'mace', 'polearm', 'fist']),
   armor: new Set(['armor', 'helmet', 'helm', 'body', 'boots', 'head', 'legs', 'feet', 'robe', 'shield']),
   accessories: new Set(['accessory', 'ring', 'amulet', 'cloak', 'belt', 'gloves', 'gauntlets']),
-  consumables: new Set(['consumable', 'potion', 'scroll', 'material', 'food'])
+  consumables: new Set(['consumable', 'potion', 'scroll', 'material', 'food', 'key_item'])
 });
 
 const ISSUE_SEVERITIES = Object.freeze({

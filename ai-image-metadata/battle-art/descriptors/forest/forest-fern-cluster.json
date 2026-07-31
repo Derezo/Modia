@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "battle-art-family-descriptor-v1",
+  "id": "forest-fern-cluster",
+  "theme": "forest",
+  "category": "nonblocking-decoration",
+  "status": "compiled",
+  "promptProfile": {
+    "id": "battle-art-family-v2",
+    "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+    "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+  },
+  "styleReferences": [
+    {
+      "id": "forest-source-template-01",
+      "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+      "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+    }
+  ],
+  "generationPrompt": "Create one small nonblocking cluster of forest ferns, moss fronds, and a few low leaves. The complete cluster must read as soft walkable decoration, with all stems meeting at a stable base centered on anchor (64,160) and no implied solid trunk or collision wall. Keep the exterior transparent. No ground tile, pot, rock wall, disconnected second cluster, rectangular panel, or cast floor shadow.",
+  "rasterContract": {
+    "schemaVersion": "battle-art-raster-contract-v1",
+    "kind": "transparent-cutout",
+    "minimumCoveredPermille": 30,
+    "maximumCoveredPermille": 700
+  },
+  "canvas": {
+    "width": 128,
+    "height": 192
+  },
+  "placement": {
+    "pivot": {
+      "x": 64,
+      "y": 160
+    },
+    "anchor": {
+      "x": 64,
+      "y": 160
+    },
+    "footprint": {
+      "x": 0,
+      "y": 0,
+      "width": 1,
+      "height": 1
+    },
+    "collision": {
+      "kind": "none",
+      "cells": []
+    },
+    "drawBounds": {
+      "x": 8,
+      "y": 16,
+      "width": 112,
+      "height": 176
+    },
+    "occlusionBounds": {
+      "x": 24,
+      "y": 48,
+      "width": 80,
+      "height": 112
+    },
+    "stratum": "decoration"
+  },
+  "content": {
+    "version": 2,
+    "sourceSha256": "sha256:08e75ccda6ef7b0c14461c20f180cae2463104e62816e40fbc01c28643336408",
+    "runtimeSha256": "sha256:9082bdd410696deebb4d9c1fcb60bddb7337fce0bb62ccee432a01622ee89bc4",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v6/forest/nonblocking-decoration/forest-fern-cluster/v2/9082bdd410696deebb4d9c1fcb60bddb7337fce0bb62ccee432a01622ee89bc4.webp"
+  },
+  "source": {
+    "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-fern-cluster/result.json",
+    "imagePath": "ai-image-metadata/battle-art/sources/forest/forest-fern-cluster/v2/08e75ccda6ef7b0c14461c20f180cae2463104e62816e40fbc01c28643336408.png",
+    "imageSha256": "sha256:08e75ccda6ef7b0c14461c20f180cae2463104e62816e40fbc01c28643336408",
+    "width": 128,
+    "height": 192,
+    "format": "png",
+    "reviewer": "codex",
+    "approvedAt": "2026-07-30T09:44:39.582Z"
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "assetBundlePins": [
+    {
+      "assetBundleId": "battle-art-descriptors-2026-07-30",
+      "manifestFullHash": "sha256:485641dbc09df96dc3067b2fc6fe490cb6493da8da5dfda8775d4f4ef37a9819"
+    }
+  ],
+  "catalogReleaseId": "battle-map-v3-forest-pilot-2026-07-30-r6",
+  "catalogSchemaVersion": 2,
+  "entries": [
+    {
+      "assetBundleId": "battle-art-descriptors-2026-07-30",
+      "assetBundleManifestFullHash": "sha256:485641dbc09df96dc3067b2fc6fe490cb6493da8da5dfda8775d4f4ef37a9819",
+      "bossCapable": false,
+      "candidatePoolSize": 24,
+      "catalogReleaseId": "battle-map-v3-forest-pilot-2026-07-30-r6",
+      "competitiveParity": false,
+      "dimensions": {
+        "height": 32,
+        "width": 32
+      },
+      "ecologyProfile": "forest-iron-depths-borderwood",
+      "id": "entry:forest-template-01-b",
+      "mapContentId": "forest-template-01-b",
+      "mapContentVersion": 12,
+      "mapFullHash": "sha256:cad472a23e3ff4cc3549076b0a4715df4611ee91f87cb095d7c699ffe1d372f8",
+      "maxAssignableOpponents": 7,
+      "orientation": "isometric-diamond",
+      "playerCapacity": 5,
+      "renderProfileId": "forest-iron-depths-borderwood-v5",
+      "sourceTemplateId": "forest-template-02",
+      "supportedModes": [
+        "pve"
+      ],
+      "teamLayout": "players-vs-opponents",
+      "theme": "forest",
+      "tierEligibility": [
+        "tier-1"
+      ],
+      "weight": 1
+    }
+  ],
+  "selectorVersion": 2,
+  "catalogFullHash": "sha256:76af233bcb30c9716e1e07652134fbb9efdc928a83888f956ee321ad8d7cc85e"
+}

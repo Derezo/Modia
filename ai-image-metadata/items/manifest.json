@@ -2,7 +2,7 @@
   "version": "2.0.0",
   "category": "items",
   "description": "Item sprites for layered composition system - base sprites combined with overlays at runtime",
-  "totalAssets": 76,
+  "totalAssets": 84,
   "outputDir": "/assets/items/",
   "size": "128x128",
   "format": "webp",
@@ -27,7 +27,7 @@
       "weapons": 18,
       "armor": 17,
       "accessories": 9,
-      "consumables": 32
+      "consumables": 40
     },
     "overlayDirectory": "../overlays/",
     "rarityOverlays": [

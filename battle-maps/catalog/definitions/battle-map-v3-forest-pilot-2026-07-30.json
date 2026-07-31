@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "battle-map-v3-catalog-definition-v1",
+  "catalogReleaseId": "battle-map-v3-forest-pilot-2026-07-30",
+  "entries": [
+    {
+      "id": "entry:forest-template-01-a",
+      "mapPath": "battle-maps/compiled/forest/forest-template-01-a.v4.json",
+      "approvalPath": "battle-maps/approvals/forest/forest-template-01-a.v4.json",
+      "approvalFileSha256": "sha256:1974b6534519e22b1a35d86380d5908db8081d0fe9eeab591e5b763437cdb48f",
+      "orientation": "isometric-diamond",
+      "teamLayout": "players-vs-opponents",
+      "weight": 1,
+      "bossCapable": false,
+      "competitiveParity": false
+    },
+    {
+      "id": "entry:forest-template-01-b",
+      "mapPath": "battle-maps/compiled/forest/forest-template-01-b.v4.json",
+      "approvalPath": "battle-maps/approvals/forest/forest-template-01-b.v4.json",
+      "approvalFileSha256": "sha256:6fabd4388aa56382174b7ac14303a6ee26434cceef50902b63557b542da517cc",
+      "orientation": "isometric-diamond",
+      "teamLayout": "players-vs-opponents",
+      "weight": 1,
+      "bossCapable": false,
+      "competitiveParity": false
+    },
+    {
+      "id": "entry:forest-template-01-c",
+      "mapPath": "battle-maps/compiled/forest/forest-template-01-c.v4.json",
+      "approvalPath": "battle-maps/approvals/forest/forest-template-01-c.v4.json",
+      "approvalFileSha256": "sha256:9c1edd4866115817a516f016af188c3fd8020b4730ceca1516e4e0fc2831a59c",
+      "orientation": "isometric-diamond",
+      "teamLayout": "players-vs-opponents",
+      "weight": 1,
+      "bossCapable": false,
+      "competitiveParity": false
+    }
+  ],
+  "coverageQueries": [
+    {
+      "id": "coverage:forest:pve:tier-1",
+      "theme": "forest",
+      "sourceTier": 1,
+      "selectionBand": "tier-1",
+      "mode": "pve",
+      "dimensions": {
+        "width": 32,
+        "height": 32
+      },
+      "teamLayout": "players-vs-opponents",
+      "playerCounts": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "opponentCounts": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "requireBossCapable": false,
+      "requireCompetitiveParity": false
+    }
+  ]
+}

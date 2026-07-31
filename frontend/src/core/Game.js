@@ -312,7 +312,7 @@ export class Game {
           // scene after a browser refresh instead of attempting a second start.
           try {
             const fishingStatus = await this.api.getActiveFishingStatus();
-            if (fishingStatus.active) {
+            if (fishingStatus.active || fishingStatus.collectable) {
               this.scenes.switchTo('fishing', {
                 nodeId: fishingStatus.nodeId,
                 nodeName: fishingStatus.nodeName,

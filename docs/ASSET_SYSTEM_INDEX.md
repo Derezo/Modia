@@ -1,6 +1,8 @@
 # Asset System Index
 
-This document provides unified navigation for Modia's deterministic tile compiler, AI image generation, audio generation, and asset organization.
+This document provides unified navigation for Modia's deterministic tile
+compiler, review-gated Battle Map V3 art, AI image generation, audio
+generation, and asset organization.
 
 ## Table of Contents
 
@@ -18,6 +20,7 @@ This document provides unified navigation for Modia's deterministic tile compile
 
 ```
 tile metadata       -> deterministic material compiler -> terrain WebPs
+battle-art plan      -> npm image candidate review     -> V3 lossless WebPs
 image metadata      -> ComfyUI/HuggingFace -> Sharp     -> image assets
 audio metadata      -> Suno/ElevenLabs                  -> audio assets
 design tokens       -> CSS variables                    -> UI components
@@ -34,6 +37,13 @@ design tokens       -> CSS variables                    -> UI components
 | `npm run tiles:generate` | Compile missing deterministic terrain assets |
 | `npm run tiles:rebuild` | Rebuild the complete terrain contract and prune legacy files |
 | `npm run tiles:check` | Run tile compiler tests and strict live-asset validation |
+| `npm run battle-art:matrix` | Report reviewed biome/ecology/tier readiness |
+| `npm run battle-art:scaffold` | Create deterministic descriptors from the reviewed plan |
+| `npm run battle-art:generate` | Generate isolated V3 art candidates; never approve or publish |
+| `npm run battle-art:preview` | Build the review contact sheet |
+| `npm run battle-art:approve` | Pin one explicitly accepted candidate |
+| `npm run battle-art:compile` | Deterministically compile approved V3 art |
+| `npm run battle-art:check` | Audit the complete Battle Map V3 art lifecycle |
 | `npm run ai:status` | Check AI image generation status |
 | `npm run ai:validate` | Full validation of image files |
 | `npm run ai:generate` | Generate all pending categories; tiles are compiled deterministically |
@@ -50,6 +60,10 @@ design tokens       -> CSS variables                    -> UI components
 | `npm run audio:generate:sfx` | Generate sound effects only |
 | `npm run audio:download` | Download generated audio from Suno |
 | `npm run audio:validate` | Validate audio file coverage |
+
+Battle Map V3 art never uses the generic `ai:generate` tile path. Follow
+[BATTLE_MAP_V3_ART_LIFECYCLE.md](BATTLE_MAP_V3_ART_LIFECYCLE.md); all image
+generation must enter through `npm run battle-art:generate`.
 
 ### Single Asset Generation
 

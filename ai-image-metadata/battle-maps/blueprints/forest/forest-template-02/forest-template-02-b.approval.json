@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "battle-map-blueprint-approval-v1",
+  "id": "forest-template-02-b",
+  "theme": "forest",
+  "templateId": "forest-template-02",
+  "decision": "approved",
+  "reviewer": "codex",
+  "blueprintPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-02/forest-template-02-b.json",
+  "blueprintFileSha256": "sha256:bf9cca9a6648ddc97b1eee6d62f45109d810486195509fc5e7d5bf764a1e40a1",
+  "blueprintFullHash": "sha256:5a57be4de15eaa2035c83899288ac1972a592a3bfe2eeeafef44fb0514630772",
+  "sourceImageSha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1",
+  "promptProfile": {
+    "id": "map-blueprint-v1",
+    "path": "ai-image-metadata/battle-maps/prompts/map-blueprint-v1.json",
+    "sha256": "sha256:954512d0cce94919913758f5bc23a204becf9f9dd010c7c4724e013d32438795"
+  }
+}

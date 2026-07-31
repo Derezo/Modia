@@ -1,0 +1,98 @@
+{
+  "schemaVersion": "battle-art-family-descriptor-v2",
+  "id": "forest-borderwood-ironpine",
+  "theme": "forest",
+  "category": "blocking-obstacle",
+  "familyGroup": "forest-borderwood-ironpine",
+  "variantId": "mature",
+  "capabilities": {
+    "direction": null,
+    "routeTopology": null,
+    "surfaceVariant": null,
+    "ecologyProfile": "forest-iron-depths-borderwood",
+    "tierBands": [
+      1
+    ],
+    "heightDeltas": [
+      0
+    ]
+  },
+  "status": "compiled",
+  "promptProfile": {
+    "id": "battle-art-family-v2",
+    "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+    "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+  },
+  "styleReferences": [
+    {
+      "id": "forest-source-template-01",
+      "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+      "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+    }
+  ],
+  "generationPrompt": "Create exactly one seam-safe orthographic isometric forest blocking-obstacle asset named forest-borderwood-ironpine for ecology profile forest-iron-depths-borderwood; tier band 1. Author the declared orientation directly, preserve continuous neighboring materials and edge alignment, and include only the declared family content. Regional visual vocabulary: Iron Depths Borderwood uses a coherent mixed forest of rugged ironpine conifers, pale birch, and sparse ancient broadleaf trees; cool olive moss and ferns; slate-gray stones; muted russet soil; and weathered exposed roots. Keep this species mix, material palette, scale, and lighting consistent across every directional edge and transition. Depict the literal regional subject forest borderwood ironpine, making its species, silhouette, bark or stone, foliage, age, and scale clearly distinct from other obstacle families. Use one grounded isometric cutout with a clean base. Do not add a baked backdrop, black void, unrelated terrain wall, or presentation frame.",
+  "rasterContract": {
+    "schemaVersion": "battle-art-raster-contract-v1",
+    "kind": "transparent-cutout",
+    "minimumCoveredPermille": 10,
+    "maximumCoveredPermille": 850
+  },
+  "canvas": {
+    "width": 192,
+    "height": 256
+  },
+  "placement": {
+    "pivot": {
+      "x": 96,
+      "y": 224
+    },
+    "anchor": {
+      "x": 96,
+      "y": 224
+    },
+    "footprint": {
+      "x": 0,
+      "y": 0,
+      "width": 1,
+      "height": 1
+    },
+    "collision": {
+      "kind": "solid",
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ]
+    },
+    "drawBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 192,
+      "height": 256
+    },
+    "occlusionBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 192,
+      "height": 192
+    },
+    "stratum": "obstacle"
+  },
+  "content": {
+    "version": 1,
+    "sourceSha256": "sha256:a1ced6e6c7674feac1173634eede1ab1a06cd9b6327ccc1d28288aee11345fdb",
+    "runtimeSha256": "sha256:ba80ef20512cc536969aa21c138bc01cfabd043f43d007f035743a6a7d94bbf1",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v6/forest/blocking-obstacle/forest-borderwood-ironpine/v1/ba80ef20512cc536969aa21c138bc01cfabd043f43d007f035743a6a7d94bbf1.webp"
+  },
+  "source": {
+    "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-borderwood-ironpine/result.json",
+    "imagePath": "ai-image-metadata/battle-art/sources/forest/forest-borderwood-ironpine/v1/a1ced6e6c7674feac1173634eede1ab1a06cd9b6327ccc1d28288aee11345fdb.png",
+    "imageSha256": "sha256:a1ced6e6c7674feac1173634eede1ab1a06cd9b6327ccc1d28288aee11345fdb",
+    "width": 192,
+    "height": 256,
+    "format": "png",
+    "reviewer": "codex",
+    "approvedAt": "2026-07-31T02:31:07.459Z"
+  }
+}

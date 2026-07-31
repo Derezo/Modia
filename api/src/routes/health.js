@@ -7,6 +7,7 @@ import { battleTerminalOutbox } from '../services/battle/BattleTerminalOutbox.js
 import { battleTerminalOutboxWorker } from '../services/battle/BattleTerminalOutboxWorker.js';
 import { getBattleMapOperationalMetrics } from '../services/battle/BattleMapOperations.js';
 import { determineOverallHealthStatus } from '../services/healthStatus.js';
+import { getFishingMetrics } from '../services/fishingMetrics.js';
 import { getMetricsSnapshot as getWebSocketMetricsSnapshot } from '../websocket/wsMetrics.js';
 
 const router = express.Router();
@@ -184,6 +185,7 @@ router.get('/metrics', async (req, res) => {
     connections.size,
     rooms.size
   );
+  const fishingMetrics = getFishingMetrics();
 
   const overallStatus = determineOverallHealthStatus({
     databaseAvailable: dbResult.success,
@@ -254,6 +256,9 @@ router.get('/metrics', async (req, res) => {
 
     // Battle-map rollout, payload, capability, and recovery telemetry
     battleMaps: battleMapMetrics,
+
+    // Authoritative fishing funnel, settlement, and observed economy telemetry
+    fishing: fishingMetrics,
 
     // Rate limiter metrics
     rateLimiter: {

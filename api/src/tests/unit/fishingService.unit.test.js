@@ -18,7 +18,6 @@
 
 import { describe, it, before, after, beforeEach, afterEach, mock } from 'node:test';
 import assert from 'node:assert';
-import { pool } from '../../config/database.js';
 import {
   FISH_TYPES,
   FISHING_CONFIG,
@@ -310,11 +309,12 @@ describe('Fishing Service Unit Tests', () => {
     });
   });
 
-  describe('getSessionStatus (pure function)', () => {
-    it('should return null for non-existent session', async (t) => {
-      t.mock.method(pool, 'query', async () => ({ rows: [] }));
-      const status = await fishingService.getSessionStatus(99999, 99999);
-      assert.strictEqual(status, null);
+  describe('authoritative cast depth (pure function)', () => {
+    it('should derive depth from server receive-time power boundaries', () => {
+      assert.strictEqual(fishingService.depthFromCastPower(39), 'near');
+      assert.strictEqual(fishingService.depthFromCastPower(40), 'mid');
+      assert.strictEqual(fishingService.depthFromCastPower(74), 'mid');
+      assert.strictEqual(fishingService.depthFromCastPower(75), 'deep');
     });
   });
 

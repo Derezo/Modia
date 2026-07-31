@@ -56,10 +56,9 @@ import {
   buildColiseumTerminalProgressionPayload
 } from '../battle/BattleTerminalEffects.js';
 import {
+  AUTHORED_BATTLE_MAP_VERSION,
   extractBattleMutableState,
-  generateBattleMap,
-  isBattleMapV2EnabledForMode,
-  selectBattleMapGenerationVersion
+  generateBattleMap
 } from '../battle/battleMapGenerationService.js';
 import { deriveEncounterTerrainSeed } from '../battle/encounterService.js';
 import {
@@ -787,23 +786,10 @@ async function startMatchWithFormations(matchId) {
     const player2CharacterIds = Object.keys(player2Formation).map(Number);
     const player1FormationSize = player1CharacterIds.length;
     const player2FormationSize = player2CharacterIds.length;
-    const serverAllowsV2 = isBattleMapV2EnabledForMode('pvp_coliseum');
-    const player1Version = selectBattleMapGenerationVersion({
-      mode: 'pvp_coliseum',
-      allowV2: serverAllowsV2,
-      clientCapabilities: match.player1.battleMapCapabilities
-    });
-    const player2Version = selectBattleMapGenerationVersion({
-      mode: 'pvp_coliseum',
-      allowV2: serverAllowsV2,
-      clientCapabilities: match.player2.battleMapCapabilities
-    });
-    const useV2 = player1Version === 2 && player2Version === 2;
-    const terrainGenerationVersion = useV2 ? 2 : 1;
     const mapSeed = deriveEncounterTerrainSeed(
       match.createdAt + match.id,
       'arena',
-      terrainGenerationVersion
+      AUTHORED_BATTLE_MAP_VERSION
     );
     const creationIdempotencyKey = [
       'coliseum',
@@ -971,10 +957,11 @@ async function startMatchWithFormations(matchId) {
         enemyCapacity: player2Party.length,
         existingUnits: initialState.units,
         initialMutableState: initialState,
-        allowV2: useV2,
-        clientCapabilities: useV2
-          ? match.player1.battleMapCapabilities
-          : null
+        competitiveBand: match.queueType,
+        clientCapabilities: match.player1.battleMapCapabilities,
+        additionalClientCapabilities: [
+          match.player2.battleMapCapabilities
+        ]
       });
       const result = await battleStateRepository.createBattle({
         battleType: 'pvp_coliseum',
@@ -984,7 +971,8 @@ async function startMatchWithFormations(matchId) {
         creationIdempotencyKey,
         finalMap: generatedMap.finalMap,
         legacyFlatState: generatedMap.legacyFlatState,
-        initialMutableState: generatedMap.mutableState
+        initialMutableState: generatedMap.mutableState,
+        selectionProvenance: generatedMap.selectionProvenance
       }, { client });
 
       // Mark characters as in battle in the same transaction as battle creation.

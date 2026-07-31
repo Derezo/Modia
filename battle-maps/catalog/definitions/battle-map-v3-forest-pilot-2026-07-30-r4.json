@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "battle-map-v3-catalog-definition-v1",
+  "catalogReleaseId": "battle-map-v3-forest-pilot-2026-07-30-r4",
+  "entries": [
+    {
+      "id": "entry:forest-template-01-b",
+      "mapPath": "battle-maps/compiled/forest/forest-template-01-b.v9.json",
+      "approvalPath": "battle-maps/approvals/forest/forest-template-01-b.v9.json",
+      "approvalFileSha256": "sha256:9add7b31b28acfb834cfae05904bd87be7d5093e5dcd638938514e84a2627f69",
+      "orientation": "isometric-diamond",
+      "teamLayout": "players-vs-opponents",
+      "weight": 1,
+      "bossCapable": false,
+      "competitiveParity": false
+    }
+  ],
+  "coverageQueries": [
+    {
+      "id": "coverage:forest:pve:tier-1",
+      "theme": "forest",
+      "sourceTier": 1,
+      "selectionBand": "tier-1",
+      "mode": "pve",
+      "dimensions": {
+        "width": 32,
+        "height": 32
+      },
+      "teamLayout": "players-vs-opponents",
+      "playerCounts": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "opponentCounts": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "requireBossCapable": false,
+      "requireCompetitiveParity": false
+    }
+  ]
+}

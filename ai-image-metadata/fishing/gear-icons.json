@@ -1,0 +1,98 @@
+{
+  "version": "1.0.0",
+  "generationMethod": "built-in-imagegen-chroma-key-removal",
+  "postProcessing": {
+    "helper": "$CODEX_HOME/skills/.system/imagegen/scripts/remove_chroma_key.py",
+    "arguments": "--auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill"
+  },
+  "assets": [
+    {
+      "id": "fishing_rod_weathered",
+      "name": "Weathered Rod",
+      "paths": {
+        "32": "/assets/items/32/consumables/fishing_rod_weathered.webp",
+        "64": "/assets/items/64/consumables/fishing_rod_weathered.webp",
+        "128": "/assets/items/128/consumables/fishing_rod_weathered.webp",
+        "original": "/assets/items/originals/consumables/fishing_rod_weathered.webp"
+      },
+      "prompt": "Use case: stylized-concept\nAsset type: fantasy RPG fishing gear item icon\nStyle/medium: Modia fantasy ink-and-wash watercolor item illustration, bold dark hand-inked outline, controlled watercolor shading, subtle aged-parchment character only inside the painted subject; polished readable game icon, strictly 2D.\nComposition/framing: one isolated item centered diagonally from lower-left to upper-right, full object visible, crisp strong silhouette, generous empty padding on all sides, no frame.\nScene/backdrop: perfectly flat solid #00ff00 chroma-key background for background removal. The background must be one uniform color with no shadows, gradients, texture, reflections, floor plane, or lighting variation.\nConstraints: simple opaque subject, no cast shadow, no contact shadow, no reflection, no glow extending into the background, no text, letters, numbers, UI, border, logo, or watermark. Do not use #00ff00 anywhere in the subject.\nPrimary request: Weathered Rod icon.\nSubject: a humble old fishing rod made from crooked sun-bleached brown wood, wrapped tan twine grip, worn dark iron ferrules, tiny plain reel; sturdy and visibly patched. Show the rod itself as a compact solid item with no loose fishing line, no hook, and no bait."
+    },
+    {
+      "id": "fishing_rod_riverwood",
+      "name": "Riverwood Rod",
+      "paths": {
+        "32": "/assets/items/32/consumables/fishing_rod_riverwood.webp",
+        "64": "/assets/items/64/consumables/fishing_rod_riverwood.webp",
+        "128": "/assets/items/128/consumables/fishing_rod_riverwood.webp",
+        "original": "/assets/items/originals/consumables/fishing_rod_riverwood.webp"
+      },
+      "prompt": "Use case: stylized-concept\nAsset type: fantasy RPG fishing gear item icon\nStyle/medium: Modia fantasy ink-and-wash watercolor item illustration, bold dark hand-inked outline, controlled watercolor shading, subtle aged-parchment character only inside the painted subject; polished readable game icon, strictly 2D.\nComposition/framing: one isolated item centered diagonally from lower-left to upper-right, full object visible, crisp strong silhouette, generous empty padding on all sides, no frame.\nScene/backdrop: perfectly flat solid #00ff00 chroma-key background for background removal. The background must be one uniform color with no shadows, gradients, texture, reflections, floor plane, or lighting variation.\nConstraints: simple opaque subject, no cast shadow, no contact shadow, no reflection, no glow extending into the background, no text, letters, numbers, UI, border, logo, or watermark. Do not use #00ff00 anywhere in the subject.\nPrimary request: Riverwood Rod icon.\nSubject: a refined reddish riverwood fishing rod with smooth carved wood, brass ferrules, dark leather grip, and a compact brass reel; practical artisan craftsmanship. Show the rod itself as a compact solid item with no loose fishing line, no hook, and no bait."
+    },
+    {
+      "id": "fishing_rod_silverline",
+      "name": "Silverline Rod",
+      "paths": {
+        "32": "/assets/items/32/consumables/fishing_rod_silverline.webp",
+        "64": "/assets/items/64/consumables/fishing_rod_silverline.webp",
+        "128": "/assets/items/128/consumables/fishing_rod_silverline.webp",
+        "original": "/assets/items/originals/consumables/fishing_rod_silverline.webp"
+      },
+      "prompt": "Use case: stylized-concept\nAsset type: fantasy RPG fishing gear item icon\nStyle/medium: Modia fantasy ink-and-wash watercolor item illustration, bold dark hand-inked outline, controlled watercolor shading, subtle aged-parchment character only inside the painted subject; polished readable game icon, strictly 2D.\nComposition/framing: one isolated item centered diagonally from lower-left to upper-right, full object visible, crisp strong silhouette, generous empty padding on all sides, no frame.\nScene/backdrop: perfectly flat solid #00ff00 chroma-key background for background removal. The background must be one uniform color with no shadows, gradients, texture, reflections, floor plane, or lighting variation.\nConstraints: simple opaque subject, no cast shadow, no contact shadow, no reflection, no glow extending into the background, no text, letters, numbers, UI, border, logo, or watermark. Do not use #00ff00 anywhere in the subject.\nPrimary request: Silverline Rod icon.\nSubject: an elegant silver-metal fishing rod with a deep navy wrapped grip, bright silver ferrules, compact precision reel, and one small blue gemstone accent; sleek and high quality. Show the rod itself as a compact solid item with no loose fishing line, no hook, and no bait."
+    },
+    {
+      "id": "fishing_rod_runebound",
+      "name": "Runebound Rod",
+      "paths": {
+        "32": "/assets/items/32/consumables/fishing_rod_runebound.webp",
+        "64": "/assets/items/64/consumables/fishing_rod_runebound.webp",
+        "128": "/assets/items/128/consumables/fishing_rod_runebound.webp",
+        "original": "/assets/items/originals/consumables/fishing_rod_runebound.webp"
+      },
+      "prompt": "Use case: stylized-concept\nAsset type: fantasy RPG fishing gear item icon\nStyle/medium: Modia fantasy ink-and-wash watercolor item illustration, bold dark hand-inked outline, controlled watercolor shading, subtle aged-parchment character only inside the painted subject; polished readable game icon, strictly 2D.\nComposition/framing: one isolated item centered diagonally from lower-left to upper-right, full object visible, crisp strong silhouette, generous empty padding on all sides, no frame.\nScene/backdrop: perfectly flat solid #00ff00 chroma-key background for background removal. The background must be one uniform color with no shadows, gradients, texture, reflections, floor plane, or lighting variation.\nConstraints: simple opaque subject, no cast shadow, no contact shadow, no reflection, no glow extending into the background, no text, letters, numbers, UI, border, logo, or watermark. Do not use #00ff00 anywhere in the subject.\nPrimary request: Runebound Rod icon.\nSubject: a legendary black ironwood fishing rod with heavy antique-gold fittings, a compact ornate reel, and luminous violet rune inlays contained strictly within the rod body; powerful ancient craftsmanship. Show the rod itself as a compact solid item with no loose fishing line, no hook, and no bait."
+    },
+    {
+      "id": "fishing_tackle_earthworm",
+      "name": "Earthworm",
+      "paths": {
+        "32": "/assets/items/32/consumables/fishing_tackle_earthworm.webp",
+        "64": "/assets/items/64/consumables/fishing_tackle_earthworm.webp",
+        "128": "/assets/items/128/consumables/fishing_tackle_earthworm.webp",
+        "original": "/assets/items/originals/consumables/fishing_tackle_earthworm.webp"
+      },
+      "prompt": "Use case: stylized-concept\nAsset type: fantasy RPG fishing gear item icon\nStyle/medium: Modia fantasy ink-and-wash watercolor item illustration, bold dark hand-inked outline, controlled watercolor shading, subtle aged-parchment character only inside the painted subject; polished readable game icon, strictly 2D.\nComposition/framing: one isolated item centered diagonally from lower-left to upper-right, full object visible, crisp strong silhouette, generous empty padding on all sides, no frame.\nScene/backdrop: perfectly flat solid #00ff00 chroma-key background for background removal. The background must be one uniform color with no shadows, gradients, texture, reflections, floor plane, or lighting variation.\nConstraints: simple opaque subject, no cast shadow, no contact shadow, no reflection, no glow extending into the background, no text, letters, numbers, UI, border, logo, or watermark. Do not use #00ff00 anywhere in the subject.\nPrimary request: Earthworm tackle icon.\nSubject: one plump curled earthworm in warm earthy brown and muted rose segments, shaped into a compact readable S-curve; fully opaque and charming but not anthropomorphic."
+    },
+    {
+      "id": "fishing_tackle_slime_slug",
+      "name": "Slime Slug",
+      "paths": {
+        "32": "/assets/items/32/consumables/fishing_tackle_slime_slug.webp",
+        "64": "/assets/items/64/consumables/fishing_tackle_slime_slug.webp",
+        "128": "/assets/items/128/consumables/fishing_tackle_slime_slug.webp",
+        "original": "/assets/items/originals/consumables/fishing_tackle_slime_slug.webp"
+      },
+      "prompt": "Use case: stylized-concept\nAsset type: fantasy RPG fishing gear item icon\nStyle/medium: Modia fantasy ink-and-wash watercolor item illustration, bold dark hand-inked outline, controlled watercolor shading, subtle aged-parchment character only inside the painted subject; polished readable game icon, strictly 2D.\nComposition/framing: one isolated item centered, full object visible, crisp strong silhouette, generous empty padding on all sides, no frame.\nScene/backdrop: perfectly flat solid #ff00ff chroma-key background for background removal. The background must be one uniform color with no shadows, gradients, texture, reflections, floor plane, or lighting variation.\nConstraints: simple opaque subject, no cast shadow, no contact shadow, no reflection, no glow extending into the background, no text, letters, numbers, UI, border, logo, or watermark. Do not use #ff00ff anywhere in the subject.\nPrimary request: Slime Slug tackle icon.\nSubject: one small magical slug-shaped bait made of opaque emerald and lime-green slime, with a compact rounded silhouette, two short feelers, and a few contained jade highlights; no puddle, drips, translucency, or reflection; not anthropomorphic."
+    },
+    {
+      "id": "fishing_tackle_gilded_spinner",
+      "name": "Gilded Spinner",
+      "paths": {
+        "32": "/assets/items/32/consumables/fishing_tackle_gilded_spinner.webp",
+        "64": "/assets/items/64/consumables/fishing_tackle_gilded_spinner.webp",
+        "128": "/assets/items/128/consumables/fishing_tackle_gilded_spinner.webp",
+        "original": "/assets/items/originals/consumables/fishing_tackle_gilded_spinner.webp"
+      },
+      "prompt": "Use case: stylized-concept\nAsset type: fantasy RPG fishing gear item icon\nStyle/medium: Modia fantasy ink-and-wash watercolor item illustration, bold dark hand-inked outline, controlled watercolor shading, subtle aged-parchment character only inside the painted subject; polished readable game icon, strictly 2D.\nComposition/framing: one isolated item centered diagonally from lower-left to upper-right, full object visible, crisp strong silhouette, generous empty padding on all sides, no frame.\nScene/backdrop: perfectly flat solid #00ff00 chroma-key background for background removal. The background must be one uniform color with no shadows, gradients, texture, reflections, floor plane, or lighting variation.\nConstraints: simple opaque subject, no cast shadow, no contact shadow, no reflection, no glow extending into the background, no text, letters, numbers, UI, border, logo, or watermark. Do not use #00ff00 anywhere in the subject.\nPrimary request: Gilded Spinner tackle icon.\nSubject: one ornate fishing spinner lure with a broad hammered-gold oval blade, tiny copper swivel, dark red thread binding, and a compact dark steel treble hook; bright metallic object but painted opaquely with no reflection outside its silhouette."
+    },
+    {
+      "id": "fishing_tackle_abyssal_lure",
+      "name": "Abyssal Lure",
+      "paths": {
+        "32": "/assets/items/32/consumables/fishing_tackle_abyssal_lure.webp",
+        "64": "/assets/items/64/consumables/fishing_tackle_abyssal_lure.webp",
+        "128": "/assets/items/128/consumables/fishing_tackle_abyssal_lure.webp",
+        "original": "/assets/items/originals/consumables/fishing_tackle_abyssal_lure.webp"
+      },
+      "prompt": "Use case: stylized-concept\nAsset type: fantasy RPG fishing gear item icon\nStyle/medium: Modia fantasy ink-and-wash watercolor item illustration, bold dark hand-inked outline, controlled watercolor shading, subtle aged-parchment character only inside the painted subject; polished readable game icon, strictly 2D.\nComposition/framing: one isolated item centered, full object visible, crisp strong silhouette, generous empty padding on all sides, no frame.\nScene/backdrop: perfectly flat solid #ff00ff chroma-key background for background removal. The background must be one uniform color with no shadows, gradients, texture, reflections, floor plane, or lighting variation.\nConstraints: simple opaque subject, no cast shadow, no contact shadow, no reflection, no glow extending into the background, no text, letters, numbers, UI, border, logo, or watermark. Do not use #ff00ff anywhere in the subject.\nPrimary request: Abyssal Lure tackle icon.\nSubject: one ominous deep-sea fishing lure carved from matte black-violet obsidian, shaped like a compact squid with a bronze eyelet and short dark steel hook, contained cyan rune accents within the solid lure body; fully opaque, no tentacle wisps, no glow outside the silhouette."
+    }
+  ]
+}

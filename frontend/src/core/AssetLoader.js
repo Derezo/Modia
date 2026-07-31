@@ -207,6 +207,8 @@ export class AssetLoader {
   constructor() {
     this.cache = new Map();
     this.loading = new Map();
+    this.battleMapV3Assets = new Map();
+    this.assetCache = assetCache;
     this.manifest = null;
     this.basePath = '/assets';
     this.initialized = false;
@@ -427,6 +429,99 @@ export class AssetLoader {
       );
       return null;
     }
+  }
+
+  _getBattleMapV3AssetIdentity(asset) {
+    return `${asset?.assetBundleId}:${asset?.key}:${asset?.contentVersion}`;
+  }
+
+  /**
+   * Return only the already verified image for an exact V3 asset reference.
+   * There is deliberately no key, biome, or legacy artwork fallback.
+   */
+  getBattleMapV3Asset(asset) {
+    const entry = this.battleMapV3Assets.get(
+      this._getBattleMapV3AssetIdentity(asset)
+    );
+    if (!entry ||
+        entry.asset.contentHash !== asset?.contentHash ||
+        entry.asset.immutableUrl !== asset?.immutableUrl) {
+      return null;
+    }
+    return entry.image;
+  }
+
+  async _decodeBattleMapV3Image(bytes, immutableUrl) {
+    const blob = new Blob([bytes]);
+    if (typeof globalThis.createImageBitmap === 'function') {
+      return globalThis.createImageBitmap(blob);
+    }
+    if (typeof Image !== 'function' ||
+        typeof URL?.createObjectURL !== 'function') {
+      throw new Error(`No image decoder is available for ${immutableUrl}`);
+    }
+
+    const blobUrl = URL.createObjectURL(blob);
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => {
+        URL.revokeObjectURL(blobUrl);
+        reject(new Error(`Failed to decode image: ${immutableUrl}`));
+      };
+      image.src = blobUrl;
+    });
+  }
+
+  /**
+   * Fetch raw bytes, verify SHA-256, then decode and expose a V3 image.
+   */
+  async loadBattleMapV3Asset(asset) {
+    const existing = this.getBattleMapV3Asset(asset);
+    if (existing) return existing;
+
+    const identity = this._getBattleMapV3AssetIdentity(asset);
+    const loadingKey = `battle-map-v3:${identity}`;
+    if (this.loading.has(loadingKey)) {
+      return this.loading.get(loadingKey);
+    }
+
+    const loadPromise = (async () => {
+      try {
+        const bytes = await this.assetCache.fetchVerifiedBytes(asset);
+        const image = await this._decodeBattleMapV3Image(
+          bytes,
+          asset.immutableUrl
+        );
+        this.battleMapV3Assets.set(identity, {
+          asset: Object.freeze({ ...asset }),
+          image
+        });
+        return image;
+      } finally {
+        this.loading.delete(loadingKey);
+      }
+    })();
+    this.loading.set(loadingKey, loadPromise);
+    return loadPromise;
+  }
+
+  /**
+   * Strictly preload every V3 reference. Any missing, corrupt, or undecodable
+   * asset rejects the whole operation so BattleScene remains blocked.
+   */
+  async preloadBattleMapV3Assets(assets, { onProgress } = {}) {
+    if (!Array.isArray(assets) || assets.length === 0) {
+      throw new TypeError('BattleMapV3 requires a non-empty asset manifest');
+    }
+    let loaded = 0;
+    return Promise.all(assets.map(asset =>
+      this.loadBattleMapV3Asset(asset).then(image => {
+        loaded++;
+        onProgress?.(loaded, assets.length);
+        return image;
+      })
+    ));
   }
 
   /**
@@ -2050,6 +2145,7 @@ export class AssetLoader {
     // Clear in-memory caches
     this.cache.clear();
     this.loading.clear();
+    this.battleMapV3Assets.clear();
     this.failedLookups.clear();
 
     // Optionally clear persistent cache

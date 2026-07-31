@@ -3,7 +3,10 @@ import assert from 'node:assert/strict';
 
 globalThis.window ??= { devicePixelRatio: 1 };
 
-const { BattleGrid } = await import('../BattleGrid.js');
+const {
+  BattleGrid,
+  renderBattleSceneBackdrop
+} = await import('../BattleGrid.js');
 const { BattlePathfinding } = await import('../BattlePathfinding.js');
 
 function createGrid(width = 2, height = 2) {
@@ -149,6 +152,90 @@ describe('BattleGrid elevation contract', () => {
     assert.equal(pathfinding.findPath(0, 0, 2, 0), null);
     assert.equal(grid.isWalkable(2, 0), false);
   });
+
+  it('uses V3 obstacle cells for collision while rendering only at the anchor', () => {
+    const grid = createGrid(4, 1);
+    const obstacle = {
+      id: 'obstacle:fallen-tree',
+      kind: 'fallen-tree',
+      cells: [{ x: 1, y: 0 }, { x: 2, y: 0 }],
+      blocking: true,
+      movementCost: 0,
+      anchor: { x: 2, y: 0 }
+    };
+    grid.setObstacles([obstacle]);
+    const traversal = grid.createTraversalView();
+
+    assert.equal(grid.getObstacle(1, 0), null, 'footprint cells do not duplicate rendering');
+    assert.equal(grid.getObstacle(2, 0).id, obstacle.id);
+    assert.equal(traversal.obstacles[0][1].id, obstacle.id);
+    assert.equal(traversal.obstacles[0][2].id, obstacle.id);
+    assert.equal(grid.isWalkable(1, 0), false);
+    assert.equal(grid.isWalkable(2, 0), false);
+
+    assert.throws(
+      () => grid.setObstacles([
+        obstacle,
+        {
+          ...obstacle,
+          id: 'obstacle:rock',
+          cells: [{ x: 2, y: 0 }]
+        }
+      ]),
+      error => (
+        error.code === 'INVALID_BATTLE_MAP_V3_TOPOLOGY' &&
+        /multiple blocking obstacles occupy 2,0/.test(error.message)
+      )
+    );
+  });
+
+  it('enforces V3 traversable:false connections in both directions', () => {
+    const grid = createGrid(2, 1);
+    grid.setElevation([[0, 2]], 'discrete');
+    grid.setElevationConnections([{
+      id: 'connection:cliff',
+      from: { x: 0, y: 0 },
+      to: { x: 1, y: 0 },
+      direction: 'e',
+      kind: 'cliff',
+      heightDelta: 2,
+      traversable: false,
+      bidirectional: false
+    }]);
+    const traversal = grid.createTraversalView([], {
+      canTraverseElevation: () => true
+    });
+
+    assert.equal(
+      traversal.elevationConnections[0][0].e.traversable,
+      false
+    );
+    assert.equal(
+      traversal.elevationConnections[0][1].w.traversable,
+      false
+    );
+    assert.equal(grid.isWalkable(1, 0, { from: { x: 0, y: 0 } }), false);
+    assert.equal(grid.isWalkable(0, 0, { from: { x: 1, y: 0 } }), false);
+  });
+
+  it('filters attack, AoE, and selectable tiles through the V3 playable mask', () => {
+    const grid = createGrid(3, 2);
+    grid.setMasks(
+      [[true, true, true], [true, true, true]],
+      [[true, false, true], [false, true, false]]
+    );
+    const pathfinding = new BattlePathfinding(grid, new Map());
+
+    assert.deepEqual(
+      pathfinding.getAttackableTiles(0, 0, 2).map(tile => [tile.x, tile.y]),
+      [[1, 1], [2, 0]]
+    );
+    assert.deepEqual(
+      pathfinding.getAoETiles(1, 0, 1, 'circle').map(tile => [tile.x, tile.y]),
+      [[0, 0], [1, 1], [2, 0]]
+    );
+    assert.equal(pathfinding.isValidMove(1, 0), false);
+  });
 });
 
 describe('BattleGrid elevated hit testing', () => {
@@ -169,6 +256,26 @@ describe('BattleGrid elevated hit testing', () => {
     grid.nodeType = 'guild';
 
     assert.equal(grid.getSpriteBiome(), 'castle');
+  });
+
+  it('does not expose rendered V3 scene-only cells to hit testing', () => {
+    const grid = createGrid(2, 1);
+    grid.setMasks([[true, true]], [[true, false]]);
+    const sceneOnlyCenter = grid.gridToScreen(1, 0);
+
+    assert.equal(
+      grid.getTileAtScreen(sceneOnlyCenter.x, sceneOnlyCenter.y),
+      null
+    );
+    assert.deepEqual(
+      grid.getTileAtScreen(
+        sceneOnlyCenter.x,
+        sceneOnlyCenter.y,
+        null,
+        true
+      ),
+      []
+    );
   });
 });
 
@@ -203,6 +310,20 @@ describe('BattleGrid unified painter queue', () => {
     assert.ok(order.indexOf('0,1') < order.indexOf('1,0'));
   });
 
+  it('renders the V3 scene silhouette while skipping void cells', () => {
+    const grid = createGrid(2, 2);
+    grid.setMasks(
+      [[true, false], [true, true]],
+      [[true, false], [true, true]]
+    );
+    const order = [];
+    grid.renderTileUnified = (_ctx, _sx, _sy, x, y) => order.push(`${x},${y}`);
+
+    grid.render({});
+
+    assert.deepEqual(order, ['0,0', '0,1', '1,1']);
+  });
+
   it('computes only exposed camera-facing wall heights', () => {
     const grid = createGrid();
     grid.setElevation([[2, 0], [1, 0]], 'discrete');
@@ -215,6 +336,766 @@ describe('BattleGrid unified painter queue', () => {
     grid.renderUnifiedWalls({}, 100, 80, 0, 0, 2, 'stone', 'forest');
 
     assert.deepEqual(exposure, { left: 16, right: 32 });
+  });
+
+  it('does not apply the universal legacy edge skirt to V3 masks', () => {
+    const grid = createGrid(1, 1);
+    grid.setElevation([[2]], 'discrete');
+    grid.setMasks([[true]], [[true]]);
+    let rendered = false;
+    grid.renderTexturedWall = () => {
+      rendered = true;
+    };
+    grid.assetLoader = { getWallTexture: () => ({ width: 128, height: 32 }) };
+
+    grid.renderUnifiedWalls({}, 100, 80, 0, 0, 2, 'stone', 'forest');
+
+    assert.equal(rendered, false);
+  });
+
+  it('sorts V3 surfaces, layers, units, and props by shared base contact', () => {
+    const grid = createGrid(1, 1);
+    const renderer = (id, stratum, width = 256, height = 128) => ({
+      id,
+      width,
+      height,
+      pivot: { x: width / 2, y: height / 2 },
+      anchor: { x: width / 2, y: height / 2 },
+      footprint: { x: 0, y: 0, width: 1, height: 1 },
+      drawBounds: { x: 0, y: 0, width, height },
+      occlusionBounds: { x: 0, y: 0, width, height },
+      stratum
+    });
+    const asset = key => ({ key });
+    const surface = asset('surface');
+    const route = asset('route');
+    const obstacle = asset('obstacle');
+    grid.setMasks([[true]], [[true]]);
+    grid.setBattleMapV3RenderData({
+      visualCells: [[{ surface, overlays: [] }]],
+      surfaceRenderers: [[renderer('surface', 'surface')]],
+      layers: [[[
+        {
+          asset: route,
+          category: 'route',
+          renderer: renderer('route', 'route'),
+          direction: null,
+          routeTopology: {
+            neighbors: ['e', 'w'],
+            textureSeed: 31,
+            width: 2,
+            visualSeed: 17
+          }
+        }
+      ]]],
+      obstacleLayers: [{
+        asset: obstacle,
+        renderer: renderer('obstacle', 'obstacle', 192, 256),
+        direction: null,
+        record: { id: 'obstacle' },
+        cell: { x: 0, y: 0 }
+      }],
+      renderProfile: {
+        sourcePixelScale: 4,
+        tileWidth: 64,
+        tileHeight: 32,
+        elevationStep: 16
+      }
+    });
+    grid.setAssetLoader({
+      getBattleMapV3Asset(reference) {
+        const dimensions = reference.key === 'obstacle'
+          ? { width: 192, height: 256 }
+          : { width: 256, height: 128 };
+        return { id: reference.key, ...dimensions };
+      }
+    });
+    const order = [];
+    grid.renderTileHighlight = () => order.push('highlight');
+    let routeClips = 0;
+    let routeCurves = 0;
+    const routeJoins = [];
+    const routeFills = [];
+    const alphaStack = [];
+    const ctx = {
+      globalAlpha: 1,
+      save() { alphaStack.push(this.globalAlpha); },
+      restore() { this.globalAlpha = alphaStack.pop(); },
+      translate() {},
+      scale() {},
+      beginPath() {},
+      closePath() {},
+      moveTo() {},
+      lineTo() {},
+      quadraticCurveTo() { routeCurves++; },
+      ellipse(_x, _y, radiusX, radiusY) {
+        routeJoins.push({ radiusX, radiusY });
+      },
+      fill() {
+        routeFills.push({
+          color: this.fillStyle,
+          alpha: this.globalAlpha
+        });
+      },
+      clip() { routeClips++; },
+      drawImage(image) { order.push(image.id); }
+    };
+    grid.render(ctx, { '0,0': 'rgba(30, 120, 220, 0.5)' }, null, {
+      entities: [{ gridX: 0, gridY: 0, getRenderDepth: () => 0 }],
+      renderEntity: () => order.push('unit')
+    });
+
+    assert.deepEqual(
+      order,
+      ['surface', 'route', 'highlight', 'unit', 'obstacle']
+    );
+    assert.equal(routeClips, 0, 'the exact authored route sprite is not clipped');
+    assert.deepEqual(routeFills, [
+      { color: '#a08352', alpha: 0.18 },
+      { color: '#80613d', alpha: 0.32 }
+    ]);
+    assert.ok(routeCurves >= 4, 'both underpaint passes follow curved topology');
+    assert.equal(routeJoins.length, 2);
+    assert.ok(routeJoins[0].radiusX > routeJoins[1].radiusX);
+    for (const join of routeJoins) {
+      assert.equal(
+        join.radiusY,
+        join.radiusX / 2,
+        'route joins follow the 2:1 isometric projection'
+      );
+    }
+  });
+
+  it('bridges the complete elevation gap for a north-facing connection', () => {
+    const grid = createGrid(2, 2);
+    const bridge = grid.getBattleMapV3ConnectionBridge({
+      direction: 'n',
+      record: { heightDelta: 1 }
+    }, 100, 80);
+
+    assert.deepEqual(bridge, {
+      points: [
+        { x: 100, y: 64 },
+        { x: 132, y: 80 },
+        { x: 132, y: 64 },
+        { x: 100, y: 48 }
+      ],
+      midpoint: { x: 116, y: 64 },
+      lowMidpoint: { x: 116, y: 72 },
+      highMidpoint: { x: 116, y: 56 }
+    });
+  });
+
+  it('uses terrain-derived legacy connection fill with no raw brown fallback', () => {
+    const grid = createGrid(2, 1);
+    const renderer = {
+      category: 'surface',
+      width: 256,
+      height: 128,
+      pivot: { x: 128, y: 64 },
+      anchor: { x: 128, y: 64 },
+      footprint: { x: 0, y: 0, width: 1, height: 1 },
+      drawBounds: { x: 0, y: 0, width: 256, height: 128 },
+      occlusionBounds: { x: 0, y: 0, width: 0, height: 0 },
+      stratum: 'surface'
+    };
+    const asset = { key: 'surface' };
+    grid.setMasks([[true, true]], [[true, true]]);
+    grid.setBattleMapV3RenderData({
+      visualCells: [[
+        { surface: asset, overlays: [] },
+        { surface: asset, overlays: [] }
+      ]],
+      surfaceRenderers: [[renderer, renderer]],
+      layers: [[[], []]],
+      obstacleLayers: [],
+      renderProfile: {
+        sourcePixelScale: 4,
+        tileWidth: 64,
+        tileHeight: 32,
+        elevationStep: 16
+      }
+    });
+    grid.setAssetLoader({
+      getBattleMapV3Asset: () => ({ width: 256, height: 128 })
+    });
+    const fills = [];
+    const gradient = { addColorStop() {} };
+    const ctx = {
+      globalAlpha: 1,
+      save() {},
+      restore() {},
+      beginPath() {},
+      closePath() {},
+      moveTo() {},
+      lineTo() {},
+      fill() { fills.push(this.fillStyle); },
+      clip() {},
+      translate() {},
+      scale() {},
+      drawImage() {},
+      stroke() {},
+      createLinearGradient() { return gradient; }
+    };
+    const layer = {
+      asset,
+      renderer,
+      category: 'elevation-slope',
+      direction: 'e',
+      authoredDirectional: false,
+      record: {
+        from: { x: 0, y: 0 },
+        to: { x: 1, y: 0 },
+        heightDelta: 1
+      }
+    };
+    grid.renderBattleMapV3Slope(ctx, layer, 100, 80, 1);
+    grid.renderBattleMapV3LegacyConnectionUnderlay(
+      ctx,
+      { ...layer, category: 'elevation-connection' },
+      100,
+      80,
+      1
+    );
+
+    assert.ok(fills.includes(grid.getTerrainColor('grass')));
+    assert.ok(!fills.includes('#493a25'));
+    assert.ok(!fills.includes('#4b3522'));
+  });
+
+  it('underlays every authored slope and stair with exact regional terrain', () => {
+    const grid = createGrid(3, 3);
+    const surfaceRenderer = {
+      category: 'surface',
+      width: 256,
+      height: 128,
+      pivot: { x: 128, y: 64 },
+      anchor: { x: 128, y: 64 },
+      footprint: { x: 0, y: 0, width: 1, height: 1 },
+      drawBounds: { x: 0, y: 0, width: 256, height: 128 },
+      occlusionBounds: { x: 0, y: 0, width: 256, height: 128 },
+      stratum: 'surface'
+    };
+    const connectionRenderer = {
+      category: 'connection-stairs',
+      width: 256,
+      height: 192,
+      pivot: { x: 128, y: 128 },
+      anchor: { x: 128, y: 128 },
+      footprint: { x: 0, y: 0, width: 1, height: 2 },
+      drawBounds: { x: 0, y: 0, width: 256, height: 192 },
+      occlusionBounds: { x: 0, y: 0, width: 256, height: 192 },
+      stratum: 'connection'
+    };
+    const foundation = { key: 'regional-surface-0' };
+    grid.setBattleMapV3RenderData({
+      visualCells: Array.from({ length: 3 }, () => Array(3).fill(null)),
+      surfaceRenderers: Array.from({ length: 3 }, () => Array(3).fill(null)),
+      layers: Array.from(
+        { length: 3 },
+        () => Array.from({ length: 3 }, () => [])
+      ),
+      obstacleLayers: [],
+      surfaceFoundation: {
+        asset: foundation,
+        renderer: surfaceRenderer
+      },
+      renderProfile: {
+        sourcePixelScale: 4,
+        tileWidth: 64,
+        tileHeight: 32,
+        elevationStep: 16
+      }
+    });
+    grid.setAssetLoader({
+      getBattleMapV3Asset(reference) {
+        return reference.key === foundation.key
+          ? { id: reference.key, width: 256, height: 128 }
+          : { id: reference.key, width: 256, height: 192 };
+      }
+    });
+
+    const specs = [
+      ['elevation-slope', 'e', { x: 0, y: 1 }, { x: 1, y: 1 }],
+      ['elevation-slope', 'w', { x: 2, y: 1 }, { x: 1, y: 1 }],
+      ['elevation-connection', 'n', { x: 1, y: 1 }, { x: 1, y: 0 }],
+      ['elevation-connection', 's', { x: 1, y: 1 }, { x: 1, y: 2 }]
+    ];
+    const alphaStack = [];
+    const filterStack = [];
+    const draws = [];
+    const fills = [];
+    const ctx = {
+      globalAlpha: 1,
+      filter: 'none',
+      save() {
+        alphaStack.push(this.globalAlpha);
+        filterStack.push(this.filter);
+      },
+      restore() {
+        this.globalAlpha = alphaStack.pop();
+        this.filter = filterStack.pop();
+      },
+      beginPath() {},
+      closePath() {},
+      moveTo() {},
+      lineTo() {},
+      fill() { fills.push(this.fillStyle); },
+      clip() {},
+      createLinearGradient() {
+        return { addColorStop() {} };
+      },
+      translate() {},
+      scale() {},
+      drawImage(image) { draws.push(image.id); }
+    };
+    for (const [category, direction, from, to] of specs) {
+      const asset = { key: `${category}:${direction}` };
+      const layer = {
+        asset,
+        renderer: {
+          ...connectionRenderer,
+          category: category === 'elevation-slope'
+            ? 'connection-slope'
+            : 'connection-stairs'
+        },
+        category,
+        direction,
+        authoredDirectional: true,
+        record: {
+          kind: category === 'elevation-slope' ? 'slope' : 'stairs',
+          from,
+          to,
+          heightDelta: 1
+        }
+      };
+      assert.equal(
+        grid.getBattleMapV3ConnectionBridge(layer, 100, 80).points.length,
+        4
+      );
+      grid.renderBattleMapV3Asset(ctx, layer, 100, 80);
+    }
+
+    assert.deepEqual(draws, specs.flatMap(([category, direction]) => [
+      foundation.key,
+      foundation.key,
+      foundation.key,
+      `${category}:${direction}`
+    ]));
+    assert.equal(
+      fills.filter(fill => fill === grid.getTerrainColor('grass')).length,
+      specs.length
+    );
+    assert.ok(fills.every(fill =>
+      typeof fill !== 'string' ||
+      !['#ffffff', '#D7C5A9', '#C9D8D8', '#9DB8C4'].includes(fill)
+    ));
+  });
+
+  it('bridges camera-facing elevation faces with level-aware moss earth', () => {
+    const grid = createGrid(2, 2);
+    const renderer = {
+      width: 256,
+      height: 256,
+      pivot: { x: 128, y: 192 },
+      anchor: { x: 128, y: 192 },
+      footprint: { x: 0, y: 0, width: 1, height: 1 },
+      drawBounds: { x: 0, y: 0, width: 256, height: 256 },
+      occlusionBounds: { x: 32, y: 16, width: 192, height: 176 },
+      stratum: 'boundary'
+    };
+    const asset = { key: 'earth-face' };
+    grid.setBattleMapV3RenderData({
+      visualCells: [[null, null], [null, null]],
+      surfaceRenderers: [[null, null], [null, null]],
+      layers: [[[], []], [[], []]],
+      obstacleLayers: [],
+      renderProfile: {
+        sourcePixelScale: 4,
+        tileWidth: 64,
+        tileHeight: 32,
+        elevationStep: 16
+      }
+    });
+    grid.setAssetLoader({
+      getBattleMapV3Asset: () => ({ id: 'face', width: 256, height: 256 })
+    });
+    const eastLayer = {
+      asset,
+      renderer,
+      category: 'boundary',
+      direction: 'e',
+      authoredDirectional: true,
+      record: { kind: 'elevation-face', levelOffset: 2 }
+    };
+    assert.deepEqual(
+      grid.getBattleMapV3ElevationFaceBridge(eastLayer, 100, 80),
+      {
+        levelOffset: 2,
+        points: [
+          { x: 132, y: 80 },
+          { x: 100, y: 96 },
+          { x: 100, y: 128 },
+          { x: 132, y: 112 }
+        ],
+        topMidpoint: { x: 116, y: 88 },
+        bottomMidpoint: { x: 116, y: 120 }
+      }
+    );
+
+    const events = [];
+    const colors = [];
+    const strokes = [];
+    const gradient = {
+      addColorStop(_offset, color) { colors.push(color); }
+    };
+    const ctx = {
+      globalAlpha: 1,
+      save() {},
+      restore() {},
+      beginPath() {},
+      closePath() {},
+      moveTo() {},
+      lineTo() {},
+      fill() { events.push('bridge'); },
+      clip() {},
+      stroke() { strokes.push(this.strokeStyle); },
+      createLinearGradient() { return gradient; },
+      translate() {},
+      scale() {},
+      drawImage() { events.push('face'); }
+    };
+    grid.renderBattleMapV3Asset(ctx, eastLayer, 100, 80);
+    assert.deepEqual(events, ['bridge', 'face', 'face']);
+    assert.deepEqual(colors, ['#655d3d', '#735a3c', '#684b34']);
+    assert.deepEqual(strokes, [
+      'rgba(76, 52, 31, 0.36)',
+      'rgba(133, 124, 73, 0.28)',
+      'rgba(76, 52, 31, 0.36)',
+      'rgba(133, 124, 73, 0.28)'
+    ]);
+    assert.ok(colors.every(color => !['#000000', '#493a25', '#4b3522'].includes(color)));
+
+    events.length = 0;
+    grid.renderBattleMapV3Asset(ctx, {
+      ...eastLayer,
+      record: { kind: 'biome-edge' }
+    }, 100, 80);
+    assert.deepEqual(events, ['face'], 'biome edges never receive an earth bridge');
+
+    events.length = 0;
+    const northFace = {
+      ...eastLayer,
+      direction: 'n',
+      record: { kind: 'elevation-face', levelOffset: 2 }
+    };
+    assert.doesNotThrow(() =>
+      grid.renderBattleMapV3Asset(ctx, northFace, 100, 80)
+    );
+    assert.deepEqual(events, ['face']);
+    assert.deepEqual(
+      grid.getBattleMapV3AssetGeometry(northFace, 100, 80).pivotOrigin,
+      { x: 100, y: 80 },
+      'rear elevation faces use their authored generic boundary anchor'
+    );
+  });
+
+  it('keeps authored V2 surfaces upright with only subtle tone variation', () => {
+    const grid = createGrid(2, 1);
+    const renderer = {
+      category: 'surface',
+      width: 256,
+      height: 128,
+      pivot: { x: 128, y: 64 },
+      anchor: { x: 128, y: 64 },
+      footprint: { x: 0, y: 0, width: 1, height: 1 },
+      drawBounds: { x: 0, y: 0, width: 256, height: 128 },
+      occlusionBounds: { x: 0, y: 0, width: 256, height: 128 },
+      stratum: 'surface'
+    };
+    const foundation = { key: 'surface-variant-0' };
+    const first = { key: 'surface-variant-1' };
+    const second = { key: 'surface-variant-2' };
+    grid.setElevation([[0, 2]], 'discrete');
+    grid.setBattleMapV3RenderData({
+      visualCells: [[
+        { surface: first, overlays: [] },
+        { surface: second, overlays: [] }
+      ]],
+      surfaceRenderers: [[renderer, renderer]],
+      layers: [[[], []]],
+      obstacleLayers: [],
+      surfaceFoundation: {
+        asset: foundation,
+        renderer
+      },
+      renderProfile: {
+        sourcePixelScale: 4,
+        tileWidth: 64,
+        tileHeight: 32,
+        elevationStep: 16
+      }
+    });
+    grid.setAssetLoader({
+      getBattleMapV3Asset: reference => ({
+        id: reference.key,
+        width: 256,
+        height: 128
+      })
+    });
+    const alphaStack = [];
+    const filterStack = [];
+    const scales = [];
+    const filters = [];
+    const draws = [];
+    const ctx = {
+      globalAlpha: 1,
+      imageSmoothingEnabled: false,
+      filter: 'none',
+      save() {
+        alphaStack.push(this.globalAlpha);
+        filterStack.push(this.filter);
+      },
+      restore() {
+        this.globalAlpha = alphaStack.pop();
+        this.filter = filterStack.pop();
+      },
+      translate() {},
+      scale(x, y) {
+        scales.push({ x, y });
+        filters.push(this.filter);
+      },
+      drawImage(image) {
+        draws.push({ id: image.id, alpha: this.globalAlpha });
+      }
+    };
+    grid.renderBattleMapV3Tile(ctx, 100, 80, 0, 0);
+    grid.renderBattleMapV3Tile(ctx, 132, 80, 1, 0);
+
+    assert.deepEqual(scales, [
+      { x: 1, y: 1 },
+      { x: 1, y: 1 },
+      { x: 1, y: 1 },
+      { x: 1, y: 1 }
+    ]);
+    assert.deepEqual(draws.map(draw => draw.id), [
+      foundation.key,
+      first.key,
+      foundation.key,
+      second.key
+    ]);
+    assert.deepEqual(
+      draws.filter(draw => draw.id === foundation.key).map(draw => draw.alpha),
+      [1, 1]
+    );
+    assert.ok(
+      draws.filter(draw => draw.id !== foundation.key)
+        .every(draw => draw.alpha >= 0.36 && draw.alpha <= 0.5)
+    );
+    for (const filter of filters) {
+      const [, brightness, saturation] =
+        /brightness\((\d+)%\) saturate\((\d+)%\)/.exec(filter) ?? [];
+      assert.ok(Number(brightness) >= 98 && Number(brightness) <= 102);
+      assert.ok(Number(saturation) >= 103 && Number(saturation) <= 109);
+      const [, hueRotate] = /hue-rotate\((\d+)deg\)/.exec(filter) ?? [];
+      assert.ok(Number(hueRotate) >= 4 && Number(hueRotate) <= 20);
+    }
+  });
+
+  it('includes a larger asymmetric surface foundation in V3 world bounds', () => {
+    const grid = createGrid(1, 1);
+    const asset = { key: 'selected-surface' };
+    const foundationAsset = { key: 'foundation-surface' };
+    const renderer = {
+      category: 'surface',
+      width: 256,
+      height: 128,
+      pivot: { x: 128, y: 64 },
+      anchor: { x: 128, y: 64 },
+      footprint: { x: 0, y: 0, width: 1, height: 1 },
+      drawBounds: { x: 0, y: 0, width: 256, height: 128 },
+      occlusionBounds: { x: 0, y: 0, width: 256, height: 128 },
+      stratum: 'surface'
+    };
+    const foundationRenderer = {
+      ...renderer,
+      width: 400,
+      height: 240,
+      pivot: { x: 220, y: 140 },
+      anchor: { x: 200, y: 120 },
+      drawBounds: { x: 0, y: 0, width: 400, height: 240 },
+      occlusionBounds: { x: 0, y: 0, width: 400, height: 240 }
+    };
+    grid.setMasks([[true]], [[true]]);
+    grid.setBattleMapV3RenderData({
+      visualCells: [[{ surface: asset, overlays: [] }]],
+      surfaceRenderers: [[renderer]],
+      layers: [[[]]],
+      obstacleLayers: [],
+      surfaceFoundation: {
+        asset: foundationAsset,
+        renderer: foundationRenderer
+      },
+      renderProfile: {
+        sourcePixelScale: 4,
+        tileWidth: 64,
+        tileHeight: 32,
+        elevationStep: 16
+      }
+    });
+    const world = grid.gridToScreenWorld(0, 0);
+    const foundationGeometry = grid.getBattleMapV3AssetGeometry({
+      asset: foundationAsset,
+      renderer: foundationRenderer,
+      category: 'surface',
+      direction: null
+    }, world.x, world.y);
+    const dimensions = grid.getBattleMapV3PixelDimensions();
+
+    assert.equal(dimensions.worldMinX, foundationGeometry.drawBounds.x);
+    assert.equal(dimensions.worldMinY, foundationGeometry.drawBounds.y);
+    assert.equal(
+      dimensions.worldMaxX,
+      foundationGeometry.drawBounds.x + foundationGeometry.drawBounds.width
+    );
+    assert.equal(
+      dimensions.worldMaxY,
+      foundationGeometry.drawBounds.y + foundationGeometry.drawBounds.height
+    );
+    assert.deepEqual(grid.getMapCenter(), {
+      x: dimensions.worldMinX + dimensions.width / 2,
+      y: dimensions.worldMinY + dimensions.height / 2
+    });
+  });
+
+  it('orders organic rear canopy before actors and front skirts after them', () => {
+    const grid = createGrid(1, 1);
+    const renderer = (stratum, width = 256, height = 128) => ({
+      width,
+      height,
+      pivot: { x: width / 2, y: height / 2 },
+      anchor: { x: width / 2, y: height / 2 },
+      footprint: { x: 0, y: 0, width: 1, height: 1 },
+      drawBounds: { x: 0, y: 0, width, height },
+      occlusionBounds: { x: 0, y: 0, width: 0, height: 0 },
+      stratum
+    });
+    const surface = { key: 'surface' };
+    const rear = { key: 'rear' };
+    const front = { key: 'front' };
+    grid.setMasks([[true]], [[true]]);
+    grid.setBattleMapV3RenderData({
+      visualCells: [[{ surface, overlays: [] }]],
+      surfaceRenderers: [[renderer('surface')]],
+      layers: [[[
+        {
+          asset: rear,
+          category: 'boundary',
+          renderer: renderer('boundary', 192, 256),
+          direction: 'n',
+          exteriorStratum: 'rear-canopy',
+          record: { kind: 'biome-edge' }
+        },
+        {
+          asset: front,
+          category: 'boundary',
+          renderer: renderer('boundary', 192, 256),
+          direction: 's',
+          exteriorStratum: 'front-skirt',
+          record: { kind: 'biome-edge' }
+        }
+      ]]],
+      obstacleLayers: [],
+      renderProfile: {
+        sourcePixelScale: 4,
+        tileWidth: 64,
+        tileHeight: 32,
+        elevationStep: 16
+      },
+      scene: {
+        silhouette: 'organic-island',
+        exterior: 'forest-canopy',
+        backdrop: {
+          kind: 'sky-gradient',
+          topColor: '#6688AA',
+          horizonColor: '#AACCDE',
+          bottomColor: '#DDEEFF',
+          hazeColor: '#EEF8FF'
+        }
+      }
+    });
+    const order = [];
+    grid.setAssetLoader({
+      getBattleMapV3Asset(reference) {
+        return {
+          id: reference.key,
+          width: reference.key === 'surface' ? 256 : 192,
+          height: reference.key === 'surface' ? 128 : 256
+        };
+      }
+    });
+    const ctx = {
+      globalAlpha: 1,
+      save() {},
+      restore() {},
+      translate() {},
+      scale() {},
+      drawImage(image) { order.push(image.id); }
+    };
+    grid.render(ctx, {}, null, {
+      entities: [{ gridX: 0, gridY: 0, getRenderDepth: () => 0 }],
+      renderEntity: () => order.push('unit')
+    });
+    assert.deepEqual(order, ['surface', 'rear', 'unit', 'front']);
+  });
+});
+
+describe('BattleGrid scene backdrop', () => {
+  it('renders the pinned production gradient and atmosphere before map art', () => {
+    const gradients = [];
+    const fills = [];
+    const makeGradient = kind => {
+      const stops = [];
+      const gradient = {
+        kind,
+        stops,
+        addColorStop(offset, color) { stops.push([offset, color]); }
+      };
+      gradients.push(gradient);
+      return gradient;
+    };
+    const ctx = {
+      save() {},
+      restore() {},
+      fillRect() { fills.push(this.fillStyle); },
+      createLinearGradient() { return makeGradient('linear'); },
+      createRadialGradient() { return makeGradient('radial'); }
+    };
+    const scene = {
+      silhouette: 'organic-island',
+      exterior: 'forest-canopy',
+      backdrop: {
+        kind: 'sky-gradient',
+        topColor: '#6688AA',
+        horizonColor: '#AACCDE',
+        bottomColor: '#DDEEFF',
+        hazeColor: '#EEF8FF'
+      }
+    };
+    renderBattleSceneBackdrop(ctx, { width: 800, height: 600, scene });
+
+    assert.deepEqual(gradients[0].stops, [
+      [0, '#6688AA'],
+      [0.58, '#AACCDE'],
+      [1, '#DDEEFF']
+    ]);
+    assert.deepEqual(gradients[1].stops, [
+      [0, '#EEF8FF66'],
+      [0.55, '#EEF8FF20'],
+      [1, '#EEF8FF00']
+    ]);
+    assert.deepEqual(fills, gradients);
+    assert.ok(!gradients[0].stops.some(([, color]) => color === '#000000'));
   });
 });
 

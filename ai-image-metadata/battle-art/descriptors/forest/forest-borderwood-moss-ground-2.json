@@ -1,0 +1,94 @@
+{
+  "schemaVersion": "battle-art-family-descriptor-v2",
+  "id": "forest-borderwood-moss-ground-2",
+  "theme": "forest",
+  "category": "surface",
+  "familyGroup": "forest-borderwood-moss-ground",
+  "variantId": "surface-2",
+  "capabilities": {
+    "direction": null,
+    "routeTopology": null,
+    "surfaceVariant": 2,
+    "ecologyProfile": "forest-iron-depths-borderwood",
+    "tierBands": [
+      1
+    ],
+    "heightDeltas": [
+      0
+    ]
+  },
+  "status": "compiled",
+  "promptProfile": {
+    "id": "battle-art-family-v2",
+    "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+    "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+  },
+  "styleReferences": [
+    {
+      "id": "forest-source-template-01",
+      "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+      "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+    }
+  ],
+  "generationPrompt": "Create exactly one seam-safe orthographic isometric forest surface asset named forest-borderwood-moss-ground-2 for ecology profile forest-iron-depths-borderwood; tier band 1; surface variant 2. Author the declared orientation directly, preserve continuous neighboring materials and edge alignment, and include only the declared family content. Regional visual vocabulary: Iron Depths Borderwood uses a coherent mixed forest of rugged ironpine conifers, pale birch, and sparse ancient broadleaf trees; cool olive moss and ferns; slate-gray stones; muted russet soil; and weathered exposed roots. Keep this species mix, material palette, scale, and lighting consistent across every directional edge and transition. Depict forest borderwood moss ground 2 as a complete ground diamond with a quiet, shared seam perimeter and one continuous forest-floor material plane. Use large, irregular moss and soil patches that cross the diamond, then sparse unique leaf, pebble, and root clusters concentrated away from the rim. Its source-raster center is (128,64). Never depict internal tile boundaries, square subcells, checkerboards, mosaics, quilts, paving, contour grids, repeated stamps, evenly spaced clusters, stripes, or uniform noise; keep the field quiet enough for characters and route overlays. Give this variant one large muted-russet loam pool across the left-center that wraps into two broad moss peninsulas, plus one sparse pale-leaf fan; use no small repeated patches. Do not add a baked backdrop, black void, unrelated terrain wall, or presentation frame.",
+  "rasterContract": {
+    "schemaVersion": "battle-art-raster-contract-v1",
+    "kind": "opaque-tile-diamond",
+    "alphaThreshold": 240,
+    "minimumCoveredPermille": 1000,
+    "maximumExteriorCoveredPermille": 5
+  },
+  "canvas": {
+    "width": 256,
+    "height": 128
+  },
+  "placement": {
+    "pivot": {
+      "x": 128,
+      "y": 64
+    },
+    "anchor": {
+      "x": 128,
+      "y": 64
+    },
+    "footprint": {
+      "x": 0,
+      "y": 0,
+      "width": 1,
+      "height": 1
+    },
+    "collision": {
+      "kind": "none",
+      "cells": []
+    },
+    "drawBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 128
+    },
+    "occlusionBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
+    },
+    "stratum": "surface"
+  },
+  "content": {
+    "version": 1,
+    "sourceSha256": "sha256:02773532ff3ba0ac4def77f522a69ea4a3454521b801007619a1563c400eae0a",
+    "runtimeSha256": "sha256:fc623126e45e047e84cab568023c0dac5b1258482e89474f7dcb8b62d2c54a44",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v6/forest/surface/forest-borderwood-moss-ground-2/v1/fc623126e45e047e84cab568023c0dac5b1258482e89474f7dcb8b62d2c54a44.webp"
+  },
+  "source": {
+    "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-borderwood-moss-ground-2/result.json",
+    "imagePath": "ai-image-metadata/battle-art/sources/forest/forest-borderwood-moss-ground-2/v1/02773532ff3ba0ac4def77f522a69ea4a3454521b801007619a1563c400eae0a.png",
+    "imageSha256": "sha256:02773532ff3ba0ac4def77f522a69ea4a3454521b801007619a1563c400eae0a",
+    "width": 256,
+    "height": 128,
+    "format": "png",
+    "reviewer": "codex",
+    "approvedAt": "2026-07-31T02:31:08.565Z"
+  }
+}

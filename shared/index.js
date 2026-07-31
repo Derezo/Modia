@@ -89,6 +89,7 @@ export {
   createTraversalView,
   validateTraversalView,
   isWithinTraversalBounds,
+  isTraversalCellPlayable,
   getTraversalOccupant,
   getElevationConnection,
   canEnterTile,

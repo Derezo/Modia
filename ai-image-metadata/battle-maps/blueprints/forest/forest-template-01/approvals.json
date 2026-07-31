@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "battle-map-blueprint-approval-index-v1",
+  "theme": "forest",
+  "templateId": "forest-template-01",
+  "entries": [
+    {
+      "id": "forest-template-01-a",
+      "blueprintPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-01/forest-template-01-a.json",
+      "approvalPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-01/forest-template-01-a.approval.json",
+      "blueprintFullHash": "sha256:5893a6bdbc032f8dfd5eacb0cbd26b12dfabd6d527b72d3cb8cb456e353a7cf9",
+      "sourceImageSha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1",
+      "promptProfileSha256": "sha256:954512d0cce94919913758f5bc23a204becf9f9dd010c7c4724e013d32438795",
+      "reviewer": "codex",
+      "decision": "approved"
+    },
+    {
+      "id": "forest-template-01-b",
+      "blueprintPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-01/forest-template-01-b.json",
+      "approvalPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-01/forest-template-01-b.approval.json",
+      "blueprintFullHash": "sha256:95f56ccceb09e28036445dd0680d2cda638c8f3898e96778175f566d435683f3",
+      "sourceImageSha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1",
+      "promptProfileSha256": "sha256:954512d0cce94919913758f5bc23a204becf9f9dd010c7c4724e013d32438795",
+      "reviewer": "codex",
+      "decision": "approved"
+    },
+    {
+      "id": "forest-template-01-c",
+      "blueprintPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-01/forest-template-01-c.json",
+      "approvalPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-01/forest-template-01-c.approval.json",
+      "blueprintFullHash": "sha256:a621be6b758d1028bd732a1698f32af7c9138c90c0c955f3a22553bb0a2ad6c7",
+      "sourceImageSha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1",
+      "promptProfileSha256": "sha256:954512d0cce94919913758f5bc23a204becf9f9dd010c7c4724e013d32438795",
+      "reviewer": "codex",
+      "decision": "approved"
+    }
+  ],
+  "fullHash": "sha256:3edcb6129c13ca01c3a5719ccdefb1d65168e479a82fbf1ef2f3fa239b1558d4"
+}

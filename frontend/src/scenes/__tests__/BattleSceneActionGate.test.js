@@ -112,6 +112,9 @@ describe('BattleScene authoritative action gate', () => {
     scene.applyAuthoritativeAvailability({ canMove: true, canAct: true });
 
     assert.equal(scene.canSubmitAction('attack'), true);
+    scene.battleMapAssetsReady = false;
+    assert.equal(scene.canSubmitAction('attack'), false);
+    scene.battleMapAssetsReady = true;
     scene.inputEnabled = false;
     assert.equal(scene.canSubmitAction('attack'), false);
     scene.inputEnabled = true;

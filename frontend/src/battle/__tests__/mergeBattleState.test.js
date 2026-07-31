@@ -49,6 +49,9 @@ describe('applyBattleMapPatch', () => {
       setTileVariants(value) { calls.push(['variants', value]); },
       setObstacles(value) { calls.push(['obstacles', value]); },
       setElevationConnections(value) { calls.push(['connections', value]); },
+      setMasks(renderMask, playableMask) {
+        calls.push(['masks', renderMask, playableMask]);
+      },
       setTransitions(value) { calls.push(['transitions', value]); },
       setDecorations(value) { calls.push(['decorations', value]); }
     };
@@ -65,6 +68,8 @@ describe('applyBattleMapPatch', () => {
         to: { x: 1, y: 0 },
         kind: 'ramp'
       }],
+      renderMask: [[true]],
+      playableMask: [[true]],
       transitions: [{ id: 'snow-edge', x: 0, y: 0 }],
       decorations: [{ id: 'snow-drift', x: 0, y: 0 }]
     };
@@ -78,8 +83,19 @@ describe('applyBattleMapPatch', () => {
       ['variants', patch.variants],
       ['obstacles', patch.obstacles],
       ['connections', patch.elevationConnections],
+      ['masks', patch.renderMask, patch.playableMask],
       ['transitions', patch.transitions],
       ['decorations', patch.decorations]
     ]);
+  });
+
+  it('rejects partial V3 mask hydration', () => {
+    assert.throws(
+      () => applyBattleMapPatch(
+        { setMasks() {} },
+        { renderMask: [[true]] }
+      ),
+      /requires renderMask and playableMask together/
+    );
   });
 });

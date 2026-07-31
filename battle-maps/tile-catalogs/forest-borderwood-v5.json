@@ -1,0 +1,14 @@
+{
+  "id": "forest-borderwood-v5-tiles",
+  "version": 1,
+  "fullHash": "sha256:9c32448ffa019e2fd90442deb8b91545211e0ee5d4e8f8b8f2f5abe9aad7c1d7",
+  "renderProfileId": "forest-iron-depths-borderwood-v5",
+  "materials": [
+    {
+      "symbol": "ground",
+      "material": "forest-floor",
+      "passable": true,
+      "movementCost": 1
+    }
+  ]
+}

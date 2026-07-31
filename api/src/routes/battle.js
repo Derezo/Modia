@@ -22,11 +22,13 @@ import { createPlayerHandoffCoordinator } from
   '../services/battle/playerHandoffCoordinator.js';
 import { deriveEncounterTerrainSeed } from '../services/battle/encounterService.js';
 import {
-  CURRENT_BATTLE_MAP_VERSION,
+  AUTHORED_BATTLE_MAP_VERSION,
   extractBattleMutableStateForCommit,
-  generateBattleMap,
-  selectBattleMapGenerationVersion
+  generateBattleMap
 } from '../services/battle/battleMapGenerationService.js';
+import {
+  loadBattleMapEcologyNode
+} from '../services/battle/BattleMapEcologyContext.js';
 import * as traitService from '../services/traitService.js';
 import * as bossService from '../services/bossService.js';
 import * as battleTurnManager from '../services/battleTurnManager.js';
@@ -56,7 +58,10 @@ import {
 import {
   assertBattleMapCapabilities
 } from '../../../shared/battleStateProtocol.js';
-import { battleMapV2ToFlatState } from '../../../shared/index.js';
+import {
+  battleMapV2ToFlatState,
+  battleMapV3ToFlatState
+} from '../../../shared/index.js';
 import {
   validateActionSequence,
   resetActionSequence,
@@ -238,7 +243,9 @@ function createZodiacAbilityCommand({
 async function materializeBattleActionReceipt(receipt, battle) {
   const state = battle.battleMapSchemaVersion === 2
     ? await battleMapV2ToFlatState(battle.map, receipt.mutableState)
-    : { ...receipt.mutableState, ...battle.map };
+    : battle.battleMapSchemaVersion === 3
+      ? await battleMapV3ToFlatState(battle.map, receipt.mutableState)
+      : { ...receipt.mutableState, ...battle.map };
   return battleService.withBattleStateVisualIdentities(state);
 }
 
@@ -380,7 +387,7 @@ export function createBattleTransportResponse(
     battleMapCapabilities: negotiated.negotiation,
     snapshot: negotiated.snapshot
   };
-  if (battle.battleMapSchemaVersion === 2) {
+  if (battle.battleMapSchemaVersion !== 1) {
     delete response.state;
   }
   return response;
@@ -988,15 +995,6 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
     // second active-battle check inside the creation transaction below.
   }
 
-  let selectedGenerationVersion;
-  try {
-    selectedGenerationVersion = selectBattleMapGenerationVersion({
-      mode: 'pve',
-      clientCapabilities: battleMapCapabilities
-    });
-  } catch (error) {
-    throwCapabilityError(error);
-  }
   const creation = await withTransaction(async client => {
     // Character deletion and Coliseum lifecycle writes use the same user-wide,
     // deterministic lock order. Lock every owned row before trusting the
@@ -1070,14 +1068,14 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
     if (selectedParty.some(character => character.current_node_id !== currentNodeId)) {
       throw new AppError('Selected characters must be at the same location', 400);
     }
-    const nodeResult = await client.query(
-      'SELECT node_type, name, difficulty_tier, local_seed FROM world_nodes WHERE id = $1',
-      [currentNodeId]
+    const ecologySource = await loadBattleMapEcologyNode(
+      client.query.bind(client),
+      currentNodeId
     );
-    if (nodeResult.rows.length === 0) {
+    if (ecologySource === null) {
       throw new AppError('Current location not found', 400);
     }
-    const node = nodeResult.rows[0];
+    const { node, ecologyContext } = ecologySource;
     if (!BATTLE_NODE_TYPES.includes(node.node_type)) {
       throw new AppError('Cannot battle at this location', 400);
     }
@@ -1221,13 +1219,15 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
     const mapSeed = deriveEncounterTerrainSeed(
       node.local_seed,
       node.node_type,
-      selectedGenerationVersion
+      AUTHORED_BATTLE_MAP_VERSION
     );
     let generatedBattle;
     try {
       generatedBattle = await generateBattleMap({
         terrainSeed: mapSeed,
         nodeType: node.node_type,
+        ecologyContext,
+        difficultyTier: node.difficulty_tier,
         mode: 'pve',
         playerCount: selectedParty.length,
         enemyCount: enemies.length,
@@ -1235,7 +1235,6 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
         enemyStrategy: 'formation',
         existingUnits: [],
         initialMutableState: initialState,
-        allowV2: selectedGenerationVersion === CURRENT_BATTLE_MAP_VERSION,
         clientCapabilities: battleMapCapabilities
       });
     } catch (error) {
@@ -1255,7 +1254,8 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
       creationIdempotencyKey,
       finalMap: generatedBattle.finalMap,
       legacyFlatState: generatedBattle.legacyFlatState,
-      initialMutableState: generatedBattle.mutableState
+      initialMutableState: generatedBattle.mutableState,
+      selectionProvenance: generatedBattle.selectionProvenance
     }, { client });
 
     const updateResult = await client.query(

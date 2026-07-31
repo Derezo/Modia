@@ -64,7 +64,14 @@ export const ENEMY_TEMPLATES = [
     spawn_node_types: ['forest', 'cave'], ai_type: 'defensive',
     experience_reward: 10, gold_reward_min: 1, gold_reward_max: 5, min_difficulty_tier: 1,
     elemental_resistances: { water: 50, fire: -50 }, // Water slime resists water, weak to fire
-    drop_table: { dropChance: 0.4, minItems: 0, maxItems: 1, rarityWeights: { common: 95, uncommon: 5 }, itemPool: [{ templateId: 12, weight: 100 }] }
+    drop_table: {
+      dropChance: 0.4,
+      minItems: 0,
+      maxItems: 1,
+      rarityWeights: { common: 95, uncommon: 5 },
+      itemPool: [{ templateId: 12, weight: 100 }],
+      fixedDrops: [{ catalogKey: 'fishing:tackle:slime_slug', chance: 0.02 }]
+    }
   },
 
   // Tier 1-2 - Caves
@@ -146,7 +153,14 @@ export const ENEMY_TEMPLATES = [
     spawn_node_types: ['mountain'], ai_type: 'hit-and-run',
     experience_reward: 55, gold_reward_min: 15, gold_reward_max: 35, min_difficulty_tier: 3,
     elemental_resistances: { wind: 50, earth: -50, lightning: -25 }, // Flying creature
-    drop_table: { dropChance: 0.7, minItems: 0, maxItems: 2, rarityWeights: { common: 45, uncommon: 40, rare: 15 }, itemPool: [{ templateId: 10, weight: 40 }, { templateId: 6, weight: 30 }, { templateId: 13, weight: 30 }] }
+    drop_table: {
+      dropChance: 0.7,
+      minItems: 0,
+      maxItems: 2,
+      rarityWeights: { common: 45, uncommon: 40, rare: 15 },
+      itemPool: [{ templateId: 10, weight: 40 }, { templateId: 6, weight: 30 }, { templateId: 13, weight: 30 }],
+      fixedDrops: [{ catalogKey: 'fishing:tackle:earthworm', chance: 0.03 }]
+    }
   },
 
   // Tier 2 - Bridges
@@ -159,7 +173,14 @@ export const ENEMY_TEMPLATES = [
     spawn_node_types: ['bridge'], ai_type: 'tactical',
     experience_reward: 35, gold_reward_min: 20, gold_reward_max: 40, min_difficulty_tier: 2,
     elemental_resistances: {}, // No special resistances
-    drop_table: { dropChance: 0.75, minItems: 1, maxItems: 2, rarityWeights: { common: 55, uncommon: 35, rare: 10 }, itemPool: [{ templateId: 1, weight: 30 }, { templateId: 6, weight: 30 }, { templateId: 10, weight: 20 }, { templateId: 12, weight: 20 }] }
+    drop_table: {
+      dropChance: 0.75,
+      minItems: 1,
+      maxItems: 2,
+      rarityWeights: { common: 55, uncommon: 35, rare: 10 },
+      itemPool: [{ templateId: 1, weight: 30 }, { templateId: 6, weight: 30 }, { templateId: 10, weight: 20 }, { templateId: 12, weight: 20 }],
+      fixedDrops: [{ catalogKey: 'fishing:tackle:gilded_spinner', chance: 0.01 }]
+    }
   },
   {
     name: 'Bandit Captain',
@@ -181,7 +202,14 @@ export const ENEMY_TEMPLATES = [
     spawn_node_types: ['bridge'], ai_type: 'aggressive',
     experience_reward: 70, gold_reward_min: 30, gold_reward_max: 55, min_difficulty_tier: 3,
     elemental_resistances: { water: 25, fire: -25 }, // Lives near water
-    drop_table: { dropChance: 0.8, minItems: 1, maxItems: 2, rarityWeights: { common: 35, uncommon: 45, rare: 18, epic: 2 }, itemPool: [{ templateId: 3, weight: 35 }, { templateId: 8, weight: 35 }, { templateId: 11, weight: 30 }] }
+    drop_table: {
+      dropChance: 0.8,
+      minItems: 1,
+      maxItems: 2,
+      rarityWeights: { common: 35, uncommon: 45, rare: 18, epic: 2 },
+      itemPool: [{ templateId: 3, weight: 35 }, { templateId: 8, weight: 35 }, { templateId: 11, weight: 30 }],
+      fixedDrops: [{ catalogKey: 'fishing:tackle:abyssal_lure', chance: 0.005 }]
+    }
   },
 
   // Tier 4+ - Palace area

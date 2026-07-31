@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 
 import {
   BATTLE_MAP_HASH_VERSION,
-  createMinimalBattleMapV2FinalFixture
+  BATTLE_MAP_V3_HASH_VERSION,
+  createMinimalBattleMapV2FinalFixture,
+  createMinimalBattleMapV3FinalFixture
 } from './battleMap/index.js';
 import {
   applyBattleMutableStateUpdateV1,
@@ -63,6 +65,31 @@ describe('BattleMutableStateUpdateV1', () => {
       () => assertBattleMutableStateUpdateV1({ ...update, path: '/terrain/0/0' }),
       /not allowed/
     );
+    assert.throws(
+      () => assertBattleMutableStateUpdateV1({
+        ...update,
+        battleMapSchemaVersion: 3,
+        terrainGenerationVersion: 2
+      }),
+      /Unsupported battle map version pair 3\/2/
+    );
+  });
+
+  it('carries an exact V3 hash reference without changing the mutable protocol', async () => {
+    const map = await createMinimalBattleMapV3FinalFixture();
+    const update = createBattleMutableStateUpdateV1({
+      battleId: 'v3-battle',
+      battleMapSchemaVersion: 3,
+      terrainGenerationVersion: 3,
+      fullHash: map.hashes.fullHash,
+      baseStateRevision: 7,
+      stateRevision: 8,
+      mutableState: mutable()
+    });
+
+    assert.equal(update.protocolVersion, 1);
+    assert.equal(update.fullHash, map.hashes.fullHash);
+    assert.equal(assertBattleMutableStateUpdateV1(update), update);
   });
 
   it('applies ordered updates, ignores duplicates, and fails closed on gaps and map mismatch', () => {
@@ -140,5 +167,73 @@ describe('battle map capability negotiation and snapshots', () => {
     });
     assert.equal(snapshot.battleMap, null);
     assert.equal(snapshot.fullHash, map.diagnostics.hashes.fullHash);
+  });
+
+  it('requires V3 capability, never downgrades, and always delivers a full verified V3 map', async () => {
+    const map = await createMinimalBattleMapV3FinalFixture();
+    const absent = negotiateBattleMapCapabilities({
+      clientCapabilities: null,
+      existingMap: map
+    });
+    assert.deepEqual(absent, {
+      compatible: false,
+      code: 'battle_map_upgrade_required',
+      requiredBattleMapSchemaVersion: 3,
+      requiredHashVersion: BATTLE_MAP_V3_HASH_VERSION,
+      requiredMutableStateProtocolVersion: 1
+    });
+
+    const v2Only = createBattleMapCapabilities({
+      supportedBattleMapSchemaVersions: [1, 2],
+      supportedHashVersions: [BATTLE_MAP_HASH_VERSION]
+    });
+    assert.equal(negotiateBattleMapCapabilities({
+      clientCapabilities: v2Only,
+      existingMap: map
+    }).compatible, false);
+
+    const v3 = createBattleMapCapabilities({
+      supportedBattleMapSchemaVersions: [1, 2, 3],
+      supportedHashVersions: [BATTLE_MAP_HASH_VERSION, BATTLE_MAP_V3_HASH_VERSION]
+    });
+    const selected = negotiateBattleMapCapabilities({
+      clientCapabilities: v3,
+      existingMap: map,
+      allowNewV2: true
+    });
+    assert.equal(selected.selectedBattleMapSchemaVersion, 3);
+    assert.equal(selected.mapDelivery, 'full');
+
+    const snapshot = createBattleStateSnapshotV1({
+      battleId: 'v3-battle',
+      stateRevision: 4,
+      battleMap: map,
+      mutableState: mutable(),
+      mapDelivery: selected.mapDelivery
+    });
+    assert.equal(snapshot.battleMap.contentId, map.contentId);
+    assert.equal(snapshot.fullHash, map.hashes.fullHash);
+    assert.throws(
+      () => createBattleStateSnapshotV1({
+        battleId: 'v3-battle',
+        stateRevision: 5,
+        battleMap: map,
+        mutableState: mutable(),
+        mapDelivery: 'cached'
+      }),
+      /require full map delivery/
+    );
+    assert.throws(
+      () => createBattleMapCapabilities({
+        supportedBattleMapSchemaVersions: [1, 2, 3],
+        supportedHashVersions: [BATTLE_MAP_V3_HASH_VERSION],
+        cachedMaps: [{
+          battleMapSchemaVersion: 3,
+          terrainGenerationVersion: 3,
+          fullHash: map.hashes.fullHash
+        }]
+      }),
+      /not a cacheable V2 map reference/
+    );
   });
 });

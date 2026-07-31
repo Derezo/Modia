@@ -15,12 +15,14 @@ import {
   analyzeMapConnectivity,
   createTraversalView,
   validateTraversalView,
+  isTraversalCellPlayable,
   canEnterTile,
   getStepCost,
   getReachableTilesForTraversal,
   calculateTraversalPathCost,
   findTraversalPath
 } from './pathfinding.js';
+import { createTraversalObstacleGrid } from './traversal.js';
 
 // Helper to create a simple terrain grid
 function createGrid(width, height, defaultTerrain = 'grass') {
@@ -45,10 +47,12 @@ function createView({
   terrain = createGrid(width, height),
   obstacles = Array.from({ length: height }, () => Array(width).fill(null)),
   elevation = Array.from({ length: height }, () => Array(width).fill(0.33)),
+  elevationFormat = 'normalized',
   elevationConnections = Array.from(
     { length: height },
     () => Array(width).fill(null)
   ),
+  playableMask,
   units = [],
   movementPolicy = {}
 } = {}) {
@@ -56,7 +60,9 @@ function createView({
     terrain,
     obstacles,
     elevation,
+    elevationFormat,
     elevationConnections,
+    playableMask,
     units,
     dimensions: { width, height },
     movementPolicy
@@ -75,6 +81,69 @@ describe('TraversalView object API', () => {
       }),
       /terrain must be a row-major grid with 2 rows/
     );
+  });
+
+  it('validates an optional compiler-authored playable mask', () => {
+    const playableMask = [
+      [false, true, false],
+      [true, true, true],
+      [false, true, false]
+    ];
+    const view = createView({ playableMask });
+
+    assert.strictEqual(view.playableMask, playableMask);
+    assert.strictEqual(isTraversalCellPlayable(view, { x: 1, y: 0 }), true);
+    assert.strictEqual(isTraversalCellPlayable(view, { x: 0, y: 0 }), false);
+    assert.strictEqual(isTraversalCellPlayable(view, { x: -1, y: 0 }), false);
+    assert.strictEqual(
+      isTraversalCellPlayable(createView(), { x: 0, y: 0 }),
+      true,
+      'legacy views without a mask keep dimensions-as-playable behavior'
+    );
+
+    assert.throws(
+      () => createView({
+        playableMask: [
+          [true, true, true],
+          [true, 1, true],
+          [true, true, true]
+        ]
+      }),
+      /playableMask\[1\]\[1\] must be a boolean/
+    );
+  });
+
+  it('blocks both entry to and exit from visible non-playable cells', () => {
+    const playableMask = [[false, true, true]];
+    const view = createView({ width: 3, height: 1, playableMask });
+    const sceneOnly = { x: 0, y: 0 };
+    const playable = { x: 1, y: 0 };
+
+    assert.strictEqual(canEnterTile(view, playable, sceneOnly), false);
+    assert.strictEqual(canEnterTile(view, sceneOnly, playable), false);
+    assert.strictEqual(getStepCost(view, playable, sceneOnly), Infinity);
+    assert.throws(
+      () => getReachableTilesForTraversal(view, {
+        start: sceneOnly,
+        range: 2
+      }),
+      /start must be a playable traversal cell/
+    );
+  });
+
+  it('does not route across a passable but non-playable scene boundary', () => {
+    const playableMask = [
+      [true, false, true],
+      [true, false, true]
+    ];
+    const view = createView({ width: 3, height: 2, playableMask });
+    const request = {
+      start: { x: 0, y: 0 },
+      goal: { x: 2, y: 0 }
+    };
+
+    assert.strictEqual(calculateTraversalPathCost(view, request), Infinity);
+    assert.strictEqual(findTraversalPath(view, request), null);
   });
 
   it('blocks ordinary movement through passable:false obstacles', () => {
@@ -113,6 +182,48 @@ describe('TraversalView object API', () => {
     assert.strictEqual(
       getStepCost(view, { x: 1, y: 1 }, { x: 2, y: 1 }),
       2
+    );
+  });
+
+  it('expands V3 multi-cell obstacle footprints and rejects overlaps', () => {
+    const obstacle = {
+      id: 'obstacle:fallen-tree',
+      kind: 'fallen-tree',
+      cells: [{ x: 1, y: 0 }, { x: 2, y: 0 }],
+      blocking: true,
+      movementCost: 0,
+      anchor: { x: 2, y: 0 }
+    };
+    const view = createTraversalView({
+      terrain: createGrid(4, 1),
+      obstacles: [obstacle],
+      elevation: [[0, 0, 0, 0]],
+      elevationConnections: [[null, null, null, null]],
+      units: [],
+      dimensions: { width: 4, height: 1 }
+    });
+
+    assert.strictEqual(view.obstacles[0][0], null);
+    assert.strictEqual(view.obstacles[0][1].id, obstacle.id);
+    assert.strictEqual(view.obstacles[0][2].id, obstacle.id);
+    assert.strictEqual(view.obstacles[0][1].passable, false);
+    assert.strictEqual(
+      canEnterTile(view, { x: 0, y: 0 }, { x: 1, y: 0 }),
+      false
+    );
+    assert.throws(
+      () => createTraversalObstacleGrid([
+        obstacle,
+        {
+          ...obstacle,
+          id: 'obstacle:rock',
+          cells: [{ x: 2, y: 0 }]
+        }
+      ], { width: 4, height: 1 }),
+      error => (
+        error.code === 'INVALID_BATTLE_MAP_V3_TOPOLOGY' &&
+        /multiple blocking obstacles occupy 2,0/.test(error.message)
+      )
     );
   });
 
@@ -250,6 +361,58 @@ describe('TraversalView object API', () => {
       { x: 0, y: 0, z: 0 },
       { x: 1, y: 0, z: 2 }
     ]);
+  });
+
+  it('treats integer V3 elevation levels as discrete rather than normalized heights', () => {
+    const elevationConnections = [[
+      { e: { type: 'slope', levels: 1 } },
+      { w: { type: 'slope', levels: 1 } }
+    ]];
+    const view = createView({
+      width: 2,
+      height: 1,
+      elevation: [[0, 1]],
+      elevationFormat: 'discrete',
+      elevationConnections
+    });
+    const lower = { x: 0, y: 0 };
+    const upper = { x: 1, y: 0 };
+
+    assert.strictEqual(getStepCost(view, lower, upper), 2);
+    assert.strictEqual(getStepCost(view, upper, lower), 2);
+    assert.deepStrictEqual(findTraversalPath(view, { start: lower, goal: upper }), [
+      { x: 0, y: 0, z: 0 },
+      { x: 1, y: 0, z: 1 }
+    ]);
+  });
+
+  it('enforces a V3 non-traversable connection in both directions', () => {
+    const blockedConnection = {
+      id: 'connection:cliff',
+      from: { x: 0, y: 0 },
+      to: { x: 1, y: 0 },
+      direction: 'e',
+      kind: 'cliff',
+      heightDelta: 2,
+      traversable: false,
+      bidirectional: false
+    };
+    const view = createView({
+      width: 2,
+      height: 1,
+      elevation: [[0, 2]],
+      elevationConnections: [[
+        { e: blockedConnection },
+        null
+      ]],
+      movementPolicy: {
+        canTraverseElevation: () => true
+      }
+    });
+
+    assert.strictEqual(canEnterTile(view, { x: 0, y: 0 }, { x: 1, y: 0 }), false);
+    assert.strictEqual(canEnterTile(view, { x: 1, y: 0 }, { x: 0, y: 0 }), false);
+    assert.strictEqual(getStepCost(view, { x: 1, y: 0 }, { x: 0, y: 0 }), Infinity);
   });
 
   it('supports explicit ability policies without local obstacle exceptions', () => {

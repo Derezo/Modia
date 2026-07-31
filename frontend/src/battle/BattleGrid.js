@@ -31,7 +31,8 @@ import {
 } from '@modia/shared/terrain';
 import {
   canEnterTile,
-  createTraversalView as createSharedTraversalView
+  createTraversalView as createSharedTraversalView,
+  createTraversalObstacleGrid
 } from '@modia/shared/traversal';
 import { isBlockingObstacle } from '@modia/shared/obstacles';
 import {
@@ -65,7 +66,211 @@ const VISUAL_ANCHOR_ORDER = Object.freeze({
   tile_top: 2,
   above_connection: 3
 });
+const V3_STRATUM_PHASE = Object.freeze({
+  surface: 0,
+  route: 0.05,
+  'rear-canopy': 0.12,
+  boundary: 0.2,
+  connection: 0.35,
+  highlight: 0.45,
+  'front-skirt': 0.7,
+  obstacle: 0.75,
+  decoration: 0.8
+});
+const V3_DIRECTION_SCALE = Object.freeze({
+  s: Object.freeze({ x: 1, y: 1 }),
+  e: Object.freeze({ x: -1, y: 1 }),
+  w: Object.freeze({ x: 1, y: -1 }),
+  n: Object.freeze({ x: -1, y: -1 })
+});
+const V3_ROUTE_BRANCH = Object.freeze({
+  n: Object.freeze({ x: 1, y: -1, tangentX: 1, tangentY: 1 }),
+  e: Object.freeze({ x: 1, y: 1, tangentX: -1, tangentY: 1 }),
+  s: Object.freeze({ x: -1, y: 1, tangentX: -1, tangentY: -1 }),
+  w: Object.freeze({ x: -1, y: -1, tangentX: 1, tangentY: -1 })
+});
+const V3_CONNECTION_VECTOR = Object.freeze({
+  n: Object.freeze({ x: 1, y: -1, tangentX: 1, tangentY: 1 }),
+  e: Object.freeze({ x: 1, y: 1, tangentX: -1, tangentY: 1 }),
+  s: Object.freeze({ x: -1, y: 1, tangentX: -1, tangentY: -1 }),
+  w: Object.freeze({ x: -1, y: -1, tangentX: 1, tangentY: -1 })
+});
 // Note: Elevation limits (-3 to +8) are defined in shared/terrain.js as ELEVATION_LEVELS
+
+function stableVisualHash(x, y, salt = 0) {
+  let value = Math.imul(x + 0x9e3779b9, 0x85ebca6b);
+  value ^= Math.imul(y + 0x7f4a7c15, 0xc2b2ae35);
+  value ^= salt;
+  value ^= value >>> 16;
+  return value >>> 0;
+}
+
+function surfaceVisualTreatment(x, y, elevation = 0) {
+  const value = stableVisualHash(x, y, 0x4d4f5353);
+  const brightnessWave =
+    Math.sin(x * 0.29 + y * 0.17) +
+    Math.cos(x * 0.13 - y * 0.23);
+  const saturationWave =
+    Math.sin(x * 0.19 - y * 0.21) +
+    Math.cos(x * 0.11 + y * 0.27);
+  const mossWave =
+    Math.sin(x * 0.08 + y * 0.05) +
+    Math.cos(x * 0.04 - y * 0.09);
+  const brightness = Math.round(
+    100 + brightnessWave * 0.65 +
+      Math.min(2, Math.max(0, elevation)) * 0.35 +
+      ((value >>> 9) % 3 - 1) * 0.2
+  );
+  const saturation = Math.round(106 + saturationWave * 0.7);
+  const hueRotate = Math.round(12 + mossWave * 4);
+  return {
+    // Compiler-selected V2 surface variants have authored light and texture
+    // direction. Rotating every cell creates an obvious checkerboard and
+    // breaks those regional compositions.
+    direction: null,
+    filter:
+      `brightness(${brightness}%) saturate(${saturation}%) ` +
+      `hue-rotate(${hueRotate}deg)`
+  };
+}
+
+function surfaceVariantBlendAlpha(x, y) {
+  const broadWave =
+    Math.sin(x * 0.16 + y * 0.09) +
+    Math.cos(x * 0.07 - y * 0.14);
+  return Math.max(0.36, Math.min(0.5, 0.43 + broadWave * 0.035));
+}
+
+/**
+ * Paint the production battle backdrop in screen space. It deliberately runs
+ * before the camera transform so zooming or panning never reveals a raw canvas
+ * behind scene-aware V3 maps. The visual harness imports this exact function.
+ */
+export function renderBattleSceneBackdrop(
+  ctx,
+  { width, height, scene = null } = {}
+) {
+  const legacy = !scene;
+  const backdrop = scene?.backdrop;
+  const palette = legacy
+    ? {
+      topColor: '#0a0a1a',
+      horizonColor: '#0a0a1a',
+      bottomColor: '#0a0a1a',
+      hazeColor: '#0a0a1a'
+    }
+    : {
+      topColor: backdrop.topColor,
+      horizonColor: backdrop.horizonColor,
+      bottomColor: backdrop.bottomColor,
+      hazeColor: backdrop.hazeColor
+    };
+  ctx.save();
+  const gradient = ctx.createLinearGradient?.(0, 0, 0, height);
+  if (gradient) {
+    gradient.addColorStop(0, palette.topColor);
+    gradient.addColorStop(0.58, palette.horizonColor);
+    gradient.addColorStop(1, palette.bottomColor);
+    ctx.fillStyle = gradient;
+  } else {
+    ctx.fillStyle = palette.horizonColor;
+  }
+  ctx.fillRect(0, 0, width, height);
+
+  if (!legacy) {
+    const haze = ctx.createRadialGradient?.(
+      width * 0.5,
+      height * 0.56,
+      0,
+      width * 0.5,
+      height * 0.56,
+      Math.max(width, height) * 0.62
+    );
+    if (haze) {
+      haze.addColorStop(0, `${palette.hazeColor}66`);
+      haze.addColorStop(0.55, `${palette.hazeColor}20`);
+      haze.addColorStop(1, `${palette.hazeColor}00`);
+      ctx.fillStyle = haze;
+      ctx.fillRect(0, 0, width, height);
+    }
+  }
+  ctx.restore();
+}
+
+function addBattleMapV3RouteMaskPath(
+  ctx,
+  screenX,
+  screenY,
+  tileWidth,
+  tileHeight,
+  topology,
+  expansion = 0
+) {
+  const width = Math.max(1, Math.min(3, topology?.width ?? 1));
+  const visualSeed = topology?.visualSeed ?? 0;
+  const widthVariation = ((visualSeed & 255) / 255 - 0.5) * 1.8;
+  const edgeHalfWidth = 7 + width * 1.45 + widthVariation + expansion;
+  const centerHalfWidth = edgeHalfWidth + 1.1;
+  const centerRadiusX = centerHalfWidth;
+  const centerRadiusY = centerHalfWidth * tileHeight / tileWidth;
+  const neighbors = topology?.neighbors ?? [];
+
+  ctx.beginPath();
+  for (const [index, direction] of neighbors.entries()) {
+    const branch = V3_ROUTE_BRANCH[direction];
+    if (!branch) continue;
+    const boundaryOverscan = 1.35;
+    const endpointX = branch.x * (tileWidth / 4 + boundaryOverscan);
+    const endpointY = branch.y * (
+      tileHeight / 4 + boundaryOverscan * tileHeight / tileWidth
+    );
+    // An isometric diamond's shared edge is not Euclidean-perpendicular to
+    // the line between tile centers. Follow the projected grid tangent so
+    // neighboring route masks meet as one band instead of two pointed dabs.
+    const tangentX = branch.tangentX * tileWidth / 2;
+    const tangentY = branch.tangentY * tileHeight / 2;
+    const tangentLength = Math.hypot(tangentX, tangentY);
+    const edgeTangentX = tangentX / tangentLength;
+    const edgeTangentY = tangentY / tangentLength;
+    const wobble = (
+      ((visualSeed >>> ((index * 5) % 24)) & 31) / 31 - 0.5
+    ) * 3;
+    const controlX = endpointX * 0.52 + edgeTangentX * wobble;
+    const controlY = endpointY * 0.52 + edgeTangentY * wobble;
+
+    ctx.moveTo(
+      screenX + endpointX + edgeTangentX * edgeHalfWidth,
+      screenY + endpointY + edgeTangentY * edgeHalfWidth
+    );
+    ctx.quadraticCurveTo(
+      screenX + controlX + edgeTangentX * centerHalfWidth,
+      screenY + controlY + edgeTangentY * centerHalfWidth,
+      screenX + edgeTangentX * centerHalfWidth,
+      screenY + edgeTangentY * centerHalfWidth
+    );
+    ctx.lineTo(
+      screenX - edgeTangentX * centerHalfWidth,
+      screenY - edgeTangentY * centerHalfWidth
+    );
+    ctx.quadraticCurveTo(
+      screenX + controlX - edgeTangentX * centerHalfWidth,
+      screenY + controlY - edgeTangentY * centerHalfWidth,
+      screenX + endpointX - edgeTangentX * edgeHalfWidth,
+      screenY + endpointY - edgeTangentY * edgeHalfWidth
+    );
+    ctx.closePath();
+  }
+  ctx.moveTo(screenX + centerRadiusX, screenY);
+  ctx.ellipse(
+    screenX,
+    screenY,
+    centerRadiusX,
+    centerRadiusY,
+    0,
+    0,
+    Math.PI * 2
+  );
+}
 
 function isCompleteGrid(grid, width, height) {
   return Array.isArray(grid) &&
@@ -185,6 +390,35 @@ function normalizeObstacleCell(cell) {
   };
 }
 
+function toObstacleRenderGrid(layer, width, height, collisionGrid) {
+  const hasV3Footprints = Array.isArray(layer) &&
+    !layer.some(Array.isArray) &&
+    layer.some(record => Array.isArray(record?.cells));
+  if (!hasV3Footprints) {
+    return collisionGrid ?? createFilledGrid(width, height, null);
+  }
+
+  const grid = createFilledGrid(width, height, null);
+  for (const record of layer) {
+    const { x, y } = record?.anchor ?? {};
+    if (!Number.isInteger(x) || !Number.isInteger(y) ||
+        x < 0 || y < 0 || x >= width || y >= height) {
+      const error = new TypeError(
+        `V3 obstacle ${record?.id ?? '<unknown>'} has invalid render anchor`
+      );
+      error.code = 'INVALID_BATTLE_MAP_V3_TOPOLOGY';
+      throw error;
+    }
+    if (grid[y][x] !== null) {
+      const error = new TypeError(`multiple obstacle anchors occupy ${x},${y}`);
+      error.code = 'INVALID_BATTLE_MAP_V3_TOPOLOGY';
+      throw error;
+    }
+    grid[y][x] = record;
+  }
+  return grid;
+}
+
 function getConnectionDirection(from, to) {
   if (to.x === from.x && to.y === from.y - 1) return 'n';
   if (to.x === from.x + 1 && to.y === from.y) return 'e';
@@ -195,6 +429,71 @@ function getConnectionDirection(from, to) {
 
 function reverseConnectionDirection(direction) {
   return { n: 's', e: 'w', s: 'n', w: 'e' }[direction] ?? null;
+}
+
+function transformedRect(rect, pivot, scale, sourcePixelScale, origin) {
+  const corners = [
+    [rect.x, rect.y],
+    [rect.x + rect.width, rect.y],
+    [rect.x, rect.y + rect.height],
+    [rect.x + rect.width, rect.y + rect.height]
+  ].map(([x, y]) => ({
+    x: origin.x + ((x - pivot.x) / sourcePixelScale) * scale.x,
+    y: origin.y + ((y - pivot.y) / sourcePixelScale) * scale.y
+  }));
+  const xs = corners.map(point => point.x);
+  const ys = corners.map(point => point.y);
+  const minX = Math.min(...xs);
+  const minY = Math.min(...ys);
+  return {
+    x: minX,
+    y: minY,
+    width: Math.max(...xs) - minX,
+    height: Math.max(...ys) - minY
+  };
+}
+
+export function getBattleMapV3DrawGeometry({
+  renderer,
+  renderProfile,
+  screenX,
+  screenY,
+  direction = null
+}) {
+  const sourcePixelScale = renderProfile.sourcePixelScale;
+  const scale = direction ? V3_DIRECTION_SCALE[direction] : V3_DIRECTION_SCALE.s;
+  if (!scale) throw new TypeError(`unsupported BattleMapV3 direction ${direction}`);
+  const pivotOrigin = {
+    x: screenX -
+      scale.x * (renderer.anchor.x - renderer.pivot.x) / sourcePixelScale,
+    y: screenY -
+      scale.y * (renderer.anchor.y - renderer.pivot.y) / sourcePixelScale
+  };
+  return {
+    pivotOrigin,
+    scale,
+    image: {
+      x: -renderer.pivot.x / sourcePixelScale,
+      y: -renderer.pivot.y / sourcePixelScale,
+      width: renderer.width / sourcePixelScale,
+      height: renderer.height / sourcePixelScale
+    },
+    drawBounds: transformedRect(
+      renderer.drawBounds,
+      renderer.pivot,
+      scale,
+      sourcePixelScale,
+      pivotOrigin
+    ),
+    occlusionBounds: transformedRect(
+      renderer.occlusionBounds,
+      renderer.pivot,
+      scale,
+      sourcePixelScale,
+      pivotOrigin
+    ),
+    footprint: renderer.footprint
+  };
 }
 
 /**
@@ -257,7 +556,7 @@ function toConnectionGrid(layer, width, height, elevation) {
     grid[record.from.y][record.from.x] ||= {};
     grid[record.from.y][record.from.x][direction] = connection;
 
-    if (record.bidirectional) {
+    if (record.bidirectional || record.traversable === false) {
       const reverse = reverseConnectionDirection(direction);
       grid[record.to.y][record.to.x] ||= {};
       grid[record.to.y][record.to.x][reverse] = {
@@ -365,6 +664,8 @@ export class BattleGrid {
     this.elevation = [];
     this.elevationFormat = 'normalized';
     this.elevationConnections = [];
+    this.renderMask = null;
+    this.playableMask = null;
 
     // Asset loader reference (set externally)
     this.assetLoader = null;
@@ -376,6 +677,7 @@ export class BattleGrid {
     this.tileVariants = [];
     this.semanticVariants = false;
     this.v2RenderPalette = null;
+    this.battleMapV3RenderData = null;
 
     // Persisted, non-authoritative visual layers. These are indexed by tile
     // once at hydration time so render order does not depend on input order.
@@ -395,6 +697,58 @@ export class BattleGrid {
   }
 
   /**
+   * Install the dedicated V3 visual contract. V3 rendering reads only exact,
+   * integrity-verified asset references from this data.
+   */
+  setBattleMapV3RenderData({
+    visualCells,
+    surfaceRenderers,
+    layers,
+    obstacleLayers,
+    renderProfile,
+    scene = null,
+    surfaceFoundation = null
+  }) {
+    if (!isCompleteGrid(visualCells, this.width, this.height) ||
+        !isCompleteGrid(surfaceRenderers, this.width, this.height) ||
+        !isCompleteGrid(layers, this.width, this.height) ||
+        !Array.isArray(obstacleLayers) ||
+        !renderProfile) {
+      throw new TypeError(
+        'BattleMapV3 visual cells, renderers, and layers must match grid dimensions'
+      );
+    }
+    if (
+      surfaceFoundation !== null &&
+      (
+        !surfaceFoundation.asset ||
+        !surfaceFoundation.renderer ||
+        surfaceFoundation.renderer.category !== 'surface'
+      )
+    ) {
+      throw new TypeError(
+        'BattleMapV3 surface foundation requires an exact surface renderer'
+      );
+    }
+    this.semanticVariants = false;
+    this.v2RenderPalette = null;
+    this.transitions = [];
+    this.decorations = [];
+    this.tileWidth = renderProfile.tileWidth;
+    this.tileHeight = renderProfile.tileHeight;
+    this.elevationPixelsPerLevel = renderProfile.elevationStep;
+    this.battleMapV3RenderData = {
+      visualCells,
+      surfaceRenderers,
+      layers,
+      obstacleLayers,
+      renderProfile,
+      scene,
+      surfaceFoundation
+    };
+  }
+
+  /**
    * Generate terrain from a seed value using shared mapGeneration module
    * This ensures server/client terrain is identical for the same seed
    */
@@ -402,6 +756,12 @@ export class BattleGrid {
     this.nodeType = nodeType;
     this.semanticVariants = false;
     this.v2RenderPalette = null;
+    this.battleMapV3RenderData = null;
+    this.tileWidth = TILE_WIDTH;
+    this.tileHeight = TILE_HEIGHT;
+    this.elevationPixelsPerLevel = WALL_HEIGHT_PER_LEVEL;
+    this.renderMask = null;
+    this.playableMask = null;
 
     // Use shared generateTerrain for deterministic map generation
     // Request elevation data for 3D rendering
@@ -494,11 +854,16 @@ export class BattleGrid {
 
   setObstacles(obstacleGrid) {
     if (obstacleGrid && Array.isArray(obstacleGrid)) {
-      this.obstacleTraversalData = obstacleGrid;
-      this.obstacles = toRowMajorLayer(
+      const collisionGrid = createTraversalObstacleGrid(
+        obstacleGrid,
+        { width: this.width, height: this.height }
+      );
+      this.obstacleTraversalData = collisionGrid;
+      this.obstacles = toObstacleRenderGrid(
         obstacleGrid,
         this.width,
-        this.height
+        this.height,
+        collisionGrid
       ).map(row => row.map(normalizeObstacleCell));
     }
   }
@@ -507,6 +872,34 @@ export class BattleGrid {
     if (connectionGrid && Array.isArray(connectionGrid)) {
       this.elevationConnections = connectionGrid;
     }
+  }
+
+  /**
+   * Apply the immutable V3 scene/gameplay silhouette.
+   *
+   * Legacy maps omit both masks and continue treating every in-bounds cell as
+   * rendered and playable. V3 must provide both complete boolean grids.
+   */
+  setMasks(renderMask, playableMask) {
+    if (!isCompleteGrid(renderMask, this.width, this.height) ||
+        !isCompleteGrid(playableMask, this.width, this.height)) {
+      throw new TypeError(
+        'renderMask and playableMask must match the battle-map dimensions'
+      );
+    }
+    for (let y = 0; y < this.height; y++) {
+      for (let x = 0; x < this.width; x++) {
+        if (typeof renderMask[y][x] !== 'boolean' ||
+            typeof playableMask[y][x] !== 'boolean') {
+          throw new TypeError('renderMask and playableMask cells must be booleans');
+        }
+        if (playableMask[y][x] && !renderMask[y][x]) {
+          throw new TypeError('playableMask must be a subset of renderMask');
+        }
+      }
+    }
+    this.renderMask = renderMask;
+    this.playableMask = playableMask;
   }
 
   getTransitions(x, y) {
@@ -529,13 +922,10 @@ export class BattleGrid {
       this.height,
       'grass'
     );
-    const obstacleRecords = Array.isArray(this.obstacleTraversalData)
-      ? toRowMajorLayer(
-        this.obstacleTraversalData,
-        this.width,
-        this.height
-      )
-      : null;
+    const obstacleRecords = createTraversalObstacleGrid(
+      this.obstacleTraversalData,
+      { width: this.width, height: this.height }
+    );
     const terrain = terrainRecords.map(row => row.map(normalizeTerrainCell));
     const obstacles = obstacleRecords?.map(
       row => row.map(normalizeObstacleCell)
@@ -555,6 +945,7 @@ export class BattleGrid {
       obstacles,
       elevation,
       elevationConnections,
+      playableMask: this.playableMask,
       units,
       dimensions: { width: this.width, height: this.height },
       movementPolicy: adaptMovementPolicy(
@@ -725,6 +1116,16 @@ export class BattleGrid {
     return x >= 0 && x < this.width && y >= 0 && y < this.height;
   }
 
+  isRendered(x, y) {
+    return this.isInBounds(x, y) &&
+      (this.renderMask?.[y]?.[x] ?? true);
+  }
+
+  isPlayable(x, y) {
+    return this.isInBounds(x, y) &&
+      (this.playableMask?.[y]?.[x] ?? true);
+  }
+
   /**
    * Get terrain at position
    */
@@ -744,7 +1145,7 @@ export class BattleGrid {
    * Check if a tile is walkable
    */
   isWalkable(x, y, { from = null, units = [], movementPolicy = {} } = {}) {
-    if (!this.isInBounds(x, y)) return false;
+    if (!this.isPlayable(x, y)) return false;
 
     if (!from) {
       // Surface walkability is direction-independent. Actual movement paths
@@ -754,10 +1155,12 @@ export class BattleGrid {
         { x: x + 1, y },
         { x, y: y - 1 },
         { x, y: y + 1 }
-      ].find(point => this.isInBounds(point.x, point.y));
+      ].find(point => this.isPlayable(point.x, point.y));
       if (!probe) {
         const terrain = this.getTerrain(x, y);
-        const obstacle = this.obstacles[y]?.[x] ?? null;
+        const obstacle = normalizeObstacleCell(
+          this.obstacleTraversalData?.[y]?.[x] ?? null
+        );
         return !isImpassable(terrain) && !isBlockingObstacle(obstacle);
       }
       const surfacePolicy = {
@@ -801,6 +1204,9 @@ export class BattleGrid {
    * Accounts for elevation by checking extreme elevations at map corners
    */
   getMapPixelDimensions() {
+    if (this.battleMapV3RenderData) {
+      return this.getBattleMapV3PixelDimensions();
+    }
     // For isometric grid, calculate bounding box
     // The isometric diamond has corners at:
     // - Top (north): grid (0, height-1) - negative X, mid Y
@@ -854,9 +1260,102 @@ export class BattleGrid {
    * Get the center of the map in world coordinates
    */
   getMapCenter() {
+    if (this.battleMapV3RenderData) {
+      const bounds = this.getBattleMapV3PixelDimensions();
+      return {
+        x: (bounds.worldMinX + bounds.worldMaxX) / 2,
+        y: (bounds.worldMinY + bounds.worldMaxY) / 2
+      };
+    }
     const centerX = Math.floor(this.width / 2);
     const centerY = Math.floor(this.height / 2);
     return this.gridToScreenWorld(centerX, centerY);
+  }
+
+  getRenderedWorldCells() {
+    const cells = [];
+    for (let y = 0; y < this.height; y++) {
+      for (let x = 0; x < this.width; x++) {
+        if (!this.isRendered(x, y)) continue;
+        const world = this.gridToScreenWorld(x, y);
+        cells.push({ x, y, worldX: world.x, worldY: world.y });
+      }
+    }
+    return cells;
+  }
+
+  getBattleMapV3PixelDimensions() {
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    const include = rect => {
+      minX = Math.min(minX, rect.x);
+      minY = Math.min(minY, rect.y);
+      maxX = Math.max(maxX, rect.x + rect.width);
+      maxY = Math.max(maxY, rect.y + rect.height);
+    };
+    const includeLayer = (layer, x, y) => {
+      const world = this.gridToScreenWorld(x, y);
+      include(this.getBattleMapV3AssetGeometry(
+        layer,
+        world.x,
+        world.y
+      ).drawBounds);
+    };
+
+    for (const cell of this.getRenderedWorldCells()) {
+      include({
+        x: cell.worldX - this.tileWidth / 2,
+        y: cell.worldY - this.tileHeight / 2,
+        width: this.tileWidth,
+        height: this.tileHeight
+      });
+      const visualCell =
+        this.battleMapV3RenderData.visualCells[cell.y]?.[cell.x];
+      const renderer =
+        this.battleMapV3RenderData.surfaceRenderers[cell.y]?.[cell.x];
+      const foundation = this.battleMapV3RenderData.surfaceFoundation;
+      if (foundation) {
+        includeLayer(
+          {
+            asset: foundation.asset,
+            renderer: foundation.renderer,
+            category: 'surface',
+            direction: null
+          },
+          cell.x,
+          cell.y
+        );
+      }
+      if (visualCell?.surface && renderer) {
+        includeLayer(
+          { asset: visualCell.surface, renderer, direction: null },
+          cell.x,
+          cell.y
+        );
+      }
+      for (const layer of
+        this.battleMapV3RenderData.layers[cell.y]?.[cell.x] ?? []) {
+        includeLayer(layer, cell.x, cell.y);
+      }
+    }
+    for (const layer of this.battleMapV3RenderData.obstacleLayers) {
+      includeLayer(layer, layer.cell.x, layer.cell.y);
+    }
+    if (!Number.isFinite(minX)) {
+      throw new Error('BattleMapV3 render mask contains no rendered cells');
+    }
+    return {
+      width: maxX - minX,
+      height: maxY - minY,
+      worldMinX: minX,
+      worldMinY: minY,
+      worldMaxX: maxX,
+      worldMaxY: maxY,
+      offsetX: -minX,
+      offsetY: -minY
+    };
   }
 
 
@@ -1153,6 +1652,18 @@ export class BattleGrid {
   renderObstacleAt(ctx, screenX, screenY, obstacle, alpha = 1) {
     if (!obstacle) return;
 
+    const exactV3Asset = this.battleMapV3RenderData !== null &&
+      obstacle.asset;
+    if (exactV3Asset) {
+      const layer = this.battleMapV3RenderData.obstacleLayers.find(
+        value => value.record.id === obstacle.id
+      );
+      if (!layer) {
+        throw new Error(`BattleMapV3 obstacle renderer is missing for ${obstacle.id}`);
+      }
+      this.renderBattleMapV3Asset(ctx, layer, screenX, screenY, alpha);
+      return;
+    }
     const exactV2Asset = this.semanticVariants && obstacle.assetKey;
     const sprite = exactV2Asset
       ? this.assetLoader?.getBattleMapV2Asset?.(
@@ -1207,6 +1718,547 @@ export class BattleGrid {
     }
   }
 
+  getBattleMapV3AssetGeometry(layer, screenX, screenY) {
+    if (!this.battleMapV3RenderData) {
+      throw new Error('BattleMapV3 render data is not installed');
+    }
+    let anchorX = screenX;
+    let anchorY = screenY;
+    if (
+      layer.category === 'boundary'
+      && layer.record?.kind === 'elevation-face'
+      && ['e', 's'].includes(layer.direction)
+    ) {
+      anchorX += layer.direction === 'e'
+        ? this.tileWidth / 4
+        : -this.tileWidth / 4;
+      const levelOffset = layer.record.levelOffset ?? 1;
+      if (
+        !Number.isSafeInteger(levelOffset)
+        || levelOffset < 1
+        || levelOffset > 64
+      ) {
+        throw new Error(
+          'BattleMapV3 elevation faces require a valid level offset'
+        );
+      }
+      anchorY += this.tileHeight / 4
+        + this.elevationPixelsPerLevel * levelOffset;
+    }
+    return getBattleMapV3DrawGeometry({
+      renderer: layer.renderer,
+      renderProfile: this.battleMapV3RenderData.renderProfile,
+      screenX: anchorX,
+      screenY: anchorY,
+      direction: layer.authoredDirectional
+        ? null
+        : layer.artDirection ?? layer.mirrorDirection ?? layer.direction
+    });
+  }
+
+  drawBattleMapV3AssetImage(ctx, layer, screenX, screenY, alpha = 1) {
+    const image = this.assetLoader?.getBattleMapV3Asset?.(layer.asset);
+    if (!image) {
+      throw new Error(`Required BattleMapV3 asset is unavailable: ${layer.asset.key}`);
+    }
+    if (
+      image.width !== layer.renderer.width ||
+      image.height !== layer.renderer.height
+    ) {
+      throw new Error(
+        `BattleMapV3 decoded dimensions mismatch for ${layer.asset.key}: ` +
+        `${image.width}x${image.height} != ` +
+        `${layer.renderer.width}x${layer.renderer.height}`
+      );
+    }
+    const geometry = this.getBattleMapV3AssetGeometry(layer, screenX, screenY);
+    ctx.save();
+    ctx.globalAlpha *= alpha;
+    ctx.imageSmoothingEnabled = true;
+    if (layer.visualTreatment?.filter && 'filter' in ctx) {
+      ctx.filter = layer.visualTreatment.filter;
+    }
+    ctx.translate(geometry.pivotOrigin.x, geometry.pivotOrigin.y);
+    ctx.scale(geometry.scale.x, geometry.scale.y);
+    const seamBleedX = layer.category === 'surface'
+      ? 0.4
+      : layer.category === 'route'
+        ? 1
+        : layer.category === 'boundary'
+          ? 0.65
+          : 0;
+    const seamBleedY = layer.category === 'surface'
+      ? 0.2
+      : layer.category === 'route'
+        ? 0.5
+        : layer.category === 'boundary'
+          ? 0.35
+          : 0;
+    ctx.drawImage(
+      image,
+      geometry.image.x - seamBleedX,
+      geometry.image.y - seamBleedY,
+      geometry.image.width + seamBleedX * 2,
+      geometry.image.height + seamBleedY * 2
+    );
+    ctx.restore();
+    return geometry;
+  }
+
+  getBattleMapV3ConnectionBridge(layer, screenX, screenY) {
+    const vector = V3_CONNECTION_VECTOR[layer.direction];
+    if (!vector) {
+      throw new TypeError(
+        'BattleMapV3 connection bridge requires a cardinal direction'
+      );
+    }
+    const levelCount = Math.max(1, Math.abs(layer.record?.heightDelta ?? 1));
+    const baseX = vector.x * this.tileWidth / 2;
+    const baseY = vector.y * this.tileHeight / 2;
+    const highX = baseX;
+    const highY = baseY - this.elevationPixelsPerLevel * levelCount;
+    const lowEdge = {
+      x: screenX + baseX / 2,
+      y: screenY + baseY / 2
+    };
+    const highEdge = {
+      x: screenX + highX - baseX / 2,
+      y: screenY + highY - baseY / 2
+    };
+    const tangent = {
+      x: vector.tangentX * this.tileWidth / 4,
+      y: vector.tangentY * this.tileHeight / 4
+    };
+    return {
+      points: [
+        {
+          x: lowEdge.x - tangent.x,
+          y: lowEdge.y - tangent.y
+        },
+        {
+          x: lowEdge.x + tangent.x,
+          y: lowEdge.y + tangent.y
+        },
+        {
+          x: highEdge.x + tangent.x,
+          y: highEdge.y + tangent.y
+        },
+        {
+          x: highEdge.x - tangent.x,
+          y: highEdge.y - tangent.y
+        }
+      ],
+      midpoint: {
+        x: screenX + highX / 2,
+        y: screenY + highY / 2
+      },
+      lowMidpoint: lowEdge,
+      highMidpoint: highEdge
+    };
+  }
+
+  traceBattleMapV3ConnectionBridge(ctx, bridge) {
+    ctx.beginPath();
+    ctx.moveTo(bridge.points[0].x, bridge.points[0].y);
+    for (const point of bridge.points.slice(1)) {
+      ctx.lineTo(point.x, point.y);
+    }
+    ctx.closePath();
+  }
+
+  renderBattleMapV3Slope(ctx, layer, screenX, screenY, alpha) {
+    if (layer.authoredDirectional) {
+      this.renderBattleMapV3ConnectionUnderlay(
+        ctx,
+        layer,
+        screenX,
+        screenY,
+        alpha
+      );
+      return this.drawBattleMapV3AssetImage(
+        ctx,
+        layer,
+        screenX,
+        screenY,
+        alpha
+      );
+    }
+    const bridge = this.getBattleMapV3ConnectionBridge(
+      layer,
+      screenX,
+      screenY
+    );
+    ctx.save();
+    this.traceBattleMapV3ConnectionBridge(ctx, bridge);
+    const lowCell = layer.record?.heightDelta < 0
+      ? layer.record?.to
+      : layer.record?.from;
+    ctx.fillStyle = this.getTerrainColor(
+      this.getTerrain(lowCell?.x, lowCell?.y)
+    );
+    ctx.globalAlpha *= alpha;
+    ctx.fill();
+    ctx.clip();
+    this.drawBattleMapV3AssetImage(
+      ctx,
+      {
+        ...layer,
+        category: 'surface',
+        direction: null,
+        mirrorDirection: surfaceVisualTreatment(
+          layer.record.from.x,
+          layer.record.from.y
+        ).direction,
+        visualTreatment: {
+          filter: 'brightness(97%) saturate(94%)'
+        }
+      },
+      bridge.midpoint.x,
+      bridge.midpoint.y,
+      0.96
+    );
+    this.traceBattleMapV3ConnectionBridge(ctx, bridge);
+    const grade = ctx.createLinearGradient?.(
+      bridge.lowMidpoint.x,
+      bridge.lowMidpoint.y,
+      bridge.highMidpoint.x,
+      bridge.highMidpoint.y
+    );
+    if (grade) {
+      grade.addColorStop(0, 'rgba(44, 30, 17, 0.14)');
+      grade.addColorStop(0.48, 'rgba(57, 43, 25, 0.015)');
+      grade.addColorStop(1, 'rgba(215, 226, 168, 0.11)');
+      ctx.fillStyle = grade;
+    } else {
+      ctx.fillStyle = 'rgba(44, 30, 17, 0.12)';
+    }
+    ctx.fill();
+
+    // A narrow directional contour preserves readable height without the
+    // tile-wide dark separators used by the earlier renderer.
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(bridge.points[0].x, bridge.points[0].y);
+    ctx.lineTo(bridge.points[1].x, bridge.points[1].y);
+    ctx.strokeStyle = 'rgba(35, 28, 18, 0.16)';
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(bridge.points[3].x, bridge.points[3].y);
+    ctx.lineTo(bridge.points[2].x, bridge.points[2].y);
+    ctx.strokeStyle = 'rgba(215, 226, 168, 0.13)';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+    ctx.restore();
+    return bridge;
+  }
+
+  renderBattleMapV3ConnectionUnderlay(
+    ctx,
+    layer,
+    screenX,
+    screenY,
+    alpha
+  ) {
+    const bridge = this.getBattleMapV3ConnectionBridge(
+      layer,
+      screenX,
+      screenY
+    );
+    const lowCell = layer.record?.heightDelta < 0
+      ? layer.record?.to
+      : layer.record?.from;
+    ctx.save();
+    this.traceBattleMapV3ConnectionBridge(ctx, bridge);
+    ctx.fillStyle = this.getTerrainColor(
+      this.getTerrain(lowCell?.x, lowCell?.y)
+    );
+    ctx.globalAlpha *= alpha;
+    ctx.fill();
+    ctx.clip();
+
+    const foundation = this.battleMapV3RenderData?.surfaceFoundation;
+    if (foundation) {
+      const foundationLayer = {
+        asset: foundation.asset,
+        renderer: foundation.renderer,
+        category: 'surface',
+        direction: null,
+        visualTreatment: {
+          filter: 'brightness(97%) saturate(105%) hue-rotate(10deg)'
+        }
+      };
+      for (const point of [
+        bridge.lowMidpoint,
+        bridge.midpoint,
+        bridge.highMidpoint
+      ]) {
+        this.drawBattleMapV3AssetImage(
+          ctx,
+          foundationLayer,
+          point.x,
+          point.y,
+          0.95
+        );
+      }
+    }
+    this.traceBattleMapV3ConnectionBridge(ctx, bridge);
+    const grade = ctx.createLinearGradient?.(
+      bridge.lowMidpoint.x,
+      bridge.lowMidpoint.y,
+      bridge.highMidpoint.x,
+      bridge.highMidpoint.y
+    );
+    if (grade) {
+      grade.addColorStop(0, 'rgba(76, 58, 35, 0.13)');
+      grade.addColorStop(0.55, 'rgba(91, 73, 43, 0.04)');
+      grade.addColorStop(1, 'rgba(93, 86, 54, 0.08)');
+      ctx.fillStyle = grade;
+    } else {
+      ctx.fillStyle = 'rgba(76, 62, 37, 0.14)';
+    }
+    ctx.fill();
+    ctx.restore();
+    return bridge;
+  }
+
+  renderBattleMapV3LegacyConnectionUnderlay(
+    ctx,
+    layer,
+    screenX,
+    screenY,
+    alpha
+  ) {
+    return this.renderBattleMapV3ConnectionUnderlay(
+      ctx,
+      layer,
+      screenX,
+      screenY,
+      alpha
+    );
+  }
+
+  renderBattleMapV3Route(ctx, layer, screenX, screenY, alpha) {
+    const visualSeed = layer.routeTopology?.visualSeed ?? 0;
+    const brightness = 99 + visualSeed % 3;
+    const saturation = 96 + ((visualSeed >>> 5) % 4);
+    const treatment = {
+      direction: ['s', 'e', 'w', 'n'][
+        (layer.routeTopology?.textureSeed ?? 0) & 3
+      ],
+      filter: `brightness(${brightness}%) saturate(${saturation}%)`
+    };
+    const renderUnderpaint = (expansion, opacity, color) => {
+      ctx.save();
+      addBattleMapV3RouteMaskPath(
+        ctx,
+        screenX,
+        screenY,
+        this.tileWidth,
+        this.tileHeight,
+        layer.routeTopology,
+        expansion
+      );
+      ctx.globalAlpha *= alpha * opacity;
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.restore();
+    };
+    renderUnderpaint(4.5, 0.18, '#a08352');
+    renderUnderpaint(1.5, 0.32, '#80613d');
+
+    // The topology-shaped underpaint closes hairline seams while the approved
+    // transparent sprite remains intact and supplies its own soft edge.
+    this.drawBattleMapV3AssetImage(
+      ctx,
+      {
+        ...layer,
+        artDirection: layer.authoredTopology ? null : treatment.direction,
+        visualTreatment: treatment
+      },
+      screenX,
+      screenY,
+      alpha
+    );
+  }
+
+  getBattleMapV3ElevationFaceBridge(layer, screenX, screenY) {
+    if (
+      layer.category !== 'boundary' ||
+      layer.record?.kind !== 'elevation-face' ||
+      !['e', 's'].includes(layer.direction)
+    ) {
+      throw new TypeError(
+        'BattleMapV3 elevation-face bridge requires a camera-facing e/s face'
+      );
+    }
+    const levelOffset = layer.record.levelOffset ?? 1;
+    if (
+      !Number.isSafeInteger(levelOffset) ||
+      levelOffset < 1 ||
+      levelOffset > 64
+    ) {
+      throw new TypeError(
+        'BattleMapV3 elevation-face bridge requires a valid level offset'
+      );
+    }
+    const top = layer.direction === 'e'
+      ? [
+        { x: screenX + this.tileWidth / 2, y: screenY },
+        { x: screenX, y: screenY + this.tileHeight / 2 }
+      ]
+      : [
+        { x: screenX, y: screenY + this.tileHeight / 2 },
+        { x: screenX - this.tileWidth / 2, y: screenY }
+      ];
+    const height = this.elevationPixelsPerLevel * levelOffset;
+    return {
+      levelOffset,
+      points: [
+        top[0],
+        top[1],
+        { x: top[1].x, y: top[1].y + height },
+        { x: top[0].x, y: top[0].y + height }
+      ],
+      topMidpoint: {
+        x: (top[0].x + top[1].x) / 2,
+        y: (top[0].y + top[1].y) / 2
+      },
+      bottomMidpoint: {
+        x: (top[0].x + top[1].x) / 2,
+        y: (top[0].y + top[1].y) / 2 + height
+      }
+    };
+  }
+
+  renderBattleMapV3ElevationFaceBridge(
+    ctx,
+    layer,
+    screenX,
+    screenY,
+    alpha
+  ) {
+    const bridge = this.getBattleMapV3ElevationFaceBridge(
+      layer,
+      screenX,
+      screenY
+    );
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(bridge.points[0].x, bridge.points[0].y);
+    for (const point of bridge.points.slice(1)) {
+      ctx.lineTo(point.x, point.y);
+    }
+    ctx.closePath();
+    const grade = ctx.createLinearGradient?.(
+      bridge.topMidpoint.x,
+      bridge.topMidpoint.y,
+      bridge.bottomMidpoint.x,
+      bridge.bottomMidpoint.y
+    );
+    if (grade) {
+      grade.addColorStop(0, '#655d3d');
+      grade.addColorStop(0.34, '#735a3c');
+      grade.addColorStop(1, '#684b34');
+      ctx.fillStyle = grade;
+    } else {
+      ctx.fillStyle = '#735a3c';
+    }
+    ctx.globalAlpha *= alpha;
+    ctx.fill();
+    ctx.clip();
+    this.drawBattleMapV3AssetImage(
+      ctx,
+      layer,
+      screenX,
+      screenY,
+      0.72
+    );
+
+    const edgeCell = layer.record.edge?.cell ?? { x: 0, y: 0 };
+    const textureSeed = stableVisualHash(
+      edgeCell.x,
+      edgeCell.y,
+      bridge.levelOffset
+    );
+    ctx.lineCap = 'round';
+    for (let index = 0; index < 4; index++) {
+      const baseOffset = [0.18, 0.39, 0.62, 0.82][index];
+      const jitter = (
+        ((textureSeed >>> (index * 6)) & 31) / 31 - 0.5
+      ) * 0.06;
+      const offset = baseOffset + jitter;
+      const left = {
+        x: bridge.points[0].x +
+          (bridge.points[3].x - bridge.points[0].x) * offset,
+        y: bridge.points[0].y +
+          (bridge.points[3].y - bridge.points[0].y) * offset
+      };
+      const right = {
+        x: bridge.points[1].x +
+          (bridge.points[2].x - bridge.points[1].x) * offset,
+        y: bridge.points[1].y +
+          (bridge.points[2].y - bridge.points[1].y) * offset
+      };
+      ctx.beginPath();
+      ctx.moveTo(left.x, left.y);
+      ctx.lineTo(right.x, right.y);
+      ctx.strokeStyle = index & 1
+        ? 'rgba(133, 124, 73, 0.28)'
+        : 'rgba(76, 52, 31, 0.36)';
+      ctx.lineWidth = index & 1 ? 1.05 : 1.3;
+      ctx.globalAlpha = alpha;
+      ctx.stroke();
+    }
+    ctx.restore();
+    return bridge;
+  }
+
+  renderBattleMapV3Asset(ctx, layer, screenX, screenY, alpha = 1) {
+    if (layer.category === 'route') {
+      this.renderBattleMapV3Route(ctx, layer, screenX, screenY, alpha);
+      return this.getBattleMapV3AssetGeometry(layer, screenX, screenY);
+    }
+    if (layer.category === 'elevation-slope') {
+      return this.renderBattleMapV3Slope(
+        ctx,
+        layer,
+        screenX,
+        screenY,
+        alpha
+      );
+    }
+    if (layer.category === 'elevation-connection') {
+      this.renderBattleMapV3ConnectionUnderlay(
+        ctx,
+        layer,
+        screenX,
+        screenY,
+        alpha
+      );
+    }
+    if (
+      layer.category === 'boundary' &&
+      layer.record?.kind === 'elevation-face' &&
+      ['e', 's'].includes(layer.direction)
+    ) {
+      this.renderBattleMapV3ElevationFaceBridge(
+        ctx,
+        layer,
+        screenX,
+        screenY,
+        alpha
+      );
+    }
+    return this.drawBattleMapV3AssetImage(
+      ctx,
+      layer,
+      screenX,
+      screenY,
+      alpha
+    );
+  }
+
   /**
    * Get obstacle at position
    */
@@ -1226,11 +2278,12 @@ export class BattleGrid {
 
     for (let y = 0; y < this.height; y++) {
       for (let x = 0; x < this.width; x++) {
+        if (!this.isRendered(x, y)) continue;
         const screenPos = this.gridToScreen(x, y, camera);
 
         // Camera.isVisible accounts for zoomed-out view bounds. The old screen
         // rectangle culling dropped valid tiles whenever zoom was below 1.
-        if (camera) {
+        if (camera && !this.battleMapV3RenderData) {
           const worldPos = this.gridToScreenWorld(x, y);
           if (!camera.isVisible(worldPos.x, worldPos.y, this.tileWidth * 2, 192)) continue;
         }
@@ -1265,6 +2318,16 @@ export class BattleGrid {
 
     // Build sorted render order
     const renderOrder = this.buildRenderOrder(camera);
+    if (this.battleMapV3RenderData) {
+      this.renderBattleMapV3(
+        ctx,
+        combinedHighlights,
+        camera,
+        options,
+        renderOrder
+      );
+      return;
+    }
 
     // Terrain, props, and units share one painter queue. Fractional entity
     // depths preserve the visual footpoint while a unit walks between rows.
@@ -1317,6 +2380,138 @@ export class BattleGrid {
     }
   }
 
+  renderBattleMapV3(ctx, highlights, camera, options, renderOrder) {
+    const commands = [];
+    for (const tile of renderOrder) {
+      commands.push({
+        kind: 'surface',
+        order: tile.baseDepth + V3_STRATUM_PHASE.surface,
+        tieY: tile.y,
+        tieX: tile.x,
+        tile
+      });
+      if (highlights[`${tile.x},${tile.y}`]) {
+        commands.push({
+          kind: 'highlight',
+          order: tile.baseDepth + V3_STRATUM_PHASE.highlight,
+          tieY: tile.y,
+          tieX: tile.x,
+          tile,
+          highlight: highlights[`${tile.x},${tile.y}`]
+        });
+      }
+      for (const layer of
+        this.battleMapV3RenderData.layers[tile.y]?.[tile.x] ?? []) {
+        const phase = layer.exteriorStratum ??
+          layer.renderer.stratum;
+        commands.push({
+          kind: 'asset',
+          order: tile.baseDepth + V3_STRATUM_PHASE[phase],
+          tieY: tile.y,
+          tieX: tile.x,
+          tile,
+          layer
+        });
+      }
+    }
+    for (const layer of this.battleMapV3RenderData.obstacleLayers) {
+      const { x, y } = layer.cell;
+      if (!this.isRendered(x, y)) continue;
+      const screenPos = this.gridToScreen(x, y, camera);
+      commands.push({
+        kind: 'asset',
+        order: x + y + V3_STRATUM_PHASE[layer.renderer.stratum],
+        tieY: y,
+        tieX: x,
+        tile: { x, y, screenX: screenPos.x, screenY: screenPos.y },
+        layer
+      });
+    }
+    for (const entity of options.entities || []) {
+      const entityDepth = typeof entity.getRenderDepth === 'function'
+        ? entity.getRenderDepth()
+        : (entity.gridX ?? entity.x ?? entity.tileX ?? 0) +
+          (entity.gridY ?? entity.y ?? entity.tileY ?? 0);
+      commands.push({
+        kind: 'entity',
+        order: entityDepth + 0.5,
+        tieY: entity.gridY ?? entity.y ?? 0,
+        tieX: entity.gridX ?? entity.x ?? 0,
+        entity
+      });
+    }
+    commands.sort((left, right) =>
+      left.order - right.order ||
+      left.tieY - right.tieY ||
+      left.tieX - right.tieX ||
+      String(left.layer?.asset?.key ?? left.kind).localeCompare(
+        String(right.layer?.asset?.key ?? right.kind)
+      )
+    );
+
+    for (const command of commands) {
+      if (command.kind === 'entity') {
+        options.renderEntity?.(command.entity);
+        continue;
+      }
+      if (command.kind === 'surface') {
+        this.renderBattleMapV3Tile(
+          ctx,
+          command.tile.screenX,
+          command.tile.screenY,
+          command.tile.x,
+          command.tile.y
+        );
+        continue;
+      }
+      if (command.kind === 'highlight') {
+        this.renderTileHighlight(
+          ctx,
+          command.tile.screenX,
+          command.tile.screenY,
+          command.highlight
+        );
+        continue;
+      }
+      const alpha = this.isBattleMapV3LayerOccludingEntity(
+        command,
+        commands,
+        camera
+      ) ? OCCLUSION_ALPHA : 1;
+      this.renderBattleMapV3Asset(
+        ctx,
+        command.layer,
+        command.tile.screenX,
+        command.tile.screenY,
+        alpha
+      );
+    }
+  }
+
+  isBattleMapV3LayerOccludingEntity(command, commands, camera) {
+    if (!['boundary', 'obstacle', 'decoration'].includes(
+      command.layer.renderer.stratum
+    )) return false;
+    const geometry = this.getBattleMapV3AssetGeometry(
+      command.layer,
+      command.tile.screenX,
+      command.tile.screenY
+    );
+    const bounds = geometry.occlusionBounds;
+    return commands.some(candidate => {
+      if (candidate.kind !== 'entity' || candidate.order >= command.order) return false;
+      const position = candidate.entity.getRenderGridPosition?.() ?? {
+        x: candidate.entity.gridX ?? candidate.entity.x ?? candidate.entity.tileX,
+        y: candidate.entity.gridY ?? candidate.entity.y ?? candidate.entity.tileY
+      };
+      if (!Number.isFinite(position.x) || !Number.isFinite(position.y)) return false;
+      const base = this.gridToScreen(position.x, position.y, camera);
+      const sampleY = base.y - this.tileHeight / 2;
+      return base.x >= bounds.x && base.x <= bounds.x + bounds.width &&
+        sampleY >= bounds.y && sampleY <= bounds.y + bounds.height;
+    });
+  }
+
   /**
    * Get tile at screen position (for click detection)
    * @param {number} screenX - Screen X position
@@ -1330,7 +2525,7 @@ export class BattleGrid {
       return this.screenToGridCandidates(screenX, screenY, camera);
     }
     const { x, y } = this.screenToGrid(screenX, screenY, camera);
-    if (this.isInBounds(x, y)) {
+    if (this.isPlayable(x, y)) {
       return { x, y };
     }
     return null;
@@ -1380,7 +2575,7 @@ export class BattleGrid {
         const checkX = baseGridX + dx;
         const checkY = baseGridY + dy;
 
-        if (!this.isInBounds(checkX, checkY)) continue;
+        if (!this.isPlayable(checkX, checkY)) continue;
 
         const elevation = this.getElevation(checkX, checkY);
 
@@ -1423,6 +2618,18 @@ export class BattleGrid {
    * @param {string} highlight - Optional highlight color
    */
   renderTileUnified(ctx, screenX, screenY, gridX, gridY, highlight = null) {
+    if (this.battleMapV3RenderData) {
+      this.renderBattleMapV3Tile(
+        ctx,
+        screenX,
+        screenY,
+        gridX,
+        gridY,
+        highlight
+      );
+      return;
+    }
+
     const terrain = this.getTerrain(gridX, gridY);
     const elevation = this.getElevation(gridX, gridY);
     const variant = this.getTileVariant(gridX, gridY);
@@ -1511,6 +2718,59 @@ export class BattleGrid {
     }
   }
 
+  renderBattleMapV3Tile(
+    ctx,
+    screenX,
+    screenY,
+    gridX,
+    gridY,
+    highlight = null
+  ) {
+    const visualCell =
+      this.battleMapV3RenderData.visualCells[gridY]?.[gridX];
+    if (!visualCell) return;
+    const renderer = this.battleMapV3RenderData.surfaceRenderers[gridY]?.[gridX];
+    if (!renderer) {
+      throw new Error(`BattleMapV3 surface renderer is missing at ${gridX},${gridY}`);
+    }
+    const treatment = surfaceVisualTreatment(
+      gridX,
+      gridY,
+      this.getElevation(gridX, gridY)
+    );
+    const foundation = this.battleMapV3RenderData.surfaceFoundation;
+    if (foundation) {
+      this.renderBattleMapV3Asset(
+        ctx,
+        {
+          asset: foundation.asset,
+          renderer: foundation.renderer,
+          category: 'surface',
+          direction: null,
+          visualTreatment: treatment
+        },
+        screenX,
+        screenY
+      );
+    }
+    this.renderBattleMapV3Asset(
+      ctx,
+      {
+        asset: visualCell.surface,
+        renderer,
+        category: 'surface',
+        direction: null,
+        visualTreatment: treatment
+      },
+      screenX,
+      screenY,
+      foundation ? surfaceVariantBlendAlpha(gridX, gridY) : 1
+    );
+    if (highlight) {
+      this.renderTileHighlight(ctx, screenX, screenY, highlight);
+    }
+  }
+
   /**
    * Render wall faces for elevated tiles using the stacking system
    * Walls are rendered as stacked strips from bottom to top
@@ -1532,12 +2792,19 @@ export class BattleGrid {
     const halfHeight = this.tileHeight / 2;
     const southWestInBounds = this.isInBounds(gridX, gridY + 1);
     const southEastInBounds = this.isInBounds(gridX + 1, gridY);
-    const southWestElevation = southWestInBounds ? this.getElevation(gridX, gridY + 1) : Math.min(0, elevation);
-    const southEastElevation = southEastInBounds ? this.getElevation(gridX + 1, gridY) : Math.min(0, elevation);
+    const southWestRendered = this.isRendered(gridX, gridY + 1);
+    const southEastRendered = this.isRendered(gridX + 1, gridY);
+    const southWestElevation = southWestRendered
+      ? this.getElevation(gridX, gridY + 1)
+      : elevation;
+    const southEastElevation = southEastRendered
+      ? this.getElevation(gridX + 1, gridY)
+      : elevation;
+    const legacyEdgeSkirt = this.renderMask === null ? MAP_EDGE_SKIRT : 0;
     const leftExposure = Math.max(0, elevation - southWestElevation) * WALL_HEIGHT_PER_LEVEL +
-      (southWestInBounds ? 0 : MAP_EDGE_SKIRT);
+      (southWestInBounds ? 0 : legacyEdgeSkirt);
     const rightExposure = Math.max(0, elevation - southEastElevation) * WALL_HEIGHT_PER_LEVEL +
-      (southEastInBounds ? 0 : MAP_EDGE_SKIRT);
+      (southEastInBounds ? 0 : legacyEdgeSkirt);
 
     if (leftExposure <= 0 && rightExposure <= 0) return;
 
@@ -2066,6 +3333,8 @@ export class BattleGrid {
     this.terrainTraversalData = null;
     this.elevation = null;
     this.elevationConnections = null;
+    this.renderMask = null;
+    this.playableMask = null;
     this.tileVariants = null;
     this.semanticVariants = false;
     this.v2RenderPalette = null;

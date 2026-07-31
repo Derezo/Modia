@@ -1,0 +1,84 @@
+{
+  "schemaVersion": "battle-art-family-descriptor-v1",
+  "id": "forest-rock-boundary",
+  "theme": "forest",
+  "category": "exposed-face-boundary",
+  "status": "compiled",
+  "promptProfile": {
+    "id": "battle-art-family-v2",
+    "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+    "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+  },
+  "styleReferences": [
+    {
+      "id": "forest-source-template-01",
+      "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+      "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+    }
+  ],
+  "generationPrompt": "Create only one low, horizontally repeatable front-facing isometric exposed forest-bank cutout. It is a shallow eroded soil face beneath a mossy edge, never a tall cliff wall, fence, freestanding block, or cuboid: show no top ground plane and no receding left or right side. Form one broad connected organic band across the canvas, roughly y=88 through y=196, reaching x<=20 and x>=235 and contacting anchor (128,192). Give the top moss lip and broken lower soil edge natural uneven contours without a repeating sawtooth rhythm. The alpha silhouette must be visibly eroded rather than rectangular: cut multiple asymmetric transparent bites 8–20 pixels deep into both the upper and lower contours, vary their widths and spacing, keep the side ends irregular, and ensure visible alpha fills no more than 820 permille of its tight bounding box while the main bank remains connected. Use compact muted brown earth, irregular moss patches, a few small embedded stones, leaf fragments, and only a handful of short broken root pieces; roots must be sparse, crooked, mostly horizontal or diagonal, and never span more than one quarter of the bank height. Make the left and right material edges visually compatible for 16-pixel overlap, using similar midtone earth and partial moss contours without a hard vertical seam. Keep one connected main component, all four canvas corners transparent, and the exterior transparent. After the single generation call, deterministic local finishing must remove any accidental top plane or cuboid side and may cut additional transparent erosion notches into existing content, but must not invent or repaint content. No upright roots, posts, stakes, pickets, palisade rhythm, tree-trunk row, wall panel, masonry, isolated boulder, pillar, route, stair, floor diamond, black gap, opaque rectangle, horizontal color streak, background card, horizon, or cast shadow.",
+  "rasterContract": {
+    "schemaVersion": "battle-art-raster-contract-v1",
+    "kind": "transparent-cutout",
+    "minimumCoveredPermille": 100,
+    "maximumCoveredPermille": 800
+  },
+  "canvas": {
+    "width": 256,
+    "height": 256
+  },
+  "placement": {
+    "pivot": {
+      "x": 128,
+      "y": 192
+    },
+    "anchor": {
+      "x": 128,
+      "y": 192
+    },
+    "footprint": {
+      "x": 0,
+      "y": 0,
+      "width": 1,
+      "height": 1
+    },
+    "collision": {
+      "kind": "boundary",
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ]
+    },
+    "drawBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 256
+    },
+    "occlusionBounds": {
+      "x": 32,
+      "y": 16,
+      "width": 192,
+      "height": 176
+    },
+    "stratum": "boundary"
+  },
+  "content": {
+    "version": 3,
+    "sourceSha256": "sha256:87ee895a06efe281fc7e3c58553b8fb7d644fe4e4fb42b10969cd265e46f0852",
+    "runtimeSha256": "sha256:c7468f27a48352f5a8d6143778bd977a00fe7cf1114ffb8fbca1304ba2c79199",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v6/forest/exposed-face-boundary/forest-rock-boundary/v3/c7468f27a48352f5a8d6143778bd977a00fe7cf1114ffb8fbca1304ba2c79199.webp"
+  },
+  "source": {
+    "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-rock-boundary/result.json",
+    "imagePath": "ai-image-metadata/battle-art/sources/forest/forest-rock-boundary/v3/87ee895a06efe281fc7e3c58553b8fb7d644fe4e4fb42b10969cd265e46f0852.png",
+    "imageSha256": "sha256:87ee895a06efe281fc7e3c58553b8fb7d644fe4e4fb42b10969cd265e46f0852",
+    "width": 256,
+    "height": 256,
+    "format": "png",
+    "reviewer": "codex",
+    "approvedAt": "2026-07-30T19:00:53.587Z"
+  }
+}

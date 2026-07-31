@@ -1,0 +1,83 @@
+{
+  "schemaVersion": "battle-art-readiness-plan-v1",
+  "plans": [
+    {
+      "theme": "forest",
+      "ecologyProfile": "forest-heartlands-woodland",
+      "tierBand": 1,
+      "artDirection": "Heartlands woodland uses mature oak, silver birch, meadow grass, warm leaf litter, ochre-brown soil, rounded fieldstone, and sunlit green understory. Keep this regional species and material palette consistent across surfaces, transitions, boundaries, obstacles, and tiers.",
+      "requirements": [
+        {
+          "descriptorId": "heartlands-meadow-surface-0",
+          "familyGroup": "heartlands-meadow-surface",
+          "variantId": "surface-0",
+          "category": "surface",
+          "direction": null,
+          "routeTopology": null,
+          "surfaceVariant": 0,
+          "heightDelta": 0
+        },
+        {
+          "descriptorId": "heartlands-dirt-route-corner-ne",
+          "familyGroup": "heartlands-dirt-route",
+          "variantId": "corner-ne",
+          "category": "route-transition",
+          "direction": null,
+          "routeTopology": "corner-ne",
+          "surfaceVariant": null,
+          "heightDelta": 0
+        },
+        {
+          "descriptorId": "heartlands-earth-slope-n-grade-1",
+          "familyGroup": "heartlands-earth-slope",
+          "variantId": "grade-1-n",
+          "category": "connection-slope",
+          "direction": "n",
+          "routeTopology": null,
+          "surfaceVariant": null,
+          "heightDelta": 1
+        },
+        {
+          "descriptorId": "heartlands-earth-slope-e-grade-1",
+          "familyGroup": "heartlands-earth-slope",
+          "variantId": "grade-1-e",
+          "category": "connection-slope",
+          "direction": "e",
+          "routeTopology": null,
+          "surfaceVariant": null,
+          "heightDelta": 1
+        },
+        {
+          "descriptorId": "heartlands-earth-slope-s-grade-1",
+          "familyGroup": "heartlands-earth-slope",
+          "variantId": "grade-1-s",
+          "category": "connection-slope",
+          "direction": "s",
+          "routeTopology": null,
+          "surfaceVariant": null,
+          "heightDelta": 1
+        },
+        {
+          "descriptorId": "heartlands-earth-slope-w-grade-1",
+          "familyGroup": "heartlands-earth-slope",
+          "variantId": "grade-1-w",
+          "category": "connection-slope",
+          "direction": "w",
+          "routeTopology": null,
+          "surfaceVariant": null,
+          "heightDelta": 1
+        },
+        {
+          "descriptorId": "heartlands-oak-obstacle-mature",
+          "familyGroup": "heartlands-oak-obstacle",
+          "variantId": "mature",
+          "category": "blocking-obstacle",
+          "direction": null,
+          "routeTopology": null,
+          "surfaceVariant": null,
+          "heightDelta": 0
+        }
+      ]
+    }
+  ]
+}

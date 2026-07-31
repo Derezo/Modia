@@ -1,0 +1,14 @@
+{
+  "id": "forest-v3-tiles",
+  "version": 1,
+  "fullHash": "sha256:5b5f20e3158e4d5e65de71b41cef1dd4dc4c972166d4bc15bb8a0fa4920adecc",
+  "renderProfileId": "forest-v3",
+  "materials": [
+    {
+      "symbol": "ground",
+      "material": "forest-floor",
+      "passable": true,
+      "movementCost": 1
+    }
+  ]
+}

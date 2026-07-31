@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "battle-art-prompt-profile-v1",
+  "id": "battle-art-family-v1",
+  "frozen": true,
+  "background": {
+    "mode": "chroma-or-transparent",
+    "chroma": "#00ff00",
+    "tolerance": 24
+  },
+  "prompt": "Create one production-ready, orthographic isometric battle-map art asset matching the frozen family descriptor. Preserve the declared footprint, pivot, anchor, draw bounds, occlusion bounds, and stratum. Match the supplied style reference for lighting, material language, edge treatment, scale, and palette without copying its composition. Center the complete asset inside the requested canvas. Use transparent background when supported; otherwise use a single flat #00ff00 chroma background with no green spill.",
+  "negativeConstraints": [
+    "No text, labels, UI, borders, watermarks, signatures, or presentation cards.",
+    "No cast shadow outside the declared draw bounds.",
+    "No perspective or camera angle that conflicts with the isometric battle-map view.",
+    "No cropped geometry, detached fragments, photorealism, or painterly background.",
+    "No extra props outside this descriptor family and no alternate variants in one image."
+  ]
+}

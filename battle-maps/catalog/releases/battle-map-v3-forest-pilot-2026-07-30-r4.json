@@ -1,0 +1,44 @@
+{
+  "assetBundlePins": [
+    {
+      "assetBundleId": "battle-art-descriptors-2026-07-30",
+      "manifestFullHash": "sha256:0abd629ee95320cf41661a7e9cc1822a6ff1ae16fb4b734cbe60e5d087f2fc83"
+    }
+  ],
+  "catalogReleaseId": "battle-map-v3-forest-pilot-2026-07-30-r4",
+  "catalogSchemaVersion": 1,
+  "entries": [
+    {
+      "assetBundleId": "battle-art-descriptors-2026-07-30",
+      "assetBundleManifestFullHash": "sha256:0abd629ee95320cf41661a7e9cc1822a6ff1ae16fb4b734cbe60e5d087f2fc83",
+      "bossCapable": false,
+      "candidatePoolSize": 24,
+      "catalogReleaseId": "battle-map-v3-forest-pilot-2026-07-30-r4",
+      "competitiveParity": false,
+      "dimensions": {
+        "height": 32,
+        "width": 32
+      },
+      "id": "entry:forest-template-01-b",
+      "mapContentId": "forest-template-01-b",
+      "mapContentVersion": 9,
+      "mapFullHash": "sha256:bae03eddef54d0a7185899118b9415a207e8df404acdd12088386ff41e695320",
+      "maxAssignableOpponents": 7,
+      "orientation": "isometric-diamond",
+      "playerCapacity": 5,
+      "renderProfileId": "forest-v3",
+      "sourceTemplateId": "forest-template-01",
+      "supportedModes": [
+        "pve"
+      ],
+      "teamLayout": "players-vs-opponents",
+      "theme": "forest",
+      "tierEligibility": [
+        "tier-1"
+      ],
+      "weight": 1
+    }
+  ],
+  "selectorVersion": 1,
+  "catalogFullHash": "sha256:8390699a3aafcb9ee4fa1d62b38fdaf04791ef24adde5fa828d1cb4d85036527"
+}

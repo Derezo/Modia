@@ -1,0 +1,443 @@
+{
+  "schemaVersion": "battle-art-readiness-plan-v1",
+  "plans": [
+    {
+      "theme": "forest",
+      "ecologyProfile": "forest-iron-depths-borderwood",
+      "tierBand": 1,
+      "artDirection": "Iron Depths Borderwood uses a coherent mixed forest of rugged ironpine conifers, pale birch, and sparse ancient broadleaf trees; cool olive moss and ferns; slate-gray stones; muted russet soil; and weathered exposed roots. Keep this species mix, material palette, scale, and lighting consistent across every directional edge and transition.",
+      "requirements": [
+        {
+          "descriptorId": "forest-borderwood-moss-ground-0",
+          "familyGroup": "forest-borderwood-moss-ground",
+          "variantId": "surface-0",
+          "category": "surface",
+          "direction": null,
+          "routeTopology": null,
+          "surfaceVariant": 0,
+          "heightDelta": 0
+        },
+        {
+          "descriptorId": "forest-borderwood-moss-ground-1",
+          "familyGroup": "forest-borderwood-moss-ground",
+          "variantId": "surface-1",
+          "category": "surface",
+          "direction": null,
+          "routeTopology": null,
+          "surfaceVariant": 1,
+          "heightDelta": 0
+        },
+        {
+          "descriptorId": "forest-borderwood-moss-ground-2",
+          "familyGroup": "forest-borderwood-moss-ground",
+          "variantId": "surface-2",
+          "category": "surface",
+          "direction": null,
+          "routeTopology": null,
+          "surfaceVariant": 2,
+          "heightDelta": 0
+        },
+        {
+          "descriptorId": "forest-borderwood-moss-ground-3",
+          "familyGroup": "forest-borderwood-moss-ground",
+          "variantId": "surface-3",
+          "category": "surface",
+          "direction": null,
+          "routeTopology": null,
+          "surfaceVariant": 3,
+          "heightDelta": 0
+        },
+        {
+          "descriptorId": "forest-borderwood-dirt-path-end-n",
+          "familyGroup": "forest-borderwood-dirt-path",
+          "variantId": "end-n",
+          "category": "route-transition",
+          "direction": null,
+          "routeTopology": "end-n",
+          "surfaceVariant": null,
+          "heightDelta": 0
+        },
+        {
+          "descriptorId": "forest-borderwood-dirt-path-end-e",
+          "familyGroup": "forest-borderwood-dirt-path",
+          "variantId": "end-e",
+          "category": "route-transition",
+          "direction": null,
+          "routeTopology": "end-e",
+          "surfaceVariant": null,
+          "heightDelta": 0
+        },
+        {
+          "descriptorId": "forest-borderwood-dirt-path-end-s",
+          "familyGroup": "forest-borderwood-dirt-path",
+          "variantId": "end-s",
+          "category": "route-transition",
+          "direction": null,
+          "routeTopology": "end-s",
+          "surfaceVariant": null,
+          "heightDelta": 0
+        },
+        {
+          "descriptorId": "forest-borderwood-dirt-path-end-w",
+          "familyGroup": "forest-borderwood-dirt-path",
+          "variantId": "end-w",
+          "category": "route-transition",
+          "direction": null,
+          "routeTopology": "end-w",
+          "surfaceVariant": null,
+          "heightDelta": 0
+        },
+        {
+          "descriptorId": "forest-borderwood-dirt-path-straight-ns",
+          "familyGroup": "forest-borderwood-dirt-path",
+          "variantId": "straight-ns",
+          "category": "route-transition",
+          "direction": null,
+          "routeTopology": "straight-ns",
+          "surfaceVariant": null,
+          "heightDelta": 0
+        },
+        {
+          "descriptorId": "forest-borderwood-dirt-path-straight-ew",
+          "familyGroup": "forest-borderwood-dirt-path",
+          "variantId": "straight-ew",
+          "category": "route-transition",
+          "direction": null,
+          "routeTopology": "straight-ew",
+          "surfaceVariant": null,
+          "heightDelta": 0
+        },
+        {
+          "descriptorId": "forest-borderwood-dirt-path-corner-ne",
+          "familyGroup": "forest-borderwood-dirt-path",
+          "variantId": "corner-ne",
+          "category": "route-transition",
+          "direction": null,
+          "routeTopology": "corner-ne",
+          "surfaceVariant": null,
+          "heightDelta": 0
+        },
+        {
+          "descriptorId": "forest-borderwood-dirt-path-corner-es",
+          "familyGroup": "forest-borderwood-dirt-path",
+          "variantId": "corner-es",
+          "category": "route-transition",
+          "direction": null,
+          "routeTopology": "corner-es",
+          "surfaceVariant": null,
+          "heightDelta": 0
+        },
+        {
+          "descriptorId": "forest-borderwood-dirt-path-corner-sw",
+          "familyGroup": "forest-borderwood-dirt-path",
+          "variantId": "corner-sw",
+          "category": "route-transition",
+          "direction": null,
+          "routeTopology": "corner-sw",
+          "surfaceVariant": null,
+          "heightDelta": 0
+        },
+        {
+          "descriptorId": "forest-borderwood-dirt-path-corner-wn",
+          "familyGroup": "forest-borderwood-dirt-path",
+          "variantId": "corner-wn",
+          "category": "route-transition",
+          "direction": null,
+          "routeTopology": "corner-wn",
+          "surfaceVariant": null,
+          "heightDelta": 0
+        },
+        {
+          "descriptorId": "forest-borderwood-dirt-path-tee-nes",
+          "familyGroup": "forest-borderwood-dirt-path",
+          "variantId": "tee-nes",
+          "category": "route-transition",
+          "direction": null,
+          "routeTopology": "tee-nes",
+          "surfaceVariant": null,
+          "heightDelta": 0
+        },
+        {
+          "descriptorId": "forest-borderwood-dirt-path-tee-esw",
+          "familyGroup": "forest-borderwood-dirt-path",
+          "variantId": "tee-esw",
+          "category": "route-transition",
+          "direction": null,
+          "routeTopology": "tee-esw",
+          "surfaceVariant": null,
+          "heightDelta": 0
+        },
+        {
+          "descriptorId": "forest-borderwood-dirt-path-tee-nsw",
+          "familyGroup": "forest-borderwood-dirt-path",
+          "variantId": "tee-nsw",
+          "category": "route-transition",
+          "direction": null,
+          "routeTopology": "tee-nsw",
+          "surfaceVariant": null,
+          "heightDelta": 0
+        },
+        {
+          "descriptorId": "forest-borderwood-dirt-path-tee-wne",
+          "familyGroup": "forest-borderwood-dirt-path",
+          "variantId": "tee-wne",
+          "category": "route-transition",
+          "direction": null,
+          "routeTopology": "tee-wne",
+          "surfaceVariant": null,
+          "heightDelta": 0
+        },
+        {
+          "descriptorId": "forest-borderwood-dirt-path-cross",
+          "familyGroup": "forest-borderwood-dirt-path",
+          "variantId": "cross",
+          "category": "route-transition",
+          "direction": null,
+          "routeTopology": "cross",
+          "surfaceVariant": null,
+          "heightDelta": 0
+        },
+        {
+          "descriptorId": "forest-borderwood-dirt-path-isolated",
+          "familyGroup": "forest-borderwood-dirt-path",
+          "variantId": "isolated",
+          "category": "route-transition",
+          "direction": null,
+          "routeTopology": "isolated",
+          "surfaceVariant": null,
+          "heightDelta": 0
+        },
+        {
+          "descriptorId": "forest-borderwood-root-stairs-n",
+          "familyGroup": "forest-borderwood-root-stairs",
+          "variantId": "grade-1-n",
+          "category": "connection-stairs",
+          "direction": "n",
+          "routeTopology": null,
+          "surfaceVariant": null,
+          "heightDelta": 1
+        },
+        {
+          "descriptorId": "forest-borderwood-root-stairs-e",
+          "familyGroup": "forest-borderwood-root-stairs",
+          "variantId": "grade-1-e",
+          "category": "connection-stairs",
+          "direction": "e",
+          "routeTopology": null,
+          "surfaceVariant": null,
+          "heightDelta": 1
+        },
+        {
+          "descriptorId": "forest-borderwood-root-stairs-s",
+          "familyGroup": "forest-borderwood-root-stairs",
+          "variantId": "grade-1-s",
+          "category": "connection-stairs",
+          "direction": "s",
+          "routeTopology": null,
+          "surfaceVariant": null,
+          "heightDelta": 1
+        },
+        {
+          "descriptorId": "forest-borderwood-root-stairs-w",
+          "familyGroup": "forest-borderwood-root-stairs",
+          "variantId": "grade-1-w",
+          "category": "connection-stairs",
+          "direction": "w",
+          "routeTopology": null,
+          "surfaceVariant": null,
+          "heightDelta": 1
+        },
+        {
+          "descriptorId": "forest-borderwood-earth-ramp-n",
+          "familyGroup": "forest-borderwood-earth-ramp",
+          "variantId": "grade-1-n",
+          "category": "connection-slope",
+          "direction": "n",
+          "routeTopology": null,
+          "surfaceVariant": null,
+          "heightDelta": 1
+        },
+        {
+          "descriptorId": "forest-borderwood-earth-ramp-e",
+          "familyGroup": "forest-borderwood-earth-ramp",
+          "variantId": "grade-1-e",
+          "category": "connection-slope",
+          "direction": "e",
+          "routeTopology": null,
+          "surfaceVariant": null,
+          "heightDelta": 1
+        },
+        {
+          "descriptorId": "forest-borderwood-earth-ramp-s",
+          "familyGroup": "forest-borderwood-earth-ramp",
+          "variantId": "grade-1-s",
+          "category": "connection-slope",
+          "direction": "s",
+          "routeTopology": null,
+          "surfaceVariant": null,
+          "heightDelta": 1
+        },
+        {
+          "descriptorId": "forest-borderwood-earth-ramp-w",
+          "familyGroup": "forest-borderwood-earth-ramp",
+          "variantId": "grade-1-w",
+          "category": "connection-slope",
+          "direction": "w",
+          "routeTopology": null,
+          "surfaceVariant": null,
+          "heightDelta": 1
+        },
+        {
+          "descriptorId": "forest-borderwood-canopy-edge-n",
+          "familyGroup": "forest-borderwood-canopy-edge",
+          "variantId": "edge-n",
+          "category": "exposed-face-boundary",
+          "direction": "n",
+          "routeTopology": null,
+          "surfaceVariant": null,
+          "heightDelta": 1
+        },
+        {
+          "descriptorId": "forest-borderwood-canopy-edge-e",
+          "familyGroup": "forest-borderwood-canopy-edge",
+          "variantId": "edge-e",
+          "category": "exposed-face-boundary",
+          "direction": "e",
+          "routeTopology": null,
+          "surfaceVariant": null,
+          "heightDelta": 1
+        },
+        {
+          "descriptorId": "forest-borderwood-canopy-edge-s",
+          "familyGroup": "forest-borderwood-canopy-edge",
+          "variantId": "edge-s",
+          "category": "exposed-face-boundary",
+          "direction": "s",
+          "routeTopology": null,
+          "surfaceVariant": null,
+          "heightDelta": 1
+        },
+        {
+          "descriptorId": "forest-borderwood-canopy-edge-w",
+          "familyGroup": "forest-borderwood-canopy-edge",
+          "variantId": "edge-w",
+          "category": "exposed-face-boundary",
+          "direction": "w",
+          "routeTopology": null,
+          "surfaceVariant": null,
+          "heightDelta": 1
+        },
+        {
+          "descriptorId": "forest-borderwood-earth-face-n",
+          "familyGroup": "forest-borderwood-earth-face",
+          "variantId": "face-n",
+          "category": "exposed-face-boundary",
+          "direction": "n",
+          "routeTopology": null,
+          "surfaceVariant": null,
+          "heightDelta": 1
+        },
+        {
+          "descriptorId": "forest-borderwood-earth-face-e",
+          "familyGroup": "forest-borderwood-earth-face",
+          "variantId": "face-e",
+          "category": "exposed-face-boundary",
+          "direction": "e",
+          "routeTopology": null,
+          "surfaceVariant": null,
+          "heightDelta": 1
+        },
+        {
+          "descriptorId": "forest-borderwood-earth-face-s",
+          "familyGroup": "forest-borderwood-earth-face",
+          "variantId": "face-s",
+          "category": "exposed-face-boundary",
+          "direction": "s",
+          "routeTopology": null,
+          "surfaceVariant": null,
+          "heightDelta": 1
+        },
+        {
+          "descriptorId": "forest-borderwood-earth-face-w",
+          "familyGroup": "forest-borderwood-earth-face",
+          "variantId": "face-w",
+          "category": "exposed-face-boundary",
+          "direction": "w",
+          "routeTopology": null,
+          "surfaceVariant": null,
+          "heightDelta": 1
+        },
+        {
+          "descriptorId": "forest-borderwood-ancient-tree",
+          "familyGroup": "forest-borderwood-ancient-tree",
+          "variantId": "mature",
+          "category": "blocking-obstacle",
+          "direction": null,
+          "routeTopology": null,
+          "surfaceVariant": null,
+          "heightDelta": 0
+        },
+        {
+          "descriptorId": "forest-borderwood-ironpine",
+          "familyGroup": "forest-borderwood-ironpine",
+          "variantId": "mature",
+          "category": "blocking-obstacle",
+          "direction": null,
+          "routeTopology": null,
+          "surfaceVariant": null,
+          "heightDelta": 0
+        },
+        {
+          "descriptorId": "forest-borderwood-pale-birch",
+          "familyGroup": "forest-borderwood-pale-birch",
+          "variantId": "mature",
+          "category": "blocking-obstacle",
+          "direction": null,
+          "routeTopology": null,
+          "surfaceVariant": null,
+          "heightDelta": 0
+        },
+        {
+          "descriptorId": "forest-borderwood-moss-boulder",
+          "familyGroup": "forest-borderwood-moss-boulder",
+          "variantId": "mature",
+          "category": "blocking-obstacle",
+          "direction": null,
+          "routeTopology": null,
+          "surfaceVariant": null,
+          "heightDelta": 0
+        },
+        {
+          "descriptorId": "forest-borderwood-fern-cluster",
+          "familyGroup": "forest-borderwood-fern-cluster",
+          "variantId": "lush",
+          "category": "nonblocking-decoration",
+          "direction": null,
+          "routeTopology": null,
+          "surfaceVariant": null,
+          "heightDelta": 0
+        },
+        {
+          "descriptorId": "forest-borderwood-fallen-branch",
+          "familyGroup": "forest-borderwood-fallen-branch",
+          "variantId": "weathered",
+          "category": "nonblocking-decoration",
+          "direction": null,
+          "routeTopology": null,
+          "surfaceVariant": null,
+          "heightDelta": 0
+        },
+        {
+          "descriptorId": "forest-borderwood-low-shrub",
+          "familyGroup": "forest-borderwood-low-shrub",
+          "variantId": "dense",
+          "category": "nonblocking-decoration",
+          "direction": null,
+          "routeTopology": null,
+          "surfaceVariant": null,
+          "heightDelta": 0
+        }
+      ]
+    }
+  ]
+}

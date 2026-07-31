@@ -15,6 +15,31 @@ import {
   request
 } from '../testHelper.js';
 import { query } from '../../config/database.js';
+import {
+  BATTLE_MAP_HASH_VERSION,
+  BATTLE_MAP_SCHEMA_VERSION,
+  BATTLE_MAP_V3_HASH_VERSION,
+  BATTLE_MAP_V3_SCHEMA_VERSION
+} from '../../../../shared/battleMap/index.js';
+import {
+  BATTLE_MUTABLE_STATE_PROTOCOL_VERSION,
+  createBattleMapCapabilities
+} from '../../../../shared/battleStateProtocol.js';
+
+const supportedBattleMapCapabilities = createBattleMapCapabilities({
+  supportedBattleMapSchemaVersions: [
+    1,
+    BATTLE_MAP_SCHEMA_VERSION,
+    BATTLE_MAP_V3_SCHEMA_VERSION
+  ],
+  supportedHashVersions: [
+    BATTLE_MAP_HASH_VERSION,
+    BATTLE_MAP_V3_HASH_VERSION
+  ],
+  supportedMutableStateProtocolVersions: [
+    BATTLE_MUTABLE_STATE_PROTOCOL_VERSION
+  ]
+});
 
 describe('Battle Zodiac Abilities', () => {
   const ctx = createTestContext();
@@ -524,6 +549,7 @@ describe('Battle Zodiac Abilities', () => {
         'POST',
         '/api/battle/start',
         {
+          battleMapCapabilities: supportedBattleMapCapabilities,
           formation: {
             [character.id]: { tileX: 2, tileY: 1 }
           }
@@ -532,11 +558,12 @@ describe('Battle Zodiac Abilities', () => {
       );
       assert.strictEqual(started.status, 201, JSON.stringify(started.body));
       const battleId = started.body.battleId;
+      const startedState = started.body.snapshot.mutableState;
       assert.strictEqual(
-        String(started.body.state.activeUnitId),
+        String(startedState.activeUnitId),
         String(character.id)
       );
-      const createdUnit = started.body.state.units.find(
+      const createdUnit = startedState.units.find(
         unit => String(unit.id) === String(character.id)
       );
       assert.deepStrictEqual(

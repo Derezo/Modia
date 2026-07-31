@@ -1,11 +1,14 @@
 import { beforeEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 
 import {
   BATTLE_MAP_HASH_VERSION,
+  BATTLE_MAP_V3_HASH_VERSION,
   createMinimalBattleMapV2CandidateFixture,
   finalizeBattleMapV2,
-  createMinimalBattleMapV2FinalFixture
+  createMinimalBattleMapV2FinalFixture,
+  createMinimalBattleMapV3FinalFixture
 } from '../../../../shared/battleMap/index.js';
 import {
   createBattleMutableStateUpdateV1,
@@ -18,6 +21,13 @@ import {
   getBattleMapCapabilities,
   MAX_VERIFIED_BATTLE_MAP_CACHE_ENTRIES
 } from '../BattleMapSession.js';
+import {
+  assertBattleMapV3RuntimeManifestSupportsMap,
+  clearBattleMapV3RuntimeManifest,
+  installBattleMapV3RuntimeBundleRegistry,
+  setBattleMapV3RuntimeManifest
+} from '../BattleMapAssets.js';
+import { createRuntimeBundleForMap } from './battleMapV3RuntimeFixture.js';
 
 function mutable(overrides = {}) {
   return createBattleMutableStateV1({
@@ -27,7 +37,18 @@ function mutable(overrides = {}) {
   });
 }
 
-beforeEach(() => clearBattleMapSessionCache());
+beforeEach(() => {
+  clearBattleMapSessionCache();
+  clearBattleMapV3RuntimeManifest();
+});
+
+function installFixtureRuntimeManifest(map) {
+  setBattleMapV3RuntimeManifest(createRuntimeBundleForMap(map));
+}
+
+async function readTrackedJson(relativePath) {
+  return JSON.parse(await readFile(new URL(relativePath, import.meta.url), 'utf8'));
+}
 
 describe('BattleMapSession', () => {
   it('verifies a full V2 snapshot, caches it, and hydrates every map layer', async () => {
@@ -153,6 +174,137 @@ describe('BattleMapSession', () => {
       error => error.code === 'battle_map_verification_failed'
     );
     assert.equal(getBattleMapCapabilities().cachedMaps.length, 0);
+  });
+
+  it('verifies and hydrates a full V3 snapshot without adding it to the V2 cache', async () => {
+    const map = await createMinimalBattleMapV3FinalFixture();
+    assert.deepEqual(
+      getBattleMapCapabilities().supportedBattleMapSchemaVersions,
+      [1, 2]
+    );
+    installFixtureRuntimeManifest(map);
+    const snapshot = createBattleStateSnapshotV1({
+      battleId: 'v3-session',
+      stateRevision: 3,
+      battleMap: map,
+      mutableState: mutable()
+    });
+    const session = new BattleMapSession();
+    const result = await session.acceptSnapshot(snapshot);
+    const hydrated = await new BattleMapSession().hydrateResponse({ snapshot });
+
+    assert.equal(Object.isFrozen(result.map), true);
+    assert.equal(result.map.hashes.fullHash, map.hashes.fullHash);
+    assert.equal(result.state.renderMask, result.map.renderMask);
+    assert.equal(result.state.playableMask, result.map.playableMask);
+    assert.equal(hydrated.mapWidth, map.dimensions.width);
+    assert.equal(hydrated.mapHeight, map.dimensions.height);
+    assert.equal(hydrated.nodeType, map.theme);
+    assert.deepEqual(getBattleMapCapabilities().cachedMaps, []);
+    assert.deepEqual(
+      getBattleMapCapabilities().supportedBattleMapSchemaVersions,
+      [1, 2, 3]
+    );
+    assert.deepEqual(
+      getBattleMapCapabilities().supportedHashVersions,
+      [BATTLE_MAP_V3_HASH_VERSION]
+    );
+
+    const update = createBattleMutableStateUpdateV1({
+      battleId: 'v3-session',
+      battleMapSchemaVersion: 3,
+      terrainGenerationVersion: 3,
+      fullHash: map.hashes.fullHash,
+      baseStateRevision: 3,
+      stateRevision: 4,
+      mutableState: mutable({ turn: 2 })
+    });
+    assert.equal(session.acceptUpdate(update).status, 'applied');
+    assert.equal(session.state.turn, 2);
+  });
+
+  it('hydrates the active forest V12 map with its exact generated runtime bundle', async () => {
+    const [activeRelease, map, runtimeBundles] = await Promise.all([
+      readTrackedJson('../../../../battle-maps/catalog/active-release.json'),
+      readTrackedJson(
+        '../../../../battle-maps/compiled/forest/forest-template-01-b.v12.json'
+      ),
+      readTrackedJson('../../generated/battleMapV3RuntimeBundles.json')
+    ]);
+    const activeMap = activeRelease.maps.find(
+      entry => entry.contentId === 'forest-template-01-b'
+    );
+
+    assert.equal(
+      activeRelease.catalogReleaseId,
+      'battle-map-v3-forest-pilot-2026-07-30-r6'
+    );
+    assert.deepEqual(activeMap, {
+      contentId: 'forest-template-01-b',
+      contentVersion: 12,
+      path: 'battle-maps/compiled/forest/forest-template-01-b.v12.json',
+      fullHash: map.hashes.fullHash
+    });
+    assert.equal(map.battleMapSchemaVersion, 3);
+    assert.equal(map.terrainGenerationVersion, 3);
+    assert.equal(map.contentVersion, 12);
+    assert.equal(map.hashes.fullHash, activeMap.fullHash);
+
+    assert.equal(
+      await installBattleMapV3RuntimeBundleRegistry(runtimeBundles),
+      true
+    );
+    assert.equal(assertBattleMapV3RuntimeManifestSupportsMap(map), true);
+
+    const capabilities = getBattleMapCapabilities();
+    assert.equal(
+      capabilities.supportedBattleMapSchemaVersions.includes(3),
+      true
+    );
+    assert.equal(
+      capabilities.supportedHashVersions.includes(BATTLE_MAP_V3_HASH_VERSION),
+      true
+    );
+
+    const snapshot = createBattleStateSnapshotV1({
+      battleId: 'active-forest-v12-session',
+      stateRevision: 1,
+      battleMap: map,
+      mutableState: mutable()
+    });
+    const result = await new BattleMapSession().acceptSnapshot(snapshot);
+
+    assert.equal(Object.isFrozen(result.map), true);
+    assert.equal(result.map.battleMapSchemaVersion, 3);
+    assert.equal(result.map.contentId, activeMap.contentId);
+    assert.equal(result.map.contentVersion, activeMap.contentVersion);
+    assert.equal(result.map.hashes.fullHash, activeMap.fullHash);
+    assert.equal(result.state.visualCells, result.map.visualCells);
+    assert.equal(assertBattleMapV3RuntimeManifestSupportsMap(result.map), true);
+  });
+
+  it('rejects V3-as-legacy delivery and a tampered V3 full snapshot', async () => {
+    const map = await createMinimalBattleMapV3FinalFixture();
+    const session = new BattleMapSession();
+    await assert.rejects(
+      () => session.hydrateResponse({
+        battleId: 'v3-flat',
+        state: structuredClone(map)
+      }),
+      error => error.code === 'battle_map_snapshot_required'
+    );
+
+    const snapshot = structuredClone(createBattleStateSnapshotV1({
+      battleId: 'v3-tampered',
+      stateRevision: 1,
+      battleMap: map,
+      mutableState: mutable()
+    }));
+    snapshot.battleMap.terrain[0][0].movementCost += 1;
+    await assert.rejects(
+      () => new BattleMapSession().acceptSnapshot(snapshot),
+      error => error.code === 'battle_map_verification_failed'
+    );
   });
 
   it('applies ordered deltas and detects duplicate, gap, and map-reference recovery cases', async () => {
