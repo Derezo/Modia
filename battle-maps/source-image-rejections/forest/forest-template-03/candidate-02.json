@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "battle-map-source-image-candidate-rejection-v1",
+  "theme": "forest",
+  "template": "forest-template-03",
+  "candidate": "candidate-02",
+  "decision": "rejected",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "The two principal formation grounds are near-mirrored oval meadows, so the eastern coppice is not visibly denser and the composition reads too close to symmetric arena geometry.",
+  "evidence": {
+    "result": {
+      "path": "ai-image-metadata/battle-maps/candidates/forest/forest-template-03/candidate-02/result.json",
+      "bytes": 1832,
+      "sha256": "sha256:82bf6fd3d1bea0c6fd0d7352298ad0528f4f975d73abc21a17258f9edc09611b"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-maps/candidates/forest/forest-template-03/candidate-02/candidate.png",
+      "bytes": 3216879,
+      "width": 1254,
+      "height": 1254,
+      "format": "png",
+      "sha256": "sha256:ac4ebb730218b6302031e0d93953115cfbb68136e24dcb70df1fab35089259c1"
+    },
+    "promptProfile": {
+      "id": "source-template-image-v1",
+      "path": "ai-image-metadata/battle-maps/prompts/source-template-image-v1.json",
+      "sha256": "sha256:6a4200193384b8682cb7cbc69ad6a819dc5cb4cfbd116c395b0f628b5a208f41"
+    },
+    "prompt": {
+      "path": "ai-image-metadata/battle-maps/candidates/forest/forest-template-03/candidate-02/prompt.txt",
+      "bytes": 7128,
+      "sha256": "sha256:f26ddcc0bf59188a3271f48af1f16808d76ba1a86e10c4f13188ab393d977295"
+    },
+    "workerLogs": {
+      "stdout": {
+        "path": "ai-image-metadata/battle-maps/candidates/forest/forest-template-03/candidate-02/worker.jsonl",
+        "bytes": 28400,
+        "sha256": "sha256:52521b6b900d9d6abee71cd8f3a45057cfebffc5045f96cae5010252bd653c07"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-maps/candidates/forest/forest-template-03/candidate-02/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-maps/candidates/forest/forest-template-03/candidate-02/last-message.txt",
+        "bytes": 294,
+        "sha256": "sha256:d34798ac1b2d4e50fde492e8db6581d104e808b518daa92391a3ec7baab98519"
+      }
+    },
+    "imagegenInvocationCount": 1
+  }
+}

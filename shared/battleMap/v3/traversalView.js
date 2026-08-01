@@ -425,7 +425,9 @@ export function assertBattleMapV3Topology(map) {
           id: `validation:${index}`,
           x: assignment.cell.x,
           y: assignment.cell.y,
-          hp: 1
+          hp: 1,
+          type: assignment.side === 'opponent' ? 'enemy' : 'player',
+          teamId: assignment.side === 'opponent' ? 2 : 1
         }))
       });
       return [...playerAssignments, ...opponentAssignments].every(assignment =>

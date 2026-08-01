@@ -798,6 +798,67 @@ describe('calculatePathCost', () => {
     );
   });
 
+  test('should let players and enemies cross living allies at normal cost', () => {
+    const cases = [
+      {
+        label: 'player',
+        unit: createMockPlayerUnit({
+          id: 'p1',
+          tileX: 0,
+          tileY: 0,
+          teamId: 7
+        }),
+        ally: createMockPlayerUnit({
+          id: 'p2',
+          tileX: 1,
+          tileY: 0,
+          teamId: 7
+        })
+      },
+      {
+        label: 'enemy',
+        unit: createMockEnemyUnit({
+          id: 'e1',
+          tileX: 0,
+          tileY: 0,
+          class: 'warrior'
+        }),
+        ally: createMockEnemyUnit({
+          id: 'e2',
+          tileX: 1,
+          tileY: 0
+        })
+      }
+    ];
+
+    for (const { label, unit, ally } of cases) {
+      const state = createMockBattleState({
+        units: [unit, ally],
+        terrain: [['grass', 'grass', 'grass']],
+        elevation: [[0, 0, 0]],
+        elevationFormat: 'discrete',
+        mapWidth: 3,
+        mapHeight: 1
+      });
+
+      assert.strictEqual(
+        calculatePathCost(0, 0, 2, 0, state, 3),
+        2,
+        `${label} should cross an ally without extra movement cost`
+      );
+      assert.strictEqual(
+        calculatePathCost(0, 0, 1, 0, state, 3),
+        Infinity,
+        `${label} should not be able to end movement on an ally`
+      );
+      assert.deepStrictEqual(
+        getReachableTiles(unit, state),
+        [{ x: 2, y: 0, z: 0, cost: 2 }],
+        `${label} should expose the free tile beyond the ally`
+      );
+    }
+  });
+
   test('should return 0 for same position', () => {
     const state = createMockBattleState({});
     delete state.terrain;

@@ -15,10 +15,68 @@ import {
   BATTLE_MAP_V3_SUPPORTED_THEMES
 } from '../../../../shared/battleMap/BattleMapV3Resolvers.js';
 import {
+  BATTLE_MAP_V3_ECOLOGY_PROFILES_BY_THEME
+} from '../../../../shared/battleMap/BattleMapV3EcologyProfiles.js';
+import {
   assertBattleMapV3SelectionQuery
 } from '../../../../shared/battleMap/BattleMapV3Selector.js';
 
 describe('BattleMap ecology context', () => {
+  it('publishes the exact deeply immutable 24-pair ecology matrix', () => {
+    const expected = {
+      forest: [
+        'forest-temperate-woodland',
+        'forest-heartlands-woodland',
+        'forest-sylvan-ancient-grove',
+        'forest-shadowmere-gloomwood',
+        'forest-iron-depths-borderwood'
+      ],
+      cave: [
+        'cave-limestone',
+        'cave-iron-depths-granite',
+        'cave-shadowmere-crypt'
+      ],
+      mountain: [
+        'mountain-granite',
+        'mountain-bloodplains-red-crag'
+      ],
+      bridge: ['bridge-stone-crossing'],
+      castle: ['castle-fortress', 'palace-grand-palace'],
+      dungeon: ['dungeon-subterranean'],
+      swamp: ['swamp-wetlands'],
+      volcano: ['volcano-caldera'],
+      plains: ['plains-grassland'],
+      arena: ['arena-coliseum'],
+      guild: ['guild-guildhall'],
+      elven_grove: ['forest-sylvan-ancient-grove'],
+      dwarven_mine: ['cave-iron-depths-granite'],
+      vampiric_crypt: ['cave-shadowmere-crypt'],
+      orcish_warcamp: ['mountain-bloodplains-red-crag'],
+      human_ruins: ['human-heartlands-ruins']
+    };
+
+    assert.deepEqual(BATTLE_MAP_V3_ECOLOGY_PROFILES_BY_THEME, expected);
+    assert.deepEqual(
+      Object.keys(BATTLE_MAP_V3_ECOLOGY_PROFILES_BY_THEME),
+      BATTLE_MAP_V3_SUPPORTED_THEMES
+    );
+    assert.equal(
+      Object.values(BATTLE_MAP_V3_ECOLOGY_PROFILES_BY_THEME)
+        .reduce((total, profiles) => total + profiles.length, 0),
+      24
+    );
+    assert.equal(Object.isFrozen(BATTLE_MAP_V3_ECOLOGY_PROFILES_BY_THEME), true);
+    for (const profiles of Object.values(
+      BATTLE_MAP_V3_ECOLOGY_PROFILES_BY_THEME
+    )) {
+      assert.equal(Object.isFrozen(profiles), true);
+      assert.equal(new Set(profiles).size, profiles.length);
+      assert.ok(profiles.every(
+        profile => /^[a-z0-9](?:[a-z0-9._:/-]{0,127})$/.test(profile)
+      ));
+    }
+  });
+
   it('resolves the approved regional forest profiles deterministically', () => {
     const expected = new Map([
       ['human', 'forest-heartlands-woodland'],

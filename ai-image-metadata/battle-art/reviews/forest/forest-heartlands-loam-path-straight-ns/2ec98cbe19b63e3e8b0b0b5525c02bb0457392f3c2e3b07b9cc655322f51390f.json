@@ -1,0 +1,90 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v2",
+  "theme": "forest",
+  "familyId": "forest-heartlands-loam-path-straight-ns",
+  "decision": "rejected",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "Both rounded terminal lobes extend about 15–16 pixels beyond the exact N and S internal capability-diamond contacts, exceeding the required 8-pixel terminal limit and 10-pixel maximum outward continuation; topology, core width, chroma cleanup, and Heartlands styling otherwise pass.",
+  "reviewedAt": "2026-07-31T17:45:55.721Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-straight-ns.json",
+    "sha256": "sha256:5b0a9517a84eefdd2562bd5dd65278868ca3ac096f08169dd7a09582d9a0ca54",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-straight-ns/result.json",
+      "bytes": 3534,
+      "sha256": "sha256:27363858706111eae581c115b82a6ceead5c38dd89e69cead5db3dfb84bed269"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-straight-ns/candidate.png",
+      "bytes": 20068,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:2ec98cbe19b63e3e8b0b0b5525c02bb0457392f3c2e3b07b9cc655322f51390f"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      },
+      {
+        "id": "forest-heartlands-approved-route-straight-ew-v1",
+        "path": "ai-image-metadata/battle-art/sources/forest/forest-heartlands-loam-path-straight-ew/v1/c1e441f91c71349b3e49e1319a51af80bf69433ada4f74d8aa838e0be94abaf3.png",
+        "sha256": "sha256:c1e441f91c71349b3e49e1319a51af80bf69433ada4f74d8aa838e0be94abaf3"
+      }
+    ],
+    "styleReferenceMode": "attachments",
+    "styleReferenceProvenance": [
+      {
+        "id": "forest-source-template-01",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1",
+        "stagedBasename": "style-reference-01.png"
+      },
+      {
+        "id": "forest-heartlands-approved-route-straight-ew-v1",
+        "sha256": "sha256:c1e441f91c71349b3e49e1319a51af80bf69433ada4f74d8aa838e0be94abaf3",
+        "stagedBasename": "style-reference-02.png"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 1200000,
+      "imageArguments": [
+        "style-reference-01.png",
+        "style-reference-02.png"
+      ],
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-straight-ns/prompt.txt",
+        "bytes": 16778,
+        "sha256": "sha256:766541c24a12512014a056553fd9e4aafc7b4cd357a87069fa6193d1c68e8a9f"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-straight-ns/worker.jsonl",
+        "bytes": 28496,
+        "sha256": "sha256:b02378af91da26a457b8bf1e9e3d3b919d9cda6d8c7231cf48a99f8042948c39"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-straight-ns/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-straight-ns/last-message.txt",
+        "bytes": 350,
+        "sha256": "sha256:ab5eb1e81c64b47a80f2236719afa64646a3458127cc13dbac4d55c264b4711c"
+      }
+    }
+  },
+  "fullHash": "sha256:32785eb3218eccffaef0181747fe9472c69c4056c55922ffc918580b5f4f25dc"
+}

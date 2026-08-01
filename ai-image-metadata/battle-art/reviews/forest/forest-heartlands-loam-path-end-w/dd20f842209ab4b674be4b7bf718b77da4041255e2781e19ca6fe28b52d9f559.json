@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-loam-path-end-w",
+  "decision": "rejected",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "The W topology and arm width are correct, but the central terminal is a straight-sided trapezoidal dirt slab with a pointed lower-left corner rather than a broad irregular rounded wear basin with a tangential arm.",
+  "reviewedAt": "2026-07-31T08:50:01.852Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-end-w.json",
+    "sha256": "sha256:00094c8f83df8ab49c1bc11ba3083cb0a420c3b3c58bed71752d98e6adb72b8c",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-end-w/result.json",
+      "bytes": 2295,
+      "sha256": "sha256:598653d40184dedb5b86cc7e9ddc2e2d0491ca1a08d0b9d7d9e38099a6bb3144"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-end-w/candidate.png",
+      "bytes": 27441,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:dd20f842209ab4b674be4b7bf718b77da4041255e2781e19ca6fe28b52d9f559"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-end-w/prompt.txt",
+        "bytes": 11005,
+        "sha256": "sha256:9739aabb2396641e12b379dcefd5a9aba6a7089df716758ce6a003a50bb2ef10"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-end-w/worker.jsonl",
+        "bytes": 27159,
+        "sha256": "sha256:6093a9f6d4d6b7ef9f47b427ecbc6e0fa663ea167e6b16944ae77e7c35579c72"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-end-w/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-end-w/last-message.txt",
+        "bytes": 349,
+        "sha256": "sha256:2c9708e0ccca7b9da15569e1ea829e8674e9a828a71e59438a061ee7c801a560"
+      }
+    }
+  },
+  "fullHash": "sha256:e02c1202ea93da92625871300bb821f753b8c979007612fabae8c1b0860db752"
+}

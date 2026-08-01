@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-meadow-ground-1",
+  "decision": "approved",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "The broad cool-olive sweep crosses the center on the requested upper-left to lower-right bias, opposed by one unbroken russet clearing; sparse accents and a quiet perimeter preserve tactical readability.",
+  "reviewedAt": "2026-07-31T07:03:12.929Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-meadow-ground-1.json",
+    "sha256": "sha256:01db5980cfaaa73154c489247ac7b3831218c7447b6337a8758ad8d0d34d2d70",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-meadow-ground-1/result.json",
+      "bytes": 2295,
+      "sha256": "sha256:4be9e65da01cacfba7580516606ed6f4024de22ab08b7b3a6142b88018a89cfa"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-meadow-ground-1/candidate.png",
+      "bytes": 46479,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:931043a62ee795f5c2c58152883805a61d55049f06b3b21f4a6f889c8da76ae4"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-meadow-ground-1/prompt.txt",
+        "bytes": 9057,
+        "sha256": "sha256:7ff12c3cfe4e949d63880dc9eb994e8cb69b0211733e9424864cf8e9879159cc"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-meadow-ground-1/worker.jsonl",
+        "bytes": 32625,
+        "sha256": "sha256:80c7e610945dce1e30a12564f01e3bd5de5c1307d870c83272f8b629f17b308e"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-meadow-ground-1/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-meadow-ground-1/last-message.txt",
+        "bytes": 373,
+        "sha256": "sha256:2e2dd866fa5dba658261efce5b9e1e324a854ffd6e818e3dac671d714157d386"
+      }
+    }
+  },
+  "fullHash": "sha256:e5195d368722d2361f17c4600f9a877f9384a6598881087df8ef8a2a8bf7ba7d"
+}

@@ -1,0 +1,90 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v2",
+  "theme": "forest",
+  "familyId": "forest-heartlands-loam-path-corner-es",
+  "decision": "rejected",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "A conspicuous rectangular notch cuts into the center apex, creating a hard squared gap instead of the required smooth, generous-radius anchor turn.",
+  "reviewedAt": "2026-07-31T15:21:25.578Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-corner-es.json",
+    "sha256": "sha256:db95ff7cbabc03f38d1038d018166bb0effef636fe64b7ef6a234a61a2461e25",
+    "contentVersion": 2
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-es/result.json",
+      "bytes": 3505,
+      "sha256": "sha256:904d636a6176e3c325c71794a15f4510629d904154f80c60d7c3e43a5b3f180f"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-es/candidate.png",
+      "bytes": 23910,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:47204f589fb7d719462b04c9efaba9b09205e5e0c331bf414b4f249806f2e16a"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      },
+      {
+        "id": "forest-heartlands-approved-route-corner-ne-v1",
+        "path": "ai-image-metadata/battle-art/sources/forest/forest-heartlands-loam-path-corner-ne/v1/9c085b05ee5900b4e2c4438efdb56a0af40bd4a5b2d47633290360f7d03f0019.png",
+        "sha256": "sha256:9c085b05ee5900b4e2c4438efdb56a0af40bd4a5b2d47633290360f7d03f0019"
+      }
+    ],
+    "styleReferenceMode": "attachments",
+    "styleReferenceProvenance": [
+      {
+        "id": "forest-source-template-01",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1",
+        "stagedBasename": "style-reference-01.png"
+      },
+      {
+        "id": "forest-heartlands-approved-route-corner-ne-v1",
+        "sha256": "sha256:9c085b05ee5900b4e2c4438efdb56a0af40bd4a5b2d47633290360f7d03f0019",
+        "stagedBasename": "style-reference-02.png"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "imageArguments": [
+        "style-reference-01.png",
+        "style-reference-02.png"
+      ],
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-es/prompt.txt",
+        "bytes": 20835,
+        "sha256": "sha256:f1fe99d458f6d33035c0bbdd82308ca99ef002f0029201b74ba9165f123dbd67"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-es/worker.jsonl",
+        "bytes": 61561,
+        "sha256": "sha256:87983756915aea11d611c32d7fc9daf064042951a93a6b8a0bc819cd7d088e32"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-es/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-es/last-message.txt",
+        "bytes": 356,
+        "sha256": "sha256:ffb2fd242343af4e455f9967eae9d246061a8ea2fbec19195132f8308966bede"
+      }
+    }
+  },
+  "fullHash": "sha256:165d5ef3b37d9654895a3d3dca4dc4606151cec8b138d4ff8ce3a1827f752b97"
+}

@@ -12,7 +12,7 @@
  * Height Movement:
  * - Units animate with parabolic arc when moving between elevations
  * - Shadow follows terrain surface during movement
- * - Occlusion cache updates per-frame for transparent blocking tiles
+ * - Occlusion cache updates when living unit positions change
  *
  * Extracted modules (to reduce file size):
  * - BattleHighlights.js - Tile highlight color computation
@@ -36,7 +36,10 @@ import {
 } from '../battle/BattleGrid.js';
 import { BattleUnit } from '../battle/BattleUnit.js';
 import { BattleUI } from '../battle/BattleUI.js';
-import { BattleAnimations, ANIMATION_TIMING } from '../battle/BattleAnimations.js';
+import {
+  BattleAnimations,
+  getMovementPresentationDuration
+} from '../battle/BattleAnimations.js';
 import { BattlePathfinding } from '../battle/BattlePathfinding.js';
 import { BattleCamera } from '../battle/BattleCamera.js';
 import { BattleIntro } from '../battle/BattleIntro.js';
@@ -158,10 +161,11 @@ export class BattleScene extends Scene {
     this.selectedInventoryId = null;
     this.selectedZodiacAbilityKey = null;
     this.lockedTarget = null; // { tile: {x,y}, unit: <unit or null> } - prevents tile cycling during targeting
+    this.occlusionUnitSignature = null;
 
-    // Mobile/touch support for terrain preview
+    // Mobile/touch support for terrain tooltips
     this.isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    this.selectedMoveTile = null; // For two-tap movement on mobile
+    this.selectedMoveTile = null;
 
     // Input handler manages mouse/touch/keyboard events and tile cycling
     this.inputHandler = null;
@@ -228,18 +232,31 @@ export class BattleScene extends Scene {
     this.assetLoadRetryData = null;
     this.assetLoadRetryInProgress = false;
     this.battleMapAssetsReady = true;
+
+    // Each enter/exit advances this epoch so async work from an older entry
+    // cannot resume initialization after teardown or a newer entry.
+    this.entryEpoch = 0;
   }
 
   /**
    * Enter the battle scene
    */
   async enter(data) {
+    const entryEpoch = ++this.entryEpoch;
+
     // data = { battleId, mapSeed, mapWidth, mapHeight, state, initialEnemyActions, battleType, opponentUsername, nodeType }
     const battleResponse = data;
     this.assetLoadError = null;
     this.assetLoadRetryData = battleResponse;
     this.mapSession = new BattleMapSession();
-    data = await this.mapSession.hydrateResponse(data);
+    try {
+      data = await this.mapSession.hydrateResponse(data);
+    } catch (err) {
+      if (entryEpoch !== this.entryEpoch) return false;
+      throw err;
+    }
+    if (entryEpoch !== this.entryEpoch) return false;
+
     const requiresExactV2Assets = data.state?.battleMapSchemaVersion === 2;
     const requiresExactV3Assets = data.state?.battleMapSchemaVersion === 3;
     const requiresExactMapAssets =
@@ -290,6 +307,7 @@ export class BattleScene extends Scene {
 
     // Initialize grid with asset loader for sprite rendering
     this.grid = new BattleGrid(this.game.canvas, data.mapWidth || 32, data.mapHeight || 32);
+    this.occlusionUnitSignature = null;
     this.grid.setAssetLoader(this.game.assetLoader);
     if (requiresExactV3Assets) {
       // V3 is a fully compiled, verified map. Its renderer contract never
@@ -404,6 +422,8 @@ export class BattleScene extends Scene {
           })
         )
       ]);
+      if (entryEpoch !== this.entryEpoch) return false;
+
       progress.finish();
       console.log(`[BattleScene] Preloaded terrain, obstacles, ${enemyVisuals.length} enemy types, and ${playerCharacters.length} player variants for ${nodeType}`);
 
@@ -412,6 +432,8 @@ export class BattleScene extends Scene {
         unit.initializeSprites();
       }
     } catch (err) {
+      if (entryEpoch !== this.entryEpoch) return false;
+
       console.warn('[BattleScene] Asset preload failed:', err.message);
       if (requiresExactMapAssets) {
         // Authored records are authoritative. Entering combat with
@@ -650,6 +672,8 @@ export class BattleScene extends Scene {
    * Exit the battle scene
    */
   exit() {
+    this.entryEpoch = (Number(this.entryEpoch) || 0) + 1;
+
     this.zodiacAvailabilityRequestId++;
     this.zodiacSubmissionRequestId++;
     this.zodiacAvailabilityController?.abort();
@@ -710,6 +734,7 @@ export class BattleScene extends Scene {
       this.grid.destroy();
       this.grid = null;
     }
+    this.occlusionUnitSignature = null;
 
     if (this.bossPhaseIndicator) {
       this.bossPhaseIndicator.destroy();
@@ -1325,28 +1350,12 @@ export class BattleScene extends Scene {
     const isValidTile = this.validTiles.some(t => t.x === x && t.y === y);
 
     if (this.currentAction === 'move' && isValidTile) {
-      // Two-tap support for mobile: first tap selects, second tap confirms
-      if (this.isTouchDevice) {
-        const isSameTile = this.selectedMoveTile &&
-          this.selectedMoveTile.x === x && this.selectedMoveTile.y === y;
-
-        if (isSameTile) {
-          // Second tap on same tile - confirm move
-          this.selectedMoveTile = null;
-          this.pendingAction = { type: 'move', targetTile: { x, y } };
-          this.ui.showConfirmation(`Move to (${x}, ${y})?`);
-        } else {
-          // First tap or different tile - select for preview
-          this.selectedMoveTile = { x, y };
-          // Don't show confirmation yet, just show tooltip
-        }
-      } else {
-        // Desktop: immediate confirmation dialog
-        this.pendingAction = { type: 'move', targetTile: { x, y } };
-        this.ui.showConfirmation(`Move to (${x}, ${y})?`);
-      }
-    } else if (this.currentAction === 'move' && !isValidTile && this.isTouchDevice) {
-      // Tapped outside valid area on mobile - clear selection
+      // Every input type uses the same confirmation contract: the first click
+      // exposes the Confirm UI and a second click on this tile submits.
+      this.selectedMoveTile = { x, y };
+      this.pendingAction = { type: 'move', targetTile: { x, y } };
+      this.ui.showConfirmation(`Move to (${x}, ${y})?`);
+    } else if (this.currentAction === 'move' && !isValidTile) {
       this.selectedMoveTile = null;
     } else if (this.currentAction === 'attack' && isValidTile) {
       // Tile-based targeting: allow attacking any valid tile
@@ -1448,21 +1457,24 @@ export class BattleScene extends Scene {
     const activeUnit = this.getActiveUnit();
 
     if (activeUnit) {
-      // Prefer server-provided attack targets if available
-      if (this.serverAvailableActions?.attacks?.targets) {
-        // Convert server targets to tile format
-        this.validTiles = this.serverAvailableActions.attacks.targets.map(t => ({
+      // Target actions are ground-first: the availability payload describes
+      // every legal tile, independently of its current occupant.
+      const serverAttack = this.serverAvailableActions?.attacks;
+      if (Array.isArray(serverAttack?.tiles)) {
+        this.validTiles = serverAttack.tiles.map(t => ({
           x: t.tileX ?? t.x,
           y: t.tileY ?? t.y,
-          unitId: t.id,
+          unitId: t.unitId ?? t.id,
           distance: t.distance
         }));
       } else {
-        // Fall back to client-side calculation
+        // Older availability payloads only contained unit targets. Derive the
+        // full tile range locally so empty and friendly-occupied tiles remain
+        // selectable.
         this.validTiles = this.pathfinding.getAttackableTiles(
           activeUnit.gridX,
           activeUnit.gridY,
-          this.attackRange
+          serverAttack?.range ?? this.attackRange
         );
       }
     }
@@ -1939,6 +1951,9 @@ export class BattleScene extends Scene {
       parchmentToast.error('Skill Error', 'Skill not found');
       return;
     }
+    const serverSkill = this.serverAvailableActions?.skills?.find(
+      candidate => candidate.id === skillId
+    );
 
     // Check if unit has enough MP
     if (activeUnit.mp < skill.mpCost) {
@@ -1947,29 +1962,45 @@ export class BattleScene extends Scene {
     }
 
     // Check if this is a self-targeting skill (meditation, buffs, cleanses, etc.)
-    if (isSelfTargetingSkill(skill)) {
+    if (isSelfTargetingSkill(skill) ||
+        (serverSkill && isSelfTargetingSkill(serverSkill))) {
       this.startSelfTargetSkillAction(skillId, skill, activeUnit);
       return;
     }
 
     if (activeUnit && skill) {
-      // Prefer server-provided skill targets if available
-      const serverSkill = this.serverAvailableActions?.skills?.find(s => s.id === skillId);
-      if (serverSkill?.targets) {
-        // Convert server targets to tile format
-        this.validTiles = serverSkill.targets.map(t => ({
+      // Prefer the server's tile-first targeting contract. The legacy targets
+      // list remains unit-oriented for AI consumers and must not restrict UI
+      // selection by occupancy or allegiance.
+      if (Array.isArray(serverSkill?.tiles)) {
+        this.validTiles = serverSkill.tiles.map(t => ({
           x: t.tileX ?? t.x,
           y: t.tileY ?? t.y,
           unitId: t.unitId ?? t.id,
           distance: t.distance
         }));
       } else {
-        // Fall back to client-side calculation
-        this.validTiles = this.pathfinding.getAttackableTiles(
-          activeUnit.gridX,
-          activeUnit.gridY,
-          skill.range || this.attackRange
-        );
+        const targetRange = serverSkill?.range ?? skill.range ?? this.attackRange;
+        const casterTile = {
+          x: activeUnit.gridX,
+          y: activeUnit.gridY,
+          unitId: activeUnit.id,
+          distance: 0
+        };
+        if (serverSkill?.targetAllAllies || skill.targetAllAllies) {
+          // Intrinsic party effects remain caster-centered even when an older
+          // server only supplies the legacy unit-target list.
+          this.validTiles = [casterTile];
+        } else {
+          this.validTiles = this.pathfinding.getAttackableTiles(
+            activeUnit.gridX,
+            activeUnit.gridY,
+            targetRange
+          );
+          // Skill range includes distance zero. This allows explicitly targeted
+          // skills to affect the caster just like any other friendly occupant.
+          this.validTiles.unshift(casterTile);
+        }
       }
     }
 
@@ -2410,8 +2441,12 @@ export class BattleScene extends Scene {
 
     this.ui.hideConfirmation();
 
-    // Validate locked target is still valid (could have died via concurrent action)
-    if (this.lockedTarget?.unit && this.lockedTarget.unit.hp <= 0) {
+    // Unit-identity actions still require their selected recipient. Attacks
+    // and skills are tile-targeted, so a defeated or departed preview target
+    // does not invalidate the tile; execution resolves its current occupant.
+    if (['item', 'zodiac'].includes(this.pendingAction.type) &&
+        this.lockedTarget?.unit &&
+        this.lockedTarget.unit.hp <= 0) {
       parchmentToast.warning('Target Defeated', 'The target was defeated');
       this.cancelAction();
       return false;
@@ -2590,7 +2625,7 @@ export class BattleScene extends Scene {
    * Handles two-action turn system where turnContinues=true means player has more actions
    */
   async processActionResult(result, submittedIntent = this.pendingAction) {
-    const {
+    let {
       state,
       actionResult,
       enemyActions,
@@ -2599,7 +2634,58 @@ export class BattleScene extends Scene {
       availableActions,
       stateRevision
     } = result;
-    const responseRevision = stateRevision ?? state?.stateRevision ?? null;
+    const update = result.update ?? null;
+    let updateWasSuperseded = false;
+    if (update) {
+      let acceptedUpdate;
+      try {
+        acceptedUpdate = this.mapSession?.acceptUpdate?.(update);
+      } catch (error) {
+        console.warn('[Battle] Rejected malformed action state update:', error);
+        acceptedUpdate = {
+          status: 'resync_required',
+          reason: 'action_update_invalid'
+        };
+      }
+
+      if (!acceptedUpdate ||
+          !['applied', 'duplicate'].includes(acceptedUpdate.status)) {
+        const reason = acceptedUpdate?.reason || 'action_update_session_missing';
+        this.applyAuthoritativeAvailability(null);
+        this.inputEnabled = false;
+        this.clearActionTargetingState();
+        this.wsManager?.requestFullStateSync?.({
+          includeCachedMaps: reason !== 'map_reference_mismatch',
+          reason
+        });
+        this.refreshActionControls();
+        return false;
+      }
+
+      updateWasSuperseded = acceptedUpdate.status === 'duplicate'
+        && acceptedUpdate.reason === 'older_revision';
+      // A known duplicate is the same committed revision and may safely reuse
+      // the session state. An older replay must never combine newer session
+      // state with the replay's older availableActions.
+      state = updateWasSuperseded
+        ? null
+        : acceptedUpdate.state ?? this.mapSession.state;
+      if (!state && !updateWasSuperseded) {
+        this.applyAuthoritativeAvailability(null);
+        this.inputEnabled = false;
+        this.clearActionTargetingState();
+        this.wsManager?.requestFullStateSync?.({
+          reason: 'action_update_state_missing'
+        });
+        this.refreshActionControls();
+        return false;
+      }
+    }
+
+    const responseRevision = stateRevision ??
+      update?.stateRevision ??
+      state?.stateRevision ??
+      null;
     if (this.isStaleStateRevision(responseRevision)) {
       console.log('[Battle] Ignoring stale action replay response:', responseRevision);
       return false;
@@ -2615,9 +2701,7 @@ export class BattleScene extends Scene {
         const from = { x: unit.gridX, y: unit.gridY };
         const to = submittedIntent.targetTile;
         unit.moveTo(to.x, to.y);
-        // Use consistent distance-based timing
-        const distance = Math.abs(to.x - from.x) + Math.abs(to.y - from.y);
-        const moveDuration = Math.max(ANIMATION_TIMING.MOVEMENT_MIN_MS, distance * ANIMATION_TIMING.MOVEMENT_PER_TILE_MS);
+        const moveDuration = getMovementPresentationDuration(unit, from, to);
         await this.waitForAnimation(moveDuration);
       }
     }
@@ -2930,12 +3014,12 @@ export class BattleScene extends Scene {
     // time the enemy sequence can finish and a newer WebSocket revision can
     // restore the next local turn. Never let this older HTTP response overwrite
     // that successor or lock input again after it was already recovered.
-    if (this.isStaleStateRevision(responseRevision)) {
+    if (updateWasSuperseded || this.isStaleStateRevision(responseRevision)) {
       console.log(
-        '[Battle] Action response was superseded during presentation; preserving WebSocket state:',
+        '[Battle] Action response was superseded; preserving WebSocket state:',
         responseRevision,
         '->',
-        this.stateRevision
+        this.mapSession?.current?.stateRevision ?? this.stateRevision
       );
       this.clearActionTargetingState();
       this.syncUnitsWithState(this.battleState?.units || []);
@@ -2971,7 +3055,15 @@ export class BattleScene extends Scene {
     // presentation, while the direct-local handoff below may still update the
     // logical active unit. HTTP and WebSocket delivery are intentionally
     // treated as unordered.
-    console.log('[Camera] processActionResult - syncing unit data only (activeUnitId stays:', this.battleState?.activeUnitId, ')');
+    console.log(
+      '[Camera] processActionResult - reconciling action state without changing camera ownership'
+    );
+    if (update) {
+      // acceptUpdate already advanced the shared BattleMapSession. Commit its
+      // verified mutable state to the scene as well; otherwise the matching
+      // WebSocket update is a duplicate and cannot perform this reconciliation.
+      this.battleState = { ...this.battleState, ...state };
+    }
     this.syncUnitsWithState(state?.units || []);
 
     // Update turn predictions if available (for turn order display)
@@ -3158,13 +3250,12 @@ export class BattleScene extends Scene {
       );
     }
 
-    // Show action menu after partial turn so player can select remaining action
-    // Short delay allows any action animations to settle
-    setTimeout(() => {
-      if (this.getActiveUnit()?.id === activeUnit.id && !this.currentAction) {
-        this.showActionMenu();
-      }
-    }, 200);
+    // The authoritative response has already committed the partial turn and
+    // local presentation has completed, so no additional UI settle delay is
+    // needed before exposing the remaining action.
+    if (this.getActiveUnit()?.id === activeUnit.id && !this.currentAction) {
+      this.showActionMenu();
+    }
   }
 
   /**
@@ -3788,6 +3879,34 @@ export class BattleScene extends Scene {
   }
 
   /**
+   * Rebuild the terrain occlusion cache only when the set or position of
+   * living units changes. HP and presentation-only changes do not affect it.
+   */
+  updateOcclusionCacheForUnits() {
+    if (!this.grid) return [];
+
+    const aliveUnits = Array.from(this.units.values())
+      .filter(unit => unit.isAlive())
+      .sort((a, b) => String(a.id).localeCompare(String(b.id)));
+    const signature = JSON.stringify(aliveUnits.map(unit => {
+      const renderPosition = unit.getRenderGridPosition?.();
+      return [
+        String(unit.id),
+        renderPosition?.x ?? unit.gridX,
+        renderPosition?.y ?? unit.gridY,
+        renderPosition?.elevation ?? unit.elevation ?? 0
+      ];
+    }));
+
+    if (signature !== this.occlusionUnitSignature) {
+      this.occlusionUnitSignature = signature;
+      this.grid.invalidateOcclusionCache();
+    }
+    this.grid.updateOcclusionCache(aliveUnits);
+    return aliveUnits;
+  }
+
+  /**
    * Render the battle scene
    */
   render(ctx) {
@@ -3835,10 +3954,9 @@ export class BattleScene extends Scene {
       localTeamId
     });
 
-    // Update occlusion cache with current unit positions before rendering
-    const aliveUnits = Array.from(this.units.values()).filter(u => u.isAlive());
-    this.grid.invalidateOcclusionCache();
-    this.grid.updateOcclusionCache(aliveUnits);
+    // Update occlusion only when the living-unit layout changes. Render can run
+    // much more frequently than movement, so rebuilding it per frame is costly.
+    this.updateOcclusionCacheForUnits();
 
     // Apply camera zoom as a visual scale around the viewport center.
     // Grid, units, and animations share the same transform so hit-testing

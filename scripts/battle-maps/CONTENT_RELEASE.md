@@ -1,7 +1,78 @@
 # Battle Map V3 deterministic content release
 
-These commands consume reviewed, tracked metadata only. They never generate
-images or blueprints and never read a runtime activation flag.
+Release assembly commands consume reviewed, tracked metadata only. The source
+candidate rejection command below reads exact ignored generation evidence only
+to emit tracked provenance. These commands never generate images or blueprints
+and never read a runtime activation flag.
+
+## Rejecting a generated source-image candidate
+
+Review and reject one exact generated source-image candidate with:
+
+```bash
+npm run battle-maps:templates:reject-candidate -- \
+  --theme forest \
+  --template forest-template-03 \
+  --candidate candidate-01 \
+  --reviewer <reviewer-id> \
+  --decision rejected \
+  --reason "<specific visual rejection rationale>" \
+  --json
+```
+
+The command requires the complete ignored candidate result, decoded image,
+prompt, and worker logs. It verifies their fixed paths and source-template
+prompt-profile pin, rejects symlinks and unsafe identities, and requires the
+worker JSONL to prove exactly one image-generation invocation. It records the
+exact byte counts and SHA-256 hashes, image dimensions and format, reviewer,
+decision, and rationale at:
+
+`battle-maps/source-image-rejections/<theme>/<template>/<candidate>.json`
+
+That tracked record is immutable and cumulative. Repeating an identical review
+is idempotent; changed candidate evidence, reviewer, or rationale is rejected
+instead of overwriting history. A regenerated image must use a new candidate
+identity. This rejection lifecycle never invokes image generation and never
+stages, approves, promotes, compiles, catalogs, or activates content.
+
+## Approving a symbolic blueprint candidate
+
+Approve a reviewed template-03-or-newer blueprint with a bounded rationale:
+
+```bash
+npm run battle-maps:candidates:approve -- \
+  --theme forest \
+  --template forest-template-03 \
+  --map forest-template-03-a \
+  --reviewer <reviewer-id> \
+  --reason "<specific acceptance rationale>"
+```
+
+`--reason` must be non-empty, trimmed, free of control characters, and at most
+1000 UTF-8 bytes. The command validates this structure; reviewers remain
+responsible for the rationale's substance.
+For template-03 and newer identities, the rationale is stored in the v2
+approval record and approval-index entry. The record `fullHash` covers the
+complete record including its rationale, and the index `fullHash` covers every
+entry including the rationale and record hash. Compile recipes and content
+releases pin that index hash, so a new release transitively hashes the reviewed
+rationale.
+
+Existing template-01 and template-02 approvals remain in their frozen v1
+record and index formats. Their command omits `--reason`, and release
+validation continues to accept their existing byte-valid records and hashes.
+Do not rewrite those legacy approvals to v2.
+
+Blueprint prompt profiles follow the same explicit compatibility boundary.
+Template-01 and template-02 candidates and approvals continue to pin the frozen
+`map-blueprint-v1.json` bytes. Template-03 and newer candidates use the tracked
+`map-blueprint-v2.json` profile, whose fixed-family contract must not be copied
+back into v1. Verify legacy approval compatibility without rewriting evidence:
+
+```bash
+npm run battle-maps:candidates:check -- \
+  --theme forest --template forest-template-01 --all
+```
 
 ## Initial compiler pin for a new source template
 

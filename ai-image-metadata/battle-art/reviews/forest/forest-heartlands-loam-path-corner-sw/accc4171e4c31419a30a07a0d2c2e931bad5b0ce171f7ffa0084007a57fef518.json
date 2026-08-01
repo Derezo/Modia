@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-loam-path-corner-sw",
+  "decision": "rejected",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "Topology, alpha, border, and minimum arm widths pass, but repeated tall hard-edged brown and black teeth surround both arms and read as a palisade or black-gap artifact rather than soft irregular Heartlands grass and leaf feathering over continuous warm loam.",
+  "reviewedAt": "2026-07-31T10:36:15.105Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-corner-sw.json",
+    "sha256": "sha256:a4ce53ddbb867c7dde99a364a60e06b8bd7ad059dba3dc2eaea057f5ea8fdf9b",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-sw/result.json",
+      "bytes": 2331,
+      "sha256": "sha256:9d3aaa630e5f50a35fc013edabeb297888202eb0dfc1fefcac40b3994e5ca573"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-sw/candidate.png",
+      "bytes": 15010,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:accc4171e4c31419a30a07a0d2c2e931bad5b0ce171f7ffa0084007a57fef518"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-sw/prompt.txt",
+        "bytes": 13277,
+        "sha256": "sha256:27b73d48526ff454ce005aacf4a8f0cbbc76b9c6315b185ff16ac62f84e5489a"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-sw/worker.jsonl",
+        "bytes": 41645,
+        "sha256": "sha256:005b43bd7890ecdb25f7058fefeb9af29a4b2c70c6bbf47ec4d8c20cd3aa3353"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-sw/worker.stderr.log",
+        "bytes": 180,
+        "sha256": "sha256:1c5895b390ec5a3132712f2fa7290dc3c0e0b751a23b96a36a02378a7024c97f"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-sw/last-message.txt",
+        "bytes": 464,
+        "sha256": "sha256:cca4537a7a4023b99dd522eec439b03c8db2ffe38e0491cb8dfc2d1c43dc5678"
+      }
+    }
+  },
+  "fullHash": "sha256:2d8c89e7a531d367184d7ef559b310e3afee7ad082184888ed612595dc83cb73"
+}

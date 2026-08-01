@@ -111,7 +111,14 @@ async function createCandidate(root, variant = 'candidate-01') {
     },
     worker: {
       command: 'codex',
-      args: ['exec', '--ephemeral', '--sandbox', 'workspace-write'],
+      args: [
+        'exec',
+        '--ephemeral',
+        '--enable',
+        'image_generation',
+        '--sandbox',
+        'workspace-write'
+      ],
       timeoutMs: 300_000,
       promptPath: `${directory}/prompt.txt`,
       stdoutPath: `${directory}/worker.jsonl`,
@@ -309,6 +316,12 @@ test('synthetic candidate pins are verified and preview HTML is byte-determinist
   const outputs = [];
   for (const root of roots) {
     const candidate = await createCandidate(root);
+    const lockDirectory = path.join(
+      root,
+      `ai-image-metadata/battle-maps/candidates/${THEME}/${TEMPLATE}/.locks`
+    );
+    await mkdir(lockDirectory, { recursive: true });
+    await writeFile(path.join(lockDirectory, 'candidate-01.lock'), '{"pid":123}\n');
     const result = await previewTemplate(previewOptions(root));
     assert.equal(result.sourceImage, null);
     assert.equal(result.candidates.length, 1);
@@ -349,6 +362,22 @@ test('synthetic candidate pins are verified and preview HTML is byte-determinist
   assert.match(outputs[0].html, /sha256:[0-9a-f]{64}/);
 });
 
+test('preview rejects a non-directory candidate lock boundary', async t => {
+  const root = await createFixture(t);
+  await createCandidate(root);
+  await writeFile(
+    path.join(
+      root,
+      `ai-image-metadata/battle-maps/candidates/${THEME}/${TEMPLATE}/.locks`
+    ),
+    'not a directory\n'
+  );
+  await assert.rejects(
+    previewTemplate(previewOptions(root)),
+    /candidate lock directory must be a directory/
+  );
+});
+
 test('candidate image hash mismatch fails closed before review output is written', async t => {
   const root = await createFixture(t);
   const { imagePath } = await createCandidate(root);
@@ -363,5 +392,24 @@ test('candidate image hash mismatch fails closed before review output is written
   await assert.rejects(
     previewTemplate(previewOptions(root)),
     /candidate candidate-01 image pin mismatch/
+  );
+});
+
+test('candidate preview requires explicit image-generation capability provenance', async t => {
+  const root = await createFixture(t);
+  const { result } = await createCandidate(root);
+  result.worker.args = result.worker.args.filter(
+    argument => !['--enable', 'image_generation'].includes(argument)
+  );
+  await writeFile(
+    path.join(
+      root,
+      `ai-image-metadata/battle-maps/candidates/${THEME}/${TEMPLATE}/candidate-01/result.json`
+    ),
+    `${JSON.stringify(result, null, 2)}\n`
+  );
+  await assert.rejects(
+    previewTemplate(previewOptions(root)),
+    /candidate worker provenance is invalid/
   );
 });

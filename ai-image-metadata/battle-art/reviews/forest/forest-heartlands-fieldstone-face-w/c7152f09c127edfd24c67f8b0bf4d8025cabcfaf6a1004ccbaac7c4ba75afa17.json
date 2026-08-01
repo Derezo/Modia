@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-fieldstone-face-w",
+  "decision": "rejected",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "The vertical face is readable but stops roughly halfway along the west edge, remaining about 52 pixels from the required 128,128 endpoint and leaving the final seam third open; regenerate the same top lip and stone face through the anchor-side endpoint without widening into a platform.",
+  "reviewedAt": "2026-07-31T08:00:18.295Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-fieldstone-face-w.json",
+    "sha256": "sha256:0a27586f38d0e2737e0ac1b38f26ec48bdee2442045c57333290f3470db80223",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-face-w/result.json",
+      "bytes": 2312,
+      "sha256": "sha256:a9eda3e6ccf9f166f27477b384677a809f30d013aac35ce57d224eebcbccda5a"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-face-w/candidate.png",
+      "bytes": 7037,
+      "width": 256,
+      "height": 256,
+      "format": "png",
+      "sha256": "sha256:c7152f09c127edfd24c67f8b0bf4d8025cabcfaf6a1004ccbaac7c4ba75afa17"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-face-w/prompt.txt",
+        "bytes": 10405,
+        "sha256": "sha256:7e63c86801ea676a0c081a3ba286741a8593eaa216b78064f8fcfa774070ebe2"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-face-w/worker.jsonl",
+        "bytes": 37660,
+        "sha256": "sha256:1c137b6de1f2300ce08d4e180b8f7f4365e8bd53848fdc64fba9737629bb68e9"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-face-w/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-face-w/last-message.txt",
+        "bytes": 334,
+        "sha256": "sha256:3d0144a28fdecdb9fee8a8ca98bdf499abd1b587c5df2018f378827e61b28720"
+      }
+    }
+  },
+  "fullHash": "sha256:30afe7f9a2bec16c1c6196ffb25718a7e5e1de80f8e5b59101dfb396462d95d5"
+}

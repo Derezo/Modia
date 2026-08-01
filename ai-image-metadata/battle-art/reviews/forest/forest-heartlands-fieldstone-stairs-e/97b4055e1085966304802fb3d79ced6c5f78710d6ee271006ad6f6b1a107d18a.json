@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-fieldstone-stairs-e",
+  "decision": "rejected",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "The overlong, unusually thin strip extends far behind the low anchor, and its lengthwise highlights merge into a braided eroded-track read instead of stable transverse fieldstone treads; regenerate a 28–36 pixel stair bed with repeated crosswise stone steps and only a short low-end feather.",
+  "reviewedAt": "2026-07-31T07:26:44.645Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-fieldstone-stairs-e.json",
+    "sha256": "sha256:429d7c85ea18fd66006cfee18b25bc75ea48676684d5c1de51f667594ece55f5",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-stairs-e/result.json",
+      "bytes": 2331,
+      "sha256": "sha256:ac917e428c91836e80af860ec8673da2c30317fe4aa21bcbdcecd90128b8bb60"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-stairs-e/candidate.png",
+      "bytes": 31430,
+      "width": 256,
+      "height": 192,
+      "format": "png",
+      "sha256": "sha256:97b4055e1085966304802fb3d79ced6c5f78710d6ee271006ad6f6b1a107d18a"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-stairs-e/prompt.txt",
+        "bytes": 8718,
+        "sha256": "sha256:b49540813b2cf4ccc08f57e347d34f4192e82d16326e22fa848d24ddac84271c"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-stairs-e/worker.jsonl",
+        "bytes": 35649,
+        "sha256": "sha256:7c07783aa8b6a9a36c299d1a1f9c705835c3147736ac9b412f1969310f3fc9df"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-stairs-e/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-stairs-e/last-message.txt",
+        "bytes": 417,
+        "sha256": "sha256:381c4379877b0e6b8b5fecd1974a8955447d47ff5d0f87574ff6344ce422fcb9"
+      }
+    }
+  },
+  "fullHash": "sha256:0f01f62be26c3d658a2bc5c0fc915c330ac92b9901b3db70132e21ea6206a3b4"
+}

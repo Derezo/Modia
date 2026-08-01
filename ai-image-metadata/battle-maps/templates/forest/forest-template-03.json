@@ -1,0 +1,281 @@
+{
+  "schemaVersion": "battle-map-source-template-v1",
+  "id": "forest-template-03",
+  "theme": "forest",
+  "status": "approved",
+  "tierEligibility": [
+    "tier-1",
+    "tier-2",
+    "tier-3",
+    "tier-4",
+    "tier-5"
+  ],
+  "supportedModes": [
+    "pve"
+  ],
+  "mapProfile": {
+    "width": 32,
+    "height": 32,
+    "orientation": "isometric-diamond",
+    "cameraFraming": "Keep the complete irregular oak-meadow basin, both loops, and every formation approach readable in the production isometric camera.",
+    "playerCapacity": {
+      "minimum": 1,
+      "maximum": 5
+    },
+    "candidatePoolSize": 24,
+    "maxAssignableOpponents": 7
+  },
+  "sourceImage": {
+    "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-03/reference.png",
+    "bytes": 3613563,
+    "width": 1254,
+    "height": 1254,
+    "format": "png",
+    "sha256": "sha256:c622b9b0def37497cf12a96013c72cfff405ad15aaae2955b5a8820a6f7e9efd"
+  },
+  "styleAuthority": {
+    "kind": "supplied-composition-reference",
+    "usage": "Use the image for Heartlands color, material, and pastoral woodland hierarchy; derive gameplay topology from this semantic contract.",
+    "literalTraceAllowed": false
+  },
+  "composition": {
+    "summary": "An irregular Heartlands oak-meadow basin centered on a shallow loam hollow and dry streambed, with a western meadow, eastern coppice clearing, northern fieldstone overlook, and branching figure-eight paths.",
+    "visualHierarchy": [
+      "The warm ochre loam hollow and dry streambed form the low central seam and shared crossing space.",
+      "The broad western meadow balances the denser eastern coppice clearing as distinct formation grounds.",
+      "A low northern fieldstone overlook crowns the upper loop without becoming an isolated peak.",
+      "Oak, flowering hawthorn, field maple, and rounded fieldstone shape an organic pastoral boundary."
+    ],
+    "focalAreas": [
+      "central shallow loam hollow and dry streambed",
+      "western wildflower meadow",
+      "eastern coppice clearing",
+      "northern fieldstone overlook",
+      "branching figure-eight path crossings"
+    ],
+    "negativeSpace": [
+      "Keep open breathing room within the western meadow and eastern coppice clearing for readable formations.",
+      "Preserve sightlines through the shallow hollow and around both figure-eight crossings.",
+      "Leave narrow natural gaps between hawthorn, oak, and fieldstone boundary clusters for alternate approaches."
+    ],
+    "density": [
+      "Open warm meadow grass and bluebells across the western basin shelf.",
+      "Moderate coppiced oak, field maple, leaf litter, and low fieldstone density around the eastern clearing.",
+      "Denser oak and flowering hawthorn clusters along the irregular outer basin rim.",
+      "Sparse fieldstone accents on the northern overlook and beside streambed crossings."
+    ]
+  },
+  "topologyIntent": {
+    "coordinateAuthority": "semantic-only",
+    "areas": [
+      {
+        "id": "central-loam-hollow",
+        "description": "A broad, shallow loam depression and dry streambed that carries the middle crossing without functioning as a choke.",
+        "required": true
+      },
+      {
+        "id": "western-meadow",
+        "description": "An irregular open meadow formation area with multiple exits into both halves of the figure-eight network.",
+        "required": true
+      },
+      {
+        "id": "eastern-coppice-clearing",
+        "description": "A sheltered formation clearing edged by coppiced oak and field maple with distinct upper and lower approaches.",
+        "required": true
+      },
+      {
+        "id": "northern-fieldstone-overlook",
+        "description": "A broad low overlook backed by rounded fieldstone and reached by natural slopes or occasional fieldstone stairs.",
+        "required": true
+      },
+      {
+        "id": "southern-hawthorn-fork",
+        "description": "A low path fork framed by flowering hawthorn that closes the lower loop and provides a second cross-basin route.",
+        "required": true
+      }
+    ],
+    "relationships": [
+      {
+        "from": "western-meadow",
+        "to": "central-loam-hollow",
+        "kind": "two gently curving entries across the western lip of the dry streambed",
+        "required": true
+      },
+      {
+        "from": "central-loam-hollow",
+        "to": "eastern-coppice-clearing",
+        "kind": "paired streambed crossings that arrive from different angles",
+        "required": true
+      },
+      {
+        "from": "western-meadow",
+        "to": "northern-fieldstone-overlook",
+        "kind": "upper loop approach by a natural slope and a separate fieldstone stair",
+        "required": true
+      },
+      {
+        "from": "northern-fieldstone-overlook",
+        "to": "eastern-coppice-clearing",
+        "kind": "descending upper-loop branches around oak and fieldstone clusters",
+        "required": true
+      },
+      {
+        "from": "western-meadow",
+        "to": "southern-hawthorn-fork",
+        "kind": "lower meadow branch with two readable exits",
+        "required": true
+      },
+      {
+        "from": "southern-hawthorn-fork",
+        "to": "eastern-coppice-clearing",
+        "kind": "lower-loop coppice approach skirting the dry streambed",
+        "required": true
+      },
+      {
+        "from": "southern-hawthorn-fork",
+        "to": "central-loam-hollow",
+        "kind": "secondary branch that creates the lower figure-eight crossing",
+        "required": true
+      },
+      {
+        "from": "central-loam-hollow",
+        "to": "northern-fieldstone-overlook",
+        "kind": "secondary upper branch that creates the northern crossing",
+        "required": true
+      }
+    ]
+  },
+  "heightIntent": {
+    "levelCount": {
+      "minimum": 3,
+      "maximum": 4
+    },
+    "landforms": [
+      "shallow central loam hollow",
+      "broad western meadow shelf",
+      "gently raised eastern coppice shelf",
+      "low northern fieldstone overlook"
+    ],
+    "maxGradualSlope": 1,
+    "connections": [
+      "Use natural grassy or loamy slopes for most level changes.",
+      "Use occasional rounded fieldstone stairs where the upper loop meets the northern overlook.",
+      "Keep every rise broad and connected; do not create isolated peaks.",
+      "Let the dry streambed remain shallow enough to cross at several readable points."
+    ]
+  },
+  "routeIntent": {
+    "primaryApproaches": [
+      "Build two interlocking loops between the western meadow and eastern coppice clearing, crossing through the central hollow and reconnecting at northern and southern branches.",
+      "Give each formation area at least two tactically distinct approaches, with no route serving as the sole crossing.",
+      "Curve paths around oak, hawthorn, and fieldstone clusters instead of forming straight corridors."
+    ],
+    "secondaryApproaches": [
+      "Link the northern overlook to both sides of the basin by a slope route and an occasional fieldstone-stair route.",
+      "Use the southern hawthorn fork and shallow streambed branches to preserve flanking choices around the lower loop.",
+      "Keep both figure-eight crossing spaces broad enough for alternate movement lines."
+    ],
+    "minimumApproachesPerFormation": 2
+  },
+  "boundaryIntent": {
+    "owners": [
+      "mature oak clusters",
+      "field maple coppice",
+      "flowering hawthorn thickets",
+      "rounded cream-gray fieldstone",
+      "broad natural basin slopes"
+    ],
+    "irregularPlayableSilhouette": true,
+    "description": "Organic oak, hawthorn, fieldstone, and natural slopes own an uneven Heartlands basin edge; never resolve the perimeter into a rectangle or continuous wall."
+  },
+  "spawnIntent": {
+    "sides": [
+      "players",
+      "opponents"
+    ],
+    "formationCharacter": "Opposing formations occupy the western meadow and eastern coppice clearing, each with local cover, open maneuvering room, and upper- and lower-loop exits.",
+    "minimumApproaches": 2,
+    "localClearanceTiles": 2,
+    "candidateRoles": [
+      "frontline",
+      "ranged",
+      "support",
+      "mobile",
+      "ambush",
+      "boss"
+    ],
+    "forbiddenBehavior": [
+      "Do not place candidates on detached pads.",
+      "Do not reserve full-height or full-width cleared spawn strips.",
+      "Do not make either formation depend on a single choke or crossing.",
+      "Do not infer exact spawn coordinates by literally tracing the source image."
+    ]
+  },
+  "requiredLandmarks": [
+    "irregular oak-meadow basin",
+    "central shallow loam hollow and dry streambed",
+    "western meadow formation area",
+    "eastern coppice clearing formation area",
+    "northern fieldstone overlook",
+    "branching figure-eight path network",
+    "at least two crossings or approaches per formation",
+    "natural slopes and occasional fieldstone stairs"
+  ],
+  "forbiddenPatterns": [
+    "full-height or full-width cleared strips",
+    "detached spawn pads",
+    "rectangular perimeter",
+    "checkerboard materials",
+    "literal pixel or coordinate tracing",
+    "single-choke formations or routes",
+    "isolated peaks",
+    "repeated straight boundaries",
+    "large visually ambiguous movement regions"
+  ],
+  "assetHints": {
+    "surfaces": [
+      "warm meadow grass and bluebells",
+      "warm ochre loam and leaf litter",
+      "shallow dry streambed earth",
+      "soft grassed natural slopes"
+    ],
+    "connections": [
+      "warm ochre loam paths",
+      "gradual meadow and coppice slopes",
+      "occasional rounded cream-gray fieldstone stairs",
+      "broad dry streambed crossings"
+    ],
+    "obstacles": [
+      "mature oak",
+      "field maple coppice",
+      "flowering hawthorn",
+      "rounded cream-gray fieldstone"
+    ],
+    "decorations": [
+      "bluebells in warm meadow grass",
+      "oak and field maple leaf litter",
+      "flowering hawthorn petals",
+      "small rounded cream-gray fieldstones"
+    ]
+  },
+  "promptProfile": {
+    "id": "source-template-image-v1",
+    "path": "ai-image-metadata/battle-maps/prompts/source-template-image-v1.json",
+    "sha256": "sha256:6a4200193384b8682cb7cbc69ad6a819dc5cb4cfbd116c395b0f628b5a208f41"
+  },
+  "candidateMaps": [
+    "forest-template-03-a",
+    "forest-template-03-b",
+    "forest-template-03-c"
+  ],
+  "pins": {
+    "sourceImageSha256": "sha256:c622b9b0def37497cf12a96013c72cfff405ad15aaae2955b5a8820a6f7e9efd",
+    "promptProfileSha256": "sha256:6a4200193384b8682cb7cbc69ad6a819dc5cb4cfbd116c395b0f628b5a208f41",
+    "approvedBlueprintSha256": null,
+    "compilerSha256": "sha256:59e05298142a9e5c0b9bc32b04a87c1127e15cebff8af9feafe2a3a6da167ab9"
+  },
+  "review": {
+    "decision": "approved",
+    "reviewer": "codex-full-game-battle-content-review"
+  }
+}

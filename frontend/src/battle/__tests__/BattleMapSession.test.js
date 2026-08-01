@@ -176,7 +176,7 @@ describe('BattleMapSession', () => {
     assert.equal(getBattleMapCapabilities().cachedMaps.length, 0);
   });
 
-  it('verifies and hydrates a full V3 snapshot without adding it to the V2 cache', async () => {
+  it('verifies, caches, and hydrates a full V3 snapshot', async () => {
     const map = await createMinimalBattleMapV3FinalFixture();
     assert.deepEqual(
       getBattleMapCapabilities().supportedBattleMapSchemaVersions,
@@ -200,7 +200,11 @@ describe('BattleMapSession', () => {
     assert.equal(hydrated.mapWidth, map.dimensions.width);
     assert.equal(hydrated.mapHeight, map.dimensions.height);
     assert.equal(hydrated.nodeType, map.theme);
-    assert.deepEqual(getBattleMapCapabilities().cachedMaps, []);
+    assert.deepEqual(getBattleMapCapabilities().cachedMaps, [{
+      battleMapSchemaVersion: 3,
+      terrainGenerationVersion: 3,
+      fullHash: map.hashes.fullHash
+    }]);
     assert.deepEqual(
       getBattleMapCapabilities().supportedBattleMapSchemaVersions,
       [1, 2, 3]
@@ -221,6 +225,37 @@ describe('BattleMapSession', () => {
     });
     assert.equal(session.acceptUpdate(update).status, 'applied');
     assert.equal(session.state.turn, 2);
+  });
+
+  it('hydrates cached V3 only after an exact full map was verified locally', async () => {
+    const map = await createMinimalBattleMapV3FinalFixture();
+    installFixtureRuntimeManifest(map);
+    const full = createBattleStateSnapshotV1({
+      battleId: 'v3-cache',
+      stateRevision: 1,
+      battleMap: map,
+      mutableState: mutable()
+    });
+    const cached = createBattleStateSnapshotV1({
+      battleId: 'v3-cache',
+      stateRevision: 2,
+      battleMap: map,
+      mutableState: mutable({ turn: 2 }),
+      mapDelivery: 'cached'
+    });
+
+    await assert.rejects(
+      () => new BattleMapSession().acceptSnapshot(cached),
+      error => error.code === 'battle_map_cache_miss'
+    );
+
+    const primingSession = new BattleMapSession();
+    await primingSession.acceptSnapshot(full);
+    const result = await new BattleMapSession().acceptSnapshot(cached);
+
+    assert.equal(result.map, primingSession.battleMap);
+    assert.equal(result.state.turn, 2);
+    assert.equal(result.state.stateRevision, 2);
   });
 
   it('hydrates the active forest V12 map with its exact generated runtime bundle', async () => {
@@ -294,9 +329,17 @@ describe('BattleMapSession', () => {
       error => error.code === 'battle_map_snapshot_required'
     );
 
-    const snapshot = structuredClone(createBattleStateSnapshotV1({
+    await session.acceptSnapshot(createBattleStateSnapshotV1({
       battleId: 'v3-tampered',
       stateRevision: 1,
+      battleMap: map,
+      mutableState: mutable()
+    }));
+    assert.equal(getBattleMapCapabilities().cachedMaps.length, 1);
+
+    const snapshot = structuredClone(createBattleStateSnapshotV1({
+      battleId: 'v3-tampered',
+      stateRevision: 2,
       battleMap: map,
       mutableState: mutable()
     }));
@@ -305,6 +348,7 @@ describe('BattleMapSession', () => {
       () => new BattleMapSession().acceptSnapshot(snapshot),
       error => error.code === 'battle_map_verification_failed'
     );
+    assert.equal(getBattleMapCapabilities().cachedMaps.length, 0);
   });
 
   it('applies ordered deltas and detects duplicate, gap, and map-reference recovery cases', async () => {

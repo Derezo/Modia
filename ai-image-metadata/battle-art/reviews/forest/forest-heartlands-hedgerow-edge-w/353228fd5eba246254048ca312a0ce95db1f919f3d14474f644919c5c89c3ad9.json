@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-hedgerow-edge-w",
+  "decision": "rejected",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "The retry removes the prior vertical crop seam and keeps the W strip grounded, but the leftmost elevated crown reaches roughly x=3 to x=4, violating the required 8-pixel canopy clearance and retaining a visible seam risk.",
+  "reviewedAt": "2026-07-31T08:28:09.162Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-hedgerow-edge-w.json",
+    "sha256": "sha256:ac4401ed7c2566fb0abcf1d822e46d966331b7c204d94e44d91a11ed37fd617c",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hedgerow-edge-w/result.json",
+      "bytes": 2295,
+      "sha256": "sha256:07f1d569c576e3bc17e056f16b4916795f638509111cc5790a1f6733f74a54bb"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hedgerow-edge-w/candidate.png",
+      "bytes": 21346,
+      "width": 256,
+      "height": 256,
+      "format": "png",
+      "sha256": "sha256:353228fd5eba246254048ca312a0ce95db1f919f3d14474f644919c5c89c3ad9"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hedgerow-edge-w/prompt.txt",
+        "bytes": 11181,
+        "sha256": "sha256:33902b6e734e6d5cad23c27bd0941632b807d2888a997a50a3df22d38b44f436"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hedgerow-edge-w/worker.jsonl",
+        "bytes": 36320,
+        "sha256": "sha256:15c8e5454c980295a463a8d24cfa445bb23677f58b43933ccb53022d33e00260"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hedgerow-edge-w/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hedgerow-edge-w/last-message.txt",
+        "bytes": 393,
+        "sha256": "sha256:7bc950790c436a0a60dd12c7cd542dfba9295dbf29efa5076fc18a2dff6dddf6"
+      }
+    }
+  },
+  "fullHash": "sha256:9c4bafb9b1e68cd6ce3313f0eabe9b92a016f71611ddecc5e33aac6b80dbfcae"
+}

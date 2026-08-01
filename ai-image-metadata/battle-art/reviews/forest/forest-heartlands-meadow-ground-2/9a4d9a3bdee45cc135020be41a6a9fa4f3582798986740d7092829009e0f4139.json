@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-meadow-ground-2",
+  "decision": "approved",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "One dominant left-center russet pool is wrapped by two broad moss intrusions with a single pale-leaf fan; there is no repeated patch mosaic or busy seam rim.",
+  "reviewedAt": "2026-07-31T07:03:36.884Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-meadow-ground-2.json",
+    "sha256": "sha256:a80eeb294be178479f3a8dec91122c0a3b7742e321403065440763b5b3554395",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-meadow-ground-2/result.json",
+      "bytes": 2295,
+      "sha256": "sha256:e877bb6118d3767aaebae0177ff1415558c17c779f16d25a59496bd7eec1ea44"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-meadow-ground-2/candidate.png",
+      "bytes": 45313,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:9a4d9a3bdee45cc135020be41a6a9fa4f3582798986740d7092829009e0f4139"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-meadow-ground-2/prompt.txt",
+        "bytes": 9009,
+        "sha256": "sha256:4d0d0ce353ac2eeefb9255f0d7f0bf5ec78e800ef9a3c4134fcd64d12939b55b"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-meadow-ground-2/worker.jsonl",
+        "bytes": 24099,
+        "sha256": "sha256:dba8fd52b22590b0266e56577a89b29ab43baae4cbdd3de6ef511ee21acc271d"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-meadow-ground-2/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-meadow-ground-2/last-message.txt",
+        "bytes": 342,
+        "sha256": "sha256:00f0c601a21ea5187bca74c6f59e3b643819c5bfede47c076685c0b88430e432"
+      }
+    }
+  },
+  "fullHash": "sha256:2a2e583176c0dbe1fb954b90965c000302b6190dc8848becbf69ffebb4150450"
+}

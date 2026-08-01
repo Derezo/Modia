@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-field-maple",
+  "decision": "approved",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "Palmate yellow-green maple foliage, upright branching bark, and a rounded canopy distinguish this tree from the ancient oak while preserving a grounded one-cell blocking silhouette and clean transparency.",
+  "reviewedAt": "2026-07-31T07:03:12.795Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-field-maple.json",
+    "sha256": "sha256:f098fadc3ca74bc458d3ec4e99638ca3dbf34ef390dc3f8a160700a7a474ca46",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-field-maple/result.json",
+      "bytes": 2259,
+      "sha256": "sha256:f39c046723070d86249a81e026d1ac0d0d68c61dbd5e43978e0e5c4cc220d65e"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-field-maple/candidate.png",
+      "bytes": 81656,
+      "width": 192,
+      "height": 256,
+      "format": "png",
+      "sha256": "sha256:9fe4e35bae7ca636b449d64616b249a1b97697cec619972232edca5e868e7328"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-field-maple/prompt.txt",
+        "bytes": 7900,
+        "sha256": "sha256:824743498374fab9f59e0a420130bfa78003b288e3616dad792fac5c6340727a"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-field-maple/worker.jsonl",
+        "bytes": 24931,
+        "sha256": "sha256:fec020c64e10f8b3de0e89caa9427d15f452e7e2e0f2347a034d7c5c87304586"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-field-maple/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-field-maple/last-message.txt",
+        "bytes": 368,
+        "sha256": "sha256:c134ef76e513a450dfa7a9f74c50a09381a962adfc7879fd396553f6febcd887"
+      }
+    }
+  },
+  "fullHash": "sha256:f16d40e9c48944eba50a77d64b144b8ed0c474045a485f8debc26c18a113d264"
+}

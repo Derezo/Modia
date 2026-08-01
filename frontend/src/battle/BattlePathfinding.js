@@ -389,9 +389,12 @@ export class BattlePathfinding {
     const unitsArray = [];
     for (const unit of this.units.values()) {
       unitsArray.push({
+        id: unit.id,
         gridX: unit.gridX,
         gridY: unit.gridY,
-        hp: unit.hp
+        hp: unit.hp,
+        type: unit.type,
+        teamId: unit.teamId
       });
     }
     return unitsArray;

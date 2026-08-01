@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-loam-path-corner-sw",
+  "decision": "rejected",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "Mechanical W/S contacts pass, but the oversized teardrop mass contains black striped voids and hard repeated under-edge segments, so it reads as a broken extruded platform or palisade rather than one soft continuous rounded loam bend overlay.",
+  "reviewedAt": "2026-07-31T12:03:35.208Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-corner-sw.json",
+    "sha256": "sha256:82546c0ce3b8a5b09370bfcb411afd2fbe6e7f2ac4e951c6557a846cbd02a65f",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-sw/result.json",
+      "bytes": 2331,
+      "sha256": "sha256:4d26d7e0d3cbd6ac957143f116f181f79fc6dafcf86704416324524aaaff156a"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-sw/candidate.png",
+      "bytes": 24021,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:b740a85e45e29826a780585a42f1aec3c3320c61f4a7819a242ed86ee7ad495f"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-sw/prompt.txt",
+        "bytes": 15119,
+        "sha256": "sha256:2f94c46309cea61b069027eafbe4930afcf04e0a61072e70a942d5dfc7299f78"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-sw/worker.jsonl",
+        "bytes": 45645,
+        "sha256": "sha256:07e41c948950ed17d7c3b7429a18d68dd36cb4937d71615439c044fa36618aff"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-sw/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-sw/last-message.txt",
+        "bytes": 353,
+        "sha256": "sha256:365d6e8e1cee4340b997bda4200fbb61acd65256ea2b937a6fe2d24a3254f0fb"
+      }
+    }
+  },
+  "fullHash": "sha256:26f724e0da0324980919f9bbc1baba39759c9929f671e70531e73bbff2c1af2c"
+}

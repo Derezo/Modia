@@ -18,6 +18,11 @@ uses `battle-art-family-descriptor-v2`, which adds:
 - `variantId`: the stable variant within that group, such as `grade-1-n`.
 - `capabilities`: a closed object containing `direction`, `routeTopology`,
   `surfaceVariant`, `ecologyProfile`, `tierBands`, and `heightDeltas`.
+- experimentally, `routeFinishing` on a route descriptor that explicitly opts
+  in: the fixed
+  `largest-component-box-v1` operation, descriptor-pinned target box,
+  detached-coverage ceiling, and alpha threshold/minimum/maximum/spread
+  measurements used by both publication and review replay.
 
 `direction` is `n`, `e`, `s`, `w`, or `null`. Route topology is one of the
 16 final authored roles: `isolated`; `end-n/e/s/w`; `straight-ns/ew`;
@@ -275,20 +280,127 @@ Generate candidates:
 ```bash
 npm run battle-art:generate -- \
   --theme forest \
-  --ecology-profile forest-heartlands-woodland \
-  --tier 1 \
-  --category connection-slope \
-  --resume
+  --family forest-heartlands-loam-path-straight-ns \
+  --concurrency 1
 ```
 
-There is exactly one imagegen invocation per concrete descriptor. Generation
-cannot approve, compile, publish, or fabricate readiness metadata.
+Live generation requires exactly one explicit family and concurrency `1`.
+There is exactly one imagegen invocation for that descriptor. Generation
+cannot approve, compile, publish, or fabricate readiness metadata. Dry runs and
+the narrowly audited recovery path retain their separate selection semantics.
 
-For a large reviewed matrix, add `--keep-going`. Every family still runs in
-its isolated one-image worker; invalid families are reported as `failed`, the
-remaining families continue, and the command exits nonzero after all work
-finishes. This prevents one direction that misses a hard raster contract from
-discarding valid sibling work.
+The active Heartlands `straight-ns` canary uses direct whole-image generation:
+one ordinary forest template reference, exact-aspect whole-image resize when
+needed, normalization, and the generic raster contract. The experimental
+`routeFinishing` and rejected-artifact corrective-reference path remains in the
+tooling for historical audit and explicit opt-in testing, but is not active on
+this descriptor.
+
+The v12 draft corrects only the direct-generation prompt: N `(192,32)` and S
+`(64,96)` are full-width terminal seam cross-sections, with short transverse
+caps 4–6 pixels beyond them at `(196,30)` and `(60,98)`. The rejected v11
+candidate and its immutable review evidence remain preserved; do not normalize,
+replace, or reuse those bytes when generating v12.
+
+Every new direct route candidate records
+`battle-art-route-direct-preparation-v1` provenance. It pins the immutable raw
+path, hash, byte count, format, and dimensions, plus whether the one
+exact-aspect whole-image Lanczos3 resize was applied, the fixed PNG
+normalization operation, and the final candidate hash. Normalize, recovery,
+preview, review, approval, and audit replay that preparation from the pinned
+raw and require byte-identical output. Re-hashing replacement candidate bytes
+does not satisfy this provenance.
+
+Route-transition workers have a deliberately smaller finishing surface: read
+the pinned image-generation skill, make the one imagegen call, copy that
+current-thread artifact once to `candidate.png`, and stop.
+
+For an experimental descriptor with `routeFinishing`, the parent first verifies the copied
+bytes and exact source aspect, then persists that raw image under its SHA-256
+identity in `ai-image-metadata/battle-art/generated-artifacts/`. That raw path
+is tracked, immutable, and survives failed validation, forced regeneration,
+and review.
+The parent removes chroma, selects the one largest four-connected alpha
+component, rejects source-border truncation, excessive detached coverage, or
+a source/target subject-aspect mismatch that would require more than 5:4
+X/Y scale anisotropy, crops once to that component, resizes once with Lanczos3 into the
+descriptor-pinned target box, and places it on the declared canvas. It then
+runs the descriptor-pinned border, arm-width/spread, topology, and coverage
+checks once before publishing a candidate. The metadata records the complete
+raw-to-final derivation and hashes.
+
+The arm-width range applies to the connected near-opaque route band at the
+descriptor's exact alpha threshold; it is not a measurement of the faintest
+visible fringe. Generation prompts must state that threshold explicitly.
+When arm validation fails, the rejection reports every direction/fraction
+sample in canonical order, every narrow or wide sample, the observed range,
+and any spread violation so one attempt does not reveal defects serially.
+
+Before candidate validation, every route transition durably pins the exact
+generated raw artifact. If validation then fails, generation also writes an
+immutable, content-addressed
+`battle-art-route-failed-attempt-v1` JSON record beside the family’s raw
+artifacts. It embeds and hashes the exact descriptor snapshot, prompt, bounded
+worker logs, style provenance, one-imagegen/current-thread copy audit, raw
+identity, and rejection. A later forced attempt may replace the ignored
+working diagnostics, but it cannot overwrite or orphan the earlier failure
+evidence.
+
+Generated artifacts are not ordinary style-reference roots. The sole narrow
+exception is an immutable rejected route raw explicitly authorized by the
+module-pinned
+`ai-image-metadata/battle-art/corrective-style-reference-registry.json`.
+Each authorization pins one exact consumer theme/family, raw path and hash,
+and failed-attempt record path, content hash, and full hash. Manifest loading
+verifies that complete tuple and the raw bytes; generation then re-runs the
+full failed-attempt audit before staging the reference. A descriptor may use
+the authorization only for its exact consumer and must place it last so it is
+the final-precedence same-orientation corrective edit target. Earlier approved
+art may remain a secondary material or width-profile oracle.
+
+This exception does not approve or promote the rejected raw. It remains
+non-publishable and non-reusable outside its registered correction, and the
+new result must independently pass every current raster, finishing, topology,
+width, spread, and review contract. Arbitrary generated-artifact pins, missing
+or altered failure evidence, cross-family use, and a corrective reference in
+any non-final position are rejected.
+
+Because the correction is an image edit, a descriptor using this registry
+cannot use `--text-style-fallback`; generation and recovery fail closed unless
+the ordered attachments are available.
+
+There is no placement enumeration, scoring loop, transform retry, or local
+content repair. An invalid source produces one actionable rejection while
+retaining the bounded worker diagnostics and immutable raw evidence. A
+mismatched aspect, truncated component, detached fragment excess, narrow or
+wide arm, excess width spread, border contact, or coverage failure cannot be
+promoted for visual review.
+
+If a route worker completed its one imagegen call and unchanged artifact copy
+but the parent lifecycle rejected the evidence before publication, recover
+that exact artifact through the same npm command instead of generating again:
+
+```bash
+npm run battle-art:generate -- \
+  --theme forest \
+  --family <exact-route-family-id> \
+  --recover \
+  --timeout <original-worker-timeout-seconds>
+```
+
+Recovery is deliberately narrow: it accepts exactly one explicit draft
+route family, requires the original bounded prompt, JSONL, stderr, and final
+message, requires no existing candidate publication, and requires the exact
+current prompt and style pins. It re-audits the one-call/current-thread copy
+evidence, securely reads the preserved generated artifact, and passes those
+bytes through the same deterministic parent-side path as ordinary generation.
+It never starts a worker or calls imagegen. The original timeout must be
+supplied so the reconstructed candidate provenance records the invocation
+accurately.
+
+Do not batch live families or use `--keep-going`. Run one reviewed family per
+live command at concurrency `1`, inspect its result, and only then proceed to a
+separate command.
 
 The normal path sends the hash-pinned style reference to the image tool. In a
 restricted nested sandbox where local image ingestion is unavailable, use the
@@ -297,9 +409,8 @@ tracked textual authority without changing models or bypassing the lifecycle:
 ```bash
 npm run battle-art:generate -- \
   --theme forest \
-  --ecology-profile forest-heartlands-woodland \
-  --tier 1 \
-  --resume \
+  --family forest-heartlands-loam-path-straight-ns \
+  --concurrency 1 \
   --text-style-fallback
 ```
 
@@ -312,6 +423,10 @@ temporary-directory, locale, certificate, and proxy environment. Application,
 database, session, payment, parent-thread, and API-key secrets are not
 forwarded. Worker output, the final message, the disposable workspace, and the
 candidate image are byte-bounded and audited before anything is published.
+Operational accounting must distinguish actual worker starts and Imagegen
+invocations from deterministic normalization and validation checks. One failed
+validation is not another generation attempt. The lifecycle performs no
+automatic retry, candidate search, placement enumeration, or selection loop.
 
 If deterministic raster normalization changes after candidates were generated,
 repin the selected draft candidates before visual review without regenerating
@@ -332,6 +447,12 @@ result, and atomically updates the candidate image and its hash, dimensions,
 format, and byte-count metadata. Candidate status and the original worker audit
 record are preserved. It never invokes imagegen and rejects missing or stale
 candidates and approved/compiled families.
+
+A route candidate with an immutable finishing derivation is already canonical.
+Normalization replays and verifies its raw-to-final derivation first. If a
+normalizer change would alter those final bytes, the command fails instead of
+rewriting the image and invalidating provenance; regenerate only after the
+tracked finishing contract itself is deliberately revised.
 
 Image and metadata publication uses a durable per-family recovery journal under
 the same candidate lock. The backup, journal, image, metadata, and cleanup
@@ -362,16 +483,45 @@ npm run battle-art:preview -- \
 ```
 
 Review alpha bounds, anchor, footprint, scale, edge seams, direction, height
-alignment, route topology, and regional art direction. Then approve each
-concrete family explicitly:
+alignment, route topology, and regional art direction. Record every decision
+against the exact current candidate with a concrete rationale. Rejected records
+must be written before regenerating the draft candidate:
+
+```bash
+npm run battle-art:review -- \
+  --theme forest \
+  --family heartlands-earth-slope-n-grade-1 \
+  --reviewer <identity> \
+  --decision rejected \
+  --reason "<specific visual or contract issue>"
+```
+
+Review records are immutable, content-addressed tracked JSON under
+`ai-image-metadata/battle-art/reviews/`. They pin the candidate metadata, image,
+frozen prompt/style inputs, and worker evidence. Route records additionally pin
+the content-addressed raw artifact and deterministic finishing derivation;
+review audit re-reads that raw pin and replays current-contract derivations.
+An identical retry is safe; a different decision, reviewer, or rationale for
+the same candidate is rejected. Regenerate a rejected draft to obtain a new
+candidate identity.
+
+Then approve each accepted concrete family explicitly:
 
 ```bash
 npm run battle-art:approve -- \
   --theme forest \
   --family heartlands-earth-slope-n-grade-1 \
   --reviewer <identity> \
-  --decision approved
+  --decision approved \
+  --reason "<specific acceptance rationale>"
 ```
+
+Approval creates or verifies the matching approved review record before
+promoting the source. `battle-art:review --decision approved` can backfill a
+just-approved, not-yet-compiled family when its exact candidate is still
+present. Archived legacy releases remain valid without retroactive review
+records. That legacy exemption is pinned to releases 1–6 of
+`battle-art-descriptors-2026-07-30`; later archives remain review-gated.
 
 Compile and validate immutable runtime assets:
 

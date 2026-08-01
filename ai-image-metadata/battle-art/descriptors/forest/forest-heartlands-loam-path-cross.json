@@ -1,0 +1,97 @@
+{
+  "schemaVersion": "battle-art-family-descriptor-v2",
+  "id": "forest-heartlands-loam-path-cross",
+  "theme": "forest",
+  "category": "route-transition",
+  "familyGroup": "forest-heartlands-loam-path",
+  "variantId": "cross",
+  "capabilities": {
+    "direction": null,
+    "routeTopology": "cross",
+    "surfaceVariant": null,
+    "ecologyProfile": "forest-heartlands-woodland",
+    "tierBands": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "heightDeltas": [
+      0
+    ]
+  },
+  "status": "approved",
+  "promptProfile": {
+    "id": "battle-art-family-v2",
+    "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+    "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+  },
+  "styleReferences": [
+    {
+      "id": "forest-source-template-01",
+      "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+      "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+    }
+  ],
+  "generationPrompt": "Create exactly one seam-safe orthographic isometric forest route-transition asset named forest-heartlands-loam-path-cross for ecology profile forest-heartlands-woodland; tier bands 1, 2, 3, 4, 5; exact route topology cross. Author the declared orientation directly, preserve continuous neighboring materials and edge alignment, and include only the declared family content. Regional visual vocabulary: Heartlands Woodland uses a coherent pastoral forest of mature broad-canopy oak, field maple, and flowering hawthorn; warm meadow grass and bluebells; rounded cream-gray fieldstone; warm ochre loam and oak leaf litter; and dappled late-morning light. Keep this species mix, material palette, scale, and lighting explicitly consistent across every directional edge and transition. Depict only a naturally worn path overlay with loose soil, tiny stones, leaf litter, and soft irregular grass feathering. Connect exactly the sides named by cross; In the 2:1 isometric diamond, N meets the upper-right edge, E the lower-right edge, S the lower-left edge, and W the upper-left edge. Join the path at (128,64). The four precise edge-band targets are N=(192,32), E=(192,96), S=(64,96), and W=(64,32) on this 256x128 source raster. Carry the path into a 20-pixel neighborhood of every named target and keep every unnamed target neighborhood free of dirt. Use a 28–36 pixel worn core with a further 6–10 pixel irregular grass-and-leaf feather on each side. Join branches through one broad, rounded central wear area; corner roles need a continuous generous-radius bend with no pointed chevron, acute V, square elbow, or polygonal cusp. Keep every connection centered and equal width at the tile edge, with no opaque ground diamond and no hard polygonal border. Do not add a baked backdrop, black void, unrelated terrain wall, or presentation frame.",
+  "rasterContract": {
+    "schemaVersion": "battle-art-raster-contract-v1",
+    "kind": "transparent-cutout",
+    "minimumCoveredPermille": 10,
+    "maximumCoveredPermille": 850
+  },
+  "canvas": {
+    "width": 256,
+    "height": 128
+  },
+  "placement": {
+    "pivot": {
+      "x": 128,
+      "y": 64
+    },
+    "anchor": {
+      "x": 128,
+      "y": 64
+    },
+    "footprint": {
+      "x": 0,
+      "y": 0,
+      "width": 1,
+      "height": 1
+    },
+    "collision": {
+      "kind": "none",
+      "cells": []
+    },
+    "drawBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 128
+    },
+    "occlusionBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
+    },
+    "stratum": "route"
+  },
+  "content": {
+    "version": 1,
+    "sourceSha256": "sha256:07efeed70b035cf9301b82494a76a909214d4b27f96127c2476905fd4dd73246",
+    "runtimeSha256": null,
+    "immutableUrl": null
+  },
+  "source": {
+    "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-cross/result.json",
+    "imagePath": "ai-image-metadata/battle-art/sources/forest/forest-heartlands-loam-path-cross/v1/07efeed70b035cf9301b82494a76a909214d4b27f96127c2476905fd4dd73246.png",
+    "imageSha256": "sha256:07efeed70b035cf9301b82494a76a909214d4b27f96127c2476905fd4dd73246",
+    "width": 256,
+    "height": 128,
+    "format": "png",
+    "reviewer": "codex-full-game-battle-content-review",
+    "approvedAt": "2026-07-31T06:34:53.025Z"
+  }
+}

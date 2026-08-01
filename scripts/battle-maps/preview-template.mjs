@@ -228,10 +228,22 @@ function validateCandidateResult(value, expected) {
   if (!Array.isArray(value.worker.args) || value.worker.args.some(argument => typeof argument !== 'string')) {
     throw new Error('candidate worker.args must be an array of strings');
   }
+  const imageGenerationEnabled = value.worker.args.some(
+    (argument, index) =>
+      argument === '--enable'
+      && value.worker.args[index + 1] === 'image_generation'
+  );
+  const imageGenerationDisabled = value.worker.args.some(
+    (argument, index) =>
+      argument === '--disable'
+      && value.worker.args[index + 1] === 'image_generation'
+  );
   if (
     value.worker.args[0] !== 'exec'
     || !value.worker.args.includes('--ephemeral')
     || !value.worker.args.includes('workspace-write')
+    || !imageGenerationEnabled
+    || imageGenerationDisabled
   ) {
     throw new Error('candidate worker provenance is invalid');
   }
@@ -327,6 +339,22 @@ async function loadCandidates(projectRoot, sidecar) {
   const candidates = [];
   for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
     if (entry.name === 'blueprints' || entry.name.startsWith('.workspace-')) continue;
+    if (entry.name === '.locks') {
+      const lockDirectory = resolveWithinProject(
+        projectRoot,
+        `${relativeRoot}/.locks`,
+        'candidate lock directory'
+      );
+      await assertSafeWritePath(
+        projectRoot,
+        lockDirectory,
+        'candidate lock directory'
+      );
+      if (!entry.isDirectory()) {
+        throw new Error('candidate lock directory must be a directory');
+      }
+      continue;
+    }
     if (!ID_PATTERN.test(entry.name)) throw new Error(`candidate directory has invalid entry "${entry.name}"`);
     const entryRelative = `${relativeRoot}/${entry.name}`;
     const entryPath = resolveWithinProject(projectRoot, entryRelative, 'candidate variant directory');

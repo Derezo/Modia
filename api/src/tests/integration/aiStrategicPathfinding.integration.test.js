@@ -191,6 +191,46 @@ describe('calculateStrategicPath', () => {
     assert.strictEqual(result.turnsToReach, 1);
   });
 
+  test('routes through a living ally without adding movement cost', () => {
+    const aiUnit = createMockEnemyUnit({
+      id: 'enemy_1',
+      tileX: 0,
+      tileY: 0,
+      movement: 3
+    });
+    const ally = createMockEnemyUnit({
+      id: 'enemy_2',
+      tileX: 1,
+      tileY: 0,
+      hp: 100
+    });
+    const player = createMockPlayerUnit({
+      id: 'player_1',
+      tileX: 3,
+      tileY: 0,
+      hp: 100
+    });
+    const state = createMockBattleState({
+      units: [aiUnit, ally, player],
+      terrain: generateGrassGrid(4, 1),
+      mapWidth: 4,
+      mapHeight: 1
+    });
+
+    const result = calculateStrategicPath(aiUnit, state);
+
+    assert.deepStrictEqual(
+      result.path.map(({ x, y }) => ({ x, y })),
+      [
+        { x: 0, y: 0 },
+        { x: 1, y: 0 },
+        { x: 2, y: 0 },
+        { x: 3, y: 0 }
+      ]
+    );
+    assert.strictEqual(result.turnsToReach, 1);
+  });
+
   test('returns correct turnsToReach based on path length and movement', () => {
     const aiUnit = createMockEnemyUnit({
       id: 'enemy_1',

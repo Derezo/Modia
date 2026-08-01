@@ -404,12 +404,21 @@ function assertFinalAssignment({
     }
   }
 
-  const finalUnits = allAssignments.map(assignment => ({
+  const finalUnits = playerAssignments.map(assignment => ({
     id: assignment.unitId,
     x: assignment.cell.x,
     y: assignment.cell.y,
-    hp: 1
-  }));
+    hp: 1,
+    type: 'player',
+    teamId: 1
+  })).concat(opponentAssignments.map(assignment => ({
+    id: assignment.unitId,
+    x: assignment.cell.x,
+    y: assignment.cell.y,
+    hp: 1,
+    type: 'enemy',
+    teamId: 2
+  })));
   const occupiedView = createBattleMapV3TraversalView(map, {
     units: finalUnits
   });

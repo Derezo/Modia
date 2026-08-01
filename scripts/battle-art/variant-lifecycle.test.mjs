@@ -78,11 +78,17 @@ async function fixture() {
   const manifest = (await readJson(root,
     'ai-image-metadata/battle-art/manifest.json')).value;
   manifest.historicalReleases = [];
+  const fixtureStyleReference = manifest.styleReferences.find(
+    entry => entry.path === reference
+  );
+  assert.ok(fixtureStyleReference);
+  manifest.styleReferences = [fixtureStyleReference];
   const descriptors = [];
   for (const relative of manifest.descriptors) {
     const descriptor = (await readJson(root, relative)).value;
     const draft = {
       ...descriptor,
+      styleReferences: [structuredClone(fixtureStyleReference)],
       status: 'draft',
       content: {
         ...descriptor.content,

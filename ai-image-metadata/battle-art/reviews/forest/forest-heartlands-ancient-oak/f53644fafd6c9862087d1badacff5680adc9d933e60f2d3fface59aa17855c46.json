@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-ancient-oak",
+  "decision": "approved",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "The mature oak has a distinct broad-canopy silhouette, grounded roots, regional bark and foliage, correct obstacle scale, and a clean transparent cutout.",
+  "reviewedAt": "2026-07-31T06:34:54.346Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-ancient-oak.json",
+    "sha256": "sha256:64489cb28b1531d36f3df54ccd9dc3f5574fd2908c3010105870ad87c14de147",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-ancient-oak/result.json",
+      "bytes": 2259,
+      "sha256": "sha256:4143bdb53cef5a040998521b80707efb5ec782e8ec687cf8c0186942c54ec6e5"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-ancient-oak/candidate.png",
+      "bytes": 65444,
+      "width": 192,
+      "height": 256,
+      "format": "png",
+      "sha256": "sha256:f53644fafd6c9862087d1badacff5680adc9d933e60f2d3fface59aa17855c46"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-ancient-oak/prompt.txt",
+        "bytes": 7900,
+        "sha256": "sha256:10a750c98e470025493a3123436657ff0503e8f1a2b9eea95be71a9632870d3b"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-ancient-oak/worker.jsonl",
+        "bytes": 27043,
+        "sha256": "sha256:ecc69eefaaa967e632099d558d6695de413b2f19955f4374e0b57bb3e5fff6d1"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-ancient-oak/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-ancient-oak/last-message.txt",
+        "bytes": 508,
+        "sha256": "sha256:1baa624fe0ab88c70c8b116d73aa10a4954b52d4b570eb22c3ffed67ff1d8a9a"
+      }
+    }
+  },
+  "fullHash": "sha256:ebf6abdd3baf9836902f5a31c5341bf1f9bb024b1973348e297d575b67f6c8f7"
+}

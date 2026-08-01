@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-loam-slope-e",
+  "decision": "approved",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "The east-directed ochre-loam ramp reads as a smooth traversable grade, reaches the declared edge without becoming a wall, and keeps forbidden edges and alpha framing clean.",
+  "reviewedAt": "2026-07-31T06:34:53.564Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-slope-e.json",
+    "sha256": "sha256:19b5eda82b27226cf90aa735cecc3a0be7c6454249c9bf860d93e513bc5d5bcc",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-slope-e/result.json",
+      "bytes": 2268,
+      "sha256": "sha256:a28534246f8904842bf46c9703e75d35614d015926ec68ba5f2d0ce310ecfdd2"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-slope-e/candidate.png",
+      "bytes": 11727,
+      "width": 256,
+      "height": 192,
+      "format": "png",
+      "sha256": "sha256:64cd4c5e90989deb1805953dd083d51da121af21f29978820e88472c3abbbe10"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-slope-e/prompt.txt",
+        "bytes": 8625,
+        "sha256": "sha256:7aa95faf7493e25ce2590475c458777b734197b2a0c0ead005cdde4b56d38411"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-slope-e/worker.jsonl",
+        "bytes": 30977,
+        "sha256": "sha256:d18641c03b9a1b63c7c83fba685279a63c6bf1d17cf155999de4c3e312a0ba2a"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-slope-e/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-slope-e/last-message.txt",
+        "bytes": 331,
+        "sha256": "sha256:716e788930e1b8ea184d2fcf31ed35475ebf72bcb175cc958e9471e000ded2d0"
+      }
+    }
+  },
+  "fullHash": "sha256:e2660bab6f74468b2976289f4e4e63f9db81132cf54b1458ce464533cefe1e10"
+}

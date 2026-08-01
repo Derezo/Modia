@@ -11,13 +11,43 @@ import { responsive } from '../core/Responsive.js';
  */
 export const ANIMATION_TIMING = {
   DAMAGE_NUMBER_DURATION: 1200,
-  ACTION_WAIT_SHORT: 600,      // Minimum wait after attack animations
-  ACTION_WAIT_FULL: 1200,      // Wait for damage numbers to complete
-  TURN_SETTLE_DELAY: 400,      // Buffer after actions before next turn
-  CAMERA_PAN_DURATION: 500,    // Standard camera pan time
-  MOVEMENT_PER_TILE_MS: 150,   // Consistent timing per tile moved
-  MOVEMENT_MIN_MS: 400,        // Minimum movement wait
+  ACTION_WAIT_SHORT: 350,      // Readable fallback when no authored sprite timing exists
+  ACTION_WAIT_FULL: 700,       // Preserve impact readability before a camera transition
+  ACTION_IMPACT_DELAY: 120,    // Let the attack/cast establish before target feedback
+  DEATH_REACTION_DELAY: 200,   // Keep hit feedback visible before the terminal pose
+  ITEM_TRAVEL_DURATION: 500,   // Item arc travel before result numbers appear
+  TURN_SETTLE_DELAY: 100,      // Small camera-only buffer; action boundaries need no extra settle
+  CAMERA_PAN_DURATION: 300,    // Fast turn-awareness pan
+  MOVEMENT_PER_TILE_MS: 90,    // Consistent timing per tile moved
+  MOVEMENT_MIN_MS: 180,        // Keep short moves legible without blocking the queue
 };
+
+/**
+ * Match queue timing to the unit's actual straight-line screen movement.
+ * Manhattan tile counts substantially over-wait diagonal moves and can
+ * under-wait long axial moves, allowing the next action to start mid-walk.
+ */
+export function getMovementPresentationDuration(unit, from, to) {
+  const moveSpeed = Number(unit?.moveSpeed);
+  const grid = unit?.grid;
+  if (moveSpeed > 0 && grid?.gridToScreenWorld) {
+    const start = grid.gridToScreenWorld(from.x, from.y, false);
+    const end = grid.gridToScreenWorld(to.x, to.y, false);
+    const pixelDistance = Math.hypot(end.x - start.x, end.y - start.y);
+    if (Number.isFinite(pixelDistance)) {
+      return Math.max(
+        ANIMATION_TIMING.MOVEMENT_MIN_MS,
+        Math.ceil((pixelDistance / moveSpeed) * 1000)
+      );
+    }
+  }
+
+  const tileDistance = Math.abs(to.x - from.x) + Math.abs(to.y - from.y);
+  return Math.max(
+    ANIMATION_TIMING.MOVEMENT_MIN_MS,
+    tileDistance * ANIMATION_TIMING.MOVEMENT_PER_TILE_MS
+  );
+}
 
 /**
  * Return a canvas-compatible color with an explicit alpha channel.

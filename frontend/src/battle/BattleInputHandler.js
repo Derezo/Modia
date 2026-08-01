@@ -124,6 +124,11 @@ export class BattleInputHandler {
   updatePointerInteraction(pos, updatePan = false) {
     const scene = this.scene;
 
+    if (!scene.grid?.getTileAtScreen) {
+      this.clearTileInteractionState();
+      return;
+    }
+
     // Update outro sequence button hover state
     if (scene.outroSequence) {
       scene.outroSequence.handleMouseMove(pos.x, pos.y);
@@ -170,6 +175,11 @@ export class BattleInputHandler {
 
   /** Resolve a click to the candidate currently selected by tile cycling. */
   getCycledTileAtPosition(pos) {
+    if (!this.scene.grid?.getTileAtScreen) {
+      this.clearTileInteractionState();
+      return null;
+    }
+
     const candidates = this.scene.grid.getTileAtScreen(
       pos.x,
       pos.y,
@@ -185,6 +195,16 @@ export class BattleInputHandler {
     const fallback = candidates[Math.min(this.tileCycleIndex, candidates.length - 1)];
     const tile = matchingCandidate || fallback;
     return { x: tile.x, y: tile.y };
+  }
+
+  /** Clear hover/cycling state when the scene grid is unavailable. */
+  clearTileInteractionState() {
+    this.tileCandidates = [];
+    this.tileCycleIndex = 0;
+    this.tileCycleTimer = 0;
+    this.tileCyclePaused = false;
+    this.lastTileCyclePosition = null;
+    this.scene.hoveredTile = null;
   }
 
   /**

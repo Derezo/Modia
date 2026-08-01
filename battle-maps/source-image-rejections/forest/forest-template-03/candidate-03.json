@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "battle-map-source-image-candidate-rejection-v1",
+  "theme": "forest",
+  "template": "forest-template-03",
+  "candidate": "candidate-03",
+  "decision": "rejected",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "The northern fieldstone overlook reads as a rock-ringed isolated summit with only one visible stair approach, while the basin edge is pressed against the frame; the separate natural-slope connection and complete camera framing are not readable.",
+  "evidence": {
+    "result": {
+      "path": "ai-image-metadata/battle-maps/candidates/forest/forest-template-03/candidate-03/result.json",
+      "bytes": 1832,
+      "sha256": "sha256:d3773d4af1d06d838b8ca09a1905f662d09cee2e96885502026f3c1b0de52597"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-maps/candidates/forest/forest-template-03/candidate-03/candidate.png",
+      "bytes": 3481798,
+      "width": 1254,
+      "height": 1254,
+      "format": "png",
+      "sha256": "sha256:cf81efa7cb85d508555c34af896dfe2927baa683144faf539e90d7c8e4853d41"
+    },
+    "promptProfile": {
+      "id": "source-template-image-v1",
+      "path": "ai-image-metadata/battle-maps/prompts/source-template-image-v1.json",
+      "sha256": "sha256:6a4200193384b8682cb7cbc69ad6a819dc5cb4cfbd116c395b0f628b5a208f41"
+    },
+    "prompt": {
+      "path": "ai-image-metadata/battle-maps/candidates/forest/forest-template-03/candidate-03/prompt.txt",
+      "bytes": 8025,
+      "sha256": "sha256:c8744cadb35455682924d4a91d7d6b8327ce95b00faf99db6c4b0e0da2e3b520"
+    },
+    "workerLogs": {
+      "stdout": {
+        "path": "ai-image-metadata/battle-maps/candidates/forest/forest-template-03/candidate-03/worker.jsonl",
+        "bytes": 20581,
+        "sha256": "sha256:fe43b868a40e9b9440e3f8aa4d7b8d0b4f8cf4db24726f633953383e833417ec"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-maps/candidates/forest/forest-template-03/candidate-03/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-maps/candidates/forest/forest-template-03/candidate-03/last-message.txt",
+        "bytes": 300,
+        "sha256": "sha256:e6fafca95df34617f9f9f3a48332990cb8cb91d16f2c66d469494dc221d77a04"
+      }
+    },
+    "imagegenInvocationCount": 1
+  }
+}

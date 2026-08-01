@@ -1,7 +1,7 @@
 {
   "schemaVersion": "battle-art-manifest-v1",
   "releaseId": "battle-art-descriptors-2026-07-30",
-  "version": 6,
+  "version": 7,
   "frozen": true,
   "themes": [
     "forest",
@@ -40,6 +40,36 @@
       "id": "forest-source-template-01",
       "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
       "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+    },
+    {
+      "id": "forest-borderwood-approved-route-corner-es-v1",
+      "path": "ai-image-metadata/battle-art/sources/forest/forest-borderwood-dirt-path-corner-es/v1/c0277f2744dff9adb241a9ab5240b709d3d91ca2d0e78e2b83bf863263a358cd.png",
+      "sha256": "sha256:c0277f2744dff9adb241a9ab5240b709d3d91ca2d0e78e2b83bf863263a358cd"
+    },
+    {
+      "id": "forest-heartlands-approved-route-corner-ne-v1",
+      "path": "ai-image-metadata/battle-art/sources/forest/forest-heartlands-loam-path-corner-ne/v1/9c085b05ee5900b4e2c4438efdb56a0af40bd4a5b2d47633290360f7d03f0019.png",
+      "sha256": "sha256:9c085b05ee5900b4e2c4438efdb56a0af40bd4a5b2d47633290360f7d03f0019"
+    },
+    {
+      "id": "forest-heartlands-approved-route-straight-ew-v1",
+      "path": "ai-image-metadata/battle-art/sources/forest/forest-heartlands-loam-path-straight-ew/v1/c1e441f91c71349b3e49e1319a51af80bf69433ada4f74d8aa838e0be94abaf3.png",
+      "sha256": "sha256:c1e441f91c71349b3e49e1319a51af80bf69433ada4f74d8aa838e0be94abaf3"
+    },
+    {
+      "id": "forest-heartlands-approved-route-tee-nes-v1",
+      "path": "ai-image-metadata/battle-art/sources/forest/forest-heartlands-loam-path-tee-nes/v1/3c149484c1d8e32a84e785332b7691b2014b373058e04ce12192087241be2bd5.png",
+      "sha256": "sha256:3c149484c1d8e32a84e785332b7691b2014b373058e04ce12192087241be2bd5"
+    },
+    {
+      "id": "forest-heartlands-approved-route-tee-wne-v1",
+      "path": "ai-image-metadata/battle-art/sources/forest/forest-heartlands-loam-path-tee-wne/v1/a9c855dfe087102d66ee37da23bde91bf64b754d4caed3c6332969037661d633.png",
+      "sha256": "sha256:a9c855dfe087102d66ee37da23bde91bf64b754d4caed3c6332969037661d633"
+    },
+    {
+      "id": "forest-heartlands-rejected-route-straight-ns-v7",
+      "path": "ai-image-metadata/battle-art/generated-artifacts/forest/forest-heartlands-loam-path-straight-ns/3e1983b6e510abe1cac17e492d38d41b306156dd31808d91be95cfea63fcbe56.png",
+      "sha256": "sha256:3e1983b6e510abe1cac17e492d38d41b306156dd31808d91be95cfea63fcbe56"
     }
   ],
   "descriptors": [
@@ -90,6 +120,49 @@
     "ai-image-metadata/battle-art/descriptors/forest/forest-dirt-route.json",
     "ai-image-metadata/battle-art/descriptors/forest/forest-fallen-branch.json",
     "ai-image-metadata/battle-art/descriptors/forest/forest-fern-cluster.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-ancient-oak.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-bluebell-cluster.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-field-maple.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-fieldstone-face-e.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-fieldstone-face-n.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-fieldstone-face-s.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-fieldstone-face-w.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-fieldstone-stairs-e.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-fieldstone-stairs-n.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-fieldstone-stairs-s.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-fieldstone-stairs-w.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-hawthorn-thicket.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-hedgerow-edge-e.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-hedgerow-edge-n.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-hedgerow-edge-s.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-hedgerow-edge-w.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-corner-es.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-corner-ne.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-corner-sw.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-corner-wn.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-cross.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-end-e.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-end-n.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-end-s.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-end-w.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-isolated.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-straight-ew.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-straight-ns.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-tee-esw.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-tee-nes.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-tee-nsw.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-tee-wne.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-slope-e.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-slope-n.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-slope-s.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-slope-w.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-meadow-grass.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-meadow-ground-0.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-meadow-ground-1.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-meadow-ground-2.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-meadow-ground-3.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-oak-leaf-litter.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-rounded-fieldstone.json",
     "ai-image-metadata/battle-art/descriptors/forest/forest-low-shrub.json",
     "ai-image-metadata/battle-art/descriptors/forest/forest-moss-surface.json",
     "ai-image-metadata/battle-art/descriptors/forest/forest-rock-boundary.json",

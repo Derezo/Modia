@@ -205,6 +205,36 @@ describe('BattleInputHandler outro keyboard controls', () => {
 });
 
 describe('BattleInputHandler mouse tile cycling', () => {
+  it('clears hover and candidates when a queued pointer event sees no grid', () => {
+    const { handler, scene } = createHarness();
+    handler.tileCandidates = [{ x: 2, y: 3 }];
+    handler.tileCycleIndex = 1;
+    handler.tileCycleTimer = 500;
+    handler.tileCyclePaused = true;
+    scene.hoveredTile = { x: 2, y: 3 };
+    scene.grid = null;
+
+    assert.doesNotThrow(() => {
+      handler.updatePointerInteraction({ x: 0, y: 0 });
+    });
+    assert.deepEqual(handler.tileCandidates, []);
+    assert.equal(handler.tileCycleIndex, 0);
+    assert.equal(handler.tileCycleTimer, 0);
+    assert.equal(handler.tileCyclePaused, false);
+    assert.equal(scene.hoveredTile, null);
+  });
+
+  it('does not resolve a cycled tile after the grid is torn down', () => {
+    const { handler, scene } = createHarness();
+    handler.tileCandidates = [{ x: 2, y: 3 }];
+    scene.hoveredTile = { x: 2, y: 3 };
+    scene.grid = null;
+
+    assert.equal(handler.getCycledTileAtPosition({ x: 0, y: 0 }), null);
+    assert.deepEqual(handler.tileCandidates, []);
+    assert.equal(scene.hoveredTile, null);
+  });
+
   it('clicks the currently cycled overlapping candidate', () => {
     const candidates = [
       { x: 2, y: 3, elevation: 2 },

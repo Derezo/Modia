@@ -6,9 +6,11 @@ import { fileURLToPath } from 'node:url';
 import {
   archiveCurrentRelease,
   approveCandidate,
+  assertReviewReason,
   auditBattleArt,
   checkBattleArt,
   compileApproved,
+  recordCandidateReview,
   reportReadinessMatrix,
   reviseFamily,
   scaffoldReadinessDescriptors,
@@ -89,6 +91,10 @@ function parseSurfaceVariant(value, flag) {
   return Number(value);
 }
 
+function parseReviewReason(value, flag) {
+  return assertReviewReason(value, flag);
+}
+
 const SELECTION = Object.freeze({
   '--theme': { key: 'theme' },
   '--ecology-profile': { key: 'ecologyProfile' },
@@ -148,10 +154,31 @@ export function parseCommand(argv = process.argv.slice(2)) {
       '--theme': { key: 'theme' },
       '--family': { key: 'family' },
       '--reviewer': { key: 'reviewer' },
-      '--decision': { key: 'decision' }
+      '--decision': { key: 'decision' },
+      '--reason': { key: 'reason', transform: parseReviewReason }
     });
-    for (const key of ['theme', 'family', 'reviewer', 'decision']) {
+    for (const key of ['theme', 'family', 'reviewer', 'decision', 'reason']) {
       if (!options[key]) throw new Error(`--${key} is required`);
+    }
+    if (options.decision !== 'approved') {
+      throw new Error('--decision approved is required');
+    }
+    return { command, options };
+  }
+  if (command === 'review') {
+    const options = parseOptions(argumentsList, {
+      ...COMMON,
+      '--theme': { key: 'theme' },
+      '--family': { key: 'family' },
+      '--reviewer': { key: 'reviewer' },
+      '--decision': { key: 'decision' },
+      '--reason': { key: 'reason', transform: parseReviewReason }
+    });
+    for (const key of ['theme', 'family', 'reviewer', 'decision', 'reason']) {
+      if (!options[key]) throw new Error(`--${key} is required`);
+    }
+    if (!['approved', 'rejected'].includes(options.decision)) {
+      throw new Error('--decision must be approved or rejected');
     }
     return { command, options };
   }
@@ -264,9 +291,11 @@ Commands:
   scaffold --theme <theme> --ecology-profile <id> --tier n --category <category> [--family <id> ...] [--check|--force]
   draft --theme <theme> --category <category> --family <id> [variant capability flags] [--art-direction <text>] [--width n --height n --check|--force]
   generate [selection flags] [--family <id> ...] [--dry-run|--resume|--force] [--keep-going] [--concurrency 1-4]
+  generate --family <id> --recover --timeout <original-seconds>
   normalize [selection flags] [--family <id> ...] [--check]
   preview [selection flags] [--family <id> ...] [--output <tracked.html>]
-  approve --theme <theme> --family <id> --reviewer <identity> --decision approved
+  review --theme <theme> --family <id> --reviewer <identity> --decision approved|rejected --reason <rationale>
+  approve --theme <theme> --family <id> --reviewer <identity> --decision approved --reason <rationale>
   revise --theme <theme> --family <id>
   compile [--check]
   archive
@@ -296,6 +325,7 @@ export async function main(argv = process.argv.slice(2), dependencies) {
     result = await generateBattleArt({ ...options, projectRoot: root }, dependencies);
   } else if (parsed.command === 'normalize') result = await normalizeCandidates(common);
   else if (parsed.command === 'preview') result = await writePreview(common);
+  else if (parsed.command === 'review') result = await recordCandidateReview(common);
   else if (parsed.command === 'approve') result = await approveCandidate(common);
   else if (parsed.command === 'revise') result = await reviseFamily(common);
   else if (parsed.command === 'compile') result = await compileApproved(common);

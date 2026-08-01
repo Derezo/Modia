@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-fieldstone-stairs-w",
+  "decision": "approved",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "Broad fieldstone treads, a readable upper landing, and subtle but valid west-end contact form a legible one-level west climb without a second direction or false wall.",
+  "reviewedAt": "2026-07-31T07:29:45.278Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-fieldstone-stairs-w.json",
+    "sha256": "sha256:32443d0429b9526bc812c77d509e0879c2bd4f9a4bfeb163a9e71dce857a2016",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-stairs-w/result.json",
+      "bytes": 2331,
+      "sha256": "sha256:382ed5d6d2fb6f92b9ae2e67d3dc6cad3444235c1dc25e22c37414ee34b92983"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-stairs-w/candidate.png",
+      "bytes": 30130,
+      "width": 256,
+      "height": 192,
+      "format": "png",
+      "sha256": "sha256:6001d7c362c2e081ace3b08f7add716dd718bab9969b1e1d5714ee2d78900788"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-stairs-w/prompt.txt",
+        "bytes": 8708,
+        "sha256": "sha256:aa3244dec8c620f7e4472439cd9008d417a0ffcb3e2f8e0fb57a078fc09f749f"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-stairs-w/worker.jsonl",
+        "bytes": 32517,
+        "sha256": "sha256:4d64bb2e44a905892edc70ddb63002b64854fa61e2829d794893bd81c5c7de6b"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-stairs-w/worker.stderr.log",
+        "bytes": 120,
+        "sha256": "sha256:3a955edb26f6a413eeb03f72f1b4e832d6a0a0ac97c13468d1a5f5b3046d0742"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-stairs-w/last-message.txt",
+        "bytes": 483,
+        "sha256": "sha256:39089c05c5588931016a07b8665bdc733cff69a0082b7819ab31928efacff041"
+      }
+    }
+  },
+  "fullHash": "sha256:9c8b457bd489d231055b310a30abba9d57bdcd73249dc613274fde8710508205"
+}

@@ -271,6 +271,51 @@ describe('BattleMap V3 static architecture guardrail', () => {
     `, filePath).includes('v3-specific-environment'));
   });
 
+  it('treats battle-art fallback provenance as offline without exempting runtime controls', () => {
+    const source = `
+      export function resolveBattleMapV3StyleReference({ styleReferenceMode }) {
+        return styleReferenceMode === 'text-fallback'
+          ? 'Use the frozen textual style description.'
+          : 'Use staged style-reference attachments.';
+      }
+    `;
+    const filePath = 'scripts/battle-art/lifecycle.mjs';
+    assert.deepEqual(codes(source, filePath), []);
+    for (const environmentSource of [
+      'const enabled = process.env.BATTLE_MAP_V3_TEXT_FALLBACK_ENABLED;',
+      `
+        const env = process.env;
+        const enabled = env.BATTLE_MAP_V3_TEXT_FALLBACK_ENABLED;
+      `,
+      `
+        const {
+          BATTLE_MAP_V3_TEXT_FALLBACK_ENABLED: enabled
+        } = process.env;
+      `
+    ]) {
+      assert.ok(codes(
+        environmentSource,
+        filePath
+      ).includes('v3-specific-environment'));
+    }
+    assert.ok(codes(`
+      import flags from '@launchdarkly/node-server-sdk';
+      export function selectBattleMapV3() {
+        return flags.variation('battle-map-v3');
+      }
+    `, filePath).includes('v3-feature-flag-provider'));
+    assert.ok(codes(`
+      if (v3KillSwitch) return generateBattleMapV2();
+    `, filePath).includes('v3-kill-switch'));
+    assert.ok(codes(`
+      if (v3RolloutGate.allows(theme)) selectBattleMapV3();
+    `, filePath).includes('v3-rollout-control'));
+    assert.ok(codes(
+      source,
+      'api/src/services/battle/v3/lifecycle.js'
+    ).includes('v3-configurable-fallback'));
+  });
+
   it('ignores prohibited spellings in comments and excluded source files', () => {
     assert.deepEqual(codes(`
       // Never read process.env.BATTLE_MAP_V3_ENABLED here.

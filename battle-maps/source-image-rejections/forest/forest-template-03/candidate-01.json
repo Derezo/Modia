@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "battle-map-source-image-candidate-rejection-v1",
+  "theme": "forest",
+  "template": "forest-template-03",
+  "candidate": "candidate-01",
+  "decision": "rejected",
+  "reviewer": "codex-content-reviewer",
+  "reason": "The lower formation clearing and its approach run out of frame, so the opposing formation space and forest-owned outer boundary are not fully readable.",
+  "evidence": {
+    "result": {
+      "path": "ai-image-metadata/battle-maps/candidates/forest/forest-template-03/candidate-01/result.json",
+      "bytes": 1832,
+      "sha256": "sha256:4c5258b26d793f7ce31e8b24ee1d70fb7e664f29ddf77fe34539b27b007950a2"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-maps/candidates/forest/forest-template-03/candidate-01/candidate.png",
+      "bytes": 3263759,
+      "width": 1254,
+      "height": 1254,
+      "format": "png",
+      "sha256": "sha256:b4e5492b010e49920dbaf5855c3a48c3e7d628f89d6ce97458cd6bc3ea96c934"
+    },
+    "promptProfile": {
+      "id": "source-template-image-v1",
+      "path": "ai-image-metadata/battle-maps/prompts/source-template-image-v1.json",
+      "sha256": "sha256:6a4200193384b8682cb7cbc69ad6a819dc5cb4cfbd116c395b0f628b5a208f41"
+    },
+    "prompt": {
+      "path": "ai-image-metadata/battle-maps/candidates/forest/forest-template-03/candidate-01/prompt.txt",
+      "bytes": 1399,
+      "sha256": "sha256:9fa3ac7ac58d266e7e4039c86b7a6b35ce2f56e8228b69caa2c662abbe2a030e"
+    },
+    "workerLogs": {
+      "stdout": {
+        "path": "ai-image-metadata/battle-maps/candidates/forest/forest-template-03/candidate-01/worker.jsonl",
+        "bytes": 20518,
+        "sha256": "sha256:a1428c95bc20b978b2d475b17049ccf6d76359ad15526ad422928e6f917b95a0"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-maps/candidates/forest/forest-template-03/candidate-01/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-maps/candidates/forest/forest-template-03/candidate-01/last-message.txt",
+        "bytes": 342,
+        "sha256": "sha256:66f98bdf8f0d5da6e852ab49675aa015685d66232e128a0bea2e3fc40f32d827"
+      }
+    },
+    "imagegenInvocationCount": 1
+  }
+}

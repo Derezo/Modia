@@ -299,7 +299,7 @@ describe('BattleWebSocketManager local turn recovery', () => {
   it('does not relock after your_turn supersedes an in-flight camera transition', async () => {
     const player = createUnit('player');
     const enemy = createUnit('enemy', { type: 'enemy', ownerId: null });
-    const { manager, scene } = createHarness([player, enemy]);
+    const { manager, scene, calls } = createHarness([player, enemy]);
     scene.game.localUserId = 1;
     scene.battleState.activeUnitId = enemy.id;
     scene.ui = {
@@ -311,12 +311,14 @@ describe('BattleWebSocketManager local turn recovery', () => {
     scene.grid.clearIntentHighlights = () => {};
     let finishCamera;
     let followTarget = null;
+    let transitionDuration = null;
     scene.camera = {
       setFollowTarget(unit) {
         followTarget = unit;
       },
-      startTurnTransition(_x, _y, callback) {
+      startTurnTransition(_x, _y, callback, duration) {
         finishCamera = callback;
+        transitionDuration = duration;
       }
     };
     scene.recoverLocalTurn = payload => {
@@ -344,6 +346,8 @@ describe('BattleWebSocketManager local turn recovery', () => {
     assert.equal(scene.inputEnabled, true);
     assert.equal(scene.inEnemySequence, false);
     assert.equal(followTarget, player);
+    assert.equal(transitionDuration, 300);
+    assert.deepEqual(calls.waits, [100]);
   });
 
   it('keeps distinct revisioned turns for the same fast unit', () => {
@@ -412,6 +416,26 @@ describe('BattleWebSocketManager action presentation parity', () => {
     });
   });
 
+  it('does not stack a redundant settle delay between movement and action', async () => {
+    const enemy = createUnit('enemy', { type: 'enemy', ownerId: null });
+    const { manager, calls } = createHarness([enemy]);
+    enemy.moveTo = () => {};
+    manager.turnEventQueue.push({
+      type: 'action_executed',
+      actorId: enemy.id,
+      actionType: 'attack',
+      result: {}
+    });
+
+    await manager.processUnitMovedEvent({
+      unitId: enemy.id,
+      from: { x: 1, y: 2 },
+      to: { x: 2, y: 2 }
+    });
+
+    assert.deepEqual(calls.waits, [180]);
+  });
+
   it('presents remote Zodiac actions lightly without generic action presentation', async (t) => {
     const actor = createUnit('caster');
     const target = createUnit('target', { teamId: 2 });
@@ -437,7 +461,7 @@ describe('BattleWebSocketManager action presentation parity', () => {
     assert.equal(calls.presentations.length, 0);
     assert.equal(calls.zodiacPresentations.length, 1);
     assert.equal(logs[0][1], 'zodiac_ability');
-    assert.deepEqual(calls.waits, [600]);
+    assert.deepEqual(calls.waits, [350]);
   });
 
   it('uses the AoE center and applies damage/absorb feedback once per target', async () => {
@@ -549,7 +573,7 @@ describe('BattleWebSocketManager authored action timing', () => {
       result: {}
     });
 
-    assert.deepEqual(calls.waits, [180, 667]);
+    assert.deepEqual(calls.waits, [120, 667]);
   });
 
   it('waits for all frames of the selected cast animation', async () => {
@@ -566,7 +590,7 @@ describe('BattleWebSocketManager authored action timing', () => {
       result: { skillUsed: 'arcane_burst' }
     });
 
-    assert.deepEqual(calls.waits, [180, 800]);
+    assert.deepEqual(calls.waits, [120, 800]);
   });
 
   it('keeps the established queue wait when animation timing is unavailable', async () => {
@@ -579,7 +603,25 @@ describe('BattleWebSocketManager authored action timing', () => {
       result: {}
     });
 
-    assert.deepEqual(calls.waits, [180, 600]);
+    assert.deepEqual(calls.waits, [120, 350]);
+  });
+
+  it('moves directly into the next turn pan after the full action wait', async () => {
+    const actor = createUnit('fighter');
+    const nextUnit = createUnit('next-unit', { teamId: 2 });
+    const { manager, calls } = createHarness([actor, nextUnit]);
+    manager.turnEventQueue.push({
+      type: 'turn_start',
+      unitId: nextUnit.id
+    });
+
+    await manager.processActionExecutedEvent({
+      actorId: actor.id,
+      actionType: 'attack',
+      result: {}
+    });
+
+    assert.deepEqual(calls.waits, [120, 700]);
   });
 
   it('ignores a stale previous sprite and retains safe timing floors', () => {

@@ -1,0 +1,102 @@
+{
+  "schemaVersion": "battle-art-family-descriptor-v2",
+  "id": "forest-heartlands-field-maple",
+  "theme": "forest",
+  "category": "blocking-obstacle",
+  "familyGroup": "forest-heartlands-field-maple",
+  "variantId": "mature",
+  "capabilities": {
+    "direction": null,
+    "routeTopology": null,
+    "surfaceVariant": null,
+    "ecologyProfile": "forest-heartlands-woodland",
+    "tierBands": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "heightDeltas": [
+      0
+    ]
+  },
+  "status": "approved",
+  "promptProfile": {
+    "id": "battle-art-family-v2",
+    "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+    "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+  },
+  "styleReferences": [
+    {
+      "id": "forest-source-template-01",
+      "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+      "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+    }
+  ],
+  "generationPrompt": "Create exactly one seam-safe orthographic isometric forest blocking-obstacle asset named forest-heartlands-field-maple for ecology profile forest-heartlands-woodland; tier bands 1, 2, 3, 4, 5. Author the declared orientation directly, preserve continuous neighboring materials and edge alignment, and include only the declared family content. Regional visual vocabulary: Heartlands Woodland uses a coherent pastoral forest of mature broad-canopy oak, field maple, and flowering hawthorn; warm meadow grass and bluebells; rounded cream-gray fieldstone; warm ochre loam and oak leaf litter; and dappled late-morning light. Keep this species mix, material palette, scale, and lighting explicitly consistent across every directional edge and transition. Depict the literal regional subject forest heartlands field maple, making its species, silhouette, bark or stone, foliage, age, and scale clearly distinct from other obstacle families. Use one grounded isometric cutout with a clean base. Do not add a baked backdrop, black void, unrelated terrain wall, or presentation frame.",
+  "rasterContract": {
+    "schemaVersion": "battle-art-raster-contract-v1",
+    "kind": "transparent-cutout",
+    "minimumCoveredPermille": 10,
+    "maximumCoveredPermille": 850
+  },
+  "canvas": {
+    "width": 192,
+    "height": 256
+  },
+  "placement": {
+    "pivot": {
+      "x": 96,
+      "y": 224
+    },
+    "anchor": {
+      "x": 96,
+      "y": 224
+    },
+    "footprint": {
+      "x": 0,
+      "y": 0,
+      "width": 1,
+      "height": 1
+    },
+    "collision": {
+      "kind": "solid",
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ]
+    },
+    "drawBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 192,
+      "height": 256
+    },
+    "occlusionBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 192,
+      "height": 192
+    },
+    "stratum": "obstacle"
+  },
+  "content": {
+    "version": 1,
+    "sourceSha256": "sha256:9fe4e35bae7ca636b449d64616b249a1b97697cec619972232edca5e868e7328",
+    "runtimeSha256": null,
+    "immutableUrl": null
+  },
+  "source": {
+    "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-field-maple/result.json",
+    "imagePath": "ai-image-metadata/battle-art/sources/forest/forest-heartlands-field-maple/v1/9fe4e35bae7ca636b449d64616b249a1b97697cec619972232edca5e868e7328.png",
+    "imageSha256": "sha256:9fe4e35bae7ca636b449d64616b249a1b97697cec619972232edca5e868e7328",
+    "width": 192,
+    "height": 256,
+    "format": "png",
+    "reviewer": "codex-full-game-battle-content-review",
+    "approvedAt": "2026-07-31T07:03:12.795Z"
+  }
+}

@@ -5,6 +5,7 @@ export * from './BattleMapAdapter.js';
 export * from './V3Adapter.js';
 export * from './BattleMapV3Selector.js';
 export * from './BattleMapV3Resolvers.js';
+export * from './BattleMapV3EcologyProfiles.js';
 export * from './fixtures.js';
 export * from './versionRegistry.js';
 export * from './v3/index.js';

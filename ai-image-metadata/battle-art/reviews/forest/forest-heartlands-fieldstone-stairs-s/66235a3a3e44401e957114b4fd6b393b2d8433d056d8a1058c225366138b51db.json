@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-fieldstone-stairs-s",
+  "decision": "approved",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "Clear repeated crosswise fieldstone steps follow the south axis from the low anchor to the lower-left high endpoint, with no extra endpoint, wall, or floating tread and with coherent Heartlands scale and lighting.",
+  "reviewedAt": "2026-07-31T07:29:44.923Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-fieldstone-stairs-s.json",
+    "sha256": "sha256:f4154461da7f155825b5e0c779b2eca880eb71c647726e46dbd576771402627c",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-stairs-s/result.json",
+      "bytes": 2331,
+      "sha256": "sha256:82bc25ac30744d0c08da3ce9bae46111a41e733bad5f8d44da44c33ba27524a7"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-stairs-s/candidate.png",
+      "bytes": 16527,
+      "width": 256,
+      "height": 192,
+      "format": "png",
+      "sha256": "sha256:66235a3a3e44401e957114b4fd6b393b2d8433d056d8a1058c225366138b51db"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-stairs-s/prompt.txt",
+        "bytes": 8711,
+        "sha256": "sha256:db4893fa581ebb6583ae3acac5b76766066bc4d5de386248b13c615d467f79bf"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-stairs-s/worker.jsonl",
+        "bytes": 31321,
+        "sha256": "sha256:1432bcf3c67fccb239a35ab35c50918ae4c91dfba5e4d55faccb0f4b251d4175"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-stairs-s/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-stairs-s/last-message.txt",
+        "bytes": 458,
+        "sha256": "sha256:ac26274853da7b18e4480fcf3bc8613c70e4928a5145bc6b3e653e3fa182e398"
+      }
+    }
+  },
+  "fullHash": "sha256:5a9dcf68bd42e60d390306e4111949ba4d27af87261613a480e638c69cd07fce"
+}

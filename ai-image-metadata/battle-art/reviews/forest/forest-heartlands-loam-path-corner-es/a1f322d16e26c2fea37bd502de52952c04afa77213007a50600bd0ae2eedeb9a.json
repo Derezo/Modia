@@ -1,0 +1,90 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v2",
+  "theme": "forest",
+  "familyId": "forest-heartlands-loam-path-corner-es",
+  "decision": "rejected",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "The route is visibly an inverted upper arch: at canvas center it occupies only y=40-69 and leaves the lower center transparent, instead of forming the required broad bottom-side U-shaped hairpin basin between the E and S seam contacts.",
+  "reviewedAt": "2026-07-31T13:40:51.082Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-corner-es.json",
+    "sha256": "sha256:a6ed3feb19e145e26bf06b279a2b2212ef120dd81ec4ca8ca01a6a894668ab62",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-es/result.json",
+      "bytes": 3505,
+      "sha256": "sha256:ac3f0f703fab56ea21c1a1dbdef6e1e8e3025b5896e8b2358dfceae580cb59e8"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-es/candidate.png",
+      "bytes": 15614,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:a1f322d16e26c2fea37bd502de52952c04afa77213007a50600bd0ae2eedeb9a"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      },
+      {
+        "id": "forest-heartlands-approved-route-corner-ne-v1",
+        "path": "ai-image-metadata/battle-art/sources/forest/forest-heartlands-loam-path-corner-ne/v1/9c085b05ee5900b4e2c4438efdb56a0af40bd4a5b2d47633290360f7d03f0019.png",
+        "sha256": "sha256:9c085b05ee5900b4e2c4438efdb56a0af40bd4a5b2d47633290360f7d03f0019"
+      }
+    ],
+    "styleReferenceMode": "attachments",
+    "styleReferenceProvenance": [
+      {
+        "id": "forest-source-template-01",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1",
+        "stagedBasename": "style-reference-01.png"
+      },
+      {
+        "id": "forest-heartlands-approved-route-corner-ne-v1",
+        "sha256": "sha256:9c085b05ee5900b4e2c4438efdb56a0af40bd4a5b2d47633290360f7d03f0019",
+        "stagedBasename": "style-reference-02.png"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "imageArguments": [
+        "style-reference-01.png",
+        "style-reference-02.png"
+      ],
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-es/prompt.txt",
+        "bytes": 15986,
+        "sha256": "sha256:e82d6151c664d6dac26ed6a6d5c2e3f782e4b9b30179ba29ecd2d4f6e334b4a1"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-es/worker.jsonl",
+        "bytes": 42767,
+        "sha256": "sha256:bfbd80d7158964e5c6cacb8c2f174a3d1368154e4659ee012c091d6a53de03b8"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-es/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-es/last-message.txt",
+        "bytes": 376,
+        "sha256": "sha256:902b6ba2b1a11a4e5e0090706a8a07649995bee09e4b8252fe320b7d0f2bcaec"
+      }
+    }
+  },
+  "fullHash": "sha256:db596b0c80fd64afe94d352b6d0b8ea39adb54732f9f67cb8f0646bf66046a90"
+}

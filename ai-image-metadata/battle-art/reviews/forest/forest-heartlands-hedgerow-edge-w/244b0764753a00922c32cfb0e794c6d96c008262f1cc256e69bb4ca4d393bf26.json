@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-hedgerow-edge-w",
+  "decision": "rejected",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "The W grounding remains continuous and narrow, but the leftmost elevated crown still reaches roughly x=2 above the endpoint zone, far inside the required 8-pixel rectangular-canvas clearance and still at risk of a visible adjacent-art seam.",
+  "reviewedAt": "2026-07-31T08:35:29.222Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-hedgerow-edge-w.json",
+    "sha256": "sha256:ac4401ed7c2566fb0abcf1d822e46d966331b7c204d94e44d91a11ed37fd617c",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hedgerow-edge-w/result.json",
+      "bytes": 2295,
+      "sha256": "sha256:f752e742c2c7e7c670b749c15b49378a3fd9d0a1a643d523293975854b564a17"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hedgerow-edge-w/candidate.png",
+      "bytes": 23355,
+      "width": 256,
+      "height": 256,
+      "format": "png",
+      "sha256": "sha256:244b0764753a00922c32cfb0e794c6d96c008262f1cc256e69bb4ca4d393bf26"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hedgerow-edge-w/prompt.txt",
+        "bytes": 11181,
+        "sha256": "sha256:33902b6e734e6d5cad23c27bd0941632b807d2888a997a50a3df22d38b44f436"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hedgerow-edge-w/worker.jsonl",
+        "bytes": 30400,
+        "sha256": "sha256:eed29a6291f3313bc5a69806d6a4c3ff5af578d5c1f292512816e592e3e76078"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hedgerow-edge-w/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hedgerow-edge-w/last-message.txt",
+        "bytes": 303,
+        "sha256": "sha256:a6727c7ead164296c69275eab35fb7c8c76f5d062c805710d69c9fb208c5cfaa"
+      }
+    }
+  },
+  "fullHash": "sha256:4e5dc184edda358cbe3fe275ffbbcc0e0cd77f7d7d8775ca2f5b7afaf54f2969"
+}

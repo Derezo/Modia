@@ -1,0 +1,106 @@
+{
+  "schemaVersion": "battle-art-family-descriptor-v2",
+  "id": "forest-heartlands-fieldstone-stairs-n",
+  "theme": "forest",
+  "category": "connection-stairs",
+  "familyGroup": "forest-heartlands-fieldstone-stairs",
+  "variantId": "grade-1-n",
+  "capabilities": {
+    "direction": "n",
+    "routeTopology": null,
+    "surfaceVariant": null,
+    "ecologyProfile": "forest-heartlands-woodland",
+    "tierBands": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "heightDeltas": [
+      1
+    ]
+  },
+  "status": "approved",
+  "promptProfile": {
+    "id": "battle-art-family-v2",
+    "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+    "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+  },
+  "styleReferences": [
+    {
+      "id": "forest-source-template-01",
+      "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+      "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+    }
+  ],
+  "generationPrompt": "Create exactly one seam-safe orthographic isometric forest connection-stairs asset named forest-heartlands-fieldstone-stairs-n for ecology profile forest-heartlands-woodland; tier bands 1, 2, 3, 4, 5; final authored direction n; height magnitude 1. Author the declared orientation directly, preserve continuous neighboring materials and edge alignment, and include only the declared family content. Regional visual vocabulary: Heartlands Woodland uses a coherent pastoral forest of mature broad-canopy oak, field maple, and flowering hawthorn; warm meadow grass and bluebells; rounded cream-gray fieldstone; warm ochre loam and oak leaf litter; and dappled late-morning light. Keep this species mix, material palette, scale, and lighting explicitly consistent across every directional edge and transition. Depict forest heartlands fieldstone stairs n as one coherent two-cell climb rising from the low cell toward n. In the 2:1 isometric diamond, N meets the upper-right edge, E the lower-right edge, S the lower-left edge, and W the upper-left edge. Use roots, embedded stones, and packed earth steps that meet both surfaces cleanly; the low endpoint is (128,128) and the required high-end canvas target is (255,64). The connected climb must visibly reach both 16-pixel endpoint neighborhoods and no other directional canvas endpoint. Do not add a dark vertical block, floating steps, or a second direction. Do not add a baked backdrop, black void, unrelated terrain wall, or presentation frame.",
+  "rasterContract": {
+    "schemaVersion": "battle-art-raster-contract-v1",
+    "kind": "transparent-cutout",
+    "minimumCoveredPermille": 10,
+    "maximumCoveredPermille": 850
+  },
+  "canvas": {
+    "width": 256,
+    "height": 192
+  },
+  "placement": {
+    "pivot": {
+      "x": 128,
+      "y": 128
+    },
+    "anchor": {
+      "x": 128,
+      "y": 128
+    },
+    "footprint": {
+      "x": 0,
+      "y": 0,
+      "width": 1,
+      "height": 2
+    },
+    "collision": {
+      "kind": "connection",
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0,
+          "y": 1
+        }
+      ]
+    },
+    "drawBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 192
+    },
+    "occlusionBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 144
+    },
+    "stratum": "connection"
+  },
+  "content": {
+    "version": 1,
+    "sourceSha256": "sha256:df31e749fba56389cb720642aa875256ea36991c6dbcb8a0df7c69ee9e877742",
+    "runtimeSha256": null,
+    "immutableUrl": null
+  },
+  "source": {
+    "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-stairs-n/result.json",
+    "imagePath": "ai-image-metadata/battle-art/sources/forest/forest-heartlands-fieldstone-stairs-n/v1/df31e749fba56389cb720642aa875256ea36991c6dbcb8a0df7c69ee9e877742.png",
+    "imageSha256": "sha256:df31e749fba56389cb720642aa875256ea36991c6dbcb8a0df7c69ee9e877742",
+    "width": 256,
+    "height": 192,
+    "format": "png",
+    "reviewer": "codex-full-game-battle-content-review",
+    "approvedAt": "2026-07-31T06:34:53.271Z"
+  }
+}

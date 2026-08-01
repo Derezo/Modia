@@ -1,0 +1,106 @@
+{
+  "schemaVersion": "battle-art-family-descriptor-v2",
+  "id": "forest-heartlands-loam-slope-s",
+  "theme": "forest",
+  "category": "connection-slope",
+  "familyGroup": "forest-heartlands-loam-slope",
+  "variantId": "grade-1-s",
+  "capabilities": {
+    "direction": "s",
+    "routeTopology": null,
+    "surfaceVariant": null,
+    "ecologyProfile": "forest-heartlands-woodland",
+    "tierBands": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "heightDeltas": [
+      1
+    ]
+  },
+  "status": "approved",
+  "promptProfile": {
+    "id": "battle-art-family-v2",
+    "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+    "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+  },
+  "styleReferences": [
+    {
+      "id": "forest-source-template-01",
+      "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+      "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+    }
+  ],
+  "generationPrompt": "Create exactly one seam-safe orthographic isometric forest connection-slope asset named forest-heartlands-loam-slope-s for ecology profile forest-heartlands-woodland; tier bands 1, 2, 3, 4, 5; final authored direction s; height magnitude 1. Author the declared orientation directly, preserve continuous neighboring materials and edge alignment, and include only the declared family content. Regional visual vocabulary: Heartlands Woodland uses a coherent pastoral forest of mature broad-canopy oak, field maple, and flowering hawthorn; warm meadow grass and bluebells; rounded cream-gray fieldstone; warm ochre loam and oak leaf litter; and dappled late-morning light. Keep this species mix, material palette, scale, and lighting explicitly consistent across every directional edge and transition. Depict forest heartlands loam slope s as one coherent walkable two-cell earthen grade rising from the low cell toward s. In the 2:1 isometric diamond, N meets the upper-right edge, E the lower-right edge, S the lower-left edge, and W the upper-left edge. Blend moss, roots, and compacted soil into both ends. The low endpoint is (128,128) and the required high-end canvas target is (0,191). The grade must visibly reach both 16-pixel endpoint neighborhoods and no other directional canvas endpoint; do not depict stairs, a cliff wall, a dark underlay, or a second direction. Do not add a baked backdrop, black void, unrelated terrain wall, or presentation frame.",
+  "rasterContract": {
+    "schemaVersion": "battle-art-raster-contract-v1",
+    "kind": "transparent-cutout",
+    "minimumCoveredPermille": 10,
+    "maximumCoveredPermille": 850
+  },
+  "canvas": {
+    "width": 256,
+    "height": 192
+  },
+  "placement": {
+    "pivot": {
+      "x": 128,
+      "y": 128
+    },
+    "anchor": {
+      "x": 128,
+      "y": 128
+    },
+    "footprint": {
+      "x": 0,
+      "y": 0,
+      "width": 1,
+      "height": 2
+    },
+    "collision": {
+      "kind": "connection",
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0,
+          "y": 1
+        }
+      ]
+    },
+    "drawBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 192
+    },
+    "occlusionBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 144
+    },
+    "stratum": "connection"
+  },
+  "content": {
+    "version": 1,
+    "sourceSha256": "sha256:d5862ed7e0c6eeb7f2db88a92fabe4496465e737c89d946293fb7b1702224e63",
+    "runtimeSha256": null,
+    "immutableUrl": null
+  },
+  "source": {
+    "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-slope-s/result.json",
+    "imagePath": "ai-image-metadata/battle-art/sources/forest/forest-heartlands-loam-slope-s/v1/d5862ed7e0c6eeb7f2db88a92fabe4496465e737c89d946293fb7b1702224e63.png",
+    "imageSha256": "sha256:d5862ed7e0c6eeb7f2db88a92fabe4496465e737c89d946293fb7b1702224e63",
+    "width": 256,
+    "height": 192,
+    "format": "png",
+    "reviewer": "codex-full-game-battle-content-review",
+    "approvedAt": "2026-07-31T07:29:45.965Z"
+  }
+}

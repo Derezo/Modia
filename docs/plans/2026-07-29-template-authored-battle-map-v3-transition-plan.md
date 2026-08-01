@@ -426,7 +426,8 @@ ai-image-metadata/
     prompts/
       source-template-image-v1.json        # tracked
       source-analysis-v1.json             # tracked
-      map-blueprint-v1.json               # tracked
+      map-blueprint-v1.json               # tracked, frozen template-01/-02 profile
+      map-blueprint-v2.json               # tracked, template-03+ fixed-family profile
     templates/
       forest/
         forest-template-01.json           # tracked sidecar
@@ -659,6 +660,12 @@ closed TemplateMapBlueprint schema and output limits
 + forbidden fields/patterns
 + JSON-only output contract
 ```
+
+The prompt-profile identity is versioned at the legacy-content boundary:
+template-01/-02 retain the frozen `map-blueprint-v1` bytes and pins, while
+template-03 and newer use `map-blueprint-v2` with the corrected fixed-family
+contract. A correction for new templates must never rewrite the legacy prompt
+or its approval evidence.
 
 Each of the three jobs receives a distinct reviewed variant brief—for example,
 route-network emphasis, terraced-clearing emphasis, or landmark/flank
@@ -1250,7 +1257,7 @@ compile → check conventions.
 | `battle-maps:templates:approve` | Explicitly pin and approve the exact source image, prompt, and reviewed sidecar. |
 | `battle-maps:candidates:generate` | Run isolated Codex workers to create the three symbolic map blueprints for one approved source template. |
 | `battle-maps:candidates:preview` | Strictly parse a candidate, deterministically compile and validate it into a disposable V3 artifact, then load that artifact in the production harness with semantic overlays. Exact missing assets block the production render and feed the art audit; raw Codex JSON never enters the renderer. |
-| `battle-maps:candidates:approve` | Explicitly pin and approve one reviewed blueprint hash; never generates or compiles art. |
+| `battle-maps:candidates:approve` | Explicitly pin and approve one reviewed blueprint hash. Template-03+ records require a bounded rationale that is included in the v2 record/index hashes; frozen template-01/-02 approvals remain v1. Never generates or compiles art. |
 | `battle-maps:compile` | Deterministically compile approved blueprints into canonical V3 JSON. |
 | `battle-maps:validate` | Run schema, traversal, topology, spawn, tactical, diversity, provenance, and exact-asset validation. |
 | `battle-maps:catalog` | Build/check an immutable catalog release from approved compiled maps. |
@@ -1283,7 +1290,13 @@ npm run battle-maps:candidates:preview -- \
 
 npm run battle-maps:candidates:approve -- \
   --theme forest --template forest-template-01 \
-  --map forest-template-01-a --update-pins
+  --map forest-template-01-a --reviewer <reviewer-id> --update-pins
+
+# Template-03 and newer approvals additionally require a hash-pinned rationale:
+npm run battle-maps:candidates:approve -- \
+  --theme forest --template forest-template-03 \
+  --map forest-template-03-a --reviewer <reviewer-id> \
+  --reason "<specific acceptance rationale>"
 
 npm run battle-maps:compile -- \
   --theme forest --template forest-template-01 --all-approved

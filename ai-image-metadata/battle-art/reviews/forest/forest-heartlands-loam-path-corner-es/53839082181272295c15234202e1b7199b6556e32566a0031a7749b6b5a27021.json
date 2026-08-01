@@ -1,0 +1,90 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v2",
+  "theme": "forest",
+  "familyId": "forest-heartlands-loam-path-corner-es",
+  "decision": "rejected",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "The lower-center geometry is a broad hard-edged polygonal dirt slab or plaza with long ruler-straight boundaries and squared cuts, not a soft organic U-shaped worn path with feathered grass-and-leaf verges; its measured 48-51 pixel arms also exceed the intended 28-36 pixel core.",
+  "reviewedAt": "2026-07-31T13:50:03.747Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-corner-es.json",
+    "sha256": "sha256:a6ed3feb19e145e26bf06b279a2b2212ef120dd81ec4ca8ca01a6a894668ab62",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-es/result.json",
+      "bytes": 3505,
+      "sha256": "sha256:6e3a79599032154f5bc9b4c887c1fdc197b21b6ae50821587fd8ec420abc7831"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-es/candidate.png",
+      "bytes": 22962,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:53839082181272295c15234202e1b7199b6556e32566a0031a7749b6b5a27021"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      },
+      {
+        "id": "forest-heartlands-approved-route-corner-ne-v1",
+        "path": "ai-image-metadata/battle-art/sources/forest/forest-heartlands-loam-path-corner-ne/v1/9c085b05ee5900b4e2c4438efdb56a0af40bd4a5b2d47633290360f7d03f0019.png",
+        "sha256": "sha256:9c085b05ee5900b4e2c4438efdb56a0af40bd4a5b2d47633290360f7d03f0019"
+      }
+    ],
+    "styleReferenceMode": "attachments",
+    "styleReferenceProvenance": [
+      {
+        "id": "forest-source-template-01",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1",
+        "stagedBasename": "style-reference-01.png"
+      },
+      {
+        "id": "forest-heartlands-approved-route-corner-ne-v1",
+        "sha256": "sha256:9c085b05ee5900b4e2c4438efdb56a0af40bd4a5b2d47633290360f7d03f0019",
+        "stagedBasename": "style-reference-02.png"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "imageArguments": [
+        "style-reference-01.png",
+        "style-reference-02.png"
+      ],
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-es/prompt.txt",
+        "bytes": 16319,
+        "sha256": "sha256:276eb8819679c8d15e5aef6cf99d7f56a05709092f349de3f873f313bb15927a"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-es/worker.jsonl",
+        "bytes": 41508,
+        "sha256": "sha256:4911acaf0abe8a13ddddd8747274b8964262f5292ad2ff8e94281eff91e9c3e5"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-es/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-es/last-message.txt",
+        "bytes": 379,
+        "sha256": "sha256:fd02f10cca041353c27e3d55e2ac8125507a5207608789e15e59e70b5e503468"
+      }
+    }
+  },
+  "fullHash": "sha256:43b3dbb30deeaa859a62cea9bff74261c7d1ab9f025f2a3f7589cbbf48706fc4"
+}

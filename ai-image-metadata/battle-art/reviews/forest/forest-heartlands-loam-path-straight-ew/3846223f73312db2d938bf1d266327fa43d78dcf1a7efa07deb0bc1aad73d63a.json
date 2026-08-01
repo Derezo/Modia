@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-loam-path-straight-ew",
+  "decision": "rejected",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "The candidate reads as an opaque diamond-shaped dirt platform or paved plaza: loam fills nearly the entire tile between endpoints with hard isometric slab edges instead of a transparent natural W-to-E route overlay.",
+  "reviewedAt": "2026-07-31T09:33:43.098Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-straight-ew.json",
+    "sha256": "sha256:21f24ef73864f7f10e36fa8d26050ac77bc83b15f905503ff4a0af4c836ccf0b",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-straight-ew/result.json",
+      "bytes": 2349,
+      "sha256": "sha256:23b886b99f6b997e1140f4d429bb6da141660375a3a08a25f53c44134b5973f9"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-straight-ew/candidate.png",
+      "bytes": 40175,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:3846223f73312db2d938bf1d266327fa43d78dcf1a7efa07deb0bc1aad73d63a"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-straight-ew/prompt.txt",
+        "bytes": 11465,
+        "sha256": "sha256:e744e4eac7daa5458059442b689e2aba23ac2abda0a8196815b098342c459252"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-straight-ew/worker.jsonl",
+        "bytes": 47587,
+        "sha256": "sha256:458f1fe7b1380cdaea71d3fba5597c4a9a082fed5c2c26969e8cb9fa0b05e0e0"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-straight-ew/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-straight-ew/last-message.txt",
+        "bytes": 434,
+        "sha256": "sha256:f41f3bbf500b804299cf38eaeecf1b9d0099144472e8d461d6301d7520e43aef"
+      }
+    }
+  },
+  "fullHash": "sha256:916e8abafa7daf8fbf2bad9af74507156df4c19e695c32f2a4672b938d9f8a38"
+}

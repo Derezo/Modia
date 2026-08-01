@@ -48,6 +48,7 @@ function createSceneHarness() {
   Object.assign(scene, {
     battleId: 11,
     battleEnded: false,
+    battleMapAssetsReady: true,
     battleState: {
       status: 'active',
       activeUnitId: unit.id,
@@ -94,6 +95,92 @@ function createSceneHarness() {
 }
 
 describe('BattleScene authoritative action gate', () => {
+  it('shows move confirmation on the first valid destination for every input type', () => {
+    for (const isTouchDevice of [false, true]) {
+      const { scene } = createSceneHarness();
+      const messages = [];
+      scene.isTouchDevice = isTouchDevice;
+      scene.currentAction = 'move';
+      scene.validTiles = [{ x: 2, y: 3 }];
+      scene.applyAuthoritativeAvailability({ canMove: true, canAct: true });
+      scene.ui.showConfirmation = message => messages.push(message);
+
+      scene.handleTileClick(2, 3);
+
+      assert.deepEqual(scene.pendingAction, {
+        type: 'move',
+        targetTile: { x: 2, y: 3 }
+      });
+      assert.deepEqual(scene.selectedMoveTile, { x: 2, y: 3 });
+      assert.deepEqual(messages, ['Move to (2, 3)?']);
+    }
+  });
+
+  it('confirms a pending move exactly once on the second click of its destination', () => {
+    const { scene } = createSceneHarness();
+    scene.isTouchDevice = true;
+    scene.currentAction = 'move';
+    scene.validTiles = [{ x: 2, y: 3 }];
+    scene.applyAuthoritativeAvailability({ canMove: true, canAct: true });
+    scene.ui.showConfirmation = () => {};
+    let confirmations = 0;
+    scene.confirmAction = () => {
+      confirmations++;
+    };
+
+    scene.handleTileClick(2, 3);
+    assert.equal(confirmations, 0);
+    scene.handleTileClick(2, 3);
+    assert.equal(confirmations, 1);
+  });
+
+  it('rebuilds occlusion only when living unit identity or position changes', () => {
+    const { scene, unit } = createSceneHarness();
+    Object.assign(unit, {
+      gridX: 1,
+      gridY: 2,
+      hp: 10,
+      isAlive() { return this.hp > 0; }
+    });
+    const enemy = {
+      id: 'enemy',
+      gridX: 4,
+      gridY: 5,
+      hp: 10,
+      isAlive() { return this.hp > 0; }
+    };
+    scene.units.set(enemy.id, enemy);
+    let invalidations = 0;
+    const updates = [];
+    scene.grid = {
+      invalidateOcclusionCache() {
+        invalidations++;
+      },
+      updateOcclusionCache(units) {
+        updates.push(units.map(candidate => candidate.id));
+      }
+    };
+
+    scene.updateOcclusionCacheForUnits();
+    scene.updateOcclusionCacheForUnits();
+    unit.hp = 9;
+    scene.updateOcclusionCacheForUnits();
+    enemy.gridX = 6;
+    scene.updateOcclusionCacheForUnits();
+    enemy.getRenderGridPosition = () => ({
+      x: enemy.gridX - 0.5,
+      y: enemy.gridY,
+      elevation: 0
+    });
+    scene.updateOcclusionCacheForUnits();
+    enemy.hp = 0;
+    scene.updateOcclusionCacheForUnits();
+
+    assert.equal(invalidations, 4);
+    assert.equal(updates.length, 6);
+    assert.deepEqual(updates.at(-1), [unit.id]);
+  });
+
   for (const actionType of ['skill', 'attack', 'item']) {
     it(`allows ${actionType} → move without granting a second action`, () => {
       const { scene } = createSceneHarness();
@@ -277,6 +364,139 @@ describe('BattleScene authoritative action gate', () => {
     assert.equal(scene.inputEnabled, true);
     assert.equal(scene.inEnemySequence, false);
     assert.equal(scene.wsManager.lastYourTurnUnitId, unit.id);
+  });
+
+  it('uses applied and duplicate V3 action updates from the verified map session', async () => {
+    for (const status of ['applied', 'duplicate']) {
+      const { scene, unit } = createSceneHarness();
+      const update = { stateRevision: 4 };
+      const authoritativeState = {
+        status: 'active',
+        activeUnitId: unit.id,
+        stateRevision: 4,
+        turn: 2,
+        units: [{ id: unit.id }]
+      };
+      let acceptedUpdate = null;
+      scene.mapSession = {
+        state: authoritativeState,
+        acceptUpdate(candidate) {
+          acceptedUpdate = candidate;
+          return status === 'applied'
+            ? { status, state: authoritativeState }
+            : { status, reason: 'known_update' };
+        }
+      };
+      scene.inEnemySequence = false;
+      scene.updateUI = () => {};
+      scene.updateUIForPartialTurn = () => {};
+      scene.addBattleLogEntry = () => {};
+      scene.playActionPresentation = () => null;
+      scene.ui.clearTargetSticky = () => {};
+      const syncedUnits = [];
+      scene.syncUnitsWithState = units => syncedUnits.push(units);
+      const availability = {
+        canMove: false,
+        canAct: true,
+        canWait: true,
+        turnPhase: 'partial'
+      };
+
+      const processed = await scene.processActionResult({
+        update,
+        actionResult: {},
+        battleStatus: 'active',
+        turnContinues: true,
+        availableActions: availability
+      }, {
+        type: 'move',
+        unitId: unit.id
+      });
+
+      assert.equal(processed, true);
+      assert.equal(acceptedUpdate, update);
+      assert.equal(scene.stateRevision, 4);
+      assert.equal(scene.battleState.turn, 2);
+      assert.deepEqual(syncedUnits, [authoritativeState.units]);
+      assert.deepEqual(scene.serverAvailableActions, availability);
+    }
+  });
+
+  it('locks input and requests a full sync when an action update cannot be verified', async () => {
+    const { scene } = createSceneHarness();
+    scene.applyAuthoritativeAvailability({ canMove: true, canAct: true });
+    scene.mapSession = {
+      acceptUpdate() {
+        return { status: 'resync_required', reason: 'revision_gap' };
+      }
+    };
+    let syncRequest = null;
+    scene.wsManager.requestFullStateSync = options => {
+      syncRequest = options;
+    };
+
+    const processed = await scene.processActionResult({
+      update: { stateRevision: 5 },
+      actionResult: {},
+      battleStatus: 'active',
+      turnContinues: true,
+      availableActions: { canMove: true, canAct: false }
+    });
+
+    assert.equal(processed, false);
+    assert.equal(scene.inputEnabled, false);
+    assert.equal(scene.serverAvailableActions, null);
+    assert.deepEqual(syncRequest, {
+      includeCachedMaps: true,
+      reason: 'revision_gap'
+    });
+  });
+
+  it('does not pair a superseded HTTP replay with newer session state', async () => {
+    const { scene, unit } = createSceneHarness();
+    const priorAvailability = {
+      canMove: false,
+      canAct: false,
+      canWait: false
+    };
+    scene.applyAuthoritativeAvailability(priorAvailability);
+    scene.stateRevision = 4;
+    scene.battleState.turn = 4;
+    scene.mapSession = {
+      current: { stateRevision: 6 },
+      state: {
+        ...scene.battleState,
+        turn: 6,
+        stateRevision: 6
+      },
+      acceptUpdate() {
+        return { status: 'duplicate', reason: 'older_revision' };
+      }
+    };
+    scene.addBattleLogEntry = () => {};
+    scene.playActionPresentation = () => null;
+    scene.syncUnitsWithState = () => {};
+    scene.updateUI = () => {};
+    scene.ui.clearTargetSticky = () => {};
+
+    const processed = await scene.processActionResult({
+      update: { stateRevision: 5 },
+      actionResult: {},
+      battleStatus: 'active',
+      turnContinues: true,
+      availableActions: {
+        canMove: true,
+        canAct: true,
+        canWait: true
+      }
+    }, {
+      type: 'wait',
+      unitId: unit.id
+    });
+
+    assert.equal(processed, true);
+    assert.equal(scene.battleState.turn, 4);
+    assert.deepEqual(scene.serverAvailableActions, priorAvailability);
   });
 
   it('does not let an HTTP result become stale during presentation and overwrite a recovered local turn', async () => {

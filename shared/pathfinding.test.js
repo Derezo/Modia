@@ -332,6 +332,153 @@ describe('TraversalView object API', () => {
     assert.strictEqual(findTraversalPath(view, { start, goal: beyond }), null);
   });
 
+  it('charges normal terrain and elevation costs while a player crosses an ally', () => {
+    const start = { x: 0, y: 0 };
+    const allyTile = { x: 1, y: 0 };
+    const beyond = { x: 2, y: 0 };
+    const opponentTile = { x: 3, y: 0 };
+    const view = createView({
+      width: 4,
+      height: 1,
+      terrain: [['grass', 'forest', 'grass', 'grass']],
+      elevation: [[0, 1, 1, 1]],
+      elevationFormat: 'discrete',
+      elevationConnections: [[
+        { e: { type: 'slope', levels: 1 } },
+        { w: { type: 'slope', levels: 1 } },
+        null,
+        null
+      ]],
+      units: [
+        {
+          id: 'player',
+          tileX: 0,
+          tileY: 0,
+          hp: 10,
+          type: 'player',
+          teamId: 'blue'
+        },
+        {
+          id: 'ally',
+          tileX: 1,
+          tileY: 0,
+          hp: 10,
+          type: 'enemy',
+          teamId: 'blue'
+        },
+        {
+          id: 'opponent',
+          tileX: 3,
+          tileY: 0,
+          hp: 10,
+          type: 'player',
+          teamId: 'red'
+        }
+      ],
+      movementPolicy: {
+        canTraverseOccupant: () => undefined
+      }
+    });
+
+    assert.deepStrictEqual(
+      getReachableTilesForTraversal(view, { start, range: 5 }),
+      [{ x: 2, y: 0, z: 1, cost: 4 }]
+    );
+    assert.strictEqual(
+      calculateTraversalPathCost(view, { start, goal: beyond }),
+      4
+    );
+    assert.deepStrictEqual(findTraversalPath(view, { start, goal: beyond }), [
+      { x: 0, y: 0, z: 0 },
+      { x: 1, y: 0, z: 1 },
+      { x: 2, y: 0, z: 1 }
+    ]);
+    assert.strictEqual(findTraversalPath(view, { start, goal: allyTile }), null);
+    assert.strictEqual(findTraversalPath(view, { start, goal: opponentTile }), null);
+  });
+
+  it('uses legacy type teams when an enemy crosses an ally but not an opponent', () => {
+    const start = { x: 0, y: 0 };
+    const allyTile = { x: 1, y: 0 };
+    const beyond = { x: 2, y: 0 };
+    const opponentTile = { x: 3, y: 0 };
+    const view = createView({
+      width: 4,
+      height: 1,
+      units: [
+        { tileX: 0, tileY: 0, hp: 10, type: 'enemy' },
+        { tileX: 1, tileY: 0, hp: 10, type: 'enemy' },
+        { tileX: 3, tileY: 0, hp: 10, type: 'player' }
+      ]
+    });
+
+    assert.deepStrictEqual(
+      getReachableTilesForTraversal(view, { start, range: 3 }),
+      [{ x: 2, y: 0, z: 0, cost: 2 }]
+    );
+    assert.deepStrictEqual(findTraversalPath(view, { start, goal: beyond }), [
+      { x: 0, y: 0, z: 0 },
+      { x: 1, y: 0, z: 0 },
+      { x: 2, y: 0, z: 0 }
+    ]);
+    assert.strictEqual(findTraversalPath(view, { start, goal: allyTile }), null);
+    assert.strictEqual(findTraversalPath(view, { start, goal: opponentTile }), null);
+  });
+
+  it('uses legacy type teams when persisted team ids are null', () => {
+    const view = createView({
+      width: 3,
+      height: 1,
+      units: [
+        {
+          tileX: 0,
+          tileY: 0,
+          hp: 10,
+          type: 'player',
+          teamId: null
+        },
+        {
+          tileX: 1,
+          tileY: 0,
+          hp: 10,
+          type: 'enemy',
+          teamId: null
+        }
+      ]
+    });
+
+    assert.strictEqual(
+      findTraversalPath(view, {
+        start: { x: 0, y: 0 },
+        goal: { x: 2, y: 0 }
+      }),
+      null
+    );
+  });
+
+  it('keeps the mover anchored to the start after crossing a corpse', () => {
+    const start = { x: 0, y: 0 };
+    const allyTile = { x: 2, y: 0 };
+    const beyond = { x: 3, y: 0 };
+    const view = createView({
+      width: 4,
+      height: 1,
+      units: [
+        { tileX: 0, tileY: 0, hp: 10, teamId: 1 },
+        { tileX: 1, tileY: 0, hp: 0, teamId: 2 },
+        { tileX: 2, tileY: 0, hp: 10, teamId: 1 }
+      ]
+    });
+
+    assert.deepStrictEqual(findTraversalPath(view, { start, goal: beyond }), [
+      { x: 0, y: 0, z: 0 },
+      { x: 1, y: 0, z: 0 },
+      { x: 2, y: 0, z: 0 },
+      { x: 3, y: 0, z: 0 }
+    ]);
+    assert.strictEqual(findTraversalPath(view, { start, goal: allyTile }), null);
+  });
+
   it('uses the same directional elevation connection cost in every object API', () => {
     const elevation = [[0.33, 0.66]];
     const elevationConnections = [[

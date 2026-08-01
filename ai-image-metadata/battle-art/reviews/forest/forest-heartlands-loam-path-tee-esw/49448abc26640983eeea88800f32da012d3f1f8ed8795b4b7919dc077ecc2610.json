@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-loam-path-tee-esw",
+  "decision": "rejected",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "The E/S/W bands pass mechanically, but visible loam fills a broad angular triangular slab with hard edges instead of three distinct route arms meeting in a compact rounded tee junction with transparent exterior.",
+  "reviewedAt": "2026-07-31T11:14:38.123Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-tee-esw.json",
+    "sha256": "sha256:e425c25952f2d82eb34969d5a67e7caca5de320e8fc5725e7fdfc358d6c91a40",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-tee-esw/result.json",
+      "bytes": 2313,
+      "sha256": "sha256:b260617b17fb0f2f5300fb1b596dc3ade4c1d4353fa61e8bfee92b8258539dde"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-tee-esw/candidate.png",
+      "bytes": 15276,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:49448abc26640983eeea88800f32da012d3f1f8ed8795b4b7919dc077ecc2610"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-tee-esw/prompt.txt",
+        "bytes": 13040,
+        "sha256": "sha256:74661f3bb1aec8d6a58f6e27a9d9cf5591e3bd8612dfc76ada183cdb21ef35dd"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-tee-esw/worker.jsonl",
+        "bytes": 44459,
+        "sha256": "sha256:dfd393a1ab61faa3ee100affb560f322cc6a3175b80bf13f7b873b5b7a313add"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-tee-esw/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-tee-esw/last-message.txt",
+        "bytes": 360,
+        "sha256": "sha256:5a760558da78b2336c1e42c0a185894f93b1013168b4bc7664bb67e0f81dc620"
+      }
+    }
+  },
+  "fullHash": "sha256:6d54a55451f293d585a7736952b50a62d396c77df8f4e9b497dfb7c1e91934b4"
+}

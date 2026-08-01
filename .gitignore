@@ -93,6 +93,8 @@ ai-image-metadata/**
 ai-image-metadata/battle-maps/candidates/**
 ai-image-metadata/battle-maps/review/**
 ai-image-metadata/battle-art/candidates/**
+!ai-image-metadata/battle-art/generated-artifacts/**/*.png
+!ai-image-metadata/battle-art/generated-artifacts/**/*.webp
 
 # Playwright test artifacts
 playwright-report/

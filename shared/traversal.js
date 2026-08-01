@@ -272,6 +272,11 @@ function isDefeatedOccupant(occupant) {
   return typeof occupant?.hp === 'number' && occupant.hp <= 0;
 }
 
+function getUnitTeamId(unit) {
+  if (unit?.teamId != null) return unit.teamId;
+  return unit?.type === 'enemy' ? 2 : 1;
+}
+
 export function getElevationConnection(view, from, to) {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
@@ -341,12 +346,25 @@ function evaluateStep(view, from, to, {
   const terrain = view.terrain[to.y][to.x] ?? 'grass';
   const terrainCost = getTerrainMovementCost(terrain);
   const obstacle = view.obstacles?.[to.y]?.[to.x] ?? null;
+  const mover = policy.ignoreUnits
+    ? null
+    : getTraversalOccupant(view, start);
   const occupant = policy.ignoreUnits
     ? null
     : getTraversalOccupant(view, to, { exclude: start });
   const isGoal = Boolean(goal && goal.x === to.x && goal.y === to.y);
   const isTransit = explicitTransit ?? Boolean(goal && !isGoal);
+  const moverDefeated = isDefeatedOccupant(mover);
   const occupantDefeated = isDefeatedOccupant(occupant);
+  const alliedOccupantTransit = Boolean(
+    mover &&
+    !moverDefeated &&
+    occupant &&
+    !occupantDefeated &&
+    isTransit &&
+    !isGoal &&
+    getUnitTeamId(mover) === getUnitTeamId(occupant)
+  );
   const connection = getElevationConnection(view, from, to);
   const fromElevation = getElevationAt(view, from);
   const toElevation = getElevationAt(view, to);
@@ -369,6 +387,8 @@ function evaluateStep(view, from, to, {
     terrain,
     terrainCost,
     obstacle,
+    mover,
+    moverDefeated,
     occupant,
     occupantDefeated,
     isTransit,
@@ -409,7 +429,7 @@ function evaluateStep(view, from, to, {
     context,
     occupantDefeated
       ? isTransit && !isGoal
-      : isGoal && policy.allowOccupiedGoal
+      : alliedOccupantTransit || (isGoal && policy.allowOccupiedGoal)
   );
   if (!occupantPassable) {
     return { canEnter: false, cost: Infinity, reason: 'occupied', context };

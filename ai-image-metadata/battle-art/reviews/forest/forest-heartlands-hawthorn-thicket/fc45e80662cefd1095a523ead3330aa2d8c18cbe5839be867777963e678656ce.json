@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-hawthorn-thicket",
+  "decision": "approved",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "Dense low thorn branches and abundant white blossom read specifically as flowering hawthorn, with a compact grounded blocking silhouette, coherent scale, and clean transparent base.",
+  "reviewedAt": "2026-07-31T07:03:12.897Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-hawthorn-thicket.json",
+    "sha256": "sha256:57c5d7440318efecb3c332d68ab8ee80e73a7de8869d8f549c4e29d2cdc39177",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hawthorn-thicket/result.json",
+      "bytes": 2304,
+      "sha256": "sha256:45fc328681f9b6f94e1fd0cecdf9a5afd23e4f36608d769b4937e165aafaf2e1"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hawthorn-thicket/candidate.png",
+      "bytes": 80062,
+      "width": 192,
+      "height": 256,
+      "format": "png",
+      "sha256": "sha256:fc45e80662cefd1095a523ead3330aa2d8c18cbe5839be867777963e678656ce"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hawthorn-thicket/prompt.txt",
+        "bytes": 7934,
+        "sha256": "sha256:bee161014c272494a91f6086149d356c4458bc1afdcb4aec21239f12449cee1f"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hawthorn-thicket/worker.jsonl",
+        "bytes": 27384,
+        "sha256": "sha256:33ce9351a0fb361273e1bf1eb62f65e8459c11870a14ad7cebe0980cdfb8cf06"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hawthorn-thicket/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hawthorn-thicket/last-message.txt",
+        "bytes": 422,
+        "sha256": "sha256:7ae3fc44828f925c459f4e823cfa5bbcf3377b95139f9c7eef060cc90628c290"
+      }
+    }
+  },
+  "fullHash": "sha256:44ddc5c71b93bafc8920f749e2904e176d20ffd57c46e3e4b811124834e8207f"
+}

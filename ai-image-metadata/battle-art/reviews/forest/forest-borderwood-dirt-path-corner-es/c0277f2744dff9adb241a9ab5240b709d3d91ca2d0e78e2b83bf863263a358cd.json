@@ -1,0 +1,78 @@
+{
+  "schemaVersion": "battle-art-compiled-current-source-attestation-v1",
+  "theme": "forest",
+  "familyId": "forest-borderwood-dirt-path-corner-es",
+  "decision": "approved",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "It forms a continuous, generous-radius E-to-S arch with a legible near-uniform dirt core and soft organic verge, without notches, cusps, slabs, or vertical artifacts.",
+  "reviewedAt": "2026-07-31T15:56:12.797Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-borderwood-dirt-path-corner-es.json",
+    "sha256": "sha256:3ea76cd2f3472f0be9504c8b505dad42d914127b9919638334ed0e0216d4bcca",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-borderwood-dirt-path-corner-es/result.json",
+      "bytes": 2288,
+      "sha256": "sha256:32d08c028ab1d79b3539f5e0abc1cd1b71272440d03e267394b75b7de4007ad4"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-borderwood-dirt-path-corner-es/candidate.png",
+      "bytes": 22494,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:c0277f2744dff9adb241a9ab5240b709d3d91ca2d0e78e2b83bf863263a358cd"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 1200000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-borderwood-dirt-path-corner-es/prompt.txt",
+        "bytes": 9592,
+        "sha256": "sha256:67b63520dcf544767def7a5084faf845b2850965d112a7ae76e094b35139b745"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-borderwood-dirt-path-corner-es/worker.jsonl",
+        "bytes": 31734,
+        "sha256": "sha256:e16992d5e1b03ec97d81c64578eb2de158e60f45d7373ed6ba8035894abf8f22"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-borderwood-dirt-path-corner-es/worker.stderr.log",
+        "bytes": 120,
+        "sha256": "sha256:1fc8ca81a27bd62c50d0a5af1a6017cb953506c9c4e4b32edc2de17b75ae86a4"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-borderwood-dirt-path-corner-es/last-message.txt",
+        "bytes": 409,
+        "sha256": "sha256:788728a67db2642c16b43c2c43f501d244d369d09e6fe854ecb478c7132facc8"
+      }
+    }
+  },
+  "source": {
+    "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-borderwood-dirt-path-corner-es/result.json",
+    "imagePath": "ai-image-metadata/battle-art/sources/forest/forest-borderwood-dirt-path-corner-es/v1/c0277f2744dff9adb241a9ab5240b709d3d91ca2d0e78e2b83bf863263a358cd.png",
+    "imageSha256": "sha256:c0277f2744dff9adb241a9ab5240b709d3d91ca2d0e78e2b83bf863263a358cd",
+    "width": 256,
+    "height": 128,
+    "format": "png",
+    "reviewer": "codex",
+    "approvedAt": "2026-07-31T02:31:00.974Z"
+  },
+  "fullHash": "sha256:385d0b3c56f8ba3ef3275d0cfa3520d3a5dd98781b164acdcd7a80bda0a4ffdc"
+}

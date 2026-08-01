@@ -110,6 +110,86 @@ describe('BattleGrid elevation contract', () => {
     assert.equal(pathfinding.isValidMove(1, 0), false);
   });
 
+  it('routes a player through a living ally while opponents and occupied goals block', () => {
+    const grid = createGrid(4, 1);
+    const units = new Map([
+      ['player', {
+        id: 'player',
+        gridX: 0,
+        gridY: 0,
+        hp: 10,
+        type: 'player',
+        teamId: 'blue'
+      }],
+      ['ally', {
+        id: 'ally',
+        gridX: 1,
+        gridY: 0,
+        hp: 10,
+        type: 'enemy',
+        teamId: 'blue'
+      }],
+      ['opponent', {
+        id: 'opponent',
+        gridX: 3,
+        gridY: 0,
+        hp: 10,
+        type: 'player',
+        teamId: 'red'
+      }]
+    ]);
+    const pathfinding = new BattlePathfinding(grid, units);
+
+    assert.deepEqual(pathfinding.getReachableTiles(0, 0, 3), [
+      { x: 2, y: 0, z: 0, cost: 2 }
+    ]);
+    assert.deepEqual(pathfinding.findPath(0, 0, 2, 0), [
+      { x: 0, y: 0, z: 0 },
+      { x: 1, y: 0, z: 0 },
+      { x: 2, y: 0, z: 0 }
+    ]);
+    assert.equal(pathfinding.findPath(0, 0, 1, 0), null);
+    assert.equal(pathfinding.findPath(0, 0, 3, 0), null);
+    assert.equal(pathfinding.isValidMove(1, 0), false);
+    assert.equal(pathfinding.isValidMove(3, 0), false);
+  });
+
+  it('uses projected legacy types when an enemy crosses an ally', () => {
+    const grid = createGrid(4, 1);
+    const units = new Map([
+      ['enemy-mover', {
+        id: 'enemy-mover',
+        gridX: 0,
+        gridY: 0,
+        hp: 10,
+        type: 'enemy'
+      }],
+      ['enemy-ally', {
+        id: 'enemy-ally',
+        gridX: 1,
+        gridY: 0,
+        hp: 10,
+        type: 'enemy'
+      }],
+      ['player-opponent', {
+        id: 'player-opponent',
+        gridX: 3,
+        gridY: 0,
+        hp: 10,
+        type: 'player'
+      }]
+    ]);
+    const pathfinding = new BattlePathfinding(grid, units);
+
+    assert.deepEqual(pathfinding.findPath(0, 0, 2, 0), [
+      { x: 0, y: 0, z: 0 },
+      { x: 1, y: 0, z: 0 },
+      { x: 2, y: 0, z: 0 }
+    ]);
+    assert.equal(pathfinding.findPath(0, 0, 1, 0), null);
+    assert.equal(pathfinding.findPath(0, 0, 3, 0), null);
+  });
+
   it('hydrates BattleMapV2 terrain, obstacles, and connections', () => {
     const grid = createGrid(3, 1);
     grid.setTerrain([[

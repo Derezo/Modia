@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-loam-slope-n",
+  "decision": "approved",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "A smooth unobstructed earthen grade runs continuously from the low anchor to the north endpoint, remains distinct from stairs and cliffs, and matches the accepted east-slope scale and materials.",
+  "reviewedAt": "2026-07-31T07:29:45.607Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-slope-n.json",
+    "sha256": "sha256:95096056b10b02ada5f51464bd966bca111490e2c0d6b06f4582c84d73343980",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-slope-n/result.json",
+      "bytes": 2268,
+      "sha256": "sha256:2a28f706049568ee9a6a0a7ce0e4f4437984a933a8e407f8a49f7be66e0a72a1"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-slope-n/candidate.png",
+      "bytes": 11971,
+      "width": 256,
+      "height": 192,
+      "format": "png",
+      "sha256": "sha256:f3d19d0d7b95afaeb2a047ab7c57b3bb523518fcdcab0ca0172df7abea30ced2"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-slope-n/prompt.txt",
+        "bytes": 8622,
+        "sha256": "sha256:4e442b3f557705bcb6c706c509cf5864f0b927034941e6eb89a699671e76fcff"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-slope-n/worker.jsonl",
+        "bytes": 25548,
+        "sha256": "sha256:4951386f59ddea98d247448e1914f7c29d6a83b56e4318f70e429d8ee441a9fe"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-slope-n/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-slope-n/last-message.txt",
+        "bytes": 401,
+        "sha256": "sha256:3545526a2954e63f99c12077dcaeb6ae61131a94916fe90a8bbbcdecba0a2337"
+      }
+    }
+  },
+  "fullHash": "sha256:ee848003160719ddb257af69544de93e0421a5c2160f7c779cc674d038fdac40"
+}

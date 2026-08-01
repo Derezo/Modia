@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-hedgerow-edge-n",
+  "decision": "approved",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "The flowering hedgerow remains a narrow north-only boundary strip, leaves forbidden edge segments clear, and reads as regional vegetation rather than a complete tile platform.",
+  "reviewedAt": "2026-07-31T06:34:53.791Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-hedgerow-edge-n.json",
+    "sha256": "sha256:688c32c5c70544e65a043722c2d361795ce24e74235bdbb441a28545ed18541b",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hedgerow-edge-n/result.json",
+      "bytes": 2295,
+      "sha256": "sha256:af6200b9ce5bff47faa94c7e3fd42a52adc8d7c28aca383eebc970dadd453b32"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hedgerow-edge-n/candidate.png",
+      "bytes": 32516,
+      "width": 256,
+      "height": 256,
+      "format": "png",
+      "sha256": "sha256:989bb7022bb4febde4af4440206c6075f66f775ecd7af618e47ddfb48e870235"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hedgerow-edge-n/prompt.txt",
+        "bytes": 9990,
+        "sha256": "sha256:2aa450d024fae8f827fc0ba67c215e233c0b6d4bef6690f581888ae70c049e62"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hedgerow-edge-n/worker.jsonl",
+        "bytes": 46434,
+        "sha256": "sha256:02bc530de4b789c519da59f7a215e875d6d49a57d5ad64645f3ca82340fe639b"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hedgerow-edge-n/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hedgerow-edge-n/last-message.txt",
+        "bytes": 432,
+        "sha256": "sha256:3509f97171ddef889f299b4c56bdd0a660553b2f7a4e7e25353fb7af6b599d7d"
+      }
+    }
+  },
+  "fullHash": "sha256:c32ace237e9c90ade7d767e0b9a1a98e24e657bd3c98cbeb3ea8528d60590941"
+}

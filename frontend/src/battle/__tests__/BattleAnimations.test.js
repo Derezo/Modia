@@ -17,7 +17,12 @@ globalThis.document = {
   head: { appendChild() {} }
 };
 
-const { BattleAnimations, withColorAlpha } = await import('../BattleAnimations.js');
+const {
+  ANIMATION_TIMING,
+  BattleAnimations,
+  getMovementPresentationDuration,
+  withColorAlpha
+} = await import('../BattleAnimations.js');
 const { SKILL_EFFECT_CATEGORIES } = await import('../SkillEffectCategories.js');
 
 function createCanvasContext({ rejectColor = null } = {}) {
@@ -50,6 +55,52 @@ function createCanvasContext({ rejectColor = null } = {}) {
     set globalAlpha(_value) {}
   };
 }
+
+describe('BattleAnimations timing budgets', () => {
+  it('keeps action presentation responsive without removing visual ordering', () => {
+    assert.deepEqual({
+      actionShort: ANIMATION_TIMING.ACTION_WAIT_SHORT,
+      actionFull: ANIMATION_TIMING.ACTION_WAIT_FULL,
+      actionImpact: ANIMATION_TIMING.ACTION_IMPACT_DELAY,
+      deathReaction: ANIMATION_TIMING.DEATH_REACTION_DELAY,
+      itemTravel: ANIMATION_TIMING.ITEM_TRAVEL_DURATION,
+      turnSettle: ANIMATION_TIMING.TURN_SETTLE_DELAY,
+      cameraPan: ANIMATION_TIMING.CAMERA_PAN_DURATION,
+      movementPerTile: ANIMATION_TIMING.MOVEMENT_PER_TILE_MS,
+      movementMinimum: ANIMATION_TIMING.MOVEMENT_MIN_MS
+    }, {
+      actionShort: 350,
+      actionFull: 700,
+      actionImpact: 120,
+      deathReaction: 200,
+      itemTravel: 500,
+      turnSettle: 100,
+      cameraPan: 300,
+      movementPerTile: 90,
+      movementMinimum: 180
+    });
+  });
+
+  it('matches movement waits to actual screen distance and unit speed', () => {
+    const unit = {
+      moveSpeed: 200,
+      grid: {
+        gridToScreenWorld(x, y) {
+          return { x: (x - y) * 32, y: (x + y) * 16 };
+        }
+      }
+    };
+
+    assert.equal(
+      getMovementPresentationDuration(unit, { x: 0, y: 0 }, { x: 1, y: 0 }),
+      180
+    );
+    assert.equal(
+      getMovementPresentationDuration(unit, { x: 0, y: 0 }, { x: 5, y: 5 }),
+      800
+    );
+  });
+});
 
 describe('BattleAnimations skill action effects', () => {
   it('resolves a projectile into exactly one impact', () => {

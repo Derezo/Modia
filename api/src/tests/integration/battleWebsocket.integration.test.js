@@ -16,6 +16,9 @@ import {
   createBattleMutableStateV1
 } from '../../../../shared/battleStateProtocol.js';
 import {
+  BATTLE_MAP_V3_HASH_VERSION
+} from '../../../../shared/battleMap/index.js';
+import {
   cleanupConnection,
   registerBattleMapCapabilities
 } from '../../services/messageReliability.js';
@@ -145,6 +148,118 @@ describe('battleWebsocket service', () => {
   });
 
   describe('State Broadcasts', () => {
+    test('broadcasts V3 deltas automatically when the legacy V2 gate is disabled', async () => {
+      const battleId = getUniqueBattleId();
+      const userId = getUniqueUserId();
+      const update = createBattleMutableStateUpdateV1({
+        battleId,
+        battleMapSchemaVersion: 3,
+        terrainGenerationVersion: 3,
+        fullHash: `sha256:${'a'.repeat(64)}`,
+        baseStateRevision: 2,
+        stateRevision: 3,
+        mutableState: createBattleMutableStateV1({
+          units: [],
+          battleType: 'pve',
+          player1Id: userId
+        })
+      });
+      const sentMessages = [];
+      const connection = {
+        readyState: 1,
+        send(data) {
+          sentMessages.push(JSON.parse(data));
+        }
+      };
+      const wsModule = await import('../../websocket/index.js');
+      const previousGate = process.env[BATTLE_MAP_REFERENCE_DELTA_ENABLED_ENV];
+      const loadBattleMock = mock.method(
+        battleStateRepository,
+        'loadBattle',
+        async () => {
+          throw new Error('V3 delta delivery must not load the persisted map');
+        }
+      );
+      process.env[BATTLE_MAP_REFERENCE_DELTA_ENABLED_ENV] = 'false';
+      wsModule.connections.set(userId, connection);
+      registerBattleMapCapabilities(connection, battleId, {
+        cachedMaps: [],
+        supportedBattleMapSchemaVersions: [1, 2, 3],
+        supportedHashVersions: [BATTLE_MAP_V3_HASH_VERSION],
+        supportedMutableStateProtocolVersions: [1]
+      });
+
+      try {
+        await battleWs.joinBattle(battleId, userId);
+        const deliveries = await battleWs.broadcastStateUpdate(battleId, update);
+
+        assert.equal(deliveries.get(userId), 1);
+        assert.equal(loadBattleMock.mock.callCount(), 0);
+        assert.deepEqual(sentMessages[0].payload.update, update);
+        assert.equal('snapshot' in sentMessages[0].payload, false);
+        assert.equal('state' in sentMessages[0].payload, false);
+      } finally {
+        loadBattleMock.mock.restore();
+        if (previousGate === undefined) {
+          delete process.env[BATTLE_MAP_REFERENCE_DELTA_ENABLED_ENV];
+        } else {
+          process.env[BATTLE_MAP_REFERENCE_DELTA_ENABLED_ENV] = previousGate;
+        }
+        cleanupConnection(userId);
+        wsModule.connections.delete(userId);
+        await battleWs.cleanupBattleRoom(battleId);
+      }
+    });
+
+    test('requires an upgrade instead of flattening V3 for an undeclared recipient', async () => {
+      const battleId = getUniqueBattleId();
+      const userId = getUniqueUserId();
+      const update = createBattleMutableStateUpdateV1({
+        battleId,
+        battleMapSchemaVersion: 3,
+        terrainGenerationVersion: 3,
+        fullHash: `sha256:${'b'.repeat(64)}`,
+        baseStateRevision: 0,
+        stateRevision: 1,
+        mutableState: createBattleMutableStateV1({
+          units: [],
+          battleType: 'pve',
+          player1Id: userId
+        })
+      });
+      const sentMessages = [];
+      const connection = {
+        readyState: 1,
+        send(data) {
+          sentMessages.push(JSON.parse(data));
+        }
+      };
+      const wsModule = await import('../../websocket/index.js');
+      const loadBattleMock = mock.method(
+        battleStateRepository,
+        'loadBattle',
+        async () => {
+          throw new Error('undeclared V3 recipients must not receive flat state');
+        }
+      );
+      wsModule.connections.set(userId, connection);
+
+      try {
+        await battleWs.joinBattle(battleId, userId);
+        const deliveries = await battleWs.broadcastStateUpdate(battleId, update);
+
+        assert.equal(deliveries.size, 0);
+        assert.equal(loadBattleMock.mock.callCount(), 0);
+        assert.equal(sentMessages[0].type, 'battle_map_upgrade_required');
+        assert.equal(sentMessages[0].payload.requiredBattleMapSchemaVersion, 3);
+      } finally {
+        loadBattleMock.mock.restore();
+        cleanupConnection(userId);
+        wsModule.connections.delete(userId);
+        await battleWs.cleanupBattleRoom(battleId);
+      }
+    });
+
     test('broadcastStateUpdate sends to battle room', async () => {
       const battleId = getUniqueBattleId();
       const userId = getUniqueUserId();

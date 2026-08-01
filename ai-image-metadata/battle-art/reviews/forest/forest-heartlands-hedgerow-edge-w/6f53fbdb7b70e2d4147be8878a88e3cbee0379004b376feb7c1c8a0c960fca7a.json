@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-hedgerow-edge-w",
+  "decision": "rejected",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "The canopy is materially oversized and fills most of the left terrain triangle, while the tapered rightward foliage extension lies on the north edge and reads as a second grounded boundary; regenerate at the accepted north-family scale with no low N-edge extension.",
+  "reviewedAt": "2026-07-31T08:00:18.902Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-hedgerow-edge-w.json",
+    "sha256": "sha256:ac4401ed7c2566fb0abcf1d822e46d966331b7c204d94e44d91a11ed37fd617c",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hedgerow-edge-w/result.json",
+      "bytes": 2295,
+      "sha256": "sha256:0f9fca1d22fde612ff9d694e4587f9a5a8107c7f084a15b69af5f092e2d8df90"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hedgerow-edge-w/candidate.png",
+      "bytes": 76845,
+      "width": 256,
+      "height": 256,
+      "format": "png",
+      "sha256": "sha256:6f53fbdb7b70e2d4147be8878a88e3cbee0379004b376feb7c1c8a0c960fca7a"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hedgerow-edge-w/prompt.txt",
+        "bytes": 9983,
+        "sha256": "sha256:7a51ed7e9dcf6e7305849668ce49c039ecdfe08bd338a4c7617f040db3332814"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hedgerow-edge-w/worker.jsonl",
+        "bytes": 46092,
+        "sha256": "sha256:fc67144b43bcb0a46d43b4da1153cde2f08f9c6a258ad3d875288f8720b66a95"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hedgerow-edge-w/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hedgerow-edge-w/last-message.txt",
+        "bytes": 373,
+        "sha256": "sha256:bc2c04fb1692710450973a003afc39e28469ec30ca4a6764083dcdacad6c49df"
+      }
+    }
+  },
+  "fullHash": "sha256:1735d79b2243b8946b52b6daabe2391c946c9d0d7e8bc043a8a3046e6378e6b0"
+}

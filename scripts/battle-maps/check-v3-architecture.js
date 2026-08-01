@@ -820,13 +820,17 @@ function prohibitedControl(window, sourceIsV3Module) {
 
 function checkRuntimeControls(source, filePath, violations, seen) {
   if (offlineTool(filePath)) return;
+  const offlineBattleArt = slashPath(filePath).startsWith('scripts/battle-art/');
   const sourceIsV3Module = v3Module(filePath, source);
   const lines = source.split('\n');
   let offset = 0;
   lines.forEach((line, index) => {
     const window = lines.slice(Math.max(0, index - 1), index + 2).join('\n');
     const prohibited = prohibitedControl(window, sourceIsV3Module);
-    if (prohibited) {
+    if (
+      prohibited
+      && !(offlineBattleArt && prohibited.code === 'v3-configurable-fallback')
+    ) {
       addViolation(
         violations,
         seen,

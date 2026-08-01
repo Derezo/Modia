@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "battle-art-corrective-style-reference-registry-v1",
+  "registryVersion": "battle-art-corrective-style-references-2026-07-31",
+  "entries": [
+    {
+      "id": "forest-heartlands-rejected-route-straight-ns-v7",
+      "consumer": {
+        "theme": "forest",
+        "familyId": "forest-heartlands-loam-path-straight-ns"
+      },
+      "raw": {
+        "path": "ai-image-metadata/battle-art/generated-artifacts/forest/forest-heartlands-loam-path-straight-ns/3e1983b6e510abe1cac17e492d38d41b306156dd31808d91be95cfea63fcbe56.png",
+        "sha256": "sha256:3e1983b6e510abe1cac17e492d38d41b306156dd31808d91be95cfea63fcbe56"
+      },
+      "failureRecord": {
+        "path": "ai-image-metadata/battle-art/generated-artifacts/forest/forest-heartlands-loam-path-straight-ns/failures/085119648741161655dc241fca9c5cf91881b2021176ec5fbbf0ec35beeac66e.json",
+        "fullHash": "sha256:085119648741161655dc241fca9c5cf91881b2021176ec5fbbf0ec35beeac66e",
+        "sha256": "sha256:fe179ff7b1cd78b4491e0fd455afed62905542acad4b59b4ec396b509aca17a6"
+      }
+    }
+  ]
+}

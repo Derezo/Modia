@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-oak-leaf-litter",
+  "decision": "approved",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "The warm russet oak-leaf patch is low, flat, grounded, and clearly decorative rather than blocking, with a clean transparent cutout and readable scale.",
+  "reviewedAt": "2026-07-31T07:03:12.738Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-oak-leaf-litter.json",
+    "sha256": "sha256:5a95918f93ae6f610c7acca966f66d7564b5a55bc196e7b1c3ca20fd2c76414b",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-oak-leaf-litter/result.json",
+      "bytes": 2295,
+      "sha256": "sha256:db327f31374653b4212d9b8637951aa2612fa1675b119e1ecef2af0823730545"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-oak-leaf-litter/candidate.png",
+      "bytes": 20233,
+      "width": 128,
+      "height": 192,
+      "format": "png",
+      "sha256": "sha256:32e6ff2cf044c64e41f24ee515c82b1ac3f3c29ff368c6341f6c08793e3abde7"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-oak-leaf-litter/prompt.txt",
+        "bytes": 7590,
+        "sha256": "sha256:439a00e6e748f00cd3dbd16d847ef3ecf0a4c00647726884716df92653a1fbea"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-oak-leaf-litter/worker.jsonl",
+        "bytes": 37327,
+        "sha256": "sha256:d28ff39223648a5b7e399b215fadc47364dcd6b73f3a0ef09240b412d435fb82"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-oak-leaf-litter/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-oak-leaf-litter/last-message.txt",
+        "bytes": 432,
+        "sha256": "sha256:fe4cf3118d4fc7cb4a2550fc7786321ccbbab95b8eaa22e1f79484751c30203d"
+      }
+    }
+  },
+  "fullHash": "sha256:b2e15af0a5ea24d6088a83e2946fbdf11c019e851f2438836635fe977298d498"
+}

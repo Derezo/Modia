@@ -13,6 +13,10 @@
  * @see websocket/index.js - WebSocket connection/room management
  */
 
+import {
+  BATTLE_MAP_V3_HASH_VERSION,
+  BATTLE_MAP_V3_SCHEMA_VERSION
+} from '../../../shared/battleMap/index.js';
 import { assertBattleMutableStateUpdateV1 } from '../../../shared/battleStateProtocol.js';
 import { battleStateRepository } from './battle/BattleStateRepository.js';
 import {
@@ -123,7 +127,8 @@ async function leaveBattle(battleId, userId) {
  * Broadcast battle state update to all participants
  * CRITICAL: Uses ACK-required, per-client delivery. Clients that declared the
  * revisioned protocol receive only the immutable-map reference plus mutable
- * update. Undeclared legacy clients receive the authoritative flattened state.
+ * update. Undeclared V1/V2 clients receive authoritative flattened state;
+ * undeclared V3 recipients must upgrade.
  * @param {number} battleId - Battle ID
  * @param {Object} update - BattleMutableStateUpdateV1 from BattleStateRepository
  * @param {number} excludeUserId - Optional user to exclude from broadcast
@@ -145,7 +150,11 @@ async function broadcastStateUpdate(battleId, update, excludeUserId = null) {
   if (!roomUsers || roomUsers.size === 0) return results;
 
   const recipients = [...roomUsers].filter(userId => userId !== excludeUserId);
-  let useReferenceDelta = isBattleMapReferenceDeltaEnabled();
+  // V3 uses its revisioned mutable protocol automatically. The legacy runtime
+  // switch controls only the older V2 rollout path.
+  const isV3Update =
+    update.battleMapSchemaVersion === BATTLE_MAP_V3_SCHEMA_VERSION;
+  let useReferenceDelta = isV3Update || isBattleMapReferenceDeltaEnabled();
   if (useReferenceDelta) {
     try {
       assertBattleMapWirePayloadWithinBudget(update, 'mutableDelta');
@@ -161,7 +170,7 @@ async function broadcastStateUpdate(battleId, update, excludeUserId = null) {
     const connection = connections.get(userId);
     return connection && getRegisteredBattleMapCapabilities(connection, battleId) === undefined;
   });
-  let persistedEnvelope = hasLegacyRecipient || !useReferenceDelta
+  let persistedEnvelope = (hasLegacyRecipient && !isV3Update) || !useReferenceDelta
     ? await battleStateRepository.loadBattle(battleId)
     : null;
   const loadPersistedEnvelope = async () => {
@@ -180,6 +189,17 @@ async function broadcastStateUpdate(battleId, update, excludeUserId = null) {
       timestamp: Date.now()
     };
     if (declaredCapabilities === undefined) {
+      if (isV3Update) {
+        sendWithAck(connection, {
+          type: 'battle_map_upgrade_required',
+          payload: createBattleMapUpgradeRequiredPayload({
+            requiredBattleMapSchemaVersion: BATTLE_MAP_V3_SCHEMA_VERSION,
+            requiredHashVersion: BATTLE_MAP_V3_HASH_VERSION,
+            requiredMutableStateProtocolVersion: 1
+          })
+        }, battleId, userId);
+        continue;
+      }
       payload.state = getParticipantBattleView(
         await loadPersistedEnvelope(),
         userId

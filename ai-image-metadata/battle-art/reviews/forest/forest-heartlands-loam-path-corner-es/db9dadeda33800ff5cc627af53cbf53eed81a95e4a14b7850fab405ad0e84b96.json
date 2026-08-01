@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-loam-path-corner-es",
+  "decision": "rejected",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "The E and S arms pinch into a narrow angular hourglass at the anchor, reading as two triangular wedges instead of one broad continuous generous-radius bottom hairpin.",
+  "reviewedAt": "2026-07-31T09:14:09.886Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-corner-es.json",
+    "sha256": "sha256:bbec6d48b3595370046bfa6c7190ed3bb11b598391e9b8fcd67eaad0b3a51b8e",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-es/result.json",
+      "bytes": 2331,
+      "sha256": "sha256:ccb812dcc32d4bad66a97c6fc27ec39c8115f8b4d2a3b48270faad5d4ca7c723"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-es/candidate.png",
+      "bytes": 19364,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:db9dadeda33800ff5cc627af53cbf53eed81a95e4a14b7850fab405ad0e84b96"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-es/prompt.txt",
+        "bytes": 11523,
+        "sha256": "sha256:d436421fba8db1ba37fdbfbd0288a6a7dcccc89f0038b5849b4b02dece60366b"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-es/worker.jsonl",
+        "bytes": 48453,
+        "sha256": "sha256:bdf4ea7c6cc1b502877a1f137ac81167f042b2566ffc671de9e842dc86478efc"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-es/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-es/last-message.txt",
+        "bytes": 329,
+        "sha256": "sha256:519bd69efa172aa4ff715ee8c7ef2cc900c48998c8c63c4528b74e8b23b47c88"
+      }
+    }
+  },
+  "fullHash": "sha256:2a472e6be9479c4d20e2bf1d3b5b1aa49f0abb35e282c625c9516a7132a5ff0a"
+}

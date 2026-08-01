@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-fieldstone-face-s",
+  "decision": "approved",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "The narrow south-edge strip has sustained cream-gray vertical stone courses and a distinct moss-and-soil top lip matching the accepted east face, without filling a tile platform or grounding any other edge.",
+  "reviewedAt": "2026-07-31T08:00:18.005Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-fieldstone-face-s.json",
+    "sha256": "sha256:340fca968d302d10d99ea0e13285ce1c1465fd4e24c0798456b774836db17a06",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-face-s/result.json",
+      "bytes": 2313,
+      "sha256": "sha256:1e710e15fc1307b6c05a44b65f075c9db8baff578699b6bfb2fa5230108a0fe5"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-face-s/candidate.png",
+      "bytes": 10109,
+      "width": 256,
+      "height": 256,
+      "format": "png",
+      "sha256": "sha256:c4dfc8d683f67288e549c96586bf4a167e29875443703a9ef4a04d999ac1f285"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-face-s/prompt.txt",
+        "bytes": 10406,
+        "sha256": "sha256:be69a0fac46d0fe6ba7ed3c07f49fb08040309338c9190d2b3fa25f4b9ba1f78"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-face-s/worker.jsonl",
+        "bytes": 27786,
+        "sha256": "sha256:e01746a074a8c1956a8bf756a21afd20cb6a134c75622dfca08723b7e3a911d7"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-face-s/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-face-s/last-message.txt",
+        "bytes": 417,
+        "sha256": "sha256:30aeff0e59312233dba6ef4910a074be4754f154fa937cdadb89100e78a131ed"
+      }
+    }
+  },
+  "fullHash": "sha256:ddc92f7d28ebd180ae483d436c96bb33c9d80f948cfab924dc81859d8b7263d1"
+}

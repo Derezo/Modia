@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-hedgerow-edge-e",
+  "decision": "approved",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "The E hedgerow forms one connected, rooted Heartlands hedge along the full (255,192) to (128,255) seam, with low-profile endpoint zones, a narrow grounded root and understory strip, and separated elevated crowns and trunks. It preserves transparent interior and canvas clearance and no longer reads as a clipped corner mass, detached fragment, or terrain wedge.",
+  "reviewedAt": "2026-07-31T09:45:08.849Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-hedgerow-edge-e.json",
+    "sha256": "sha256:d1a0591fdaa163a5b0fb87929e6c9fd1fc61025771bd5eefe03f7fbd65081298",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hedgerow-edge-e/result.json",
+      "bytes": 2295,
+      "sha256": "sha256:f2a5d1682247a8dc4bf66cf4151d802c8e9263b6f0c6d183ef39b96d5a0fdad5"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hedgerow-edge-e/candidate.png",
+      "bytes": 16032,
+      "width": 256,
+      "height": 256,
+      "format": "png",
+      "sha256": "sha256:d58799394edf6ecb2c25a0e436ab0638fc7f781d25a1385ba05fed80ba4126c0"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hedgerow-edge-e/prompt.txt",
+        "bytes": 12385,
+        "sha256": "sha256:29c6d0cf89172dd707bf25c387351eee10fe49a6d40fc13279b85b5347813f51"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hedgerow-edge-e/worker.jsonl",
+        "bytes": 44627,
+        "sha256": "sha256:52813c81d608107613453c76ceecbbe4fc93d57473a3bba2990f646731afb1e0"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hedgerow-edge-e/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hedgerow-edge-e/last-message.txt",
+        "bytes": 345,
+        "sha256": "sha256:e4a3ac6e95c8a5d8f6313dee8ad6b7c314d6928c83d29a8123193f4d1a27f4f0"
+      }
+    }
+  },
+  "fullHash": "sha256:39d018621d02089d2d7a069ff2b1700c93b049e2a9b77a43af8d50ab6a874d5f"
+}

@@ -13,8 +13,11 @@ function usage() {
 
 Usage:
   node scripts/battle-maps/approve-map-candidate.mjs --theme <theme> --template <id> \
-    --map <id> --reviewer <id> [--decision approved|rejected] [--update-pins] [--force]
+    --map <id> --reviewer <id> [--reason <rationale>] \
+    [--decision approved|rejected] [--update-pins] [--force]
 
+Template-03 and newer approvals require a bounded, trimmed, control-free rationale.
+Legacy template-01/-02 approvals retain their frozen v1 format and omit --reason.
 Approval never generates art or compiles a runtime map.`;
 }
 
@@ -23,7 +26,9 @@ export async function main(argv = process.argv.slice(2)) {
     requireReviewer: true,
     allowDecision: true,
     allowForce: true,
-    allowUpdatePins: true
+    allowUpdatePins: true,
+    allowReason: true,
+    requireReasonForNewApproval: true
   });
   if (options.help) {
     console.log(usage());

@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-loam-slope-w",
+  "decision": "rejected",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "Two prominent shrub clumps obstruct the grade, while a continuous dark rock-lined lower side creates a raised causeway or retaining-wall silhouette inconsistent with the unobstructed north, east, and south loam slopes; regenerate with only low fringe and no sustained side plane.",
+  "reviewedAt": "2026-07-31T07:26:50.754Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-slope-w.json",
+    "sha256": "sha256:addae3fb6677f86d1df8ec25c9306bcafb509d2c82e233044da50e184c1d7006",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-slope-w/result.json",
+      "bytes": 2268,
+      "sha256": "sha256:1c15d90b593fa541ef6fbc395296f3970a203af98c8c344544b066d35f5596e3"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-slope-w/candidate.png",
+      "bytes": 23904,
+      "width": 256,
+      "height": 192,
+      "format": "png",
+      "sha256": "sha256:d0d595a90958e65b0de93a47a8e83d1bea421b78b4dacffe2759e1093f0af7bc"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-slope-w/prompt.txt",
+        "bytes": 8615,
+        "sha256": "sha256:122f3a858cc8dc9795baf9cfb27a6a5f2021f47db94e5349d013d839b3c27fdb"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-slope-w/worker.jsonl",
+        "bytes": 28401,
+        "sha256": "sha256:338a184d53bdc64a801d78a12f6c41cebfec016b63e515c7a7bd1bcaa4754802"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-slope-w/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-slope-w/last-message.txt",
+        "bytes": 465,
+        "sha256": "sha256:7c036820d0986c9b881ad570b9cd8f17493762f8babbc5076a43d825c0130db6"
+      }
+    }
+  },
+  "fullHash": "sha256:ad33ad02aec337be0a599f220e051966dee534e1c2b015e4116a12c2c308c2ee"
+}

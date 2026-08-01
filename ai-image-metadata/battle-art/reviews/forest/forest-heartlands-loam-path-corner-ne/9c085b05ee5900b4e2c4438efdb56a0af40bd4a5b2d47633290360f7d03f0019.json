@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-loam-path-corner-ne",
+  "decision": "approved",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "The asset forms a clean N-to-E right-side hairpin with a broad continuous loam core, generous rounded bend, soft verge, exact declared endpoint contacts, and no forbidden-edge or rectangular-border contact.",
+  "reviewedAt": "2026-07-31T09:14:20.628Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-corner-ne.json",
+    "sha256": "sha256:9f3e284da044000512feeea86230ecbfc4899750f2270217663736f73f387a18",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-ne/result.json",
+      "bytes": 2331,
+      "sha256": "sha256:c663cb7f373b98dc1d1f4195732d9975bba3eaa01c31873e04f75a29eeddce7b"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-ne/candidate.png",
+      "bytes": 24883,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:9c085b05ee5900b4e2c4438efdb56a0af40bd4a5b2d47633290360f7d03f0019"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-ne/prompt.txt",
+        "bytes": 11523,
+        "sha256": "sha256:e1c2f1d80945c535db9c8b1787263d95920069b1fba5defbb112e6c375e02aba"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-ne/worker.jsonl",
+        "bytes": 38276,
+        "sha256": "sha256:8a4d9202f9dccdd859e5992fa99274a0fb07693d6a8d98c2f149e7c0548c3713"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-ne/worker.stderr.log",
+        "bytes": 180,
+        "sha256": "sha256:23647e5e0f814242285921a391091b99b8385d65baede82d83d9f1d3ef44556f"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-ne/last-message.txt",
+        "bytes": 355,
+        "sha256": "sha256:bc45d85f3164951b3b46f62c4080c038b954b818c5692f44904e9b7d26a05762"
+      }
+    }
+  },
+  "fullHash": "sha256:3642f2c6f7c433227ce5e08acd4b1d1bf35d45c0399031f34229f8ce2acb7b5c"
+}

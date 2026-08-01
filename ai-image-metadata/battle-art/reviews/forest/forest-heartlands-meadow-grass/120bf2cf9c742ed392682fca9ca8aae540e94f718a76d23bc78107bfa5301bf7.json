@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-meadow-grass",
+  "decision": "approved",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "The low yellow-green tuft remains a restrained nonblocking ground detail; sparse blue accents match the Heartlands ecology without overtaking the meadow-grass identity.",
+  "reviewedAt": "2026-07-31T07:03:12.982Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-meadow-grass.json",
+    "sha256": "sha256:970c47a0f68d8162476fce472b065154ffe1fb1315eb07cefacccdf3bd79cab0",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-meadow-grass/result.json",
+      "bytes": 2268,
+      "sha256": "sha256:ab8452a0c406bf9aa28a7a9b2e1c1e2b415082adb384e90a2b8fad9e06413f7d"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-meadow-grass/candidate.png",
+      "bytes": 18381,
+      "width": 128,
+      "height": 192,
+      "format": "png",
+      "sha256": "sha256:120bf2cf9c742ed392682fca9ca8aae540e94f718a76d23bc78107bfa5301bf7"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-meadow-grass/prompt.txt",
+        "bytes": 7566,
+        "sha256": "sha256:7cb409bd27a375994fc6a8759b28f30963d461515b7c8a5f95ac85f745914e9f"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-meadow-grass/worker.jsonl",
+        "bytes": 29552,
+        "sha256": "sha256:dd581ecae907e23f5a3fae30edec4fefb93208db79d9b158c2426ab7ebc1080b"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-meadow-grass/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-meadow-grass/last-message.txt",
+        "bytes": 303,
+        "sha256": "sha256:a313e67fee48786047b9000bf824c37b37c7363047264f71edbcfb2f559afbe2"
+      }
+    }
+  },
+  "fullHash": "sha256:93409621fad491d370fa40552dc5c522393fd106379cd5751138addb7cf95780"
+}

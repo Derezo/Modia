@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-fieldstone-face-n",
+  "decision": "approved",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "The narrow grounded strip follows only the N edge, reaches both endpoint neighborhoods, and preserves a sustained cream-gray vertical stone plane with a distinct vegetated top lip and clean transparency.",
+  "reviewedAt": "2026-07-31T08:05:53.598Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-fieldstone-face-n.json",
+    "sha256": "sha256:bd42313b9262f461acc016780463ccec852b09f4e3020b2d7552eda53413eb61",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-face-n/result.json",
+      "bytes": 2313,
+      "sha256": "sha256:c45d932511f33888df64c704e39c329b2e4701f3124d2e09d1e45abfcf42aa5c"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-face-n/candidate.png",
+      "bytes": 10799,
+      "width": 256,
+      "height": 256,
+      "format": "png",
+      "sha256": "sha256:f9a16423078e0ab2fc6e48f7a5fdfc875c1715d6e425f35fb80ecbeea1df2abf"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-face-n/prompt.txt",
+        "bytes": 10412,
+        "sha256": "sha256:3a42d0bd6e560a4cc974dedbd321c86d48e18a54520f7e6e2c8132290778d1bf"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-face-n/worker.jsonl",
+        "bytes": 38748,
+        "sha256": "sha256:77a8208efb13b42ed59841c868bb72c03a909c5d30d07f6d807978b546504216"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-face-n/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-face-n/last-message.txt",
+        "bytes": 413,
+        "sha256": "sha256:f7d458dff2c18948f4ee2643dfb9cc1398433135c658b22ba1d63eca93cf74cd"
+      }
+    }
+  },
+  "fullHash": "sha256:3d85e1220c1e1acb87b8a86fc64f79f1fa35e7cc082e490275d41b3eaba93731"
+}

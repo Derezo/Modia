@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-bluebell-cluster",
+  "decision": "approved",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "The restrained bluebell cluster is regionally identifiable, flat and nonblocking in scale, cleanly transparent, and readable without obscuring tactical overlays.",
+  "reviewedAt": "2026-07-31T06:34:54.576Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-bluebell-cluster.json",
+    "sha256": "sha256:bb493d0034dc6bb225c0eb740e8fa96bde9db84d90ab0667dcdb3989600cb01d",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-bluebell-cluster/result.json",
+      "bytes": 2304,
+      "sha256": "sha256:1697b5d6caca5f8cbe1f958f7e5c8d35e3e61a2ca2031e0ef38c0dca07914779"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-bluebell-cluster/candidate.png",
+      "bytes": 18225,
+      "width": 128,
+      "height": 192,
+      "format": "png",
+      "sha256": "sha256:034ff367dbfa174a7ef483e6bc3270311c4837b83002d26f7748387aa08d478d"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-bluebell-cluster/prompt.txt",
+        "bytes": 7597,
+        "sha256": "sha256:988974d15ec895cd89d51691269ee5861b6d0694691eddbd8a1beb10e7f97831"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-bluebell-cluster/worker.jsonl",
+        "bytes": 26016,
+        "sha256": "sha256:a79131dd520db99f9b6b4ebf8c027d2943b83ba21c903d580758b7af0f9a2bd0"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-bluebell-cluster/worker.stderr.log",
+        "bytes": 120,
+        "sha256": "sha256:b85c948e7b27631b6ffd18d0f2826ada42db589293829fcff8c4e729667d568b"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-bluebell-cluster/last-message.txt",
+        "bytes": 443,
+        "sha256": "sha256:a5346e34e81dd10e2fde90b74791855362fc1951000462e9b081a828d586a70a"
+      }
+    }
+  },
+  "fullHash": "sha256:60ffd563e2527ca72472d3172b0465dce7471ea3fde0aea17ab0556c4822497e"
+}

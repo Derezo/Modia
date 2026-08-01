@@ -1,0 +1,90 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v2",
+  "theme": "forest",
+  "familyId": "forest-heartlands-loam-path-tee-nes",
+  "decision": "approved",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "Exact N upper-right, E lower-right, and S lower-left tee with the W quadrant clear; compact rounded Heartlands loam junction; tightly matched 29/30/29-pixel terminal cores; one attached grass, leaf, pebble, and loam silhouette; no slab, black gap, vertical face, baked backdrop, rectangular-border contact, or residual magenta. All nine canonical arm samples are 28–40 pixels and coverage is 256 permille.",
+  "reviewedAt": "2026-07-31T18:28:49.428Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-tee-nes.json",
+    "sha256": "sha256:31d01602f85cae8c08c5625001b9c2a84e3e4857385836da59da6784320f9d2a",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-tee-nes/result.json",
+      "bytes": 3478,
+      "sha256": "sha256:ee9bd5e81d3c25b48ba1176ef47393a3a8affdd0a110f39e0447afab29ac456a"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-tee-nes/candidate.png",
+      "bytes": 24788,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:3c149484c1d8e32a84e785332b7691b2014b373058e04ce12192087241be2bd5"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      },
+      {
+        "id": "forest-heartlands-approved-route-tee-wne-v1",
+        "path": "ai-image-metadata/battle-art/sources/forest/forest-heartlands-loam-path-tee-wne/v1/a9c855dfe087102d66ee37da23bde91bf64b754d4caed3c6332969037661d633.png",
+        "sha256": "sha256:a9c855dfe087102d66ee37da23bde91bf64b754d4caed3c6332969037661d633"
+      }
+    ],
+    "styleReferenceMode": "attachments",
+    "styleReferenceProvenance": [
+      {
+        "id": "forest-source-template-01",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1",
+        "stagedBasename": "style-reference-01.png"
+      },
+      {
+        "id": "forest-heartlands-approved-route-tee-wne-v1",
+        "sha256": "sha256:a9c855dfe087102d66ee37da23bde91bf64b754d4caed3c6332969037661d633",
+        "stagedBasename": "style-reference-02.png"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 1200000,
+      "imageArguments": [
+        "style-reference-01.png",
+        "style-reference-02.png"
+      ],
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-tee-nes/prompt.txt",
+        "bytes": 17142,
+        "sha256": "sha256:ab7445261af258edba71eb9f2fb0348f9ae2f19513db032bc7d7769dc9a1ebba"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-tee-nes/worker.jsonl",
+        "bytes": 28300,
+        "sha256": "sha256:c2eed8aefc3533075319ff59050c472f487727b9fed35db795c79217a799a55b"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-tee-nes/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-tee-nes/last-message.txt",
+        "bytes": 280,
+        "sha256": "sha256:5a63ae79ac222b4d706a7b88b846b5cd35a9523cd1521c13aad1e5cee733cf30"
+      }
+    }
+  },
+  "fullHash": "sha256:2d4fb53c9be6b8baf9bd79e5f9fb53e500e54e16c809e0c17013a2782fdba162"
+}

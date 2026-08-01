@@ -152,8 +152,10 @@ npm run tiles:check                      # Compiler tests plus strict live valid
 npm run battle-art:matrix                # Reviewed biome/ecology/tier readiness
 npm run battle-art:scaffold -- --theme forest --ecology-profile forest-heartlands-woodland --tier 1 --category surface
 npm run battle-art:generate -- --theme forest --ecology-profile forest-heartlands-woodland --tier 1 --resume --keep-going
+npm run battle-art:generate -- --theme forest --family <failed-route-id> --recover --timeout <original-seconds>
 npm run battle-art:preview -- --theme forest --ecology-profile forest-heartlands-woodland --tier 1
-npm run battle-art:approve -- --theme forest --family <id> --reviewer <name> --decision approved
+npm run battle-art:review -- --theme forest --family <id> --reviewer <name> --decision rejected --reason "<specific issue>"
+npm run battle-art:approve -- --theme forest --family <id> --reviewer <name> --decision approved --reason "<specific acceptance rationale>"
 npm run battle-art:compile
 npm run battle-art:archive
 npm run battle-art:check

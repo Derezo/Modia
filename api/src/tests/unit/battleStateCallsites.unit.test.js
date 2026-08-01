@@ -220,11 +220,16 @@ describe('battle route enemy-turn revision handoff', () => {
     );
     assert.match(
       actionRoute,
-      /state = structuredClone\(actionCommit\.envelope\.state\);[\s\S]*committedRevision = actionCommit\.envelope\.stateRevision/
+      /state = battle\.battleMapSchemaVersion === 3[\s\S]*actionCommit\.envelope\.state[\s\S]*structuredClone\(actionCommit\.envelope\.state\);[\s\S]*committedRevision = actionCommit\.envelope\.stateRevision/
     );
     assert.match(
       actionRoute,
       /const committedUpdate = completion\?\.committedUpdate \?\? actionCommit\?\.update;[\s\S]*broadcastStateUpdate\(battleId, committedUpdate\)/
+    );
+    assert.match(actionRoute, /let state = createBattleActionProcessingState\(battle\)/);
+    assert.match(
+      actionRoute,
+      /createBattleActionStateTransport\(\{[\s\S]*battle,[\s\S]*state,[\s\S]*update:\s*committedUpdate/
     );
     assert.match(
       actionRoute,

@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-meadow-ground-3",
+  "decision": "approved",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "The mostly-moss field contains one winding root seam and one off-center russet island with generous readable green separation; richer stipple does not become uniform tactical noise.",
+  "reviewedAt": "2026-07-31T07:03:12.947Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-meadow-ground-3.json",
+    "sha256": "sha256:11aedf0fce038dc0de01a884df091b80a29e76c8740a44f72098ae7bda4f0f13",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-meadow-ground-3/result.json",
+      "bytes": 2295,
+      "sha256": "sha256:a3a21c3d6947dc9db1680c070fd1094494fd5ad764b56a09298bd420712d8448"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-meadow-ground-3/candidate.png",
+      "bytes": 48420,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:2e73cf336d3c2dbc12c3d87f37adf59a385f5bca641f64586eca4095daf3cc0f"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-meadow-ground-3/prompt.txt",
+        "bytes": 8995,
+        "sha256": "sha256:08e431fb6507e986134175c9be0905ca731b1aa24f19a62a02b0a7547a494c63"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-meadow-ground-3/worker.jsonl",
+        "bytes": 25818,
+        "sha256": "sha256:23505b6518539d351dfc901cf1e0146f41788c3884634027bfcb80c02253d363"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-meadow-ground-3/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-meadow-ground-3/last-message.txt",
+        "bytes": 357,
+        "sha256": "sha256:480ac2cfc30e1e9e0ec5cfc3d23e7fad7398edcf573452ea5544ff1c1161bfcf"
+      }
+    }
+  },
+  "fullHash": "sha256:8b7cb38b97ef6f38eb242887cfcfce4a0486bbeb4d139761c2feafcd19728329"
+}

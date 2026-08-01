@@ -411,9 +411,10 @@ export function assertBattleMapCapabilities(value) {
       throw new TypeError(`battleMapCapabilities.cachedMaps[${index}].fullHash must be a sha256 hash`);
     }
     const descriptor = resolveBattleMapVersionDescriptor(entry);
-    if (descriptor.battleMapSchemaVersion !== BATTLE_MAP_SCHEMA_VERSION) {
+    if (descriptor.battleMapSchemaVersion !== BATTLE_MAP_SCHEMA_VERSION
+      && descriptor.battleMapSchemaVersion !== BATTLE_MAP_V3_SCHEMA_VERSION) {
       throw new TypeError(
-        `battleMapCapabilities.cachedMaps[${index}] is not a cacheable V2 map reference`
+        `battleMapCapabilities.cachedMaps[${index}] is not a cacheable map reference`
       );
     }
   });
@@ -489,11 +490,16 @@ export function negotiateBattleMapCapabilities({
   }
 
   let mapDelivery = 'full';
-  if (requestedVersion === BATTLE_MAP_SCHEMA_VERSION && existingMap) {
+  if ((requestedVersion === BATTLE_MAP_SCHEMA_VERSION
+      || requestedVersion === BATTLE_MAP_V3_SCHEMA_VERSION)
+    && existingMap) {
+    const existingFullHash = requestedVersion === BATTLE_MAP_V3_SCHEMA_VERSION
+      ? existingMap.hashes?.fullHash
+      : existingMap.diagnostics?.hashes?.fullHash;
     const cached = clientCapabilities.cachedMaps.some(entry => (
       entry.battleMapSchemaVersion === existingMap.battleMapSchemaVersion
       && entry.terrainGenerationVersion === existingMap.terrainGenerationVersion
-      && entry.fullHash === existingMap.diagnostics?.hashes?.fullHash
+      && entry.fullHash === existingFullHash
     ));
     mapDelivery = cached ? 'cached' : 'full';
   }
@@ -534,9 +540,6 @@ export function createBattleStateSnapshotV1({
     assertBattleMapV2Final(battleMap);
   } else if (schemaVersion === BATTLE_MAP_V3_SCHEMA_VERSION) {
     assertBattleMapV3Final(battleMap);
-    if (mapDelivery !== 'full') {
-      throw new TypeError('BattleMapV3 snapshots require full map delivery');
-    }
   }
   const fullHash = schemaVersion === BATTLE_MAP_SCHEMA_VERSION
     ? battleMap.diagnostics.hashes.fullHash
@@ -586,13 +589,12 @@ export function assertBattleStateSnapshotV1(value) {
       }
     }
   } else if (descriptor.battleMapSchemaVersion === BATTLE_MAP_V3_SCHEMA_VERSION) {
-    if (value.mapDelivery !== 'full') {
-      throw new TypeError('BattleMapV3 snapshots require full map delivery');
-    }
     if (!HASH_PATTERN.test(value.fullHash)) throw new TypeError('V3 snapshot fullHash is invalid');
-    assertBattleMapV3Final(value.battleMap);
-    if (value.battleMap.hashes.fullHash !== value.fullHash) {
-      throw new TypeError('V3 snapshot map/hash reference mismatch');
+    if (value.mapDelivery === 'full') {
+      assertBattleMapV3Final(value.battleMap);
+      if (value.battleMap.hashes.fullHash !== value.fullHash) {
+        throw new TypeError('V3 snapshot map/hash reference mismatch');
+      }
     }
   } else {
     if (value.fullHash !== null) {

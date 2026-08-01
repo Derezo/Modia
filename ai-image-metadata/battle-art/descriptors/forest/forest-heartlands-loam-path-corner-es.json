@@ -1,0 +1,88 @@
+{
+  "schemaVersion": "battle-art-family-descriptor-v2",
+  "id": "forest-heartlands-loam-path-corner-es",
+  "theme": "forest",
+  "category": "route-transition",
+  "familyGroup": "forest-heartlands-loam-path",
+  "variantId": "corner-es",
+  "capabilities": {
+    "direction": null,
+    "routeTopology": "corner-es",
+    "surfaceVariant": null,
+    "ecologyProfile": "forest-heartlands-woodland",
+    "tierBands": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "heightDeltas": [
+      0
+    ]
+  },
+  "status": "draft",
+  "promptProfile": {
+    "id": "battle-art-family-v2",
+    "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+    "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+  },
+  "styleReferences": [
+    {
+      "id": "forest-borderwood-approved-route-corner-es-v1",
+      "path": "ai-image-metadata/battle-art/sources/forest/forest-borderwood-dirt-path-corner-es/v1/c0277f2744dff9adb241a9ab5240b709d3d91ca2d0e78e2b83bf863263a358cd.png",
+      "sha256": "sha256:c0277f2744dff9adb241a9ab5240b709d3d91ca2d0e78e2b83bf863263a358cd"
+    }
+  ],
+  "generationPrompt": "Edit Image 1 only and treat it as the exact layout target, not loose inspiration. Preserve Image 1's full 256-by-128 canvas and framing; the route subject, not the output canvas, occupies its 190-by-65 box at x=33..222 and y=53..117. Preserve its outer contour, shallow E-to-S trajectory, endpoint positions, crown height, rounded bend, and every exterior background position. Repaint only its surface materials in crisp orthographic 16-bit style: warm ochre loam, warm meadow grass, sparse bluebells, oak leaf litter, and small cream-gray stones in dappled late-morning light. The sole geometry exception is to shave back only the inner edge of the broad crown and mid-arms until their thickness matches the narrow seam-tip thickness of both arms; keep both seam tips and the entire outer contour fixed, and blend the correction smoothly through the bend. Keep all decoration sparse and attached to the route. Use one perfectly flat #ff00ff background. Add no terrain platform, props, side faces, shadows, holes, detached pixels, text, frame, or alternate variant.",
+  "rasterContract": {
+    "schemaVersion": "battle-art-raster-contract-v1",
+    "kind": "transparent-cutout",
+    "minimumCoveredPermille": 10,
+    "maximumCoveredPermille": 850
+  },
+  "canvas": {
+    "width": 256,
+    "height": 128
+  },
+  "placement": {
+    "pivot": {
+      "x": 128,
+      "y": 64
+    },
+    "anchor": {
+      "x": 128,
+      "y": 64
+    },
+    "footprint": {
+      "x": 0,
+      "y": 0,
+      "width": 1,
+      "height": 1
+    },
+    "collision": {
+      "kind": "none",
+      "cells": []
+    },
+    "drawBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 128
+    },
+    "occlusionBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
+    },
+    "stratum": "route"
+  },
+  "content": {
+    "version": 9,
+    "sourceSha256": null,
+    "runtimeSha256": null,
+    "immutableUrl": null
+  },
+  "source": null
+}

@@ -43,6 +43,9 @@ import {
   BATTLE_MAP_V3_SUPPORTED_THEMES
 } from '../../shared/battleMap/BattleMapV3Resolvers.js';
 import {
+  BATTLE_MAP_V3_ECOLOGY_PROFILES_BY_THEME
+} from '../../shared/battleMap/BattleMapV3EcologyProfiles.js';
+import {
   createBattleMapV3SelectionQuery,
   selectBattleMapV3CatalogEntry
 } from '../../shared/battleMap/BattleMapV3Selector.js';
@@ -57,6 +60,10 @@ import {
   toCompilerAssetBundle
 } from '../battle-art/lifecycle.mjs';
 import { inspectImage } from './source-template-lifecycle.mjs';
+import {
+  usesBlueprintV2SemanticContract,
+  validateV2BlueprintSemanticContract
+} from './blueprint-v2-semantic-contract.mjs';
 
 export const COMPILE_RECIPE_SCHEMA = 'battle-map-v3-compile-recipe-v1';
 export const MAP_VISUAL_APPROVAL_SCHEMA = 'battle-map-v3-visual-approval-v1';
@@ -85,9 +92,11 @@ export const VALIDATOR_SOURCE_FILES = Object.freeze([
   'scripts/battle-art/candidate-lock.mjs',
   'scripts/battle-art/lifecycle.mjs',
   'scripts/battle-art/raster-contract.mjs',
+  'scripts/battle-maps/blueprint-v2-semantic-contract.mjs',
   'scripts/battle-maps/content-release-lifecycle.mjs',
   'scripts/battle-maps/persistent-exclusive-lock.mjs',
   'scripts/battle-maps/source-template-lifecycle.mjs',
+  'shared/battleMap/BattleMapV3EcologyProfiles.js',
   'shared/battleMap/BattleMapV3Resolvers.js',
   'shared/battleMap/BattleMapV3Selector.js',
   'shared/battleMap/canonicalJson.js',
@@ -106,12 +115,17 @@ export const VALIDATOR_SOURCE_FILES = Object.freeze([
   'shared/terrain.js',
   'shared/traversal.js'
 ]);
-const BLUEPRINT_PROMPT_PATH =
+const BLUEPRINT_PROMPT_PATH_V1 =
   'ai-image-metadata/battle-maps/prompts/map-blueprint-v1.json';
+const BLUEPRINT_PROMPT_PATH_V2 =
+  'ai-image-metadata/battle-maps/prompts/map-blueprint-v2.json';
 const ART_BUNDLE_PATH =
   'ai-image-metadata/battle-art/runtime-asset-bundle.json';
 const FRONTEND_ART_BUNDLE_MIRROR_PATH =
   'frontend/src/generated/battleMapV3RuntimeBundle.json';
+const LEGACY_BLUEPRINT_APPROVAL_TEMPLATE_PATTERN = /-template-(?:01|02)$/;
+const CONTROL_CHARACTER_PATTERN = /[\u0000-\u001f\u007f-\u009f]/;
+const MAX_BLUEPRINT_APPROVAL_REASON_BYTES = 1000;
 
 const SCRIPT_PROJECT_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -246,6 +260,52 @@ function supportedTheme(value, label) {
 function sha256Pin(value, label) {
   if (typeof value !== 'string' || !HASH_PATTERN.test(value)) {
     fail(`${label} must be a lowercase sha256 pin`);
+  }
+  return value;
+}
+
+function blueprintApprovalSchemas(templateId) {
+  const legacy = LEGACY_BLUEPRINT_APPROVAL_TEMPLATE_PATTERN.test(templateId);
+  return legacy
+    ? {
+        index: 'battle-map-blueprint-approval-index-v1',
+        record: 'battle-map-blueprint-approval-v1',
+        v2: false
+      }
+    : {
+        index: 'battle-map-blueprint-approval-index-v2',
+        record: 'battle-map-blueprint-approval-v2',
+        v2: true
+      };
+}
+
+function blueprintPromptProfile(templateId) {
+  const legacy = LEGACY_BLUEPRINT_APPROVAL_TEMPLATE_PATTERN.test(templateId);
+  return legacy
+    ? {
+        id: 'map-blueprint-v1',
+        path: BLUEPRINT_PROMPT_PATH_V1,
+        schema: 'battle-map-blueprint-prompt-profile-v1'
+      }
+    : {
+        id: 'map-blueprint-v2',
+        path: BLUEPRINT_PROMPT_PATH_V2,
+        schema: 'battle-map-blueprint-prompt-profile-v2'
+      };
+}
+
+function approvalReason(value, label) {
+  if (
+    typeof value !== 'string'
+    || value.length === 0
+    || value !== value.trim()
+    || CONTROL_CHARACTER_PATTERN.test(value)
+    || Buffer.byteLength(value, 'utf8') > MAX_BLUEPRINT_APPROVAL_REASON_BYTES
+  ) {
+    fail(
+      `${label} must be a non-empty, trimmed, control-free rationale of at most `
+        + `${MAX_BLUEPRINT_APPROVAL_REASON_BYTES} UTF-8 bytes`
+    );
   }
   return value;
 }
@@ -655,13 +715,14 @@ function validateRecipeShape(recipe, theme, templateId) {
 }
 
 function validateApprovalIndex(index, { theme, templateId, expectedPath, expectedHash }) {
+  const schemas = blueprintApprovalSchemas(templateId);
   exactObject(
     index,
     ['schemaVersion', 'theme', 'templateId', 'entries', 'fullHash'],
     'blueprint approval index'
   );
   if (
-    index.schemaVersion !== 'battle-map-blueprint-approval-index-v1'
+    index.schemaVersion !== schemas.index
     || index.theme !== theme
     || index.templateId !== templateId
   ) fail('blueprint approval index identity is invalid');
@@ -680,7 +741,8 @@ function validateApprovalIndex(index, { theme, templateId, expectedPath, expecte
       'sourceImageSha256',
       'promptProfileSha256',
       'reviewer',
-      'decision'
+      'decision',
+      ...(schemas.v2 ? ['reason', 'approvalFullHash'] : [])
     ], label);
     safeId(entry.id, `${label}.id`);
     safeId(entry.reviewer, `${label}.reviewer`);
@@ -689,6 +751,10 @@ function validateApprovalIndex(index, { theme, templateId, expectedPath, expecte
     sha256Pin(entry.blueprintFullHash, `${label}.blueprintFullHash`);
     sha256Pin(entry.sourceImageSha256, `${label}.sourceImageSha256`);
     sha256Pin(entry.promptProfileSha256, `${label}.promptProfileSha256`);
+    if (schemas.v2) {
+      approvalReason(entry.reason, `${label}.reason`);
+      sha256Pin(entry.approvalFullHash, `${label}.approvalFullHash`);
+    }
     if (entry.decision !== 'approved') fail(`${label}.decision must be approved`);
     if (ids.has(entry.id)) fail(`${label}.id is duplicated`);
     ids.add(entry.id);
@@ -715,6 +781,66 @@ function validateApprovalIndex(index, { theme, templateId, expectedPath, expecte
   return index;
 }
 
+function validateBlueprintApprovalRecord(
+  approval,
+  entry,
+  { theme, templateId, sidecar, blueprintPrompt }
+) {
+  const schemas = blueprintApprovalSchemas(templateId);
+  exactObject(approval, [
+    'schemaVersion',
+    'id',
+    'theme',
+    'templateId',
+    'decision',
+    'reviewer',
+    'blueprintPath',
+    'blueprintFileSha256',
+    'blueprintFullHash',
+    'sourceImageSha256',
+    'promptProfile',
+    ...(schemas.v2 ? ['reason', 'fullHash'] : [])
+  ], `blueprint approval ${entry.id}`);
+  exactObject(
+    approval.promptProfile,
+    ['id', 'path', 'sha256'],
+    `blueprint approval ${entry.id}.promptProfile`
+  );
+  if (schemas.v2) {
+    approvalReason(approval.reason, `blueprint approval ${entry.id}.reason`);
+    sha256Pin(approval.fullHash, `blueprint approval ${entry.id}.fullHash`);
+    const approvalProjection = { ...approval };
+    delete approvalProjection.fullHash;
+    if (stableSha256(approvalProjection) !== approval.fullHash) {
+      fail(`blueprint approval ${entry.id} full hash mismatch`);
+    }
+  }
+  if (
+    approval.schemaVersion !== schemas.record
+    || approval.id !== entry.id
+    || approval.theme !== theme
+    || approval.templateId !== templateId
+    || approval.decision !== 'approved'
+    || approval.reviewer !== entry.reviewer
+    || approval.blueprintPath !== entry.blueprintPath
+    || approval.blueprintFullHash !== entry.blueprintFullHash
+    || approval.sourceImageSha256 !== sidecar.sourceImage?.sha256
+    || approval.sourceImageSha256 !== entry.sourceImageSha256
+    || approval.promptProfile.id !== blueprintPrompt.id
+    || approval.promptProfile.path !== blueprintPrompt.path
+    || approval.promptProfile.sha256 !== blueprintPrompt.sha256
+    || approval.promptProfile.sha256 !== entry.promptProfileSha256
+    || (
+      schemas.v2
+      && (
+        approval.reason !== entry.reason
+        || approval.fullHash !== entry.approvalFullHash
+      )
+    )
+  ) fail(`blueprint approval ${entry.id} is stale or mismatched`);
+  return approval;
+}
+
 async function validateBlueprintApproval(
   projectRoot,
   entry,
@@ -733,40 +859,12 @@ async function validateBlueprintApproval(
   if (fullHash !== entry.blueprintFullHash) {
     fail(`approved blueprint ${entry.id} full hash mismatch`);
   }
-  exactObject(approval, [
-    'schemaVersion',
-    'id',
-    'theme',
-    'templateId',
-    'decision',
-    'reviewer',
-    'blueprintPath',
-    'blueprintFileSha256',
-    'blueprintFullHash',
-    'sourceImageSha256',
-    'promptProfile'
-  ], `blueprint approval ${entry.id}`);
-  exactObject(
-    approval.promptProfile,
-    ['id', 'path', 'sha256'],
-    `blueprint approval ${entry.id}.promptProfile`
-  );
-  if (
-    approval.schemaVersion !== 'battle-map-blueprint-approval-v1'
-    || approval.id !== entry.id
-    || approval.theme !== theme
-    || approval.templateId !== templateId
-    || approval.decision !== 'approved'
-    || approval.reviewer !== entry.reviewer
-    || approval.blueprintPath !== entry.blueprintPath
-    || approval.blueprintFullHash !== entry.blueprintFullHash
-    || approval.sourceImageSha256 !== sidecar.sourceImage?.sha256
-    || approval.sourceImageSha256 !== entry.sourceImageSha256
-    || approval.promptProfile.id !== blueprintPrompt.id
-    || approval.promptProfile.path !== blueprintPrompt.path
-    || approval.promptProfile.sha256 !== blueprintPrompt.sha256
-    || approval.promptProfile.sha256 !== entry.promptProfileSha256
-  ) fail(`blueprint approval ${entry.id} is stale or mismatched`);
+  validateBlueprintApprovalRecord(approval, entry, {
+    theme,
+    templateId,
+    sidecar,
+    blueprintPrompt
+  });
   const blueprintBytes = await readTrackedBytes(
     projectRoot,
     entry.blueprintPath,
@@ -778,6 +876,9 @@ async function validateBlueprintApproval(
   // Reading the exact approval bytes above is intentional: the approval record
   // itself is tracked evidence and must be a regular, non-symlink JSON file.
   if (approvalBytes.length === 0) fail(`blueprint approval ${entry.id} is empty`);
+  if (usesBlueprintV2SemanticContract(templateId)) {
+    validateV2BlueprintSemanticContract(blueprint, sidecar);
+  }
   return { blueprint, entry, approval, fullHash };
 }
 
@@ -949,6 +1050,25 @@ export const REQUIRED_BATTLE_MAP_V3_COVERAGE_QUERIES =
     playerCounts: Object.freeze([...record.playerCounts]),
     opponentCounts: Object.freeze([...record.opponentCounts])
   })));
+
+function requiredEcologyCoverageQueries() {
+  const records = REQUIRED_BATTLE_MAP_V3_COVERAGE_QUERIES.flatMap(query =>
+    BATTLE_MAP_V3_ECOLOGY_PROFILES_BY_THEME[query.theme].map(
+      ecologyProfile => Object.freeze({
+        ...query,
+        ecologyProfile
+      })
+    )
+  );
+  return records.sort((left, right) => {
+    const leftCase = `${left.id}\0${left.ecologyProfile}`;
+    const rightCase = `${right.id}\0${right.ecologyProfile}`;
+    return leftCase < rightCase ? -1 : leftCase > rightCase ? 1 : 0;
+  });
+}
+
+export const REQUIRED_BATTLE_MAP_V3_ECOLOGY_COVERAGE_QUERIES =
+  Object.freeze(requiredEcologyCoverageQueries());
 
 function collectMapAssetRefs(map) {
   const refs = [];
@@ -1225,6 +1345,7 @@ export async function loadCompileRecipe({
   const root = path.resolve(projectRoot);
   supportedTheme(theme, 'theme');
   safeId(templateId, 'templateId');
+  const expectedBlueprintPrompt = blueprintPromptProfile(templateId);
   if (!BINARY_MODES.has(binaryMode)) fail('binaryMode must be require or metadata');
   const recipePath = compileRecipePath(theme, templateId);
   const { value: recipe } = await readTrackedJson(root, recipePath, 'compile recipe');
@@ -1256,7 +1377,7 @@ export async function loadCompileRecipe({
       FRONTEND_ART_BUNDLE_MIRROR_PATH,
       'frontend art runtime bundle mirror'
     ),
-    readTrackedJson(root, BLUEPRINT_PROMPT_PATH, 'blueprint prompt profile'),
+    readTrackedJson(root, expectedBlueprintPrompt.path, 'blueprint prompt profile'),
     loadBattleArt(root),
     validateSourceSet(
       root,
@@ -1295,15 +1416,15 @@ export async function loadCompileRecipe({
   if (sidecar.pins?.approvedBlueprintSha256 !== approvalIndex.fullHash) {
     fail('source sidecar approved-blueprint index pin is stale');
   }
-  const blueprintPromptProfile = blueprintPromptLoaded.value;
+  const blueprintPromptProfileValue = blueprintPromptLoaded.value;
   if (
-    blueprintPromptProfile.schemaVersion !== 'battle-map-blueprint-prompt-profile-v1'
-    || blueprintPromptProfile.id !== 'map-blueprint-v1'
-    || blueprintPromptProfile.frozen !== true
+    blueprintPromptProfileValue.schemaVersion !== expectedBlueprintPrompt.schema
+    || blueprintPromptProfileValue.id !== expectedBlueprintPrompt.id
+    || blueprintPromptProfileValue.frozen !== true
   ) fail('blueprint prompt profile is not the frozen supported profile');
   const blueprintPrompt = {
-    id: blueprintPromptProfile.id,
-    path: BLUEPRINT_PROMPT_PATH,
+    id: blueprintPromptProfileValue.id,
+    path: expectedBlueprintPrompt.path,
     sha256: bytesSha256(blueprintPromptLoaded.bytes)
   };
   const recipeBlueprintIds = recipe.maps.map(record => record.blueprintId);
@@ -2429,6 +2550,17 @@ export async function checkReleaseCoverage(release, definition, {
       'INCOMPLETE_BATTLE_MAP_V3_CATALOG_COVERAGE'
     );
   }
+  if (
+    requireComplete
+    && canonicalizeJson(definition.coverageQueries)
+      !== canonicalizeJson(REQUIRED_BATTLE_MAP_V3_ECOLOGY_COVERAGE_QUERIES)
+  ) {
+    fail(
+      'complete release acceptance requires the full authoritative '
+      + '118-case theme/ecology coverage matrix',
+      'INCOMPLETE_BATTLE_MAP_V3_CATALOG_COVERAGE'
+    );
+  }
   assertCoverageEntryCapacities(normalizedRelease, definition);
   const misses = [];
   const selections = [];
@@ -2870,6 +3002,11 @@ export const ContentReleaseInternals = Object.freeze({
   assertMapRendererContracts,
   resolveRecipeArtBundle,
   validateCatalogDefinition,
+  validateRecipeShape,
+  validateApprovalIndex,
+  validateBlueprintApproval,
+  validateBlueprintApprovalRecord,
+  blueprintPromptProfile,
   validateMapApprovalRecord,
   expandCoverageQueries,
   jsonBytes,

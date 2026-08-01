@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-loam-path-straight-ew",
+  "decision": "rejected",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "The route visibly reaches and clips both left and right rectangular canvas borders instead of stopping at W and E on the capability diamond, creating false seam continuation outside its declared endpoints.",
+  "reviewedAt": "2026-07-31T09:20:18.710Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-straight-ew.json",
+    "sha256": "sha256:21f24ef73864f7f10e36fa8d26050ac77bc83b15f905503ff4a0af4c836ccf0b",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-straight-ew/result.json",
+      "bytes": 2349,
+      "sha256": "sha256:1748ef74b650ca51fdd6d36490969bb7b6f72488d7f16d2964a1d8181cc9e962"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-straight-ew/candidate.png",
+      "bytes": 27572,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:74ff7651ffebd1f81bd5230ff3cba263e9c5aa2bfe8d4c6d406c98e057708993"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-straight-ew/prompt.txt",
+        "bytes": 11178,
+        "sha256": "sha256:f6f776029586745998ffb533b93cdb6a67058e116c678698a05d8097936eb7cb"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-straight-ew/worker.jsonl",
+        "bytes": 54351,
+        "sha256": "sha256:103aba925c44a81035b61b3c0036fd3c4c62df42062e3e8fe354bfcc373baa76"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-straight-ew/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-straight-ew/last-message.txt",
+        "bytes": 356,
+        "sha256": "sha256:2865d354af51e970bfbe9d342194e914cfa075ca4a4ac897a8623c9e2199630e"
+      }
+    }
+  },
+  "fullHash": "sha256:f6d867f56a38f3309dc327ea98bfd1e920cfaafe40e0b249934d5cab8af714a5"
+}

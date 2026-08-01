@@ -6,6 +6,7 @@ import { describe, it } from 'node:test';
 
 import {
   BATTLE_MAP_HASH_VERSION,
+  BATTLE_MAP_V3_HASH_VERSION,
   createMinimalBattleMapV2FinalFixture,
   createMinimalBattleMapV3FinalFixture
 } from '../../../../shared/battleMap/index.js';
@@ -75,7 +76,10 @@ async function v3Envelope() {
 function capabilities({ cachedMaps = [], versions = [1, 2] } = {}) {
   return createBattleMapCapabilities({
     supportedBattleMapSchemaVersions: versions,
-    supportedHashVersions: [BATTLE_MAP_HASH_VERSION],
+    supportedHashVersions: [
+      BATTLE_MAP_HASH_VERSION,
+      ...(versions.includes(3) ? [BATTLE_MAP_V3_HASH_VERSION] : [])
+    ],
     supportedMutableStateProtocolVersions: [1],
     cachedMaps
   });
@@ -149,7 +153,7 @@ describe('API battle-map transport negotiation', () => {
     assert.equal(result.snapshot.fullHash, cachedMaps[0].fullHash);
   });
 
-  it('requires declared V3 support and always sends a full verified V3 snapshot', async () => {
+  it('requires declared V3 support and sends cached V3 only for an exact reference', async () => {
     const battle = await v3Envelope();
     const absent = createNegotiatedBattleStateSnapshot(battle, undefined);
     assert.equal(absent.negotiation.code, 'battle_map_upgrade_required');
@@ -165,6 +169,20 @@ describe('API battle-map transport negotiation', () => {
     assert.equal(result.negotiation.mapDelivery, 'full');
     assert.equal(result.snapshot.battleMap.hashes.fullHash, battle.map.hashes.fullHash);
     assert.equal(result.snapshot.fullHash, battle.map.hashes.fullHash);
+
+    const cachedMaps = [{
+      battleMapSchemaVersion: 3,
+      terrainGenerationVersion: battle.map.terrainGenerationVersion,
+      fullHash: battle.map.hashes.fullHash
+    }];
+    const cached = createNegotiatedBattleStateSnapshot(
+      battle,
+      capabilities({ versions: [1, 2, 3], cachedMaps }),
+      { referenceDeltaEnabled: false }
+    );
+    assert.equal(cached.negotiation.mapDelivery, 'cached');
+    assert.equal(cached.snapshot.battleMap, null);
+    assert.equal(cached.snapshot.fullHash, battle.map.hashes.fullHash);
   });
 
   it('fails closed for incompatible and malformed declarations', async () => {

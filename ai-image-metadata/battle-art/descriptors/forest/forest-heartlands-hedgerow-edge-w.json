@@ -1,0 +1,102 @@
+{
+  "schemaVersion": "battle-art-family-descriptor-v2",
+  "id": "forest-heartlands-hedgerow-edge-w",
+  "theme": "forest",
+  "category": "exposed-face-boundary",
+  "familyGroup": "forest-heartlands-hedgerow-edge",
+  "variantId": "edge-w",
+  "capabilities": {
+    "direction": "w",
+    "routeTopology": null,
+    "surfaceVariant": null,
+    "ecologyProfile": "forest-heartlands-woodland",
+    "tierBands": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "heightDeltas": [
+      1
+    ]
+  },
+  "status": "approved",
+  "promptProfile": {
+    "id": "battle-art-family-v2",
+    "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+    "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+  },
+  "styleReferences": [
+    {
+      "id": "forest-source-template-01",
+      "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+      "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+    }
+  ],
+  "generationPrompt": "Create exactly one seam-safe orthographic isometric forest exposed-face-boundary asset named forest-heartlands-hedgerow-edge-w for ecology profile forest-heartlands-woodland; tier bands 1, 2, 3, 4, 5; final authored direction w; height magnitude 1. Author the declared orientation directly, preserve continuous neighboring materials and edge alignment, and include only the declared family content. Regional visual vocabulary: Heartlands Woodland uses a coherent pastoral forest of mature broad-canopy oak, field maple, and flowering hawthorn; warm meadow grass and bluebells; rounded cream-gray fieldstone; warm ochre loam and oak leaf litter; and dappled late-morning light. Keep this species mix, material palette, scale, and lighting explicitly consistent across every directional edge and transition. Depict the literal subject forest heartlands hedgerow edge w along the declared w tile edge. In the 2:1 isometric diamond, N meets the upper-right edge, E the lower-right edge, S the lower-left edge, and W the upper-left edge. If this is a canopy edge, use layered regional trunks, foliage, roots, and understory to define a convincing forest exterior. If this is an earth face, blend moss, roots, soil strata, and small stones without a flat chocolate-brown wall. The grounded root/soil base must follow the declared edge from (0,192) to (128,128), with sustained contact centered at (64,160), and connect naturally to the anchor. Do not ground the base on any other edge. Tall trunks, branches, and crown foliage may overhang other edge bands; overhang is not ground contact. Do not add a baked backdrop, black void, unrelated terrain wall, or presentation frame.",
+  "rasterContract": {
+    "schemaVersion": "battle-art-raster-contract-v1",
+    "kind": "transparent-cutout",
+    "minimumCoveredPermille": 10,
+    "maximumCoveredPermille": 850
+  },
+  "canvas": {
+    "width": 256,
+    "height": 256
+  },
+  "placement": {
+    "pivot": {
+      "x": 128,
+      "y": 192
+    },
+    "anchor": {
+      "x": 128,
+      "y": 192
+    },
+    "footprint": {
+      "x": 0,
+      "y": 0,
+      "width": 1,
+      "height": 1
+    },
+    "collision": {
+      "kind": "boundary",
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ]
+    },
+    "drawBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 256
+    },
+    "occlusionBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 192
+    },
+    "stratum": "boundary"
+  },
+  "content": {
+    "version": 1,
+    "sourceSha256": "sha256:a18943d8d684b4d211554f6d758f034c5508b54c3fa008bb64a940fad667020b",
+    "runtimeSha256": null,
+    "immutableUrl": null
+  },
+  "source": {
+    "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hedgerow-edge-w/result.json",
+    "imagePath": "ai-image-metadata/battle-art/sources/forest/forest-heartlands-hedgerow-edge-w/v1/a18943d8d684b4d211554f6d758f034c5508b54c3fa008bb64a940fad667020b.png",
+    "imageSha256": "sha256:a18943d8d684b4d211554f6d758f034c5508b54c3fa008bb64a940fad667020b",
+    "width": 256,
+    "height": 256,
+    "format": "png",
+    "reviewer": "codex-full-game-battle-content-review",
+    "approvedAt": "2026-07-31T08:45:22.361Z"
+  }
+}

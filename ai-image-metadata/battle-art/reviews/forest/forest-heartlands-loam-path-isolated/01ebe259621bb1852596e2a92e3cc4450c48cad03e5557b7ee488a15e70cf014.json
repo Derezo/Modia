@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-loam-path-isolated",
+  "decision": "approved",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "The asset is one connected centered warm-loam wear patch with a broad irregular terminal shape, soft Heartlands grass and leaf edging, fully clear endpoint bands, and no baked ground diamond or rotation ambiguity.",
+  "reviewedAt": "2026-07-31T08:28:22.376Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-isolated.json",
+    "sha256": "sha256:48f0cb7ec647a144f4be02c477807f2ad8c463bc3607620121ccdd36322cfc4e",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-isolated/result.json",
+      "bytes": 2322,
+      "sha256": "sha256:076285d1549b3e3a0bafe2f68e6375e49181bc654d9154824e3ab8f066176c22"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-isolated/candidate.png",
+      "bytes": 11142,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:01ebe259621bb1852596e2a92e3cc4450c48cad03e5557b7ee488a15e70cf014"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-isolated/prompt.txt",
+        "bytes": 9293,
+        "sha256": "sha256:1e232f5aa586fd4f49f61928546c364afecc883597b4ff87bc0cfd672840e6ad"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-isolated/worker.jsonl",
+        "bytes": 36468,
+        "sha256": "sha256:5631ad99623e1c109215cfb1fe95b6c31202c0a4d463956029e944230782302f"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-isolated/worker.stderr.log",
+        "bytes": 143,
+        "sha256": "sha256:3919180ae555ccfee2eb202bad99f3f4e4c8c90244fbf63714cfbf9fae7c9dce"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-isolated/last-message.txt",
+        "bytes": 409,
+        "sha256": "sha256:ee56f75e335aa74c0b28cf2c8c39acd11ce3b0b7d2e9ab2cbb820cfc119854d4"
+      }
+    }
+  },
+  "fullHash": "sha256:472d517c9812f927b56ca8dc664d519c694dc9773b37575fa6ffa8fe67fa1765"
+}

@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-meadow-ground-0",
+  "decision": "approved",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "Broad low-frequency meadow and ochre-loam fields, sparse accents, and a quiet seam rim preserve tactical readability without uniform micro-fleck noise.",
+  "reviewedAt": "2026-07-31T06:34:52.731Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-meadow-ground-0.json",
+    "sha256": "sha256:9c65e552a8997c33a942a861eca0700f2cf1fdc123dab32c6e8fa34d4f2dc55b",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-meadow-ground-0/result.json",
+      "bytes": 2295,
+      "sha256": "sha256:b59e90d16e7e8c9497d72b356626d0500724929f637cd00a622ccdd540249677"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-meadow-ground-0/candidate.png",
+      "bytes": 47214,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:a1d3c5ea2b61d295e1c14a938e40c359ab32f2993ff00c88f0b783afdc114950"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-meadow-ground-0/prompt.txt",
+        "bytes": 8651,
+        "sha256": "sha256:21fa336a085efcd5961f32b59660893ff7d8850553962278cd19391ab62c1f92"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-meadow-ground-0/worker.jsonl",
+        "bytes": 29024,
+        "sha256": "sha256:4dde3b705e419ec11350dde0e3d9b9e1482bdef052f1b001a35918437e52b1ab"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-meadow-ground-0/worker.stderr.log",
+        "bytes": 143,
+        "sha256": "sha256:fe4d06d26dca33723bb9c74b631c0b0d519911dfee6043d6880216a510207327"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-meadow-ground-0/last-message.txt",
+        "bytes": 309,
+        "sha256": "sha256:3b695966508ec6252625470e3e6110549cb61422a539194d9ea23cc23ce98da5"
+      }
+    }
+  },
+  "fullHash": "sha256:3aec84cee70d032c51f52c6690013fe790134e974d42d9aeb3b86b8ec3602c33"
+}

@@ -14,6 +14,8 @@ import {
   BATTLE_MAP_V3_CATALOG_SCHEMA_VERSION,
   BATTLE_MAP_V3_SELECTOR_VERSION,
   computeTemplateMapAssetBundleManifestFullHash,
+  computeTemplateMapBlueprintFullHash,
+  computeTemplateMapSourceSidecarFullHash,
   createMinimalBattleMapV3FinalFixture,
   finalizeBattleMapV3CatalogRelease
 } from '../../shared/battleMap/v3/index.js';
@@ -25,11 +27,15 @@ import {
   computeBattleArtRendererManifestFullHash
 } from '../battle-art/lifecycle.mjs';
 import {
+  createBlueprintContractExample
+} from './blueprint-candidate-lifecycle.mjs';
+import {
   CATALOG_DEFINITION_SCHEMA,
   COMPILER_SOURCE_FILES,
   COMPILER_SOURCE_SET_DOMAIN,
   ContentReleaseInternals,
   REQUIRED_BATTLE_MAP_V3_COVERAGE_QUERIES,
+  REQUIRED_BATTLE_MAP_V3_ECOLOGY_COVERAGE_QUERIES,
   VALIDATOR_SOURCE_FILES,
   VALIDATOR_SOURCE_SET_DOMAIN,
   buildCatalogRelease,
@@ -42,28 +48,35 @@ import {
 
 const HASH_A = `sha256:${'a'.repeat(64)}`;
 const HASH_B = `sha256:${'b'.repeat(64)}`;
+const PROJECT_ROOT = path.resolve(import.meta.dirname, '../..');
 
-function coverageDefinition(entries) {
+function coverageDefinition(
+  entries,
+  coverageQueries = REQUIRED_BATTLE_MAP_V3_ECOLOGY_COVERAGE_QUERIES
+) {
   return {
     schemaVersion: CATALOG_DEFINITION_SCHEMA,
     catalogReleaseId: 'catalog:test-v1',
     entries,
-    coverageQueries: REQUIRED_BATTLE_MAP_V3_COVERAGE_QUERIES.map(query => ({
-      ...structuredClone(query),
-      ecologyProfile: `ecology:${query.theme}`
-    }))
+    coverageQueries: coverageQueries.map(query => structuredClone(query))
   };
 }
 
 function catalogEntry(query) {
+  const ecologyProfile = query.ecologyProfile ?? `ecology:${query.theme}`;
+  const ecologySuffix = query.ecologyProfile === undefined
+    ? ''
+    : `:${query.ecologyProfile}`;
   return {
-    id: `entry:${query.theme}:${query.mode}:${query.selectionBand}`,
-    mapContentId: `map:${query.theme}:${query.mode}:${query.selectionBand}`,
+    id:
+      `entry:${query.theme}:${query.mode}:${query.selectionBand}${ecologySuffix}`,
+    mapContentId:
+      `map:${query.theme}:${query.mode}:${query.selectionBand}${ecologySuffix}`,
     mapContentVersion: 1,
     mapFullHash: HASH_A,
     catalogReleaseId: 'catalog:test-v1',
     theme: query.theme,
-    ecologyProfile: `ecology:${query.theme}`,
+    ecologyProfile,
     renderProfileId: `profile:${query.theme}`,
     tierEligibility: [query.selectionBand],
     supportedModes: [query.mode],
@@ -142,6 +155,407 @@ test('closed command parsing rejects unknown, conflicting, and unsafe arguments'
       '--metadata-only'
     ]),
     /cannot be combined/
+  );
+});
+
+test('blueprint approval indexes preserve legacy v1 and require hash-pinned v2 rationale', () => {
+  const makeEntries = (templateId, v2 = false) => ['a', 'b', 'c'].map(suffix => {
+    const id = `${templateId}-${suffix}`;
+    return {
+      id,
+      blueprintPath:
+        `ai-image-metadata/battle-maps/blueprints/forest/${templateId}/${id}.json`,
+      approvalPath:
+        `ai-image-metadata/battle-maps/blueprints/forest/${templateId}/${id}.approval.json`,
+      blueprintFullHash: HASH_A,
+      sourceImageSha256: HASH_B,
+      promptProfileSha256: HASH_A,
+      reviewer: 'reviewer-1',
+      decision: 'approved',
+      ...(v2 ? { reason: `Approved ${suffix}`, approvalFullHash: HASH_B } : {})
+    };
+  });
+  const finalize = projection => ({
+    ...projection,
+    fullHash: ContentReleaseInternals.stableSha256(projection)
+  });
+
+  const legacy = finalize({
+    schemaVersion: 'battle-map-blueprint-approval-index-v1',
+    theme: 'forest',
+    templateId: 'forest-template-02',
+    entries: makeEntries('forest-template-02')
+  });
+  assert.equal(
+    ContentReleaseInternals.validateApprovalIndex(legacy, {
+      theme: 'forest',
+      templateId: 'forest-template-02',
+      expectedPath: 'legacy/approvals.json',
+      expectedHash: legacy.fullHash
+    }),
+    legacy
+  );
+
+  const v2 = finalize({
+    schemaVersion: 'battle-map-blueprint-approval-index-v2',
+    theme: 'forest',
+    templateId: 'forest-template-03',
+    entries: makeEntries('forest-template-03', true)
+  });
+  assert.equal(
+    ContentReleaseInternals.validateApprovalIndex(v2, {
+      theme: 'forest',
+      templateId: 'forest-template-03',
+      expectedPath: 'v2/approvals.json',
+      expectedHash: v2.fullHash
+    }),
+    v2
+  );
+
+  const tampered = structuredClone(v2);
+  tampered.entries[0].reason = 'Changed after approval';
+  assert.throws(
+    () => ContentReleaseInternals.validateApprovalIndex(tampered, {
+      theme: 'forest',
+      templateId: 'forest-template-03',
+      expectedPath: 'v2/approvals.json',
+      expectedHash: v2.fullHash
+    }),
+    /hash mismatch/
+  );
+  const missingReason = structuredClone(v2);
+  delete missingReason.entries[0].reason;
+  assert.throws(
+    () => ContentReleaseInternals.validateApprovalIndex(missingReason, {
+      theme: 'forest',
+      templateId: 'forest-template-03',
+      expectedPath: 'v2/approvals.json',
+      expectedHash: v2.fullHash
+    }),
+    /reason is required/
+  );
+  const upgradedLegacy = structuredClone(legacy);
+  upgradedLegacy.schemaVersion = 'battle-map-blueprint-approval-index-v2';
+  assert.throws(
+    () => ContentReleaseInternals.validateApprovalIndex(upgradedLegacy, {
+      theme: 'forest',
+      templateId: 'forest-template-02',
+      expectedPath: 'legacy/approvals.json',
+      expectedHash: legacy.fullHash
+    }),
+    /identity is invalid/
+  );
+
+  const blueprintPrompt = {
+    id: 'map-blueprint-v1',
+    path: 'ai-image-metadata/battle-maps/prompts/map-blueprint-v1.json',
+    sha256: HASH_A
+  };
+  const recordContext = {
+    theme: 'forest',
+    templateId: 'forest-template-02',
+    sidecar: { sourceImage: { sha256: HASH_B } },
+    blueprintPrompt
+  };
+  assert.deepEqual(
+    ContentReleaseInternals.blueprintPromptProfile('forest-template-02'),
+    {
+      id: 'map-blueprint-v1',
+      path: 'ai-image-metadata/battle-maps/prompts/map-blueprint-v1.json',
+      schema: 'battle-map-blueprint-prompt-profile-v1'
+    }
+  );
+  const v2BlueprintPrompt = {
+    id: 'map-blueprint-v2',
+    path: 'ai-image-metadata/battle-maps/prompts/map-blueprint-v2.json',
+    sha256: HASH_B
+  };
+  assert.deepEqual(
+    ContentReleaseInternals.blueprintPromptProfile('forest-template-03'),
+    {
+      id: 'map-blueprint-v2',
+      path: 'ai-image-metadata/battle-maps/prompts/map-blueprint-v2.json',
+      schema: 'battle-map-blueprint-prompt-profile-v2'
+    }
+  );
+  assert.deepEqual(
+    ContentReleaseInternals.blueprintPromptProfile('forest-template-04'),
+    ContentReleaseInternals.blueprintPromptProfile('forest-template-03')
+  );
+  const legacyRecord = {
+    schemaVersion: 'battle-map-blueprint-approval-v1',
+    id: legacy.entries[0].id,
+    theme: 'forest',
+    templateId: 'forest-template-02',
+    decision: 'approved',
+    reviewer: legacy.entries[0].reviewer,
+    blueprintPath: legacy.entries[0].blueprintPath,
+    blueprintFileSha256: HASH_A,
+    blueprintFullHash: legacy.entries[0].blueprintFullHash,
+    sourceImageSha256: legacy.entries[0].sourceImageSha256,
+    promptProfile: blueprintPrompt
+  };
+  assert.equal(
+    ContentReleaseInternals.validateBlueprintApprovalRecord(
+      legacyRecord,
+      legacy.entries[0],
+      recordContext
+    ),
+    legacyRecord
+  );
+
+  const v2Entry = structuredClone(v2.entries[0]);
+  v2Entry.promptProfileSha256 = v2BlueprintPrompt.sha256;
+  const v2RecordProjection = {
+    ...legacyRecord,
+    schemaVersion: 'battle-map-blueprint-approval-v2',
+    id: v2Entry.id,
+    templateId: 'forest-template-03',
+    reviewer: v2Entry.reviewer,
+    blueprintPath: v2Entry.blueprintPath,
+    blueprintFullHash: v2Entry.blueprintFullHash,
+    sourceImageSha256: v2Entry.sourceImageSha256,
+    promptProfile: v2BlueprintPrompt,
+    reason: v2Entry.reason
+  };
+  const v2Record = finalize(v2RecordProjection);
+  v2Entry.approvalFullHash = v2Record.fullHash;
+  assert.equal(
+    ContentReleaseInternals.validateBlueprintApprovalRecord(
+      v2Record,
+      v2Entry,
+      {
+        ...recordContext,
+        templateId: 'forest-template-03',
+        blueprintPrompt: v2BlueprintPrompt
+      }
+    ),
+    v2Record
+  );
+  const tamperedRecord = structuredClone(v2Record);
+  tamperedRecord.reason = 'Changed without refreshing the approval hash.';
+  assert.throws(
+    () => ContentReleaseInternals.validateBlueprintApprovalRecord(
+      tamperedRecord,
+      v2Entry,
+      {
+        ...recordContext,
+        templateId: 'forest-template-03',
+        blueprintPrompt: v2BlueprintPrompt
+      }
+    ),
+    /full hash mismatch/
+  );
+});
+
+test('release validation rejects excessive V2 connections after every pin is refreshed', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'modia-v3-semantic-release-'));
+  const sidecar = JSON.parse(await readFile(
+    path.join(
+      PROJECT_ROOT,
+      'ai-image-metadata/battle-maps/templates/forest/forest-template-01.json'
+    ),
+    'utf8'
+  ));
+  sidecar.id = 'forest-template-03';
+  sidecar.candidateMaps = [
+    'forest-template-03-a',
+    'forest-template-03-b',
+    'forest-template-03-c'
+  ];
+  sidecar.routeIntent.primaryApproaches[0] =
+    'Build two interlocking loops through a shared central crossing.';
+  sidecar.routeIntent.secondaryApproaches[0] =
+    'Keep the figure-eight centerline connected by authored route cells.';
+
+  const mapId = sidecar.candidateMaps[0];
+  const blueprint = createBlueprintContractExample(sidecar, mapId);
+  const requiredRouteCellKeys = new Set(
+    blueprint.routes
+      .filter(route => route.required)
+      .flatMap(route => route.cells)
+      .map(cell => `${cell.x},${cell.y}`)
+  );
+  const routeTouchingEdges = [];
+  for (let y = 0; y < blueprint.dimensions.height; y += 1) {
+    for (let x = 0; x < blueprint.dimensions.width; x += 1) {
+      for (const [dx, dy] of [[1, 0], [0, 1]]) {
+        const from = { x, y };
+        const to = { x: x + dx, y: y + dy };
+        if (
+          to.x >= blueprint.dimensions.width
+          || to.y >= blueprint.dimensions.height
+          || (
+            !requiredRouteCellKeys.has(`${from.x},${from.y}`)
+            && !requiredRouteCellKeys.has(`${to.x},${to.y}`)
+          )
+        ) continue;
+        routeTouchingEdges.push({ from, to });
+      }
+    }
+  }
+  assert.ok(routeTouchingEdges.length >= 33);
+  blueprint.connections = routeTouchingEdges
+    .slice(0, 33)
+    .map(({ from, to }, index) => {
+      const kind = index % 2 === 0 ? 'stairs' : 'slope';
+      return {
+        id: `connection:release-regression:${index}`,
+        from,
+        to,
+        kind,
+        traversable: true,
+        bidirectional: true,
+        featureId: 'feature:terraces',
+        assetFamily: kind
+      };
+    });
+
+  const blueprintPath =
+    `ai-image-metadata/battle-maps/blueprints/forest/forest-template-03/${mapId}.json`;
+  const approvalPath =
+    `ai-image-metadata/battle-maps/blueprints/forest/forest-template-03/`
+      + `${mapId}.approval.json`;
+  const indexPath =
+    'ai-image-metadata/battle-maps/blueprints/forest/forest-template-03/approvals.json';
+  const sidecarPath =
+    'ai-image-metadata/battle-maps/templates/forest/forest-template-03.json';
+  const recipePath =
+    'battle-maps/compile-recipes/forest/forest-template-03.json';
+  const blueprintBytes = Buffer.from(`${JSON.stringify(blueprint, null, 2)}\n`);
+  const blueprintFullHash = await computeTemplateMapBlueprintFullHash(blueprint);
+  const promptProfile = {
+    id: 'map-blueprint-v2',
+    path: 'ai-image-metadata/battle-maps/prompts/map-blueprint-v2.json',
+    sha256: HASH_A
+  };
+  const approvalProjection = {
+    schemaVersion: 'battle-map-blueprint-approval-v2',
+    id: mapId,
+    theme: 'forest',
+    templateId: sidecar.id,
+    decision: 'approved',
+    reviewer: 'reviewer-1',
+    blueprintPath,
+    blueprintFileSha256: ContentReleaseInternals.bytesSha256(blueprintBytes),
+    blueprintFullHash,
+    sourceImageSha256: sidecar.sourceImage.sha256,
+    promptProfile,
+    reason: 'All structural evidence was deliberately rehashed for this regression.'
+  };
+  const approval = {
+    ...approvalProjection,
+    fullHash: ContentReleaseInternals.stableSha256(approvalProjection)
+  };
+  const entry = {
+    id: mapId,
+    blueprintPath,
+    approvalPath,
+    blueprintFullHash,
+    sourceImageSha256: sidecar.sourceImage.sha256,
+    promptProfileSha256: promptProfile.sha256,
+    reviewer: approval.reviewer,
+    decision: 'approved',
+    reason: approval.reason,
+    approvalFullHash: approval.fullHash
+  };
+  const indexProjection = {
+    schemaVersion: 'battle-map-blueprint-approval-index-v2',
+    theme: 'forest',
+    templateId: sidecar.id,
+    entries: [
+      entry,
+      ...['b', 'c'].map(suffix => ({
+        ...entry,
+        id: `forest-template-03-${suffix}`,
+        blueprintPath:
+          `ai-image-metadata/battle-maps/blueprints/forest/forest-template-03/`
+            + `forest-template-03-${suffix}.json`,
+        approvalPath:
+          `ai-image-metadata/battle-maps/blueprints/forest/forest-template-03/`
+            + `forest-template-03-${suffix}.approval.json`
+      }))
+    ]
+  };
+  const index = {
+    ...indexProjection,
+    fullHash: ContentReleaseInternals.stableSha256(indexProjection)
+  };
+  sidecar.pins.approvedBlueprintSha256 = index.fullHash;
+  const recipe = JSON.parse(await readFile(
+    path.join(
+      PROJECT_ROOT,
+      'battle-maps/compile-recipes/forest/forest-template-01.json'
+    ),
+    'utf8'
+  ));
+  recipe.templateId = sidecar.id;
+  recipe.sourceSidecar = {
+    path: sidecarPath,
+    fullHash: await computeTemplateMapSourceSidecarFullHash(sidecar)
+  };
+  recipe.blueprintApprovalIndex = {
+    path: indexPath,
+    fullHash: index.fullHash
+  };
+  recipe.maps = sidecar.candidateMaps.map((blueprintId, index) => ({
+    blueprintId,
+    contentId: blueprintId,
+    contentVersion: index + 1,
+    templateRevision: 1
+  }));
+
+  for (const [relativePath, value] of [
+    [blueprintPath, blueprintBytes],
+    [approvalPath, Buffer.from(`${JSON.stringify(approval, null, 2)}\n`)],
+    [indexPath, Buffer.from(`${JSON.stringify(index, null, 2)}\n`)],
+    [sidecarPath, Buffer.from(`${JSON.stringify(sidecar, null, 2)}\n`)],
+    [recipePath, Buffer.from(`${JSON.stringify(recipe, null, 2)}\n`)]
+  ]) {
+    const absolutePath = path.join(root, ...relativePath.split('/'));
+    await mkdir(path.dirname(absolutePath), { recursive: true });
+    await writeFile(absolutePath, value);
+  }
+
+  assert.equal(sidecar.pins.approvedBlueprintSha256, recipe.blueprintApprovalIndex.fullHash);
+  assert.equal(
+    ContentReleaseInternals.validateRecipeShape(recipe, 'forest', sidecar.id),
+    recipe
+  );
+  assert.equal(
+    ContentReleaseInternals.validateApprovalIndex(index, {
+      theme: 'forest',
+      templateId: sidecar.id,
+      expectedPath: recipe.blueprintApprovalIndex.path,
+      expectedHash: recipe.blueprintApprovalIndex.fullHash
+    }),
+    index
+  );
+  assert.equal(
+    ContentReleaseInternals.validateBlueprintApprovalRecord(
+      approval,
+      entry,
+      {
+        theme: 'forest',
+        templateId: sidecar.id,
+        sidecar,
+        blueprintPrompt: promptProfile
+      }
+    ),
+    approval
+  );
+  await assert.rejects(
+    ContentReleaseInternals.validateBlueprintApproval(
+      root,
+      entry,
+      {
+        theme: 'forest',
+        templateId: sidecar.id,
+        sidecar,
+        blueprintPrompt: promptProfile
+      }
+    ),
+    /33 traversable elevation connections; at most the fixed map width of 32/
   );
 });
 
@@ -665,7 +1079,15 @@ test('renderer-aware art projection remains compatible with the shared bundle ha
 });
 
 test('coverage validation exercises every declared theme and capacity case without network', async () => {
-  const entries = REQUIRED_BATTLE_MAP_V3_COVERAGE_QUERIES
+  assert.equal(REQUIRED_BATTLE_MAP_V3_COVERAGE_QUERIES.length, 78);
+  assert.equal(REQUIRED_BATTLE_MAP_V3_ECOLOGY_COVERAGE_QUERIES.length, 118);
+  assert.equal(new Set(
+    REQUIRED_BATTLE_MAP_V3_ECOLOGY_COVERAGE_QUERIES.map(
+      query => `${query.theme}\0${query.ecologyProfile}`
+    )
+  ).size, 24);
+
+  const entries = REQUIRED_BATTLE_MAP_V3_ECOLOGY_COVERAGE_QUERIES
     .map(catalogEntry)
     .sort((left, right) => left.mapContentId.localeCompare(right.mapContentId));
   const release = await finalizeBattleMapV3CatalogRelease({
@@ -709,7 +1131,8 @@ test('coverage validation exercises every declared theme and capacity case witho
     const result = await checkReleaseCoverage(release, definition, {
       requireComplete: true
     });
-    const expectedQueryCount = REQUIRED_BATTLE_MAP_V3_COVERAGE_QUERIES
+    const expectedQueryCount =
+      REQUIRED_BATTLE_MAP_V3_ECOLOGY_COVERAGE_QUERIES
       .reduce(
         (total, query) =>
           total + query.playerCounts.length * query.opponentCounts.length,
@@ -732,6 +1155,27 @@ test('coverage validation exercises every declared theme and capacity case witho
   await assert.rejects(
     checkReleaseCoverage(release, incomplete, { requireComplete: true }),
     /full authoritative/
+  );
+
+  const missingRegionalEcology = structuredClone(definition);
+  const regionalIndex = missingRegionalEcology.coverageQueries.findIndex(
+    query =>
+      query.id === 'coverage:forest:pve:tier-1'
+      && query.ecologyProfile === 'forest-iron-depths-borderwood'
+  );
+  assert.notEqual(regionalIndex, -1);
+  missingRegionalEcology.coverageQueries.splice(regionalIndex, 1);
+  assert.doesNotThrow(() =>
+    ContentReleaseInternals.validateCatalogDefinition(
+      missingRegionalEcology,
+      'catalog:test-v1'
+    )
+  );
+  await assert.rejects(
+    checkReleaseCoverage(release, missingRegionalEcology, {
+      requireComplete: true
+    }),
+    /118-case theme\/ecology/
   );
 });
 
@@ -762,10 +1206,16 @@ test('coverage supports repeated authoritative cases qualified by ecology and le
     }],
     entries
   });
+  const partialCoverageQueries = REQUIRED_BATTLE_MAP_V3_COVERAGE_QUERIES
+    .map(query => ({
+      ...structuredClone(query),
+      ecologyProfile: `ecology:${query.theme}`
+    }));
   const definition = coverageDefinition(
     entries.map(definitionEntry).sort((left, right) =>
       left.mapPath < right.mapPath ? -1 : left.mapPath > right.mapPath ? 1 : 0
-    )
+    ),
+    partialCoverageQueries
   );
   const qualifiedCase = definition.coverageQueries.find(query =>
     query.id === targetQuery.id
@@ -786,9 +1236,7 @@ test('coverage supports repeated authoritative cases qualified by ecology and le
       'catalog:test-v1'
     )
   );
-  const result = await checkReleaseCoverage(release, definition, {
-    requireComplete: true
-  });
+  const result = await checkReleaseCoverage(release, definition);
   const addedQueryCount =
     targetQuery.playerCounts.length * targetQuery.opponentCounts.length;
   assert.equal(

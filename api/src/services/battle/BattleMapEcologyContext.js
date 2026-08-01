@@ -1,40 +1,43 @@
+import {
+  BATTLE_MAP_V3_ECOLOGY_PROFILES_BY_THEME
+} from '../../../../shared/battleMap/BattleMapV3EcologyProfiles.js';
+
 export const BATTLE_MAP_ECOLOGY_CONTEXT_VERSION =
   'battle-map-ecology-context-v1';
 
 const FOREST_PROFILES_BY_RACE = Object.freeze({
-  human: 'forest-heartlands-woodland',
-  elf: 'forest-sylvan-ancient-grove',
-  vampire: 'forest-shadowmere-gloomwood',
-  dwarf: 'forest-iron-depths-borderwood'
+  human: BATTLE_MAP_V3_ECOLOGY_PROFILES_BY_THEME.forest[1],
+  elf: BATTLE_MAP_V3_ECOLOGY_PROFILES_BY_THEME.forest[2],
+  vampire: BATTLE_MAP_V3_ECOLOGY_PROFILES_BY_THEME.forest[3],
+  dwarf: BATTLE_MAP_V3_ECOLOGY_PROFILES_BY_THEME.forest[4]
 });
 
 const CAVE_PROFILES_BY_RACE = Object.freeze({
-  dwarf: 'cave-iron-depths-granite',
-  vampire: 'cave-shadowmere-crypt'
+  dwarf: BATTLE_MAP_V3_ECOLOGY_PROFILES_BY_THEME.cave[1],
+  vampire: BATTLE_MAP_V3_ECOLOGY_PROFILES_BY_THEME.cave[2]
 });
 
 const MOUNTAIN_PROFILES_BY_RACE = Object.freeze({
-  orc: 'mountain-bloodplains-red-crag'
+  orc: BATTLE_MAP_V3_ECOLOGY_PROFILES_BY_THEME.mountain[1]
 });
 
-const DEFAULT_PROFILES_BY_THEME = Object.freeze({
-  forest: 'forest-temperate-woodland',
-  cave: 'cave-limestone',
-  mountain: 'mountain-granite',
-  bridge: 'bridge-stone-crossing',
-  castle: 'castle-fortress',
-  palace: 'palace-grand-palace',
-  dungeon: 'dungeon-subterranean',
-  swamp: 'swamp-wetlands',
-  volcano: 'volcano-caldera',
-  plains: 'plains-grassland',
-  arena: 'arena-coliseum',
-  guild: 'guild-guildhall',
-  'elven-grove': 'forest-sylvan-ancient-grove',
-  'dwarven-mine': 'cave-iron-depths-granite',
-  'vampiric-crypt': 'cave-shadowmere-crypt',
-  'orcish-warcamp': 'mountain-bloodplains-red-crag',
-  'human-ruins': 'human-heartlands-ruins'
+const AUTHORITATIVE_THEME_BY_NODE_TYPE = Object.freeze({
+  forest: 'forest',
+  cave: 'cave',
+  mountain: 'mountain',
+  bridge: 'bridge',
+  castle: 'castle',
+  dungeon: 'dungeon',
+  swamp: 'swamp',
+  volcano: 'volcano',
+  plains: 'plains',
+  arena: 'arena',
+  guild: 'guild',
+  'elven-grove': 'elven_grove',
+  'dwarven-mine': 'dwarven_mine',
+  'vampiric-crypt': 'vampiric_crypt',
+  'orcish-warcamp': 'orcish_warcamp',
+  'human-ruins': 'human_ruins'
 });
 
 export const BATTLE_MAP_ECOLOGY_NODE_QUERY = `
@@ -124,15 +127,24 @@ export function resolveBattleMapEcologyProfile({
   const type = normalizedIdentifier(nodeType);
   const race = normalizedIdentifier(regionRace);
   if (type === 'forest') {
-    return FOREST_PROFILES_BY_RACE[race] ?? DEFAULT_PROFILES_BY_THEME.forest;
+    return FOREST_PROFILES_BY_RACE[race]
+      ?? BATTLE_MAP_V3_ECOLOGY_PROFILES_BY_THEME.forest[0];
   }
   if (type === 'cave') {
-    return CAVE_PROFILES_BY_RACE[race] ?? DEFAULT_PROFILES_BY_THEME.cave;
+    return CAVE_PROFILES_BY_RACE[race]
+      ?? BATTLE_MAP_V3_ECOLOGY_PROFILES_BY_THEME.cave[0];
   }
   if (type === 'mountain') {
-    return MOUNTAIN_PROFILES_BY_RACE[race] ?? DEFAULT_PROFILES_BY_THEME.mountain;
+    return MOUNTAIN_PROFILES_BY_RACE[race]
+      ?? BATTLE_MAP_V3_ECOLOGY_PROFILES_BY_THEME.mountain[0];
   }
-  return DEFAULT_PROFILES_BY_THEME[type] ?? null;
+  if (type === 'palace') {
+    return BATTLE_MAP_V3_ECOLOGY_PROFILES_BY_THEME.castle[1];
+  }
+  const authoritativeTheme = AUTHORITATIVE_THEME_BY_NODE_TYPE[type];
+  return authoritativeTheme === undefined
+    ? null
+    : BATTLE_MAP_V3_ECOLOGY_PROFILES_BY_THEME[authoritativeTheme][0];
 }
 
 /**

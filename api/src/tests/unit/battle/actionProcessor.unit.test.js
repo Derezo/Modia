@@ -596,6 +596,121 @@ describe('getAvailableActions', () => {
 
       assert.strictEqual(actions.canAct, false);
     });
+
+    it('publishes every playable attack and skill tile without changing AI targets', () => {
+      const unit = createTestUnit({
+        tileX: 1,
+        tileY: 1,
+        teamId: 1,
+        attackRange: 1,
+        skills: [{
+          id: 'lightning_bolt',
+          name: 'Lightning Bolt',
+          type: 'active',
+          mpCost: 5,
+          range: 1,
+          power: 100
+        }]
+      });
+      const ally = createTestUnit({
+        id: 'ally',
+        tileX: 2,
+        tileY: 1,
+        teamId: 1
+      });
+      const enemy = createTestUnit({
+        id: 'enemy',
+        type: 'enemy',
+        tileX: 1,
+        tileY: 2,
+        teamId: 2
+      });
+      const state = createTestState({
+        units: [unit, ally, enemy],
+        mapWidth: 3,
+        mapHeight: 3,
+        obstacles: [{
+          x: 0,
+          y: 1,
+          type: 'rock',
+          blocking: true
+        }]
+      });
+
+      const actions = getAvailableActions(unit, state);
+
+      assert.deepStrictEqual(actions.attacks.tiles, [
+        { x: 1, y: 0, distance: 1 },
+        { x: 0, y: 1, distance: 1 },
+        { x: 2, y: 1, distance: 1 },
+        { x: 1, y: 2, distance: 1 }
+      ]);
+      assert.ok(
+        actions.attacks.tiles.some(tile => tile.x === 0 && tile.y === 1),
+        'blocking obstacles do not remove otherwise playable target tiles'
+      );
+      assert.deepStrictEqual(
+        actions.attacks.targets.map(target => target.unitId),
+        [enemy.id],
+        'legacy AI targets remain opponent units only'
+      );
+
+      const [skill] = actions.skills;
+      assert.deepStrictEqual(skill.tiles, [
+        { x: 1, y: 0, distance: 1 },
+        { x: 0, y: 1, distance: 1 },
+        { x: 1, y: 1, distance: 0 },
+        { x: 2, y: 1, distance: 1 },
+        { x: 1, y: 2, distance: 1 }
+      ]);
+      assert.deepStrictEqual(
+        skill.targets.map(target => target.unitId),
+        [enemy.id],
+        'legacy AI skill targets remain opponent units only'
+      );
+    });
+
+    it('excludes non-playable and out-of-bounds cells from targeting tiles', () => {
+      const unit = createTestUnit({
+        tileX: 0,
+        tileY: 0,
+        attackRange: 2,
+        skills: [{
+          id: 'blast',
+          name: 'Blast',
+          type: 'active',
+          mpCost: 5,
+          range: 2,
+          power: 100
+        }]
+      });
+      const playableMask = Array.from(
+        { length: 3 },
+        () => Array(3).fill(true)
+      );
+      playableMask[0][1] = false;
+      const state = createTestState({
+        units: [unit],
+        mapWidth: 3,
+        mapHeight: 3,
+        playableMask
+      });
+
+      const actions = getAvailableActions(unit, state);
+      for (const tile of [
+        ...actions.attacks.tiles,
+        ...actions.skills[0].tiles
+      ]) {
+        assert.ok(tile.x >= 0 && tile.x < 3);
+        assert.ok(tile.y >= 0 && tile.y < 3);
+        assert.strictEqual(playableMask[tile.y][tile.x], true);
+      }
+      assert.ok(!actions.attacks.tiles.some(tile => tile.x === 1 && tile.y === 0));
+      assert.ok(!actions.skills[0].tiles.some(tile => tile.x === 1 && tile.y === 0));
+      assert.ok(actions.skills[0].tiles.some(tile =>
+        tile.x === unit.tileX && tile.y === unit.tileY && tile.distance === 0
+      ));
+    });
   });
 
   describe('skills availability', () => {
@@ -712,6 +827,11 @@ describe('getAvailableActions', () => {
         unitId: unit.id,
         distance: 0
       }]);
+      assert.deepStrictEqual(skill.tiles, [{
+        x: unit.tileX,
+        y: unit.tileY,
+        distance: 0
+      }]);
     });
 
     it('centers range-zero offensive AoEs on the caster', () => {
@@ -742,6 +862,11 @@ describe('getAvailableActions', () => {
       assert.strictEqual(skill.range, 0);
       assert.strictEqual(skill.targets.length, 1);
       assert.strictEqual(skill.targets[0].unitId, unit.id);
+      assert.deepStrictEqual(skill.tiles, [{
+        x: unit.tileX,
+        y: unit.tileY,
+        distance: 0
+      }]);
     });
   });
 
@@ -881,27 +1006,68 @@ describe('processAction - Move Action', () => {
     assert.deepStrictEqual(result.newPosition, { x: 2, y: 0 });
   });
 
-  it('should not bypass a living blocker when terrain data is absent', () => {
-    const unit = createMoveTestUnit({ tileX: 0, tileY: 0 });
-    const blocker = { id: 'blocker', tileX: 1, tileY: 0, hp: 100 };
-    const state = createMoveTestState({
-      units: [unit, blocker],
-      mapWidth: 3,
-      mapHeight: 1,
-      terrain: undefined
-    });
+  it('should let players and enemies move through living allies', () => {
+    for (const type of ['player', 'enemy']) {
+      const unit = createMoveTestUnit({
+        id: `${type}-mover`,
+        type,
+        tileX: 0,
+        tileY: 0
+      });
+      const ally = {
+        id: `${type}-ally`,
+        type,
+        tileX: 1,
+        tileY: 0,
+        hp: 100
+      };
+      const state = createMoveTestState({
+        units: [unit, ally],
+        mapWidth: 3,
+        mapHeight: 1,
+        terrain: [['grass', 'grass', 'grass']]
+      });
 
-    const result = processAction(state, unit, 'move', { x: 2, y: 0 });
+      const result = processAction(state, unit, 'move', { x: 2, y: 0 });
 
-    assert.strictEqual(
-      result.error,
-      'Target out of movement range (max: 3, cost: unreachable)'
-    );
-    assert.deepStrictEqual(
-      { x: unit.tileX, y: unit.tileY },
-      { x: 0, y: 0 }
-    );
-    assert.strictEqual(unit.moveUsed, false);
+      assert.strictEqual(result.error, undefined, `${type} move should succeed`);
+      assert.strictEqual(result.moved, true);
+      assert.deepStrictEqual(result.newPosition, { x: 2, y: 0 });
+    }
+  });
+
+  it('should not bypass a living opponent when terrain data is absent', () => {
+    for (const [type, opponentType] of [
+      ['player', 'enemy'],
+      ['enemy', 'player']
+    ]) {
+      const unit = createMoveTestUnit({ type, tileX: 0, tileY: 0 });
+      const blocker = {
+        id: 'blocker',
+        type: opponentType,
+        tileX: 1,
+        tileY: 0,
+        hp: 100
+      };
+      const state = createMoveTestState({
+        units: [unit, blocker],
+        mapWidth: 3,
+        mapHeight: 1,
+        terrain: undefined
+      });
+
+      const result = processAction(state, unit, 'move', { x: 2, y: 0 });
+
+      assert.strictEqual(
+        result.error,
+        'Target out of movement range (max: 3, cost: unreachable)'
+      );
+      assert.deepStrictEqual(
+        { x: unit.tileX, y: unit.tileY },
+        { x: 0, y: 0 }
+      );
+      assert.strictEqual(unit.moveUsed, false);
+    }
   });
 
   it('should reject move outside map bounds before traversal', () => {
@@ -1076,6 +1242,75 @@ describe('processAction - Attack Action', () => {
     // Should process as empty tile attack
     assert.strictEqual(result.attackedEmptyTile, true);
     assert.strictEqual(attacker.actUsed, true);
+  });
+
+  it('damages a friendly unit selected by tile', () => {
+    const attacker = createAttackTestUnit({ teamId: 1 });
+    const ally = createAttackTestUnit({
+      id: 'ally',
+      teamId: 1,
+      tileX: 6,
+      tileY: 5,
+      hp: 100,
+      maxHp: 100,
+      agility: 0,
+      luck: 0,
+      vitality: 0,
+      defense: 0,
+      actUsed: false
+    });
+    const state = createAttackTestState({ units: [attacker, ally] });
+
+    const result = withRandomValues(
+      [0, 0.5],
+      () => processAction(state, attacker, 'attack', { x: 6, y: 5 })
+    );
+
+    assert.strictEqual(result.error, undefined);
+    assert.strictEqual(result.targetId, ally.id);
+    assert.ok(result.damage > 0);
+    assert.ok(ally.hp < 100);
+  });
+
+  it('rejects malformed, out-of-bounds, and non-playable attack tiles', () => {
+    const playableMask = Array.from(
+      { length: 3 },
+      () => Array(3).fill(true)
+    );
+    playableMask[1][2] = false;
+    const cases = [
+      {
+        targetTile: { x: 1.5, y: 1 },
+        expected: 'Target tile coordinates must be finite integers'
+      },
+      {
+        targetTile: { x: 3, y: 1 },
+        expected: 'Target tile is outside map bounds'
+      },
+      {
+        targetTile: { x: 2, y: 1 },
+        expected: 'Target tile is not playable'
+      }
+    ];
+
+    for (const { targetTile, expected } of cases) {
+      const attacker = createAttackTestUnit({
+        tileX: 1,
+        tileY: 1,
+        attackRange: 3
+      });
+      const state = createAttackTestState({
+        units: [attacker],
+        mapWidth: 3,
+        mapHeight: 3,
+        playableMask
+      });
+
+      const result = processAction(state, attacker, 'attack', targetTile);
+
+      assert.strictEqual(result.error, expected);
+      assert.strictEqual(attacker.actUsed, false);
+    }
   });
 
   it('consumes and applies all next-basic Zodiac effects on a hit', () => {
@@ -1852,7 +2087,7 @@ describe('processAction - Healing Skills', () => {
     assert.ok(buffedDamage > baseDamage);
   });
 
-  it('normalizes DB-shaped self and ally buffs and rejects opposing ally targets', () => {
+  it('normalizes DB-shaped self and targeted buffs for any living occupant', () => {
     const ironDefense = {
       id: 'construct_iron_defense',
       name: 'Iron Defense',
@@ -1918,7 +2153,7 @@ describe('processAction - Healing Skills', () => {
     assert.strictEqual(caster.mp, 40);
 
     caster.actUsed = false;
-    const rejectedResult = processAction(
+    const opponentResult = processAction(
       state,
       caster,
       'skill',
@@ -1926,11 +2161,17 @@ describe('processAction - Healing Skills', () => {
       magicShield.id
     );
 
-    assert.strictEqual(rejectedResult.error, 'Invalid ally target');
-    assert.strictEqual(caster.mp, 40);
-    assert.strictEqual(caster.actUsed, false);
-    assert.deepStrictEqual(opponent.statusEffects, []);
+    assert.strictEqual(opponentResult.error, undefined);
+    assert.strictEqual(opponentResult.targetId, opponent.id);
+    assert.strictEqual(caster.mp, 25);
+    assert.strictEqual(caster.actUsed, true);
+    assert.deepStrictEqual(opponent.statusEffects, [{
+      type: 'magic_shield',
+      duration: 3,
+      modifiers: { magicDefense: 1.3 }
+    }]);
 
+    caster.actUsed = false;
     const allyResult = processAction(
       state,
       caster,
@@ -1946,8 +2187,7 @@ describe('processAction - Healing Skills', () => {
       duration: 3,
       modifiers: { magicDefense: 1.3 }
     }]);
-    assert.deepStrictEqual(opponent.statusEffects, []);
-    assert.strictEqual(caster.mp, 25);
+    assert.strictEqual(caster.mp, 10);
 
     const physicalAttacker = {
       ...opponent,
@@ -2122,6 +2362,102 @@ describe('processAction - Healing Skills', () => {
     assert.ok(berserkIncomingDamage > baseIncomingDamage);
   });
 
+  it('applies Lightning Bolt damage to a friendly unit selected by tile', () => {
+    const lightningBolt = {
+      id: 'lightning_bolt',
+      name: 'Lightning Bolt',
+      type: 'active',
+      range: 3,
+      mpCost: 5,
+      power: 120,
+      damageType: 'magical',
+      element: 'lightning'
+    };
+    const caster = createSkillTestUnit({
+      intelligence: 50,
+      magicAttack: 20,
+      luck: 0,
+      skills: [lightningBolt]
+    });
+    const ally = createSkillTestUnit({
+      id: 'friendly-target',
+      teamId: caster.teamId,
+      tileX: 6,
+      hp: 200,
+      maxHp: 200,
+      vitality: 10,
+      magicDefense: 5,
+      luck: 0,
+      skills: []
+    });
+    const state = createSkillTestState([caster, ally]);
+
+    const result = withRandomValues(
+      [0.5, 0.5],
+      () => processAction(
+        state,
+        caster,
+        'skill',
+        { x: ally.tileX, y: ally.tileY },
+        lightningBolt.id
+      )
+    );
+
+    assert.strictEqual(result.error, undefined);
+    assert.strictEqual(result.targetId, ally.id);
+    assert.ok(result.damage > 0);
+    assert.ok(ally.hp < 200);
+  });
+
+  it('applies a tile-centered AoE to friendly units around an empty center', () => {
+    const inferno = {
+      id: 'inferno',
+      name: 'Inferno',
+      type: 'active',
+      range: 3,
+      mpCost: 5,
+      power: 120,
+      damageType: 'magical',
+      element: 'fire',
+      aoeRadius: 1
+    };
+    const caster = createSkillTestUnit({
+      intelligence: 50,
+      magicAttack: 20,
+      luck: 0,
+      skills: [inferno]
+    });
+    const ally = createSkillTestUnit({
+      id: 'friendly-aoe-target',
+      teamId: caster.teamId,
+      tileX: 6,
+      tileY: 5,
+      hp: 200,
+      maxHp: 200,
+      vitality: 10,
+      magicDefense: 5,
+      luck: 0,
+      skills: []
+    });
+    const state = createSkillTestState([caster, ally]);
+
+    const result = withRandomValues(
+      [0.5, 0.5],
+      () => processAction(
+        state,
+        caster,
+        'skill',
+        { x: 7, y: 5 },
+        inferno.id
+      )
+    );
+
+    assert.strictEqual(result.error, undefined);
+    assert.strictEqual(result.isAoE, true);
+    assert.ok(result.aoeTargets.some(target => target.targetId === ally.id));
+    assert.ok(ally.hp < 200);
+  });
+
   it('applies a debuff-only AoE without dealing damage', () => {
     const smokeBomb = {
       id: 'test_smoke_bomb',
@@ -2213,6 +2549,45 @@ describe('processAction - Healing Skills', () => {
     assert.strictEqual(caster.mp, 50);
     assert.strictEqual(caster.actUsed, false);
     assert.deepStrictEqual(opponent.statusEffects, []);
+  });
+
+  it('rejects malformed and out-of-bounds non-caster skill tiles', () => {
+    const lightningBolt = {
+      id: 'lightning_bolt',
+      name: 'Lightning Bolt',
+      type: 'active',
+      range: 3,
+      mpCost: 5,
+      power: 120,
+      damageType: 'magical'
+    };
+    const cases = [
+      {
+        targetTile: { x: 5.5, y: 5 },
+        expected: 'Target tile coordinates must be finite integers'
+      },
+      {
+        targetTile: { x: 32, y: 5 },
+        expected: 'Target tile is outside map bounds'
+      }
+    ];
+
+    for (const { targetTile, expected } of cases) {
+      const caster = createSkillTestUnit({ skills: [lightningBolt] });
+      const state = createSkillTestState([caster]);
+
+      const result = processAction(
+        state,
+        caster,
+        'skill',
+        targetTile,
+        lightningBolt.id
+      );
+
+      assert.strictEqual(result.error, expected);
+      assert.strictEqual(caster.mp, 50);
+      assert.strictEqual(caster.actUsed, false);
+    }
   });
 
   it('filters non-playable V3 cells from AoE tiles and effects', () => {
@@ -2518,46 +2893,55 @@ describe('processAction - Healing Skills', () => {
     assert.strictEqual(healer.healingDone, 10);
   });
 
-  it('does not spend MP or consume the action for invalid ally targets', () => {
-    const invalidTargets = [
-      {
-        name: 'an opposing unit',
-        target: createSkillTestUnit({
-          id: 'opponent',
-          type: 'player',
-          teamId: 1,
-          tileX: 6,
-          skills: []
-        })
-      },
-      {
-        name: 'a defeated ally',
-        target: createSkillTestUnit({
-          id: 'defeated_ally',
-          tileX: 7,
-          hp: 0,
-          skills: []
-        })
-      }
-    ];
+  it('applies targeted healing to opponents and spends the cast on empty tiles', () => {
+    const targetedHeal = { ...allyHeal, cooldown: 2 };
+    const opponentHealer = createSkillTestUnit({ skills: [targetedHeal] });
+    const opponent = createSkillTestUnit({
+      id: 'opponent',
+      type: 'player',
+      teamId: 1,
+      tileX: 6,
+      hp: 50,
+      maxHp: 100,
+      skills: []
+    });
+    const occupiedState = createSkillTestState([opponentHealer, opponent]);
 
-    for (const { name, target } of invalidTargets) {
-      const healer = createSkillTestUnit({ skills: [allyHeal] });
-      const state = createSkillTestState([healer, target]);
+    const occupiedResult = processAction(
+      occupiedState,
+      opponentHealer,
+      'skill',
+      { x: opponent.tileX, y: opponent.tileY },
+      targetedHeal.id
+    );
 
-      const result = processAction(
-        state,
-        healer,
-        'skill',
-        { x: target.tileX, y: target.tileY },
-        allyHeal.id
-      );
+    assert.strictEqual(occupiedResult.error, undefined);
+    assert.strictEqual(occupiedResult.targetId, opponent.id);
+    assert.strictEqual(occupiedResult.healing, 25);
+    assert.strictEqual(opponent.hp, 75);
+    assert.strictEqual(opponentHealer.mp, 35);
+    assert.strictEqual(opponentHealer.actUsed, true);
+    assert.strictEqual(opponentHealer.skillCooldowns[targetedHeal.id], 2);
 
-      assert.strictEqual(result.error, 'Invalid ally target', name);
-      assert.strictEqual(healer.mp, 50, name);
-      assert.strictEqual(healer.actUsed, false, name);
-      assert.strictEqual(healer.skillCooldowns[allyHeal.id], undefined, name);
-    }
+    const emptyHealer = createSkillTestUnit({ skills: [targetedHeal] });
+    const emptyState = createSkillTestState([emptyHealer]);
+    const emptyTile = { x: 7, y: 5 };
+
+    const emptyResult = processAction(
+      emptyState,
+      emptyHealer,
+      'skill',
+      emptyTile,
+      targetedHeal.id
+    );
+
+    assert.strictEqual(emptyResult.error, undefined);
+    assert.strictEqual(emptyResult.attackedEmptyTile, true);
+    assert.deepStrictEqual(emptyResult.targetTile, emptyTile);
+    assert.strictEqual(emptyResult.targetId, undefined);
+    assert.strictEqual(emptyHealer.mp, 35);
+    assert.strictEqual(emptyHealer.actUsed, true);
+    assert.strictEqual(emptyHealer.skillCooldowns[targetedHeal.id], 2);
   });
 
   it('applies a zero-cost party heal only to living teammates', () => {

@@ -17,7 +17,10 @@
 
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { debugLog } from '../utils/debugLogger.js';
-import { ANIMATION_TIMING } from './BattleAnimations.js';
+import {
+  ANIMATION_TIMING,
+  getMovementPresentationDuration
+} from './BattleAnimations.js';
 import { BattleStatePoller } from './BattleStatePoller.js';
 import { connectionQuality } from '../api/connectionQuality.js';
 import { applyBattleMapPatch, mergeBattleStatePatch } from './mergeBattleState.js';
@@ -1911,16 +1914,8 @@ export class BattleWebSocketManager {
       unit.moveTo(to.x, to.y);
 
       // Wait for movement animation to complete (estimate based on distance)
-      const distance = Math.abs(to.x - from.x) + Math.abs(to.y - from.y);
-      const moveDuration = Math.max(ANIMATION_TIMING.MOVEMENT_MIN_MS, distance * ANIMATION_TIMING.MOVEMENT_PER_TILE_MS);
+      const moveDuration = getMovementPresentationDuration(unit, from, to);
       await this.scene.waitForAnimation(moveDuration);
-
-      // Add settling delay if next event is an action (move-then-act sequence)
-      // This provides visual breathing room between movement and action
-      const nextEvent = this.turnEventQueue[0];
-      if (nextEvent && (nextEvent.type === 'action_executed' || nextEvent.type === 'intent_highlight')) {
-        await this.scene.waitForAnimation(ANIMATION_TIMING.TURN_SETTLE_DELAY);
-      }
     }
   }
 
@@ -1986,7 +1981,7 @@ export class BattleWebSocketManager {
         ? getActorAnimationDurationMs(actor)
         : null;
       if (presentation) {
-        await this.scene.waitForAnimation(180);
+        await this.scene.waitForAnimation(ANIMATION_TIMING.ACTION_IMPACT_DELAY);
       }
 
       const deathAnimations = [];
@@ -2132,7 +2127,7 @@ export class BattleWebSocketManager {
       if (deathAnimations.length > 0) {
         // Let hit reactions and numbers register before replacing them with the
         // terminal pose, matching the local HTTP presentation order.
-        await this.scene.waitForAnimation(300);
+        await this.scene.waitForAnimation(ANIMATION_TIMING.DEATH_REACTION_DELAY);
         for (const defeated of deathAnimations) defeated.playDeathAnimation();
       }
 
@@ -2153,11 +2148,6 @@ export class BattleWebSocketManager {
         fallbackWaitDuration
       );
       await this.scene.waitForAnimation(waitDuration);
-
-      // Add settling delay before turn transition for smooth visual feedback
-      if (willPanToDifferentUnit) {
-        await this.scene.waitForAnimation(ANIMATION_TIMING.TURN_SETTLE_DELAY);
-      }
     }
 
     // Play item animation
@@ -2174,7 +2164,7 @@ export class BattleWebSocketManager {
       }
 
       // Wait for arc animation, then show result numbers
-      await this.scene.waitForAnimation(800);
+      await this.scene.waitForAnimation(ANIMATION_TIMING.ITEM_TRAVEL_DURATION);
 
       if (target && result.itemEffects) {
         let yOffset = 0;

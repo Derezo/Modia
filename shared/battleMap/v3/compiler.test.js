@@ -862,6 +862,77 @@ test('compiler treats undeclared elevation edges as blocked faces and rejects un
   );
 });
 
+test('V3 spawn capacity treats opposing spawn assignments as hostile blockers', async () => {
+  const blueprint = createBlueprint();
+  const compiled = await compileTemplateMapBlueprint(
+    blueprint,
+    await createContext(blueprint)
+  );
+  const bottleneck = deepCloneJsonValue(compiled);
+  bottleneck.playableMask = Array.from(
+    { length: bottleneck.dimensions.height },
+    (_, y) => Array.from(
+      { length: bottleneck.dimensions.width },
+      (_, x) => y === 3 && x >= 1 && x <= 5
+    )
+  );
+  // Preserve the fixture's isolated authored feature cells so this test
+  // isolates simultaneous spawn occupancy rather than structural closure.
+  for (const cell of [point(0, 0), point(3, 1), point(4, 1)]) {
+    bottleneck.playableMask[cell.y][cell.x] = true;
+  }
+  bottleneck.spawnContract.capacities = {
+    playerCapacity: 1,
+    candidatePoolSize: 1,
+    maxAssignableOpponents: 1
+  };
+  bottleneck.spawnContract.playerSlots = [{
+    ...bottleneck.spawnContract.playerSlots[0],
+    id: 'player:bottleneck',
+    cell: point(1, 3)
+  }];
+  bottleneck.spawnContract.opponentCandidates = [{
+    ...bottleneck.spawnContract.opponentCandidates[0],
+    id: 'opponent:bottleneck',
+    cell: point(2, 3),
+    zoneId: 'zone:bottleneck'
+  }];
+  bottleneck.spawnContract.opponentZones = [{
+    ...bottleneck.spawnContract.opponentZones[0],
+    id: 'zone:bottleneck',
+    cells: [point(2, 3)],
+    capacity: 1
+  }];
+  bottleneck.spawnContract.exits = bottleneck.spawnContract.exits.map(exit =>
+    exit.side === 'player'
+      ? { ...exit, cell: point(3, 3) }
+      : { ...exit, cell: point(5, 3) }
+  );
+  bottleneck.spawnContract.approachRegions =
+    bottleneck.spawnContract.approachRegions.map(region =>
+      region.side === 'player'
+        ? { ...region, cells: [point(3, 3)] }
+        : { ...region, cells: [point(5, 3)] }
+    );
+
+  assert.throws(
+    () => assertBattleMapV3Topology(bottleneck),
+    error => error.code === 'INVALID_BATTLE_MAP_V3_TOPOLOGY'
+      && /clearance and zone constraints cannot satisfy maxAssignableOpponents 1/
+        .test(error.message)
+  );
+  assert.throws(
+    () => assignBattleMapV3Spawns({
+      map: bottleneck,
+      playerUnits: [{ id: 'player-unit' }],
+      opponentUnits: [{ id: 'opponent-unit' }],
+      encounterSeed: 'hostile-bottleneck'
+    }),
+    error => error.code === 'BATTLE_MAP_V3_SPAWN_CAPACITY_SHORTFALL'
+      && /no complete deterministic opponent spawn matching/.test(error.message)
+  );
+});
+
 test('V3 TraversalView consumes playableMask and compiler-authored blockers', async () => {
   const blueprint = createBlueprint();
   const candidate = await compileTemplateMapBlueprint(

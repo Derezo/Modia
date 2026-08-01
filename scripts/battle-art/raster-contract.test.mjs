@@ -655,6 +655,46 @@ describe('battle-art deterministic raster contract', () => {
     assert.equal(result.data[3], 0);
   });
 
+  it('normalizes an opaque chroma route to binary alpha without inventing a partial-alpha verge', async () => {
+    const { descriptor, profile } = await inputs(
+      'forest-heartlands-loam-path-straight-ns'
+    );
+    const { width, height } = descriptor.canvas;
+    const sides = routeSides(width, height);
+    const generated = await encode(
+      rawRaster(width, height, (x, y) => (
+        distanceToSegment(x, y, sides.s, sides.n) <= 20
+          ? [148, 102, 48, 255]
+          : [255, 0, 255, 255]
+      )),
+      width,
+      height
+    );
+    const normalized = await normalizeGeneratedRasterBytes({
+      bytes: generated,
+      descriptor,
+      profile,
+      format: 'png'
+    });
+    const { data } = await sharp(normalized)
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    const alphaValues = new Set();
+    let partialAlphaPixels = 0;
+    for (let index = 3; index < data.length; index += 4) {
+      const alpha = data[index];
+      alphaValues.add(alpha);
+      if (alpha > 0 && alpha < 255) partialAlphaPixels += 1;
+    }
+    assert.deepEqual([...alphaValues].sort((a, b) => a - b), [0, 255]);
+    assert.equal(
+      partialAlphaPixels,
+      0,
+      'opaque #ff00ff route input cannot satisfy a prompt requiring partial alpha'
+    );
+  });
+
   it('deterministically removes chroma fringe and completes generated surface diamonds', async () => {
     const { descriptor, profile } = await inputs();
     const { width, height } = descriptor.canvas;

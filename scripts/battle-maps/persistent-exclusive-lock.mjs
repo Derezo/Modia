@@ -13,6 +13,9 @@ const DEFAULT_HOLDER_SOURCE = [
   'process.stdin.on("end", () => process.exit(0));'
 ].join('');
 const LOCK_HOLDER_SCRIPT_PREFIX = 'set -eu\n';
+const LOCK_HOLDER_TERMINATION_GRACE_MS = 1_000;
+const ACTIVE_LOCK_HOLDER_GROUPS = new Set();
+let lockHolderSignalHandlersInstalled = false;
 
 function lockHolderShellSource(descriptorCount) {
   const acquisitions = Array.from(
@@ -24,6 +27,133 @@ function lockHolderShellSource(descriptorCount) {
 
 function describeHolderResult(result) {
   return result?.error?.message ?? result?.signal ?? `code ${result?.code}`;
+}
+
+function lockCancellationError(label, reason) {
+  const error = new Error(
+    `${label} acquisition cancelled`,
+    reason === undefined ? undefined : { cause: reason }
+  );
+  error.code = 'PERSISTENT_LOCK_CANCELLED';
+  return error;
+}
+
+function attachLockSecondaryFailure(primary, secondary, stage) {
+  try {
+    if (!primary || secondary === primary || typeof primary !== 'object') return;
+    let diagnostics;
+    try {
+      diagnostics = primary.secondaryFailures;
+    } catch {
+      return;
+    }
+    if (!Array.isArray(diagnostics)) {
+      diagnostics = [];
+      Object.defineProperty(primary, 'secondaryFailures', {
+        configurable: true,
+        enumerable: true,
+        value: diagnostics,
+        writable: false
+      });
+    }
+    if (diagnostics.length >= 8 || Object.isFrozen(diagnostics)) return;
+    const bounded = value => {
+      try {
+        return String(value ?? '').slice(0, 1_024);
+      } catch {
+        return '[unavailable]';
+      }
+    };
+    diagnostics.push(Object.freeze({
+      stage: bounded(stage),
+      name: bounded(secondary?.name || 'Error'),
+      code: bounded(secondary?.code || 'PERSISTENT_LOCK_CLEANUP_FAILED'),
+      message: bounded(secondary?.message || secondary)
+    }));
+  } catch {
+    // Diagnostics must never replace the primary acquisition failure.
+  }
+}
+
+function signalLockHolderGroup(pid, signal) {
+  try {
+    process.kill(-pid, signal);
+  } catch (error) {
+    if (error.code !== 'ESRCH') return error;
+  }
+  return null;
+}
+
+function installLockHolderSignalHandlers() {
+  if (lockHolderSignalHandlersInstalled || process.platform === 'win32') return;
+  lockHolderSignalHandlersInstalled = true;
+  for (const signal of ['SIGHUP', 'SIGINT', 'SIGTERM']) {
+    const handler = () => {
+      for (const pid of ACTIVE_LOCK_HOLDER_GROUPS) {
+        signalLockHolderGroup(pid, 'SIGKILL');
+      }
+      process.removeListener(signal, handler);
+      setImmediate(() => process.kill(process.pid, signal));
+    };
+    process.prependListener(signal, handler);
+  }
+  process.on('exit', () => {
+    for (const pid of ACTIVE_LOCK_HOLDER_GROUPS) {
+      signalLockHolderGroup(pid, 'SIGKILL');
+    }
+  });
+}
+
+async function waitForHolderCompletion(holderCompletion, timeoutMs) {
+  let timeout;
+  const result = await Promise.race([
+    holderCompletion.then(value => ({ completed: true, value })),
+    new Promise(resolve => {
+      timeout = setTimeout(() => resolve({ completed: false }), timeoutMs);
+    })
+  ]);
+  if (timeout) clearTimeout(timeout);
+  return result;
+}
+
+async function terminateLockHolder(
+  child,
+  holderCompletion,
+  graceMs = LOCK_HOLDER_TERMINATION_GRACE_MS
+) {
+  let cleanupFailure = null;
+  const signalHolder = signal => {
+    const groupFailure = signalLockHolderGroup(child.pid, signal);
+    if (groupFailure) cleanupFailure ??= groupFailure;
+    try {
+      child.kill(signal);
+    } catch (error) {
+      cleanupFailure ??= error;
+    }
+  };
+  signalHolder('SIGTERM');
+  const afterTerm = await waitForHolderCompletion(holderCompletion, graceMs);
+  if (afterTerm.completed) {
+    if (cleanupFailure) throw cleanupFailure;
+    return;
+  }
+  signalHolder('SIGKILL');
+  const afterKill = await waitForHolderCompletion(holderCompletion, graceMs);
+  if (!afterKill.completed) {
+    const timeoutError = new Error(
+      `persistent lock holder did not close within ${graceMs * 2}ms`
+    );
+    timeoutError.code = 'PERSISTENT_LOCK_HOLDER_CLEANUP_TIMEOUT';
+    if (cleanupFailure) {
+      attachLockSecondaryFailure(
+        timeoutError,
+        cleanupFailure,
+        'signal-lock-holder'
+      );
+    }
+    throw timeoutError;
+  }
+  if (cleanupFailure) throw cleanupFailure;
 }
 
 async function stableLockPath(lockPath, expected) {
@@ -44,8 +174,14 @@ export async function acquirePersistentExclusiveLock({
   lockPath,
   label = lockPath,
   assertSafePath = async () => {},
-  holderSource = DEFAULT_HOLDER_SOURCE
+  holderSource = DEFAULT_HOLDER_SOURCE,
+  signal = null,
+  spawnImpl = spawn,
+  terminationGraceMs = LOCK_HOLDER_TERMINATION_GRACE_MS
 }) {
+  if (signal?.aborted) {
+    throw lockCancellationError(label, signal.reason);
+  }
   await assertSafePath(lockPath);
   await mkdir(path.dirname(lockPath), { recursive: true });
   await assertSafePath(lockPath);
@@ -75,7 +211,7 @@ export async function acquirePersistentExclusiveLock({
     throw new Error(`${label} must be a stable regular non-symlink file`);
   }
 
-  const child = spawn(
+  const child = spawnImpl(
     '/bin/sh',
     [
       '-c',
@@ -86,17 +222,24 @@ export async function acquirePersistentExclusiveLock({
       holderSource
     ],
     {
-      stdio: ['pipe', 'pipe', 'pipe', handle.fd]
+      stdio: ['pipe', 'pipe', 'pipe', handle.fd],
+      detached: true
     }
   );
+  if (spawnImpl === spawn && Number.isSafeInteger(child.pid) && child.pid > 0) {
+    installLockHolderSignalHandlers();
+    ACTIVE_LOCK_HOLDER_GROUPS.add(child.pid);
+  }
   let holderResult = null;
   let stderr = '';
   const holderCompletion = new Promise(resolve => {
     child.once('error', error => {
+      ACTIVE_LOCK_HOLDER_GROUPS.delete(child.pid);
       holderResult = { error, code: null, signal: null };
       resolve(holderResult);
     });
     child.once('close', (code, signal) => {
+      ACTIVE_LOCK_HOLDER_GROUPS.delete(child.pid);
       holderResult = { error: null, code, signal };
       resolve(holderResult);
     });
@@ -106,33 +249,85 @@ export async function acquirePersistentExclusiveLock({
     if (stderr.length > 4096) stderr = stderr.slice(-4096);
   });
 
+  let abortError = null;
+  let abortHandler = null;
   try {
     const stdout = await new Promise((resolve, reject) => {
       let value = '';
-      child.once('error', reject);
+      let settled = false;
+      const finish = (callback, result) => {
+        if (settled) return;
+        settled = true;
+        callback(result);
+      };
+      child.once('error', error => finish(reject, error));
       child.stdout.on('data', chunk => {
         value += chunk.toString('utf8');
-        if (value.includes('\n')) resolve(value);
+        if (value.includes('\n')) finish(resolve, value);
       });
       holderCompletion.then(result => {
-        reject(new Error(
+        finish(reject, new Error(
           `${label} holder failed before acquisition: `
             + `${stderr.trim() || describeHolderResult(result)}`
         ));
       });
+      if (signal) {
+        abortHandler = () => {
+          abortError = lockCancellationError(label, signal.reason);
+          finish(reject, abortError);
+        };
+        if (signal.aborted) abortHandler();
+        else signal.addEventListener('abort', abortHandler, { once: true });
+      }
     });
+    if (abortError || signal?.aborted) {
+      throw abortError ?? lockCancellationError(label, signal.reason);
+    }
     if (stdout !== 'locked\n') {
       throw new Error(`${label} holder emitted an invalid handshake`);
     }
     await assertSafePath(lockPath);
+    if (abortError || signal?.aborted) {
+      throw abortError ?? lockCancellationError(label, signal.reason);
+    }
     if (!(await stableLockPath(lockPath, details))) {
       throw new Error(`${label} pathname changed during acquisition`);
     }
+    if (abortError || signal?.aborted) {
+      throw abortError ?? lockCancellationError(label, signal.reason);
+    }
   } catch (error) {
-    if (!child.stdin.destroyed) child.stdin.end();
-    await holderCompletion;
-    await handle.close();
-    throw error;
+    const primaryError = error;
+    try {
+      await terminateLockHolder(child, holderCompletion, terminationGraceMs);
+    } catch (cleanupError) {
+      attachLockSecondaryFailure(
+        primaryError,
+        cleanupError,
+        'terminate-lock-holder'
+      );
+    }
+    for (const [stage, stream] of [
+      ['destroy-lock-holder-stdin', child.stdin],
+      ['destroy-lock-holder-stdout', child.stdout],
+      ['destroy-lock-holder-stderr', child.stderr]
+    ]) {
+      try {
+        stream.destroy();
+      } catch (cleanupError) {
+        attachLockSecondaryFailure(primaryError, cleanupError, stage);
+      }
+    }
+    try {
+      await handle.close();
+    } catch (cleanupError) {
+      attachLockSecondaryFailure(primaryError, cleanupError, 'close-lock-handle');
+    } finally {
+      ACTIVE_LOCK_HOLDER_GROUPS.delete(child.pid);
+    }
+    throw primaryError;
+  } finally {
+    if (abortHandler) signal.removeEventListener('abort', abortHandler);
   }
 
   return {
@@ -264,18 +459,23 @@ export async function acquirePersistentExclusiveLocks({
         'pipe',
         'pipe',
         ...entries.map(entry => entry.handle.fd)
-      ]
+      ],
+      detached: true
     }
   );
+  installLockHolderSignalHandlers();
+  ACTIVE_LOCK_HOLDER_GROUPS.add(child.pid);
   let holderResult = null;
   let stderr = '';
   const label = entries.map(entry => entry.label).join(' then ');
   const holderCompletion = new Promise(resolve => {
     child.once('error', error => {
+      ACTIVE_LOCK_HOLDER_GROUPS.delete(child.pid);
       holderResult = { error, code: null, signal: null };
       resolve(holderResult);
     });
     child.once('close', (code, signal) => {
+      ACTIVE_LOCK_HOLDER_GROUPS.delete(child.pid);
       holderResult = { error: null, code, signal };
       resolve(holderResult);
     });
@@ -310,8 +510,14 @@ export async function acquirePersistentExclusiveLocks({
       }
     }
   } catch (error) {
-    if (!child.stdin.destroyed) child.stdin.end();
-    await holderCompletion;
+    try {
+      await terminateLockHolder(child, holderCompletion);
+    } catch (cleanupError) {
+      attachLockSecondaryFailure(error, cleanupError, 'terminate-lock-holder-group');
+    }
+    child.stdin.destroy();
+    child.stdout.destroy();
+    child.stderr.destroy();
     await Promise.allSettled(entries.map(entry => entry.handle.close()));
     throw error;
   }

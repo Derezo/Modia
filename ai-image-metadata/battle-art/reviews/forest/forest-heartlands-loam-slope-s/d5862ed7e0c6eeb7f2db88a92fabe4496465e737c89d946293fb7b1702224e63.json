@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-loam-slope-s",
+  "decision": "approved",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "The corrected raster has clean transparent corners and a continuous compacted-loam ramp on the south axis, contacting both required endpoint neighborhoods without stairs, obstruction, or a false sidewall.",
+  "reviewedAt": "2026-07-31T07:29:45.965Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-slope-s.json",
+    "sha256": "sha256:0a0e95f564ddfac009c616c71a00cfe67f17ce5b73974d38f5c2b0905732406b",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-slope-s/result.json",
+      "bytes": 2268,
+      "sha256": "sha256:615796bf32fd55a2ea42c5a113bfcef048668648f0907470b39c3cea69617b99"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-slope-s/candidate.png",
+      "bytes": 13844,
+      "width": 256,
+      "height": 192,
+      "format": "png",
+      "sha256": "sha256:d5862ed7e0c6eeb7f2db88a92fabe4496465e737c89d946293fb7b1702224e63"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-slope-s/prompt.txt",
+        "bytes": 8618,
+        "sha256": "sha256:a796843bd37a7c83509ac35ec784c651717426d8dec1969a348c2e4a03756e62"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-slope-s/worker.jsonl",
+        "bytes": 36776,
+        "sha256": "sha256:8aa69096233ea9210d2bdf43371e9ec2d7585a6c288a1eec80e5589cfdceff26"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-slope-s/worker.stderr.log",
+        "bytes": 324,
+        "sha256": "sha256:05f4673919b61bd8be09b7c8abd716ac3147b7eaaacff2422881ff76a45e4ab9"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-slope-s/last-message.txt",
+        "bytes": 373,
+        "sha256": "sha256:68935f0ed3acdc1cce227d294cd39208d77c8767b14ae4c9b4ba7bd3fb6404ff"
+      }
+    }
+  },
+  "fullHash": "sha256:767d576b8ca6e74a5747603efc4218cefe474c2bbb099106fe1766b738de5069"
+}

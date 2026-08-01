@@ -46,6 +46,11 @@ import {
   BattleStateIdempotencyError,
   battleStateRepository
 } from '../services/battle/BattleStateRepository.js';
+import {
+  createBattleActionProcessingState,
+  createBattleActionReplayStateTransport,
+  createBattleActionStateTransport
+} from '../services/battle/BattleActionTransport.js';
 import { battleTerminalOutbox } from '../services/battle/BattleTerminalOutbox.js';
 import {
   BATTLE_TERMINAL_PROGRESSION_EVENT_TYPE,
@@ -279,8 +284,15 @@ async function sendBattleActionReplay(res, receipt, battle, commandId, userId) {
       ...createBattleActionRecovery(battle, userId)
     });
   }
+  const replayState = battle.battleMapSchemaVersion === 3
+    ? undefined
+    : await materializeBattleActionReceipt(receipt, battle);
   return res.json({
-    state: await materializeBattleActionReceipt(receipt, battle),
+    ...createBattleActionReplayStateTransport({
+      battle,
+      state: replayState,
+      receipt
+    }),
     actionResult: replayMetadata.actionResult,
     battleStatus: replayMetadata.battleStatus,
     turnContinues: replayMetadata.turnContinues,
@@ -1596,9 +1608,7 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
     });
   }
 
-  let state = structuredClone(
-    battleService.withBattleStateVisualIdentities(battle.state)
-  );
+  let state = createBattleActionProcessingState(battle);
 
   // Migration: ensure all units have CT field (for existing battles)
   for (const unit of state.units) {
@@ -1759,7 +1769,9 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
         req.user.userId
       );
     }
-    state = structuredClone(actionCommit.envelope.state);
+    state = battle.battleMapSchemaVersion === 3
+      ? actionCommit.envelope.state
+      : structuredClone(actionCommit.envelope.state);
     committedRevision = actionCommit.envelope.stateRevision;
 
     // Timers and all presentation events observe only the committed successor.
@@ -1795,7 +1807,9 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
         req.user.userId
       );
     }
-    state = structuredClone(completion.state);
+    state = battle.battleMapSchemaVersion === 3
+      ? completion.state
+      : structuredClone(completion.state);
     result.rewards = completion.rewards;
     replayMetadata = completion.replayMetadata ?? {
       ...replayMetadata,
@@ -1866,7 +1880,11 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
   }
 
   res.json({
-    state,
+    ...createBattleActionStateTransport({
+      battle,
+      state,
+      update: committedUpdate
+    }),
     actionResult: result,
     battleStatus,
     // Two-action turn system: indicate if turn continues

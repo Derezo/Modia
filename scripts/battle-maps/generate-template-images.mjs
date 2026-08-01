@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 
 import { spawn } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import {
-  copyFile,
   lstat,
   mkdir,
   mkdtemp,
@@ -16,6 +15,7 @@ import {
 } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import sharp from 'sharp';
 
 import {
   assertSafeWritePath,
@@ -30,7 +30,8 @@ import {
 import {
   auditCodexWorkerJsonl,
   buildCodexWorkerEnvironment,
-  CODEX_WORKER_ENV_KEYS
+  CODEX_WORKER_ENV_KEYS,
+  verifyCodexImagegenEvidence
 } from './codex-worker-boundary.mjs';
 
 export {
@@ -182,23 +183,94 @@ function withCandidateGenerationLock(root, theme, template, variant, callback) {
 }
 
 export function buildGenerationPrompt(context, variant) {
+  const sidecar = context.sidecar;
+  const forbidsIsolatedPeaks = sidecar.forbiddenPatterns.some(
+    value => value.toLowerCase().includes('isolated peak')
+  );
+  const heightConnections = sidecar.heightIntent.connections.join(' ').toLowerCase();
+  const requiresSlopeAndStair = heightConnections.includes('slope')
+    && heightConnections.includes('stair');
+  const semanticContract = [
+    'Tracked template-specific source-image semantic contract:',
+    `- Template: ${sidecar.theme}/${sidecar.id}`,
+    `- Eligible tiers: ${sidecar.tierEligibility.join(', ')}`,
+    `- Camera framing: ${sidecar.mapProfile.cameraFraming}`,
+    `- Composition: ${sidecar.composition.summary}`,
+    'Visual hierarchy:',
+    ...sidecar.composition.visualHierarchy.map(value => `- ${value}`),
+    'Focal-area distinctions:',
+    ...sidecar.composition.focalAreas.map(value => `- ${value}`),
+    'Required negative space:',
+    ...sidecar.composition.negativeSpace.map(value => `- ${value}`),
+    'Density distribution:',
+    ...sidecar.composition.density.map(value => `- ${value}`),
+    'Required topology areas:',
+    ...sidecar.topologyIntent.areas.map(
+      area => `- ${area.id}: ${area.description}`
+    ),
+    'Required topology relationships:',
+    ...sidecar.topologyIntent.relationships.map(
+      relationship =>
+        `- ${relationship.from} to ${relationship.to}: ${relationship.kind}`
+    ),
+    'Height and landform intent:',
+    ...sidecar.heightIntent.landforms.map(value => `- ${value}`),
+    ...sidecar.heightIntent.connections.map(value => `- ${value}`),
+    'Route intent:',
+    ...sidecar.routeIntent.primaryApproaches.map(value => `- ${value}`),
+    ...sidecar.routeIntent.secondaryApproaches.map(value => `- ${value}`),
+    'Access legibility:',
+    '- Make every required topology relationship visibly readable in the source composition.',
+    ...(requiresSlopeAndStair
+      ? [
+          '- Where the contract calls for natural slopes and stairs, visibly show '
+            + 'separate connected slope and stair approaches.'
+        ]
+      : []),
+    ...(forbidsIsolatedPeaks
+      ? [
+          '- Raised landforms must read as broad connected terrain, never as a '
+            + 'rock-ringed isolated summit.'
+        ]
+      : []),
+    `Boundary intent: ${sidecar.boundaryIntent.description}`,
+    `Boundary owners: ${sidecar.boundaryIntent.owners.join(', ')}`,
+    `Formation intent: ${sidecar.spawnIntent.formationCharacter}`,
+    'Required landmarks:',
+    ...sidecar.requiredLandmarks.map(value => `- ${value}`),
+    'Regional surface/material motifs:',
+    ...Object.entries(sidecar.assetHints).flatMap(([category, values]) => [
+      `- ${category}: ${values.join(', ')}`
+    ]),
+    'Template-specific forbidden patterns:',
+    ...sidecar.forbiddenPatterns.map(value => `- ${value}`),
+    ...sidecar.spawnIntent.forbiddenBehavior.map(value => `- ${value}`)
+  ].join('\n');
   return `${context.profile.prompt}
 
 Negative constraints:
 ${context.profile.negativeConstraints.map(constraint => `- ${constraint}`).join('\n')}
 
+${semanticContract}
+
 This is source-image candidate variant "${variant}" for ${context.theme}/${context.template}.
 Use the imagegen skill and call the image generation tool exactly once. Write exactly one
 square PNG or WebP candidate to candidate.png or candidate.webp in the current disposable
 workspace. Do not create subdirectories, metadata, source pins, approvals, maps, runtime
-content, or any other file. The image is compositional reference only and must not be a
-literal coordinate trace or tile extraction.`.trim();
+content, or any other file. Copy the generated raster to that filename with one standalone
+command that must exit successfully; do not chain file, identify, or any other inspection
+utility into the copy command. The image is compositional reference only and must not be
+a literal coordinate trace or tile extraction. The tracked template-specific semantic
+contract controls ecology, materials, landmarks, and topology whenever the generic prompt
+is less specific.`.trim();
 }
 
 export function buildCodexArgs(workspace, lastMessagePath) {
   return [
     'exec',
     '--ephemeral',
+    '--enable',
+    'image_generation',
     '--json',
     '--color',
     'never',
@@ -212,6 +284,18 @@ export function buildCodexArgs(workspace, lastMessagePath) {
     lastMessagePath,
     '-'
   ];
+}
+
+function hasImageGenerationEnable(args) {
+  return args.some(
+    (argument, index) =>
+      argument === '--enable'
+      && args[index + 1] === 'image_generation'
+  ) && !args.some(
+    (argument, index) =>
+      argument === '--disable'
+      && args[index + 1] === 'image_generation'
+  );
 }
 
 export class WorkerTimeoutError extends Error {
@@ -359,10 +443,31 @@ function auditWorkspace(before, after) {
   return candidates[0][0];
 }
 
-async function inspectCandidate(candidatePath) {
-  const image = await inspectImage(candidatePath);
+async function inspectCandidate(candidate) {
+  if (Buffer.isBuffer(candidate) && candidate.length > MAX_CANDIDATE_BYTES) {
+    throw new Error(`candidate exceeds ${MAX_CANDIDATE_BYTES} bytes`);
+  }
+  const image = Buffer.isBuffer(candidate)
+    ? await sharp(candidate, {
+      failOn: 'error',
+      limitInputPixels: 268_435_456
+    }).metadata().then(metadata => ({
+      bytes: candidate.length,
+      width: metadata.width,
+      height: metadata.height,
+      format: metadata.format,
+      sha256: `sha256:${createHash('sha256').update(candidate).digest('hex')}`
+    }))
+    : await inspectImage(candidate);
   if (image.bytes > MAX_CANDIDATE_BYTES) {
     throw new Error(`candidate exceeds ${MAX_CANDIDATE_BYTES} bytes`);
+  }
+  if (
+    !['png', 'webp'].includes(image.format)
+    || !Number.isSafeInteger(image.width)
+    || !Number.isSafeInteger(image.height)
+  ) {
+    throw new Error('source-template candidate image contract is invalid');
   }
   if (image.width !== image.height) throw new Error('source-template candidate must be square');
   if (image.width > MAX_IMAGE_DIMENSION || image.height > MAX_IMAGE_DIMENSION) {
@@ -385,21 +490,6 @@ async function atomicWrite(filePath, contents, projectRoot) {
   }
   await assertSafeWritePath(projectRoot, filePath, 'candidate write path');
   await rename(temporaryPath, filePath);
-}
-
-async function atomicPromote(sourcePath, destinationPath, projectRoot) {
-  await assertSafeWritePath(projectRoot, destinationPath, 'candidate image path');
-  await mkdir(path.dirname(destinationPath), { recursive: true });
-  await assertSafeWritePath(projectRoot, destinationPath, 'candidate image path');
-  const temporaryPath = `${destinationPath}.${process.pid}.${randomUUID()}.tmp`;
-  try {
-    await copyFile(sourcePath, temporaryPath);
-    await assertSafeWritePath(projectRoot, destinationPath, 'candidate image path');
-    await rename(temporaryPath, destinationPath);
-  } catch (error) {
-    await rm(temporaryPath, { force: true });
-    throw error;
-  }
 }
 
 function assertExactKeys(value, keys, location) {
@@ -476,6 +566,7 @@ async function readCandidateResult(root, paths, expected) {
     || parsed.worker.args[0] !== 'exec'
     || !parsed.worker.args.includes('--ephemeral')
     || !parsed.worker.args.includes('workspace-write')
+    || !hasImageGenerationEnable(parsed.worker.args)
     || !Number.isInteger(parsed.worker.timeoutMs)
     || parsed.worker.timeoutMs < 1
     || parsed.worker.promptPath !== paths.promptLog
@@ -506,6 +597,37 @@ async function removeIncompleteCandidate(root, paths) {
     const absolutePath = resolveWithinProject(root, relativePath, 'candidate cleanup path');
     await assertSafeWritePath(root, absolutePath, 'candidate cleanup path');
     await rm(absolutePath, { force: true, recursive: false });
+  }
+}
+
+async function removeIncompleteCandidatePublication(root, paths) {
+  for (const relativePath of [
+    paths.imagePng,
+    paths.imageWebp,
+    paths.metadata
+  ]) {
+    const absolutePath = resolveWithinProject(root, relativePath, 'candidate cleanup path');
+    await assertSafeWritePath(root, absolutePath, 'candidate cleanup path');
+    await rm(absolutePath, { force: true, recursive: false });
+  }
+}
+
+async function persistWorkerDiagnostics(root, paths, prompt, workerResult) {
+  const logValues = [
+    [paths.promptLog, `${prompt}\n`],
+    [paths.stdoutLog, workerResult.stdout ?? Buffer.alloc(0)],
+    [paths.stderrLog, workerResult.stderr ?? Buffer.alloc(0)]
+  ];
+  for (const [relativePath, contents] of logValues) {
+    const bytes = Buffer.byteLength(contents);
+    if (bytes > MAX_WORKER_OUTPUT_BYTES) {
+      throw new Error(`candidate log exceeds ${MAX_WORKER_OUTPUT_BYTES} bytes: ${relativePath}`);
+    }
+    await atomicWrite(
+      resolveWithinProject(root, relativePath, 'candidate log path'),
+      contents,
+      root
+    );
   }
 }
 
@@ -594,6 +716,7 @@ async function loadGenerationContext(projectRoot, theme, template) {
   }
   return {
     ...promptLoaded,
+    sidecar: sidecarLoaded.sidecar,
     sidecarStatus: sidecarLoaded.sidecar.status
   };
 }
@@ -604,7 +727,9 @@ async function generateOne({
   variant,
   paths,
   options,
-  worker
+  worker,
+  environmentSource,
+  afterCandidateVerified
 }) {
   const candidateRoot = resolveWithinProject(root, context.candidateDirectory, 'candidate directory');
   await assertSafeWritePath(root, candidateRoot, 'candidate directory');
@@ -622,6 +747,7 @@ async function generateOne({
       theme: context.theme,
       template: context.template
     });
+    await persistWorkerDiagnostics(root, paths, prompt, workerResult);
     const toolAudit = auditCodexWorkerJsonl(workerResult.stdout);
     if (toolAudit.imagegenInvocationCount !== 1) {
       throw new Error(
@@ -632,16 +758,22 @@ async function generateOne({
     const after = await snapshotWorkspace(workspace);
     const candidateName = auditWorkspace(before, after);
     const workspaceCandidate = path.join(workspace, candidateName);
-    const image = await inspectCandidate(workspaceCandidate);
+    const verification = await verifyCodexImagegenEvidence(toolAudit, {
+      environmentSource,
+      candidatePath: workspaceCandidate,
+      requireCandidateByteIdentity: true
+    });
+    const verifiedCandidateBytes = verification.candidateBytes;
+    await afterCandidateVerified({
+      workspaceCandidate,
+      verifiedCandidateBytes
+    });
+    const image = await inspectCandidate(verifiedCandidateBytes);
     const finalImageRelative = image.format === 'png' ? paths.imagePng : paths.imageWebp;
     const finalImagePath = resolveWithinProject(root, finalImageRelative, 'candidate image path');
-    await atomicPromote(workspaceCandidate, finalImagePath, root);
+    await atomicWrite(finalImagePath, verifiedCandidateBytes, root);
 
-    const logValues = [
-      [paths.promptLog, `${prompt}\n`],
-      [paths.stdoutLog, workerResult.stdout ?? Buffer.alloc(0)],
-      [paths.stderrLog, workerResult.stderr ?? Buffer.alloc(0)]
-    ];
+    const logValues = [];
     const workspaceLastMessage = path.join(workspace, 'last-message.txt');
     try {
       logValues.push([paths.lastMessage, await readFile(workspaceLastMessage)]);
@@ -693,7 +825,9 @@ async function generateOne({
 }
 
 export async function generateTemplateImages(options, {
-  worker = spawnCodexWorker
+  worker = spawnCodexWorker,
+  environmentSource = process.env,
+  afterCandidateVerified = async () => {}
 } = {}) {
   const root = path.resolve(options.projectRoot ?? SCRIPT_PROJECT_ROOT);
   const context = await loadGenerationContext(root, options.theme, options.template);
@@ -762,10 +896,12 @@ export async function generateTemplateImages(options, {
             variant: job.variant,
             paths: job.paths,
             options,
-            worker
+            worker,
+            environmentSource,
+            afterCandidateVerified
           });
         } catch (error) {
-          await removeIncompleteCandidate(root, job.paths);
+          await removeIncompleteCandidatePublication(root, job.paths);
           throw error;
         }
       }

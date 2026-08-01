@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-loam-path-cross",
+  "decision": "approved",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "All four warm-loam arms span the required north, east, south, and west capability segments with soft organic edges, a readable center junction, and no clipped frame or baked ground.",
+  "reviewedAt": "2026-07-31T06:34:53.025Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-cross.json",
+    "sha256": "sha256:710878a076550fb5160ece75c9f0e007a331155b57b13e5aff83cb8499ea175c",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-cross/result.json",
+      "bytes": 2295,
+      "sha256": "sha256:1ece1f5c97e40f2335ff3e8364f56118f836966126fde03c46be8d7209fc299b"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-cross/candidate.png",
+      "bytes": 43555,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:07efeed70b035cf9301b82494a76a909214d4b27f96127c2476905fd4dd73246"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-cross/prompt.txt",
+        "bytes": 9971,
+        "sha256": "sha256:e43a9db3548eaceb6bd4c561b9a28c153ac96535386d597c8eca037998aa424a"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-cross/worker.jsonl",
+        "bytes": 38040,
+        "sha256": "sha256:1acbe90f569c3c65ab4b39951dc432332fdab33369298dfdd77e35653cc6bee5"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-cross/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-cross/last-message.txt",
+        "bytes": 403,
+        "sha256": "sha256:2069b9f436ff7a097507d75efd8890daed706071e333f3d8ec6972c04c2cf651"
+      }
+    }
+  },
+  "fullHash": "sha256:bae0397461d6be822647389f84b081aa02dad7ba50e3df8a3bf8ebe93cb1771a"
+}

@@ -20,7 +20,8 @@ import {
   inspectImageContents,
   readJson,
   sha256,
-  stableJson
+  stableJson,
+  styleReferenceProvenance
 } from './lifecycle.mjs';
 import { main, parseCommand } from './cli.mjs';
 import { normalizeCandidates } from './normalize.mjs';
@@ -45,6 +46,12 @@ async function fixture() {
     path.join(REPOSITORY_ROOT, DESCRIPTOR_RELATIVE),
     'utf8'
   ));
+  const descriptorStyleReferencePaths = new Set(
+    releasedDescriptor.styleReferences.map(reference => reference.path)
+  );
+  manifest.styleReferences = manifest.styleReferences.filter(
+    reference => descriptorStyleReferencePaths.has(reference.path)
+  );
   const descriptor = {
     ...releasedDescriptor,
     status: 'draft',
@@ -110,7 +117,7 @@ async function fixture() {
     promptPath: paths.prompt,
     stdoutPath: paths.stdout,
     stderrPath: paths.stderr,
-    lastMessagePath: paths.lastMessage
+    lastMessagePath: null
   };
   const candidate = {
     schemaVersion: CANDIDATE_SCHEMA,
@@ -120,11 +127,25 @@ async function fixture() {
     descriptorSha256: sha256(Buffer.from(stableJson(descriptor))),
     promptProfile: structuredClone(descriptor.promptProfile),
     styleReferences: structuredClone(descriptor.styleReferences),
+    styleReferenceMode: 'text-fallback',
+    styleReferenceProvenance: styleReferenceProvenance(
+      descriptor.styleReferences
+    ),
     image,
     worker,
     status: 'candidate-awaiting-review'
   };
-  await writeFile(path.join(root, paths.metadata), stableJson(candidate));
+  await Promise.all([
+    writeFile(path.join(root, paths.metadata), stableJson(candidate)),
+    writeFile(path.join(root, paths.prompt), 'normalization fixture prompt\n'),
+    writeFile(
+      path.join(root, paths.stdout),
+      '{"type":"item.completed","item":{"id":"imagegen-1",'
+      + '"type":"mcp_tool_call","server":"image_gen",'
+      + '"tool":"imagegen","status":"completed"}}\n'
+    ),
+    writeFile(path.join(root, paths.stderr), '')
+  ]);
   return {
     root,
     descriptor,
@@ -353,6 +374,10 @@ describe('battle-art candidate normalization', () => {
       family: approved.descriptor.id,
       reviewer: 'normalization-test',
       decision: 'approved',
+      reason:
+        'The normalized moss surface preserves full-diamond coverage, quiet '
+        + 'seam edges, the intended forest palette, and has no framing or route '
+        + 'artifacts.',
       approvedAt: '2026-07-30T12:00:00.000Z'
     });
     await assert.rejects(

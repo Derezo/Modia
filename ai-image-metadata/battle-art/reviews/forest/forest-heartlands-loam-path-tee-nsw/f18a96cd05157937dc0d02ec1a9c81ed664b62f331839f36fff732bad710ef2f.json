@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-loam-path-tee-nsw",
+  "decision": "rejected",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "N/S/W bands pass, but the center becomes a broad diamond dirt slab with hard dark and black side appendages, not a compact transparent-exterior tee with three readable continuous loam arms.",
+  "reviewedAt": "2026-07-31T12:17:06.299Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-tee-nsw.json",
+    "sha256": "sha256:e635110603c2fd7a7f75674c9ed40eea19c62dd33494d5d4fa4244e094d9aa79",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-tee-nsw/result.json",
+      "bytes": 2313,
+      "sha256": "sha256:2513ec9c26c0ad8b6b90a7fdc769285762129c4725691a4701613618d42f48d0"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-tee-nsw/candidate.png",
+      "bytes": 31960,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:f18a96cd05157937dc0d02ec1a9c81ed664b62f331839f36fff732bad710ef2f"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-tee-nsw/prompt.txt",
+        "bytes": 14662,
+        "sha256": "sha256:21d39b7cf2a9333e43cf7d766681ba14a0d97b49817e5b3f14cc61c1a9d05a12"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-tee-nsw/worker.jsonl",
+        "bytes": 48359,
+        "sha256": "sha256:17899c31e7f88ff5533c75b5749d67f7b4f27fb438c62f4bee68d65b590d8f07"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-tee-nsw/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-tee-nsw/last-message.txt",
+        "bytes": 367,
+        "sha256": "sha256:eb0da6dde3c3b296d379e839df71ef4f48a508cd72dacda43b5b92281bc97e12"
+      }
+    }
+  },
+  "fullHash": "sha256:d0c35e3b4e45dc6505b782c0af086084a2aefb94046965f4314a06217b7c131d"
+}

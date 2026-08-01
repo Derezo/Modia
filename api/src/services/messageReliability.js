@@ -111,11 +111,17 @@ export function getRegisteredBattleMapCapabilities(ws, battleId) {
 export function createNegotiatedBattleStateSnapshot(
   battle,
   clientCapabilities,
-  { referenceDeltaEnabled = isBattleMapReferenceDeltaEnabled() } = {}
+  options = {}
 ) {
+  const isV3Battle = battle.battleMapSchemaVersion === 3;
+  const referenceDeltaEnabled = options.referenceDeltaEnabled ??
+    (isV3Battle ? false : isBattleMapReferenceDeltaEnabled());
   const hadCachedMaps = Array.isArray(clientCapabilities?.cachedMaps)
     && clientCapabilities.cachedMaps.length > 0;
-  const effectiveCapabilities = !referenceDeltaEnabled && clientCapabilities
+  // V3 activation and transport are catalog-driven, never runtime-gated.
+  // Keep the legacy V2 rollout behavior isolated to V2 snapshots.
+  const allowCachedMapReference = isV3Battle || referenceDeltaEnabled;
+  const effectiveCapabilities = !allowCachedMapReference && clientCapabilities
     ? { ...clientCapabilities, cachedMaps: [] }
     : clientCapabilities;
   let negotiation;

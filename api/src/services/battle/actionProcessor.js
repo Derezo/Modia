@@ -222,6 +222,55 @@ function applySelfSkillEffects(unit, skill, result, applyBuff = true) {
   }
 }
 
+function createTargetingTileView(state) {
+  return createBattleTraversalView(state, {
+    ignoreUnits: true,
+    ignoreObstacles: true
+  });
+}
+
+function getTargetingTiles(state, unit, range, { includeCaster }) {
+  const view = createTargetingTileView(state);
+  const { width, height } = view.dimensions;
+  const maxRange = Number.isFinite(range) && range >= 0
+    ? Math.floor(range)
+    : 0;
+  const tiles = [];
+
+  for (let y = Math.max(0, unit.tileY - maxRange);
+    y <= Math.min(height - 1, unit.tileY + maxRange);
+    y++) {
+    for (let x = Math.max(0, unit.tileX - maxRange);
+      x <= Math.min(width - 1, unit.tileX + maxRange);
+      x++) {
+      const distance = getManhattanDistance(unit.tileX, unit.tileY, x, y);
+      if (distance > maxRange || (!includeCaster && distance === 0)) continue;
+      if (!isTraversalCellPlayable(view, { x, y })) continue;
+      tiles.push({ x, y, distance });
+    }
+  }
+
+  return tiles;
+}
+
+function validateTargetTile(state, targetTile) {
+  if (!Number.isInteger(targetTile?.x) ||
+      !Number.isInteger(targetTile?.y)) {
+    return 'Target tile coordinates must be finite integers';
+  }
+
+  const view = createTargetingTileView(state);
+  const { width, height } = view.dimensions;
+  if (targetTile.x < 0 || targetTile.y < 0 ||
+      targetTile.x >= width || targetTile.y >= height) {
+    return 'Target tile is outside map bounds';
+  }
+  if (!isTraversalCellPlayable(view, targetTile)) {
+    return 'Target tile is not playable';
+  }
+  return null;
+}
+
 /**
  * Get all available actions for a unit in the current battle state
  * This is used by both player UI (sent to client) and AI decision making
@@ -259,7 +308,13 @@ export function getAvailableActions(unit, state) {
     const attackTargets = getTargetsInRange(unit, state, attackRange, 'opponent');
     actions.attacks = {
       range: attackRange,
-      targets: attackTargets
+      targets: attackTargets,
+      tiles: getTargetingTiles(
+        state,
+        unit,
+        attackRange,
+        { includeCaster: false }
+      )
     };
 
     // Skills (if unit can use skills)
@@ -282,6 +337,10 @@ export function getAvailableActions(unit, state) {
           let targets;
           const skillRange = skill.range ?? 1;
           const isCasterCenteredAoE = skillRange === 0 && (skill.aoeRadius ?? 0) > 0;
+          const isIntrinsicSelfTargetingSkill =
+            hasSelfSkillComponent(skill) &&
+            !hasOffensiveSkillComponent(skill) &&
+            skill.targetAlly !== true;
 
           if (skill.targetAllAllies || isCasterCenteredAoE) {
             // Group ally skills and range-zero AoEs are cast from the unit's tile.
@@ -310,7 +369,17 @@ export function getAvailableActions(unit, state) {
             range: skillRange,
             cooldown: skill.cooldown || 0,
             currentCooldown: unit.skillCooldowns?.[skill.id] || 0,
-            targets
+            targets,
+            tiles: skill.targetAllAllies ||
+              isCasterCenteredAoE ||
+              isIntrinsicSelfTargetingSkill
+              ? [{ x: unit.tileX, y: unit.tileY, distance: 0 }]
+              : getTargetingTiles(
+                state,
+                unit,
+                skillRange,
+                { includeCaster: true }
+              )
           };
         });
     }
@@ -432,6 +501,12 @@ function processAttackAction(state, unit, targetTile) {
   }
 
   if (!targetTile) return result;
+
+  const targetTileError = validateTargetTile(state, targetTile);
+  if (targetTileError) {
+    result.error = targetTileError;
+    return result;
+  }
 
   // SECURITY: Validate attack range server-side (anti-cheat)
   const attackRange = getAttackRange(unit);
@@ -613,16 +688,10 @@ function processSkillAction(state, unit, targetTile, skillId) {
     : null;
 
   if (!isCasterCenteredSkill) {
-    if (targetingTraversalView) {
-      if (!Number.isInteger(targetTile.x) ||
-          !Number.isInteger(targetTile.y)) {
-        result.error = 'Target tile coordinates must be finite integers';
-        return result;
-      }
-      if (!isTraversalCellPlayable(targetingTraversalView, targetTile)) {
-        result.error = 'Target tile is not playable';
-        return result;
-      }
+    const targetTileError = validateTargetTile(state, targetTile);
+    if (targetTileError) {
+      result.error = targetTileError;
+      return result;
     }
 
     const skillDistance = getManhattanDistance(unit.tileX, unit.tileY, targetTile.x, targetTile.y);
@@ -637,18 +706,14 @@ function processSkillAction(state, unit, targetTile, skillId) {
     targetTile = { x: unit.tileX, y: unit.tileY };
   }
 
-  // Resolve ally targets before spending resources. Invalid, defeated, or
-  // opposing targets must not consume MP or the unit's action.
+  // Targeted support skills apply to any living occupant. Empty tiles (and
+  // tiles holding only defeated units) still consume the action as a deliberate
+  // tile target, but have no unit effect.
   let target = null;
   if (isAllyTargetingSkill) {
     target = state.units.find(u =>
       u.tileX === targetTile.x && u.tileY === targetTile.y && u.hp > 0
     );
-
-    if (!target || getUnitTeamId(target) !== getUnitTeamId(unit)) {
-      result.error = 'Invalid ally target';
-      return result;
-    }
   }
 
   // Calculate MP cost
@@ -753,7 +818,7 @@ function processSkillAction(state, unit, targetTile, skillId) {
 
   // Handle ally-targeting skills (heals, buffs)
   if (isAllyTargetingSkill) {
-    if (skill.healPercent) {
+    if (target && skill.healPercent) {
       const healAmount = applyHealingReceivedBonus(
         target,
         Math.floor(target.maxHp * skill.healPercent / 100)
@@ -765,24 +830,29 @@ function processSkillAction(state, unit, targetTile, skillId) {
       result.healing = actualHeal;
     }
 
-    if (skill.mpRestore) {
+    if (target && skill.mpRestore) {
       const mpAmount = Math.floor(target.maxMp * skill.mpRestore / 100);
       const actualMpRestore = Math.min(mpAmount, Math.max(0, target.maxMp - target.mp));
       target.mp = Math.min(target.maxMp, target.mp + mpAmount);
       result.mpRestored = actualMpRestore;
     }
 
-    if (skill.cleanse) {
+    if (target && skill.cleanse) {
       target.statusEffects = (target.statusEffects || [])
         .filter(isBeneficialStatusEffect);
       result.skillEffects.push({ type: 'cleanse', targetId: target.id });
     }
 
-    if (getSkillBuffEffect(skill)) {
+    if (target && getSkillBuffEffect(skill)) {
       applySkillBuff(target, skill, result);
     }
 
-    result.targetId = target.id;
+    if (target) {
+      result.targetId = target.id;
+    } else {
+      result.attackedEmptyTile = true;
+      result.targetTile = targetTile;
+    }
     if (skill.cooldown && skill.cooldown > 0) {
       unit.skillCooldowns[skillId] = skill.cooldown;
     }

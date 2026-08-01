@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-rounded-fieldstone",
+  "decision": "approved",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "Cream-gray rounded weathered stones form a coherent mossed blocking cluster with upper-left highlights, clear regional material identity, plausible isometric scale, and a clean base.",
+  "reviewedAt": "2026-07-31T07:03:42.481Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-rounded-fieldstone.json",
+    "sha256": "sha256:5eefd8a140aa41762c5a3229dd2d64f11364070a15241372ae9308f4ca23f7d2",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-rounded-fieldstone/result.json",
+      "bytes": 2322,
+      "sha256": "sha256:13f3e3aed7f7328f7c44cf384c2771928d569caae6b86d4aa13dce7fbd625e0b"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-rounded-fieldstone/candidate.png",
+      "bytes": 67917,
+      "width": 192,
+      "height": 256,
+      "format": "png",
+      "sha256": "sha256:576a51d5c1d97abf8640f1f618388bf3ddbfe585e7892850bbe2b9f6cb00a3e7"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-rounded-fieldstone/prompt.txt",
+        "bytes": 7952,
+        "sha256": "sha256:3382ba7dc0fb5d2866462426b5a352de1807dad4ef95ccb11b0cdd6fd173f95d"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-rounded-fieldstone/worker.jsonl",
+        "bytes": 26309,
+        "sha256": "sha256:6576ad97739c102e2cf7c14034750f73d6d45f8df38e795f7892413e9fe1f3f3"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-rounded-fieldstone/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-rounded-fieldstone/last-message.txt",
+        "bytes": 429,
+        "sha256": "sha256:0d88bb9a96a654637cc36970ef1487708b627503a643611785fb007f69d7f72c"
+      }
+    }
+  },
+  "fullHash": "sha256:0aebf5f8d3502be24ec9e291c692ab004182c7a5f0ab6a68ef65432e310447af"
+}

@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v1",
+  "theme": "forest",
+  "familyId": "forest-heartlands-loam-path-straight-ew",
+  "decision": "approved",
+  "reviewer": "codex-full-game-battle-content-review",
+  "reason": "The candidate is a continuous broad W-to-E warm-loam ribbon with a readable at-least-28-pixel core at every guarded sample, soft irregular Heartlands verge, large transparent exterior, correct clear forbidden sides and border, complete underpainting, and no slab, black gap, detached debris, or repeated-teeth artifact.",
+  "reviewedAt": "2026-07-31T10:36:20.540Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-straight-ew.json",
+    "sha256": "sha256:ba08fa62b3a67240b1be7b105f0bf35150a9706e43533b5619ebaafa501250ba",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-straight-ew/result.json",
+      "bytes": 2349,
+      "sha256": "sha256:8b6ea7cf6cc56233272ca306c234b0a9ff1b5582d7c8230c6e686aa0c1d782ce"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-straight-ew/candidate.png",
+      "bytes": 31283,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:c1e441f91c71349b3e49e1319a51af80bf69433ada4f74d8aa838e0be94abaf3"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-straight-ew/prompt.txt",
+        "bytes": 13067,
+        "sha256": "sha256:f1b126f67c70dd4b1b21783f7996a0d658aa4969d6fb08683dfd620c5baff977"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-straight-ew/worker.jsonl",
+        "bytes": 50353,
+        "sha256": "sha256:f6eee4c776f15538d307057a98c22fc50a1f87b89bc52c787590ed9a7f795792"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-straight-ew/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-straight-ew/last-message.txt",
+        "bytes": 462,
+        "sha256": "sha256:500f72e02d3454d642e7659dff6575a78e51c96c0202db69ac4111ac0b827d07"
+      }
+    }
+  },
+  "fullHash": "sha256:222c015a7dc198ed4134aceb0721cbb96604896cd3d1e241a40188fac846e1e2"
+}

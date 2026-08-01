@@ -92,9 +92,21 @@ export async function decodeCanonicalRaster(
   bytes,
   profile,
   label = 'battle-art raster',
-  { chromaRemovalMultiplier = 1 } = {}
+  {
+    chromaRemovalMultiplier = 1,
+    limitInputPixels
+  } = {}
 ) {
-  const { data, info } = await sharp(bytes, { failOn: 'error' })
+  if (
+    limitInputPixels !== undefined
+    && (!Number.isSafeInteger(limitInputPixels) || limitInputPixels < 1)
+  ) {
+    throw new Error(`${label} input-pixel limit is invalid`);
+  }
+  const { data, info } = await sharp(bytes, {
+    failOn: 'error',
+    ...(limitInputPixels === undefined ? {} : { limitInputPixels })
+  })
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });

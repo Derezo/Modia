@@ -60,6 +60,12 @@ function v3Reference(map) {
   };
 }
 
+function verifiedMapReference(map) {
+  return map.battleMapSchemaVersion === BATTLE_MAP_V3_SCHEMA_VERSION
+    ? v3Reference(map)
+    : v2Reference(map);
+}
+
 function assertMatchingReference(snapshot, map, reference) {
   if (snapshot.battleMapSchemaVersion !== reference.battleMapSchemaVersion
     || snapshot.terrainGenerationVersion !== reference.terrainGenerationVersion
@@ -105,14 +111,14 @@ export function getBattleMapCapabilities({ includeCachedMaps = true } = {}) {
     ],
     supportedMutableStateProtocolVersions: [BATTLE_MUTABLE_STATE_PROTOCOL_VERSION],
     cachedMaps: includeCachedMaps
-      ? Array.from(verifiedMapCache.values(), v2Reference)
+      ? Array.from(verifiedMapCache.values(), verifiedMapReference)
       : []
   });
 }
 
 /**
  * Owns one battle's immutable map reference and revisioned mutable state.
- * V2 maps enter the session only after schema and cryptographic verification.
+ * V2 and V3 maps enter the session only after schema and cryptographic verification.
  */
 export class BattleMapSession {
   constructor() {
@@ -240,22 +246,29 @@ export class BattleMapSession {
         assertMatchingReference(snapshot, map, v2Reference(map));
       }
     } else if (snapshot.battleMapSchemaVersion === BATTLE_MAP_V3_SCHEMA_VERSION) {
-      if (snapshot.mapDelivery !== 'full') {
-        throw new BattleMapSessionError(
-          'battle_map_v3_full_snapshot_required',
-          'BattleMapV3 must be delivered as a complete verified map'
-        );
+      if (snapshot.mapDelivery === 'full') {
+        try {
+          map = await loadAndFreezeBattleMapV3Final(snapshot.battleMap);
+        } catch (error) {
+          verifiedMapCache.delete(mapCacheKey(snapshot));
+          throw new BattleMapSessionError(
+            'battle_map_verification_failed',
+            'The authoritative BattleMapV3 payload failed verification',
+            { cause: error }
+          );
+        }
+        assertMatchingReference(snapshot, map, v3Reference(map));
+        cacheVerifiedMap(snapshot, map);
+      } else {
+        map = getCachedMap(snapshot);
+        if (!map) {
+          throw new BattleMapSessionError(
+            'battle_map_cache_miss',
+            'The server referenced a BattleMapV3 map that is not cached locally'
+          );
+        }
+        assertMatchingReference(snapshot, map, v3Reference(map));
       }
-      try {
-        map = await loadAndFreezeBattleMapV3Final(snapshot.battleMap);
-      } catch (error) {
-        throw new BattleMapSessionError(
-          'battle_map_verification_failed',
-          'The authoritative BattleMapV3 payload failed verification',
-          { cause: error }
-        );
-      }
-      assertMatchingReference(snapshot, map, v3Reference(map));
     } else {
       if (snapshot.mapDelivery !== 'full' || !snapshot.battleMap) {
         throw new BattleMapSessionError(

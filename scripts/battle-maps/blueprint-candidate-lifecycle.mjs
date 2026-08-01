@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { constants as fsConstants } from 'node:fs';
 import {
   copyFile,
+  link,
   lstat,
   mkdir,
   mkdtemp,
@@ -13,7 +14,9 @@ import {
   readdir,
   rename,
   rm,
+  rmdir,
   stat,
+  unlink,
   writeFile
 } from 'node:fs/promises';
 import path from 'node:path';
@@ -47,6 +50,10 @@ import {
   buildCodexWorkerEnvironment,
   CODEX_WORKER_ENV_KEYS
 } from './codex-worker-boundary.mjs';
+import {
+  usesBlueprintV2SemanticContract,
+  validateV2BlueprintSemanticContract
+} from './blueprint-v2-semantic-contract.mjs';
 
 export {
   buildCodexWorkerEnvironment,
@@ -55,12 +62,25 @@ export {
 
 export const BLUEPRINT_PROMPT_PATH =
   'ai-image-metadata/battle-maps/prompts/map-blueprint-v1.json';
+export const BLUEPRINT_PROMPT_PATH_V2 =
+  'ai-image-metadata/battle-maps/prompts/map-blueprint-v2.json';
 export const BLUEPRINT_PROMPT_SCHEMA =
   'battle-map-blueprint-prompt-profile-v1';
+export const BLUEPRINT_PROMPT_SCHEMA_V2 =
+  'battle-map-blueprint-prompt-profile-v2';
 export const BLUEPRINT_CANDIDATE_SCHEMA =
   'battle-map-blueprint-candidate-record-v1';
+export const BLUEPRINT_ATTEMPT_EVIDENCE_SCHEMA =
+  'battle-map-blueprint-attempt-evidence-v1';
 export const BLUEPRINT_APPROVAL_SCHEMA =
   'battle-map-blueprint-approval-index-v1';
+export const BLUEPRINT_APPROVAL_INDEX_SCHEMA_V2 =
+  'battle-map-blueprint-approval-index-v2';
+export const BLUEPRINT_APPROVAL_RECORD_SCHEMA_V1 =
+  'battle-map-blueprint-approval-v1';
+export const BLUEPRINT_APPROVAL_RECORD_SCHEMA_V2 =
+  'battle-map-blueprint-approval-v2';
+export const MAX_BLUEPRINT_APPROVAL_REASON_BYTES = 1000;
 export const DEFAULT_BLUEPRINT_CONCURRENCY = 2;
 export const MAX_BLUEPRINT_CONCURRENCY = 4;
 export const DEFAULT_BLUEPRINT_TIMEOUT_MS = 600_000;
@@ -70,6 +90,14 @@ export const DEFAULT_BLUEPRINT_COMPLETION_POLL_MS = 100;
 export const MAX_BLUEPRINT_BYTES = 2 * 1024 * 1024;
 export const MAX_WORKER_LOG_BYTES = 4 * 1024 * 1024;
 export const MAX_WORKSPACE_BYTES = 40 * 1024 * 1024;
+export const MAX_ATTEMPT_ERROR_BYTES = 64 * 1024;
+const ATTEMPT_ERROR_PREVIEW_BYTES = 24 * 1024;
+const MAX_ATTEMPT_TREE_ENTRIES = 1024;
+const MAX_ATTEMPT_STAGING_ORPHANS = 128;
+const MAX_ATTEMPT_HISTORY_RECORDS = 64;
+export const MAX_ATTEMPT_HISTORY_BYTES = 4 * MAX_WORKSPACE_BYTES;
+const ATTEMPT_STAGING_FILE_PATTERN =
+  /^[1-9][0-9]*\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.tmp$/;
 
 const SCRIPT_PROJECT_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -77,6 +105,8 @@ const SCRIPT_PROJECT_ROOT = path.resolve(
 );
 const ID_PATTERN = /^[a-z0-9]+(?:[-_:][a-z0-9]+)*$/;
 const HASH_PATTERN = /^sha256:[0-9a-f]{64}$/;
+const LEGACY_BLUEPRINT_APPROVAL_TEMPLATE_PATTERN = /-template-(?:01|02)$/;
+const CONTROL_CHARACTER_PATTERN = /[\u0000-\u001f\u007f-\u009f]/;
 const ALLOWED_OUTPUTS = new Set(['candidate.json', 'last-message.txt']);
 const INPUT_PATHS = new Set([
   'inputs/reference.png',
@@ -84,6 +114,324 @@ const INPUT_PATHS = new Set([
   'inputs/sidecar.json',
   'inputs/contract.json'
 ]);
+const SYSTEMD_RUN_COMMAND = '/usr/bin/systemd-run';
+const SYSTEMCTL_COMMAND = '/usr/bin/systemctl';
+const ENV_COMMAND = '/usr/bin/env';
+const SYSTEMD_CONTROL_TIMEOUT_MS = 500;
+const SYSTEMD_UNIT_CLEANUP_TIMEOUT_MS = 5_000;
+const SYSTEMD_MANAGER_PROBE_TIMEOUT_MS = 500;
+const SYSTEMD_CONTROLLER_CLOSE_TIMEOUT_MS = 500;
+const SYSTEMD_PARENT_SHUTDOWN_TIMEOUT_MS = 1_500;
+const ACTIVE_WORKER_UNITS = new Map();
+let workerSignalHandlersInstalled = false;
+let workerShutdownSignal = null;
+
+function systemdWorkerUnitName() {
+  return `modia-blueprint-${process.pid}-${randomUUID().replaceAll('-', '')}.service`;
+}
+
+function spawnSystemctl(
+  args,
+  spawnImpl = spawn,
+  timeoutMs = SYSTEMD_CONTROL_TIMEOUT_MS
+) {
+  return new Promise(resolve => {
+    let settled = false;
+    let child;
+    let timeout;
+    const disposeChild = () => {
+      for (const stream of [child?.stdin, child?.stdout, child?.stderr]) {
+        try {
+          stream?.destroy();
+        } catch {
+          // Disposal remains best-effort across injected control children.
+        }
+      }
+      try {
+        child?.unref?.();
+      } catch {
+        // Stream destruction above still removes referenced pipe handles.
+      }
+    };
+    const finish = result => {
+      if (settled) return;
+      settled = true;
+      if (timeout) clearTimeout(timeout);
+      resolve(result);
+    };
+    try {
+      child = spawnImpl(SYSTEMCTL_COMMAND, ['--user', ...args], {
+        env: process.env,
+        stdio: ['ignore', 'pipe', 'pipe']
+      });
+    } catch (error) {
+      finish({
+        code: null,
+        error,
+        signal: null,
+        stderr: '',
+        stdout: '',
+        timedOut: false
+      });
+      return;
+    }
+    let stdout = '';
+    let stderr = '';
+    child.stdout?.on('data', chunk => {
+      stdout = `${stdout}${chunk}`.slice(-4_096);
+    });
+    child.stderr?.on('data', chunk => {
+      stderr = `${stderr}${chunk}`.slice(-4_096);
+    });
+    child.once('error', error => {
+      disposeChild();
+      finish({
+        code: null,
+        error,
+        signal: null,
+        stderr,
+        stdout,
+        timedOut: false
+      });
+    });
+    child.once('close', (code, signal) => {
+      finish({
+        code,
+        error: null,
+        signal,
+        stderr,
+        stdout,
+        timedOut: false
+      });
+    });
+    timeout = setTimeout(() => {
+      try {
+        child.kill('SIGKILL');
+      } catch {
+        // The bounded result below remains authoritative.
+      }
+      disposeChild();
+      const error = new Error(
+        `${path.basename(SYSTEMCTL_COMMAND)} ${args[0]} timed out after `
+          + `${timeoutMs}ms`
+      );
+      error.code = 'BLUEPRINT_SYSTEMD_CONTROL_TIMEOUT';
+      finish({
+        code: null,
+        error,
+        signal: 'SIGKILL',
+        stderr,
+        stdout,
+        timedOut: true
+      });
+    }, timeoutMs);
+  });
+}
+
+function successfulSystemctl(result) {
+  return !result.error && result.code === 0 && !result.timedOut;
+}
+
+async function observeWorkerUnitActivation(
+  unit,
+  record,
+  controlTimeoutMs = SYSTEMD_CONTROL_TIMEOUT_MS
+) {
+  while (
+    ACTIVE_WORKER_UNITS.has(unit)
+    && !record.cleanupStarted
+    && !record.observedLoaded
+  ) {
+    const status = await spawnSystemctl([
+      'show',
+      '--property=LoadState',
+      '--value',
+      unit
+    ], record.systemctlSpawnImpl, controlTimeoutMs);
+    const loadState = successfulSystemctl(status)
+      ? status.stdout.trim()
+      : '';
+    if (loadState && loadState !== 'not-found') {
+      record.observedLoaded = true;
+      return;
+    }
+    await new Promise(resolve => setTimeout(resolve, 20));
+  }
+}
+
+async function ensureWorkerUnitRemoved(unit, {
+  cleanupTimeoutMs = SYSTEMD_UNIT_CLEANUP_TIMEOUT_MS,
+  controlTimeoutMs = SYSTEMD_CONTROL_TIMEOUT_MS,
+  canAcceptUnobservedAbsence = () => false,
+  markObservedLoaded = () => {},
+  wasObservedLoaded = () => false,
+  spawnImpl = spawn
+} = {}) {
+  let cleanupCycleStartedAt = Date.now();
+  let observedLoaded = wasObservedLoaded();
+  let sentTerm = false;
+  let sentKill = false;
+  while (true) {
+    observedLoaded ||= wasObservedLoaded();
+    const status = await spawnSystemctl([
+      'show',
+      '--property=LoadState',
+      '--value',
+      unit
+    ], spawnImpl, controlTimeoutMs);
+    if (!successfulSystemctl(status)) {
+      await new Promise(resolve => setTimeout(resolve, 20));
+      continue;
+    }
+    const loadState = status.stdout.trim();
+    if (loadState === 'not-found') {
+      if (
+        observedLoaded
+        || canAcceptUnobservedAbsence()
+      ) return;
+      await new Promise(resolve => setTimeout(resolve, 20));
+      continue;
+    }
+    if (loadState === '') {
+      await new Promise(resolve => setTimeout(resolve, 20));
+      continue;
+    }
+    observedLoaded = true;
+    markObservedLoaded();
+    if (!sentTerm) {
+      const term = await spawnSystemctl([
+        'kill',
+        '--kill-whom=all',
+        '--signal=SIGTERM',
+        unit
+      ], spawnImpl, controlTimeoutMs);
+      if (successfulSystemctl(term)) sentTerm = true;
+    }
+    const stop = await spawnSystemctl([
+      'stop',
+      '--no-block',
+      unit
+    ], spawnImpl, controlTimeoutMs);
+    if (
+      !sentKill
+      && Date.now() - cleanupCycleStartedAt
+        >= Math.min(1_000, cleanupTimeoutMs)
+    ) {
+      const kill = await spawnSystemctl([
+        'kill',
+        '--kill-whom=all',
+        '--signal=SIGKILL',
+        unit
+      ], spawnImpl, controlTimeoutMs);
+      if (successfulSystemctl(kill)) sentKill = true;
+    }
+    if (Date.now() - cleanupCycleStartedAt >= cleanupTimeoutMs) {
+      cleanupCycleStartedAt = Date.now();
+      sentTerm = false;
+      sentKill = false;
+    }
+    await new Promise(resolve => setTimeout(resolve, 20));
+  }
+}
+
+async function shutdownActiveWorkerUnits() {
+  while (ACTIVE_WORKER_UNITS.size > 0) {
+    const results = await Promise.allSettled(
+      [...ACTIVE_WORKER_UNITS.entries()].map(async ([unit, record]) => {
+        record.cleanupStarted = true;
+        await ensureWorkerUnitRemoved(unit, {
+          canAcceptUnobservedAbsence: () => (
+            record.controllerClosed
+            && record.controllerCloseClean
+          ),
+          markObservedLoaded: () => {
+            record.observedLoaded = true;
+          },
+          spawnImpl: record.systemctlSpawnImpl,
+          wasObservedLoaded: () => record.observedLoaded
+        });
+        await record.observerPromise;
+        ACTIVE_WORKER_UNITS.delete(unit);
+      })
+    );
+    if (results.every(result => result.status === 'fulfilled')) return;
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+}
+
+function blueprintWorkerCancellationError(reason) {
+  const error = new Error(
+    'Codex blueprint worker cancelled after concurrent candidate failure',
+    reason === undefined ? undefined : { cause: reason }
+  );
+  error.code = 'BLUEPRINT_WORKER_CANCELLED';
+  return error;
+}
+
+function attachSecondaryFailure(primary, secondary, context = {}) {
+  try {
+    if (
+      !primary
+      || secondary === primary
+      || typeof primary !== 'object'
+    ) return;
+    let diagnostics;
+    try {
+      diagnostics = primary.secondaryFailures;
+    } catch {
+      return;
+    }
+    if (!Array.isArray(diagnostics)) {
+      diagnostics = [];
+      Object.defineProperty(primary, 'secondaryFailures', {
+        configurable: true,
+        enumerable: true,
+        value: diagnostics,
+        writable: false
+      });
+    }
+    if (diagnostics.length >= 8 || Object.isFrozen(diagnostics)) return;
+    const bounded = value => {
+      try {
+        return String(value ?? '').slice(0, 1_024);
+      } catch {
+        return '[unavailable]';
+      }
+    };
+    diagnostics.push(Object.freeze({
+      stage: bounded(context.stage || 'concurrent-cleanup'),
+      mapId: bounded(context.mapId || ''),
+      name: bounded(secondary?.name || 'Error'),
+      code: bounded(secondary?.code || 'BATTLE_MAP_BLUEPRINT_LIFECYCLE_ERROR'),
+      message: bounded(secondary?.message || secondary)
+    }));
+  } catch {
+    // Secondary diagnostics must never replace the first operational failure.
+  }
+}
+
+function installWorkerSignalHandlers() {
+  if (workerSignalHandlersInstalled) return;
+  workerSignalHandlersInstalled = true;
+  for (const signal of ['SIGHUP', 'SIGINT', 'SIGTERM']) {
+    const handler = () => {
+      if (workerShutdownSignal !== null) return;
+      workerShutdownSignal = signal;
+      const shutdownDeadline = new Promise(resolve => {
+        setTimeout(resolve, SYSTEMD_PARENT_SHUTDOWN_TIMEOUT_MS);
+      });
+      void Promise.race([
+        shutdownActiveWorkerUnits(),
+        shutdownDeadline
+      ]).then(() => {
+        process.removeListener(signal, handler);
+        process.kill(process.pid, signal);
+      });
+    };
+    process.on(signal, handler);
+  }
+}
+
 const CANDIDATE_LOCK_HOLDER_SOURCE = [
   'process.stdout.write("locked\\n");',
   'process.stdin.resume();',
@@ -133,6 +481,54 @@ function exactKeys(value, keys, label) {
 function safeId(value, label) {
   if (typeof value !== 'string' || !ID_PATTERN.test(value)) {
     fail(`${label} must be a lowercase safe ID`);
+  }
+  return value;
+}
+
+function usesLegacyBlueprintApprovalSchema(templateId) {
+  return LEGACY_BLUEPRINT_APPROVAL_TEMPLATE_PATTERN.test(templateId);
+}
+
+function blueprintApprovalSchemas(templateId) {
+  return usesLegacyBlueprintApprovalSchema(templateId)
+    ? {
+        index: BLUEPRINT_APPROVAL_SCHEMA,
+        record: BLUEPRINT_APPROVAL_RECORD_SCHEMA_V1,
+        v2: false
+      }
+    : {
+        index: BLUEPRINT_APPROVAL_INDEX_SCHEMA_V2,
+        record: BLUEPRINT_APPROVAL_RECORD_SCHEMA_V2,
+        v2: true
+      };
+}
+
+function blueprintPromptProfile(templateId) {
+  return usesLegacyBlueprintApprovalSchema(templateId)
+    ? {
+        id: 'map-blueprint-v1',
+        path: BLUEPRINT_PROMPT_PATH,
+        schema: BLUEPRINT_PROMPT_SCHEMA
+      }
+    : {
+        id: 'map-blueprint-v2',
+        path: BLUEPRINT_PROMPT_PATH_V2,
+        schema: BLUEPRINT_PROMPT_SCHEMA_V2
+      };
+}
+
+function approvalReason(value, label = 'approval reason') {
+  if (
+    typeof value !== 'string'
+    || value.length === 0
+    || value !== value.trim()
+    || CONTROL_CHARACTER_PATTERN.test(value)
+    || Buffer.byteLength(value, 'utf8') > MAX_BLUEPRINT_APPROVAL_REASON_BYTES
+  ) {
+    fail(
+      `${label} must be a trimmed, non-empty, non-control UTF-8 string of at most `
+      + `${MAX_BLUEPRINT_APPROVAL_REASON_BYTES} bytes`
+    );
   }
   return value;
 }
@@ -315,7 +711,8 @@ async function acquireCandidateGenerationLock({
   theme,
   template,
   mapId,
-  holderSource = CANDIDATE_LOCK_HOLDER_SOURCE
+  holderSource = CANDIDATE_LOCK_HOLDER_SOURCE,
+  signal = null
 }) {
   const candidateParent = path.dirname(candidatePaths(theme, template, mapId).root);
   const lockRoot = resolveWithinProject(
@@ -348,7 +745,8 @@ async function acquireCandidateGenerationLock({
       candidateLockPath,
       'candidate generation lock path'
     ),
-    holderSource
+    holderSource,
+    signal
   });
   return {
     ...lock,
@@ -432,7 +830,9 @@ export function parseBlueprintActionArgs(argv = process.argv.slice(2), {
   requireReviewer = false,
   allowDecision = false,
   allowForce = false,
-  allowUpdatePins = false
+  allowUpdatePins = false,
+  allowReason = false,
+  requireReasonForNewApproval = false
 } = {}) {
   const options = {
     all: false,
@@ -462,6 +862,7 @@ export function parseBlueprintActionArgs(argv = process.argv.slice(2), {
     else if (flag === '--template') once('template', valueFor());
     else if (flag === '--map') once('mapId', valueFor());
     else if (flag === '--reviewer') once('reviewer', valueFor());
+    else if (flag === '--reason' && allowReason) once('reason', valueFor());
     else if (flag === '--decision' && allowDecision) once('decision', valueFor());
     else if (flag === '--project-root') once('projectRoot', path.resolve(valueFor()));
     else if (flag === '--all' && inline === undefined && allowAll) once('all', true);
@@ -481,6 +882,16 @@ export function parseBlueprintActionArgs(argv = process.argv.slice(2), {
   if (!options.all) safeId(options.mapId, '--map');
   if (options.all && options.mapId) fail('--all and --map are mutually exclusive');
   if (requireReviewer) safeId(options.reviewer, '--reviewer');
+  if (options.reason !== undefined) approvalReason(options.reason, '--reason');
+  if (requireReasonForNewApproval) {
+    const { v2 } = blueprintApprovalSchemas(options.template);
+    if (v2 && options.reason === undefined) {
+      fail('--reason is required for template-03 and newer blueprint approvals');
+    }
+    if (!v2 && options.reason !== undefined) {
+      fail('--reason is not accepted for legacy template-01/-02 approvals');
+    }
+  }
   if (!['approved', 'rejected'].includes(options.decision)) {
     fail('--decision must be approved or rejected');
   }
@@ -531,10 +942,11 @@ async function atomicCopy(projectRoot, sourcePath, destinationPath) {
   }
 }
 
-async function loadBlueprintPrompt(projectRoot) {
+async function loadBlueprintPrompt(projectRoot, template) {
+  const expected = blueprintPromptProfile(template);
   const absolutePath = resolveWithinProject(
     projectRoot,
-    BLUEPRINT_PROMPT_PATH,
+    expected.path,
     'blueprint prompt path'
   );
   await assertSafeWritePath(projectRoot, absolutePath, 'blueprint prompt read path');
@@ -549,8 +961,8 @@ async function loadBlueprintPrompt(projectRoot) {
     'negativeConstraints'
   ], 'blueprint prompt profile');
   if (
-    value.schemaVersion !== BLUEPRINT_PROMPT_SCHEMA
-    || value.id !== 'map-blueprint-v1'
+    value.schemaVersion !== expected.schema
+    || value.id !== expected.id
     || value.frozen !== true
   ) fail('blueprint prompt profile is not the frozen supported profile');
   plainObject(value.variantBriefs, 'blueprint prompt profile.variantBriefs');
@@ -571,7 +983,7 @@ async function loadBlueprintPrompt(projectRoot) {
     profile: value,
     reference: {
       id: value.id,
-      path: BLUEPRINT_PROMPT_PATH,
+      path: expected.path,
       sha256: sha256Bytes(Buffer.from(source))
     }
   };
@@ -589,6 +1001,8 @@ function point(x, y) {
 export function createBlueprintContractExample(sidecar, mapId) {
   const width = sidecar.mapProfile.width;
   const height = sidecar.mapProfile.height;
+  const v2 = usesBlueprintV2SemanticContract(sidecar.id);
+  const v2Variant = v2 ? variantKey(mapId) : null;
   const rendered = (x, y) => {
     const nx = (x - (width - 1) / 2) / (width * 0.51);
     const ny = (y - (height - 1) / 2) / (height * 0.51);
@@ -664,7 +1078,46 @@ export function createBlueprintContractExample(sidecar, mapId) {
     }
     return cells;
   };
-  const routeRecords = [
+  const routeRecords = (v2 ? [
+    {
+      id: 'route:west',
+      waypoints: [
+        point(9, 27),
+        point(9, 23),
+        point(12, 20),
+        point(12, 17),
+        point(15, 16),
+        point(14, 12),
+        point(12, 10),
+        point(12, 6),
+        point(14, 3)
+      ]
+    },
+    {
+      id: 'route:east',
+      waypoints: [
+        point(22, 27),
+        point(22, 23),
+        point(19, 20),
+        point(19, 17),
+        point(16, 16),
+        point(17, 12),
+        point(20, 10),
+        point(20, 6),
+        point(18, 3)
+      ]
+    },
+    ...(v2Variant === 'c' ? [{
+      id: 'route:flank-branch',
+      kind: 'secondary',
+      waypoints: [
+        point(14, 16),
+        point(12, 16),
+        point(9, 16),
+        point(7, 17)
+      ]
+    }] : [])
+  ] : [
     {
       id: 'route:west',
       waypoints: [
@@ -691,9 +1144,9 @@ export function createBlueprintContractExample(sidecar, mapId) {
         point(19, 3)
       ]
     }
-  ].map(record => ({
+  ]).map(record => ({
     id: record.id,
-    kind: 'primary',
+    kind: record.kind ?? 'primary',
     material: 'ground',
     cells: routeCellsThrough(record.waypoints),
     required: true,
@@ -738,7 +1191,8 @@ export function createBlueprintContractExample(sidecar, mapId) {
     ['e', 1, 0],
     ['s', 0, 1],
     ['w', -1, 0]
-  ];
+];
+
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
       if (!renderMask[y][x]) continue;
@@ -757,12 +1211,30 @@ export function createBlueprintContractExample(sidecar, mapId) {
       }
     }
   }
+  if (v2 && boundaries.length > 0) {
+    boundaries[0].assetFamily = 'earth-face';
+  }
   const roles = sidecar.spawnIntent.candidateRoles;
   const candidateCells = [];
-  for (const x of [21, 24, 27]) {
-    for (const y of [4, 7, 10, 13, 16, 19, 22, 25]) {
-      if (candidateCells.length < sidecar.mapProfile.candidatePoolSize) {
-        candidateCells.push(point(x, y));
+  if (v2) {
+    const localizedRows = [
+      [3, [8, 13, 18, 23]],
+      [5, [10, 15, 20]],
+      [8, [8, 13, 18, 23]],
+      [10, [10, 20]],
+      [13, [8, 13, 18, 23]],
+      [15, [10, 15, 20]],
+      [18, [8, 13, 18, 23]]
+    ];
+    for (const [y, xs] of localizedRows) {
+      for (const x of xs) candidateCells.push(point(x, y));
+    }
+  } else {
+    for (const x of [21, 24, 27]) {
+      for (const y of [4, 7, 10, 13, 16, 19, 22, 25]) {
+        if (candidateCells.length < sidecar.mapProfile.candidatePoolSize) {
+          candidateCells.push(point(x, y));
+        }
       }
     }
   }
@@ -806,25 +1278,41 @@ export function createBlueprintContractExample(sidecar, mapId) {
       {
         id: 'lower-clearing',
         kind: 'formation-clearing',
-        cells: [point(5, 25), point(10, 24), point(15, 25)],
+        cells: v2
+          ? playerCells.map(cell => ({ ...cell }))
+          : [point(5, 25), point(10, 24), point(15, 25)],
         annotations: ['player-formation']
       },
+      ...(v2
+        ? [{
+            id: 'opponent-formation-clearing',
+            kind: 'formation-clearing',
+            cells: candidateCells.map(cell => ({ ...cell })),
+            annotations: ['opponent-formation']
+          }]
+        : []),
       {
         id: 'upper-lookout',
         kind: 'elevated-clearing',
-        cells: [point(10, 6), point(16, 5), point(22, 7)],
+        cells: v2
+          ? [point(12, 6), point(13, 6), point(14, 6)]
+          : [point(10, 6), point(16, 5), point(22, 7)],
         annotations: ['high-ground']
       },
       {
         id: 'lateral-clearing',
         kind: 'flank-clearing',
-        cells: [point(7, 15), point(10, 17)],
+        cells: v2
+          ? [point(10, 16), point(11, 16), point(12, 16)]
+          : [point(7, 15), point(10, 17)],
         annotations: ['flank']
       },
       {
         id: 'central-route-junction',
         kind: 'route-junction',
-        cells: [point(16, 15), point(18, 16)],
+        cells: v2
+          ? [point(15, 15), point(15, 16), point(16, 16)]
+          : [point(16, 15), point(18, 16)],
         annotations: ['junction']
       }
     ],
@@ -890,10 +1378,12 @@ export function createBlueprintContractExample(sidecar, mapId) {
       {
         id: 'obstacle:upper-east-root',
         kind: 'root-cluster',
-        cells: [point(16, 7)],
+        cells: [point(v2 ? 18 : 16, 7)],
         featureId: 'upper-lookout',
-        anchor: point(16, 7),
-        occlusionBounds: { minX: 15, minY: 5, maxX: 17, maxY: 8 },
+        anchor: point(v2 ? 18 : 16, 7),
+        occlusionBounds: v2
+          ? { minX: 17, minY: 5, maxX: 19, maxY: 8 }
+          : { minX: 15, minY: 5, maxX: 17, maxY: 8 },
         assetFamily: 'ancient-tree'
       },
       {
@@ -1323,10 +1813,64 @@ topology, height, route, boundary, spawn, landmark, and forbidden-pattern intent
 inputs/sidecar.json as the complete authoring authority.`
     : `The exact approved source image is attached and available beneath inputs/. Treat it
 as composition-only inspiration and obey inputs/sidecar.json as gameplay authority.`;
+  const variantSafeguard = usesBlueprintV2SemanticContract(sidecar.id)
+    ? {
+        a: `Variant A retry safeguard: use every fixed expectedAssetFamilies symbol and
+build a broad compact interlocking junction with at least two internally
+vertex-disjoint formation-to-formation crossings in the explicit ordered route
+centerlines. No cell or edge may be the sole articulation crossing, and nearby
+parallel route surfaces do not repair a shared centerline choke. Give every overlook
+whose reviewed relationship names both access types one natural-slope portal and one
+vertex-disjoint stair portal on different required routes. Do not spend another
+attempt on a sparse composition that leaves a declared family unused or stretches the
+junction into parallel route rails.`,
+        b: `Variant B retry safeguard: elevated and staging clearing region cells must each
+form a cardinally connected semantic area that intersects or cardinally touches a
+required route. Keep required routes curved and visually distinct; never substitute
+a long side-by-side parallel adjacency ladder for a compact junction.`,
+        c: `Variant C retry safeguard: do not mirror or transpose the completeShapeExample.
+Change the render/playable masks, elevation, connection geometry, and spawn geometry,
+and author an explicit third required flank branch through or cardinally touching the
+flank-clearing. The candidate must contain at least three required route segments.`
+      }[variant]
+    : '';
+  const requiredTopologyAreaIds = usesBlueprintV2SemanticContract(sidecar.id)
+    ? sidecar.topologyIntent.areas
+      .filter(area => area.required === true)
+      .map(area => area.id)
+    : [];
+  const v2SemanticSafeguard = usesBlueprintV2SemanticContract(sidecar.id)
+    ? `Shared V2 composition safeguards: every non-formation tactical region must
+intersect or cardinally touch a required route, and every such region with multiple
+cells must form one cardinally connected set. Required routes may meet at compact
+figure-eight or interlocking junctions, but must not form a long side-by-side parallel
+adjacency ladder. When the reviewed intent calls for interlocking loops, the explicit
+ordered primary-route centerlines must provide the required count of internally
+vertex-disjoint formation-to-formation crossings; a shared articulation cell or edge
+is a choke even when other route-painted cells are nearby. A reviewed mixed
+slope/stair relationship requires separate boundary portals on different required
+routes, with no shared portal endpoint. Author no more traversable elevation-connection records than the
+fixed map width (32 on this 32 by 32 map), and at least 75% of those traversable
+connections must have from or to on a required route centerline. Use a small set of
+deliberate route/landmark/fork crossings; leave other elevation edges
+blocked/compiler-rendered faces. Create region records for every required
+topologyIntent area using these exact IDs: ${requiredTopologyAreaIds.join(', ')}.
+The generic completeShapeExample region IDs are placeholders, not substitutes for
+the approved sidecar IDs.`
+    : '';
+  const assetClosureSafeguard = usesBlueprintV2SemanticContract(sidecar.id)
+    ? `
+Every fixed expectedAssetFamilies symbol must be actually referenced at least
+once by a matching candidate field. If both connection:slope and
+connection:stairs are listed, author at least one traversable slope connection and at
+least one traversable stairs connection.`
+    : '';
   return `${profile.prompt}
 
 Variant brief:
 ${profile.variantBriefs[variant]}
+${variantSafeguard ? `\n${variantSafeguard}\n` : ''}
+${v2SemanticSafeguard ? `\n${v2SemanticSafeguard}\n` : ''}
 
 Negative constraints:
 ${profile.negativeConstraints.map(item => `- ${item}`).join('\n')}
@@ -1342,6 +1886,11 @@ record, is rejected. Implement the variant brief by changing at least two
 authoritative geometry groups while preserving every invariant: mask/surface
 topology, route cells, elevation/connection geometry, spawn-cell arrangement,
 or obstacle/boundary/decorative feature cells.
+Keep expectedAssetFamilies byte-for-byte equivalent to
+completeShapeExample.expectedAssetFamilies after canonical sorting. It is a
+fixed 13-symbol compiler contract, not an inventory to rename from the authored
+scene. Every material and family symbol referenced by the candidate must use
+that fixed set; never invent ecology-specific replacements.${assetClosureSafeguard}
 Every position in surfaceGrid and elevation must exactly follow renderMask:
 when renderMask is true, surfaceGrid must contain a plain
 { material, featureId } object and elevation must contain a safe integer; when
@@ -1350,7 +1899,10 @@ cell, non-null values for a void cell, undefined, sparse rows, or shortened
 rows in any 32 by 32 grid.
 Every required route must use unique playable cells ordered as a one-cell
 cardinal Manhattan chain. Never use diagonal jumps, repeated route cells, or
-route cells occupied by an obstacle. Every obstacle cell must be inside
+route cells occupied by an obstacle. For every consecutive pair in every
+required route, elevations must be equal or connections must contain that exact
+undirected edge as a traversable bidirectional slope or stairs; merely touching
+either route cell does not connect a different edge. Every obstacle cell must be inside
 playableMask and must not overlap a player slot, opponent candidate, exit, or
 required route; use boundary records for scenery outside the playable mask.
 The fixed obstacle:landmark renderer has exactly a one-tile collision footprint.
@@ -1366,7 +1918,8 @@ Author candidate "${mapId}" for template "${sidecar.id}" and theme
 the current disposable workspace. Do not create directories, logs, approvals,
 compiled maps, runtime assets, or any other file. Do not modify the input files.
 This is a JSON-only authoring workflow. Do not call imagegen or any other image
-generation tool.
+generation tool. Do not spawn or delegate to subagents; complete authoring and
+validation in this worker within the configured timeout.
 Return no copy of the JSON in the final response; the file is the only candidate
 output.`.trim();
 }
@@ -1405,63 +1958,175 @@ export function runBlueprintCommand({
   completionGraceMs = DEFAULT_BLUEPRINT_COMPLETION_GRACE_MS,
   completionPollMs = DEFAULT_BLUEPRINT_COMPLETION_POLL_MS,
   spawnImpl = spawn,
-  environmentSource = process.env
+  systemctlSpawnImpl = spawn,
+  systemdManagerProbeImpl = spawnSync,
+  systemdControlTimeoutMs = SYSTEMD_CONTROL_TIMEOUT_MS,
+  systemdCleanupTimeoutMs = SYSTEMD_UNIT_CLEANUP_TIMEOUT_MS,
+  systemdControllerCloseTimeoutMs = SYSTEMD_CONTROLLER_CLOSE_TIMEOUT_MS,
+  environmentSource = process.env,
+  signal: cancellationSignal = null
 }) {
   return new Promise((resolve, reject) => {
-    const child = spawnImpl(command, args, {
+    if (cancellationSignal?.aborted) {
+      reject(blueprintWorkerCancellationError(cancellationSignal.reason));
+      return;
+    }
+    let managerProbe;
+    try {
+      managerProbe = systemdManagerProbeImpl(
+        SYSTEMCTL_COMMAND,
+        ['--user', 'show-environment'],
+        {
+          env: process.env,
+          killSignal: 'SIGKILL',
+          stdio: 'ignore',
+          timeout: SYSTEMD_MANAGER_PROBE_TIMEOUT_MS
+        }
+      );
+    } catch (error) {
+      managerProbe = { error, status: null };
+    }
+    if (managerProbe?.error || managerProbe?.status !== 0) {
+      const error = new Error(
+        'Codex blueprint workers require an available user systemd manager '
+          + 'for kernel-owned process-tree containment',
+        managerProbe?.error === undefined
+          ? undefined
+          : { cause: managerProbe.error }
+      );
+      error.code = 'BLUEPRINT_WORKER_TREE_ISOLATION_UNAVAILABLE';
+      error.managerProbe = {
+        signal: managerProbe?.signal ?? null,
+        status: managerProbe?.status ?? null,
+        timedOut: managerProbe?.error?.code === 'ETIMEDOUT'
+      };
+      reject(error);
+      return;
+    }
+    if (workerShutdownSignal !== null) {
+      reject(new Error(
+        `Codex blueprint worker launch refused during ${workerShutdownSignal} shutdown`
+      ));
+      return;
+    }
+    const unit = systemdWorkerUnitName();
+    const workerEnvironment = buildCodexWorkerEnvironment(environmentSource);
+    const child = spawnImpl(SYSTEMD_RUN_COMMAND, [
+      '--user',
+      '--quiet',
+      '--wait',
+      '--collect',
+      '--pipe',
+      `--unit=${unit}`,
+      '--service-type=exec',
+      '--property=KillMode=control-group',
+      '--property=TimeoutStopSec=1s',
+      `--property=RuntimeMaxSec=${
+        Math.max(
+          1,
+          Math.ceil((timeoutMs + Math.max(0, systemdCleanupTimeoutMs)) / 1_000)
+        )
+      }s`,
+      `--working-directory=${cwd}`,
+      ENV_COMMAND,
+      '-i',
+      ...Object.entries(workerEnvironment).map(([key, value]) => (
+        `${key}=${value}`
+      )),
+      command,
+      ...args
+    ], {
       cwd,
-      env: buildCodexWorkerEnvironment(environmentSource),
-      stdio: ['pipe', 'pipe', 'pipe']
+      env: process.env,
+      stdio: ['pipe', 'pipe', 'pipe'],
+      detached: false
     });
+    installWorkerSignalHandlers();
+    const workerUnitRecord = {
+      cleanupStarted: false,
+      controllerCloseClean: false,
+      controllerClosed: false,
+      observedLoaded: false,
+      observerPromise: null,
+      systemctlSpawnImpl
+    };
+    ACTIVE_WORKER_UNITS.set(unit, workerUnitRecord);
+    workerUnitRecord.observerPromise = observeWorkerUnitActivation(
+      unit,
+      workerUnitRecord,
+      systemdControlTimeoutMs
+    );
     const stdout = [];
     const stderr = [];
     let stdoutBytes = 0;
     let stderrBytes = 0;
     let settled = false;
-    let killTimer = null;
     let timeout = null;
     let completionPoll = null;
     let terminalFailure = null;
     let intentionalCompletion = null;
     let stableCandidate = null;
     let candidatePollRunning = false;
+    let workerProcessCleaned = false;
+    let abortHandler = null;
+    let containmentCleanupPromise = null;
+    let controllerTransportFailed = false;
+    let controllerSettlementStarted = false;
+    let controllerKillTimer = null;
+    let controllerSettlementTimer = null;
     const stopCandidateMonitor = () => {
       if (completionPoll) clearTimeout(completionPoll);
       completionPoll = null;
+    };
+    const cleanupWorkerProcess = () => {
+      if (workerProcessCleaned) return;
+      workerProcessCleaned = true;
+      ACTIVE_WORKER_UNITS.delete(unit);
     };
     const finish = (callback, result) => {
       if (settled) return;
       settled = true;
       if (timeout) clearTimeout(timeout);
-      if (killTimer) clearTimeout(killTimer);
+      if (controllerKillTimer) clearTimeout(controllerKillTimer);
+      if (controllerSettlementTimer) clearTimeout(controllerSettlementTimer);
       stopCandidateMonitor();
+      if (abortHandler) {
+        cancellationSignal.removeEventListener('abort', abortHandler);
+        abortHandler = null;
+      }
+      if (workerShutdownSignal !== null) return;
       callback(result);
     };
-    const terminate = () => {
-      child.kill('SIGTERM');
-      killTimer = setTimeout(() => child.kill('SIGKILL'), 1_000);
-      killTimer.unref?.();
+    const beginContainmentCleanup = () => {
+      workerUnitRecord.cleanupStarted = true;
+      containmentCleanupPromise ??= ensureWorkerUnitRemoved(unit, {
+        cleanupTimeoutMs: systemdCleanupTimeoutMs,
+        controlTimeoutMs: systemdControlTimeoutMs,
+        canAcceptUnobservedAbsence: () => (
+          workerUnitRecord.controllerClosed
+          && workerUnitRecord.controllerCloseClean
+        ),
+        markObservedLoaded: () => {
+          workerUnitRecord.observedLoaded = true;
+        },
+        spawnImpl: systemctlSpawnImpl,
+        wasObservedLoaded: () => workerUnitRecord.observedLoaded
+      });
+      return containmentCleanupPromise;
     };
-    const failAfterTermination = (error) => {
-      if (terminalFailure || intentionalCompletion || settled) return;
-      terminalFailure = error;
-      if (timeout) clearTimeout(timeout);
-      stopCandidateMonitor();
-      terminate();
-    };
-    const collect = (target, kind, chunk) => {
-      if (kind === 'stdout') stdoutBytes += chunk.length;
-      else stderrBytes += chunk.length;
-      if (Math.max(stdoutBytes, stderrBytes) > MAX_WORKER_LOG_BYTES) {
-        const error = new Error(`worker ${kind} exceeded ${MAX_WORKER_LOG_BYTES} bytes`);
-        error.code = 'BLUEPRINT_WORKER_LOG_LIMIT';
-        failAfterTermination(error);
-      } else target.push(chunk);
-    };
-    child.stdout.on('data', chunk => collect(stdout, 'stdout', chunk));
-    child.stderr.on('data', chunk => collect(stderr, 'stderr', chunk));
-    child.once('error', error => finish(reject, error));
-    child.once('close', async (code, signal) => {
+    const settleControllerProcess = async (code, signal) => {
+      if (controllerSettlementStarted) return;
+      controllerSettlementStarted = true;
+      if (controllerKillTimer) clearTimeout(controllerKillTimer);
+      if (controllerSettlementTimer) clearTimeout(controllerSettlementTimer);
+      let containmentCleanupError = null;
+      try {
+        await beginContainmentCleanup();
+        await workerUnitRecord.observerPromise;
+        cleanupWorkerProcess();
+      } catch (error) {
+        containmentCleanupError = error;
+      }
       let completionChangedError = null;
       if (intentionalCompletion) {
         try {
@@ -1500,8 +2165,16 @@ export function runBlueprintCommand({
           : null
       };
       if (terminalFailure) {
+        if (containmentCleanupError) {
+          attachSecondaryFailure(terminalFailure, containmentCleanupError, {
+            stage: 'worker-unit-cleanup'
+          });
+        }
         terminalFailure.workerResult = result;
         finish(reject, terminalFailure);
+      } else if (containmentCleanupError) {
+        containmentCleanupError.workerResult = result;
+        finish(reject, containmentCleanupError);
       } else if (completionChangedError) {
         completionChangedError.workerResult = result;
         finish(reject, completionChangedError);
@@ -1513,12 +2186,78 @@ export function runBlueprintCommand({
         );
         error.code = 'BLUEPRINT_WORKER_EXIT';
         error.workerResult = result;
-        finish(
-          reject,
-          error
-        );
+        finish(reject, error);
       } else finish(resolve, result);
+    };
+    const terminateControllerAfterUnload = () => {
+      if (workerUnitRecord.controllerClosed || settled) return;
+      try {
+        child.kill('SIGTERM');
+      } catch {
+        // The controller is trusted and the exact worker unit is already gone.
+      }
+      if (workerUnitRecord.controllerClosed || settled) return;
+      controllerKillTimer = setTimeout(() => {
+        try {
+          child.kill('SIGKILL');
+        } catch {
+          // Bounded synthetic settlement below does not depend on this signal.
+        }
+      }, Math.min(100, systemdControllerCloseTimeoutMs));
+      controllerSettlementTimer = setTimeout(() => {
+        if (workerUnitRecord.controllerClosed || settled) return;
+        child.stdin.destroy();
+        child.stdout.destroy();
+        child.stderr.destroy();
+        child.unref?.();
+        void settleControllerProcess(null, 'SIGKILL');
+      }, systemdControllerCloseTimeoutMs);
+    };
+    const terminate = () => {
+      void beginContainmentCleanup().then(terminateControllerAfterUnload);
+    };
+    const failAfterTermination = (error) => {
+      if (terminalFailure || intentionalCompletion || settled) return;
+      terminalFailure = error;
+      if (timeout) clearTimeout(timeout);
+      stopCandidateMonitor();
+      terminate();
+    };
+    const collect = (target, kind, chunk) => {
+      if (kind === 'stdout') stdoutBytes += chunk.length;
+      else stderrBytes += chunk.length;
+      if (Math.max(stdoutBytes, stderrBytes) > MAX_WORKER_LOG_BYTES) {
+        const error = new Error(`worker ${kind} exceeded ${MAX_WORKER_LOG_BYTES} bytes`);
+        error.code = 'BLUEPRINT_WORKER_LOG_LIMIT';
+        failAfterTermination(error);
+      } else target.push(chunk);
+    };
+    child.stdout.on('data', chunk => collect(stdout, 'stdout', chunk));
+    child.stderr.on('data', chunk => collect(stderr, 'stderr', chunk));
+    child.once('error', error => {
+      controllerTransportFailed = true;
+      failAfterTermination(error);
     });
+    child.once('close', async (code, signal) => {
+      workerUnitRecord.controllerClosed = true;
+      workerUnitRecord.controllerCloseClean = (
+        !controllerTransportFailed
+        && code === 0
+        && signal === null
+      );
+      await settleControllerProcess(code, signal);
+    });
+    if (cancellationSignal) {
+      abortHandler = () => failAfterTermination(
+        blueprintWorkerCancellationError(cancellationSignal.reason)
+      );
+      if (cancellationSignal.aborted) abortHandler();
+      else {
+        cancellationSignal.addEventListener('abort', abortHandler, {
+          once: true
+        });
+      }
+    }
     timeout = setTimeout(() => {
       const error = new Error(`Codex blueprint worker timed out after ${timeoutMs}ms`);
       error.code = 'BLUEPRINT_WORKER_TIMEOUT';
@@ -1621,7 +2360,7 @@ export function runBlueprintCommand({
     };
     if (candidateContext) scheduleCandidatePoll();
     child.stdin.on('error', error => {
-      if (error.code !== 'EPIPE') finish(reject, error);
+      if (error.code !== 'EPIPE') failAfterTermination(error);
     });
     child.stdin.end(`${input}\n`);
   });
@@ -1636,7 +2375,8 @@ export async function spawnBlueprintWorker({
   sidecar,
   completionGraceMs = DEFAULT_BLUEPRINT_COMPLETION_GRACE_MS,
   completionPollMs = DEFAULT_BLUEPRINT_COMPLETION_POLL_MS,
-  textTemplateFallback = false
+  textTemplateFallback = false,
+  signal = null
 }) {
   return runBlueprintCommand({
     args: buildBlueprintCodexArgs(workspace, sourceRelativePath, {
@@ -1647,7 +2387,8 @@ export async function spawnBlueprintWorker({
     timeoutMs,
     candidateContext: { mapId, sidecar },
     completionGraceMs,
-    completionPollMs
+    completionPollMs,
+    signal
   });
 }
 
@@ -1767,8 +2508,9 @@ function auditWorkspace(
 }
 
 function candidatePaths(theme, template, mapId) {
-  const root =
-    `ai-image-metadata/battle-maps/candidates/${theme}/${template}/blueprints/${mapId}`;
+  const parent =
+    `ai-image-metadata/battle-maps/candidates/${theme}/${template}/blueprints`;
+  const root = `${parent}/${mapId}`;
   return {
     root,
     blueprint: `${root}/candidate.json`,
@@ -1776,7 +2518,9 @@ function candidatePaths(theme, template, mapId) {
     prompt: `${root}/prompt.txt`,
     stdout: `${root}/worker.jsonl`,
     stderr: `${root}/worker.stderr.log`,
-    lastMessage: `${root}/last-message.txt`
+    lastMessage: `${root}/last-message.txt`,
+    attemptHistoryRoot: `${parent}/.attempt-history/${mapId}`,
+    attemptStagingRoot: `${parent}/.attempt-staging/${mapId}`
   };
 }
 
@@ -1957,6 +2701,9 @@ async function readCandidateRecord(projectRoot, theme, template, mapId, {
   ) fail('blueprint candidate file pin mismatch');
   const blueprint = parseStrictJsonBytes(bytes, 'candidate blueprint');
   assertTemplateMapBlueprint(blueprint);
+  if (sidecar && usesBlueprintV2SemanticContract(sidecar.id)) {
+    validateV2BlueprintSemanticContract(blueprint, sidecar);
+  }
   const fullHash = await computeTemplateMapBlueprintFullHash(blueprint);
   if (fullHash !== metadata.blueprint.fullHash) {
     fail('blueprint candidate canonical hash mismatch');
@@ -2228,6 +2975,9 @@ async function validateCandidateBytes(candidateBytes, { mapId, sidecar }) {
       fail(`candidate blueprint spawn capacity ${key} does not match the approved sidecar`);
     }
   }
+  if (usesBlueprintV2SemanticContract(sidecar.id)) {
+    validateV2BlueprintSemanticContract(blueprint, sidecar);
+  }
   const example = createBlueprintContractExample(sidecar, mapId);
   const familyKeys = value => value.expectedAssetFamilies
     .map(record => `${record.category}:${record.symbol}`)
@@ -2390,53 +3140,1529 @@ async function promoteWorkerResult({
   return metadata;
 }
 
-async function preserveWorkerDiagnostics({
+async function readRegularAttemptEvidence(filePath, label, maximumBytes) {
+  let pathBefore;
+  try {
+    pathBefore = await lstat(filePath);
+  } catch (error) {
+    if (error.code === 'ENOENT') return null;
+    throw error;
+  }
+  if (pathBefore.isSymbolicLink() || !pathBefore.isFile()) {
+    fail(
+      `${label} must be a regular non-symlink file`,
+      'UNSAFE_BLUEPRINT_ATTEMPT_EVIDENCE'
+    );
+  }
+  if (pathBefore.size > maximumBytes) {
+    fail(
+      `${label} exceeds the evidence limit of ${maximumBytes} bytes`,
+      'BLUEPRINT_ATTEMPT_EVIDENCE_LIMIT'
+    );
+  }
+
+  let handle;
+  try {
+    handle = await open(
+      filePath,
+      fsConstants.O_RDONLY | (fsConstants.O_NOFOLLOW ?? 0)
+    );
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      fail(`${label} disappeared while being captured`, 'BLUEPRINT_ATTEMPT_EVIDENCE_DRIFT');
+    }
+    if (error.code === 'ELOOP') {
+      fail(
+        `${label} must be a regular non-symlink file`,
+        'UNSAFE_BLUEPRINT_ATTEMPT_EVIDENCE'
+      );
+    }
+    throw error;
+  }
+
+  try {
+    const openedBefore = await handle.stat();
+    if (
+      !openedBefore.isFile()
+      || openedBefore.dev !== pathBefore.dev
+      || openedBefore.ino !== pathBefore.ino
+      || openedBefore.size !== pathBefore.size
+      || openedBefore.mtimeMs !== pathBefore.mtimeMs
+    ) {
+      fail(`${label} changed while being opened`, 'BLUEPRINT_ATTEMPT_EVIDENCE_DRIFT');
+    }
+    const bytes = await handle.readFile();
+    const [openedAfter, pathAfter] = await Promise.all([
+      handle.stat(),
+      lstat(filePath).catch(error => {
+        if (error.code === 'ENOENT') return null;
+        throw error;
+      })
+    ]);
+    if (
+      !pathAfter
+      || pathAfter.isSymbolicLink()
+      || !pathAfter.isFile()
+      || openedAfter.dev !== openedBefore.dev
+      || openedAfter.ino !== openedBefore.ino
+      || openedAfter.size !== openedBefore.size
+      || openedAfter.mtimeMs !== openedBefore.mtimeMs
+      || pathAfter.dev !== openedBefore.dev
+      || pathAfter.ino !== openedBefore.ino
+      || pathAfter.size !== openedBefore.size
+      || pathAfter.mtimeMs !== openedBefore.mtimeMs
+      || bytes.byteLength !== openedBefore.size
+    ) {
+      fail(`${label} changed while being captured`, 'BLUEPRINT_ATTEMPT_EVIDENCE_DRIFT');
+    }
+    return bytes;
+  } finally {
+    await handle.close();
+  }
+}
+
+async function collectBoundedTreeEvidence({
+  root,
+  artifactPrefix,
+  before = null,
+  changedOnly = false,
+  afterDirectoryRead = async () => {},
+  label
+}) {
+  const artifacts = new Map();
+  const identities = new Map();
+  const entries = [];
+  const uncapturable = [];
+  let totalRegularBytes = 0;
+  let entryCount = 0;
+  let truncated = false;
+  let unstableDirectory = false;
+  const observedPaths = new Set();
+  const recordUncapturable = (relative, code, message) => {
+    const failure = { path: relative, code, message };
+    uncapturable.push(failure);
+    return failure;
+  };
+  async function visit(directory, prefix = '', expectedDirectory = null) {
+    let directoryBefore;
+    try {
+      directoryBefore = await lstat(directory);
+    } catch (error) {
+      const relative = prefix || '.';
+      entries.push({
+        path: relative,
+        type: 'directory',
+        captured: false,
+        error: recordUncapturable(
+          relative,
+          typeof error.code === 'string'
+            ? error.code
+            : 'BLUEPRINT_ATTEMPT_EVIDENCE_CAPTURE_ERROR',
+          error.message
+        )
+      });
+      return;
+    }
+    if (
+      directoryBefore.isSymbolicLink()
+      || !directoryBefore.isDirectory()
+      || (
+        expectedDirectory
+        && (
+          directoryBefore.dev !== expectedDirectory.dev
+          || directoryBefore.ino !== expectedDirectory.ino
+        )
+      )
+    ) {
+      unstableDirectory = true;
+      const relative = prefix || '.';
+      entries.push({
+        path: relative,
+        type: directoryBefore.isSymbolicLink() ? 'symlink' : 'directory',
+        captured: false,
+        error: recordUncapturable(
+          relative,
+          'UNSAFE_BLUEPRINT_ATTEMPT_EVIDENCE',
+          `${label} directory identity is unsafe or changed`
+        )
+      });
+      return;
+    }
+    identities.set(prefix || '.', {
+      type: 'directory',
+      dev: directoryBefore.dev,
+      ino: directoryBefore.ino
+    });
+    let children;
+    try {
+      children = await readdir(directory, { withFileTypes: true });
+    } catch (error) {
+      const relative = prefix || '.';
+      entries.push({
+        path: relative,
+        type: 'directory',
+        captured: false,
+        error: recordUncapturable(
+          relative,
+          typeof error.code === 'string'
+            ? error.code
+            : 'BLUEPRINT_ATTEMPT_EVIDENCE_CAPTURE_ERROR',
+          error.message
+        )
+      });
+      return;
+    }
+    children.sort((left, right) => left.name.localeCompare(right.name));
+    await afterDirectoryRead({
+      root,
+      directory,
+      relative: prefix || '.'
+    });
+    const directoryAfterRead = await lstat(directory).catch(error => {
+      if (error.code === 'ENOENT') return null;
+      throw error;
+    });
+    if (
+      !directoryAfterRead
+      || directoryAfterRead.isSymbolicLink()
+      || !directoryAfterRead.isDirectory()
+      || directoryAfterRead.dev !== directoryBefore.dev
+      || directoryAfterRead.ino !== directoryBefore.ino
+    ) {
+      unstableDirectory = true;
+      recordUncapturable(
+        prefix || '.',
+        'BLUEPRINT_ATTEMPT_EVIDENCE_DRIFT',
+        `${label} directory changed before child capture`
+      );
+      return;
+    }
+    for (const child of children) {
+      const relative = prefix ? `${prefix}/${child.name}` : child.name;
+      observedPaths.add(relative);
+      entryCount += 1;
+      if (entryCount > MAX_ATTEMPT_TREE_ENTRIES) {
+        if (!truncated) {
+          truncated = true;
+          recordUncapturable(
+            relative,
+            'BLUEPRINT_ATTEMPT_EVIDENCE_ENTRY_LIMIT',
+            `${label} exceeds ${MAX_ATTEMPT_TREE_ENTRIES} entries`
+          );
+        }
+        continue;
+      }
+      const absolute = path.join(directory, child.name);
+      let details;
+      try {
+        details = await lstat(absolute);
+      } catch (error) {
+        entries.push({
+          path: relative,
+          type: 'unknown',
+          captured: false,
+          error: recordUncapturable(
+            relative,
+            typeof error.code === 'string'
+              ? error.code
+              : 'BLUEPRINT_ATTEMPT_EVIDENCE_CAPTURE_ERROR',
+            error.message
+          )
+        });
+        continue;
+      }
+      if (details.isSymbolicLink()) {
+        entries.push({
+          path: relative,
+          type: 'symlink',
+          captured: false,
+          error: recordUncapturable(
+            relative,
+            'UNSAFE_BLUEPRINT_ATTEMPT_EVIDENCE',
+            `${label} contains a forbidden symlink`
+          )
+        });
+        continue;
+      }
+      if (details.isDirectory()) {
+        identities.set(relative, {
+          type: 'directory',
+          dev: details.dev,
+          ino: details.ino
+        });
+        entries.push({
+          path: relative,
+          type: 'directory',
+          changed: !before?.has(relative),
+          captured: true
+        });
+        await visit(absolute, relative, details);
+        continue;
+      }
+      if (!details.isFile()) {
+        entries.push({
+          path: relative,
+          type: 'special',
+          captured: false,
+          error: recordUncapturable(
+            relative,
+            'UNSAFE_BLUEPRINT_ATTEMPT_EVIDENCE',
+            `${label} contains an unsupported special entry`
+          )
+        });
+        continue;
+      }
+      if (
+        details.size > MAX_WORKSPACE_BYTES
+        || totalRegularBytes + details.size > MAX_WORKSPACE_BYTES
+      ) {
+        entries.push({
+          path: relative,
+          type: 'file',
+          bytes: details.size,
+          captured: false,
+          error: recordUncapturable(
+            relative,
+            'BLUEPRINT_ATTEMPT_EVIDENCE_LIMIT',
+            `${label} exceeds ${MAX_WORKSPACE_BYTES} captured bytes`
+          )
+        });
+        continue;
+      }
+      try {
+        const bytes = await readRegularAttemptEvidence(
+          absolute,
+          `${label} ${relative}`,
+          MAX_WORKSPACE_BYTES
+        );
+        if (!bytes) {
+          fail(
+            `${label} ${relative} disappeared while being captured`,
+            'BLUEPRINT_ATTEMPT_EVIDENCE_DRIFT'
+          );
+        }
+        totalRegularBytes += bytes.byteLength;
+        const sha256 = sha256Bytes(bytes);
+        identities.set(relative, {
+          type: 'file',
+          dev: details.dev,
+          ino: details.ino,
+          bytes: bytes.byteLength,
+          mtimeMs: details.mtimeMs,
+          sha256
+        });
+        const previous = before?.get(relative);
+        const changed = (
+          !previous
+          || previous.type !== 'file'
+          || previous.bytes !== bytes.byteLength
+          || previous.sha256 !== sha256
+        );
+        entries.push({
+          path: relative,
+          type: 'file',
+          bytes: bytes.byteLength,
+          sha256,
+          changed,
+          captured: !changedOnly || changed
+        });
+        if (!changedOnly || changed) {
+          artifacts.set(`${artifactPrefix}/${relative}`, bytes);
+        }
+      } catch (error) {
+        entries.push({
+          path: relative,
+          type: 'file',
+          bytes: details.size,
+          captured: false,
+          error: recordUncapturable(
+            relative,
+            typeof error.code === 'string'
+              ? error.code
+              : 'BLUEPRINT_ATTEMPT_EVIDENCE_CAPTURE_ERROR',
+            error.message
+          )
+        });
+      }
+    }
+    const directoryAfter = await lstat(directory).catch(error => {
+      if (error.code === 'ENOENT') return null;
+      throw error;
+    });
+    if (
+      !directoryAfter
+      || directoryAfter.isSymbolicLink()
+      || !directoryAfter.isDirectory()
+      || directoryAfter.dev !== directoryBefore.dev
+      || directoryAfter.ino !== directoryBefore.ino
+    ) {
+      unstableDirectory = true;
+      recordUncapturable(
+        prefix || '.',
+        'BLUEPRINT_ATTEMPT_EVIDENCE_DRIFT',
+        `${label} directory changed during no-follow capture`
+      );
+    }
+  }
+  await visit(root);
+  const missingFromBefore = before
+    ? [...before.keys()]
+        .filter(relative => !observedPaths.has(relative))
+        .sort()
+    : [];
+  const manifest = {
+    schemaVersion: BLUEPRINT_ATTEMPT_EVIDENCE_SCHEMA,
+    label,
+    noFollow: true,
+    changedOnly,
+    entryLimit: MAX_ATTEMPT_TREE_ENTRIES,
+    capturedByteLimit: MAX_WORKSPACE_BYTES,
+    observedEntries: entryCount,
+    totalRegularBytes,
+    truncated,
+    missingFromBefore,
+    captureFailures: uncapturable,
+    entries
+  };
+  const manifestBytes = Buffer.from(`${stableJson(manifest)}\n`);
+  if (manifestBytes.byteLength > MAX_WORKER_LOG_BYTES) {
+    fail(
+      `${label} manifest exceeds ${MAX_WORKER_LOG_BYTES} bytes`,
+      'BLUEPRINT_ATTEMPT_EVIDENCE_LIMIT'
+    );
+  }
+  return {
+    artifacts,
+    identities,
+    manifestBytes,
+    uncapturable,
+    unstableDirectory
+  };
+}
+
+function attemptArtifactPin(file, bytes) {
+  return {
+    file,
+    bytes: bytes.byteLength,
+    sha256: sha256Bytes(bytes)
+  };
+}
+
+function structuredAttemptError(error, workerResult, captureFailures) {
+  const nullableString = value => (
+    typeof value === 'string' && value.length > 0 ? value : null
+  );
+  return {
+    schemaVersion: BLUEPRINT_ATTEMPT_EVIDENCE_SCHEMA,
+    parentError: {
+      name: nullableString(error?.name) ?? 'Error',
+      code: nullableString(error?.code) ?? 'BATTLE_MAP_BLUEPRINT_LIFECYCLE_ERROR',
+      message: nullableString(error?.message) ?? String(error)
+    },
+    workerProcess: workerResult
+      ? {
+          code: Number.isSafeInteger(workerResult.code) ? workerResult.code : null,
+          signal: nullableString(workerResult.signal),
+          completionReason: nullableString(workerResult.completionReason),
+          intentionallyTerminated: workerResult.intentionallyTerminated === true,
+          completedCandidateSha256:
+            nullableString(workerResult.completedCandidateSha256)
+        }
+      : null,
+    captureFailures
+  };
+}
+
+function boundedAttemptErrorBytes(errorRecord) {
+  const original = Buffer.from(stableJson(errorRecord));
+  const serialization = {
+    encoding: 'stable-json-utf8',
+    originalBytes: original.byteLength,
+    originalSha256: sha256Bytes(original),
+    truncated: false
+  };
+  let bounded = {
+    ...errorRecord,
+    serialization
+  };
+  let bytes = Buffer.from(`${stableJson(bounded)}\n`);
+  if (bytes.byteLength <= MAX_ATTEMPT_ERROR_BYTES) return bytes;
+  const boundedField = (value, maximumBytes) => {
+    const originalField = Buffer.from(String(value));
+    const truncatedField = originalField.byteLength > maximumBytes;
+    return {
+      value: truncatedField
+        ? originalField.subarray(0, maximumBytes).toString('utf8')
+        : String(value),
+      serialization: {
+        originalBytes: originalField.byteLength,
+        originalSha256: sha256Bytes(originalField),
+        truncated: truncatedField
+      }
+    };
+  };
+  const boundedName = boundedField(errorRecord.parentError.name, 1024);
+  const boundedCode = boundedField(errorRecord.parentError.code, 1024);
+  const boundedMessage = boundedField(errorRecord.parentError.message, 8192);
+  bounded = {
+    schemaVersion: BLUEPRINT_ATTEMPT_EVIDENCE_SCHEMA,
+    parentError: {
+      name: boundedName.value,
+      code: boundedCode.value,
+      message: boundedMessage.value,
+      serialization: {
+        name: boundedName.serialization,
+        code: boundedCode.serialization,
+        message: boundedMessage.serialization
+      }
+    },
+    serialization: {
+      ...serialization,
+      truncated: true
+    },
+    previewEncoding: 'base64',
+    preview: original.subarray(0, ATTEMPT_ERROR_PREVIEW_BYTES).toString('base64')
+  };
+  bytes = Buffer.from(`${stableJson(bounded)}\n`);
+  if (bytes.byteLength > MAX_ATTEMPT_ERROR_BYTES) {
+    fail(
+      'bounded blueprint attempt error evidence exceeds its fixed limit',
+      'BLUEPRINT_ATTEMPT_EVIDENCE_LIMIT'
+    );
+  }
+  return bytes;
+}
+
+async function loadAttemptStagingOrphans(projectRoot, stagingRoot) {
+  await assertSafeWritePath(
+    projectRoot,
+    stagingRoot,
+    'blueprint attempt staging path'
+  );
+  let stagingDetails;
+  try {
+    stagingDetails = await lstat(stagingRoot);
+  } catch (error) {
+    if (error.code === 'ENOENT') return [];
+    throw error;
+  }
+  if (stagingDetails.isSymbolicLink() || !stagingDetails.isDirectory()) {
+    fail(
+      'blueprint attempt staging path must be a regular directory',
+      'UNSAFE_BLUEPRINT_ATTEMPT_EVIDENCE'
+    );
+  }
+  const candidates = [];
+  let totalBytes = 0;
+  const entries = await readdir(stagingRoot, { withFileTypes: true });
+  if (entries.length > MAX_ATTEMPT_TREE_ENTRIES) {
+    fail(
+      'blueprint attempt staging directory exceeds its fixed entry bound',
+      'BLUEPRINT_ATTEMPT_EVIDENCE_LIMIT'
+    );
+  }
+  for (const entry of entries) {
+    if (!ATTEMPT_STAGING_FILE_PATTERN.test(entry.name)) continue;
+    const absolute = path.join(stagingRoot, entry.name);
+    const details = await lstat(absolute);
+    if (details.isSymbolicLink() || !details.isFile()) {
+      fail(
+        `blueprint attempt staging orphan is unsafe: ${entry.name}`,
+        'UNSAFE_BLUEPRINT_ATTEMPT_EVIDENCE'
+      );
+    }
+    candidates.push({ absolute, details });
+    totalBytes += details.size;
+  }
+  if (
+    candidates.length > MAX_ATTEMPT_STAGING_ORPHANS
+    || totalBytes > MAX_WORKSPACE_BYTES
+  ) {
+    fail(
+      'blueprint attempt staging orphan accumulation exceeds its fixed bounds',
+      'BLUEPRINT_ATTEMPT_EVIDENCE_LIMIT'
+    );
+  }
+  const staged = [];
+  for (const candidate of candidates) {
+    let handle;
+    try {
+      handle = await open(
+        candidate.absolute,
+        fsConstants.O_RDONLY | (fsConstants.O_NOFOLLOW ?? 0)
+      );
+      const opened = await handle.stat();
+      if (
+        !opened.isFile()
+        || opened.dev !== candidate.details.dev
+        || opened.ino !== candidate.details.ino
+        || opened.size !== candidate.details.size
+        || opened.mtimeMs !== candidate.details.mtimeMs
+      ) {
+        fail(
+          'blueprint attempt staging orphan changed while being reclaimed',
+          'BLUEPRINT_ATTEMPT_EVIDENCE_DRIFT'
+        );
+      }
+    } catch (error) {
+      if (error.code === 'ELOOP') {
+        fail(
+          'blueprint attempt staging orphan became a symlink',
+          'UNSAFE_BLUEPRINT_ATTEMPT_EVIDENCE'
+        );
+      }
+      throw error;
+    } finally {
+      await handle?.close();
+    }
+    const current = await lstat(candidate.absolute).catch(error => {
+      if (error.code === 'ENOENT') return null;
+      throw error;
+    });
+    if (
+      !current
+      || current.isSymbolicLink()
+      || !current.isFile()
+      || current.dev !== candidate.details.dev
+      || current.ino !== candidate.details.ino
+      || current.size !== candidate.details.size
+      || current.mtimeMs !== candidate.details.mtimeMs
+    ) {
+      fail(
+        'blueprint attempt staging orphan changed before reclamation',
+        'BLUEPRINT_ATTEMPT_EVIDENCE_DRIFT'
+      );
+    }
+    const bytes = await readRegularAttemptEvidence(
+      candidate.absolute,
+      'blueprint attempt staging orphan',
+      MAX_WORKSPACE_BYTES
+    );
+    if (!bytes) {
+      fail(
+        'blueprint attempt staging orphan disappeared during reconciliation',
+        'BLUEPRINT_ATTEMPT_EVIDENCE_DRIFT'
+      );
+    }
+    staged.push({ ...candidate, bytes });
+  }
+  return staged;
+}
+
+async function writeImmutableAttemptFile(
+  projectRoot,
+  filePath,
+  bytes,
+  stagingRoot,
+  stagedOrphans
+) {
+  await assertSafeWritePath(projectRoot, filePath, 'blueprint attempt evidence path');
+  await mkdir(path.dirname(filePath), { recursive: true });
+  await assertSafeWritePath(projectRoot, filePath, 'blueprint attempt evidence path');
+  await assertSafeWritePath(
+    projectRoot,
+    stagingRoot,
+    'blueprint attempt staging path'
+  );
+  await mkdir(stagingRoot, { recursive: true });
+  await assertSafeWritePath(
+    projectRoot,
+    stagingRoot,
+    'blueprint attempt staging path'
+  );
+  const stagedIndex = stagedOrphans.findIndex(
+    candidate => candidate.bytes.equals(bytes)
+  );
+  const staged = stagedIndex === -1
+    ? null
+    : stagedOrphans.splice(stagedIndex, 1)[0];
+  const temporaryPath = staged?.absolute ?? path.join(
+    stagingRoot,
+    `${process.pid}.${randomUUID()}.tmp`
+  );
+  await assertSafeWritePath(
+    projectRoot,
+    temporaryPath,
+    'blueprint attempt staging path'
+  );
+  let handle;
+  let durablePublished = false;
+  try {
+    if (!staged) {
+      handle = await open(temporaryPath, 'wx', 0o600);
+      await handle.writeFile(bytes);
+      await handle.sync();
+      await handle.close();
+      handle = null;
+    }
+    try {
+      await link(temporaryPath, filePath);
+      durablePublished = true;
+      return true;
+    } catch (error) {
+      if (error.code !== 'EEXIST') throw error;
+    }
+    const existing = await readRegularAttemptEvidence(
+      filePath,
+      'existing blueprint attempt evidence',
+      Math.max(bytes.byteLength, 1)
+    );
+    if (!existing || !existing.equals(bytes)) {
+      fail(
+        `immutable blueprint attempt evidence conflicts at ${filePath}`,
+        'BLUEPRINT_ATTEMPT_EVIDENCE_CONFLICT'
+      );
+    }
+    durablePublished = true;
+    return false;
+  } finally {
+    await handle?.close();
+    if (durablePublished) {
+      await unlink(temporaryPath).catch(error => {
+        if (error.code !== 'ENOENT') throw error;
+      });
+    }
+  }
+}
+
+async function assertAttemptHistoryCapacity({
+  projectRoot,
+  historyRoot,
+  currentAttemptName,
+  additionalBytes,
+  historyByteLimit
+}) {
+  await assertSafeWritePath(
+    projectRoot,
+    historyRoot,
+    'blueprint attempt-history root'
+  );
+  let entries;
+  try {
+    entries = await readdir(historyRoot, { withFileTypes: true });
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      if (additionalBytes > historyByteLimit) {
+        fail(
+          'blueprint attempt history retention limit is exhausted; '
+          + 'current failure evidence remains quarantined locally',
+          'BLUEPRINT_ATTEMPT_HISTORY_LIMIT'
+        );
+      }
+      return;
+    }
+    throw error;
+  }
+  let recordCount = 0;
+  let historyBytes = 0;
+  let observedEntries = 0;
+  async function measure(directory) {
+    const children = await readdir(directory, { withFileTypes: true });
+    for (const child of children) {
+      observedEntries += 1;
+      if (
+        observedEntries
+        > MAX_ATTEMPT_HISTORY_RECORDS * MAX_ATTEMPT_TREE_ENTRIES
+      ) {
+        fail(
+          'blueprint attempt history exceeds its fixed entry bound',
+          'BLUEPRINT_ATTEMPT_EVIDENCE_LIMIT'
+        );
+      }
+      const absolute = path.join(directory, child.name);
+      const details = await lstat(absolute);
+      if (details.isSymbolicLink()) {
+        fail(
+          'blueprint attempt history contains a forbidden symlink',
+          'UNSAFE_BLUEPRINT_ATTEMPT_EVIDENCE'
+        );
+      }
+      if (details.isDirectory()) await measure(absolute);
+      else if (details.isFile()) historyBytes += details.size;
+      else {
+        fail(
+          'blueprint attempt history contains a special entry',
+          'UNSAFE_BLUEPRINT_ATTEMPT_EVIDENCE'
+        );
+      }
+    }
+  }
+  for (const entry of entries) {
+    if (entry.name === currentAttemptName) continue;
+    if (!/^[0-9a-f]{64}$/.test(entry.name)) {
+      fail(
+        `blueprint attempt history contains unexpected entry ${entry.name}`,
+        'BLUEPRINT_ATTEMPT_EVIDENCE_CONFLICT'
+      );
+    }
+    const absolute = path.join(historyRoot, entry.name);
+    const details = await lstat(absolute);
+    if (details.isSymbolicLink() || !details.isDirectory()) {
+      fail(
+        `blueprint attempt history record is unsafe: ${entry.name}`,
+        'UNSAFE_BLUEPRINT_ATTEMPT_EVIDENCE'
+      );
+    }
+    recordCount += 1;
+    await measure(absolute);
+  }
+  if (
+    recordCount + 1 > MAX_ATTEMPT_HISTORY_RECORDS
+    || historyBytes + additionalBytes > historyByteLimit
+  ) {
+    fail(
+      'blueprint attempt history retention limit is exhausted; '
+      + 'current failure evidence remains quarantined locally',
+      'BLUEPRINT_ATTEMPT_HISTORY_LIMIT'
+    );
+  }
+}
+
+function unmatchedStagingBytes(stagedOrphans, expectedArtifacts) {
+  const expected = expectedArtifacts.map(bytes => ({
+    bytes,
+    sha256: sha256Bytes(bytes),
+    matched: false
+  }));
+  let unmatchedBytes = 0;
+  for (const staged of stagedOrphans) {
+    const stagedSha256 = sha256Bytes(staged.bytes);
+    const match = expected.find(candidate => (
+      !candidate.matched
+      && candidate.sha256 === stagedSha256
+      && candidate.bytes.byteLength === staged.bytes.byteLength
+      && candidate.bytes.equals(staged.bytes)
+    ));
+    if (match) match.matched = true;
+    else unmatchedBytes += staged.bytes.byteLength;
+  }
+  return unmatchedBytes;
+}
+
+async function publishAttemptEvidence({
+  projectRoot,
+  paths,
+  theme,
+  template,
+  mapId,
+  outcome,
+  artifactBytes,
+  historyByteLimit = MAX_ATTEMPT_HISTORY_BYTES
+}) {
+  for (const file of artifactBytes.keys()) {
+    if (
+      typeof file !== 'string'
+      || file.length === 0
+      || path.posix.isAbsolute(file)
+      || path.posix.normalize(file) !== file
+      || file === '..'
+      || file.startsWith('../')
+    ) {
+      fail(
+        `invalid blueprint attempt artifact path ${String(file)}`,
+        'UNSAFE_BLUEPRINT_ATTEMPT_EVIDENCE'
+      );
+    }
+  }
+  const artifacts = Object.fromEntries(
+    [...artifactBytes].map(([file, bytes]) => [file, attemptArtifactPin(file, bytes)])
+  );
+  const identity = {
+    schemaVersion: BLUEPRINT_ATTEMPT_EVIDENCE_SCHEMA,
+    id: mapId,
+    theme,
+    templateId: template,
+    outcome,
+    artifacts
+  };
+  const contentHash = sha256Bytes(Buffer.from(stableJson(identity)));
+  const record = {
+    ...identity,
+    contentHash
+  };
+  const recordBytes = Buffer.from(`${stableJson(record)}\n`);
+  const aggregateBytes = (
+    recordBytes.byteLength
+    + [...artifactBytes.values()].reduce(
+      (total, bytes) => total + bytes.byteLength,
+      0
+    )
+  );
+  if (aggregateBytes > MAX_WORKSPACE_BYTES) {
+    fail(
+      `blueprint attempt evidence exceeds the aggregate `
+      + `${MAX_WORKSPACE_BYTES}-byte limit`,
+      'BLUEPRINT_ATTEMPT_EVIDENCE_LIMIT'
+    );
+  }
+  const attemptRoot = resolveWithinProject(
+    projectRoot,
+    `${paths.attemptHistoryRoot}/${contentHash.slice('sha256:'.length)}`,
+    'blueprint attempt-history path'
+  );
+  const historyRoot = path.dirname(attemptRoot);
+  const stagingRoot = resolveWithinProject(
+    projectRoot,
+    paths.attemptStagingRoot,
+    'blueprint attempt staging path'
+  );
+  const stagedOrphans = await loadAttemptStagingOrphans(
+    projectRoot,
+    stagingRoot
+  );
+  const retainedStagingBytes = unmatchedStagingBytes(
+    stagedOrphans,
+    [...artifactBytes.values(), recordBytes]
+  );
+  await assertAttemptHistoryCapacity({
+    projectRoot,
+    historyRoot,
+    currentAttemptName: path.basename(attemptRoot),
+    additionalBytes:
+      aggregateBytes
+      + retainedStagingBytes,
+    historyByteLimit
+  });
+  await assertSafeWritePath(
+    projectRoot,
+    attemptRoot,
+    'blueprint attempt-history path'
+  );
+  await mkdir(attemptRoot, { recursive: true });
+  await assertSafeWritePath(
+    projectRoot,
+    attemptRoot,
+    'blueprint attempt-history path'
+  );
+  const attemptDetails = await lstat(attemptRoot);
+  if (attemptDetails.isSymbolicLink() || !attemptDetails.isDirectory()) {
+    fail(
+      'blueprint attempt-history path must be a regular directory',
+      'UNSAFE_BLUEPRINT_ATTEMPT_EVIDENCE'
+    );
+  }
+  for (const [file, bytes] of artifactBytes) {
+    await writeImmutableAttemptFile(
+      projectRoot,
+      path.join(attemptRoot, file),
+      bytes,
+      stagingRoot,
+      stagedOrphans
+    );
+  }
+  await writeImmutableAttemptFile(
+    projectRoot,
+    path.join(attemptRoot, 'attempt.json'),
+    recordBytes,
+    stagingRoot,
+    stagedOrphans
+  );
+
+  const expectedBytes = new Map(artifactBytes);
+  expectedBytes.set('attempt.json', recordBytes);
+  const expectedFiles = new Set(expectedBytes.keys());
+  const expectedDirectories = new Set();
+  for (const file of expectedFiles) {
+    let directory = path.posix.dirname(file);
+    while (directory !== '.') {
+      expectedDirectories.add(directory);
+      directory = path.posix.dirname(directory);
+    }
+  }
+  const actualFiles = new Set();
+  const actualDirectories = new Set();
+  async function inspect(directory, prefix = '') {
+    const entries = await readdir(directory, { withFileTypes: true });
+    entries.sort((left, right) => left.name.localeCompare(right.name));
+    for (const entry of entries) {
+      const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
+      const absolute = path.join(directory, entry.name);
+      const details = await lstat(absolute);
+      if (details.isSymbolicLink()) {
+        fail(
+          `immutable blueprint attempt evidence contains unsafe entry ${relative}`,
+          'UNSAFE_BLUEPRINT_ATTEMPT_EVIDENCE'
+        );
+      }
+      if (details.isDirectory()) {
+        actualDirectories.add(relative);
+        await inspect(absolute, relative);
+      } else if (details.isFile()) {
+        actualFiles.add(relative);
+      } else {
+        fail(
+          `immutable blueprint attempt evidence contains unsafe entry ${relative}`,
+          'UNSAFE_BLUEPRINT_ATTEMPT_EVIDENCE'
+        );
+      }
+    }
+  }
+  await inspect(attemptRoot);
+  if (
+    actualFiles.size !== expectedFiles.size
+    || actualDirectories.size !== expectedDirectories.size
+    || [...actualFiles].some(file => !expectedFiles.has(file))
+    || [...actualDirectories].some(directory => !expectedDirectories.has(directory))
+  ) {
+    fail(
+      'immutable blueprint attempt evidence contains conflicting entries',
+      'BLUEPRINT_ATTEMPT_EVIDENCE_CONFLICT'
+    );
+  }
+  for (const [file, bytes] of expectedBytes) {
+    const verified = await readRegularAttemptEvidence(
+      path.join(attemptRoot, file),
+      `immutable blueprint attempt evidence ${file}`,
+      Math.max(bytes.byteLength, 1)
+    );
+    if (!verified || !verified.equals(bytes)) {
+      fail(
+        `immutable blueprint attempt evidence drifted at ${file}`,
+        'BLUEPRINT_ATTEMPT_EVIDENCE_CONFLICT'
+      );
+    }
+  }
+  return {
+    path: path.relative(projectRoot, attemptRoot).split(path.sep).join('/'),
+    contentHash
+  };
+}
+
+async function preserveFailedAttempt({
   projectRoot,
   workspace,
   paths,
+  theme,
+  template,
+  mapId,
   prompt,
-  workerResult
+  workerResult,
+  workspaceBefore,
+  historyByteLimit,
+  treeCaptureHook,
+  error
 }) {
-  if (!workerResult) return false;
-  const writes = [
-    [paths.prompt, Buffer.from(`${prompt}\n`)],
-    [paths.stdout, workerResult.stdout ?? Buffer.alloc(0)],
-    [paths.stderr, workerResult.stderr ?? Buffer.alloc(0)]
-  ];
+  const captureFailures = {};
+  const workspaceEvidenceOptions = {
+    root: workspace,
+    artifactPrefix: 'workspace',
+    before: workspaceBefore,
+    changedOnly: true,
+    afterDirectoryRead: treeCaptureHook,
+    label: 'post-worker workspace'
+  };
+  const workspaceEvidence = await collectBoundedTreeEvidence(
+    workspaceEvidenceOptions
+  );
+  const workspaceVerification = await collectBoundedTreeEvidence(
+    workspaceEvidenceOptions
+  );
+  const workspaceArtifactsMatch = (
+    workspaceEvidence.artifacts.size === workspaceVerification.artifacts.size
+    && [...workspaceEvidence.artifacts].every(([file, bytes]) =>
+      workspaceVerification.artifacts.get(file)?.equals(bytes)
+    )
+  );
+  if (
+    !workspaceEvidence.manifestBytes.equals(workspaceVerification.manifestBytes)
+    || !workspaceArtifactsMatch
+  ) {
+    fail(
+      'post-worker workspace changed during quarantined capture',
+      'BLUEPRINT_ATTEMPT_EVIDENCE_DRIFT'
+    );
+  }
+  if (
+    workspaceEvidence.unstableDirectory
+    || workspaceVerification.unstableDirectory
+  ) {
+    fail(
+      'post-worker workspace directory identity drifted during capture',
+      'BLUEPRINT_ATTEMPT_EVIDENCE_DRIFT'
+    );
+  }
+  if (workspaceEvidence.uncapturable.length > 0) {
+    captureFailures.workspace = {
+      code: 'BLUEPRINT_ATTEMPT_EVIDENCE_CAPTURE_ERROR',
+      message:
+        `${workspaceEvidence.uncapturable.length} workspace entries `
+        + 'could not be captured; see workspace-manifest.json'
+    };
+  }
+  const candidate = workspaceEvidence.artifacts.get('workspace/candidate.json') ?? null;
+  const lastMessage =
+    workspaceEvidence.artifacts.get('workspace/last-message.txt') ?? null;
+  if (candidate) workspaceEvidence.artifacts.delete('workspace/candidate.json');
+  if (lastMessage) {
+    workspaceEvidence.artifacts.delete('workspace/last-message.txt');
+    if (lastMessage.byteLength > MAX_WORKER_LOG_BYTES) {
+      captureFailures['last-message.txt'] = {
+        code: 'BLUEPRINT_ATTEMPT_EVIDENCE_LIMIT',
+        message: `last-message.txt exceeds ${MAX_WORKER_LOG_BYTES} bytes`
+      };
+    }
+  }
+  const promptBytes = Buffer.from(`${prompt}\n`);
+  const stdoutBytes = Buffer.from(workerResult?.stdout ?? Buffer.alloc(0));
+  const stderrBytes = Buffer.from(workerResult?.stderr ?? Buffer.alloc(0));
+  for (const [label, bytes] of [
+    ['prompt.txt', promptBytes],
+    ['worker.jsonl', stdoutBytes],
+    ['worker.stderr.log', stderrBytes]
+  ]) {
+    if (bytes.byteLength > MAX_WORKER_LOG_BYTES) {
+      fail(
+        `${label} exceeds the evidence limit of ${MAX_WORKER_LOG_BYTES} bytes`,
+        'BLUEPRINT_ATTEMPT_EVIDENCE_LIMIT'
+      );
+    }
+  }
+
+  const errorBytes = boundedAttemptErrorBytes(
+    structuredAttemptError(error, workerResult, captureFailures)
+  );
+  const artifactBytes = new Map([
+    ['prompt.txt', promptBytes],
+    ['worker.jsonl', stdoutBytes],
+    ['worker.stderr.log', stderrBytes],
+    ['error.json', errorBytes],
+    ['workspace-manifest.json', workspaceEvidence.manifestBytes],
+    ...workspaceEvidence.artifacts
+  ]);
+  if (lastMessage && lastMessage.byteLength <= MAX_WORKER_LOG_BYTES) {
+    artifactBytes.set('last-message.txt', lastMessage);
+  }
+  if (candidate) artifactBytes.set('candidate.json', candidate);
+  const published = await publishAttemptEvidence({
+    projectRoot,
+    paths,
+    theme,
+    template,
+    mapId,
+    outcome: 'failed',
+    artifactBytes,
+    historyByteLimit
+  });
+  return {
+    ...published,
+    complete: Object.keys(captureFailures).length === 0,
+    cleanupIdentities: workspaceEvidence.identities
+  };
+}
+
+async function preserveSupersededCandidate({
+  projectRoot,
+  candidateRoot,
+  paths,
+  theme,
+  template,
+  mapId,
+  reason,
+  historyByteLimit
+}) {
+  const residualEvidence = await collectBoundedTreeEvidence({
+    root: candidateRoot,
+    artifactPrefix: 'residual',
+    changedOnly: false,
+    label: 'superseded candidate root'
+  });
+  const residualVerification = await collectBoundedTreeEvidence({
+    root: candidateRoot,
+    artifactPrefix: 'residual',
+    changedOnly: false,
+    label: 'superseded candidate root'
+  });
+  const artifactsMatch = (
+    residualEvidence.artifacts.size === residualVerification.artifacts.size
+    && [...residualEvidence.artifacts].every(([file, bytes]) =>
+      residualVerification.artifacts.get(file)?.equals(bytes)
+    )
+  );
+  if (
+    !residualEvidence.manifestBytes.equals(residualVerification.manifestBytes)
+    || !artifactsMatch
+  ) {
+    fail(
+      'superseded candidate root changed during evidence capture',
+      'BLUEPRINT_ATTEMPT_EVIDENCE_DRIFT'
+    );
+  }
+  if (
+    residualEvidence.unstableDirectory
+    || residualVerification.unstableDirectory
+  ) {
+    fail(
+      'superseded candidate root directory identity drifted during capture',
+      'BLUEPRINT_ATTEMPT_EVIDENCE_DRIFT'
+    );
+  }
+  const captureFailures = residualEvidence.uncapturable.length > 0
+    ? {
+        residual: {
+          code: 'BLUEPRINT_ATTEMPT_EVIDENCE_CAPTURE_ERROR',
+          message:
+            `${residualEvidence.uncapturable.length} residual entries `
+            + 'could not be captured; see residual-manifest.json'
+        }
+      }
+    : {};
+  const artifactBytes = new Map(residualEvidence.artifacts);
+  artifactBytes.set('residual-manifest.json', residualEvidence.manifestBytes);
+  artifactBytes.set(
+    'error.json',
+    boundedAttemptErrorBytes(
+      structuredAttemptError(reason, null, captureFailures)
+    )
+  );
+  const published = await publishAttemptEvidence({
+    projectRoot,
+    paths,
+    theme,
+    template,
+    mapId,
+    outcome: 'superseded',
+    artifactBytes,
+    historyByteLimit
+  });
+  if (Object.keys(captureFailures).length > 0) {
+    fail(
+      'superseded blueprint candidate contains unsafe or drifting evidence',
+      'UNSAFE_BLUEPRINT_ATTEMPT_EVIDENCE'
+    );
+  }
+  return {
+    ...published,
+    cleanupIdentities: residualEvidence.identities
+  };
+}
+
+async function quarantineFailureWorkspace({
+  projectRoot,
+  candidateRoot,
+  workspace
+}) {
+  const relative = path.relative(candidateRoot, workspace);
+  if (
+    relative.length === 0
+    || relative.startsWith('..')
+    || path.isAbsolute(relative)
+    || relative.includes(path.sep)
+  ) {
+    fail(
+      'failed workspace is not a direct child of its candidate root',
+      'UNSAFE_BLUEPRINT_ATTEMPT_EVIDENCE'
+    );
+  }
+  await assertSafeWritePath(projectRoot, workspace, 'failed workspace path');
+  const before = await lstat(workspace);
+  if (before.isSymbolicLink() || !before.isDirectory()) {
+    fail(
+      'failed workspace must be a regular directory',
+      'UNSAFE_BLUEPRINT_ATTEMPT_EVIDENCE'
+    );
+  }
+  const quarantined = path.join(
+    candidateRoot,
+    `.failed-workspace-${randomUUID()}`
+  );
+  await assertSafeWritePath(
+    projectRoot,
+    quarantined,
+    'failed workspace quarantine path'
+  );
+  await rename(workspace, quarantined);
+  const after = await lstat(quarantined);
+  if (
+    after.isSymbolicLink()
+    || !after.isDirectory()
+    || after.dev !== before.dev
+    || after.ino !== before.ino
+  ) {
+    fail(
+      'failed workspace identity changed during quarantine',
+      'BLUEPRINT_ATTEMPT_EVIDENCE_DRIFT'
+    );
+  }
+  return quarantined;
+}
+
+async function quarantineCandidateRootForEvidence({
+  projectRoot,
+  candidateRoot,
+  mapId
+}) {
+  await assertSafeWritePath(
+    projectRoot,
+    candidateRoot,
+    'candidate evidence quarantine source'
+  );
+  const before = await lstat(candidateRoot);
+  if (before.isSymbolicLink() || !before.isDirectory()) {
+    fail(
+      'candidate evidence quarantine source must be a regular directory',
+      'UNSAFE_BLUEPRINT_ATTEMPT_EVIDENCE'
+    );
+  }
+  const quarantined = path.join(
+    path.dirname(candidateRoot),
+    `.superseded-candidate-${mapId}-${randomUUID()}`
+  );
+  await assertSafeWritePath(
+    projectRoot,
+    quarantined,
+    'candidate evidence quarantine path'
+  );
+  await rename(candidateRoot, quarantined);
+  const after = await lstat(quarantined);
+  if (
+    after.isSymbolicLink()
+    || !after.isDirectory()
+    || after.dev !== before.dev
+    || after.ino !== before.ino
+  ) {
+    fail(
+      'candidate root identity changed during evidence quarantine',
+      'BLUEPRINT_ATTEMPT_EVIDENCE_DRIFT'
+    );
+  }
+  return quarantined;
+}
+
+async function cleanupCapturedTree({
+  projectRoot,
+  root,
+  identities,
+  beforeFileQuarantine = async () => {}
+}) {
+  let retained = false;
+  const files = [...identities]
+    .filter(([, identity]) => identity.type === 'file')
+    .sort(([left], [right]) => right.length - left.length);
+  for (const [relative, identity] of files) {
+    const absolute = path.join(root, relative);
+    try {
+      await assertSafeWritePath(
+        projectRoot,
+        absolute,
+        'captured evidence cleanup path'
+      );
+      const details = await lstat(absolute);
+      if (
+        details.isSymbolicLink()
+        || !details.isFile()
+        || details.dev !== identity.dev
+        || details.ino !== identity.ino
+        || details.size !== identity.bytes
+        || details.mtimeMs !== identity.mtimeMs
+      ) {
+        retained = true;
+        continue;
+      }
+      const bytes = await readRegularAttemptEvidence(
+        absolute,
+        'captured evidence cleanup file',
+        Math.max(identity.bytes, 1)
+      );
+      if (!bytes || sha256Bytes(bytes) !== identity.sha256) {
+        retained = true;
+        continue;
+      }
+      await beforeFileQuarantine({ root, relative, absolute });
+      const quarantined = path.join(
+        path.dirname(absolute),
+        `.captured-cleanup-${randomUUID()}`
+      );
+      await assertSafeWritePath(
+        projectRoot,
+        quarantined,
+        'captured evidence private cleanup path'
+      );
+      await rename(absolute, quarantined);
+      const moved = await lstat(quarantined);
+      if (
+        moved.isSymbolicLink()
+        || !moved.isFile()
+        || moved.dev !== identity.dev
+        || moved.ino !== identity.ino
+        || moved.size !== identity.bytes
+        || moved.mtimeMs !== identity.mtimeMs
+      ) {
+        retained = true;
+        continue;
+      }
+      const movedBytes = await readRegularAttemptEvidence(
+        quarantined,
+        'captured evidence private cleanup file',
+        Math.max(identity.bytes, 1)
+      );
+      if (!movedBytes || sha256Bytes(movedBytes) !== identity.sha256) {
+        retained = true;
+        continue;
+      }
+      await unlink(quarantined);
+    } catch (error) {
+      if (error.code !== 'ENOENT') retained = true;
+    }
+  }
+  const directories = [...identities]
+    .filter(([, identity]) => identity.type === 'directory')
+    .sort(([left], [right]) => {
+      const depth = value => value === '.' ? -1 : value.split('/').length;
+      return depth(right) - depth(left);
+    });
+  for (const [relative, identity] of directories) {
+    const absolute = relative === '.' ? root : path.join(root, relative);
+    try {
+      await assertSafeWritePath(
+        projectRoot,
+        absolute,
+        'captured evidence cleanup directory'
+      );
+      const details = await lstat(absolute);
+      if (
+        details.isSymbolicLink()
+        || !details.isDirectory()
+        || details.dev !== identity.dev
+        || details.ino !== identity.ino
+      ) {
+        retained = true;
+        continue;
+      }
+      await rmdir(absolute);
+    } catch (error) {
+      if (!['ENOENT'].includes(error.code)) retained = true;
+    }
+  }
+  return { removed: !await pathExists(root), retained };
+}
+
+async function cleanupCapturedCandidateRoot({
+  projectRoot,
+  candidateRoot,
+  mapId
+}) {
+  let before;
   try {
-    writes.push([
-      paths.lastMessage,
-      await readFile(path.join(workspace, 'last-message.txt'))
-    ]);
+    before = await lstat(candidateRoot);
+  } catch (error) {
+    if (error.code === 'ENOENT') return { removed: true, retainedPath: null };
+    throw error;
+  }
+  if (before.isSymbolicLink() || !before.isDirectory()) {
+    return { removed: false, retainedPath: candidateRoot };
+  }
+  const retainedPath = path.join(
+    path.dirname(candidateRoot),
+    `.failed-candidate-${mapId}-${randomUUID()}`
+  );
+  await assertSafeWritePath(
+    projectRoot,
+    retainedPath,
+    'failed candidate quarantine path'
+  );
+  await rename(candidateRoot, retainedPath);
+  const after = await lstat(retainedPath);
+  if (
+    after.isSymbolicLink()
+    || !after.isDirectory()
+    || after.dev !== before.dev
+    || after.ino !== before.ino
+  ) {
+    return { removed: false, retainedPath };
+  }
+  const entries = await readdir(retainedPath);
+  if (entries.length !== 0) return { removed: false, retainedPath };
+  try {
+    await rmdir(retainedPath);
+  } catch (error) {
+    if (['ENOTEMPTY', 'EEXIST'].includes(error.code)) {
+      return { removed: false, retainedPath };
+    }
+    throw error;
+  }
+  return { removed: true, retainedPath: null };
+}
+
+async function assertNoUnresolvedAttemptQuarantine({
+  projectRoot,
+  candidateRoot,
+  mapId
+}) {
+  const parent = path.dirname(candidateRoot);
+  await assertSafeWritePath(
+    projectRoot,
+    parent,
+    'candidate quarantine parent'
+  );
+  let siblings = [];
+  try {
+    siblings = await readdir(parent);
   } catch (error) {
     if (error.code !== 'ENOENT') throw error;
   }
-  for (const [relative, contents] of writes) {
-    if (contents.byteLength > MAX_WORKER_LOG_BYTES) {
-      fail(`worker log exceeds ${MAX_WORKER_LOG_BYTES} bytes: ${relative}`);
-    }
-    await atomicWrite(
-      projectRoot,
-      resolveWithinProject(projectRoot, relative, 'blueprint diagnostic output path'),
-      contents
+  const siblingPrefixes = [
+    `.failed-candidate-${mapId}-`,
+    `.superseded-candidate-${mapId}-`
+  ];
+  if (siblings.some(name => siblingPrefixes.some(prefix => name.startsWith(prefix)))) {
+    fail(
+      `candidate ${mapId} has unresolved quarantined evidence`,
+      'UNRESOLVED_BLUEPRINT_ATTEMPT_QUARANTINE'
     );
   }
-  return true;
+  try {
+    const details = await lstat(candidateRoot);
+    if (details.isSymbolicLink() || !details.isDirectory()) return;
+    const entries = await readdir(candidateRoot);
+    if (entries.some(name => name.startsWith('.failed-workspace-'))) {
+      fail(
+        `candidate ${mapId} has an unresolved failed workspace`,
+        'UNRESOLVED_BLUEPRINT_ATTEMPT_QUARANTINE'
+      );
+    }
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
 }
 
-async function runPool(items, concurrency, callback) {
+async function runPool(items, concurrency, callback, abortController) {
   const results = new Array(items.length);
   let nextIndex = 0;
+  let firstFailure = null;
+  const notifyFailure = (error, context = {}) => {
+    if (firstFailure === null) {
+      firstFailure = error;
+      abortController.abort(error);
+    } else {
+      attachSecondaryFailure(firstFailure, error, context);
+    }
+  };
   async function consume() {
-    while (nextIndex < items.length) {
+    while (firstFailure === null && nextIndex < items.length) {
       const index = nextIndex;
       nextIndex += 1;
-      results[index] = await callback(items[index], index);
+      try {
+        results[index] = await callback(
+          items[index],
+          index,
+          (error, context = {}) => notifyFailure(error, {
+            mapId: items[index]?.mapId,
+            ...context
+          })
+        );
+      } catch (error) {
+        notifyFailure(error, {
+          stage: 'consumer-settlement',
+          mapId: items[index]?.mapId
+        });
+        return;
+      }
     }
   }
-  await Promise.all(
+  await Promise.allSettled(
     Array.from({ length: Math.min(concurrency, items.length) }, () => consume())
   );
+  if (firstFailure !== null) throw firstFailure;
   return results;
 }
 
@@ -2444,7 +4670,13 @@ export async function generateBlueprintCandidates(options, {
   worker = spawnBlueprintWorker,
   completionGraceMs = DEFAULT_BLUEPRINT_COMPLETION_GRACE_MS,
   completionPollMs = DEFAULT_BLUEPRINT_COMPLETION_POLL_MS,
-  candidateLockHolderSource = CANDIDATE_LOCK_HOLDER_SOURCE
+  candidateLockHolderSource = CANDIDATE_LOCK_HOLDER_SOURCE,
+  attemptHistoryByteLimit = MAX_ATTEMPT_HISTORY_BYTES,
+  failureQuarantineHook = async () => {},
+  beforeFailureCleanup = async () => {},
+  beforeEvidenceTreeCleanup = async () => {},
+  beforeCapturedFileQuarantine = async () => {},
+  treeCaptureHook = async () => {}
 } = {}) {
   const projectRoot = path.resolve(options.projectRoot ?? SCRIPT_PROJECT_ROOT);
   const [{ sidecar }, promptLoaded] = await Promise.all([
@@ -2453,7 +4685,7 @@ export async function generateBlueprintCandidates(options, {
       theme: options.theme,
       template: options.template
     }),
-    loadBlueprintPrompt(projectRoot)
+    loadBlueprintPrompt(projectRoot, options.template)
   ]);
   const sourcePath = await verifySource(projectRoot, sidecar);
   const requested = options.mapIds.length > 0
@@ -2529,23 +4761,44 @@ export async function generateBlueprintCandidates(options, {
     results
   };
   if (options.dryRun) return plan;
-  const generated = await runPool(jobs, options.concurrency, async job => {
-    const lock = await acquireCandidateGenerationLock({
-      projectRoot,
-      theme: options.theme,
-      template: options.template,
-      mapId: job.mapId,
-      holderSource: candidateLockHolderSource
-    });
-    try {
+  const batchAbortController = new AbortController();
+  const generated = await runPool(
+    jobs,
+    options.concurrency,
+    async (job, _index, notifyFailure) => {
+      let lock;
+      try {
+        lock = await acquireCandidateGenerationLock({
+          projectRoot,
+          theme: options.theme,
+          template: options.template,
+          mapId: job.mapId,
+          holderSource: candidateLockHolderSource,
+          signal: batchAbortController.signal
+        });
+      } catch (error) {
+        notifyFailure(error, { stage: 'lock-acquisition' });
+        throw error;
+      }
+      let jobFailure = null;
+      let releaseFailure = null;
+      let jobResult;
+      try {
+        jobResult = await (async () => {
       const candidateRoot = resolveWithinProject(
         projectRoot,
         job.paths.root,
         'candidate output path'
       );
       await assertSafeWritePath(projectRoot, candidateRoot, 'candidate output path');
+      await assertNoUnresolvedAttemptQuarantine({
+        projectRoot,
+        candidateRoot,
+        mapId: job.mapId
+      });
       const rootExists = await pathExists(candidateRoot);
       let existing;
+      let existingError = null;
       try {
         existing = await readCandidateRecord(
           projectRoot,
@@ -2560,6 +4813,7 @@ export async function generateBlueprintCandidates(options, {
         );
       } catch (error) {
         if (!options.force && !options.resume) throw error;
+        existingError = error;
         existing = null;
       }
       if (existing && options.resume) {
@@ -2579,17 +4833,56 @@ export async function generateBlueprintCandidates(options, {
         );
       }
       if (rootExists) {
-        await assertSafeWritePath(
+        const reason = new Error(
+          existingError
+            ? `candidate ${job.mapId} is stale or invalid and is being superseded: `
+              + existingError.message
+            : existing
+              ? `unapproved candidate ${job.mapId} is being superseded by force`
+              : `incomplete candidate ${job.mapId} is being superseded`
+        );
+        reason.name = 'SupersededBlueprintCandidate';
+        reason.code = existingError
+          ? 'STALE_BLUEPRINT_CANDIDATE_SUPERSEDED'
+          : existing
+            ? 'UNAPPROVED_BLUEPRINT_CANDIDATE_SUPERSEDED'
+            : 'INCOMPLETE_BLUEPRINT_CANDIDATE_SUPERSEDED';
+        const supersededRoot = await quarantineCandidateRootForEvidence({
           projectRoot,
           candidateRoot,
-          'candidate replacement path'
-        );
-        await rm(candidateRoot, { recursive: true, force: true });
+          mapId: job.mapId
+        });
+        const supersededEvidence = await preserveSupersededCandidate({
+          projectRoot,
+          candidateRoot: supersededRoot,
+          paths: job.paths,
+          theme: options.theme,
+          template: options.template,
+          mapId: job.mapId,
+          reason,
+          historyByteLimit: attemptHistoryByteLimit
+        });
+        await beforeEvidenceTreeCleanup({
+          root: supersededRoot,
+          kind: 'superseded-root'
+        });
+        const supersededCleanup = await cleanupCapturedTree({
+          projectRoot,
+          root: supersededRoot,
+          identities: supersededEvidence.cleanupIdentities,
+          beforeFileQuarantine: beforeCapturedFileQuarantine
+        });
+        if (!supersededCleanup.removed) {
+          fail(
+            'superseded candidate root changed after evidence capture',
+            'BLUEPRINT_ATTEMPT_EVIDENCE_DRIFT'
+          );
+        }
       }
 
       let workspace = null;
       let workerResult = null;
-      let diagnosticsPersisted = false;
+      let retainFailedWorkspace = false;
       try {
         const prepared = await prepareWorkspace({
           projectRoot,
@@ -2606,12 +4899,18 @@ export async function generateBlueprintCandidates(options, {
           mapId: job.mapId,
           textTemplateFallback: options.textTemplateFallback
         });
+        let workspaceBefore = null;
         try {
-          const before = await snapshotTree(workspace);
+          workspaceBefore = await snapshotTree(workspace);
           const protectedBefore =
             await snapshotProtectedGenerationContent(projectRoot);
           let workerError;
           try {
+            if (batchAbortController.signal.aborted) {
+              throw blueprintWorkerCancellationError(
+                batchAbortController.signal.reason
+              );
+            }
             workerResult = await worker({
               workspace,
               sourceRelativePath,
@@ -2623,7 +4922,8 @@ export async function generateBlueprintCandidates(options, {
               sidecar,
               completionGraceMs,
               completionPollMs,
-              textTemplateFallback: options.textTemplateFallback
+              textTemplateFallback: options.textTemplateFallback,
+              signal: batchAbortController.signal
             });
           } catch (error) {
             workerError = error;
@@ -2637,17 +4937,10 @@ export async function generateBlueprintCandidates(options, {
             `candidate worker ${job.mapId}`
           );
           const after = await snapshotTree(workspace);
-          auditWorkspace(before, after, sourceRelativePath, {
+          auditWorkspace(workspaceBefore, after, sourceRelativePath, {
             requireCandidate: !workerError
           });
           if (workerError) {
-            diagnosticsPersisted = await preserveWorkerDiagnostics({
-              projectRoot,
-              workspace,
-              paths: job.paths,
-              prompt,
-              workerResult
-            });
             throw workerError;
           }
           const toolAudit = auditCodexWorkerJsonl(workerResult.stdout);
@@ -2675,23 +4968,90 @@ export async function generateBlueprintCandidates(options, {
             fullHash: metadata.blueprint.fullHash
           };
         } catch (error) {
-          if (!diagnosticsPersisted) {
-            await rm(candidateRoot, { recursive: true, force: true });
+          notifyFailure(error, { stage: 'worker-or-validation' });
+          let failure = error;
+          let cleanupIdentities = null;
+          try {
+            const originalWorkspace = workspace;
+            workspace = await quarantineFailureWorkspace({
+              projectRoot,
+              candidateRoot,
+              workspace
+            });
+            await failureQuarantineHook({
+              originalWorkspace,
+              quarantinedWorkspace: workspace,
+              candidateRoot
+            });
+            const evidence = await preserveFailedAttempt({
+              projectRoot,
+              workspace,
+              paths: job.paths,
+              theme: options.theme,
+              template: options.template,
+              mapId: job.mapId,
+              prompt,
+              workerResult,
+              workspaceBefore,
+              historyByteLimit: attemptHistoryByteLimit,
+              treeCaptureHook,
+              error
+            });
+            retainFailedWorkspace = evidence.complete !== true;
+            cleanupIdentities = evidence.cleanupIdentities;
+          } catch (evidenceError) {
+            evidenceError.cause = error;
+            failure = evidenceError;
+            retainFailedWorkspace = true;
           }
-          throw error;
+          if (!retainFailedWorkspace) {
+            await beforeEvidenceTreeCleanup({
+              root: workspace,
+              kind: 'failed-workspace'
+            });
+            const workspaceCleanup = await cleanupCapturedTree({
+              projectRoot,
+              root: workspace,
+              identities: cleanupIdentities,
+              beforeFileQuarantine: beforeCapturedFileQuarantine
+            });
+            if (workspaceCleanup.removed) {
+              workspace = null;
+              await beforeFailureCleanup({ candidateRoot });
+              await cleanupCapturedCandidateRoot({
+                projectRoot,
+                candidateRoot,
+                mapId: job.mapId
+              });
+            } else {
+              retainFailedWorkspace = true;
+            }
+          }
+          throw failure;
         } finally {
-          await rm(workspace, { recursive: true, force: true });
+          // Failed evidence is removed only through identity-pinned cleanup
+          // above. Any incomplete or changed tree remains quarantined.
         }
       } catch (error) {
-        if (!workspace && !diagnosticsPersisted) {
-          await rm(candidateRoot, { recursive: true, force: true });
-        }
         throw error;
       }
-    } finally {
-      await lock.release();
+        })();
+    } catch (error) {
+      jobFailure = error;
+      notifyFailure(error, { stage: 'job-cleanup' });
     }
-  });
+    try {
+      await lock.release();
+    } catch (error) {
+      releaseFailure = error;
+      notifyFailure(error, { stage: 'lock-release' });
+    }
+    if (jobFailure) throw jobFailure;
+    if (releaseFailure) throw releaseFailure;
+    return jobResult;
+    },
+    batchAbortController
+  );
   return { ...plan, results: [...results, ...generated] };
 }
 
@@ -2758,7 +5118,7 @@ export async function previewBlueprintCandidates(options) {
       theme: options.theme,
       template: options.template
     }),
-    loadBlueprintPrompt(projectRoot)
+    loadBlueprintPrompt(projectRoot, options.template)
   ]);
   const mapIds = options.all ? sidecar.candidateMaps : [options.mapId];
   const results = [];
@@ -2813,6 +5173,7 @@ export async function previewBlueprintCandidates(options) {
 }
 
 async function loadApprovalIndex(projectRoot, paths, theme, template) {
+  const schemas = blueprintApprovalSchemas(template);
   const indexPath = resolveWithinProject(
     projectRoot,
     paths.index,
@@ -2829,7 +5190,7 @@ async function loadApprovalIndex(projectRoot, paths, theme, template) {
       'fullHash'
     ], 'blueprint approval index');
     if (
-      value.schemaVersion !== BLUEPRINT_APPROVAL_SCHEMA
+      value.schemaVersion !== schemas.index
       || value.theme !== theme
       || value.templateId !== template
       || !Array.isArray(value.entries)
@@ -2848,13 +5209,18 @@ async function loadApprovalIndex(projectRoot, paths, theme, template) {
         'sourceImageSha256',
         'promptProfileSha256',
         'reviewer',
-        'decision'
+        'decision',
+        ...(schemas.v2 ? ['reason', 'approvalFullHash'] : [])
       ], label);
       safeId(entry.id, `${label}.id`);
       safeId(entry.reviewer, `${label}.reviewer`);
       sha256(entry.blueprintFullHash, `${label}.blueprintFullHash`);
       sha256(entry.sourceImageSha256, `${label}.sourceImageSha256`);
       sha256(entry.promptProfileSha256, `${label}.promptProfileSha256`);
+      if (schemas.v2) {
+        approvalReason(entry.reason, `${label}.reason`);
+        sha256(entry.approvalFullHash, `${label}.approvalFullHash`);
+      }
       if (entry.decision !== 'approved') fail(`${label}.decision must be approved`);
       if (ids.has(entry.id)) fail(`blueprint approval index contains duplicate ${entry.id}`);
       ids.add(entry.id);
@@ -2881,7 +5247,7 @@ async function loadApprovalIndex(projectRoot, paths, theme, template) {
   } catch (error) {
     if (error.message.includes('does not exist')) {
       return {
-        schemaVersion: BLUEPRINT_APPROVAL_SCHEMA,
+        schemaVersion: schemas.index,
         theme,
         templateId: template,
         entries: [],
@@ -2907,6 +5273,15 @@ function finalizeApprovalIndex(value) {
   };
 }
 
+function finalizeApprovalRecord(value) {
+  const projection = { ...value };
+  delete projection.fullHash;
+  return {
+    ...projection,
+    fullHash: sha256Bytes(Buffer.from(stableJson(projection)))
+  };
+}
+
 function validateApprovalRecord(value, {
   theme,
   template,
@@ -2917,6 +5292,7 @@ function validateApprovalRecord(value, {
   sourceImageSha256,
   blueprintFileSha256
 }) {
+  const schemas = blueprintApprovalSchemas(template);
   exactKeys(value, [
     'schemaVersion',
     'id',
@@ -2928,7 +5304,8 @@ function validateApprovalRecord(value, {
     'blueprintFileSha256',
     'blueprintFullHash',
     'sourceImageSha256',
-    'promptProfile'
+    'promptProfile',
+    ...(schemas.v2 ? ['reason', 'fullHash'] : [])
   ], 'blueprint approval record');
   exactKeys(
     value.promptProfile,
@@ -2940,8 +5317,17 @@ function validateApprovalRecord(value, {
   sha256(value.blueprintFullHash, 'blueprint approval record.blueprintFullHash');
   sha256(value.sourceImageSha256, 'blueprint approval record.sourceImageSha256');
   sha256(value.promptProfile.sha256, 'blueprint approval record.promptProfile.sha256');
+  if (schemas.v2) {
+    approvalReason(value.reason, 'blueprint approval record.reason');
+    sha256(value.fullHash, 'blueprint approval record.fullHash');
+    const projection = { ...value };
+    delete projection.fullHash;
+    if (sha256Bytes(Buffer.from(stableJson(projection))) !== value.fullHash) {
+      fail('blueprint approval record full hash mismatch');
+    }
+  }
   if (
-    value.schemaVersion !== 'battle-map-blueprint-approval-v1'
+    value.schemaVersion !== schemas.record
     || value.id !== mapId
     || value.theme !== theme
     || value.templateId !== template
@@ -2956,18 +5342,31 @@ function validateApprovalRecord(value, {
     || value.promptProfile.path !== promptReference.path
     || value.promptProfile.sha256 !== promptReference.sha256
     || value.promptProfile.sha256 !== entry.promptProfileSha256
+    || (
+      schemas.v2
+      && (
+        value.reason !== entry.reason
+        || value.fullHash !== entry.approvalFullHash
+      )
+    )
   ) fail('blueprint approval record does not match its exact reviewed inputs');
   return value;
 }
 
 async function approveBlueprintCandidateUnlocked(options, projectRoot) {
+  const schemas = blueprintApprovalSchemas(options.template);
+  if (schemas.v2) {
+    approvalReason(options.reason, '--reason');
+  } else if (options.reason !== undefined) {
+    fail('--reason is not accepted for legacy template-01/-02 approvals');
+  }
   const [loaded, promptLoaded] = await Promise.all([
     loadTemplateSidecar({
       projectRoot,
       theme: options.theme,
       template: options.template
     }),
-    loadBlueprintPrompt(projectRoot)
+    loadBlueprintPrompt(projectRoot, options.template)
   ]);
   const { sidecar, sidecarPath } = loaded;
   await verifySource(projectRoot, sidecar);
@@ -2994,8 +5393,8 @@ async function approveBlueprintCandidateUnlocked(options, projectRoot) {
     options.template,
     options.mapId
   );
-  const approvalRecord = {
-    schemaVersion: 'battle-map-blueprint-approval-v1',
+  const approvalProjection = {
+    schemaVersion: schemas.record,
     id: options.mapId,
     theme: options.theme,
     templateId: options.template,
@@ -3005,8 +5404,12 @@ async function approveBlueprintCandidateUnlocked(options, projectRoot) {
     blueprintFileSha256: candidate.metadata.blueprint.fileSha256,
     blueprintFullHash: candidate.metadata.blueprint.fullHash,
     sourceImageSha256: candidate.metadata.sourceImageSha256,
-    promptProfile: candidate.metadata.promptProfile
+    promptProfile: candidate.metadata.promptProfile,
+    ...(schemas.v2 ? { reason: options.reason } : {})
   };
+  const approvalRecord = schemas.v2
+    ? finalizeApprovalRecord(approvalProjection)
+    : approvalProjection;
   if (options.decision === 'rejected') {
     const rejectionPath =
       `ai-image-metadata/battle-maps/review/${options.theme}/${options.template}/`
@@ -3065,7 +5468,13 @@ async function approveBlueprintCandidateUnlocked(options, projectRoot) {
       sourceImageSha256: candidate.metadata.sourceImageSha256,
       promptProfileSha256: candidate.metadata.promptProfile.sha256,
       reviewer: options.reviewer,
-      decision: 'approved'
+      decision: 'approved',
+      ...(schemas.v2
+        ? {
+            reason: options.reason,
+            approvalFullHash: approvalRecord.fullHash
+          }
+        : {})
     });
   const nextIndex = finalizeApprovalIndex({ ...index, entries });
   const allApproved = sidecar.candidateMaps.every(id =>
@@ -3134,7 +5543,7 @@ export async function verifyApprovedBlueprints({
       theme,
       template
     }),
-    loadBlueprintPrompt(root)
+    loadBlueprintPrompt(root, template)
   ]);
   await verifySource(root, sidecar);
   const firstPaths = approvedPaths(theme, template, sidecar.candidateMaps[0]);
@@ -3171,6 +5580,9 @@ export async function verifyApprovedBlueprints({
       const blueprintFileSha256 = sha256Bytes(blueprintBytes);
       const blueprint = parseStrictJsonBytes(blueprintBytes, 'approved blueprint');
       assertTemplateMapBlueprint(blueprint);
+      if (usesBlueprintV2SemanticContract(sidecar.id)) {
+        validateV2BlueprintSemanticContract(blueprint, sidecar);
+      }
       if (
         blueprint.candidateId !== mapId
         || blueprint.templateId !== template
@@ -3235,5 +5647,10 @@ export const BlueprintLifecycleInternals = Object.freeze({
   blueprintContract,
   createBlueprintContractExample,
   auditWorkspace,
-  finalizeApprovalIndex
+  finalizeApprovalIndex,
+  finalizeApprovalRecord,
+  blueprintApprovalSchemas,
+  blueprintPromptProfile,
+  validateV2BlueprintSemanticContract,
+  approvalReason
 });

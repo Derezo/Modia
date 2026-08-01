@@ -1,0 +1,88 @@
+{
+  "schemaVersion": "battle-art-family-descriptor-v2",
+  "id": "forest-heartlands-loam-path-straight-ns",
+  "theme": "forest",
+  "category": "route-transition",
+  "familyGroup": "forest-heartlands-loam-path",
+  "variantId": "straight-ns",
+  "capabilities": {
+    "direction": null,
+    "routeTopology": "straight-ns",
+    "surfaceVariant": null,
+    "ecologyProfile": "forest-heartlands-woodland",
+    "tierBands": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "heightDeltas": [
+      0
+    ]
+  },
+  "status": "draft",
+  "promptProfile": {
+    "id": "battle-art-family-v2",
+    "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+    "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+  },
+  "styleReferences": [
+    {
+      "id": "forest-source-template-01",
+      "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+      "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+    }
+  ],
+  "generationPrompt": "Create exactly one seam-safe orthographic isometric forest route-transition asset named forest-heartlands-loam-path-straight-ns for ecology profile forest-heartlands-woodland; tier bands 1, 2, 3, 4, 5; exact route topology straight-ns. Author the declared orientation directly as one continuous rising-right path from the N upper-right terminal seam cross-section at (192,32), through the anchor at (128,64), to the S lower-left terminal seam cross-section at (64,96) on the 256x128 canvas. Treat N=(192,32) and S=(64,96) explicitly as seam cross-sections, not cap centers. Keep the E lower-right target at (192,96) and W upper-left target at (64,32) fully transparent. Use Heartlands Woodland materials: warm ochre loam, meadow grass, bluebells, oak leaf litter, small cream-gray fieldstones, and dappled late-morning light. Carry the full 28–36 pixel warm-loam core centered through both seam targets without tapering. Continue that core only 4–6 pixels outward along each arm vector, then cap it at N=(196,30) and S=(60,98) with a short, nearly straight transverse dirt edge. Keep the total visible terminal silhouette no more than 52 pixels transverse. Place no grass, leaves, pebbles, feather, or antialiasing outward of either cap. Keep the remaining canvas transparent and the outermost 4-pixel rectangular border clear. Render only the route overlay: no opaque terrain diamond, panel, slab, baked background, exterior scenery, presentation frame, detached pixels, text, black void, or E/W branch.",
+  "rasterContract": {
+    "schemaVersion": "battle-art-raster-contract-v1",
+    "kind": "transparent-cutout",
+    "minimumCoveredPermille": 10,
+    "maximumCoveredPermille": 850
+  },
+  "canvas": {
+    "width": 256,
+    "height": 128
+  },
+  "placement": {
+    "pivot": {
+      "x": 128,
+      "y": 64
+    },
+    "anchor": {
+      "x": 128,
+      "y": 64
+    },
+    "footprint": {
+      "x": 0,
+      "y": 0,
+      "width": 1,
+      "height": 1
+    },
+    "collision": {
+      "kind": "none",
+      "cells": []
+    },
+    "drawBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 128
+    },
+    "occlusionBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
+    },
+    "stratum": "route"
+  },
+  "content": {
+    "version": 12,
+    "sourceSha256": null,
+    "runtimeSha256": null,
+    "immutableUrl": null
+  },
+  "source": null
+}

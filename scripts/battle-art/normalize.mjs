@@ -6,6 +6,7 @@ import path from 'node:path';
 
 import {
   CANDIDATE_SCHEMA,
+  assertStyleReferenceProvenance,
   atomicWrite,
   candidatePaths,
   exactKeys,
@@ -16,7 +17,8 @@ import {
   resolveTracked,
   selectFamilies,
   sha256,
-  stableJson
+  stableJson,
+  verifyCandidateRouteDerivation
 } from './lifecycle.mjs';
 import {
   normalizeGeneratedRasterBytes,
@@ -194,6 +196,9 @@ function assertCurrentCandidate(entry, candidate, paths) {
     'descriptorSha256',
     'promptProfile',
     'styleReferences',
+    'styleReferenceMode',
+    'styleReferenceProvenance',
+    ...(candidate.derivation !== undefined ? ['derivation'] : []),
     'image',
     'worker',
     'status'
@@ -214,6 +219,13 @@ function assertCurrentCandidate(entry, candidate, paths) {
       !== stableJson(entry.descriptor.styleReferences)) {
     throw new Error(`${entry.descriptor.id} candidate frozen input pins are stale`);
   }
+  assertStyleReferenceProvenance({
+    styleReferences: candidate.styleReferences,
+    provenance: candidate.styleReferenceProvenance,
+    mode: candidate.styleReferenceMode,
+    args: candidate.worker?.args,
+    label: `${entry.descriptor.id} candidate metadata`
+  });
   if (![paths.imagePng, paths.imageWebp].includes(candidate.image?.path)) {
     throw new Error(`${entry.descriptor.id} candidate image path is not canonical`);
   }
@@ -265,6 +277,15 @@ async function normalizeOne({
   if (stableJson(originalImage) !== stableJson(candidate.image)) {
     throw new Error(`${entry.descriptor.id} candidate image pin is stale`);
   }
+  await verifyCandidateRouteDerivation({
+    root: loaded.root,
+    descriptor: entry.descriptor,
+    candidate,
+    candidateBytes: originalBytes,
+    profile: loaded.promptProfile,
+    paths,
+    label: `${entry.descriptor.id} normalization route derivation`
+  });
   const normalizedBytes = await normalizeGeneratedRasterBytes({
     bytes: originalBytes,
     descriptor: entry.descriptor,
@@ -280,6 +301,12 @@ async function normalizeOne({
   });
   const image = await inspectImageContents(candidate.image.path, normalizedBytes);
   const drift = !normalizedBytes.equals(originalBytes);
+  if (drift && candidate.derivation !== undefined) {
+    throw new Error(
+      `${entry.descriptor.id} route-finished candidate is not canonical; `
+      + 'refusing to invalidate its immutable derivation'
+    );
+  }
   if (check || !drift) {
     return {
       family: entry.descriptor.id,
