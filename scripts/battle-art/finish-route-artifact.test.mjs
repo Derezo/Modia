@@ -46,6 +46,29 @@ function descriptor(overrides = {}) {
   };
 }
 
+function anchorScaleDescriptor({
+  scalePermille = 1250,
+  anchor = { x: 16, y: 12 },
+  finishing = {},
+  ...overrides
+} = {}) {
+  const base = descriptor();
+  return descriptor({
+    placement: { anchor },
+    capabilities: { routeTopology: 'straight-ns' },
+    ...overrides,
+    routeFinishing: {
+      schemaVersion: 'battle-art-route-finishing-v1',
+      strategy: 'anchor-scale-v1',
+      scalePermille,
+      maximumDetachedCoveredPermille:
+        base.routeFinishing.maximumDetachedCoveredPermille,
+      armAlphaSpan: { ...base.routeFinishing.armAlphaSpan },
+      ...finishing
+    }
+  });
+}
+
 async function sourcePng({
   width = 20,
   height = 15,
@@ -241,6 +264,136 @@ describe('bounded route artifact finishing', () => {
       );
     });
 
+  it('deterministically enlarges the whole normalized canvas about its anchor',
+    async () => {
+      const source = await sourcePng({
+        width: 32,
+        height: 24,
+        main: { x: 10, y: 8, width: 12, height: 8 },
+        detached: [{ x: 24, y: 12 }]
+      });
+      const routeDescriptor = anchorScaleDescriptor();
+      const first = await finishRouteArtifact({
+        bytes: source,
+        descriptor: routeDescriptor,
+        profile: PROFILE
+      });
+      const second = await finishRouteArtifact({
+        bytes: source,
+        descriptor: routeDescriptor,
+        profile: PROFILE
+      });
+
+      assert.deepEqual(first.bytes, second.bytes);
+      assert.deepEqual(first.derivation, second.derivation);
+      assert.deepEqual(
+        Object.keys(first.derivation).sort(),
+        [
+          'anchor',
+          'borderClearPixels',
+          'finalSha256',
+          'forbiddenBandClearPixels',
+          'kernel',
+          'scalePermille',
+          'schemaVersion',
+          'source',
+          'strategy'
+        ]
+      );
+      assert.equal(
+        first.derivation.schemaVersion,
+        'battle-art-route-finishing-v1'
+      );
+      assert.equal(first.derivation.strategy, 'anchor-scale-v1');
+      assert.equal(first.derivation.scalePermille, 1250);
+      assert.deepEqual(first.derivation.anchor, { x: 16, y: 12 });
+      assert.equal(first.derivation.borderClearPixels, 4);
+      assert.equal(first.derivation.forbiddenBandClearPixels, 0);
+      assert.equal(first.derivation.kernel, 'lanczos3');
+      assert.deepEqual(first.derivation.source, {
+        sha256: `sha256:${createHash('sha256').update(source).digest('hex')}`,
+        bytes: source.length,
+        width: 32,
+        height: 24,
+        format: 'png'
+      });
+      assert.equal(Object.hasOwn(first.derivation.source, 'path'), false);
+      assert.equal(
+        first.derivation.finalSha256,
+        `sha256:${createHash('sha256').update(first.bytes).digest('hex')}`
+      );
+
+      const geometry = await alphaBounds(first.bytes);
+      assert.ok(geometry.bounds.width > 12);
+      assert.ok(geometry.bounds.height > 8);
+      assert.ok(geometry.blueFragmentPixels > 0);
+      const { data, info } = await sharp(first.bytes)
+        .ensureAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+      for (let y = 0; y < info.height; y += 1) {
+        for (let x = 0; x < info.width; x += 1) {
+          if (x >= 4 && x < info.width - 4
+            && y >= 4 && y < info.height - 4) continue;
+          assert.equal(data[(((y * info.width) + x) * 4) + 3], 0);
+        }
+      }
+    });
+
+  it('rejects invalid anchor-scale factors, anchors, and foreign options',
+    async () => {
+      const source = await sourcePng({ width: 32, height: 24 });
+      for (const [invalid, message] of [
+        [
+          anchorScaleDescriptor({ scalePermille: 1000 }),
+          /scalePermille must be an integer between 1001 and 1500/
+        ],
+        [
+          anchorScaleDescriptor({ scalePermille: 1501 }),
+          /scalePermille must be an integer between 1001 and 1500/
+        ],
+        [
+          anchorScaleDescriptor({ scalePermille: 1100.5 }),
+          /scalePermille must be an integer between 1001 and 1500/
+        ],
+        [
+          anchorScaleDescriptor({ anchor: { x: -1, y: 12 } }),
+          /anchor\.x must be a nonnegative integer/
+        ],
+        [
+          anchorScaleDescriptor({ anchor: { x: 32, y: 12 } }),
+          /anchor must be contained by the canvas/
+        ],
+        [
+          anchorScaleDescriptor({ anchor: { x: 16, y: 12.5 } }),
+          /anchor\.y must be a nonnegative integer/
+        ],
+        ...[
+          ['targetBox', { x: 1, y: 1, width: 10, height: 10 }],
+          ['maximumScaleAnisotropyPermille', 1250],
+          ['terminalClip', {
+            schemaVersion: 'battle-art-route-terminal-clip-v1',
+            maximumOverflowPixels: 1
+          }],
+          ['geometryPrime', { schemaVersion: 'geometry-prime-v1' }]
+        ].map(([key, value]) => [
+          anchorScaleDescriptor({ finishing: { [key]: value } }),
+          new RegExp(
+            `routeFinishing\\.${key} is not allowed for anchor-scale-v1`
+          )
+        ])
+      ]) {
+        await assert.rejects(
+          finishRouteArtifact({
+            bytes: source,
+            descriptor: invalid,
+            profile: PROFILE
+          }),
+          message
+        );
+      }
+    });
+
   it('enforces the detached covered-pixel bound before selecting the subject',
     async () => {
       const source = await sourcePng({
@@ -310,6 +463,95 @@ describe('bounded route artifact finishing', () => {
       )
     );
   });
+
+  it('honors a descriptor-pinned measured-prime anisotropy limit', async () => {
+    const bounded = descriptor({
+      routeFinishing: {
+        ...descriptor().routeFinishing,
+        targetBox: { x: 6, y: 2, width: 20, height: 20 },
+        maximumScaleAnisotropyPermille: 1350
+      }
+    });
+    const result = await finishRouteArtifact({
+      bytes: await sourcePng({
+        width: 40,
+        height: 30,
+        main: { x: 10, y: 2, width: 20, height: 27 }
+      }),
+      descriptor: bounded,
+      profile: PROFILE
+    });
+    assert.equal(result.derivation.targetBox.width, 20);
+
+    await assert.rejects(
+      finishRouteArtifact({
+        bytes: await sourcePng({
+          width: 40,
+          height: 30,
+          main: { x: 10, y: 1, width: 20, height: 28 }
+        }),
+        descriptor: bounded,
+        profile: PROFILE
+      }),
+      /require anisotropy 1\.400000 .*maximum is 1\.350000/
+    );
+  });
+
+  it('clips only straight-route pixels beyond descriptor-pinned terminal planes',
+    async () => {
+      const clipped = descriptor({
+        placement: { anchor: { x: 16, y: 12 } },
+        capabilities: { routeTopology: 'straight-ns' },
+        routeFinishing: {
+          ...descriptor().routeFinishing,
+          targetBox: { x: 2, y: 2, width: 28, height: 20 },
+          terminalClip: {
+            schemaVersion: 'battle-art-route-terminal-clip-v1',
+            maximumOverflowPixels: 6
+          }
+        }
+      });
+      const result = await finishRouteArtifact({
+        bytes: await sourcePng({
+          width: 40,
+          height: 30,
+          main: { x: 2, y: 2, width: 36, height: 26 }
+        }),
+        descriptor: clipped,
+        profile: PROFILE
+      });
+      assert.equal(
+        result.derivation.terminalClip.maximumOverflowPixels,
+        6
+      );
+      assert.ok(result.derivation.terminalClip.clearedPixels > 0);
+
+      const { data, info } = await sharp(result.bytes)
+        .ensureAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+      const vectors = [
+        { x: info.width / 4, y: -info.height / 4 },
+        { x: -info.width / 4, y: info.height / 4 }
+      ];
+      for (let y = 0; y < info.height; y += 1) {
+        for (let x = 0; x < info.width; x += 1) {
+          if (data[((y * info.width) + x) * 4 + 3] === 0) continue;
+          for (const vector of vectors) {
+            const lengthSquared =
+              (vector.x * vector.x) + (vector.y * vector.y);
+            const overflowDot =
+              ((x - 16) * vector.x)
+              + ((y - 12) * vector.y)
+              - lengthSquared;
+            assert.ok(
+              overflowDot <= 0
+              || overflowDot * overflowDot <= 36 * lengthSquared
+            );
+          }
+        }
+      }
+    });
 
   it('rejects the 233x826 vertical canary before distortion', async () => {
     const canary = descriptor({
@@ -495,6 +737,65 @@ describe('bounded route artifact finishing', () => {
     );
   });
 
+  it('measures tee arms beyond the junction and caps permissive descriptors',
+    async () => {
+      const canvas = { width: 256, height: 128 };
+      const anchor = { x: 128, y: 64 };
+      const routeDescriptor = descriptor({
+        canvas,
+        capabilities: { routeTopology: 'tee-esw' },
+        placement: { anchor },
+        routeFinishing: {
+          ...descriptor().routeFinishing,
+          targetBox: { x: 16, y: 4, width: 224, height: 120 },
+          armAlphaSpan: {
+            alphaThreshold: 240,
+            minimumPixels: 28,
+            maximumPixels: 120,
+            maximumSpreadPixels: 100
+          }
+        }
+      });
+      const valid = await validateFinishedRouteArtifact({
+        bytes: await sampledArmsPng({
+          canvas,
+          anchor,
+          spans: {
+            e75: 40,
+            e100: 40,
+            s75: 42,
+            s100: 39,
+            w75: 44,
+            w100: 34
+          }
+        }),
+        descriptor: routeDescriptor
+      });
+      assert.deepEqual(
+        valid.samples.map(sample => `${sample.direction}${sample.percent}`),
+        ['e75', 'e100', 's75', 's100', 'w75', 'w100']
+      );
+
+      await assert.rejects(
+        validateFinishedRouteArtifact({
+          bytes: await sampledArmsPng({
+            canvas,
+            anchor,
+            spans: {
+              e75: 40,
+              e100: 40,
+              s75: 42,
+              s100: 39,
+              w75: 65,
+              w100: 34
+            }
+          }),
+          descriptor: routeDescriptor
+        }),
+        /w arm opaque perpendicular span at 75% is 65 pixels; expected at most 64/
+      );
+    });
+
   it('contains one fixed transform and no exhaustive-fit machinery',
     async () => {
       const moduleSource = await readFile(
@@ -503,6 +804,7 @@ describe('bounded route artifact finishing', () => {
       );
       assert.equal(moduleSource.match(/\.extract\(/g)?.length, 1);
       assert.equal(moduleSource.match(/\.resize\(/g)?.length, 1);
+      assert.doesNotMatch(moduleSource, /scalePermille\s*[+\-]=/);
       assert.doesNotMatch(
         moduleSource,
         /fit-route-candidate|\benumerat|\bgrid|\bsearch|\bretr|\bscor|\bsynth|\bfinalist/i

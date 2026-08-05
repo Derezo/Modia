@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "battle-map-v3-visual-approval-v2",
+  "decision": "approved",
+  "reviewer": "codex-template07-independent-production-visual-review",
+  "reason": "Exact v6 render approved: the relocated oak and root mass dominate the central ochre ravine, five surfaces and three subdued broad approaches remain distinct, elevation transitions do not overpower play space, and the diagonal organic boundary and complete camera framing preserve gameplay readability.",
+  "checklistVersion": 2,
+  "theme": "forest",
+  "templateId": "forest-template-07",
+  "contentId": "forest-template-07-c",
+  "contentVersion": 6,
+  "mapPath": "battle-maps/compiled/forest/forest-template-07-c.v6.json",
+  "hashes": {
+    "authoritativeHash": "sha256:db834cac46f6d40e0c6e38dbc48d896be6cf34160886bc086f60163e96f70c3f",
+    "fullHash": "sha256:00b43de2f83723d2e350341117f74a4f9b9bff839c9daa914c00d4f917de8b73",
+    "visualHash": "sha256:071ef1d558b3a0a40c1d1afb88f97e0b46703470b35d351320d5c249ae45a654"
+  },
+  "sourceSidecar": {
+    "path": "ai-image-metadata/battle-maps/templates/forest/forest-template-07.json",
+    "fullHash": "sha256:679d2a63d2aeb330cfa8f95f909067a05dcbc2f095b1a902ae22d2e3a6364849"
+  },
+  "blueprint": {
+    "id": "forest-template-07-c",
+    "fullHash": "sha256:0fed8f8a9d89efaddf5bc477f84a966d44ba48f8a07da65b54d65c3505f2ee0e",
+    "approvalIndexFullHash": "sha256:d483614b3f889d362e93e02940aa075d659ddb335cc4d6565447900c23e284f4"
+  },
+  "renderProfile": {
+    "id": "forest-heartlands-fallen-oak-v1",
+    "path": "battle-maps/render-profiles/forest-heartlands-fallen-oak-v1.json",
+    "fullHash": "sha256:36a3b37cbc3f7220718166d6684363080092819afb11fcab04d77b007811ccfd"
+  },
+  "tileCatalog": {
+    "id": "forest-heartlands-fallen-oak-v1-tiles",
+    "version": 1,
+    "path": "battle-maps/tile-catalogs/forest-heartlands-fallen-oak-v1.json",
+    "fullHash": "sha256:76e14aa45c8255c285cf1251c134989135091e7f7cba240912836773536ee8f6"
+  },
+  "assetBundle": {
+    "id": "battle-art-descriptors-2026-07-30",
+    "version": 10,
+    "path": "ai-image-metadata/battle-art/releases/battle-art-descriptors-2026-07-30.v10.json",
+    "manifestFullHash": "sha256:1f456f81c986327cc2615a7450590a0f3a1aea46e727c18ca3ed3cd0e8baca29"
+  },
+  "capabilityReport": {
+    "schemaVersion": "battle-map-v3-capability-report-v1",
+    "mapFullHash": "sha256:00b43de2f83723d2e350341117f74a4f9b9bff839c9daa914c00d4f917de8b73",
+    "bossCapable": true,
+    "competitiveParity": false,
+    "parityCases": null
+  },
+  "screenshot": {
+    "path": "ai-image-metadata/battle-maps/review/forest/forest-template-07/forest-template-07-c/forest-template-07-c.v6.00b43de2f837.png",
+    "bytes": 708236,
+    "width": 1088,
+    "height": 703,
+    "format": "png",
+    "sha256": "sha256:5cadde4662d9f528789c4b7d5f3fc23d14334634b8c05decf8ab8013c5695427"
+  }
+}

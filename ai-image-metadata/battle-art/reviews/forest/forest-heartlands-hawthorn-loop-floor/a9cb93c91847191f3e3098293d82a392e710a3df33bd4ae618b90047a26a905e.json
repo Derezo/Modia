@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v2",
+  "theme": "forest",
+  "familyId": "forest-heartlands-hawthorn-loop-floor",
+  "decision": "approved",
+  "reviewer": "codex-v3-template07-visual-assets",
+  "reason": "The full seam-safe diamond reads as dark hawthorn humus with leaf litter, scattered pale petals, berries, and flat twigs, creating a shaded loop floor without a raised thicket or backdrop.",
+  "reviewedAt": "2026-08-05T05:24:11.446Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-hawthorn-loop-floor.json",
+    "sha256": "sha256:48352794f4676ddea550850cd00aa5841f1f2aef9ef1686a23814b369a99296d",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hawthorn-loop-floor/result.json",
+      "bytes": 2778,
+      "sha256": "sha256:8ce2dafdf6c49e65f5f955a5a5a866dd5ae5b42c95e4477b783bf81dd71d1b8c"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hawthorn-loop-floor/candidate.png",
+      "bytes": 39902,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:a9cb93c91847191f3e3098293d82a392e710a3df33bd4ae618b90047a26a905e"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "styleReferenceMode": "attachments",
+    "styleReferenceProvenance": [
+      {
+        "id": "forest-source-template-01",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1",
+        "stagedBasename": "style-reference-01.png"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 600000,
+      "imageArguments": [
+        "style-reference-01.png"
+      ],
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hawthorn-loop-floor/prompt.txt",
+        "bytes": 11243,
+        "sha256": "sha256:bb996b4a972ae7c6f0bc5ac4273a8525105f50b1942a190791e5e622597e696c"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hawthorn-loop-floor/worker.jsonl",
+        "bytes": 25070,
+        "sha256": "sha256:0d27d30ad013e85564e7f93fb3604d7089de4b84898af89d1dbf4037f7ebb1e2"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hawthorn-loop-floor/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hawthorn-loop-floor/last-message.txt",
+        "bytes": 288,
+        "sha256": "sha256:16d16ede1c257f4a2add66e52e0518807f45e2245c3e2a5b99983f3e67050138"
+      }
+    }
+  },
+  "fullHash": "sha256:3b8a0858b2c2d617bfc5557df39c0c397604bfbbd7a2de4b8b4abb92858dc01e"
+}

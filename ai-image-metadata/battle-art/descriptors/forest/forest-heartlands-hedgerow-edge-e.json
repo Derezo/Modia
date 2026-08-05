@@ -21,7 +21,7 @@
       1
     ]
   },
-  "status": "approved",
+  "status": "compiled",
   "promptProfile": {
     "id": "battle-art-family-v2",
     "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
@@ -86,8 +86,8 @@
   "content": {
     "version": 1,
     "sourceSha256": "sha256:d58799394edf6ecb2c25a0e436ab0638fc7f781d25a1385ba05fed80ba4126c0",
-    "runtimeSha256": null,
-    "immutableUrl": null
+    "runtimeSha256": "sha256:485036ef55e06240c85ba6a6120eedcdd2a05dc1c3761d06ee7770d6235f6b01",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v10/forest/exposed-face-boundary/forest-heartlands-hedgerow-edge-e/v1/485036ef55e06240c85ba6a6120eedcdd2a05dc1c3761d06ee7770d6235f6b01.webp"
   },
   "source": {
     "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hedgerow-edge-e/result.json",

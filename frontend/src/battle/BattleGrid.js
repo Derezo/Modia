@@ -47,6 +47,27 @@ const TILE_WIDTH = 64;
 const TILE_HEIGHT = 32;
 const TILE_SPRITE_SIZE = 64;
 const MAP_EDGE_SKIRT = 4;
+const FALLEN_OAK_RENDER_PROFILE_ID = 'forest-heartlands-fallen-oak-v1';
+const DEFAULT_V3_ROUTE_PRESENTATION = Object.freeze({
+  underpaint: Object.freeze([
+    Object.freeze({ expansion: 4.5, opacity: 0.18, color: '#a08352' }),
+    Object.freeze({ expansion: 1.5, opacity: 0.32, color: '#80613d' })
+  ]),
+  spriteAlpha: 1,
+  brightnessOffset: 0,
+  saturationOffset: 0
+});
+const V3_ROUTE_PRESENTATION_BY_PROFILE_ID = Object.freeze({
+  [FALLEN_OAK_RENDER_PROFILE_ID]: Object.freeze({
+    underpaint: Object.freeze([
+      Object.freeze({ expansion: 10, opacity: 0.16, color: '#ad8b57' }),
+      Object.freeze({ expansion: 5.5, opacity: 0.22, color: '#8a6b42' })
+    ]),
+    spriteAlpha: 0.18,
+    brightnessOffset: -12,
+    saturationOffset: -36
+  })
+});
 const DIRECTION_NAMES = Object.freeze({
   n: 'north',
   e: 'east',
@@ -705,6 +726,7 @@ export class BattleGrid {
     surfaceRenderers,
     layers,
     obstacleLayers,
+    renderProfileId = null,
     renderProfile,
     scene = null,
     surfaceFoundation = null
@@ -742,6 +764,7 @@ export class BattleGrid {
       surfaceRenderers,
       layers,
       obstacleLayers,
+      renderProfileId,
       renderProfile,
       scene,
       surfaceFoundation
@@ -2040,8 +2063,14 @@ export class BattleGrid {
 
   renderBattleMapV3Route(ctx, layer, screenX, screenY, alpha) {
     const visualSeed = layer.routeTopology?.visualSeed ?? 0;
-    const brightness = 99 + visualSeed % 3;
-    const saturation = 96 + ((visualSeed >>> 5) % 4);
+    const presentation =
+      V3_ROUTE_PRESENTATION_BY_PROFILE_ID[
+        this.battleMapV3RenderData.renderProfileId
+      ] ?? DEFAULT_V3_ROUTE_PRESENTATION;
+    const brightness =
+      99 + visualSeed % 3 + presentation.brightnessOffset;
+    const saturation =
+      96 + ((visualSeed >>> 5) % 4) + presentation.saturationOffset;
     const treatment = {
       direction: ['s', 'e', 'w', 'n'][
         (layer.routeTopology?.textureSeed ?? 0) & 3
@@ -2064,8 +2093,13 @@ export class BattleGrid {
       ctx.fill();
       ctx.restore();
     };
-    renderUnderpaint(4.5, 0.18, '#a08352');
-    renderUnderpaint(1.5, 0.32, '#80613d');
+    for (const underpaint of presentation.underpaint) {
+      renderUnderpaint(
+        underpaint.expansion,
+        underpaint.opacity,
+        underpaint.color
+      );
+    }
 
     // The topology-shaped underpaint closes hairline seams while the approved
     // transparent sprite remains intact and supplies its own soft edge.
@@ -2078,7 +2112,7 @@ export class BattleGrid {
       },
       screenX,
       screenY,
-      alpha
+      alpha * presentation.spriteAlpha
     );
   }
 
@@ -2249,6 +2283,12 @@ export class BattleGrid {
         screenY,
         alpha
       );
+      if (
+        this.battleMapV3RenderData.renderProfileId ===
+        FALLEN_OAK_RENDER_PROFILE_ID
+      ) {
+        return this.getBattleMapV3AssetGeometry(layer, screenX, screenY);
+      }
     }
     return this.drawBattleMapV3AssetImage(
       ctx,

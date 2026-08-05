@@ -1,0 +1,38 @@
+{
+  "id": "forest-heartlands-fallen-oak-v1-tiles",
+  "version": 1,
+  "fullHash": "sha256:76e14aa45c8255c285cf1251c134989135091e7f7cba240912836773536ee8f6",
+  "renderProfileId": "forest-heartlands-fallen-oak-v1",
+  "materials": [
+    {
+      "symbol": "clover-glade",
+      "material": "clover-glade",
+      "passable": true,
+      "movementCost": 1
+    },
+    {
+      "symbol": "fern-hazel-glade",
+      "material": "fern-hazel-glade",
+      "passable": true,
+      "movementCost": 1
+    },
+    {
+      "symbol": "fieldstone-terrace",
+      "material": "fieldstone-terrace",
+      "passable": true,
+      "movementCost": 1
+    },
+    {
+      "symbol": "hawthorn-loop",
+      "material": "hawthorn-loop",
+      "passable": true,
+      "movementCost": 1
+    },
+    {
+      "symbol": "dry-ravine",
+      "material": "dry-ravine",
+      "passable": true,
+      "movementCost": 1
+    }
+  ]
+}

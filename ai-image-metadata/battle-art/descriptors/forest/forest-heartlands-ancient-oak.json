@@ -21,7 +21,7 @@
       0
     ]
   },
-  "status": "approved",
+  "status": "compiled",
   "promptProfile": {
     "id": "battle-art-family-v2",
     "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
@@ -86,8 +86,8 @@
   "content": {
     "version": 1,
     "sourceSha256": "sha256:f53644fafd6c9862087d1badacff5680adc9d933e60f2d3fface59aa17855c46",
-    "runtimeSha256": null,
-    "immutableUrl": null
+    "runtimeSha256": "sha256:ca034a038ac6b002d17f93595d0945138bcd9839e205ade7cd0528650577aa1e",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v10/forest/blocking-obstacle/forest-heartlands-ancient-oak/v1/ca034a038ac6b002d17f93595d0945138bcd9839e205ade7cd0528650577aa1e.webp"
   },
   "source": {
     "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-ancient-oak/result.json",

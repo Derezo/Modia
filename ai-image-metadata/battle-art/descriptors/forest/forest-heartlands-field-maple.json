@@ -21,7 +21,7 @@
       0
     ]
   },
-  "status": "approved",
+  "status": "compiled",
   "promptProfile": {
     "id": "battle-art-family-v2",
     "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
@@ -86,8 +86,8 @@
   "content": {
     "version": 1,
     "sourceSha256": "sha256:9fe4e35bae7ca636b449d64616b249a1b97697cec619972232edca5e868e7328",
-    "runtimeSha256": null,
-    "immutableUrl": null
+    "runtimeSha256": "sha256:240bab98436ae8fbd9761057da15e0bc882d8c0c7b598eee2292348673e00c0e",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v10/forest/blocking-obstacle/forest-heartlands-field-maple/v1/240bab98436ae8fbd9761057da15e0bc882d8c0c7b598eee2292348673e00c0e.webp"
   },
   "source": {
     "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-field-maple/result.json",

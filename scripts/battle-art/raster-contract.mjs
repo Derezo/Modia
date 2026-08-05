@@ -13,6 +13,98 @@ const TRANSPARENT_CUTOUT_NOISE_ALPHA_MAX = 8;
 // subpixel at runtime scale while still rejecting a visible matte fringe.
 const MAX_RESIDUAL_EXTERIOR_CHROMA_PIXELS = 3;
 
+export async function measureDirectGeometryPrimeRaster({
+  bytes,
+  prime,
+  label = 'battle-art direct geometry prime'
+}) {
+  const { width, height } = prime.canvas;
+  const limitInputPixels = width * height;
+  const { data, info } = await sharp(bytes, {
+    failOn: 'error',
+    limitInputPixels
+  })
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  if (info.channels !== 4 || info.width !== width || info.height !== height) {
+    throw new Error(`${label} source raster dimensions do not match its canvas`);
+  }
+
+  let minimumX = width;
+  let minimumY = height;
+  let maximumX = -1;
+  let maximumY = -1;
+  let coveredPixels = 0;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (data[(((y * width) + x) * 4) + 3] === 0) continue;
+      coveredPixels += 1;
+      minimumX = Math.min(minimumX, x);
+      minimumY = Math.min(minimumY, y);
+      maximumX = Math.max(maximumX, x);
+      maximumY = Math.max(maximumY, y);
+    }
+  }
+  if (coveredPixels === 0) {
+    throw new Error(`${label} source raster has no visible subject pixels`);
+  }
+
+  const vectors = {
+    e: { x: width / 4, y: height / 4 },
+    s: { x: -width / 4, y: height / 4 }
+  };
+  const armSampleCenters = ['e', 's'].flatMap(direction => (
+    [50, 75, 100].map(percent => ({
+      direction,
+      percent,
+      x: prime.anchor.x + (vectors[direction].x * percent / 100),
+      y: prime.anchor.y + (vectors[direction].y * percent / 100)
+    }))
+  ));
+  if (armSampleCenters.some(sample => (
+    !Number.isSafeInteger(sample.x) || !Number.isSafeInteger(sample.y)
+  ))) {
+    throw new Error(`${label} canvas cannot produce integral arm sample centers`);
+  }
+
+  const xStep = width / 64;
+  const xStart = prime.anchor.x - (xStep * 4);
+  if (!Number.isSafeInteger(xStep)
+    || xStep < 1
+    || !Number.isSafeInteger(xStart)
+    || xStart < 0
+    || xStart + (xStep * 8) >= width) {
+    throw new Error(`${label} canvas cannot produce a canonical apex profile`);
+  }
+  const alpha240Y = Array.from({ length: 9 }, (_, index) => {
+    const x = xStart + (xStep * index);
+    for (let y = 0; y < height; y += 1) {
+      if (data[(((y * width) + x) * 4) + 3] >= prime.alphaThreshold) {
+        return y;
+      }
+    }
+    throw new Error(
+      `${label} source raster has no alpha-${prime.alphaThreshold} `
+      + `apex sample at x=${x}`
+    );
+  });
+
+  return {
+    subjectBounds: {
+      x: minimumX,
+      y: minimumY,
+      width: maximumX - minimumX + 1,
+      height: maximumY - minimumY + 1
+    },
+    coveragePermille: Math.floor(
+      (coveredPixels * 1000) / limitInputPixels
+    ),
+    armSampleCenters,
+    apexTopProfile: { xStart, xStep, alpha240Y }
+  };
+}
+
 function chromaRgb(profile) {
   const value = profile?.background?.chroma;
   if (typeof value !== 'string' || !HEX_COLOR.test(value)) {
@@ -371,6 +463,10 @@ export async function normalizeGeneratedRasterBytes({
   }
   if (rasterKind === 'transparent-cutout') {
     clearLowAlphaCutoutNoise(canonical);
+    // Clearing generated alpha-noise can expose chroma pixels that were not on
+    // the first exterior frontier. Run the same bounded deterministic despill
+    // once more against the final cutout exterior before measuring residue.
+    despillExteriorChroma(canonical, profile);
     canonical.residualExteriorChromaPixels = countResidualExteriorChroma(
       canonical.data,
       canonical.width,

@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "battle-map-blueprint-approval-v2",
+  "id": "forest-template-05-c",
+  "theme": "forest",
+  "templateId": "forest-template-05",
+  "decision": "approved",
+  "reviewer": "codex-v3-borderwood-bundle-refresh",
+  "blueprintPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-05/forest-template-05-c.json",
+  "blueprintFileSha256": "sha256:a40114556cfbd3b93b1a0c303c6e0c348416440463b77e1d42d82da4134c732f",
+  "blueprintFullHash": "sha256:1f93970fc5e3378e7847390aebba73e94eb874b57fbe1b29a52e26dba70081e5",
+  "sourceImageSha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1",
+  "promptProfile": {
+    "id": "map-blueprint-v2",
+    "path": "ai-image-metadata/battle-maps/prompts/map-blueprint-v2.json",
+    "sha256": "sha256:d9fd841812bcc9a4713d3ac8b1c81715f359e55d55098589f8970650fed7cdae"
+  },
+  "reason": "Approved after strict mechanical preview of the deterministic JSON starter: variant C preserves the Borderwood clearing network and distinct decoration and connection placement while satisfying tier-1 formation, connectivity, V2 semantic, spawn-corpus, and renderer asset-family closure checks.",
+  "fullHash": "sha256:d3b2625ccc8e260e5b4bf3432d8f1362c66377d2df7617cceba4a256f82cbd77"
+}

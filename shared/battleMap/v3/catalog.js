@@ -20,20 +20,25 @@ import {
   uniqueStrings
 } from './validation.js';
 
-export const BATTLE_MAP_V3_CATALOG_SCHEMA_VERSION = 2;
+export const BATTLE_MAP_V3_CATALOG_SCHEMA_VERSION = 3;
 export const BATTLE_MAP_V3_SELECTOR_VERSION = 2;
 export const BATTLE_MAP_V3_SUPPORTED_CATALOG_SCHEMA_VERSIONS =
-  Object.freeze([1, 2]);
+  Object.freeze([1, 2, 3]);
 export const BATTLE_MAP_V3_SUPPORTED_SELECTOR_VERSIONS =
   Object.freeze([1, 2]);
 export const BATTLE_MAP_V3_MAX_WEIGHT = 1_000_000;
 export const BATTLE_MAP_V3_CATALOG_HASH_DOMAIN =
-  'modia:battle-map-v3:catalog-release:v2';
+  'modia:battle-map-v3:catalog-release:v3';
 export const BATTLE_MAP_V3_CATALOG_PROJECTION_SCHEMA =
-  'battle-map-v3-catalog-release/projection-v2';
-const LEGACY_CATALOG_HASH_DOMAIN = 'modia:battle-map-v3:catalog-release:v1';
-const LEGACY_CATALOG_PROJECTION_SCHEMA =
+  'battle-map-v3-catalog-release/projection-v3';
+const LEGACY_V1_CATALOG_HASH_DOMAIN =
+  'modia:battle-map-v3:catalog-release:v1';
+const LEGACY_V1_CATALOG_PROJECTION_SCHEMA =
   'battle-map-v3-catalog-release/projection-v1';
+const LEGACY_V2_CATALOG_HASH_DOMAIN =
+  'modia:battle-map-v3:catalog-release:v2';
+const LEGACY_V2_CATALOG_PROJECTION_SCHEMA =
+  'battle-map-v3-catalog-release/projection-v2';
 
 const RELEASE_KEYS = Object.freeze([
   'catalogSchemaVersion', 'catalogReleaseId', 'selectorVersion',
@@ -53,10 +58,27 @@ const ENTRY_V2_KEYS = Object.freeze([
   'ecologyProfile',
   ...ENTRY_V1_KEYS.slice(7)
 ]);
+const ENTRY_V3_KEYS = Object.freeze([
+  ...ENTRY_V2_KEYS.slice(0, 17),
+  'assetBundleVersion',
+  ...ENTRY_V2_KEYS.slice(17)
+]);
+const ASSET_PIN_V1_V2_KEYS = Object.freeze([
+  'assetBundleId', 'manifestFullHash'
+]);
+const ASSET_PIN_V3_KEYS = Object.freeze([
+  'assetBundleId', 'assetBundleVersion', 'manifestFullHash'
+]);
 
-function validateAssetPin(value, path, errors) {
-  if (!exactObject(value, path, ['assetBundleId', 'manifestFullHash'], errors)) return;
+function validateAssetPin(value, path, errors, schemaVersion) {
+  const keys = schemaVersion >= 3 ? ASSET_PIN_V3_KEYS : ASSET_PIN_V1_V2_KEYS;
+  if (!exactObject(value, path, keys, errors)) return;
   safeId(value.assetBundleId, `${path}.assetBundleId`, errors);
+  if (schemaVersion >= 3) {
+    integer(value.assetBundleVersion, `${path}.assetBundleVersion`, errors, {
+      min: 1
+    });
+  }
   sha256(value.manifestFullHash, `${path}.manifestFullHash`, errors);
 }
 
@@ -67,7 +89,11 @@ function validateDimensions(value, path, errors) {
 }
 
 function validateEntry(value, path, errors, releaseId, assetPins, schemaVersion) {
-  const keys = schemaVersion === 2 ? ENTRY_V2_KEYS : ENTRY_V1_KEYS;
+  const keys = schemaVersion >= 3
+    ? ENTRY_V3_KEYS
+    : schemaVersion === 2
+      ? ENTRY_V2_KEYS
+      : ENTRY_V1_KEYS;
   if (!exactObject(value, path, keys, errors)) return;
   safeId(value.id, `${path}.id`, errors);
   safeId(value.mapContentId, `${path}.mapContentId`, errors);
@@ -78,7 +104,7 @@ function validateEntry(value, path, errors, releaseId, assetPins, schemaVersion)
     push(errors, `${path}.catalogReleaseId`, `must equal release id ${releaseId}`);
   }
   safeId(value.theme, `${path}.theme`, errors);
-  if (schemaVersion === 2) {
+  if (schemaVersion >= 2) {
     safeId(value.ecologyProfile, `${path}.ecologyProfile`, errors);
   }
   safeId(value.renderProfileId, `${path}.renderProfileId`, errors);
@@ -96,10 +122,25 @@ function validateEntry(value, path, errors, releaseId, assetPins, schemaVersion)
     push(errors, path, 'maxAssignableOpponents must not exceed candidatePoolSize');
   }
   safeId(value.assetBundleId, `${path}.assetBundleId`, errors);
+  if (schemaVersion >= 3) {
+    integer(value.assetBundleVersion, `${path}.assetBundleVersion`, errors, {
+      min: 1
+    });
+  }
   sha256(value.assetBundleManifestFullHash, `${path}.assetBundleManifestFullHash`, errors);
-  const pinnedHash = assetPins.get(value.assetBundleId);
+  const assetPin = schemaVersion >= 3
+    ? `${value.assetBundleId}\0${value.assetBundleVersion}`
+    : value.assetBundleId;
+  const pinnedHash = assetPins.get(assetPin);
   if (pinnedHash === undefined) {
-    push(errors, `${path}.assetBundleId`, `asset bundle ${value.assetBundleId} is not pinned by the release`);
+    const versionSuffix = schemaVersion >= 3
+      ? `@${value.assetBundleVersion}`
+      : '';
+    push(
+      errors,
+      `${path}.assetBundleId`,
+      `asset bundle ${value.assetBundleId}${versionSuffix} is not pinned by the release`
+    );
   } else if (pinnedHash !== value.assetBundleManifestFullHash) {
     push(errors, `${path}.assetBundleManifestFullHash`, 'must equal the release asset-bundle pin');
   }
@@ -121,26 +162,59 @@ function validateCatalogRelease(value, final) {
     push(errors, `${root}.catalogSchemaVersion`, 'must be a supported catalog schema');
   }
   safeId(value.catalogReleaseId, `${root}.catalogReleaseId`, errors);
+  const expectedSelectorVersion = value.catalogSchemaVersion === 3
+    ? 2
+    : value.catalogSchemaVersion;
   if (
     !BATTLE_MAP_V3_SUPPORTED_SELECTOR_VERSIONS.includes(value.selectorVersion)
-    || value.selectorVersion !== value.catalogSchemaVersion
+    || value.selectorVersion !== expectedSelectorVersion
   ) {
     push(
       errors,
       `${root}.selectorVersion`,
-      'must be supported and equal catalogSchemaVersion'
+      `must be supported and equal ${expectedSelectorVersion} for catalog schema `
+        + value.catalogSchemaVersion
     );
   }
   const assetPins = new Map();
   if (array(value.assetBundlePins, `${root}.assetBundlePins`, errors, { min: 1 })) {
     value.assetBundlePins.forEach((pin, index) => {
-      validateAssetPin(pin, `${root}.assetBundlePins[${index}]`, errors);
-      if (assetPins.has(pin?.assetBundleId)) {
-        push(errors, `${root}.assetBundlePins[${index}].assetBundleId`, `duplicate asset bundle ${pin.assetBundleId}`);
+      const path = `${root}.assetBundlePins[${index}]`;
+      validateAssetPin(pin, path, errors, value.catalogSchemaVersion);
+      const identity = value.catalogSchemaVersion >= 3
+        ? `${pin?.assetBundleId}\0${pin?.assetBundleVersion}`
+        : pin?.assetBundleId;
+      if (assetPins.has(identity)) {
+        const versionSuffix = value.catalogSchemaVersion >= 3
+          ? `@${pin?.assetBundleVersion}`
+          : '';
+        push(
+          errors,
+          path,
+          `duplicate asset bundle ${pin?.assetBundleId}${versionSuffix}`
+        );
       }
-      assetPins.set(pin?.assetBundleId, pin?.manifestFullHash);
-      if (index > 0 && value.assetBundlePins[index - 1]?.assetBundleId >= pin?.assetBundleId) {
-        push(errors, `${root}.assetBundlePins[${index}]`, 'pins must be strictly ordered by assetBundleId');
+      assetPins.set(identity, pin?.manifestFullHash);
+      if (index > 0) {
+        const previous = value.assetBundlePins[index - 1];
+        const previousId = previous?.assetBundleId;
+        const currentId = pin?.assetBundleId;
+        const outOfOrder = value.catalogSchemaVersion >= 3
+          ? previousId > currentId
+            || (
+              previousId === currentId
+              && previous?.assetBundleVersion >= pin?.assetBundleVersion
+            )
+          : previousId >= currentId;
+        if (outOfOrder) {
+          push(
+            errors,
+            path,
+            value.catalogSchemaVersion >= 3
+              ? 'pins must be strictly ordered by assetBundleId then assetBundleVersion'
+              : 'pins must be strictly ordered by assetBundleId'
+          );
+        }
       }
     });
   }
@@ -197,10 +271,13 @@ export function assertBattleMapV3CatalogRelease(value) {
 
 export function createBattleMapV3CatalogHashProjection(candidate) {
   assertBattleMapV3CatalogReleaseCandidate(candidate);
+  const projectionSchema = candidate.catalogSchemaVersion === 1
+    ? LEGACY_V1_CATALOG_PROJECTION_SCHEMA
+    : candidate.catalogSchemaVersion === 2
+      ? LEGACY_V2_CATALOG_PROJECTION_SCHEMA
+      : BATTLE_MAP_V3_CATALOG_PROJECTION_SCHEMA;
   return {
-    projectionSchema: candidate.catalogSchemaVersion === 1
-      ? LEGACY_CATALOG_PROJECTION_SCHEMA
-      : BATTLE_MAP_V3_CATALOG_PROJECTION_SCHEMA,
+    projectionSchema,
     catalogSchemaVersion: candidate.catalogSchemaVersion,
     catalogReleaseId: candidate.catalogReleaseId,
     selectorVersion: candidate.selectorVersion,
@@ -210,10 +287,13 @@ export function createBattleMapV3CatalogHashProjection(candidate) {
 }
 
 export async function computeBattleMapV3CatalogHash(candidate) {
+  const domain = candidate.catalogSchemaVersion === 1
+    ? LEGACY_V1_CATALOG_HASH_DOMAIN
+    : candidate.catalogSchemaVersion === 2
+      ? LEGACY_V2_CATALOG_HASH_DOMAIN
+      : BATTLE_MAP_V3_CATALOG_HASH_DOMAIN;
   return hashCanonicalV3Value(
-    candidate.catalogSchemaVersion === 1
-      ? LEGACY_CATALOG_HASH_DOMAIN
-      : BATTLE_MAP_V3_CATALOG_HASH_DOMAIN,
+    domain,
     createBattleMapV3CatalogHashProjection(candidate)
   );
 }
@@ -292,8 +372,11 @@ export async function assertBattleMapV3CatalogMapPins(release, finalMaps) {
       assetBundleManifestFullHash: map.provenance.assetBundle.manifestFullHash,
       sourceTemplateId: map.templateId
     };
-    if (normalizedRelease.catalogSchemaVersion === 2) {
+    if (normalizedRelease.catalogSchemaVersion >= 2) {
       expected.ecologyProfile = map.ecologyProfile;
+    }
+    if (normalizedRelease.catalogSchemaVersion >= 3) {
+      expected.assetBundleVersion = map.provenance.assetBundle.version;
     }
     for (const [key, expectedValue] of Object.entries(expected)) {
       if (canonicalizeJson(entry[key]) !== canonicalizeJson(expectedValue)) {
@@ -315,6 +398,6 @@ export async function normalizeBattleMapV3CatalogRelease(release) {
 export const BattleMapV3CatalogRecordShapes = Object.freeze({
   candidate: RELEASE_KEYS,
   release: FINAL_RELEASE_KEYS,
-  entry: ENTRY_V2_KEYS,
-  assetBundlePin: ['assetBundleId', 'manifestFullHash']
+  entry: ENTRY_V3_KEYS,
+  assetBundlePin: ASSET_PIN_V3_KEYS
 });

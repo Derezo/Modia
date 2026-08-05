@@ -1,0 +1,14 @@
+{
+  "id": "forest-heartlands-v1-tiles",
+  "version": 1,
+  "fullHash": "sha256:0c0f946b7da9d1564380579629fe4d46f8f003e881b8006825000f60d1f9701d",
+  "renderProfileId": "forest-heartlands-woodland-v1",
+  "materials": [
+    {
+      "symbol": "ground",
+      "material": "forest-floor",
+      "passable": true,
+      "movementCost": 1
+    }
+  ]
+}

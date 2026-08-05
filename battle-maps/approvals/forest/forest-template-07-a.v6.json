@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "battle-map-v3-visual-approval-v2",
+  "decision": "approved",
+  "reviewer": "codex-template07-independent-production-visual-review",
+  "reason": "Exact v6 render approved: five distinct surfaces frame a central fallen-oak ravine, broad low-contrast northwest, oak-seam, and southeast routes remain readable without wire seams, elevation faces stay subordinate, and the organic boundary and full camera preserve formations and gameplay clarity.",
+  "checklistVersion": 2,
+  "theme": "forest",
+  "templateId": "forest-template-07",
+  "contentId": "forest-template-07-a",
+  "contentVersion": 6,
+  "mapPath": "battle-maps/compiled/forest/forest-template-07-a.v6.json",
+  "hashes": {
+    "authoritativeHash": "sha256:4cbfb2b35d3f6ad921094b9905beb8a2577e32d812022f89fccf9fbbf0d05a08",
+    "fullHash": "sha256:3f19933702a77802898510491adecc4195c6c97077a50a6fd963185cb20dde97",
+    "visualHash": "sha256:74ec8672996e521a28e7ee070e450ad90b2e2b76f417adc6aa34746dcd59c919"
+  },
+  "sourceSidecar": {
+    "path": "ai-image-metadata/battle-maps/templates/forest/forest-template-07.json",
+    "fullHash": "sha256:679d2a63d2aeb330cfa8f95f909067a05dcbc2f095b1a902ae22d2e3a6364849"
+  },
+  "blueprint": {
+    "id": "forest-template-07-a",
+    "fullHash": "sha256:1d0b1d871254c722db6d50c62208c3c426aed6f214bd8a42897769f841d1ebe9",
+    "approvalIndexFullHash": "sha256:d483614b3f889d362e93e02940aa075d659ddb335cc4d6565447900c23e284f4"
+  },
+  "renderProfile": {
+    "id": "forest-heartlands-fallen-oak-v1",
+    "path": "battle-maps/render-profiles/forest-heartlands-fallen-oak-v1.json",
+    "fullHash": "sha256:36a3b37cbc3f7220718166d6684363080092819afb11fcab04d77b007811ccfd"
+  },
+  "tileCatalog": {
+    "id": "forest-heartlands-fallen-oak-v1-tiles",
+    "version": 1,
+    "path": "battle-maps/tile-catalogs/forest-heartlands-fallen-oak-v1.json",
+    "fullHash": "sha256:76e14aa45c8255c285cf1251c134989135091e7f7cba240912836773536ee8f6"
+  },
+  "assetBundle": {
+    "id": "battle-art-descriptors-2026-07-30",
+    "version": 10,
+    "path": "ai-image-metadata/battle-art/releases/battle-art-descriptors-2026-07-30.v10.json",
+    "manifestFullHash": "sha256:1f456f81c986327cc2615a7450590a0f3a1aea46e727c18ca3ed3cd0e8baca29"
+  },
+  "capabilityReport": {
+    "schemaVersion": "battle-map-v3-capability-report-v1",
+    "mapFullHash": "sha256:3f19933702a77802898510491adecc4195c6c97077a50a6fd963185cb20dde97",
+    "bossCapable": true,
+    "competitiveParity": false,
+    "parityCases": null
+  },
+  "screenshot": {
+    "path": "ai-image-metadata/battle-maps/review/forest/forest-template-07/forest-template-07-a/forest-template-07-a.v6.3f19933702a7.png",
+    "bytes": 675172,
+    "width": 1088,
+    "height": 703,
+    "format": "png",
+    "sha256": "sha256:69ac814028c5ea7f47da806b3b716f3236b1e346ea8192e645702dbc7dfad084"
+  }
+}

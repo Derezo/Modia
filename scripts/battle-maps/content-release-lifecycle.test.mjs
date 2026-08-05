@@ -3,6 +3,8 @@ import {
   mkdtemp,
   mkdir,
   readFile,
+  rename,
+  rm,
   symlink,
   writeFile
 } from 'node:fs/promises';
@@ -17,7 +19,8 @@ import {
   computeTemplateMapBlueprintFullHash,
   computeTemplateMapSourceSidecarFullHash,
   createMinimalBattleMapV3FinalFixture,
-  finalizeBattleMapV3CatalogRelease
+  finalizeBattleMapV3CatalogRelease,
+  normalizeBattleMapV3Final
 } from '../../shared/battleMap/v3/index.js';
 import {
   selectBattleMapV3CatalogEntry
@@ -34,6 +37,9 @@ import {
   COMPILER_SOURCE_FILES,
   COMPILER_SOURCE_SET_DOMAIN,
   ContentReleaseInternals,
+  LEGACY_CATALOG_DEFINITION_SCHEMA,
+  LEGACY_MAP_VISUAL_APPROVAL_SCHEMA,
+  MAP_VISUAL_APPROVAL_SCHEMA,
   REQUIRED_BATTLE_MAP_V3_COVERAGE_QUERIES,
   REQUIRED_BATTLE_MAP_V3_ECOLOGY_COVERAGE_QUERIES,
   VALIDATOR_SOURCE_FILES,
@@ -87,6 +93,7 @@ function catalogEntry(query) {
     candidatePoolSize: 24,
     maxAssignableOpponents: 7,
     assetBundleId: 'bundle:test',
+    assetBundleVersion: 1,
     assetBundleManifestFullHash: HASH_B,
     weight: 1,
     bossCapable: query.requireBossCapable,
@@ -144,9 +151,20 @@ test('closed command parsing rejects unknown, conflicting, and unsafe arguments'
       '--template', 'forest-template-01',
       '--map', 'map-a',
       '--screenshot', '../escape.png',
-      '--reviewer', 'codex'
+      '--reviewer', 'codex',
+      '--reason', 'Reviewed exact gameplay render.'
     ]),
     /traversal segment/
+  );
+  assert.throws(
+    () => parseApprovalArgs([
+      '--theme', 'forest',
+      '--template', 'forest-template-03',
+      '--map', 'map-a',
+      '--screenshot', 'reviews/map.png',
+      '--reviewer', 'codex'
+    ]),
+    /--reason must be a non-empty/
   );
   assert.throws(
     () => parseCatalogArgs([
@@ -158,7 +176,258 @@ test('closed command parsing rejects unknown, conflicting, and unsafe arguments'
   );
 });
 
-test('blueprint approval indexes preserve legacy v1 and require hash-pinned v2 rationale', () => {
+test('catalog approval policy preserves legacy reads and requires reasoned v2 evidence',
+  async () => {
+    const legacy = JSON.parse(await readFile(
+      path.join(
+        PROJECT_ROOT,
+        'battle-maps/approvals/forest/forest-template-01-b.v12.json'
+      ),
+      'utf8'
+    ));
+    assert.doesNotThrow(
+      () => ContentReleaseInternals.validateMapApprovalRecord(legacy)
+    );
+    assert.equal(legacy.schemaVersion, LEGACY_MAP_VISUAL_APPROVAL_SCHEMA);
+    assert.doesNotThrow(
+      () => ContentReleaseInternals.validateMapApprovalRecord(
+        legacy,
+        {},
+        {
+          catalogDefinitionSchema: LEGACY_CATALOG_DEFINITION_SCHEMA,
+          historicalPublicationValidated: false
+        }
+      )
+    );
+    assert.doesNotThrow(
+      () => ContentReleaseInternals.validateMapApprovalRecord(
+        legacy,
+        {},
+        {
+          catalogDefinitionSchema: CATALOG_DEFINITION_SCHEMA,
+          historicalPublicationValidated: true
+        }
+      )
+    );
+    assert.throws(
+      () => ContentReleaseInternals.validateMapApprovalRecord(
+        legacy,
+        {},
+        {
+          catalogDefinitionSchema: CATALOG_DEFINITION_SCHEMA,
+          historicalPublicationValidated: false
+        }
+      ),
+      /definition v2 entries without a validated historicalPublication witness require .*v2.*concrete reason/
+    );
+
+    const current = {
+      ...legacy,
+      schemaVersion: MAP_VISUAL_APPROVAL_SCHEMA,
+      checklistVersion: 2,
+      reason:
+        'The exact runtime render preserves readable formations, route seams, '
+        + 'elevation transitions, organic boundaries, and unobstructed overlays.'
+    };
+    assert.doesNotThrow(
+      () => ContentReleaseInternals.validateMapApprovalRecord(
+        current,
+        {},
+        {
+          catalogDefinitionSchema: CATALOG_DEFINITION_SCHEMA,
+          historicalPublicationValidated: false
+        }
+      )
+    );
+    assert.throws(
+      () => ContentReleaseInternals.validateMapApprovalRecord({
+        ...current,
+        reason: ' '
+      }),
+      /map visual approval.reason must be a non-empty/
+    );
+  });
+
+test('catalog publication permits exact maps from multiple registered bundles',
+  async () => {
+    const source = await readFile(
+      new URL('./content-release-lifecycle.mjs', import.meta.url),
+      'utf8'
+    );
+    assert.doesNotMatch(
+      source,
+      /assetBundlePins\.length\s*!==\s*1/
+    );
+    const registry = JSON.parse(await readFile(
+      path.join(
+        PROJECT_ROOT,
+        'ai-image-metadata/battle-art/runtime-asset-bundle-registry.json'
+      ),
+      'utf8'
+    ));
+    assert.ok(registry.bundles.length >= 2);
+    assert.ok(
+      new Set(registry.bundles.map(bundle => bundle.manifestFullHash)).size
+        >= 2
+    );
+  });
+
+test('historical publication witnesses bind exact prior map and approval evidence',
+  async () => {
+    const releaseId = 'battle-map-v3-forest-pilot-2026-07-30-r9';
+    const definition = JSON.parse(await readFile(path.join(
+      PROJECT_ROOT,
+      `battle-maps/catalog/definitions/${releaseId}.json`
+    )));
+    const historicalEntry = definition.entries.find(entry =>
+      entry.id === 'entry:forest-template-01-b'
+    );
+    const newEntry = definition.entries.find(entry =>
+      entry.id === 'entry:forest-template-04-a'
+    );
+    const historicalMap = await normalizeBattleMapV3Final(JSON.parse(
+      await readFile(path.join(PROJECT_ROOT, historicalEntry.mapPath))
+    ));
+    await assert.doesNotReject(
+      ContentReleaseInternals.validateHistoricalPublicationWitness(
+        PROJECT_ROOT,
+        historicalEntry,
+        historicalMap
+      )
+    );
+    await assert.rejects(
+      ContentReleaseInternals.validateHistoricalPublicationWitness(
+        PROJECT_ROOT,
+        {
+          ...historicalEntry,
+          historicalPublication: {
+            ...historicalEntry.historicalPublication,
+            catalogFullHash: HASH_A
+          }
+        },
+        historicalMap
+      ),
+      /does not match its exact verified release/
+    );
+    const newMap = await normalizeBattleMapV3Final(JSON.parse(
+      await readFile(path.join(PROJECT_ROOT, newEntry.mapPath))
+    ));
+    await assert.rejects(
+      ContentReleaseInternals.validateHistoricalPublicationWitness(
+        PROJECT_ROOT,
+        {
+          ...newEntry,
+          historicalPublication: historicalEntry.historicalPublication
+        },
+        newMap
+      ),
+      /does not match its exact approval-bound definition entry/
+    );
+  });
+
+test('historical publication rejects future v2 witnesses and two-release cycles',
+  async () => {
+    const root = await mkdtemp(
+      path.join(os.tmpdir(), 'modia-v3-historical-publication-')
+    );
+    const sourceReleaseId = 'battle-map-v3-forest-pilot-2026-07-30-r9';
+    const sourceDefinition = JSON.parse(await readFile(path.join(
+      PROJECT_ROOT,
+      `battle-maps/catalog/definitions/${sourceReleaseId}.json`
+    )));
+    const sourceEntry = sourceDefinition.entries.find(entry =>
+      entry.id === 'entry:forest-template-01-b'
+    );
+    const map = await normalizeBattleMapV3Final(JSON.parse(
+      await readFile(path.join(PROJECT_ROOT, sourceEntry.mapPath))
+    ));
+    const makeDefinition = (catalogReleaseId, witnessedReleaseId) => {
+      const definition = structuredClone(sourceDefinition);
+      definition.catalogReleaseId = catalogReleaseId;
+      const entry = definition.entries.find(candidate =>
+        candidate.id === sourceEntry.id
+      );
+      entry.historicalPublication = {
+        catalogReleaseId: witnessedReleaseId,
+        catalogFullHash: HASH_A
+      };
+      return definition;
+    };
+    const writeFixture = async (relativePath, value) => {
+      const absolutePath = path.join(root, ...relativePath.split('/'));
+      await mkdir(path.dirname(absolutePath), { recursive: true });
+      await writeFile(absolutePath, `${JSON.stringify(value, null, 2)}\n`);
+    };
+
+    const futureReleaseId =
+      'battle-map-v3-forest-pilot-2026-08-01-r10';
+    await writeFixture(
+      `battle-maps/catalog/definitions/${futureReleaseId}.json`,
+      makeDefinition(
+        futureReleaseId,
+        sourceEntry.historicalPublication.catalogReleaseId
+      )
+    );
+    await writeFixture(
+      `battle-maps/catalog/releases/${futureReleaseId}.json`,
+      {}
+    );
+    await assert.rejects(
+      ContentReleaseInternals.validateHistoricalPublicationWitness(
+        root,
+        {
+          ...sourceEntry,
+          historicalPublication: {
+            catalogReleaseId: futureReleaseId,
+            catalogFullHash: HASH_A
+          }
+        },
+        map
+      ),
+      /must reference a legacy catalog definition v1 rooted in normal current-map compilation/
+    );
+
+    const cycleAId = 'battle-map-v3-cycle-a';
+    const cycleBId = 'battle-map-v3-cycle-b';
+    const cycleADefinition = makeDefinition(cycleAId, cycleBId);
+    const cycleBDefinition = makeDefinition(cycleBId, cycleAId);
+    assert.equal(
+      cycleADefinition.entries.find(entry => entry.id === sourceEntry.id)
+        .historicalPublication.catalogReleaseId,
+      cycleBId
+    );
+    assert.equal(
+      cycleBDefinition.entries.find(entry => entry.id === sourceEntry.id)
+        .historicalPublication.catalogReleaseId,
+      cycleAId
+    );
+    for (const [releaseId, definition] of [
+      [cycleAId, cycleADefinition],
+      [cycleBId, cycleBDefinition]
+    ]) {
+      await writeFixture(
+        `battle-maps/catalog/definitions/${releaseId}.json`,
+        definition
+      );
+      await writeFixture(
+        `battle-maps/catalog/releases/${releaseId}.json`,
+        {}
+      );
+    }
+    const cycleAEntry = cycleADefinition.entries.find(entry =>
+      entry.id === sourceEntry.id
+    );
+    await assert.rejects(
+      ContentReleaseInternals.validateHistoricalPublicationWitness(
+        root,
+        cycleAEntry,
+        map
+      ),
+      /must reference a legacy catalog definition v1 rooted in normal current-map compilation/
+    );
+  });
+
+test('blueprint approval indexes preserve v1/v2 and bind v3 review provenance', () => {
   const makeEntries = (templateId, v2 = false) => ['a', 'b', 'c'].map(suffix => {
     const id = `${templateId}-${suffix}`;
     return {
@@ -345,6 +614,215 @@ test('blueprint approval indexes preserve legacy v1 and require hash-pinned v2 r
       }
     ),
     /full hash mismatch/
+  );
+
+  const v3Template = 'forest-template-07';
+  const v3Entries = makeEntries(v3Template, true).map(entry => ({
+    ...entry,
+    promptProfileSha256: v2BlueprintPrompt.sha256,
+    mechanicalReviewReportSha256: HASH_A
+  }));
+  const v3Entry = v3Entries[0];
+  const reviewRoot =
+    `ai-image-metadata/battle-maps/review/forest/${v3Template}/${v3Entry.id}/`
+    + `previews/${v3Entry.blueprintFullHash.slice(7)}`;
+  const v3RecordProjection = {
+    ...v2RecordProjection,
+    schemaVersion: 'battle-map-blueprint-approval-v3',
+    id: v3Entry.id,
+    templateId: v3Template,
+    blueprintPath: v3Entry.blueprintPath,
+    reason: v3Entry.reason,
+    mechanicalReview: {
+      schemaVersion: 'battle-map-blueprint-mechanical-review-v1',
+      reportPath: `${reviewRoot}/mechanical-report.json`,
+      reportFileSha256: v3Entry.mechanicalReviewReportSha256,
+      previewPath: `${reviewRoot}/mechanical-preview.svg`,
+      previewFileSha256: HASH_B
+    }
+  };
+  const v3Record = finalize(v3RecordProjection);
+  v3Entry.approvalFullHash = v3Record.fullHash;
+  const v3Projection = {
+    schemaVersion: 'battle-map-blueprint-approval-index-v3',
+    theme: 'forest',
+    templateId: v3Template,
+    entries: v3Entries
+  };
+  const v3 = finalize(v3Projection);
+  assert.equal(
+    ContentReleaseInternals.validateApprovalIndex(v3, {
+      theme: 'forest',
+      templateId: v3Template,
+      expectedPath: 'v3/approvals.json',
+      expectedHash: v3.fullHash
+    }),
+    v3
+  );
+  assert.equal(
+    ContentReleaseInternals.validateBlueprintApprovalRecord(
+      v3Record,
+      v3Entry,
+      {
+        ...recordContext,
+        templateId: v3Template,
+        blueprintPrompt: v2BlueprintPrompt
+      }
+    ),
+    v3Record
+  );
+  const staleReviewPin = structuredClone(v3Record);
+  staleReviewPin.mechanicalReview.reportFileSha256 = HASH_B;
+  staleReviewPin.fullHash =
+    ContentReleaseInternals.stableSha256(v3RecordProjection);
+  assert.throws(
+    () => ContentReleaseInternals.validateBlueprintApprovalRecord(
+      staleReviewPin,
+      v3Entry,
+      {
+        ...recordContext,
+        templateId: v3Template,
+        blueprintPrompt: v2BlueprintPrompt
+      }
+    ),
+    /mechanical review provenance is invalid/
+  );
+});
+
+test('release validation requires exact V3 mechanical review evidence', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'modia-v3-review-evidence-'));
+  const sidecar = JSON.parse(await readFile(path.join(
+    PROJECT_ROOT,
+    'ai-image-metadata/battle-maps/templates/forest/forest-template-07.json'
+  )));
+  const mapId = sidecar.candidateMaps[0];
+  const blueprint = createBlueprintContractExample(sidecar, mapId);
+  const blueprintPath =
+    `ai-image-metadata/battle-maps/blueprints/forest/${sidecar.id}/${mapId}.json`;
+  const approvalPath =
+    `ai-image-metadata/battle-maps/blueprints/forest/${sidecar.id}/`
+      + `${mapId}.approval.json`;
+  const blueprintBytes = Buffer.from(`${JSON.stringify(blueprint, null, 2)}\n`);
+  const blueprintFullHash = await computeTemplateMapBlueprintFullHash(blueprint);
+  const promptProfile = {
+    id: 'map-blueprint-v2',
+    path: 'ai-image-metadata/battle-maps/prompts/map-blueprint-v2.json',
+    sha256: HASH_B
+  };
+  const reviewRoot =
+    `ai-image-metadata/battle-maps/review/forest/${sidecar.id}/${mapId}/`
+      + `previews/${blueprintFullHash.slice(7)}`;
+  const reportPath = `${reviewRoot}/mechanical-report.json`;
+  const previewPath = `${reviewRoot}/mechanical-preview.svg`;
+  const reportBytes = Buffer.from('{"schemaVersion":"fixture-review-v1"}\n');
+  const previewBytes = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+  const mechanicalReview = {
+    schemaVersion: 'battle-map-blueprint-mechanical-review-v1',
+    reportPath,
+    reportFileSha256: ContentReleaseInternals.bytesSha256(reportBytes),
+    previewPath,
+    previewFileSha256: ContentReleaseInternals.bytesSha256(previewBytes)
+  };
+  const approvalProjection = {
+    schemaVersion: 'battle-map-blueprint-approval-v3',
+    id: mapId,
+    theme: 'forest',
+    templateId: sidecar.id,
+    decision: 'approved',
+    reviewer: 'reviewer-1',
+    blueprintPath,
+    blueprintFileSha256: ContentReleaseInternals.bytesSha256(blueprintBytes),
+    blueprintFullHash,
+    sourceImageSha256: sidecar.sourceImage.sha256,
+    promptProfile,
+    mechanicalReview,
+    reason: 'Exact mechanical report and preview evidence reviewed.'
+  };
+  const approval = {
+    ...approvalProjection,
+    fullHash: ContentReleaseInternals.stableSha256(approvalProjection)
+  };
+  const entry = {
+    id: mapId,
+    blueprintPath,
+    approvalPath,
+    blueprintFullHash,
+    sourceImageSha256: sidecar.sourceImage.sha256,
+    promptProfileSha256: promptProfile.sha256,
+    mechanicalReviewReportSha256: mechanicalReview.reportFileSha256,
+    reviewer: approval.reviewer,
+    decision: 'approved',
+    reason: approval.reason,
+    approvalFullHash: approval.fullHash
+  };
+  const writeFixture = async (relativePath, bytes) => {
+    const absolutePath = path.join(root, ...relativePath.split('/'));
+    await mkdir(path.dirname(absolutePath), { recursive: true });
+    await writeFile(absolutePath, bytes);
+  };
+  await Promise.all([
+    writeFixture(blueprintPath, blueprintBytes),
+    writeFixture(
+      approvalPath,
+      Buffer.from(`${JSON.stringify(approval, null, 2)}\n`)
+    ),
+    writeFixture(reportPath, reportBytes),
+    writeFixture(previewPath, previewBytes)
+  ]);
+  const context = {
+    theme: 'forest',
+    templateId: sidecar.id,
+    sidecar,
+    blueprintPrompt: promptProfile
+  };
+
+  await assert.doesNotReject(
+    ContentReleaseInternals.validateBlueprintApproval(root, entry, context)
+  );
+  await writeFixture(previewPath, Buffer.from('<svg>tampered</svg>'));
+  await assert.rejects(
+    ContentReleaseInternals.validateBlueprintApproval(root, entry, context),
+    /mechanical review evidence hash mismatch/
+  );
+  await writeFixture(previewPath, previewBytes);
+  await writeFixture(reportPath, Buffer.from('{"tampered":true}\n'));
+  await assert.rejects(
+    ContentReleaseInternals.validateBlueprintApproval(root, entry, context),
+    /mechanical review evidence hash mismatch/
+  );
+  await writeFixture(reportPath, reportBytes);
+  await rm(path.join(root, ...reportPath.split('/')));
+  await assert.rejects(
+    ContentReleaseInternals.validateBlueprintApproval(root, entry, context)
+  );
+  await writeFixture(reportPath, reportBytes);
+  await rm(path.join(root, ...previewPath.split('/')));
+  await assert.rejects(
+    ContentReleaseInternals.validateBlueprintApproval(root, entry, context)
+  );
+  await rm(path.join(root, ...reportPath.split('/')));
+  await assert.rejects(
+    ContentReleaseInternals.validateBlueprintApproval(root, entry, context)
+  );
+  await writeFixture(reportPath, reportBytes);
+  await writeFixture(previewPath, previewBytes);
+  const external = path.join(root, 'mechanical-preview.svg');
+  await writeFile(external, previewBytes);
+  await rm(path.join(root, ...previewPath.split('/')));
+  await symlink(external, path.join(root, ...previewPath.split('/')));
+  await assert.rejects(
+    ContentReleaseInternals.validateBlueprintApproval(root, entry, context),
+    /forbidden symlink/
+  );
+  await rm(path.join(root, ...previewPath.split('/')));
+  await writeFixture(previewPath, previewBytes);
+  const externalReport = path.join(root, 'mechanical-report.json');
+  await writeFile(externalReport, reportBytes);
+  await rm(path.join(root, ...reportPath.split('/')));
+  await symlink(externalReport, path.join(root, ...reportPath.split('/')));
+  await assert.rejects(
+    ContentReleaseInternals.validateBlueprintApproval(root, entry, context),
+    /forbidden symlink/
   );
 });
 
@@ -627,6 +1105,13 @@ test('source-set validation detects a transitive dependency byte change', async 
 });
 
 test('validator identity binds battle-art and screenshot validation dependencies', async () => {
+  assert.deepEqual(VALIDATOR_SOURCE_FILES, [...VALIDATOR_SOURCE_FILES].sort());
+  assert.equal(
+    VALIDATOR_SOURCE_FILES.includes(
+      'scripts/battle-maps/blueprint-candidate-lifecycle.mjs'
+    ),
+    true
+  );
   const root = await mkdtemp(path.join(os.tmpdir(), 'modia-v3-validator-set-'));
   const sourceFiles = [];
   for (const relativePath of VALIDATOR_SOURCE_FILES) {
@@ -657,8 +1142,8 @@ test('validator identity binds battle-art and screenshot validation dependencies
     VALIDATOR_SOURCE_FILES
   );
   await writeFile(
-    path.join(root, 'scripts/battle-art/lifecycle.mjs'),
-    'changed art acceptance'
+    path.join(root, 'scripts/battle-maps/blueprint-candidate-lifecycle.mjs'),
+    'changed blueprint acceptance'
   );
   await assert.rejects(
     ContentReleaseInternals.validateSourceSet(
@@ -687,6 +1172,33 @@ test('tracked path resolution rejects traversal and every symlink component', as
       label: 'fixture'
     }),
     /forbidden symlink/
+  );
+});
+
+test('tracked reads reject a parent-directory swap after open', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'modia-v3-read-race-'));
+  const relativePath = 'safe/evidence.json';
+  const parent = path.join(root, 'safe');
+  const savedParent = path.join(root, 'safe-original');
+  const replacement = path.join(root, 'safe-replacement');
+  await mkdir(parent);
+  await mkdir(replacement);
+  await writeFile(path.join(parent, 'evidence.json'), '{"safe":true}\n');
+  await writeFile(path.join(replacement, 'evidence.json'), '{"evil":true}\n');
+
+  await assert.rejects(
+    ContentReleaseInternals.readTrackedBytes(
+      root,
+      relativePath,
+      'race fixture',
+      {
+        afterOpen: async () => {
+          await rename(parent, savedParent);
+          await rename(replacement, parent);
+        }
+      }
+    ),
+    /changed while being read/
   );
 });
 
@@ -1096,6 +1608,7 @@ test('coverage validation exercises every declared theme and capacity case witho
     selectorVersion: BATTLE_MAP_V3_SELECTOR_VERSION,
     assetBundlePins: [{
       assetBundleId: 'bundle:test',
+      assetBundleVersion: 1,
       manifestFullHash: HASH_B
     }],
     entries
@@ -1202,6 +1715,7 @@ test('coverage supports repeated authoritative cases qualified by ecology and le
     selectorVersion: BATTLE_MAP_V3_SELECTOR_VERSION,
     assetBundlePins: [{
       assetBundleId: 'bundle:test',
+      assetBundleVersion: 1,
       manifestFullHash: HASH_B
     }],
     entries
@@ -1254,6 +1768,7 @@ test('coverage supports repeated authoritative cases qualified by ecology and le
 
   const legacyEntry = { ...catalogEntry(targetQuery) };
   delete legacyEntry.ecologyProfile;
+  delete legacyEntry.assetBundleVersion;
   const legacyRelease = await finalizeBattleMapV3CatalogRelease({
     catalogSchemaVersion: 1,
     catalogReleaseId: 'catalog:test-v1',
@@ -1297,6 +1812,7 @@ test('coverage rejects every undersized positive-weight entry in an eligible cap
     selectorVersion: BATTLE_MAP_V3_SELECTOR_VERSION,
     assetBundlePins: [{
       assetBundleId: 'bundle:test',
+      assetBundleVersion: 1,
       manifestFullHash: HASH_B
     }],
     entries

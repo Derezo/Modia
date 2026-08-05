@@ -12,6 +12,7 @@ import {
   open,
   readFile,
   readdir,
+  realpath,
   rename,
   rm,
   rmdir,
@@ -51,6 +52,7 @@ import {
   CODEX_WORKER_ENV_KEYS
 } from './codex-worker-boundary.mjs';
 import {
+  passableTraversalComponents,
   usesBlueprintV2SemanticContract,
   validateV2BlueprintSemanticContract
 } from './blueprint-v2-semantic-contract.mjs';
@@ -76,10 +78,14 @@ export const BLUEPRINT_APPROVAL_SCHEMA =
   'battle-map-blueprint-approval-index-v1';
 export const BLUEPRINT_APPROVAL_INDEX_SCHEMA_V2 =
   'battle-map-blueprint-approval-index-v2';
+export const BLUEPRINT_APPROVAL_INDEX_SCHEMA_V3 =
+  'battle-map-blueprint-approval-index-v3';
 export const BLUEPRINT_APPROVAL_RECORD_SCHEMA_V1 =
   'battle-map-blueprint-approval-v1';
 export const BLUEPRINT_APPROVAL_RECORD_SCHEMA_V2 =
   'battle-map-blueprint-approval-v2';
+export const BLUEPRINT_APPROVAL_RECORD_SCHEMA_V3 =
+  'battle-map-blueprint-approval-v3';
 export const MAX_BLUEPRINT_APPROVAL_REASON_BYTES = 1000;
 export const DEFAULT_BLUEPRINT_CONCURRENCY = 2;
 export const MAX_BLUEPRINT_CONCURRENCY = 4;
@@ -106,13 +112,15 @@ const SCRIPT_PROJECT_ROOT = path.resolve(
 const ID_PATTERN = /^[a-z0-9]+(?:[-_:][a-z0-9]+)*$/;
 const HASH_PATTERN = /^sha256:[0-9a-f]{64}$/;
 const LEGACY_BLUEPRINT_APPROVAL_TEMPLATE_PATTERN = /-template-(?:01|02)$/;
+const BLUEPRINT_APPROVAL_V3_TEMPLATE_PATTERN = /-template-(\d+)$/;
 const CONTROL_CHARACTER_PATTERN = /[\u0000-\u001f\u007f-\u009f]/;
 const ALLOWED_OUTPUTS = new Set(['candidate.json', 'last-message.txt']);
 const INPUT_PATHS = new Set([
   'inputs/reference.png',
   'inputs/reference.webp',
   'inputs/sidecar.json',
-  'inputs/contract.json'
+  'inputs/contract.json',
+  'inputs/starter.json'
 ]);
 const SYSTEMD_RUN_COMMAND = '/usr/bin/systemd-run';
 const SYSTEMCTL_COMMAND = '/usr/bin/systemctl';
@@ -489,18 +497,34 @@ function usesLegacyBlueprintApprovalSchema(templateId) {
   return LEGACY_BLUEPRINT_APPROVAL_TEMPLATE_PATTERN.test(templateId);
 }
 
+function usesBlueprintApprovalSchemaV3(templateId) {
+  const match = BLUEPRINT_APPROVAL_V3_TEMPLATE_PATTERN.exec(templateId);
+  return match !== null && Number(match[1]) >= 7;
+}
+
 function blueprintApprovalSchemas(templateId) {
-  return usesLegacyBlueprintApprovalSchema(templateId)
-    ? {
-        index: BLUEPRINT_APPROVAL_SCHEMA,
-        record: BLUEPRINT_APPROVAL_RECORD_SCHEMA_V1,
-        v2: false
-      }
-    : {
-        index: BLUEPRINT_APPROVAL_INDEX_SCHEMA_V2,
-        record: BLUEPRINT_APPROVAL_RECORD_SCHEMA_V2,
-        v2: true
-      };
+  if (usesLegacyBlueprintApprovalSchema(templateId)) {
+    return {
+      index: BLUEPRINT_APPROVAL_SCHEMA,
+      record: BLUEPRINT_APPROVAL_RECORD_SCHEMA_V1,
+      v2: false,
+      v3: false
+    };
+  }
+  if (usesBlueprintApprovalSchemaV3(templateId)) {
+    return {
+      index: BLUEPRINT_APPROVAL_INDEX_SCHEMA_V3,
+      record: BLUEPRINT_APPROVAL_RECORD_SCHEMA_V3,
+      v2: true,
+      v3: true
+    };
+  }
+  return {
+    index: BLUEPRINT_APPROVAL_INDEX_SCHEMA_V2,
+    record: BLUEPRINT_APPROVAL_RECORD_SCHEMA_V2,
+    v2: true,
+    v3: false
+  };
 }
 
 function blueprintPromptProfile(templateId) {
@@ -942,6 +966,33 @@ async function atomicCopy(projectRoot, sourcePath, destinationPath) {
   }
 }
 
+async function snapshotOptionalFile(projectRoot, filePath, label) {
+  await assertSafeWritePath(projectRoot, filePath, `${label} snapshot path`);
+  try {
+    const details = await lstat(filePath);
+    if (details.isSymbolicLink() || !details.isFile()) {
+      fail(`${label} snapshot target must be a regular non-symlink file`);
+    }
+    return await readFile(filePath);
+  } catch (error) {
+    if (error.code === 'ENOENT') return null;
+    throw error;
+  }
+}
+
+async function restoreOptionalFile(projectRoot, filePath, bytes) {
+  if (bytes !== null) {
+    await atomicWrite(projectRoot, filePath, bytes);
+    return;
+  }
+  await assertSafeWritePath(projectRoot, filePath, 'approval rollback path');
+  try {
+    await unlink(filePath);
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+}
+
 async function loadBlueprintPrompt(projectRoot, template) {
   const expected = blueprintPromptProfile(template);
   const absolutePath = resolveWithinProject(
@@ -993,6 +1044,317 @@ function point(x, y) {
   return { x, y };
 }
 
+const TEMPLATE_07_ID = 'forest-template-07';
+const TEMPLATE_07_SURFACE_MATERIALS = [
+  {
+    featureId: 'southwest-clover-glade',
+    symbol: 'clover-glade'
+  },
+  {
+    featureId: 'northeast-fern-hazel-glade',
+    symbol: 'fern-hazel-glade'
+  },
+  {
+    featureId: 'northwest-fieldstone-terrace',
+    symbol: 'fieldstone-terrace'
+  },
+  {
+    featureId: 'southeast-hawthorn-loop',
+    symbol: 'hawthorn-loop'
+  },
+  {
+    featureId: 'fallen-oak-root-seam',
+    symbol: 'dry-ravine'
+  }
+];
+const TEMPLATE_07_SURFACE_MATERIAL_BY_FEATURE = new Map(
+  TEMPLATE_07_SURFACE_MATERIALS.map(record => [
+    record.featureId,
+    record.symbol
+  ])
+);
+const TEMPLATE_07_LANDMARK_COLLISION_CELLS = [
+  point(0, 0),
+  point(1, 0),
+  point(2, 0),
+  point(2, 1),
+  point(3, 1),
+  point(4, 1),
+  point(5, 1),
+  point(5, 2),
+  point(6, 2),
+  point(7, 2)
+];
+const TEMPLATE_07_LANDMARK_COMPOSITIONS = {
+  a: {
+    landmarkAnchor: point(12, 19),
+    root: point(17, 19)
+  },
+  b: {
+    landmarkAnchor: point(18, 14),
+    root: point(18, 15)
+  },
+  c: {
+    landmarkAnchor: point(13, 19),
+    root: point(18, 19)
+  }
+};
+const TEMPLATE_07_PRIMARY_ROUTE_WAYPOINTS = {
+  a: [
+    {
+      id: 'route:northwest',
+      waypoints: [
+        point(7, 24), point(7, 23), point(10, 23), point(10, 19),
+        point(6, 19), point(6, 18), point(10, 18),
+        point(10, 15), point(8, 15), point(8, 11), point(9, 11),
+        point(9, 10), point(13, 10), point(13, 6), point(15, 6),
+        point(15, 5)
+      ]
+    },
+    {
+      id: 'route:oak-seam',
+      waypoints: [
+        point(7, 26), point(11, 26), point(11, 18), point(14, 18),
+        point(14, 16), point(17, 16), point(17, 14), point(16, 14),
+        point(16, 11), point(17, 11), point(17, 5), point(18, 5),
+        point(18, 6)
+      ]
+    },
+    {
+      id: 'route:southeast',
+      waypoints: [
+        point(9, 27), point(22, 27), point(22, 23), point(21, 23),
+        point(21, 19), point(24, 19), point(24, 18),
+        point(18, 18), point(18, 15), point(20, 15),
+        point(20, 11), point(21, 11), point(21, 10), point(23, 10),
+        point(23, 4), point(20, 4), point(20, 7), point(19, 7)
+      ]
+    }
+  ],
+  b: [
+    {
+      id: 'route:northwest',
+      waypoints: [
+        point(7, 24), point(7, 23), point(10, 23), point(10, 20),
+        point(6, 20), point(6, 19), point(11, 19),
+        point(11, 16), point(9, 16), point(9, 10), point(13, 10),
+        point(13, 6), point(15, 6), point(15, 5)
+      ]
+    },
+    {
+      id: 'route:oak-seam',
+      waypoints: [
+        point(7, 26), point(12, 26), point(12, 18), point(16, 18),
+        point(16, 11), point(17, 11), point(17, 5), point(18, 5),
+        point(18, 6)
+      ]
+    },
+    {
+      id: 'route:southeast',
+      waypoints: [
+        point(9, 27), point(22, 27), point(22, 23), point(21, 23),
+        point(21, 21), point(25, 21),
+        point(25, 18), point(17, 18), point(17, 13), point(21, 13),
+        point(21, 10), point(23, 10), point(23, 4), point(20, 4),
+        point(20, 7), point(19, 7)
+      ]
+    }
+  ],
+  c: [
+    {
+      id: 'route:northwest',
+      waypoints: [
+        point(7, 24), point(7, 23), point(10, 23), point(10, 20),
+        point(6, 20), point(6, 17), point(12, 17),
+        point(12, 16), point(6, 16), point(6, 11), point(9, 11),
+        point(9, 10), point(13, 10), point(13, 6), point(15, 6),
+        point(15, 5)
+      ]
+    },
+    {
+      id: 'route:oak-seam',
+      waypoints: [
+        point(7, 26), point(12, 26), point(12, 18), point(15, 18),
+        point(15, 17), point(16, 17), point(16, 11), point(17, 11),
+        point(17, 5), point(18, 5), point(18, 6)
+      ]
+    },
+    {
+      id: 'route:southeast',
+      waypoints: [
+        point(9, 27), point(22, 27), point(22, 23), point(21, 23),
+        point(21, 20), point(24, 20), point(24, 18), point(20, 18),
+        point(20, 17), point(17, 17), point(17, 12), point(21, 12),
+        point(21, 10), point(23, 10), point(23, 4), point(20, 4),
+        point(20, 7), point(19, 7)
+      ]
+    }
+  ]
+};
+const TEMPLATE_07_ELEVATION_PROFILES = {
+  a: {
+    terrace: { x: 15.5, y: 14, rx: 14, ry: 10 },
+    secondary: { x: 7, y: 18, rx: 6, ry: 5 },
+    lookout: { x: 15.5, y: 9, rx: 8, ry: 4 }
+  },
+  b: {
+    terrace: { x: 17, y: 14.5, rx: 12.5, ry: 10.8 },
+    secondary: { x: 23, y: 17, rx: 5, ry: 6 },
+    lookout: { x: 15.5, y: 9, rx: 8, ry: 4 }
+  },
+  c: {
+    terrace: { x: 14, y: 13, rx: 14.5, ry: 9.5 },
+    secondary: { x: 6, y: 15, rx: 5, ry: 6 },
+    lookout: { x: 15.5, y: 9, rx: 8, ry: 4 }
+  }
+};
+const TEMPLATE_07_FORMATION_PROFILES = {
+  a: {
+    players: [
+      point(5, 24), point(7, 24), point(7, 26), point(9, 23), point(9, 27)
+    ],
+    opponents: [
+      point(15, 6), point(18, 6),
+      point(12, 7), point(14, 7), point(16, 7), point(19, 7), point(20, 7),
+      point(9, 8), point(10, 8), point(11, 8), point(12, 8), point(13, 8),
+      point(15, 8), point(17, 8), point(19, 8), point(21, 8),
+      point(9, 10), point(11, 10), point(13, 10), point(15, 10),
+      point(17, 10), point(19, 10), point(21, 10),
+      point(16, 11)
+    ],
+    exits: {
+      player: [point(10, 22), point(21, 22), point(16, 27)],
+      opponent: [point(10, 9), point(21, 9), point(16, 9)]
+    }
+  },
+  b: {
+    players: [
+      point(6, 24), point(8, 24), point(8, 26), point(10, 26), point(10, 27)
+    ],
+    opponents: [
+      point(15, 6), point(18, 6),
+      point(12, 7), point(14, 7), point(16, 7), point(19, 7), point(21, 7),
+      point(9, 8), point(10, 8), point(12, 8), point(14, 8), point(15, 8),
+      point(16, 8), point(17, 8), point(19, 8), point(21, 8),
+      point(10, 10), point(12, 10), point(14, 10), point(16, 10),
+      point(18, 10), point(20, 10), point(22, 10),
+      point(17, 11)
+    ],
+    exits: {
+      player: [point(11, 22), point(22, 22), point(16, 28)],
+      opponent: [point(9, 9), point(20, 9), point(15, 9)]
+    }
+  },
+  c: {
+    players: [
+      point(7, 23), point(5, 24), point(6, 26), point(9, 26), point(8, 24)
+    ],
+    opponents: [
+      point(15, 6), point(18, 6),
+      point(13, 7), point(15, 7), point(17, 7), point(20, 7), point(21, 7),
+      point(10, 8), point(11, 8), point(12, 8), point(14, 8), point(16, 8),
+      point(13, 8), point(17, 8), point(19, 8), point(20, 8),
+      point(10, 10), point(12, 10), point(14, 10), point(16, 10),
+      point(18, 10), point(20, 10), point(22, 10),
+      point(15, 11)
+    ],
+    exits: {
+      player: [point(9, 22), point(20, 22), point(15, 28)],
+      opponent: [point(11, 9), point(22, 9), point(17, 9)]
+    }
+  }
+};
+const TEMPLATE_07_ORGANIC_SURFACE_PROFILES = {
+  a: {
+    ravine: { intercept: 8.3, slope: 0.43, bend: 1.6, phase: 0.1 },
+    fieldstone: { x: 8.5, y: 8.5, rx: 5.7, ry: 4.6, phase: 0.4 },
+    clover: { x: 8, y: 23, phase: 0.2 },
+    fern: { x: 23, y: 8, phase: 0.8 },
+    hawthorn: { x: 24, y: 23, phase: 1.5 }
+  },
+  b: {
+    ravine: { intercept: 25.4, slope: -0.55, bend: 1.7, phase: 1.4 },
+    fieldstone: { x: 10, y: 8, rx: 6.2, ry: 4.3, phase: 1.2 },
+    clover: { x: 7, y: 22, phase: 1.1 },
+    fern: { x: 24, y: 9, phase: 1.8 },
+    hawthorn: { x: 23, y: 24, phase: 2.4 }
+  },
+  c: {
+    ravine: { intercept: 1.8, slope: 0.88, bend: 1.9, phase: 2.3 },
+    fieldstone: { x: 8, y: 10, rx: 5.3, ry: 5.1, phase: 2.1 },
+    clover: { x: 9, y: 24, phase: 2.2 },
+    fern: { x: 24, y: 7, phase: 2.8 },
+    hawthorn: { x: 22, y: 22, phase: 3.1 }
+  }
+};
+
+function template07RenderedCell(x, y, width, height, variant) {
+  const nx = (x - (width - 1) / 2) / (width * 0.51);
+  const ny = (y - (height - 1) / 2) / (height * 0.51);
+  // The shared inner core keeps every fixed gameplay anchor safely framed.
+  // Variant-specific outer fields make the production silhouette readable at
+  // thumbnail scale instead of relying on one-cell perimeter noise.
+  const innerCore = nx * nx + ny * ny <= 0.78;
+  let outerField;
+  if (variant === 'a') {
+    outerField =
+      (nx / 0.91) ** 2
+      + (ny / 1.08) ** 2
+      + 0.075 * Math.sin(ny * 7.5)
+      - 0.06 * nx * ny;
+  } else if (variant === 'b') {
+    outerField =
+      (nx / 1.09) ** 2
+      + (ny / 0.9) ** 2
+      + 0.07 * Math.cos(nx * 8)
+      + 0.055 * nx * ny;
+  } else {
+    const diagonalX = 0.86 * nx + 0.42 * ny;
+    const diagonalY = -0.42 * nx + 0.86 * ny;
+    outerField =
+      (diagonalX / 1.05) ** 2
+      + (diagonalY / 0.92) ** 2
+      + 0.065 * Math.sin((nx - ny) * 6.5);
+  }
+  return innerCore || outerField <= 1;
+}
+
+function template07OrganicSurfaceFeature(x, y, variant, regionIds) {
+  const profile = TEMPLATE_07_ORGANIC_SURFACE_PROFILES[variant];
+  const ravineCenter =
+    profile.ravine.intercept
+    + profile.ravine.slope * y
+    + profile.ravine.bend * Math.sin(y * 0.47 + profile.ravine.phase);
+  const ravineHalfWidth =
+    2.25 + 0.7 * (1 + Math.sin(y * 0.83 + profile.ravine.phase));
+  if (Math.abs(x - ravineCenter) <= ravineHalfWidth) {
+    return regionIds.central;
+  }
+
+  const terraceDx = (x - profile.fieldstone.x) / profile.fieldstone.rx;
+  const terraceDy = (y - profile.fieldstone.y) / profile.fieldstone.ry;
+  const terraceEdge =
+    terraceDx * terraceDx
+    + terraceDy * terraceDy
+    + 0.16 * Math.sin(x * 0.9 + y * 0.35 + profile.fieldstone.phase)
+    - 0.1 * Math.cos(y * 1.1 + profile.fieldstone.phase);
+  if (terraceEdge <= 1) return regionIds.upper;
+
+  const organicScore = (center, xScale, yScale) => (
+    ((x - center.x) / xScale) ** 2
+    + ((y - center.y) / yScale) ** 2
+    + 0.14 * Math.sin(x * 0.43 + y * 0.31 + center.phase)
+    + 0.09 * Math.cos(x * 0.21 - y * 0.57 + center.phase)
+  );
+  const scores = [
+    [organicScore(profile.clover, 10.5, 8.5), regionIds.player],
+    [organicScore(profile.fern, 9, 9.5), regionIds.opponent],
+    [organicScore(profile.hawthorn, 9.5, 8), regionIds.lateral]
+  ];
+  scores.sort((left, right) => left[0] - right[0]);
+  return scores[0][1];
+}
+
 /**
  * A complete, structurally valid example is attached to every isolated worker.
  * It is a shape/scale example, not approved content. The worker must still
@@ -1003,7 +1365,62 @@ export function createBlueprintContractExample(sidecar, mapId) {
   const height = sidecar.mapProfile.height;
   const v2 = usesBlueprintV2SemanticContract(sidecar.id);
   const v2Variant = v2 ? variantKey(mapId) : null;
+  const usesFallenOakComposition = sidecar.id === TEMPLATE_07_ID;
+  const template07LandmarkComposition = usesFallenOakComposition
+    ? TEMPLATE_07_LANDMARK_COMPOSITIONS[v2Variant]
+    : null;
+  const requiredAreas = sidecar.topologyIntent.areas
+    .filter(area => area.required === true);
+  const semanticAreaId = (patterns, fallback, excluded = new Set()) => (
+    requiredAreas.find(area => (
+      !excluded.has(area.id)
+      && patterns.some(pattern => pattern.test(
+        `${area.id} ${area.description}`.toLowerCase()
+      ))
+    ))?.id ?? fallback
+  );
+  const regionIds = v2
+    ? (() => {
+        const central = semanticAreaId(
+          [
+            /central/, /junction/, /hollow/, /crossing/,
+            /root-seam/, /fallen-oak/, /ravine/
+          ],
+          'central-route-junction'
+        );
+        const upper = semanticAreaId(
+          [/overlook/, /lookout/, /elevated/, /northern/, /ridge/],
+          'upper-lookout',
+          new Set([central])
+        );
+        const player = semanticAreaId(
+          [/southwest/, /western/, /lower/, /player/, /meadow/],
+          'lower-clearing',
+          new Set([central, upper])
+        );
+        const opponent = semanticAreaId(
+          [/northeast/, /eastern/, /opponent/, /coppice/],
+          'opponent-formation-clearing',
+          new Set([central, upper, player])
+        );
+        const lateral = semanticAreaId(
+          [/^southeast-/, /southern/, /lateral/, /flank/, /fork/, /loop/],
+          'lateral-clearing',
+          new Set([central, upper, player, opponent])
+        );
+        return { player, opponent, upper, lateral, central };
+      })()
+    : {
+        player: 'lower-clearing',
+        opponent: 'opponent-formation-clearing',
+        upper: 'upper-lookout',
+        lateral: 'lateral-clearing',
+        central: 'central-route-junction'
+      };
   const rendered = (x, y) => {
+    if (usesFallenOakComposition) {
+      return template07RenderedCell(x, y, width, height, v2Variant);
+    }
     const nx = (x - (width - 1) / 2) / (width * 0.51);
     const ny = (y - (height - 1) / 2) / (height * 0.51);
     return nx * nx + ny * ny <= 1;
@@ -1024,19 +1441,51 @@ export function createBlueprintContractExample(sidecar, mapId) {
     (_, y) => Array.from({ length: width }, (_, x) => playable(x, y))
   );
   const regionFor = (x, y) => {
-    if (y >= 22) return 'lower-clearing';
-    if (y <= 12 && x >= 8 && x <= 23) return 'upper-lookout';
-    if (x <= 14) return 'lateral-clearing';
-    return 'central-route-junction';
+    if (y >= 22) return regionIds.player;
+    if (y <= 12 && x >= 8 && x <= 23) return regionIds.upper;
+    if (x <= 14) return regionIds.lateral;
+    return regionIds.central;
+  };
+  const template07SurfaceFeatureFor = (x, y) => {
+    return template07OrganicSurfaceFeature(x, y, v2Variant, regionIds);
   };
   const surfaceGrid = Array.from({ length: height }, (_, y) =>
     Array.from({ length: width }, (_, x) => (
       renderMask[y][x]
-        ? { material: 'ground', featureId: regionFor(x, y) }
+        ? (() => {
+            const featureId = usesFallenOakComposition
+              ? template07SurfaceFeatureFor(x, y)
+              : regionFor(x, y);
+            return {
+              material: usesFallenOakComposition
+                ? TEMPLATE_07_SURFACE_MATERIAL_BY_FEATURE.get(featureId)
+                : 'ground',
+              featureId
+            };
+          })()
         : null
     ))
   );
   const elevationAt = (x, y) => {
+    if (usesFallenOakComposition) {
+      const profile = TEMPLATE_07_ELEVATION_PROFILES[v2Variant];
+      const terrace =
+        ((x - profile.terrace.x) / profile.terrace.rx) ** 2
+        + ((y - profile.terrace.y) / profile.terrace.ry) ** 2 <= 1;
+      const secondary =
+        ((x - profile.secondary.x) / profile.secondary.rx) ** 2
+        + ((y - profile.secondary.y) / profile.secondary.ry) ** 2 <= 1;
+      const lookout =
+        ((x - profile.lookout.x) / profile.lookout.rx) ** 2
+        + ((y - profile.lookout.y) / profile.lookout.ry) ** 2 <= 1;
+      // Digital ellipse tips at these two fixed cells otherwise become
+      // one-cell pockets separated from the adjacent authored mass.
+      if (v2Variant === 'b' && x === 10 && y === 6) return 2;
+      if (v2Variant === 'c' && x === 2 && y === 7) return 1;
+      if (lookout && terrace) return 2;
+      if (terrace || secondary) return 1;
+      return 0;
+    }
     const outerTerrace =
       ((x - 15.5) / 14) ** 2 + ((y - 14) / 10) ** 2 <= 1;
     const upperLookout =
@@ -1078,7 +1527,9 @@ export function createBlueprintContractExample(sidecar, mapId) {
     }
     return cells;
   };
-  const routeRecords = (v2 ? [
+  const routeSpecifications = usesFallenOakComposition
+    ? TEMPLATE_07_PRIMARY_ROUTE_WAYPOINTS[v2Variant]
+    : (v2 ? [
     {
       id: 'route:west',
       waypoints: [
@@ -1144,10 +1595,11 @@ export function createBlueprintContractExample(sidecar, mapId) {
         point(19, 3)
       ]
     }
-  ]).map(record => ({
+  ]);
+  const routeRecords = routeSpecifications.map(record => ({
     id: record.id,
     kind: record.kind ?? 'primary',
-    material: 'ground',
+    material: usesFallenOakComposition ? 'dry-ravine' : 'ground',
     cells: routeCellsThrough(record.waypoints),
     required: true,
     width: 2,
@@ -1214,18 +1666,29 @@ export function createBlueprintContractExample(sidecar, mapId) {
   if (v2 && boundaries.length > 0) {
     boundaries[0].assetFamily = 'earth-face';
   }
+  if (usesFallenOakComposition && boundaries.length > 1) {
+    boundaries[1].assetFamily = 'fieldstone-face';
+  }
   const roles = sidecar.spawnIntent.candidateRoles;
   const candidateCells = [];
   if (v2) {
-    const localizedRows = [
-      [3, [8, 13, 18, 23]],
-      [5, [10, 15, 20]],
-      [8, [8, 13, 18, 23]],
-      [10, [10, 20]],
-      [13, [8, 13, 18, 23]],
-      [15, [10, 15, 20]],
-      [18, [8, 13, 18, 23]]
-    ];
+    const localizedRows = sidecar.spawnIntent.minimumApproaches === 3
+      ? [
+          [6, [15, 18]],
+          [7, [12, 14, 16, 19, 20]],
+          [8, [9, 10, 11, 12, 13, 15, 17, 19, 21]],
+          [10, [9, 11, 13, 15, 17, 19, 21]],
+          [11, [16]]
+        ]
+      : [
+          [3, [8, 13, 18, 23]],
+          [5, [10, 15, 20]],
+          [8, [8, 13, 18, 23]],
+          [10, [10, 20]],
+          [13, [8, 13, 18, 23]],
+          [15, [10, 15, 20]],
+          [18, [8, 13, 18, 23]]
+        ];
     for (const [y, xs] of localizedRows) {
       for (const x of xs) candidateCells.push(point(x, y));
     }
@@ -1276,7 +1739,7 @@ export function createBlueprintContractExample(sidecar, mapId) {
     elevation,
     regions: [
       {
-        id: 'lower-clearing',
+        id: regionIds.player,
         kind: 'formation-clearing',
         cells: v2
           ? playerCells.map(cell => ({ ...cell }))
@@ -1285,22 +1748,28 @@ export function createBlueprintContractExample(sidecar, mapId) {
       },
       ...(v2
         ? [{
-            id: 'opponent-formation-clearing',
+            id: regionIds.opponent,
             kind: 'formation-clearing',
             cells: candidateCells.map(cell => ({ ...cell })),
             annotations: ['opponent-formation']
           }]
         : []),
       {
-        id: 'upper-lookout',
+        id: regionIds.upper,
         kind: 'elevated-clearing',
         cells: v2
-          ? [point(12, 6), point(13, 6), point(14, 6)]
+          ? [
+              point(14, 5),
+              point(15, 5),
+              point(16, 5),
+              point(17, 5),
+              point(18, 5)
+            ]
           : [point(10, 6), point(16, 5), point(22, 7)],
         annotations: ['high-ground']
       },
       {
-        id: 'lateral-clearing',
+        id: regionIds.lateral,
         kind: 'flank-clearing',
         cells: v2
           ? [point(10, 16), point(11, 16), point(12, 16)]
@@ -1308,7 +1777,7 @@ export function createBlueprintContractExample(sidecar, mapId) {
         annotations: ['flank']
       },
       {
-        id: 'central-route-junction',
+        id: regionIds.central,
         kind: 'route-junction',
         cells: v2
           ? [point(15, 15), point(15, 16), point(16, 16)]
@@ -1327,14 +1796,14 @@ export function createBlueprintContractExample(sidecar, mapId) {
           point(23, 12),
           point(24, 18)
         ],
-        ownerFeatureId: 'central-route-junction',
+        ownerFeatureId: regionIds.central,
         annotations: ['organic-contours', 'elevation']
       },
       {
         id: 'feature:routes',
         kind: 'route-network',
         cells: routeRecords.flatMap(record => record.cells),
-        ownerFeatureId: 'central-route-junction',
+        ownerFeatureId: regionIds.central,
         annotations: ['two-curved-approaches']
       },
       {
@@ -1370,7 +1839,7 @@ export function createBlueprintContractExample(sidecar, mapId) {
         id: 'obstacle:upper-west-tree',
         kind: 'tree-cluster',
         cells: [point(6, 9)],
-        featureId: 'upper-lookout',
+        featureId: regionIds.upper,
         anchor: point(6, 9),
         occlusionBounds: { minX: 5, minY: 7, maxX: 7, maxY: 10 },
         assetFamily: 'pale-birch'
@@ -1379,7 +1848,7 @@ export function createBlueprintContractExample(sidecar, mapId) {
         id: 'obstacle:upper-east-root',
         kind: 'root-cluster',
         cells: [point(v2 ? 18 : 16, 7)],
-        featureId: 'upper-lookout',
+        featureId: regionIds.upper,
         anchor: point(v2 ? 18 : 16, 7),
         occlusionBounds: v2
           ? { minX: 17, minY: 5, maxX: 19, maxY: 8 }
@@ -1390,25 +1859,61 @@ export function createBlueprintContractExample(sidecar, mapId) {
         id: 'obstacle:lateral-west-tree',
         kind: 'tree-cluster',
         cells: [point(5, 18)],
-        featureId: 'lateral-clearing',
+        featureId: regionIds.lateral,
         anchor: point(5, 18),
         occlusionBounds: { minX: 4, minY: 16, maxX: 6, maxY: 19 },
         assetFamily: 'ironpine'
       },
-      {
-        id: 'obstacle:central-root',
-        kind: 'root-cluster',
-        cells: [point(16, 18)],
-        featureId: 'central-route-junction',
-        anchor: point(16, 18),
-        occlusionBounds: { minX: 15, minY: 16, maxX: 17, maxY: 19 },
-        assetFamily: 'moss-boulder'
-      },
+      ...(usesFallenOakComposition
+        ? [
+            {
+              id: 'obstacle:fallen-oak-landmark',
+              kind: 'fallen-oak-landmark',
+              cells: TEMPLATE_07_LANDMARK_COLLISION_CELLS.map(cell =>
+                point(
+                  template07LandmarkComposition.landmarkAnchor.x + cell.x,
+                  template07LandmarkComposition.landmarkAnchor.y + cell.y
+                )
+              ),
+              featureId: regionIds.central,
+              anchor: { ...template07LandmarkComposition.landmarkAnchor },
+              occlusionBounds: {
+                minX: template07LandmarkComposition.landmarkAnchor.x,
+                minY: template07LandmarkComposition.landmarkAnchor.y,
+                maxX: template07LandmarkComposition.landmarkAnchor.x + 7,
+                maxY: template07LandmarkComposition.landmarkAnchor.y + 2
+              },
+              assetFamily: 'fallen-oak-landmark'
+            },
+            {
+              id: 'obstacle:fallen-oak-root-mass',
+              kind: 'fallen-oak-root-mass',
+              cells: [{ ...template07LandmarkComposition.root }],
+              featureId: regionIds.central,
+              anchor: { ...template07LandmarkComposition.root },
+              occlusionBounds: {
+                minX: template07LandmarkComposition.root.x - 1,
+                minY: template07LandmarkComposition.root.y - 2,
+                maxX: template07LandmarkComposition.root.x + 1,
+                maxY: template07LandmarkComposition.root.y + 1
+              },
+              assetFamily: 'fallen-oak-root-mass'
+            }
+          ]
+        : [{
+            id: 'obstacle:central-root',
+            kind: 'root-cluster',
+            cells: [point(16, 18)],
+            featureId: regionIds.central,
+            anchor: point(16, 18),
+            occlusionBounds: { minX: 15, minY: 16, maxX: 17, maxY: 19 },
+            assetFamily: 'moss-boulder'
+          }]),
       {
         id: 'obstacle:lower-west-tree',
         kind: 'tree-cluster',
         cells: [point(4, 23)],
-        featureId: 'lower-clearing',
+        featureId: regionIds.player,
         anchor: point(4, 23),
         occlusionBounds: { minX: 3, minY: 21, maxX: 5, maxY: 24 },
         assetFamily: 'pale-birch'
@@ -1417,7 +1922,7 @@ export function createBlueprintContractExample(sidecar, mapId) {
         id: 'obstacle:lower-east-root',
         kind: 'root-cluster',
         cells: [point(17, 24)],
-        featureId: 'lower-clearing',
+        featureId: regionIds.player,
         anchor: point(17, 24),
         occlusionBounds: { minX: 16, minY: 22, maxX: 18, maxY: 25 },
         assetFamily: 'ancient-tree'
@@ -1435,7 +1940,7 @@ export function createBlueprintContractExample(sidecar, mapId) {
         id: 'obstacle:upper-birch',
         kind: 'pale-birch-tree',
         cells: [point(11, 7)],
-        featureId: 'upper-lookout',
+        featureId: regionIds.upper,
         anchor: point(11, 7),
         occlusionBounds: { minX: 10, minY: 5, maxX: 12, maxY: 8 },
         assetFamily: 'pale-birch'
@@ -1453,7 +1958,7 @@ export function createBlueprintContractExample(sidecar, mapId) {
         id: 'obstacle:lateral-boulder',
         kind: 'moss-boulder',
         cells: [point(7, 14)],
-        featureId: 'lateral-clearing',
+        featureId: regionIds.lateral,
         anchor: point(7, 14),
         occlusionBounds: { minX: 6, minY: 13, maxX: 8, maxY: 15 },
         assetFamily: 'moss-boulder'
@@ -1462,7 +1967,7 @@ export function createBlueprintContractExample(sidecar, mapId) {
         id: 'obstacle:east-birch',
         kind: 'pale-birch-tree',
         cells: [point(26, 20)],
-        featureId: 'central-route-junction',
+        featureId: regionIds.central,
         anchor: point(26, 20),
         occlusionBounds: { minX: 25, minY: 18, maxX: 27, maxY: 21 },
         assetFamily: 'pale-birch'
@@ -1471,7 +1976,7 @@ export function createBlueprintContractExample(sidecar, mapId) {
         id: 'obstacle:lower-ancient-tree',
         kind: 'ancient-tree',
         cells: [point(13, 23)],
-        featureId: 'lower-clearing',
+        featureId: regionIds.player,
         anchor: point(13, 23),
         occlusionBounds: { minX: 12, minY: 21, maxX: 14, maxY: 24 },
         assetFamily: 'ancient-tree'
@@ -1482,7 +1987,7 @@ export function createBlueprintContractExample(sidecar, mapId) {
         id: 'decoration:west-accent',
         kind: 'biome-accent',
         cell: point(6, 11),
-        featureId: 'lateral-clearing',
+        featureId: regionIds.lateral,
         anchor: 'tile',
         assetFamily: 'fallen-branch'
       },
@@ -1490,7 +1995,7 @@ export function createBlueprintContractExample(sidecar, mapId) {
         id: 'decoration:east-accent',
         kind: 'biome-accent',
         cell: point(25, 18),
-        featureId: 'central-route-junction',
+        featureId: regionIds.central,
         anchor: 'tile',
         assetFamily: 'low-shrub'
       },
@@ -1498,7 +2003,7 @@ export function createBlueprintContractExample(sidecar, mapId) {
         id: 'decoration:upper-west-accent',
         kind: 'biome-accent',
         cell: point(8, 7),
-        featureId: 'upper-lookout',
+        featureId: regionIds.upper,
         anchor: 'tile',
         assetFamily: 'accent'
       },
@@ -1506,7 +2011,7 @@ export function createBlueprintContractExample(sidecar, mapId) {
         id: 'decoration:upper-center-accent',
         kind: 'biome-accent',
         cell: point(15, 11),
-        featureId: 'upper-lookout',
+        featureId: regionIds.upper,
         anchor: 'tile',
         assetFamily: 'fallen-branch'
       },
@@ -1514,7 +2019,7 @@ export function createBlueprintContractExample(sidecar, mapId) {
         id: 'decoration:upper-east-accent',
         kind: 'biome-accent',
         cell: point(24, 10),
-        featureId: 'upper-lookout',
+        featureId: regionIds.upper,
         anchor: 'tile',
         assetFamily: 'low-shrub'
       },
@@ -1522,7 +2027,7 @@ export function createBlueprintContractExample(sidecar, mapId) {
         id: 'decoration:lateral-north-accent',
         kind: 'biome-accent',
         cell: point(5, 13),
-        featureId: 'lateral-clearing',
+        featureId: regionIds.lateral,
         anchor: 'tile',
         assetFamily: 'accent'
       },
@@ -1530,7 +2035,7 @@ export function createBlueprintContractExample(sidecar, mapId) {
         id: 'decoration:lateral-south-accent',
         kind: 'biome-accent',
         cell: point(8, 20),
-        featureId: 'lateral-clearing',
+        featureId: regionIds.lateral,
         anchor: 'tile',
         assetFamily: 'fallen-branch'
       },
@@ -1538,7 +2043,7 @@ export function createBlueprintContractExample(sidecar, mapId) {
         id: 'decoration:junction-north-accent',
         kind: 'biome-accent',
         cell: point(17, 14),
-        featureId: 'central-route-junction',
+        featureId: regionIds.central,
         anchor: 'tile',
         assetFamily: 'low-shrub'
       },
@@ -1546,7 +2051,7 @@ export function createBlueprintContractExample(sidecar, mapId) {
         id: 'decoration:junction-east-accent',
         kind: 'biome-accent',
         cell: point(25, 17),
-        featureId: 'central-route-junction',
+        featureId: regionIds.central,
         anchor: 'tile',
         assetFamily: 'accent'
       },
@@ -1554,7 +2059,7 @@ export function createBlueprintContractExample(sidecar, mapId) {
         id: 'decoration:lower-west-accent',
         kind: 'biome-accent',
         cell: point(6, 24),
-        featureId: 'lower-clearing',
+        featureId: regionIds.player,
         anchor: 'tile',
         assetFamily: 'fallen-branch'
       },
@@ -1562,7 +2067,7 @@ export function createBlueprintContractExample(sidecar, mapId) {
         id: 'decoration:lower-center-accent',
         kind: 'biome-accent',
         cell: point(14, 25),
-        featureId: 'lower-clearing',
+        featureId: regionIds.player,
         anchor: 'tile',
         assetFamily: 'low-shrub'
       },
@@ -1570,7 +2075,7 @@ export function createBlueprintContractExample(sidecar, mapId) {
         id: 'decoration:lower-east-accent',
         kind: 'biome-accent',
         cell: point(24, 24),
-        featureId: 'lower-clearing',
+        featureId: regionIds.player,
         anchor: 'tile',
         assetFamily: 'accent'
       },
@@ -1578,7 +2083,7 @@ export function createBlueprintContractExample(sidecar, mapId) {
         id: 'decoration:upper-ridge-branch',
         kind: 'biome-accent',
         cell: point(11, 3),
-        featureId: 'upper-lookout',
+        featureId: regionIds.upper,
         anchor: 'tile',
         assetFamily: 'fallen-branch'
       },
@@ -1586,7 +2091,7 @@ export function createBlueprintContractExample(sidecar, mapId) {
         id: 'decoration:upper-ridge-shrub',
         kind: 'biome-accent',
         cell: point(20, 4),
-        featureId: 'upper-lookout',
+        featureId: regionIds.upper,
         anchor: 'tile',
         assetFamily: 'low-shrub'
       },
@@ -1594,7 +2099,7 @@ export function createBlueprintContractExample(sidecar, mapId) {
         id: 'decoration:west-edge-accent',
         kind: 'biome-accent',
         cell: point(3, 9),
-        featureId: 'lateral-clearing',
+        featureId: regionIds.lateral,
         anchor: 'tile',
         assetFamily: 'accent'
       },
@@ -1602,7 +2107,7 @@ export function createBlueprintContractExample(sidecar, mapId) {
         id: 'decoration:east-edge-branch',
         kind: 'biome-accent',
         cell: point(27, 12),
-        featureId: 'central-route-junction',
+        featureId: regionIds.central,
         anchor: 'tile',
         assetFamily: 'fallen-branch'
       },
@@ -1610,7 +2115,7 @@ export function createBlueprintContractExample(sidecar, mapId) {
         id: 'decoration:central-shrub',
         kind: 'biome-accent',
         cell: point(13, 16),
-        featureId: 'central-route-junction',
+        featureId: regionIds.central,
         anchor: 'tile',
         assetFamily: 'low-shrub'
       },
@@ -1618,7 +2123,7 @@ export function createBlueprintContractExample(sidecar, mapId) {
         id: 'decoration:lower-east-accent-secondary',
         kind: 'biome-accent',
         cell: point(26, 23),
-        featureId: 'lower-clearing',
+        featureId: regionIds.player,
         anchor: 'tile',
         assetFamily: 'accent'
       }
@@ -1658,6 +2163,12 @@ export function createBlueprintContractExample(sidecar, mapId) {
           cell: point(21, 22),
           approachRegionId: 'approach:player-east'
         },
+        ...(sidecar.spawnIntent.minimumApproaches === 3 ? [{
+          id: 'exit:player-center',
+          side: 'player',
+          cell: point(16, 27),
+          approachRegionId: 'approach:player-center'
+        }] : []),
         {
           id: 'exit:opponent-west',
           side: 'opponent',
@@ -1669,7 +2180,13 @@ export function createBlueprintContractExample(sidecar, mapId) {
           side: 'opponent',
           cell: point(21, 9),
           approachRegionId: 'approach:opponent-east'
-        }
+        },
+        ...(sidecar.spawnIntent.minimumApproaches === 3 ? [{
+          id: 'exit:opponent-center',
+          side: 'opponent',
+          cell: point(16, 9),
+          approachRegionId: 'approach:opponent-center'
+        }] : [])
       ],
       approachRegions: [
         {
@@ -1682,6 +2199,11 @@ export function createBlueprintContractExample(sidecar, mapId) {
           side: 'player',
           cells: [point(20, 22), point(21, 22), point(22, 22)]
         },
+        ...(sidecar.spawnIntent.minimumApproaches === 3 ? [{
+          id: 'approach:player-center',
+          side: 'player',
+          cells: [point(15, 27), point(16, 27), point(17, 27)]
+        }] : []),
         {
           id: 'approach:opponent-west',
           side: 'opponent',
@@ -1691,7 +2213,12 @@ export function createBlueprintContractExample(sidecar, mapId) {
           id: 'approach:opponent-east',
           side: 'opponent',
           cells: [point(20, 9), point(21, 9), point(22, 9)]
-        }
+        },
+        ...(sidecar.spawnIntent.minimumApproaches === 3 ? [{
+          id: 'approach:opponent-center',
+          side: 'opponent',
+          cells: [point(15, 9), point(16, 9), point(17, 9)]
+        }] : [])
       ],
       minimumRouteConstraints: {
         minimumIndependentExits: sidecar.spawnIntent.minimumApproaches,
@@ -1708,11 +2235,22 @@ export function createBlueprintContractExample(sidecar, mapId) {
       ]
     },
     expectedAssetFamilies: [
-      { category: 'surface', symbol: 'ground' },
+      ...(usesFallenOakComposition
+        ? TEMPLATE_07_SURFACE_MATERIALS.map(record => ({
+            category: 'surface',
+            symbol: record.symbol
+          }))
+        : [{ category: 'surface', symbol: 'ground' }]),
       { category: 'route', symbol: 'path' },
       { category: 'connection', symbol: 'stairs' },
       { category: 'connection', symbol: 'slope' },
       { category: 'obstacle', symbol: 'ancient-tree' },
+      ...(usesFallenOakComposition
+        ? [
+            { category: 'obstacle', symbol: 'fallen-oak-root-mass' },
+            { category: 'obstacle', symbol: 'fallen-oak-landmark' }
+          ]
+        : []),
       { category: 'obstacle', symbol: 'ironpine' },
       { category: 'obstacle', symbol: 'moss-boulder' },
       { category: 'obstacle', symbol: 'pale-birch' },
@@ -1720,6 +2258,9 @@ export function createBlueprintContractExample(sidecar, mapId) {
       { category: 'decoration', symbol: 'fallen-branch' },
       { category: 'decoration', symbol: 'low-shrub' },
       { category: 'boundary', symbol: 'earth-face' },
+      ...(usesFallenOakComposition
+        ? [{ category: 'boundary', symbol: 'fieldstone-face' }]
+        : []),
       { category: 'boundary', symbol: 'forest-edge' }
     ],
     generationNotes: [
@@ -1729,6 +2270,7 @@ export function createBlueprintContractExample(sidecar, mapId) {
 }
 
 function blueprintContract(sidecar, mapId) {
+  const usesFallenOakComposition = sidecar.id === TEMPLATE_07_ID;
   return {
     schemaVersion: 1,
     candidateId: mapId,
@@ -1768,14 +2310,27 @@ function blueprintContract(sidecar, mapId) {
       'boundary',
       'route'
     ],
-    assetFamilyGeometry: [{
-      category: 'obstacle',
-      symbol: 'landmark',
-      footprint: { width: 1, height: 1 },
-      collisionCells: [point(0, 0)],
-      authoringRule:
-        'one record per tile; repeat the family with a unique id for clusters'
-    }],
+    assetFamilyGeometry: [
+      {
+        category: 'obstacle',
+        symbol: 'landmark',
+        footprint: { width: 1, height: 1 },
+        collisionCells: [point(0, 0)],
+        authoringRule: usesFallenOakComposition
+          ? 'one record per tile for every family except fallen-oak-landmark'
+          : 'one record per tile; repeat the family with a unique id for clusters'
+      },
+      ...(usesFallenOakComposition
+        ? [{
+            category: 'obstacle',
+            symbol: 'fallen-oak-landmark',
+            footprint: { width: 8, height: 3 },
+            collisionCells: TEMPLATE_07_LANDMARK_COLLISION_CELLS,
+            authoringRule:
+              'exactly one diagonal ten-cell record; anchor at collision cell 0,0'
+          }]
+        : [])
+    ],
     spawnCapacities: {
       playerCapacity: sidecar.mapProfile.playerCapacity.maximum,
       candidatePoolSize: sidecar.mapProfile.candidatePoolSize,
@@ -1793,6 +2348,216 @@ function blueprintContract(sidecar, mapId) {
   };
 }
 
+/**
+ * Produces the deterministic standalone authored starter staged for the
+ * isolated worker. The contract example remains the neutral comparison
+ * baseline; this starter applies two bounded, validator-safe composition
+ * decisions so the worker never has to rewrite the large masks and grids.
+ */
+export function createBlueprintAuthoredStarter(sidecar, mapId) {
+  const starter = structuredClone(
+    createBlueprintContractExample(sidecar, mapId)
+  );
+  if (!usesBlueprintV2SemanticContract(sidecar.id)) return starter;
+
+  const variant = variantKey(mapId);
+  if (sidecar.id !== TEMPLATE_07_ID) {
+    const flankCells = {
+      a: [
+        point(12, 17), point(11, 17), point(10, 17), point(10, 18),
+        point(9, 18), point(8, 18), point(7, 18), point(6, 18)
+      ],
+      b: [
+        point(15, 15), point(14, 15), point(13, 15), point(12, 15),
+        point(11, 15), point(10, 15), point(9, 15), point(8, 15),
+        point(7, 15), point(6, 15)
+      ],
+      c: [
+        point(14, 16), point(13, 16), point(12, 16), point(11, 16),
+        point(10, 16), point(9, 16), point(8, 16), point(7, 16), point(7, 17)
+      ]
+    }[variant];
+    const flankRoute = {
+      id: 'route:flank-branch',
+      kind: 'secondary',
+      material: 'ground',
+      cells: flankCells,
+      required: true,
+      width: 2,
+      featureId: 'feature:routes',
+      assetFamily: 'path'
+    };
+    const existingFlankIndex = starter.routes.findIndex(
+      route => route.id === flankRoute.id
+    );
+    if (existingFlankIndex === -1) starter.routes.push(flankRoute);
+    else starter.routes[existingFlankIndex] = flankRoute;
+  }
+  starter.features.find(feature => feature.id === 'feature:routes').cells =
+    starter.routes.flatMap(route => route.cells).filter((cell, index, cells) =>
+      cells.findIndex(candidate =>
+        candidate.x === cell.x && candidate.y === cell.y
+      ) === index
+    );
+
+  starter.features.find(feature => feature.id === 'feature:terraces').cells[0] = {
+    a: point(7, 14),
+    b: point(7, 15),
+    c: point(8, 14)
+  }[variant];
+  const regionCells = {
+    a: {
+      upper: [14, 15, 16, 17, 18].map(x => point(x, 5)),
+      lateral: [point(9, 16), point(10, 16), point(11, 16)],
+      central: [point(15, 15), point(15, 16), point(16, 16)]
+    },
+    b: {
+      upper: [14, 15, 16, 17, 18].map(x => point(x, 5)),
+      lateral: [point(10, 17), point(11, 17), point(11, 18)],
+      central: [point(16, 15), point(16, 16), point(17, 16)]
+    },
+    c: {
+      upper: [14, 15, 16, 17, 18].map(x => point(x, 5)),
+      lateral: [point(9, 17), point(10, 17), point(10, 18)],
+      central: [point(15, 16), point(16, 16), point(16, 17)]
+    }
+  }[variant];
+  starter.regions.find(region => region.kind === 'elevated-clearing').cells =
+    regionCells.upper;
+  starter.regions.find(region => region.kind === 'flank-clearing').cells =
+    regionCells.lateral;
+  starter.regions.find(region => region.kind === 'route-junction').cells =
+    regionCells.central;
+
+  const playerSlot = starter.spawn.playerSlots[0];
+  const previousPlayerCell = { ...playerSlot.cell };
+  playerSlot.cell = {
+    a: point(5, 24),
+    b: point(6, 25),
+    c: point(4, 25)
+  }[variant];
+  const playerRegion = starter.regions.find(region =>
+    region.kind === 'formation-clearing'
+    && region.cells.some(cell =>
+      cell.x === previousPlayerCell.x && cell.y === previousPlayerCell.y
+    )
+  );
+  const playerRegionCell = playerRegion.cells.find(cell =>
+    cell.x === previousPlayerCell.x && cell.y === previousPlayerCell.y
+  );
+  playerRegionCell.x = playerSlot.cell.x;
+  playerRegionCell.y = playerSlot.cell.y;
+
+  if (sidecar.id === TEMPLATE_07_ID) {
+    const composition = TEMPLATE_07_LANDMARK_COMPOSITIONS[variant];
+    const landmark = starter.obstacles.find(
+      record => record.id === 'obstacle:fallen-oak-landmark'
+    );
+    landmark.cells = TEMPLATE_07_LANDMARK_COLLISION_CELLS.map(cell => point(
+      composition.landmarkAnchor.x + cell.x,
+      composition.landmarkAnchor.y + cell.y
+    ));
+    landmark.anchor = { ...composition.landmarkAnchor };
+    landmark.occlusionBounds = {
+      minX: composition.landmarkAnchor.x,
+      minY: composition.landmarkAnchor.y,
+      maxX: composition.landmarkAnchor.x + 7,
+      maxY: composition.landmarkAnchor.y + 2
+    };
+    const rootMass = starter.obstacles.find(
+      record => record.id === 'obstacle:fallen-oak-root-mass'
+    );
+    rootMass.cells = [{ ...composition.root }];
+    rootMass.anchor = { ...composition.root };
+    rootMass.occlusionBounds = {
+      minX: composition.root.x - 1,
+      minY: composition.root.y - 2,
+      maxX: composition.root.x + 1,
+      maxY: composition.root.y + 1
+    };
+    if (variant === 'a') {
+      const lowerAncientTree = starter.obstacles.find(
+        record => record.id === 'obstacle:lower-ancient-tree'
+      );
+      lowerAncientTree.cells = [point(12, 25)];
+      lowerAncientTree.anchor = point(12, 25);
+      lowerAncientTree.occlusionBounds = {
+        minX: 11,
+        minY: 23,
+        maxX: 13,
+        maxY: 26
+      };
+    }
+    const formationProfile = TEMPLATE_07_FORMATION_PROFILES[variant];
+    starter.spawn.playerSlots.forEach((slot, index) => {
+      slot.cell = { ...formationProfile.players[index] };
+    });
+    starter.spawn.opponentCandidates.forEach((candidate, index) => {
+      candidate.cell = { ...formationProfile.opponents[index] };
+    });
+    starter.spawn.opponentZones[0].cells =
+      formationProfile.opponents.map(cell => ({ ...cell }));
+    starter.regions.find(region =>
+      region.kind === 'formation-clearing'
+      && region.annotations.includes('player-formation')
+    ).cells = formationProfile.players.map(cell => ({ ...cell }));
+    starter.regions.find(region =>
+      region.kind === 'formation-clearing'
+      && region.annotations.includes('opponent-formation')
+    ).cells = formationProfile.opponents.map(cell => ({ ...cell }));
+    starter.spawn.tacticalAnnotations[0].cells =
+      formationProfile.opponents
+        .filter(cell => cell.y <= 10)
+        .map(cell => ({ ...cell }));
+    const exitCells = [
+      ...formationProfile.exits.player,
+      ...formationProfile.exits.opponent
+    ];
+    starter.spawn.exits.forEach((exit, index) => {
+      exit.cell = { ...exitCells[index] };
+      const approach = starter.spawn.approachRegions.find(
+        region => region.id === exit.approachRegionId
+      );
+      approach.cells = [-1, 0, 1].map(dx =>
+        point(exit.cell.x + dx, exit.cell.y)
+      );
+    });
+  } else {
+    const obstacle = starter.obstacles.find(
+      record => record.id === 'obstacle:central-root'
+    );
+    const obstaclePosition = {
+      a: point(16, 18),
+      b: point(16, 19),
+      c: point(17, 19)
+    }[variant];
+    const obstacleDx = obstaclePosition.x - obstacle.anchor.x;
+    const obstacleDy = obstaclePosition.y - obstacle.anchor.y;
+    obstacle.cells = [{ ...obstaclePosition }];
+    obstacle.anchor = { ...obstaclePosition };
+    obstacle.occlusionBounds = {
+      minX: obstacle.occlusionBounds.minX + obstacleDx,
+      minY: obstacle.occlusionBounds.minY + obstacleDy,
+      maxX: obstacle.occlusionBounds.maxX + obstacleDx,
+      maxY: obstacle.occlusionBounds.maxY + obstacleDy
+    };
+  }
+
+  const connectionIndex = sidecar.id === TEMPLATE_07_ID
+    ? 5
+    : { a: 0, b: 4, c: 5 }[variant];
+  const connection = starter.connections[connectionIndex];
+  connection.kind = connection.kind === 'stairs' ? 'slope' : 'stairs';
+  connection.assetFamily = connection.kind;
+
+  starter.decorations[0].cell = {
+    a: point(5, 11),
+    b: point(6, 12),
+    c: point(7, 11)
+  }[variant];
+  return starter;
+}
+
 function variantKey(mapId) {
   const match = /-([abc])$/.exec(mapId);
   if (!match) fail(`candidate map ${mapId} must end in -a, -b, or -c`);
@@ -1806,6 +2571,10 @@ export function buildBlueprintPrompt({
   textTemplateFallback = false
 }) {
   const variant = variantKey(mapId);
+  const v2 = usesBlueprintV2SemanticContract(sidecar.id);
+  const usesFallenOakComposition = sidecar.id === TEMPLATE_07_ID;
+  const expectedAssetFamilyCount =
+    createBlueprintContractExample(sidecar, mapId).expectedAssetFamilies.length;
   const sourceInstruction = textTemplateFallback
     ? `The exact approved source image remains staged and hash-verified for audit, but this
 worker must not open it or pass its path to another tool. Use the reviewed composition,
@@ -1813,9 +2582,22 @@ topology, height, route, boundary, spawn, landmark, and forbidden-pattern intent
 inputs/sidecar.json as the complete authoring authority.`
     : `The exact approved source image is attached and available beneath inputs/. Treat it
 as composition-only inspiration and obey inputs/sidecar.json as gameplay authority.`;
-  const variantSafeguard = usesBlueprintV2SemanticContract(sidecar.id)
+  const variantSafeguard = v2
     ? {
-        a: `Variant A retry safeguard: use every fixed expectedAssetFamilies symbol and
+        a: usesFallenOakComposition
+          ? `Template-07 Variant A bounded-authoring safeguard: preserve every required
+route record's ordered centerline cells exactly as staged in
+inputs/starter.json; those centerlines already prove the required
+interlocking-loop connectivity and mixed slope/stair access. Preserve the
+fixed fallen-oak landmark/root composition and the staged variant-specific
+formation and elevation/region macro topology. Make the required core composition
+change by moving the player formation spawn at (5, 24) exactly one cardinal
+step to (6, 24), and update the matching formation-clearing region cell to
+preserve exact membership. Make the second authoritative change by moving
+decoration:west-accent from (5, 11) exactly one cardinal step to (6, 11) while
+preserving its feature ownership and avoiding spawn, route, obstacle, and
+boundary cells.`
+          : `Variant A retry safeguard: use every fixed expectedAssetFamilies symbol and
 build a broad compact interlocking junction with at least two internally
 vertex-disjoint formation-to-formation crossings in the explicit ordered route
 centerlines. No cell or edge may be the sole articulation crossing, and nearby
@@ -1824,30 +2606,72 @@ whose reviewed relationship names both access types one natural-slope portal and
 vertex-disjoint stair portal on different required routes. Do not spend another
 attempt on a sparse composition that leaves a declared family unused or stretches the
 junction into parallel route rails.`,
-        b: `Variant B retry safeguard: elevated and staging clearing region cells must each
+        b: usesFallenOakComposition
+          ? `Template-07 Variant B bounded-authoring safeguard: preserve every required
+primary route record's ordered centerline cells exactly as staged in
+inputs/starter.json, together with the fixed fallen-oak landmark/root composition
+and the staged variant-specific formation and elevation/region macro topology.
+Make the required core composition change by moving the player formation spawn
+at (6, 24) exactly one cardinal step to (7, 24), and update the matching
+formation-clearing region cell to preserve exact membership. Make the second
+authoritative change by moving decoration:west-accent from (6, 12) exactly one
+cardinal step to (7, 12), while avoiding spawn, route, obstacle, and boundary
+cells. Do not copy a sibling variant's route, formation, elevation, feature, or
+connection geometry.`
+          : `Variant B retry safeguard: preserve every required route record's ordered
+centerline cells exactly as staged in inputs/starter.json; those centerlines already
+prove the required interlocking-loop connectivity. Express the terrace emphasis with
+a bounded elevation/connection edit, not a route edit. Make the required core
+composition change by moving one formation spawn cell one cardinal step to an
+eligible playable neighbor and updating the matching formation-clearing region cell
+to preserve exact membership. Elevated and staging clearing region cells must each
 form a cardinally connected semantic area that intersects or cardinally touches a
-required route. Keep required routes curved and visually distinct; never substitute
-a long side-by-side parallel adjacency ladder for a compact junction.`,
-        c: `Variant C retry safeguard: do not mirror or transpose the completeShapeExample.
-Change the render/playable masks, elevation, connection geometry, and spawn geometry,
-and author an explicit third required flank branch through or cardinally touching the
-flank-clearing. The candidate must contain at least three required route segments.`
+required route. Never substitute a long side-by-side parallel adjacency ladder for
+the starter's compact junction.`,
+        c: usesFallenOakComposition
+          ? `Template-07 Variant C bounded-authoring safeguard: do not mirror,
+transpose, or copy a sibling topology. Preserve all three required primary
+formation-to-formation route records and their ordered centerline cells exactly,
+including the northwest, oak-seam, and southeast macro families. Preserve the
+C-specific formation and elevation/region topology, connection-kind selection,
+fixed fallen-oak landmark/root composition, and decoration:west-accent cell.
+Make the required core composition change by moving the player formation spawn
+at (7, 23) exactly one cardinal step to (8, 23), and update the matching
+formation-clearing region cell to preserve exact membership. Make the second
+authoritative change by moving decoration:west-accent from (7, 11) exactly one
+cardinal step to (8, 11) while avoiding spawn, route, obstacle, and boundary
+cells.`
+          : `Variant C bounded-authoring safeguard: do not mirror or transpose
+inputs/starter.json. Preserve its explicit third required flank route through
+or cardinally touching the flank-clearing, its C-specific connection-kind
+selection, and the fixed decoration:west-accent cell. Preserve every required
+route record's ordered centerline cells exactly. Make the required core
+composition change by moving one player formation spawn cell one cardinal
+step to an eligible playable neighbor and updating the matching
+formation-clearing region cell to preserve exact membership. Make the second
+authoritative change by moving one other decoration cell one cardinal step
+while preserving its feature ownership and avoiding spawn, route, obstacle,
+and boundary cells. The candidate must retain three required route segments.`
       }[variant]
     : '';
-  const requiredTopologyAreaIds = usesBlueprintV2SemanticContract(sidecar.id)
+  const requiredTopologyAreaIds = v2
     ? sidecar.topologyIntent.areas
       .filter(area => area.required === true)
       .map(area => area.id)
     : [];
-  const v2SemanticSafeguard = usesBlueprintV2SemanticContract(sidecar.id)
+  const v2SemanticSafeguard = v2
     ? `Shared V2 composition safeguards: every non-formation tactical region must
 intersect or cardinally touch a required route, and every such region with multiple
 cells must form one cardinally connected set. Required routes may meet at compact
 figure-eight or interlocking junctions, but must not form a long side-by-side parallel
-adjacency ladder. When the reviewed intent calls for interlocking loops, the explicit
-ordered primary-route centerlines must provide the required count of internally
+adjacency ladder. The explicit ordered primary-route centerlines must provide the
+structurally declared
+routeIntent.minimumApproachesPerFormation count of internally
 vertex-disjoint formation-to-formation crossings; a shared articulation cell or edge
-is a choke even when other route-painted cells are nearby. A reviewed mixed
+is a choke even when other route-painted cells are nearby. For three-approach
+contracts, each required primary route record must itself run in order from the
+player formation to the opponent formation; a dangling secondary branch cannot
+substitute for a route family. A reviewed mixed
 slope/stair relationship requires separate boundary portals on different required
 routes, with no shared portal endpoint. Author no more traversable elevation-connection records than the
 fixed map width (32 on this 32 by 32 map), and at least 75% of those traversable
@@ -1855,16 +2679,67 @@ connections must have from or to on a required route centerline. Use a small set
 deliberate route/landmark/fork crossings; leave other elevation edges
 blocked/compiler-rendered faces. Create region records for every required
 topologyIntent area using these exact IDs: ${requiredTopologyAreaIds.join(', ')}.
-The generic completeShapeExample region IDs are placeholders, not substitutes for
-the approved sidecar IDs.`
+The prepared starter already carries those exact reviewed identities and valid
+geometry. Preserve the identities and semantic relationships while making only
+the bounded geometry edits required below.`
     : '';
-  const assetClosureSafeguard = usesBlueprintV2SemanticContract(sidecar.id)
+  const assetClosureSafeguard = v2
     ? `
 Every fixed expectedAssetFamilies symbol must be actually referenced at least
 once by a matching candidate field. If both connection:slope and
 connection:stairs are listed, author at least one traversable slope connection and at
 least one traversable stairs connection.`
     : '';
+  const template07VisualAuthorshipSafeguard = usesFallenOakComposition
+    ? `
+Template-07 visual-authorship contract: every rendered surfaceGrid cell must
+retain exactly one of these material-to-feature pairs:
+clover-glade:southwest-clover-glade,
+fern-hazel-glade:northeast-fern-hazel-glade,
+fieldstone-terrace:northwest-fieldstone-terrace,
+hawthorn-loop:southeast-hawthorn-loop, and
+dry-ravine:fallen-oak-root-seam. Each pair must cover at least one rendered
+cell; do not flatten the scene back to generic ground or leave the northeast
+fern-hazel glade without surface coverage. Preserve the organic, variant-specific
+regions: a long irregular diagonal ravine, irregular southwest clover and
+northeast fern-hazel areas, a localized northwest fieldstone terrace, and a
+southeast hawthorn loop. Do not replace them with rectangles, quadrant bands,
+or checkerboards. Preserve exactly one fallen-oak-landmark blocking obstacle
+with ten collision cells forming its fixed 8 by 3 diagonal footprint and
+exactly one cardinally adjacent one-cell
+fallen-oak-root-mass obstacle. The ${variant.toUpperCase()} composition fixes
+the landmark anchor at (${TEMPLATE_07_LANDMARK_COMPOSITIONS[variant].landmarkAnchor.x}, ${TEMPLATE_07_LANDMARK_COMPOSITIONS[variant].landmarkAnchor.y})
+and root mass at (${TEMPLATE_07_LANDMARK_COMPOSITIONS[variant].root.x}, ${TEMPLATE_07_LANDMARK_COMPOSITIONS[variant].root.y}); keep the root in the
+dry ravine, at least two landmark cells on dry-ravine, and at least one
+landmark cell continuing onto a non-ravine bank. Retain boundary:fieldstone-face so the
+fieldstone-terrace material has its distinct elevation-face family.`
+    : '';
+  const candidateAuthoringInstruction = v2
+    ? `The closed contract summary is available at inputs/contract.json. A
+standalone schema-valid, V2-semantic-valid 32 by 32 authoring starter is
+available separately at inputs/starter.json. First run
+\`cp inputs/starter.json candidate.json\`, then make targeted, bounded edits to
+candidate.json. The finished candidate must change at least two authoritative
+geometry groups relative to the starter, and at least one changed group must be
+core composition: mask/surface geometry, required-route geometry, or spawn
+arrangement. Connection-kind plus decorative-only edits are insufficient.
+Preserve candidateId, templateId, all existing record identities, every required
+topology area ID, and the fixed expectedAssetFamilies closure. Coordinate any
+dependent region or feature cells needed to keep the result semantically valid.
+Do not merely reserialize the starter, retype large masks or grids, or make
+unbounded wholesale changes.`
+    : `The closed contract summary is available at inputs/contract.json. Its
+completeShapeExample is deliberately valid at the required 32 by 32 scale:
+copy it mechanically first, then make bounded, deliberate variant-specific
+symbolic changes rather than retyping large masks or grids by hand. A copy of
+the example, or a candidate that changes only IDs, notes, or one cosmetic
+record, is rejected. Implement the variant brief by changing at least two
+authoritative geometry groups while preserving every invariant: mask/surface
+topology, route cells, elevation/connection geometry, spawn-cell arrangement,
+or obstacle/boundary/decorative feature cells.`;
+  const expectedAssetFamiliesAuthority = v2
+    ? 'inputs/starter.json expectedAssetFamilies'
+    : 'completeShapeExample.expectedAssetFamilies';
   return `${profile.prompt}
 
 Variant brief:
@@ -1877,18 +2752,11 @@ ${profile.negativeConstraints.map(item => `- ${item}`).join('\n')}
 
 The approved source sidecar is available at inputs/sidecar.json.
 ${sourceInstruction}
-The closed contract summary is available at inputs/contract.json. Its
-completeShapeExample is deliberately valid at the required 32 by 32 scale:
-copy it mechanically first, then make bounded, deliberate variant-specific
-symbolic changes rather than retyping large masks or grids by hand. A copy of
-the example, or a candidate that changes only IDs, notes, or one cosmetic
-record, is rejected. Implement the variant brief by changing at least two
-authoritative geometry groups while preserving every invariant: mask/surface
-topology, route cells, elevation/connection geometry, spawn-cell arrangement,
-or obstacle/boundary/decorative feature cells.
+${candidateAuthoringInstruction}
+${template07VisualAuthorshipSafeguard}
 Keep expectedAssetFamilies byte-for-byte equivalent to
-completeShapeExample.expectedAssetFamilies after canonical sorting. It is a
-fixed 13-symbol compiler contract, not an inventory to rename from the authored
+${expectedAssetFamiliesAuthority} after canonical sorting. It is a
+fixed ${expectedAssetFamilyCount}-symbol compiler contract, not an inventory to rename from the authored
 scene. Every material and family symbol referenced by the candidate must use
 that fixed set; never invent ecology-specific replacements.${assetClosureSafeguard}
 Every position in surfaceGrid and elevation must exactly follow renderMask:
@@ -1905,17 +2773,26 @@ undirected edge as a traversable bidirectional slope or stairs; merely touching
 either route cell does not connect a different edge. Every obstacle cell must be inside
 playableMask and must not overlap a player slot, opponent candidate, exit, or
 required route; use boundary records for scenery outside the playable mask.
-The fixed obstacle:landmark renderer has exactly a one-tile collision footprint.
+${usesFallenOakComposition
+    ? `The fixed obstacle:fallen-oak-landmark renderer is the sole multi-cell
+exception: it has exactly ten blocking collision cells in a fixed 8 by 3
+diagonal footprint at offsets (0,0), (1,0), (2,0), (2,1), (3,1), (4,1),
+(5,1), (5,2), (6,2), and (7,2). Its anchor must be the northwest collision cell. The
+fallen-oak-root-mass must contain exactly one cell, use that cell as its anchor,
+and cardinally touch the landmark. Every other obstacle record must contain
+exactly one cell and use that same cell as its anchor.`
+    : `The fixed obstacle:landmark renderer has exactly a one-tile collision footprint.
 Every obstacle record must therefore contain exactly one cell and use that same
 cell as its anchor. Build larger clusters from separate uniquely identified
-one-cell obstacle records; never make one record span multiple cells.
+one-cell obstacle records; never make one record span multiple cells.`}
 Every tags array must contain unique values. An opponent candidate may name a
 tactical annotation only when its cell is included in that annotation's cells,
 and its cell must also belong to the opponent zone named by zoneId.
 
 Author candidate "${mapId}" for template "${sidecar.id}" and theme
 "${sidecar.theme}". Write exactly one UTF-8 JSON document to candidate.json in
-the current disposable workspace. Do not create directories, logs, approvals,
+the current disposable workspace${v2 ? ' after the bounded starter edits required above' : ''}.
+Do not create directories, logs, approvals,
 compiled maps, runtime assets, or any other file. Do not modify the input files.
 This is a JSON-only authoring workflow. Do not call imagegen or any other image
 generation tool. Do not spawn or delegate to subagents; complete authoring and
@@ -2373,6 +3250,7 @@ export async function spawnBlueprintWorker({
   timeoutMs,
   mapId,
   sidecar,
+  starterBytes,
   completionGraceMs = DEFAULT_BLUEPRINT_COMPLETION_GRACE_MS,
   completionPollMs = DEFAULT_BLUEPRINT_COMPLETION_POLL_MS,
   textTemplateFallback = false,
@@ -2385,7 +3263,7 @@ export async function spawnBlueprintWorker({
     cwd: workspace,
     input: prompt,
     timeoutMs,
-    candidateContext: { mapId, sidecar },
+    candidateContext: { mapId, sidecar, starterBytes },
     completionGraceMs,
     completionPollMs,
     signal
@@ -2478,7 +3356,8 @@ function auditWorkspace(
     'inputs',
     sourceRelativePath,
     'inputs/sidecar.json',
-    'inputs/contract.json'
+    'inputs/contract.json',
+    'inputs/starter.json'
   ]);
   for (const [relative, entry] of before) {
     if (!expectedInputs.has(relative)) fail(`unexpected prepared workspace input ${relative}`);
@@ -2559,7 +3438,8 @@ async function verifySource(projectRoot, sidecar) {
 async function readCandidateRecord(projectRoot, theme, template, mapId, {
   sidecar = null,
   promptReference = null,
-  promptProfile = null
+  promptProfile = null,
+  allowHistoricalPromptProfileForRejection = false
 } = {}) {
   const paths = candidatePaths(theme, template, mapId);
   const metadataPath = resolveWithinProject(
@@ -2627,7 +3507,10 @@ async function readCandidateRecord(projectRoot, theme, template, mapId, {
     && (
       metadata.promptProfile.id !== promptReference.id
       || metadata.promptProfile.path !== promptReference.path
-      || metadata.promptProfile.sha256 !== promptReference.sha256
+      || (
+        !allowHistoricalPromptProfileForRejection
+        && metadata.promptProfile.sha256 !== promptReference.sha256
+      )
     )
   ) fail('candidate prompt-profile pin is stale');
   if (
@@ -2653,7 +3536,11 @@ async function readCandidateRecord(projectRoot, theme, template, mapId, {
       && typeof metadata.worker.textTemplateFallback !== 'boolean'
     )
   ) fail('candidate worker provenance is invalid');
-  if (sidecar && promptProfile) {
+  if (
+    sidecar
+    && promptProfile
+    && !allowHistoricalPromptProfileForRejection
+  ) {
     const promptPath = resolveWithinProject(
       projectRoot,
       paths.prompt,
@@ -2703,6 +3590,13 @@ async function readCandidateRecord(projectRoot, theme, template, mapId, {
   assertTemplateMapBlueprint(blueprint);
   if (sidecar && usesBlueprintV2SemanticContract(sidecar.id)) {
     validateV2BlueprintSemanticContract(blueprint, sidecar);
+    assertV2BoundedAuthoring(
+      blueprint,
+      createBlueprintAuthoredStarter(sidecar, mapId)
+    );
+  }
+  if (sidecar?.id === TEMPLATE_07_ID) {
+    assertTemplate07VisualAuthorship(blueprint);
   }
   const fullHash = await computeTemplateMapBlueprintFullHash(blueprint);
   if (fullHash !== metadata.blueprint.fullHash) {
@@ -2727,15 +3621,22 @@ async function prepareWorkspace({
   if (!INPUT_PATHS.has(sourceRelativePath)) {
     fail('approved source image must be PNG or WebP');
   }
+  const starterBytes = Buffer.from(
+    `${JSON.stringify(createBlueprintAuthoredStarter(sidecar, mapId), null, 2)}\n`
+  );
   await Promise.all([
     copyFile(sourcePath, path.join(workspace, sourceRelativePath)),
     writeFile(path.join(inputs, 'sidecar.json'), `${JSON.stringify(sidecar, null, 2)}\n`),
     writeFile(
       path.join(inputs, 'contract.json'),
       `${JSON.stringify(blueprintContract(sidecar, mapId), null, 2)}\n`
+    ),
+    writeFile(
+      path.join(inputs, 'starter.json'),
+      starterBytes
     )
   ]);
-  return { workspace, sourceRelativePath };
+  return { workspace, sourceRelativePath, starterBytes };
 }
 
 function deterministicPreflightHash(label) {
@@ -2824,6 +3725,9 @@ async function preflightCandidateWithSyntheticCompilerContext(blueprint, sidecar
   const elevationFaceFamily =
     elevationFaceFamilies.find(record => record.symbol === 'earth-face')
     ?? elevationFaceFamilies[0];
+  const fieldstoneFaceFamily = elevationFaceFamilies.find(
+    record => record.symbol === 'fieldstone-face'
+  );
   const assets = assetBindings.map((record, index) => ({
     key: record.assetKey,
     contentVersion: 1,
@@ -2889,7 +3793,9 @@ async function preflightCandidateWithSyntheticCompilerContext(blueprint, sidecar
       elevationFaceSymbols: Object.fromEntries(
         materials.map(material => [
           material.symbol,
-          elevationFaceFamily.symbol
+          material.symbol === 'fieldstone-terrace' && fieldstoneFaceFamily
+            ? fieldstoneFaceFamily.symbol
+            : elevationFaceFamily.symbol
         ])
       ),
       assetBindings
@@ -2943,7 +3849,693 @@ async function preflightCandidateWithSyntheticCompilerContext(blueprint, sidecar
   await compileTemplateMapBlueprint(blueprint, context);
 }
 
-async function validateCandidateBytes(candidateBytes, { mapId, sidecar }) {
+function recordsById(records, project) {
+  return [...records]
+    .sort((left, right) => left.id.localeCompare(right.id))
+    .map(record => ({ id: record.id, ...project(record) }));
+}
+
+function cellsAsSet(cells) {
+  return [...cells].sort((left, right) =>
+    left.y - right.y || left.x - right.x
+  );
+}
+
+function routeCellsWithoutOrientation(cells) {
+  const forward = [...cells];
+  const reverse = [...cells].reverse();
+  for (let index = 0; index < forward.length; index += 1) {
+    const difference = (
+      forward[index].y - reverse[index].y
+      || forward[index].x - reverse[index].x
+    );
+    if (difference !== 0) {
+      return difference < 0 ? forward : reverse;
+    }
+  }
+  return forward;
+}
+
+function undirectedConnectionEndpoints(connection) {
+  const [from, to] = [connection.from, connection.to].sort((left, right) =>
+    left.y - right.y || left.x - right.x
+  );
+  return { from, to };
+}
+
+function boundaryEdgesAsSet(edges) {
+  return [...edges].sort((left, right) => (
+    left.cell.y - right.cell.y
+    || left.cell.x - right.cell.x
+    || (left.direction < right.direction
+      ? -1
+      : left.direction > right.direction ? 1 : 0)
+  ));
+}
+
+function authoritativeGeometryGroups(value) {
+  return [
+    {
+      renderMask: value.renderMask,
+      playableMask: value.playableMask,
+      surfaceGrid: value.surfaceGrid
+    },
+    recordsById(value.routes, route => ({
+      cells: routeCellsWithoutOrientation(route.cells),
+      required: route.required,
+      width: route.width
+    })),
+    {
+      elevation: value.elevation,
+      connections: recordsById(value.connections, connection => ({
+        ...undirectedConnectionEndpoints(connection),
+        kind: connection.kind,
+        traversable: connection.traversable
+      }))
+    },
+    {
+      playerSlots: recordsById(
+        value.spawn.playerSlots,
+        slot => ({ cell: slot.cell })
+      ),
+      opponentCandidates: recordsById(
+        value.spawn.opponentCandidates,
+        candidate => ({ cell: candidate.cell })
+      ),
+      opponentZones: recordsById(
+        value.spawn.opponentZones,
+        zone => ({ cells: cellsAsSet(zone.cells) })
+      ),
+      exits: recordsById(
+        value.spawn.exits,
+        exit => ({ cell: exit.cell })
+      )
+    },
+    {
+      obstacles: recordsById(
+        value.obstacles,
+        obstacle => ({ cells: cellsAsSet(obstacle.cells) })
+      ),
+      decorations: recordsById(
+        value.decorations,
+        decoration => ({ cell: decoration.cell })
+      ),
+      boundaries: recordsById(
+        value.boundaries,
+        boundary => ({ edges: boundaryEdgesAsSet(boundary.edges) })
+      )
+    }
+  ];
+}
+
+function changedGeometryGroupCount(blueprint, baseline) {
+  const authoredGroups = authoritativeGeometryGroups(blueprint);
+  const baselineGroups = authoritativeGeometryGroups(baseline);
+  return authoredGroups.reduce(
+    (count, group, index) =>
+      count + (stableJson(group) === stableJson(baselineGroups[index]) ? 0 : 1),
+    0
+  );
+}
+
+function hasCoreCompositionChange(blueprint, baseline) {
+  const groups = authoritativeGeometryGroups(blueprint);
+  const baselineGroups = authoritativeGeometryGroups(baseline);
+  const requiredRouteGeometry = value => recordsById(
+    value.routes.filter(route => route.required),
+    route => ({
+      cells: routeCellsWithoutOrientation(route.cells),
+      required: route.required,
+      width: route.width
+    })
+  );
+  return (
+    stableJson(groups[0]) !== stableJson(baselineGroups[0])
+    || stableJson(requiredRouteGeometry(blueprint))
+      !== stableJson(requiredRouteGeometry(baseline))
+    || stableJson(groups[3]) !== stableJson(baselineGroups[3])
+  );
+}
+
+function assertV2BoundedAuthoring(blueprint, starter) {
+  if (
+    changedGeometryGroupCount(blueprint, starter) < 2
+    || !hasCoreCompositionChange(blueprint, starter)
+  ) {
+    fail(
+      'V2 candidate blueprint must author at least two authoritative geometry '
+      + 'groups relative to inputs/starter.json, including at least one core '
+      + 'composition group (mask/surface, required-route geometry, or spawn '
+      + 'arrangement)',
+      'UNAUTHORED_TEMPLATE_MAP_BLUEPRINT'
+    );
+  }
+}
+
+function template07MaterialCells(blueprint) {
+  const byMaterial = new Map(
+    TEMPLATE_07_SURFACE_MATERIALS.map(record => [record.symbol, []])
+  );
+  blueprint.surfaceGrid.forEach((row, y) => row.forEach((cell, x) => {
+    if (cell !== null && byMaterial.has(cell.material)) {
+      byMaterial.get(cell.material).push(point(x, y));
+    }
+  }));
+  return byMaterial;
+}
+
+function template07RegionShape(cells) {
+  const keys = new Set(cells.map(cell => `${cell.x},${cell.y}`));
+  const xs = cells.map(cell => cell.x);
+  const ys = cells.map(cell => cell.y);
+  const minX = Math.min(...xs);
+  const minY = Math.min(...ys);
+  const maxX = Math.max(...xs);
+  const maxY = Math.max(...ys);
+  const rows = new Map();
+  let sharedEdges = 0;
+  for (const cell of cells) {
+    if (keys.has(`${cell.x + 1},${cell.y}`)) sharedEdges += 1;
+    if (keys.has(`${cell.x},${cell.y + 1}`)) sharedEdges += 1;
+    const row = rows.get(cell.y) ?? [];
+    row.push(cell.x);
+    rows.set(cell.y, row);
+  }
+  const rowProfiles = [...rows]
+    .sort((left, right) => left[0] - right[0])
+    .map(([y, rowXs]) => {
+      rowXs.sort((left, right) => left - right);
+      let runs = 1;
+      for (let index = 1; index < rowXs.length; index += 1) {
+        if (rowXs[index] !== rowXs[index - 1] + 1) runs += 1;
+      }
+      return {
+        y,
+        minX: rowXs[0],
+        maxX: rowXs.at(-1),
+        count: rowXs.length,
+        runs
+      };
+    });
+  const unvisited = new Set(keys);
+  const componentSizes = [];
+  while (unvisited.size > 0) {
+    const first = unvisited.values().next().value;
+    unvisited.delete(first);
+    const queue = [first];
+    let size = 0;
+    while (queue.length > 0) {
+      const current = queue.pop();
+      size += 1;
+      const [x, y] = current.split(',').map(Number);
+      for (const neighbor of [
+        `${x - 1},${y}`,
+        `${x + 1},${y}`,
+        `${x},${y - 1}`,
+        `${x},${y + 1}`
+      ]) {
+        if (!unvisited.delete(neighbor)) continue;
+        queue.push(neighbor);
+      }
+    }
+    componentSizes.push(size);
+  }
+  return {
+    minX,
+    minY,
+    maxX,
+    maxY,
+    width: maxX - minX + 1,
+    height: maxY - minY + 1,
+    fillRatio: cells.length / ((maxX - minX + 1) * (maxY - minY + 1)),
+    sharedEdges,
+    largestComponent: Math.max(...componentSizes),
+    rowProfiles
+  };
+}
+
+function assertTemplate07OrganicSurfaceGeometry(blueprint) {
+  const materialCells = template07MaterialCells(blueprint);
+  for (const [symbol, cells] of materialCells) {
+    if (cells.length < 16) {
+      fail(
+        `Template-07 organic surface ${symbol} must cover a substantial region`,
+        'INVALID_TEMPLATE_MAP_BLUEPRINT'
+      );
+    }
+    const shape = template07RegionShape(cells);
+    const rowSignatures = new Set(shape.rowProfiles.map(row =>
+      `${row.minX}:${row.maxX}:${row.count}:${row.runs}`
+    ));
+    if (
+      shape.fillRatio > 0.85
+      || shape.largestComponent / cells.length < 0.5
+      || shape.sharedEdges / cells.length < 1.1
+      || rowSignatures.size < 4
+    ) {
+      fail(
+        `Template-07 organic surface ${symbol} must be connected and edge-complex, `
+        + 'not rectangular or checkerboard-like',
+        'INVALID_TEMPLATE_MAP_BLUEPRINT'
+      );
+    }
+  }
+
+  const ravine = template07RegionShape(materialCells.get('dry-ravine'));
+  const ravineCenters = ravine.rowProfiles.map(row =>
+    (row.minX + row.maxX) / 2
+  );
+  const centerSteps = ravineCenters.slice(1).map(
+    (center, index) => Math.round((center - ravineCenters[index]) * 2) / 2
+  );
+  if (
+    ravine.width < 14
+    || ravine.height < 20
+    || new Set(ravine.rowProfiles.map(row => row.count)).size < 3
+    || new Set(centerSteps).size < 3
+  ) {
+    fail(
+      'Template-07 dry-ravine must have substantial diagonal x/y extent '
+      + 'and an irregular, non-linear edge',
+      'INVALID_TEMPLATE_MAP_BLUEPRINT'
+    );
+  }
+
+  const fieldstone =
+    template07RegionShape(materialCells.get('fieldstone-terrace'));
+  if (
+    fieldstone.width > 14
+    || fieldstone.height > 13
+    || fieldstone.maxX >= blueprint.dimensions.width * 0.6
+    || fieldstone.maxY >= blueprint.dimensions.height * 0.6
+  ) {
+    fail(
+      'Template-07 fieldstone-terrace must remain localized in the northwest',
+      'INVALID_TEMPLATE_MAP_BLUEPRINT'
+    );
+  }
+
+  const centroid = symbol => {
+    const cells = materialCells.get(symbol);
+    return {
+      x: cells.reduce((sum, cell) => sum + cell.x, 0) / cells.length,
+      y: cells.reduce((sum, cell) => sum + cell.y, 0) / cells.length
+    };
+  };
+  const clover = centroid('clover-glade');
+  const fern = centroid('fern-hazel-glade');
+  const hawthorn = centroid('hawthorn-loop');
+  if (
+    !(clover.x < 16 && clover.y > 16)
+    || !(fern.x > 16 && fern.y < 16)
+    || !(hawthorn.x > 16 && hawthorn.y > 16)
+  ) {
+    fail(
+      'Template-07 clover, fern-hazel, and hawthorn organic regions must '
+      + 'remain centered southwest, northeast, and southeast respectively',
+      'INVALID_TEMPLATE_MAP_BLUEPRINT'
+    );
+  }
+}
+
+function assertTemplate07DistinctMaterialSignatures(blueprints) {
+  const signatures = blueprints.map(blueprint =>
+    blueprint.surfaceGrid.flatMap(row =>
+      row.map(cell => cell?.material ?? 'void')
+    )
+  );
+  for (let left = 0; left < signatures.length; left += 1) {
+    for (let right = left + 1; right < signatures.length; right += 1) {
+      let comparable = 0;
+      let differences = 0;
+      signatures[left].forEach((material, index) => {
+        if (material === 'void' || signatures[right][index] === 'void') return;
+        comparable += 1;
+        if (material !== signatures[right][index]) differences += 1;
+      });
+      if (comparable === 0 || differences / comparable < 0.15) {
+        fail(
+          'Template-07 sibling material grids must have meaningfully distinct '
+          + 'organic signatures',
+          'INVALID_TEMPLATE_MAP_BLUEPRINT'
+        );
+      }
+    }
+  }
+}
+
+// Route/region/formation ratios are labeled-cell Jaccard distances. Elevation
+// is the fraction of mutually rendered cells whose authored level differs.
+// These floors reject one-cell signature churn while leaving substantial room
+// for bounded candidate edits that preserve each starter's macro composition.
+const TEMPLATE_07_MINIMUM_DIVERSITY_RATIOS = Object.freeze({
+  route: 0.15,
+  elevation: 0.05,
+  nonFormationRegions: 0.25,
+  formationAndExits: 0.20,
+  coarseSilhouette: 0.045,
+  coarseElevation: 0.12,
+  coarseSurface: 0.25,
+  coarseRoutes: 0.09
+});
+const TEMPLATE_07_COARSE_BLOCK_SIZE = 4;
+
+function coordinateSet(items) {
+  return new Set(items.map(item => `${item.label}:${item.x},${item.y}`));
+}
+
+function jaccardDifference(left, right) {
+  const union = new Set([...left, ...right]);
+  if (union.size === 0) return 0;
+  let intersection = 0;
+  for (const key of left) {
+    if (right.has(key)) intersection += 1;
+  }
+  return 1 - intersection / union.size;
+}
+
+function template07CoarseCounts(blueprint, labels, labelAt) {
+  const counts = [];
+  for (
+    let blockY = 0;
+    blockY < blueprint.dimensions.height;
+    blockY += TEMPLATE_07_COARSE_BLOCK_SIZE
+  ) {
+    for (
+      let blockX = 0;
+      blockX < blueprint.dimensions.width;
+      blockX += TEMPLATE_07_COARSE_BLOCK_SIZE
+    ) {
+      const byLabel = new Map(labels.map(label => [label, 0]));
+      for (
+        let y = blockY;
+        y < Math.min(
+          blockY + TEMPLATE_07_COARSE_BLOCK_SIZE,
+          blueprint.dimensions.height
+        );
+        y += 1
+      ) {
+        for (
+          let x = blockX;
+          x < Math.min(
+            blockX + TEMPLATE_07_COARSE_BLOCK_SIZE,
+            blueprint.dimensions.width
+          );
+          x += 1
+        ) {
+          const label = labelAt(x, y);
+          if (byLabel.has(label)) {
+            byLabel.set(label, byLabel.get(label) + 1);
+          }
+        }
+      }
+      labels.forEach(label => counts.push(byLabel.get(label)));
+    }
+  }
+  return counts;
+}
+
+function normalizedCoarseDifference(left, right) {
+  let difference = 0;
+  let mass = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    difference += Math.abs(left[index] - right[index]);
+    mass += Math.abs(left[index]) + Math.abs(right[index]);
+  }
+  return mass === 0 ? 0 : difference / mass;
+}
+
+function template07CoarseDiversityRatios(left, right) {
+  const requiredRouteCells = blueprint => new Set(
+    blueprint.routes
+      .filter(route => route.required && route.kind === 'primary')
+      .flatMap(route => route.cells.map(cell => `${cell.x},${cell.y}`))
+  );
+  const routeLabels = ['required-primary-route'];
+  const leftRoutes = requiredRouteCells(left);
+  const rightRoutes = requiredRouteCells(right);
+  const vectors = {
+    coarseSilhouette: [
+      template07CoarseCounts(
+        left,
+        ['rendered'],
+        (x, y) => left.renderMask[y][x] ? 'rendered' : null
+      ),
+      template07CoarseCounts(
+        right,
+        ['rendered'],
+        (x, y) => right.renderMask[y][x] ? 'rendered' : null
+      )
+    ],
+    coarseElevation: [
+      template07CoarseCounts(
+        left,
+        [0, 1, 2],
+        (x, y) => left.renderMask[y][x] ? left.elevation[y][x] : null
+      ),
+      template07CoarseCounts(
+        right,
+        [0, 1, 2],
+        (x, y) => right.renderMask[y][x] ? right.elevation[y][x] : null
+      )
+    ],
+    coarseSurface: [
+      template07CoarseCounts(
+        left,
+        TEMPLATE_07_SURFACE_MATERIALS.map(record => record.symbol),
+        (x, y) => left.surfaceGrid[y][x]?.material ?? null
+      ),
+      template07CoarseCounts(
+        right,
+        TEMPLATE_07_SURFACE_MATERIALS.map(record => record.symbol),
+        (x, y) => right.surfaceGrid[y][x]?.material ?? null
+      )
+    ],
+    coarseRoutes: [
+      template07CoarseCounts(
+        left,
+        routeLabels,
+        (x, y) => leftRoutes.has(`${x},${y}`)
+          ? 'required-primary-route'
+          : null
+      ),
+      template07CoarseCounts(
+        right,
+        routeLabels,
+        (x, y) => rightRoutes.has(`${x},${y}`)
+          ? 'required-primary-route'
+          : null
+      )
+    ]
+  };
+  return Object.fromEntries(
+    Object.entries(vectors).map(([dimension, [leftVector, rightVector]]) => [
+      dimension,
+      normalizedCoarseDifference(leftVector, rightVector)
+    ])
+  );
+}
+
+function template07SiblingDiversityRatios(left, right) {
+  const routeSet = blueprint => coordinateSet(
+    blueprint.routes
+      .filter(route => route.required && route.kind === 'primary')
+      .flatMap(route => route.cells.map(cell => ({
+        label: 'required-primary-route',
+        x: cell.x,
+        y: cell.y
+      })))
+  );
+  const regionSet = blueprint => coordinateSet(
+    blueprint.regions
+      .filter(region => region.kind !== 'formation-clearing')
+      .flatMap(region => region.cells.map(cell => ({
+        label: `region:${region.id}`,
+        x: cell.x,
+        y: cell.y
+      })))
+  );
+  const formationSet = blueprint => coordinateSet([
+    ...blueprint.spawn.playerSlots.map(record => ({
+      label: 'formation:player',
+      x: record.cell.x,
+      y: record.cell.y
+    })),
+    ...blueprint.spawn.opponentCandidates.map(record => ({
+      label: 'formation:opponent',
+      x: record.cell.x,
+      y: record.cell.y
+    })),
+    ...blueprint.spawn.exits.map(record => ({
+      label: `exit:${record.side}`,
+      x: record.cell.x,
+      y: record.cell.y
+    }))
+  ]);
+  let comparableElevationCells = 0;
+  let differentElevationCells = 0;
+  for (let y = 0; y < left.dimensions.height; y += 1) {
+    for (let x = 0; x < left.dimensions.width; x += 1) {
+      if (!left.renderMask[y][x] || !right.renderMask[y][x]) continue;
+      comparableElevationCells += 1;
+      if (left.elevation[y][x] !== right.elevation[y][x]) {
+        differentElevationCells += 1;
+      }
+    }
+  }
+  return {
+    route: jaccardDifference(routeSet(left), routeSet(right)),
+    elevation: comparableElevationCells === 0
+      ? 0
+      : differentElevationCells / comparableElevationCells,
+    nonFormationRegions:
+      jaccardDifference(regionSet(left), regionSet(right)),
+    formationAndExits:
+      jaccardDifference(formationSet(left), formationSet(right)),
+    ...template07CoarseDiversityRatios(left, right)
+  };
+}
+
+function assertTemplate07DistinctMacroTopologies(blueprints) {
+  for (let left = 0; left < blueprints.length; left += 1) {
+    for (let right = left + 1; right < blueprints.length; right += 1) {
+      const ratios = template07SiblingDiversityRatios(
+        blueprints[left],
+        blueprints[right]
+      );
+      for (const [dimension, minimum] of Object.entries(
+        TEMPLATE_07_MINIMUM_DIVERSITY_RATIOS
+      )) {
+        if (ratios[dimension] >= minimum) continue;
+        fail(
+          `Template-07 sibling ${dimension} diversity ratio `
+            + `${ratios[dimension].toFixed(4)} is below required `
+            + `${minimum.toFixed(3)}; fine and coarse silhouette, route, `
+            + 'elevation, surface, region, and formation compositions must '
+            + 'each be materially distinct',
+          'INVALID_TEMPLATE_MAP_BLUEPRINT'
+        );
+      }
+    }
+  }
+}
+
+function assertTemplate07VisualAuthorship(blueprint) {
+  const coverage = new Map(
+    TEMPLATE_07_SURFACE_MATERIALS.map(record => [record.symbol, 0])
+  );
+  for (const cell of blueprint.surfaceGrid.flat().filter(Boolean)) {
+    const expectedMaterial =
+      TEMPLATE_07_SURFACE_MATERIAL_BY_FEATURE.get(cell.featureId);
+    if (expectedMaterial === undefined || cell.material !== expectedMaterial) {
+      fail(
+        'Template-07 surfaceGrid must use only the fixed semantic '
+        + 'material-to-feature pairs',
+        'INVALID_TEMPLATE_MAP_BLUEPRINT'
+      );
+    }
+    coverage.set(cell.material, coverage.get(cell.material) + 1);
+  }
+  for (const [symbol, count] of coverage) {
+    if (count === 0) {
+      fail(
+        `Template-07 surface material ${symbol} must cover at least one rendered cell`,
+        'INVALID_TEMPLATE_MAP_BLUEPRINT'
+      );
+    }
+  }
+  assertTemplate07OrganicSurfaceGeometry(blueprint);
+
+  const landmarks = blueprint.obstacles.filter(
+    obstacle => obstacle.assetFamily === 'fallen-oak-landmark'
+  );
+  const rootMasses = blueprint.obstacles.filter(
+    obstacle => obstacle.assetFamily === 'fallen-oak-root-mass'
+  );
+  if (landmarks.length !== 1 || rootMasses.length !== 1) {
+    fail(
+      'Template-07 must contain exactly one fallen-oak-landmark and one '
+      + 'fallen-oak-root-mass obstacle',
+      'INVALID_TEMPLATE_MAP_BLUEPRINT'
+    );
+  }
+  const landmark = landmarks[0];
+  const minX = Math.min(...landmark.cells.map(cell => cell.x));
+  const minY = Math.min(...landmark.cells.map(cell => cell.y));
+  const maxX = Math.max(...landmark.cells.map(cell => cell.x));
+  const maxY = Math.max(...landmark.cells.map(cell => cell.y));
+  const normalizedLandmarkCells = landmark.cells
+    .map(cell => `${cell.x - minX},${cell.y - minY}`)
+    .sort();
+  if (
+    maxX - minX + 1 !== 8
+    || maxY - minY + 1 !== 3
+    || stableJson(normalizedLandmarkCells)
+      !== stableJson(TEMPLATE_07_LANDMARK_COLLISION_CELLS
+        .map(cell => `${cell.x},${cell.y}`)
+        .sort())
+    || landmark.anchor.x !== minX
+    || landmark.anchor.y !== minY
+  ) {
+    fail(
+      'Template-07 fallen-oak-landmark must use the exact ten-cell 8 by 3 '
+      + 'diagonal footprint anchored at its northwest cell',
+      'INVALID_TEMPLATE_MAP_BLUEPRINT'
+    );
+  }
+  const rootMass = rootMasses[0];
+  const expectedComposition =
+    TEMPLATE_07_LANDMARK_COMPOSITIONS[variantKey(blueprint.candidateId)];
+  if (
+    landmark.anchor.x !== expectedComposition.landmarkAnchor.x
+    || landmark.anchor.y !== expectedComposition.landmarkAnchor.y
+    || rootMass.cells.length !== 1
+    || rootMass.cells[0].x !== expectedComposition.root.x
+    || rootMass.cells[0].y !== expectedComposition.root.y
+  ) {
+    fail(
+      'Template-07 fallen-oak landmark/root placement must match the fixed '
+      + `${variantKey(blueprint.candidateId).toUpperCase()} composition`,
+      'INVALID_TEMPLATE_MAP_BLUEPRINT'
+    );
+  }
+  const landmarkMaterials = landmark.cells.map(
+    cell => blueprint.surfaceGrid[cell.y][cell.x]?.material
+  );
+  if (
+    landmarkMaterials.filter(material => material === 'dry-ravine').length < 2
+    || !landmarkMaterials.some(material => material !== 'dry-ravine')
+    || blueprint.surfaceGrid[rootMass.cells[0].y][rootMass.cells[0].x]?.material
+      !== 'dry-ravine'
+  ) {
+    fail(
+      'Template-07 fallen-oak composition must cross the dry-ravine seam '
+      + 'with at least two landmark cells in the ravine, continue onto a '
+      + 'non-ravine bank, and keep the root mass in the ravine',
+      'INVALID_TEMPLATE_MAP_BLUEPRINT'
+    );
+  }
+  if (
+    rootMass.cells.length !== 1
+    || rootMass.anchor.x !== rootMass.cells[0].x
+    || rootMass.anchor.y !== rootMass.cells[0].y
+    || !landmark.cells.some(cell =>
+      Math.abs(cell.x - rootMass.cells[0].x)
+        + Math.abs(cell.y - rootMass.cells[0].y) === 1
+    )
+  ) {
+    fail(
+      'Template-07 fallen-oak-root-mass must be one anchored cell '
+      + 'cardinally adjacent to the landmark',
+      'INVALID_TEMPLATE_MAP_BLUEPRINT'
+    );
+  }
+}
+
+async function validateCandidateBytes(
+  candidateBytes,
+  { mapId, sidecar, starterBytes = null }
+) {
   if (
     candidateBytes.byteLength < 2
     || candidateBytes.byteLength > MAX_BLUEPRINT_BYTES
@@ -2977,6 +4569,16 @@ async function validateCandidateBytes(candidateBytes, { mapId, sidecar }) {
   }
   if (usesBlueprintV2SemanticContract(sidecar.id)) {
     validateV2BlueprintSemanticContract(blueprint, sidecar);
+    if (!Buffer.isBuffer(starterBytes)) {
+      fail(
+        'V2 candidate validation requires the prepared inputs/starter.json baseline',
+        'INVALID_TEMPLATE_MAP_BLUEPRINT'
+      );
+    }
+    assertV2BoundedAuthoring(
+      blueprint,
+      parseStrictJsonBytes(starterBytes, 'V2 starter blueprint')
+    );
   }
   const example = createBlueprintContractExample(sidecar, mapId);
   const familyKeys = value => value.expectedAssetFamilies
@@ -2991,7 +4593,14 @@ async function validateCandidateBytes(candidateBytes, { mapId, sidecar }) {
       'INVALID_TEMPLATE_MAP_BLUEPRINT'
     );
   }
+  if (sidecar.id === TEMPLATE_07_ID) {
+    assertTemplate07VisualAuthorship(blueprint);
+  }
   for (const obstacle of blueprint.obstacles) {
+    if (
+      sidecar.id === TEMPLATE_07_ID
+      && obstacle.assetFamily === 'fallen-oak-landmark'
+    ) continue;
     if (
       obstacle.cells.length !== 1
       || obstacle.anchor.x !== obstacle.cells[0].x
@@ -3004,46 +4613,7 @@ async function validateCandidateBytes(candidateBytes, { mapId, sidecar }) {
       );
     }
   }
-  const geometryGroups = value => [
-    {
-      renderMask: value.renderMask,
-      playableMask: value.playableMask,
-      surfaceGrid: value.surfaceGrid
-    },
-    value.routes.map(route => ({
-      cells: route.cells,
-      required: route.required,
-      width: route.width
-    })),
-    {
-      elevation: value.elevation,
-      connections: value.connections.map(connection => ({
-        from: connection.from,
-        to: connection.to,
-        kind: connection.kind,
-        traversable: connection.traversable
-      }))
-    },
-    {
-      playerSlots: value.spawn.playerSlots.map(slot => slot.cell),
-      opponentCandidates: value.spawn.opponentCandidates.map(candidate => candidate.cell),
-      opponentZones: value.spawn.opponentZones.map(zone => zone.cells),
-      exits: value.spawn.exits.map(exit => exit.cell)
-    },
-    {
-      obstacles: value.obstacles.map(obstacle => obstacle.cells),
-      decorations: value.decorations.map(decoration => decoration.cell),
-      boundaries: value.boundaries.map(boundary => boundary.edges)
-    }
-  ];
-  const authoredGroups = geometryGroups(blueprint);
-  const exampleGroups = geometryGroups(example);
-  const changedGeometryGroups = authoredGroups.reduce(
-    (count, group, index) =>
-      count + (stableJson(group) === stableJson(exampleGroups[index]) ? 0 : 1),
-    0
-  );
-  if (changedGeometryGroups < 2) {
+  if (changedGeometryGroupCount(blueprint, example) < 2) {
     fail(
       'candidate blueprint must author at least two semantic geometry groups '
       + 'instead of copying the complete contract example',
@@ -3064,7 +4634,8 @@ async function promoteWorkerResult({
   prompt,
   workerResult,
   timeoutMs,
-  textTemplateFallback
+  textTemplateFallback,
+  starterBytes
 }) {
   const workspaceBlueprint = path.join(workspace, 'candidate.json');
   const fileStats = await stat(workspaceBlueprint);
@@ -3072,7 +4643,11 @@ async function promoteWorkerResult({
     fail(`candidate blueprint must be 2..${MAX_BLUEPRINT_BYTES} bytes`);
   }
   const candidateBytes = await readFile(workspaceBlueprint);
-  const blueprint = await validateCandidateBytes(candidateBytes, { mapId, sidecar });
+  const blueprint = await validateCandidateBytes(candidateBytes, {
+    mapId,
+    sidecar,
+    starterBytes
+  });
   if (
     workerResult.completedCandidateSha256
     && workerResult.completedCandidateSha256 !== sha256Bytes(candidateBytes)
@@ -3140,7 +4715,16 @@ async function promoteWorkerResult({
   return metadata;
 }
 
-async function readRegularAttemptEvidence(filePath, label, maximumBytes) {
+async function readRegularAttemptEvidence(
+  filePath,
+  label,
+  maximumBytes,
+  {
+    projectRoot = null,
+    relativePath = null,
+    afterOpen = async () => {}
+  } = {}
+) {
   let pathBefore;
   try {
     pathBefore = await lstat(filePath);
@@ -3191,14 +4775,23 @@ async function readRegularAttemptEvidence(filePath, label, maximumBytes) {
     ) {
       fail(`${label} changed while being opened`, 'BLUEPRINT_ATTEMPT_EVIDENCE_DRIFT');
     }
+    await afterOpen(Object.freeze({ filePath, relativePath }));
     const bytes = await handle.readFile();
-    const [openedAfter, pathAfter] = await Promise.all([
+    const [openedAfter, pathAfter, physicalRoot, physicalPath] = await Promise.all([
       handle.stat(),
       lstat(filePath).catch(error => {
         if (error.code === 'ENOENT') return null;
         throw error;
-      })
+      }),
+      projectRoot === null ? null : realpath(path.resolve(projectRoot)),
+      projectRoot === null ? null : realpath(filePath)
     ]);
+    const expectedPhysicalPath = projectRoot === null
+      ? null
+      : path.join(
+          physicalRoot,
+          ...(relativePath ?? path.relative(projectRoot, filePath)).split('/')
+        );
     if (
       !pathAfter
       || pathAfter.isSymbolicLink()
@@ -3212,6 +4805,10 @@ async function readRegularAttemptEvidence(filePath, label, maximumBytes) {
       || pathAfter.size !== openedBefore.size
       || pathAfter.mtimeMs !== openedBefore.mtimeMs
       || bytes.byteLength !== openedBefore.size
+      || (
+        projectRoot !== null
+        && physicalPath !== expectedPhysicalPath
+      )
     ) {
       fail(`${label} changed while being captured`, 'BLUEPRINT_ATTEMPT_EVIDENCE_DRIFT');
     }
@@ -4892,7 +6489,7 @@ export async function generateBlueprintCandidates(options, {
           mapId: job.mapId
         });
         workspace = prepared.workspace;
-        const { sourceRelativePath } = prepared;
+        const { sourceRelativePath, starterBytes } = prepared;
         const prompt = buildBlueprintPrompt({
           profile: promptLoaded.profile,
           sidecar,
@@ -4920,6 +6517,7 @@ export async function generateBlueprintCandidates(options, {
               theme: options.theme,
               template: options.template,
               sidecar,
+              starterBytes: Buffer.from(starterBytes),
               completionGraceMs,
               completionPollMs,
               textTemplateFallback: options.textTemplateFallback,
@@ -4960,7 +6558,8 @@ export async function generateBlueprintCandidates(options, {
             prompt,
             workerResult,
             timeoutMs: options.timeoutMs,
-            textTemplateFallback: options.textTemplateFallback === true
+            textTemplateFallback: options.textTemplateFallback === true,
+            starterBytes
           });
           return {
             mapId: job.mapId,
@@ -5055,6 +6654,53 @@ export async function generateBlueprintCandidates(options, {
   return { ...plan, results: [...results, ...generated] };
 }
 
+function escapeSvgText(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&apos;');
+}
+
+function mechanicalReviewProjection(blueprint) {
+  const byId = records => [...records].sort((left, right) =>
+    left.id.localeCompare(right.id)
+  );
+  return {
+    requiredPrimaryRoutes: byId(blueprint.routes
+      .filter(route => route.required && route.kind === 'primary'))
+      .map(route => ({
+        id: route.id,
+        kind: route.kind,
+        width: route.width,
+        cells: route.cells.map(cell => ({ ...cell }))
+      })),
+    traversableConnections: byId(blueprint.connections
+      .filter(connection => connection.traversable))
+      .map(connection => ({
+        id: connection.id,
+        kind: connection.kind,
+        from: { ...connection.from },
+        to: { ...connection.to },
+        bidirectional: connection.bidirectional
+      })),
+    exits: byId(blueprint.spawn.exits).map(exit => ({
+      id: exit.id,
+      side: exit.side,
+      cell: { ...exit.cell },
+      approachRegionId: exit.approachRegionId
+    })),
+    nonFormationRegions: byId(blueprint.regions
+      .filter(region => region.kind !== 'formation-clearing'))
+      .map(region => ({
+        id: region.id,
+        kind: region.kind,
+        cells: region.cells.map(cell => ({ ...cell }))
+      }))
+  };
+}
+
 function previewSvg(blueprint) {
   const scale = 16;
   const width = blueprint.dimensions.width * scale;
@@ -5106,8 +6752,231 @@ function previewSvg(blueprint) {
       }
     }
   }
+  const projection = mechanicalReviewProjection(blueprint);
+  const regionOverlays = projection.nonFormationRegions.flatMap(
+    (region, regionIndex) => {
+      const hue = (regionIndex * 97 + 45) % 360;
+      const overlays = region.cells.map(cell =>
+        `<rect x="${cell.x * scale + 1}" y="${cell.y * scale + 1}" `
+          + `width="${scale - 2}" height="${scale - 2}" `
+          + `fill="hsl(${hue} 85% 55% / .22)" `
+          + `stroke="hsl(${hue} 85% 32%)" stroke-width="1.25">`
+          + `<title>region ${escapeSvgText(region.id)} ${escapeSvgText(region.kind)}</title></rect>`
+      );
+      const labelCell = region.cells[0];
+      if (labelCell) {
+        overlays.push(
+          `<text x="${labelCell.x * scale + 2}" y="${labelCell.y * scale + 7}" `
+            + `font-family="monospace" font-size="5" fill="#101010">`
+            + `${escapeSvgText(region.id)}</text>`
+        );
+      }
+      return overlays;
+    }
+  );
+  const routeColors = ['#00e5ff', '#ffdb4d', '#ff65d4', '#7dff72'];
+  const routeOverlays = projection.requiredPrimaryRoutes.flatMap(
+    (route, routeIndex) => {
+      const color = routeColors[routeIndex % routeColors.length];
+      const points = route.cells.map(cell =>
+        `${cell.x * scale + scale / 2},${cell.y * scale + scale / 2}`
+      ).join(' ');
+      const first = route.cells[0];
+      return [
+        `<polyline points="${points}" fill="none" stroke="${color}" `
+          + `stroke-width="3" stroke-linecap="round" stroke-linejoin="round">`
+          + `<title>required primary ${escapeSvgText(route.id)}</title></polyline>`,
+        `<text x="${first.x * scale + 2}" y="${first.y * scale + 14}" `
+          + `font-family="monospace" font-size="6" font-weight="bold" `
+          + `fill="${color}" stroke="#111" stroke-width=".25">`
+          + `${escapeSvgText(route.id)}</text>`
+      ];
+    }
+  );
+  const connectionOverlays = projection.traversableConnections.flatMap(
+    connection => {
+      const color = connection.kind === 'stairs' ? '#ffffff' : '#73ffb2';
+      const fromX = connection.from.x * scale + scale / 2;
+      const fromY = connection.from.y * scale + scale / 2;
+      const toX = connection.to.x * scale + scale / 2;
+      const toY = connection.to.y * scale + scale / 2;
+      return [
+        `<line x1="${fromX}" y1="${fromY}" x2="${toX}" y2="${toY}" `
+          + `stroke="${color}" stroke-width="5" stroke-dasharray="2 1">`
+          + `<title>${escapeSvgText(connection.id)} `
+          + `${escapeSvgText(connection.kind)}</title></line>`,
+        `<text x="${(fromX + toX) / 2 + 2}" y="${(fromY + toY) / 2 - 2}" `
+          + `font-family="monospace" font-size="5" fill="${color}">`
+          + `${escapeSvgText(connection.kind)}</text>`
+      ];
+    }
+  );
+  const exitOverlays = projection.exits.flatMap(exit => {
+    const centerX = exit.cell.x * scale + scale / 2;
+    const centerY = exit.cell.y * scale + scale / 2;
+    const color = exit.side === 'player' ? '#168fff' : '#ff382f';
+    return [
+      `<polygon points="${centerX},${centerY - 7} ${centerX + 7},${centerY} `
+        + `${centerX},${centerY + 7} ${centerX - 7},${centerY}" `
+        + `fill="${color}" stroke="#fff" stroke-width="1.5">`
+        + `<title>${escapeSvgText(exit.id)} ${escapeSvgText(exit.side)} exit</title></polygon>`,
+      `<text x="${centerX + 7}" y="${centerY - 5}" font-family="monospace" `
+        + `font-size="5" fill="#fff">${escapeSvgText(exit.id)}</text>`
+    ];
+  });
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" `
-    + `viewBox="0 0 ${width} ${height}" shape-rendering="crispEdges">${cells.join('')}</svg>`;
+    + `viewBox="0 0 ${width} ${height}" shape-rendering="crispEdges">`
+    + `<g id="terrain">${cells.join('')}</g>`
+    + `<g id="tactical-regions">${regionOverlays.join('')}</g>`
+    + `<g id="required-primary-routes">${routeOverlays.join('')}</g>`
+    + `<g id="traversable-connections">${connectionOverlays.join('')}</g>`
+    + `<g id="formation-exits">${exitOverlays.join('')}</g></svg>`;
+}
+
+function mechanicalPreviewArtifacts(candidate, mapId, reviewRoot) {
+  const evidenceRoot =
+    `${reviewRoot}/previews/${candidate.metadata.blueprint.fullHash.slice(7)}`;
+  const svgPath = `${evidenceRoot}/mechanical-preview.svg`;
+  const reportPath = `${evidenceRoot}/mechanical-report.json`;
+  const latestSvgPath = `${reviewRoot}/mechanical-preview.svg`;
+  const latestReportPath = `${reviewRoot}/mechanical-report.json`;
+  const svgBytes = Buffer.from(previewSvg(candidate.blueprint));
+  const report = {
+    schemaVersion: 'battle-map-blueprint-mechanical-preview-v2',
+    mapId,
+    blueprintFileSha256: candidate.metadata.blueprint.fileSha256,
+    blueprintFullHash: candidate.metadata.blueprint.fullHash,
+    previewPath: svgPath,
+    previewFileSha256: sha256Bytes(svgBytes),
+    dimensions: candidate.blueprint.dimensions,
+    renderedCells: candidate.blueprint.renderMask.flat().filter(Boolean).length,
+    playableCells: candidate.blueprint.playableMask.flat().filter(Boolean).length,
+    elevationLevels: [...new Set(
+      candidate.blueprint.elevation.flat().filter(Number.isInteger)
+    )].sort((left, right) => left - right),
+    playerSlots: candidate.blueprint.spawn.playerSlots.length,
+    opponentCandidates: candidate.blueprint.spawn.opponentCandidates.length,
+    maxAssignableOpponents:
+      candidate.blueprint.spawn.capacities.maxAssignableOpponents,
+    ...mechanicalReviewProjection(candidate.blueprint),
+    assetFamilies: candidate.blueprint.expectedAssetFamilies,
+    note: 'Mechanical preview only. Production rendering requires an approved blueprint and exact asset bundle.'
+  };
+  return {
+    svgPath,
+    reportPath,
+    latestSvgPath,
+    latestReportPath,
+    svgBytes,
+    report
+  };
+}
+
+async function writeImmutableReviewArtifact(
+  projectRoot,
+  relativePath,
+  bytes
+) {
+  const absolutePath = resolveWithinProject(
+    projectRoot,
+    relativePath,
+    'hash-addressed mechanical review artifact path'
+  );
+  try {
+    const existing = await readFile(absolutePath);
+    if (!existing.equals(bytes)) {
+      fail('hash-addressed mechanical review artifact has conflicting bytes');
+    }
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+    await atomicWrite(projectRoot, absolutePath, bytes);
+  }
+}
+
+async function removeLegacyPreviewPngs(projectRoot, reviewRoot) {
+  const directory = resolveWithinProject(
+    projectRoot,
+    reviewRoot,
+    'mechanical preview directory'
+  );
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    if (entry.name !== 'mechanical-preview.png') continue;
+    const pngPath = resolveWithinProject(
+      projectRoot,
+      `${reviewRoot}/${entry.name}`,
+      'legacy mechanical preview PNG path'
+    );
+    const details = await lstat(pngPath);
+    if (details.isSymbolicLink() || !details.isFile()) {
+      fail('legacy mechanical preview PNG must be a regular non-symlink file');
+    }
+    await unlink(pngPath);
+  }
+}
+
+async function assertMechanicalPreviewReview(
+  projectRoot,
+  candidate,
+  { theme, template, mapId }
+) {
+  const reviewRoot =
+    `ai-image-metadata/battle-maps/review/${theme}/${template}/${mapId}`;
+  const expected = mechanicalPreviewArtifacts(candidate, mapId, reviewRoot);
+  const reportPath = resolveWithinProject(
+    projectRoot,
+    expected.reportPath,
+    'mechanical review report path'
+  );
+  const previewPath = resolveWithinProject(
+    projectRoot,
+    expected.svgPath,
+    'mechanical review preview path'
+  );
+  await Promise.all([
+    assertSafeWritePath(projectRoot, reportPath, 'mechanical review report read path'),
+    assertSafeWritePath(projectRoot, previewPath, 'mechanical review preview read path')
+  ]);
+  const [reportBytes, previewBytes] = await Promise.all([
+    readRegularAttemptEvidence(
+      reportPath,
+      'mechanical review report',
+      MAX_BLUEPRINT_BYTES,
+      { projectRoot, relativePath: expected.reportPath }
+    ),
+    readRegularAttemptEvidence(
+      previewPath,
+      'mechanical review preview',
+      MAX_BLUEPRINT_BYTES,
+      { projectRoot, relativePath: expected.svgPath }
+    )
+  ]);
+  if (reportBytes === null || previewBytes === null) {
+    fail(
+      'approval requires both the exact mechanical review report and '
+      + 'hash-bound preview for the candidate hash'
+    );
+  }
+  const report = parseStrictJsonBytes(reportBytes, 'mechanical review report');
+  if (stableJson(report) !== stableJson(expected.report)) {
+    fail(
+      'approval requires an exact mechanical review report for the candidate hash'
+    );
+  }
+  if (
+    !previewBytes.equals(expected.svgBytes)
+    || sha256Bytes(previewBytes) !== report.previewFileSha256
+  ) {
+    fail(
+      'approval requires the exact hash-bound mechanical preview artifact'
+    );
+  }
+  return {
+    schemaVersion: 'battle-map-blueprint-mechanical-review-v1',
+    reportPath: expected.reportPath,
+    reportFileSha256: sha256Bytes(reportBytes),
+    previewPath: expected.svgPath,
+    previewFileSha256: report.previewFileSha256
+  };
 }
 
 export async function previewBlueprintCandidates(options) {
@@ -5137,42 +7006,58 @@ export async function previewBlueprintCandidates(options) {
     if (!candidate) fail(`candidate ${mapId} does not exist`);
     const reviewRoot =
       `ai-image-metadata/battle-maps/review/${options.theme}/${options.template}/${mapId}`;
-    const svgPath = `${reviewRoot}/mechanical-preview.svg`;
-    const reportPath = `${reviewRoot}/mechanical-report.json`;
-    const report = {
-      schemaVersion: 'battle-map-blueprint-mechanical-preview-v1',
-      mapId,
-      blueprintFullHash: candidate.metadata.blueprint.fullHash,
-      dimensions: candidate.blueprint.dimensions,
-      renderedCells: candidate.blueprint.renderMask.flat().filter(Boolean).length,
-      playableCells: candidate.blueprint.playableMask.flat().filter(Boolean).length,
-      elevationLevels: [...new Set(candidate.blueprint.elevation.flat().filter(Number.isInteger))]
-        .sort((left, right) => left - right),
-      playerSlots: candidate.blueprint.spawn.playerSlots.length,
-      opponentCandidates: candidate.blueprint.spawn.opponentCandidates.length,
-      maxAssignableOpponents:
-        candidate.blueprint.spawn.capacities.maxAssignableOpponents,
-      assetFamilies: candidate.blueprint.expectedAssetFamilies,
-      note: 'Mechanical preview only. Production rendering requires an approved blueprint and exact asset bundle.'
-    };
-    await Promise.all([
-      atomicWrite(
+    const artifacts = mechanicalPreviewArtifacts(candidate, mapId, reviewRoot);
+    const reportBytes =
+      Buffer.from(`${JSON.stringify(artifacts.report, null, 2)}\n`);
+    await writeImmutableReviewArtifact(
+      projectRoot,
+      artifacts.svgPath,
+      artifacts.svgBytes
+    );
+    await writeImmutableReviewArtifact(
+      projectRoot,
+      artifacts.reportPath,
+      reportBytes
+    );
+    await atomicWrite(
+      projectRoot,
+      resolveWithinProject(
         projectRoot,
-        resolveWithinProject(projectRoot, svgPath, 'mechanical preview path'),
-        Buffer.from(previewSvg(candidate.blueprint))
+        artifacts.latestSvgPath,
+        'mechanical preview path'
       ),
-      atomicWrite(
+      artifacts.svgBytes
+    );
+    await atomicWrite(
+      projectRoot,
+      resolveWithinProject(
         projectRoot,
-        resolveWithinProject(projectRoot, reportPath, 'mechanical report path'),
-        Buffer.from(`${JSON.stringify(report, null, 2)}\n`)
-      )
-    ]);
-    results.push({ mapId, svgPath, reportPath, report });
+        artifacts.latestReportPath,
+        'mechanical report path'
+      ),
+      reportBytes
+    );
+    await removeLegacyPreviewPngs(projectRoot, reviewRoot);
+    results.push({
+      mapId,
+      svgPath: artifacts.latestSvgPath,
+      reportPath: artifacts.latestReportPath,
+      report: artifacts.report
+    });
   }
   return { ok: true, theme: options.theme, template: options.template, results };
 }
 
-async function loadApprovalIndex(projectRoot, paths, theme, template) {
+async function loadApprovalIndex(
+  projectRoot,
+  paths,
+  theme,
+  template,
+  {
+    allowV2ToV3Migration = false,
+    allowV2ReadOnly = false
+  } = {}
+) {
   const schemas = blueprintApprovalSchemas(template);
   const indexPath = resolveWithinProject(
     projectRoot,
@@ -5189,8 +7074,19 @@ async function loadApprovalIndex(projectRoot, paths, theme, template) {
       'entries',
       'fullHash'
     ], 'blueprint approval index');
+    const migratesV2ToV3 =
+      schemas.v3
+      && value.schemaVersion === BLUEPRINT_APPROVAL_INDEX_SCHEMA_V2;
+    const valueSchemas = migratesV2ToV3
+      ? {
+          index: BLUEPRINT_APPROVAL_INDEX_SCHEMA_V2,
+          record: BLUEPRINT_APPROVAL_RECORD_SCHEMA_V2,
+          v2: true,
+          v3: false
+        }
+      : schemas;
     if (
-      value.schemaVersion !== schemas.index
+      value.schemaVersion !== valueSchemas.index
       || value.theme !== theme
       || value.templateId !== template
       || !Array.isArray(value.entries)
@@ -5210,14 +7106,21 @@ async function loadApprovalIndex(projectRoot, paths, theme, template) {
         'promptProfileSha256',
         'reviewer',
         'decision',
-        ...(schemas.v2 ? ['reason', 'approvalFullHash'] : [])
+        ...(valueSchemas.v3 ? ['mechanicalReviewReportSha256'] : []),
+        ...(valueSchemas.v2 ? ['reason', 'approvalFullHash'] : [])
       ], label);
       safeId(entry.id, `${label}.id`);
       safeId(entry.reviewer, `${label}.reviewer`);
       sha256(entry.blueprintFullHash, `${label}.blueprintFullHash`);
       sha256(entry.sourceImageSha256, `${label}.sourceImageSha256`);
       sha256(entry.promptProfileSha256, `${label}.promptProfileSha256`);
-      if (schemas.v2) {
+      if (valueSchemas.v3) {
+        sha256(
+          entry.mechanicalReviewReportSha256,
+          `${label}.mechanicalReviewReportSha256`
+        );
+      }
+      if (valueSchemas.v2) {
         approvalReason(entry.reason, `${label}.reason`);
         sha256(entry.approvalFullHash, `${label}.approvalFullHash`);
       }
@@ -5243,6 +7146,22 @@ async function loadApprovalIndex(projectRoot, paths, theme, template) {
     };
     const actual = sha256Bytes(Buffer.from(stableJson(projection)));
     if (actual !== value.fullHash) fail('blueprint approval index full hash mismatch');
+    if (migratesV2ToV3) {
+      if (allowV2ReadOnly) return value;
+      if (!allowV2ToV3Migration) {
+        fail(
+          'blueprint approval index V2-to-V3 migration requires --force; '
+            + 'legacy entries lack mechanical review provenance'
+        );
+      }
+      return {
+        schemaVersion: schemas.index,
+        theme,
+        templateId: template,
+        entries: [],
+        fullHash: null
+      };
+    }
     return value;
   } catch (error) {
     if (error.message.includes('does not exist')) {
@@ -5305,6 +7224,7 @@ function validateApprovalRecord(value, {
     'blueprintFullHash',
     'sourceImageSha256',
     'promptProfile',
+    ...(schemas.v3 ? ['mechanicalReview'] : []),
     ...(schemas.v2 ? ['reason', 'fullHash'] : [])
   ], 'blueprint approval record');
   exactKeys(
@@ -5317,6 +7237,38 @@ function validateApprovalRecord(value, {
   sha256(value.blueprintFullHash, 'blueprint approval record.blueprintFullHash');
   sha256(value.sourceImageSha256, 'blueprint approval record.sourceImageSha256');
   sha256(value.promptProfile.sha256, 'blueprint approval record.promptProfile.sha256');
+  if (schemas.v3) {
+    exactKeys(value.mechanicalReview, [
+      'schemaVersion',
+      'reportPath',
+      'reportFileSha256',
+      'previewPath',
+      'previewFileSha256'
+    ], 'blueprint approval record.mechanicalReview');
+    sha256(
+      value.mechanicalReview.reportFileSha256,
+      'blueprint approval record.mechanicalReview.reportFileSha256'
+    );
+    sha256(
+      value.mechanicalReview.previewFileSha256,
+      'blueprint approval record.mechanicalReview.previewFileSha256'
+    );
+    const reviewRoot =
+      `ai-image-metadata/battle-maps/review/${theme}/${template}/${mapId}/`
+      + `previews/${value.blueprintFullHash.slice(7)}`;
+    if (
+      value.mechanicalReview.schemaVersion
+        !== 'battle-map-blueprint-mechanical-review-v1'
+      || value.mechanicalReview.reportPath
+        !== `${reviewRoot}/mechanical-report.json`
+      || value.mechanicalReview.previewPath
+        !== `${reviewRoot}/mechanical-preview.svg`
+      || value.mechanicalReview.reportFileSha256
+        !== entry.mechanicalReviewReportSha256
+    ) {
+      fail('blueprint approval mechanical review provenance is invalid');
+    }
+  }
   if (schemas.v2) {
     approvalReason(value.reason, 'blueprint approval record.reason');
     sha256(value.fullHash, 'blueprint approval record.fullHash');
@@ -5353,6 +7305,117 @@ function validateApprovalRecord(value, {
   return value;
 }
 
+async function writeImmutableRejectionRecord(
+  projectRoot,
+  relativePath,
+  bytes,
+  { write = true } = {}
+) {
+  const absolutePath = resolveWithinProject(
+    projectRoot,
+    relativePath,
+    'blueprint rejection evidence path'
+  );
+  try {
+    const existing = await readFile(absolutePath);
+    if (!existing.equals(bytes)) {
+      fail('hash-keyed blueprint rejection evidence has conflicting bytes');
+    }
+    return;
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+    if (write) await atomicWrite(projectRoot, absolutePath, bytes);
+  }
+}
+
+async function writeRejectionEvidence(
+  projectRoot,
+  { theme, template, mapId, approvalRecord }
+) {
+  const reviewRoot =
+    `ai-image-metadata/battle-maps/review/${theme}/${template}/${mapId}`;
+  const latestPath = `${reviewRoot}/rejection.json`;
+  const latestAbsolutePath = resolveWithinProject(
+    projectRoot,
+    latestPath,
+    'latest blueprint rejection path'
+  );
+  const currentRecordPath =
+    `${reviewRoot}/rejections/${approvalRecord.blueprintFullHash.slice(7)}.json`;
+  const bytes = Buffer.from(`${JSON.stringify(approvalRecord, null, 2)}\n`);
+  await writeImmutableRejectionRecord(
+    projectRoot,
+    currentRecordPath,
+    bytes,
+    { write: false }
+  );
+  let existingRecordPath = null;
+  let existingBytes = null;
+  try {
+    existingBytes = await readFile(latestAbsolutePath);
+    const existing = parseStrictJsonBytes(
+      existingBytes,
+      'existing blueprint rejection record'
+    );
+    sha256(
+      existing.blueprintFullHash,
+      'existing blueprint rejection record.blueprintFullHash'
+    );
+    existingRecordPath =
+      `${reviewRoot}/rejections/${existing.blueprintFullHash.slice(7)}.json`;
+    await writeImmutableRejectionRecord(
+      projectRoot,
+      existingRecordPath,
+      existingBytes,
+      { write: false }
+    );
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+  await writeImmutableRejectionRecord(projectRoot, currentRecordPath, bytes);
+  if (existingRecordPath !== null) {
+    await writeImmutableRejectionRecord(
+      projectRoot,
+      existingRecordPath,
+      existingBytes
+    );
+  }
+  await atomicWrite(projectRoot, latestAbsolutePath, bytes);
+}
+
+async function hasExactRejectionEvidence(
+  projectRoot,
+  { theme, template, mapId, blueprintFullHash }
+) {
+  const reviewRoot =
+    `ai-image-metadata/battle-maps/review/${theme}/${template}/${mapId}`;
+  const candidates = [
+    `${reviewRoot}/rejections/${blueprintFullHash.slice(7)}.json`,
+    `${reviewRoot}/rejection.json`
+  ];
+  for (let index = 0; index < candidates.length; index += 1) {
+    const relativePath = candidates[index];
+    const absolutePath = resolveWithinProject(
+      projectRoot,
+      relativePath,
+      'blueprint rejection evidence read path'
+    );
+    try {
+      const record = parseStrictJsonBytes(
+        await readFile(absolutePath),
+        'blueprint rejection evidence'
+      );
+      if (index === 0 && record.blueprintFullHash !== blueprintFullHash) {
+        fail('hash-keyed blueprint rejection evidence does not match its path');
+      }
+      if (record.blueprintFullHash === blueprintFullHash) return true;
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+    }
+  }
+  return false;
+}
+
 async function approveBlueprintCandidateUnlocked(options, projectRoot) {
   const schemas = blueprintApprovalSchemas(options.template);
   if (schemas.v2) {
@@ -5381,7 +7444,9 @@ async function approveBlueprintCandidateUnlocked(options, projectRoot) {
     {
       sidecar,
       promptReference: promptLoaded.reference,
-      promptProfile: promptLoaded.profile
+      promptProfile: promptLoaded.profile,
+      allowHistoricalPromptProfileForRejection:
+        options.decision === 'rejected'
     }
   );
   if (!candidate) fail(`candidate ${options.mapId} does not exist`);
@@ -5393,7 +7458,7 @@ async function approveBlueprintCandidateUnlocked(options, projectRoot) {
     options.template,
     options.mapId
   );
-  const approvalProjection = {
+  let approvalProjection = {
     schemaVersion: schemas.record,
     id: options.mapId,
     theme: options.theme,
@@ -5407,19 +7472,125 @@ async function approveBlueprintCandidateUnlocked(options, projectRoot) {
     promptProfile: candidate.metadata.promptProfile,
     ...(schemas.v2 ? { reason: options.reason } : {})
   };
-  const approvalRecord = schemas.v2
+  let approvalRecord = schemas.v2
     ? finalizeApprovalRecord(approvalProjection)
     : approvalProjection;
   if (options.decision === 'rejected') {
-    const rejectionPath =
-      `ai-image-metadata/battle-maps/review/${options.theme}/${options.template}/`
-      + `${options.mapId}/rejection.json`;
-    await atomicWrite(
+    await writeRejectionEvidence(projectRoot, {
+      theme: options.theme,
+      template: options.template,
+      mapId: options.mapId,
+      approvalRecord
+    });
+    const index = await loadApprovalIndex(
       projectRoot,
-      resolveWithinProject(projectRoot, rejectionPath, 'blueprint rejection path'),
-      Buffer.from(`${JSON.stringify(approvalRecord, null, 2)}\n`)
+      paths,
+      options.theme,
+      options.template,
+      { allowV2ReadOnly: true }
     );
-    return { ok: true, promoted: false, approval: approvalRecord };
+    const matchingEntry = index.entries.find(entry =>
+      entry.id === options.mapId
+      && entry.blueprintFullHash === candidate.metadata.blueprint.fullHash
+    );
+    let approvalInvalidated = false;
+    let sidecarUpdated = false;
+    if (matchingEntry) {
+      const nextIndex = finalizeApprovalIndex({
+        ...index,
+        entries: index.entries.filter(entry => entry !== matchingEntry)
+      });
+      const indexPath = resolveWithinProject(
+        projectRoot,
+        paths.index,
+        'blueprint approval index path'
+      );
+      const previousIndexBytes =
+        Buffer.from(`${JSON.stringify(index, null, 2)}\n`);
+      try {
+        await atomicWrite(
+          projectRoot,
+          indexPath,
+          Buffer.from(`${JSON.stringify(nextIndex, null, 2)}\n`)
+        );
+        approvalInvalidated = true;
+        if (
+          sidecar.pins.approvedBlueprintSha256 !== null
+          && sidecar.pins.approvedBlueprintSha256 !== nextIndex.fullHash
+        ) {
+          if (options.beforeSidecarUpdate) await options.beforeSidecarUpdate();
+          await atomicWrite(
+            projectRoot,
+            sidecarPath,
+            Buffer.from(`${JSON.stringify({
+              ...sidecar,
+              pins: {
+                ...sidecar.pins,
+                approvedBlueprintSha256: null
+              }
+            }, null, 2)}\n`)
+          );
+          sidecarUpdated = true;
+        }
+      } catch (error) {
+        if (approvalInvalidated && !sidecarUpdated) {
+          try {
+            await atomicWrite(projectRoot, indexPath, previousIndexBytes);
+          } catch (rollbackError) {
+            rollbackError.cause = error;
+            throw rollbackError;
+          }
+        }
+        throw error;
+      }
+    }
+    if (
+      !matchingEntry
+      && sidecar.pins.approvedBlueprintSha256 !== null
+      && sidecar.pins.approvedBlueprintSha256 !== index.fullHash
+    ) {
+      if (options.beforeSidecarUpdate) await options.beforeSidecarUpdate();
+      await atomicWrite(
+        projectRoot,
+        sidecarPath,
+        Buffer.from(`${JSON.stringify({
+          ...sidecar,
+          pins: {
+            ...sidecar.pins,
+            approvedBlueprintSha256: null
+          }
+        }, null, 2)}\n`)
+      );
+      sidecarUpdated = true;
+    }
+    return {
+      ok: true,
+      promoted: false,
+      approval: approvalRecord,
+      approvalInvalidated,
+      sidecarUpdated
+    };
+  }
+  const mechanicalReview = await assertMechanicalPreviewReview(projectRoot, candidate, {
+    theme: options.theme,
+    template: options.template,
+    mapId: options.mapId
+  });
+  if (schemas.v3) {
+    approvalProjection = { ...approvalProjection, mechanicalReview };
+  }
+  approvalRecord = schemas.v2
+    ? finalizeApprovalRecord(approvalProjection)
+    : approvalProjection;
+  if (await hasExactRejectionEvidence(projectRoot, {
+    theme: options.theme,
+    template: options.template,
+    mapId: options.mapId,
+    blueprintFullHash: candidate.metadata.blueprint.fullHash
+  })) {
+    fail(
+      'the exact candidate hash was rejected; regenerate a new candidate before approval'
+    );
   }
   const destination = resolveWithinProject(
     projectRoot,
@@ -5439,7 +7610,8 @@ async function approveBlueprintCandidateUnlocked(options, projectRoot) {
     projectRoot,
     paths,
     options.theme,
-    options.template
+    options.template,
+    { allowV2ToV3Migration: options.force === true }
   );
   const declaredIds = new Set(sidecar.candidateMaps);
   const retainedEntries = [];
@@ -5456,6 +7628,14 @@ async function approveBlueprintCandidateUnlocked(options, projectRoot) {
       }
       continue;
     }
+    if (await hasExactRejectionEvidence(projectRoot, {
+      theme: options.theme,
+      template: options.template,
+      mapId: entry.id,
+      blueprintFullHash: entry.blueprintFullHash
+    })) {
+      continue;
+    }
     retainedEntries.push(entry);
   }
   const entries = retainedEntries
@@ -5469,6 +7649,11 @@ async function approveBlueprintCandidateUnlocked(options, projectRoot) {
       promptProfileSha256: candidate.metadata.promptProfile.sha256,
       reviewer: options.reviewer,
       decision: 'approved',
+      ...(schemas.v3
+        ? {
+            mechanicalReviewReportSha256: mechanicalReview.reportFileSha256
+          }
+        : {}),
       ...(schemas.v2
         ? {
             reason: options.reason,
@@ -5480,36 +7665,111 @@ async function approveBlueprintCandidateUnlocked(options, projectRoot) {
   const allApproved = sidecar.candidateMaps.every(id =>
     nextIndex.entries.some(entry => entry.id === id && entry.decision === 'approved')
   );
+  if (sidecar.id === TEMPLATE_07_ID && allApproved) {
+    const prospectiveBlueprints = [];
+    for (const mapId of sidecar.candidateMaps) {
+      if (mapId === options.mapId) {
+        prospectiveBlueprints.push(candidate.blueprint);
+        continue;
+      }
+      const siblingPaths = approvedPaths(options.theme, options.template, mapId);
+      const siblingPath = resolveWithinProject(
+        projectRoot,
+        siblingPaths.blueprint,
+        'approved sibling blueprint path'
+      );
+      await assertSafeWritePath(
+        projectRoot,
+        siblingPath,
+        'approved sibling blueprint read path'
+      );
+      const sibling = parseStrictJsonBytes(
+        await readFile(siblingPath),
+        `approved sibling blueprint ${mapId}`
+      );
+      assertTemplateMapBlueprint(sibling);
+      assertTemplate07VisualAuthorship(sibling);
+      prospectiveBlueprints.push(sibling);
+    }
+    assertTemplate07DistinctMaterialSignatures(prospectiveBlueprints);
+    assertTemplate07DistinctMacroTopologies(prospectiveBlueprints);
+  }
   if (options.updatePins && !allApproved) {
     fail('--update-pins requires approved entries for every declared candidate map');
   }
-  await atomicCopy(projectRoot, candidate.blueprintPath, destination);
-  await atomicWrite(
+  const aggregatePinInvalidated =
+    !options.updatePins
+    && sidecar.pins.approvedBlueprintSha256 !== null
+    && sidecar.pins.approvedBlueprintSha256 !== nextIndex.fullHash;
+  const approvalPath = resolveWithinProject(
     projectRoot,
-    resolveWithinProject(projectRoot, paths.approval, 'blueprint approval path'),
-    Buffer.from(`${JSON.stringify(approvalRecord, null, 2)}\n`)
+    paths.approval,
+    'blueprint approval path'
   );
-  await atomicWrite(
+  const indexPath = resolveWithinProject(
     projectRoot,
-    resolveWithinProject(projectRoot, paths.index, 'blueprint approval index path'),
-    Buffer.from(`${JSON.stringify(nextIndex, null, 2)}\n`)
+    paths.index,
+    'blueprint approval index path'
+  );
+  const transactionPaths = [
+    [destination, 'approved blueprint'],
+    [approvalPath, 'blueprint approval record'],
+    [indexPath, 'blueprint approval index'],
+    [sidecarPath, 'source template sidecar']
+  ];
+  const transactionSnapshots = await Promise.all(
+    transactionPaths.map(([filePath, label]) =>
+      snapshotOptionalFile(projectRoot, filePath, label)
+    )
   );
   let sidecarUpdated = false;
-  if (options.updatePins) {
-    const nextSidecar = {
-      ...sidecar,
-      pins: {
-        ...sidecar.pins,
-        approvedBlueprintSha256: nextIndex.fullHash
-      }
-    };
-    if (options.beforeSidecarUpdate) await options.beforeSidecarUpdate();
+  try {
+    await atomicCopy(projectRoot, candidate.blueprintPath, destination);
     await atomicWrite(
       projectRoot,
-      sidecarPath,
-      Buffer.from(`${JSON.stringify(nextSidecar, null, 2)}\n`)
+      approvalPath,
+      Buffer.from(`${JSON.stringify(approvalRecord, null, 2)}\n`)
     );
-    sidecarUpdated = true;
+    await atomicWrite(
+      projectRoot,
+      indexPath,
+      Buffer.from(`${JSON.stringify(nextIndex, null, 2)}\n`)
+    );
+    if (options.updatePins || aggregatePinInvalidated) {
+      const nextSidecar = {
+        ...sidecar,
+        pins: {
+          ...sidecar.pins,
+          approvedBlueprintSha256:
+            options.updatePins ? nextIndex.fullHash : null
+        }
+      };
+      if (options.beforeSidecarUpdate) await options.beforeSidecarUpdate();
+      await atomicWrite(
+        projectRoot,
+        sidecarPath,
+        Buffer.from(`${JSON.stringify(nextSidecar, null, 2)}\n`)
+      );
+      sidecarUpdated = true;
+    }
+  } catch (error) {
+    let rollbackFailure = null;
+    for (let index = transactionPaths.length - 1; index >= 0; index -= 1) {
+      try {
+        await restoreOptionalFile(
+          projectRoot,
+          transactionPaths[index][0],
+          transactionSnapshots[index]
+        );
+      } catch (rollbackError) {
+        rollbackFailure ??= rollbackError;
+      }
+    }
+    if (rollbackFailure !== null) {
+      rollbackFailure.cause = error;
+      throw rollbackFailure;
+    }
+    throw error;
   }
   return {
     ok: true,
@@ -5537,6 +7797,7 @@ export async function verifyApprovedBlueprints({
   template
 }) {
   const root = path.resolve(projectRoot);
+  const schemas = blueprintApprovalSchemas(template);
   const [{ sidecar }, promptLoaded] = await Promise.all([
     loadTemplateSidecar({
       projectRoot: root,
@@ -5555,6 +7816,7 @@ export async function verifyApprovedBlueprints({
     }
   }
   const results = [];
+  const template07Blueprints = [];
   for (const mapId of sidecar.candidateMaps) {
     const entry = index.entries.find(value => value.id === mapId);
     if (!entry || entry.decision !== 'approved') {
@@ -5583,6 +7845,9 @@ export async function verifyApprovedBlueprints({
       if (usesBlueprintV2SemanticContract(sidecar.id)) {
         validateV2BlueprintSemanticContract(blueprint, sidecar);
       }
+      if (sidecar.id === TEMPLATE_07_ID) {
+        assertTemplate07VisualAuthorship(blueprint);
+      }
       if (
         blueprint.candidateId !== mapId
         || blueprint.templateId !== template
@@ -5603,6 +7868,14 @@ export async function verifyApprovedBlueprints({
       if (fullHash !== entry.blueprintFullHash) {
         fail('approved blueprint canonical hash mismatch');
       }
+      if (await hasExactRejectionEvidence(root, {
+        theme,
+        template,
+        mapId,
+        blueprintFullHash: fullHash
+      })) {
+        fail('approved blueprint hash has exact rejection evidence');
+      }
       const approvalPath = resolveWithinProject(
         root,
         paths.approval,
@@ -5612,7 +7885,7 @@ export async function verifyApprovedBlueprints({
       const approvalRecord = (
         await readJson(approvalPath, 'blueprint approval record')
       ).value;
-      validateApprovalRecord(approvalRecord, {
+      const validatedApproval = validateApprovalRecord(approvalRecord, {
         theme,
         template,
         mapId,
@@ -5622,9 +7895,78 @@ export async function verifyApprovedBlueprints({
         sourceImageSha256: sidecar.sourceImage.sha256,
         blueprintFileSha256
       });
+      const reviewRoot =
+        `ai-image-metadata/battle-maps/review/${theme}/${template}/${mapId}`;
+      const expectedReview = mechanicalPreviewArtifacts(
+        {
+          blueprint,
+          metadata: {
+            blueprint: {
+              fileSha256: blueprintFileSha256,
+              fullHash
+            }
+          }
+        },
+        mapId,
+        reviewRoot
+      );
+      const [hasReviewReport, hasReviewPreview] = schemas.v3
+        ? [true, true]
+        : await Promise.all([
+            pathExists(resolveWithinProject(
+              root,
+              expectedReview.reportPath,
+              'mechanical review report path'
+            )),
+            pathExists(resolveWithinProject(
+              root,
+              expectedReview.svgPath,
+              'mechanical review preview path'
+            ))
+          ]);
+      if (schemas.v3 || hasReviewReport || hasReviewPreview) {
+        const actualMechanicalReview = await assertMechanicalPreviewReview(
+          root,
+          {
+            blueprint,
+            metadata: {
+              blueprint: {
+                fileSha256: blueprintFileSha256,
+                fullHash
+              }
+            }
+          },
+          { theme, template, mapId }
+        );
+        if (
+          schemas.v3
+          && stableJson(actualMechanicalReview)
+            !== stableJson(validatedApproval.mechanicalReview)
+        ) {
+          fail('approved blueprint mechanical review record is stale');
+        }
+      }
+      if (sidecar.id === TEMPLATE_07_ID) {
+        template07Blueprints.push(blueprint);
+      }
       results.push({ mapId, valid: true, fullHash });
     } catch (error) {
       results.push({ mapId, valid: false, error: error.message });
+    }
+  }
+  if (
+    sidecar.id === TEMPLATE_07_ID
+    && template07Blueprints.length === sidecar.candidateMaps.length
+  ) {
+    try {
+      assertTemplate07DistinctMaterialSignatures(template07Blueprints);
+      assertTemplate07DistinctMacroTopologies(template07Blueprints);
+    } catch (error) {
+      for (const result of results) {
+        if (!result.valid) continue;
+        result.valid = false;
+        result.error = error.message;
+      }
     }
   }
   const allApproved = results.every(result => result.valid);
@@ -5651,6 +7993,18 @@ export const BlueprintLifecycleInternals = Object.freeze({
   finalizeApprovalRecord,
   blueprintApprovalSchemas,
   blueprintPromptProfile,
+  passableTraversalComponents,
   validateV2BlueprintSemanticContract,
+  assertTemplate07OrganicSurfaceGeometry,
+  assertTemplate07DistinctMaterialSignatures,
+  TEMPLATE_07_MINIMUM_DIVERSITY_RATIOS,
+  template07SiblingDiversityRatios,
+  assertTemplate07DistinctMacroTopologies,
+  assertTemplate07VisualAuthorship,
+  previewSvg,
+  mechanicalReviewProjection,
+  mechanicalPreviewArtifacts,
+  preflightCandidateWithSyntheticCompilerContext,
+  readRegularAttemptEvidence,
   approvalReason
 });

@@ -24,6 +24,7 @@ import {
   hashCanonicalV3Value
 } from '../../shared/battleMap/v3/hashes.js';
 import {
+  measureDirectGeometryPrimeRaster,
   normalizeGeneratedRasterBytes,
   prepareRuntimeRaster,
   validateRasterBytes,
@@ -96,6 +97,10 @@ const LEGACY_CANDIDATE_SCHEMA = 'battle-art-candidate-v1';
 const LEGACY_REVIEW_SCHEMA = 'battle-art-candidate-review-v1';
 export const CANDIDATE_SCHEMA = 'battle-art-candidate-v2';
 export const REVIEW_SCHEMA = 'battle-art-candidate-review-v2';
+export const REVALIDATED_CANDIDATE_SCHEMA = 'battle-art-candidate-v3';
+export const REVALIDATED_REVIEW_SCHEMA = 'battle-art-candidate-review-v3';
+export const FAILED_ATTEMPT_REVALIDATION_ORIGIN =
+  'failed-attempt-revalidation-v1';
 export const DIRECT_ROUTE_DERIVATION_SCHEMA =
   'battle-art-route-direct-preparation-v1';
 export const COMPILED_SOURCE_ATTESTATION_SCHEMA =
@@ -803,6 +808,91 @@ function assertInteger(value, label, minimum = 0) {
   }
 }
 
+export function assertFailedAttemptRevalidationOrigin(
+  origin,
+  {
+    theme,
+    familyId,
+    validationDescriptorSha256,
+    derivationSource
+  },
+  label = 'failed-attempt revalidation origin'
+) {
+  exactKeys(origin, [
+    'kind',
+    'failureRecord',
+    'raw',
+    'originalDescriptor',
+    'validationDescriptorSha256'
+  ], label);
+  if (origin.kind !== FAILED_ATTEMPT_REVALIDATION_ORIGIN) {
+    throw new Error(`${label}.kind is unsupported`);
+  }
+  exactKeys(
+    origin.failureRecord,
+    ['path', 'sha256', 'fullHash'],
+    `${label}.failureRecord`
+  );
+  if (typeof origin.failureRecord.path !== 'string') {
+    throw new Error(`${label}.failureRecord.path must be a tracked path`);
+  }
+  assertHash(origin.failureRecord.sha256, `${label}.failureRecord.sha256`);
+  assertHash(origin.failureRecord.fullHash, `${label}.failureRecord.fullHash`);
+  exactKeys(origin.raw, [
+    'path',
+    'bytes',
+    'width',
+    'height',
+    'format',
+    'sha256'
+  ], `${label}.raw`);
+  if (typeof origin.raw.path !== 'string') {
+    throw new Error(`${label}.raw.path must be a tracked path`);
+  }
+  for (const key of ['bytes', 'width', 'height']) {
+    assertInteger(origin.raw[key], `${label}.raw.${key}`, 1);
+  }
+  if (!['png', 'webp'].includes(origin.raw.format)) {
+    throw new Error(`${label}.raw.format is unsupported`);
+  }
+  assertHash(origin.raw.sha256, `${label}.raw.sha256`);
+  exactKeys(
+    origin.originalDescriptor,
+    ['path', 'sha256', 'contentVersion'],
+    `${label}.originalDescriptor`
+  );
+  const descriptorPath =
+    `ai-image-metadata/battle-art/descriptors/${theme}/${familyId}.json`;
+  if (origin.originalDescriptor.path !== descriptorPath) {
+    throw new Error(`${label}.originalDescriptor.path is not canonical`);
+  }
+  assertHash(
+    origin.originalDescriptor.sha256,
+    `${label}.originalDescriptor.sha256`
+  );
+  assertInteger(
+    origin.originalDescriptor.contentVersion,
+    `${label}.originalDescriptor.contentVersion`,
+    1
+  );
+  assertHash(
+    origin.validationDescriptorSha256,
+    `${label}.validationDescriptorSha256`
+  );
+  if (
+    origin.validationDescriptorSha256 !== validationDescriptorSha256
+  ) {
+    throw new Error(`${label}.validationDescriptorSha256 is stale`);
+  }
+  if (
+    derivationSource !== undefined
+    && stableJson(origin.raw) !== stableJson(derivationSource)
+  ) {
+    throw new Error(`${label}.raw does not match the route derivation source`);
+  }
+  return origin;
+}
+
 function assertPoint(value, label, canvas) {
   exactKeys(value, ['x', 'y'], label);
   assertInteger(value.x, `${label}.x`);
@@ -1097,6 +1187,9 @@ export function assertDescriptor(descriptor, manifest, label = `descriptor ${des
     ...(v2 && descriptor?.routeFinishing !== undefined
       ? ['routeFinishing']
       : []),
+    ...(v2 && descriptor?.directGeometryPrime !== undefined
+      ? ['directGeometryPrime']
+      : []),
     'status',
     'promptProfile',
     'styleReferences',
@@ -1217,25 +1310,57 @@ export function assertDescriptor(descriptor, manifest, label = `descriptor ${des
         `${label}.routeFinishing requires a v2 route-transition descriptor`
       );
     }
+    const routeFinishingStrategy = descriptor.routeFinishing.strategy;
+    const anchorScaleFinishing =
+      routeFinishingStrategy === 'anchor-scale-v1';
+    const componentBoxFinishing =
+      routeFinishingStrategy === 'largest-component-box-v1';
     exactKeys(descriptor.routeFinishing, [
       'schemaVersion',
       'strategy',
-      'targetBox',
+      ...(componentBoxFinishing ? ['targetBox'] : []),
+      ...(anchorScaleFinishing ? ['scalePermille'] : []),
       'maximumDetachedCoveredPermille',
-      'armAlphaSpan'
+      'armAlphaSpan',
+      ...(componentBoxFinishing
+        && descriptor.routeFinishing.maximumScaleAnisotropyPermille
+        !== undefined
+        ? ['maximumScaleAnisotropyPermille']
+        : []),
+      ...(componentBoxFinishing
+        && descriptor.routeFinishing.geometryPrime !== undefined
+        ? ['geometryPrime']
+        : []),
+      ...(componentBoxFinishing
+        && descriptor.routeFinishing.terminalClip !== undefined
+        ? ['terminalClip']
+        : [])
     ], `${label}.routeFinishing`);
     if (
       descriptor.routeFinishing.schemaVersion
         !== 'battle-art-route-finishing-v1'
-      || descriptor.routeFinishing.strategy !== 'largest-component-box-v1'
+      || (!componentBoxFinishing && !anchorScaleFinishing)
     ) {
       throw new Error(`${label}.routeFinishing is unsupported`);
     }
-    assertRect(
-      descriptor.routeFinishing.targetBox,
-      `${label}.routeFinishing.targetBox`,
-      descriptor.canvas
-    );
+    if (componentBoxFinishing) {
+      assertRect(
+        descriptor.routeFinishing.targetBox,
+        `${label}.routeFinishing.targetBox`,
+        descriptor.canvas
+      );
+    } else {
+      assertInteger(
+        descriptor.routeFinishing.scalePermille,
+        `${label}.routeFinishing.scalePermille`,
+        1001
+      );
+      if (descriptor.routeFinishing.scalePermille > 1500) {
+        throw new Error(
+          `${label}.routeFinishing.scalePermille must be <= 1500`
+        );
+      }
+    }
     assertInteger(
       descriptor.routeFinishing.maximumDetachedCoveredPermille,
       `${label}.routeFinishing.maximumDetachedCoveredPermille`
@@ -1244,6 +1369,145 @@ export function assertDescriptor(descriptor, manifest, label = `descriptor ${des
       throw new Error(
         `${label}.routeFinishing.maximumDetachedCoveredPermille must be <= 150`
       );
+    }
+    if (
+      descriptor.routeFinishing.maximumScaleAnisotropyPermille !== undefined
+    ) {
+      assertInteger(
+        descriptor.routeFinishing.maximumScaleAnisotropyPermille,
+        `${label}.routeFinishing.maximumScaleAnisotropyPermille`,
+        1250
+      );
+      if (
+        descriptor.routeFinishing.maximumScaleAnisotropyPermille > 1500
+      ) {
+        throw new Error(
+          `${label}.routeFinishing.maximumScaleAnisotropyPermille `
+          + 'must be <= 1500'
+        );
+      }
+    }
+    if (descriptor.routeFinishing.geometryPrime !== undefined) {
+      const prime = descriptor.routeFinishing.geometryPrime;
+      exactKeys(prime, [
+        'schemaVersion',
+        'sourceReferenceId',
+        'sourceSha256',
+        'topology',
+        'canvas',
+        'anchor',
+        'subjectBounds',
+        'coveredPixels',
+        'coveragePermille',
+        'terminalOverflowPixels'
+      ], `${label}.routeFinishing.geometryPrime`);
+      if (
+        prime.schemaVersion !== 'battle-art-route-geometry-prime-v1'
+      ) {
+        throw new Error(
+          `${label}.routeFinishing.geometryPrime.schemaVersion is unsupported`
+        );
+      }
+      assertSafeId(
+        prime.sourceReferenceId,
+        `${label}.routeFinishing.geometryPrime.sourceReferenceId`
+      );
+      assertHash(
+        prime.sourceSha256,
+        `${label}.routeFinishing.geometryPrime.sourceSha256`
+      );
+      const sourceReference = descriptor.styleReferences.find(reference => (
+        reference.id === prime.sourceReferenceId
+      ));
+      if (sourceReference
+        && sourceReference.sha256 !== prime.sourceSha256) {
+        throw new Error(
+          `${label}.routeFinishing.geometryPrime source-reference hash `
+          + 'does not match the descriptor style reference'
+        );
+      }
+      if (prime.topology !== descriptor.capabilities?.routeTopology) {
+        throw new Error(
+          `${label}.routeFinishing.geometryPrime.topology must match `
+          + 'the descriptor route topology'
+        );
+      }
+      exactKeys(
+        prime.canvas,
+        ['width', 'height'],
+        `${label}.routeFinishing.geometryPrime.canvas`
+      );
+      assertInteger(
+        prime.canvas.width,
+        `${label}.routeFinishing.geometryPrime.canvas.width`,
+        1
+      );
+      assertInteger(
+        prime.canvas.height,
+        `${label}.routeFinishing.geometryPrime.canvas.height`,
+        1
+      );
+      assertPoint(
+        prime.anchor,
+        `${label}.routeFinishing.geometryPrime.anchor`,
+        prime.canvas
+      );
+      assertRect(
+        prime.subjectBounds,
+        `${label}.routeFinishing.geometryPrime.subjectBounds`,
+        prime.canvas
+      );
+      assertInteger(
+        prime.coveredPixels,
+        `${label}.routeFinishing.geometryPrime.coveredPixels`,
+        1
+      );
+      assertInteger(
+        prime.coveragePermille,
+        `${label}.routeFinishing.geometryPrime.coveragePermille`,
+        1
+      );
+      if (prime.coveragePermille > 1000) {
+        throw new Error(
+          `${label}.routeFinishing.geometryPrime.coveragePermille `
+          + 'must be <= 1000'
+        );
+      }
+      exactKeys(
+        prime.terminalOverflowPixels,
+        ['n', 's'],
+        `${label}.routeFinishing.geometryPrime.terminalOverflowPixels`
+      );
+      for (const direction of ['n', 's']) {
+        assertInteger(
+          prime.terminalOverflowPixels[direction],
+          `${label}.routeFinishing.geometryPrime.terminalOverflowPixels.${direction}`
+        );
+      }
+    }
+    if (descriptor.routeFinishing.terminalClip !== undefined) {
+      const clip = descriptor.routeFinishing.terminalClip;
+      exactKeys(
+        clip,
+        ['schemaVersion', 'maximumOverflowPixels'],
+        `${label}.routeFinishing.terminalClip`
+      );
+      if (
+        clip.schemaVersion !== 'battle-art-route-terminal-clip-v1'
+        || !descriptor.capabilities?.routeTopology?.startsWith('straight-')
+      ) {
+        throw new Error(`${label}.routeFinishing.terminalClip is unsupported`);
+      }
+      assertInteger(
+        clip.maximumOverflowPixels,
+        `${label}.routeFinishing.terminalClip.maximumOverflowPixels`
+      );
+      if (clip.maximumOverflowPixels > 32) {
+        throw new Error(
+          `${label}.routeFinishing.terminalClip.maximumOverflowPixels `
+          + 'must be <= 32'
+        );
+      }
     }
     exactKeys(descriptor.routeFinishing.armAlphaSpan, [
       'alphaThreshold',
@@ -1275,6 +1539,170 @@ export function assertDescriptor(descriptor, manifest, label = `descriptor ${des
       throw new Error(
         `${label}.routeFinishing.armAlphaSpan range is invalid`
       );
+    }
+  }
+  if (descriptor.directGeometryPrime !== undefined) {
+    if (
+      !v2
+      || descriptor.category !== 'route-transition'
+      || descriptor.capabilities?.routeTopology !== 'corner-es'
+      || descriptor.routeFinishing !== undefined
+    ) {
+      throw new Error(
+        `${label}.directGeometryPrime requires a direct v2 corner-es route`
+      );
+    }
+    const prime = descriptor.directGeometryPrime;
+    exactKeys(prime, [
+      'schemaVersion',
+      'sourceReferenceId',
+      'sourceSha256',
+      'topology',
+      'canvas',
+      'alphaThreshold',
+      'anchor',
+      'subjectBounds',
+      'coveragePermille',
+      'armSampleCenters',
+      'apexTopProfile'
+    ], `${label}.directGeometryPrime`);
+    if (
+      prime.schemaVersion !== 'battle-art-direct-geometry-prime-v1'
+      || prime.topology !== descriptor.capabilities.routeTopology
+      || prime.alphaThreshold !== 240
+    ) {
+      throw new Error(`${label}.directGeometryPrime is unsupported`);
+    }
+    assertSafeId(
+      prime.sourceReferenceId,
+      `${label}.directGeometryPrime.sourceReferenceId`
+    );
+    assertHash(
+      prime.sourceSha256,
+      `${label}.directGeometryPrime.sourceSha256`
+    );
+    const matchingReferences = descriptor.styleReferences.filter(
+      reference => (
+        reference.id === prime.sourceReferenceId
+        && reference.sha256 === prime.sourceSha256
+      )
+    );
+    if (matchingReferences.length !== 1) {
+      throw new Error(
+        `${label}.directGeometryPrime must bind one exact style reference`
+      );
+    }
+    exactKeys(
+      prime.canvas,
+      ['width', 'height'],
+      `${label}.directGeometryPrime.canvas`
+    );
+    if (stableJson(prime.canvas) !== stableJson(descriptor.canvas)) {
+      throw new Error(
+        `${label}.directGeometryPrime.canvas must match the descriptor`
+      );
+    }
+    assertPoint(
+      prime.anchor,
+      `${label}.directGeometryPrime.anchor`,
+      prime.canvas
+    );
+    if (stableJson(prime.anchor) !== stableJson(descriptor.placement.anchor)) {
+      throw new Error(
+        `${label}.directGeometryPrime.anchor must match the descriptor`
+      );
+    }
+    assertRect(
+      prime.subjectBounds,
+      `${label}.directGeometryPrime.subjectBounds`,
+      prime.canvas
+    );
+    assertInteger(
+      prime.coveragePermille,
+      `${label}.directGeometryPrime.coveragePermille`,
+      1
+    );
+    if (prime.coveragePermille > 1000) {
+      throw new Error(
+        `${label}.directGeometryPrime.coveragePermille must be <= 1000`
+      );
+    }
+    const vectors = {
+      e: {
+        x: descriptor.canvas.width / 4,
+        y: descriptor.canvas.height / 4
+      },
+      s: {
+        x: -descriptor.canvas.width / 4,
+        y: descriptor.canvas.height / 4
+      }
+    };
+    const expectedCenters = ['e', 's'].flatMap(direction => (
+      [50, 75, 100].map(percent => ({
+        direction,
+        percent,
+        x: descriptor.placement.anchor.x
+          + (vectors[direction].x * percent / 100),
+        y: descriptor.placement.anchor.y
+          + (vectors[direction].y * percent / 100)
+      }))
+    ));
+    if (stableJson(prime.armSampleCenters) !== stableJson(expectedCenters)) {
+      throw new Error(
+        `${label}.directGeometryPrime.armSampleCenters are not canonical`
+      );
+    }
+    exactKeys(
+      prime.apexTopProfile,
+      ['xStart', 'xStep', 'alpha240Y'],
+      `${label}.directGeometryPrime.apexTopProfile`
+    );
+    assertInteger(
+      prime.apexTopProfile.xStart,
+      `${label}.directGeometryPrime.apexTopProfile.xStart`
+    );
+    assertInteger(
+      prime.apexTopProfile.xStep,
+      `${label}.directGeometryPrime.apexTopProfile.xStep`,
+      1
+    );
+    const canonicalApexStep = prime.canvas.width / 64;
+    const canonicalApexStart = prime.anchor.x - (canonicalApexStep * 4);
+    if (
+      !Number.isSafeInteger(canonicalApexStep)
+      || prime.apexTopProfile.xStep !== canonicalApexStep
+      || prime.apexTopProfile.xStart !== canonicalApexStart
+    ) {
+      throw new Error(
+        `${label}.directGeometryPrime.apexTopProfile sampling is not canonical`
+      );
+    }
+    if (
+      !Array.isArray(prime.apexTopProfile.alpha240Y)
+      || prime.apexTopProfile.alpha240Y.length !== 9
+    ) {
+      throw new Error(
+        `${label}.directGeometryPrime.apexTopProfile.alpha240Y `
+        + 'must contain nine samples'
+      );
+    }
+    for (let index = 0;
+      index < prime.apexTopProfile.alpha240Y.length;
+      index += 1) {
+      assertInteger(
+        prime.apexTopProfile.alpha240Y[index],
+        `${label}.directGeometryPrime.apexTopProfile.alpha240Y[${index}]`
+      );
+      const x = prime.apexTopProfile.xStart
+        + (prime.apexTopProfile.xStep * index);
+      if (
+        x >= prime.canvas.width
+        || prime.apexTopProfile.alpha240Y[index] >= prime.canvas.height
+      ) {
+        throw new Error(
+          `${label}.directGeometryPrime.apexTopProfile exceeds the canvas`
+        );
+      }
     }
   }
   exactKeys(descriptor.placement, [
@@ -1417,6 +1845,39 @@ export function assertDescriptor(descriptor, manifest, label = `descriptor ${des
     throw new Error(`${label} compiled state must pin runtime output`);
   }
   return descriptor;
+}
+
+async function assertDirectGeometryPrimeEvidence(root, descriptor, label) {
+  const prime = descriptor.directGeometryPrime;
+  if (prime === undefined) return;
+  const reference = descriptor.styleReferences.find(entry => (
+    entry.id === prime.sourceReferenceId
+    && entry.sha256 === prime.sourceSha256
+  ));
+  const bytes = await readPinnedRegularFile(
+    root,
+    reference.path,
+    prime.sourceSha256,
+    `${label}.directGeometryPrime source`
+  );
+  const measured = await measureDirectGeometryPrimeRaster({
+    bytes,
+    prime,
+    label: `${label}.directGeometryPrime`
+  });
+  for (const field of [
+    'subjectBounds',
+    'coveragePermille',
+    'armSampleCenters',
+    'apexTopProfile'
+  ]) {
+    if (stableJson(prime[field]) !== stableJson(measured[field])) {
+      throw new Error(
+        `${label}.directGeometryPrime.${field} does not match the pinned `
+        + 'source raster'
+      );
+    }
+  }
 }
 
 async function assertReleaseRecord(release, root, label) {
@@ -2004,6 +2465,11 @@ async function loadBattleArtState(rootValue, {
   for (const descriptorPath of descriptorPaths) {
     const { value } = await readJson(root, descriptorPath, `descriptor ${descriptorPath}`);
     assertDescriptor(value, manifest, `descriptor ${descriptorPath}`);
+    await assertDirectGeometryPrimeEvidence(
+      root,
+      value,
+      `descriptor ${descriptorPath}`
+    );
     if (ids.has(value.id)) throw new Error(`duplicate battle-art family id ${value.id}`);
     ids.add(value.id);
     for (const pin of value.styleReferences) {
@@ -3419,6 +3885,66 @@ function assertFinishedRouteDerivationShape(
   descriptor,
   label = 'candidate route derivation'
 ) {
+  if (derivation?.strategy === 'anchor-scale-v1') {
+    exactKeys(derivation, [
+      'schemaVersion',
+      'strategy',
+      'source',
+      'scalePermille',
+      'anchor',
+      'borderClearPixels',
+      'forbiddenBandClearPixels',
+      'kernel',
+      'finalSha256'
+    ], label);
+    if (
+      derivation.schemaVersion !== 'battle-art-route-finishing-v1'
+      || (
+        descriptor.routeFinishing !== undefined
+        && descriptor.routeFinishing.strategy !== 'anchor-scale-v1'
+      )
+      || derivation.kernel !== 'lanczos3'
+    ) {
+      throw new Error(`${label} uses an unsupported operation`);
+    }
+    assertGeneratedRouteSourceShape(
+      derivation.source,
+      descriptor,
+      `${label}.source`
+    );
+    assertInteger(derivation.scalePermille, `${label}.scalePermille`, 1001);
+    if (
+      descriptor.routeFinishing !== undefined
+      && derivation.scalePermille !== descriptor.routeFinishing.scalePermille
+    ) {
+      throw new Error(`${label}.scalePermille does not match the descriptor`);
+    }
+    exactKeys(derivation.anchor, ['x', 'y'], `${label}.anchor`);
+    assertInteger(derivation.anchor.x, `${label}.anchor.x`);
+    assertInteger(derivation.anchor.y, `${label}.anchor.y`);
+    if (
+      descriptor.placement?.anchor !== undefined
+      && (
+        derivation.anchor.x !== descriptor.placement.anchor.x
+        || derivation.anchor.y !== descriptor.placement.anchor.y
+      )
+    ) {
+      throw new Error(`${label}.anchor does not match the descriptor`);
+    }
+    assertInteger(
+      derivation.borderClearPixels,
+      `${label}.borderClearPixels`
+    );
+    if (derivation.borderClearPixels !== 4) {
+      throw new Error(`${label}.borderClearPixels must be 4`);
+    }
+    assertInteger(
+      derivation.forbiddenBandClearPixels,
+      `${label}.forbiddenBandClearPixels`
+    );
+    assertHash(derivation.finalSha256, `${label}.finalSha256`);
+    return;
+  }
   exactKeys(derivation, [
     'schemaVersion',
     'strategy',
@@ -3434,6 +3960,7 @@ function assertFinishedRouteDerivationShape(
     'scaleX',
     'scaleY',
     'kernel',
+    ...(derivation.terminalClip !== undefined ? ['terminalClip'] : []),
     'finalSha256'
   ], label);
   if (
@@ -3495,6 +4022,34 @@ function assertFinishedRouteDerivationShape(
       derivation[key].denominator,
       `${label}.${key}.denominator`,
       1
+    );
+  }
+  if (derivation.terminalClip !== undefined) {
+    exactKeys(
+      derivation.terminalClip,
+      ['schemaVersion', 'maximumOverflowPixels', 'clearedPixels'],
+      `${label}.terminalClip`
+    );
+    if (
+      derivation.terminalClip.schemaVersion
+        !== 'battle-art-route-terminal-clip-v1'
+    ) {
+      throw new Error(`${label}.terminalClip is unsupported`);
+    }
+    if (
+      descriptor.routeFinishing?.terminalClip !== undefined
+      && (
+        descriptor.routeFinishing.terminalClip.schemaVersion
+          !== derivation.terminalClip.schemaVersion
+        || descriptor.routeFinishing.terminalClip.maximumOverflowPixels
+          !== derivation.terminalClip.maximumOverflowPixels
+      )
+    ) {
+      throw new Error(`${label}.terminalClip does not match the descriptor`);
+    }
+    assertInteger(
+      derivation.terminalClip.clearedPixels,
+      `${label}.terminalClip.clearedPixels`
     );
   }
   assertHash(derivation.finalSha256, `${label}.finalSha256`);
@@ -3708,6 +4263,18 @@ export async function verifyCandidateRouteDerivation({
     );
   }
   assertRouteDerivationShape(candidate.derivation, descriptor, label);
+  const revalidated =
+    candidate.schemaVersion === REVALIDATED_CANDIDATE_SCHEMA;
+  let replayValidation = null;
+  if (revalidated) {
+    replayValidation = await import('./generate.mjs');
+    await replayValidation.auditRevalidatedCandidateOrigin({
+      root,
+      descriptor,
+      candidate,
+      label: `${label} origin`
+    });
+  }
   const sourceBytes = await readPinnedRegularFile(
     root,
     candidate.derivation.source.path,
@@ -3733,6 +4300,14 @@ export async function verifyCandidateRouteDerivation({
     || stableJson(reproduced.derivation) !== stableJson(candidate.derivation)
   ) {
     throw new Error(`${label} does not reproduce the candidate bytes`);
+  }
+  if (revalidated) {
+    await replayValidation.validatePreparedRouteGeometry({
+      bytes: reproduced.bytes,
+      descriptor,
+      finished: descriptor.routeFinishing !== undefined,
+      label
+    });
   }
   return {
     source,
@@ -3826,6 +4401,8 @@ export function assertReviewRecord(
   label = `battle-art review ${relativePath}`
 ) {
   const legacy = record?.schemaVersion === LEGACY_REVIEW_SCHEMA;
+  const revalidated =
+    record?.schemaVersion === REVALIDATED_REVIEW_SCHEMA;
   const compiledSourceAttestation =
     record?.schemaVersion === COMPILED_SOURCE_ATTESTATION_SCHEMA;
   const legacyCandidateLayout = legacy || compiledSourceAttestation;
@@ -3844,6 +4421,7 @@ export function assertReviewRecord(
   ], label);
   if (
     !legacy
+    && !revalidated
     && !compiledSourceAttestation
     && record.schemaVersion !== REVIEW_SCHEMA
   ) {
@@ -3892,12 +4470,13 @@ export function assertReviewRecord(
     'metadata',
     'image',
     ...(record.candidate.derivation !== undefined ? ['derivation'] : []),
+    ...(revalidated ? ['origin'] : []),
     'promptProfile',
     'styleReferences',
-    ...(!legacyCandidateLayout
+    ...(!legacyCandidateLayout && !revalidated
       ? ['styleReferenceMode', 'styleReferenceProvenance']
       : []),
-    'worker'
+    ...(!revalidated ? ['worker'] : [])
   ], `${label}.candidate`);
   const paths = candidatePaths({
     theme: record.theme,
@@ -3920,6 +4499,14 @@ export function assertReviewRecord(
         `${label}.candidate.derivation final hash does not match its image`
       );
     }
+  }
+  if (revalidated) {
+    assertFailedAttemptRevalidationOrigin(record.candidate.origin, {
+      theme: record.theme,
+      familyId: record.familyId,
+      validationDescriptorSha256: record.descriptor.sha256,
+      derivationSource: record.candidate.derivation?.source
+    }, `${label}.candidate.origin`);
   }
   assertReviewFilePin(
     record.candidate.metadata,
@@ -3958,71 +4545,73 @@ export function assertReviewRecord(
   record.candidate.styleReferences.forEach((pin, index) => {
     assertPin(pin, `${label}.candidate.styleReferences[${index}]`);
   });
-  exactKeys(record.candidate.worker, [
-    'command',
-    'ephemeral',
-    'invocationCount',
-    'timeoutMs',
-    ...(!legacyCandidateLayout ? ['imageArguments'] : []),
-    'prompt',
-    'stdout',
-    'stderr',
-    'lastMessage'
-  ], `${label}.candidate.worker`);
-  if (
-    record.candidate.worker.command !== 'codex'
-    || record.candidate.worker.ephemeral !== true
-    || record.candidate.worker.invocationCount !== 1
-  ) {
+  if (!revalidated) {
+    exactKeys(record.candidate.worker, [
+      'command',
+      'ephemeral',
+      'invocationCount',
+      'timeoutMs',
+      ...(!legacyCandidateLayout ? ['imageArguments'] : []),
+      'prompt',
+      'stdout',
+      'stderr',
+      'lastMessage'
+    ], `${label}.candidate.worker`);
+    if (
+      record.candidate.worker.command !== 'codex'
+      || record.candidate.worker.ephemeral !== true
+      || record.candidate.worker.invocationCount !== 1
+    ) {
       throw new Error(`${label}.candidate.worker is not isolated imagegen provenance`);
-  }
-  if (!legacyCandidateLayout) {
-    if (!Array.isArray(record.candidate.worker.imageArguments)
-      || record.candidate.worker.imageArguments.some(value => (
-        typeof value !== 'string' || path.basename(value) !== value
-      ))) {
-      throw new Error(`${label}.candidate.worker.imageArguments is invalid`);
     }
-    const syntheticArgs = record.candidate.worker.imageArguments.flatMap(
-      basename => ['--image', `/review/${basename}`]
+    if (!legacyCandidateLayout) {
+      if (!Array.isArray(record.candidate.worker.imageArguments)
+        || record.candidate.worker.imageArguments.some(value => (
+          typeof value !== 'string' || path.basename(value) !== value
+        ))) {
+        throw new Error(`${label}.candidate.worker.imageArguments is invalid`);
+      }
+      const syntheticArgs = record.candidate.worker.imageArguments.flatMap(
+        basename => ['--image', `/review/${basename}`]
+      );
+      assertStyleReferenceProvenance({
+        styleReferences: record.candidate.styleReferences,
+        provenance: record.candidate.styleReferenceProvenance,
+        mode: record.candidate.styleReferenceMode,
+        args: syntheticArgs,
+        imageBasenames: record.candidate.worker.imageArguments,
+        label: `${label}.candidate`
+      });
+    }
+    assertInteger(
+      record.candidate.worker.timeoutMs,
+      `${label}.candidate.worker.timeoutMs`,
+      1
     );
-    assertStyleReferenceProvenance({
-      styleReferences: record.candidate.styleReferences,
-      provenance: record.candidate.styleReferenceProvenance,
-      mode: record.candidate.styleReferenceMode,
-      args: syntheticArgs,
-      imageBasenames: record.candidate.worker.imageArguments,
-      label: `${label}.candidate`
-    });
-  }
-  assertInteger(
-    record.candidate.worker.timeoutMs,
-    `${label}.candidate.worker.timeoutMs`,
-    1
-  );
-  assertReviewFilePin(
-    record.candidate.worker.prompt,
-    paths.prompt,
-    `${label}.candidate.worker.prompt`,
-    1
-  );
-  assertReviewFilePin(
-    record.candidate.worker.stdout,
-    paths.stdout,
-    `${label}.candidate.worker.stdout`,
-    1
-  );
-  assertReviewFilePin(
-    record.candidate.worker.stderr,
-    paths.stderr,
-    `${label}.candidate.worker.stderr`
-  );
-  if (record.candidate.worker.lastMessage !== null) {
     assertReviewFilePin(
-      record.candidate.worker.lastMessage,
-      paths.lastMessage,
-      `${label}.candidate.worker.lastMessage`
+      record.candidate.worker.prompt,
+      paths.prompt,
+      `${label}.candidate.worker.prompt`,
+      1
     );
+    assertReviewFilePin(
+      record.candidate.worker.stdout,
+      paths.stdout,
+      `${label}.candidate.worker.stdout`,
+      1
+    );
+    assertReviewFilePin(
+      record.candidate.worker.stderr,
+      paths.stderr,
+      `${label}.candidate.worker.stderr`
+    );
+    if (record.candidate.worker.lastMessage !== null) {
+      assertReviewFilePin(
+        record.candidate.worker.lastMessage,
+        paths.lastMessage,
+        `${label}.candidate.worker.lastMessage`
+      );
+    }
   }
   if (compiledSourceAttestation) {
     exactKeys(record.source, [
@@ -4110,6 +4699,10 @@ function draftDescriptorProjection(descriptor) {
   };
 }
 
+export function candidateValidationDescriptorSha256(descriptor) {
+  return sha256(Buffer.from(stableJson(draftDescriptorProjection(descriptor))));
+}
+
 async function assertCompiledCurrentSourceCandidate(loaded, entry, evidence) {
   const { descriptor } = entry;
   if (descriptor.status !== 'compiled') {
@@ -4190,6 +4783,8 @@ async function loadReviewCandidate(loaded, entry, {
   );
   const candidate = parseSnapshotJson(metadataSnapshot, 'candidate metadata');
   const legacy = candidate?.schemaVersion === LEGACY_CANDIDATE_SCHEMA;
+  const revalidated =
+    candidate?.schemaVersion === REVALIDATED_CANDIDATE_SCHEMA;
   exactKeys(candidate, [
     'schemaVersion',
     'familyId',
@@ -4198,15 +4793,20 @@ async function loadReviewCandidate(loaded, entry, {
     'descriptorSha256',
     'promptProfile',
     'styleReferences',
-    ...(!legacy ? ['styleReferenceMode', 'styleReferenceProvenance'] : []),
+    ...(!legacy && !revalidated
+      ? ['styleReferenceMode', 'styleReferenceProvenance']
+      : []),
     ...(!legacy && candidate.derivation !== undefined
       ? ['derivation']
       : []),
+    ...(revalidated ? ['origin'] : []),
     'image',
-    'worker',
+    ...(!revalidated ? ['worker'] : []),
     'status'
   ], 'candidate metadata');
-  if ((!legacy && candidate.schemaVersion !== CANDIDATE_SCHEMA)
+  if ((!legacy
+      && candidate.schemaVersion !== CANDIDATE_SCHEMA
+      && !revalidated)
     || candidate.familyId !== entry.descriptor.id
     || candidate.theme !== entry.descriptor.theme
     || candidate.descriptorPath !== entry.path
@@ -4262,6 +4862,47 @@ async function loadReviewCandidate(loaded, entry, {
         reviewFullHash,
         label: `${entry.descriptor.id} review candidate route derivation`
       });
+  if (revalidated) {
+    await readPinnedRegularFile(
+      loaded.root,
+      metadataSnapshot.pin.path,
+      metadataSnapshot.pin.sha256,
+      'candidate metadata'
+    );
+    if (derivationEvidence?.source !== undefined) {
+      await readPinnedRegularFile(
+        loaded.root,
+        derivationEvidence.source.path,
+        derivationEvidence.source.sha256,
+        `${entry.descriptor.id} review raw generated artifact`
+      );
+    }
+    if (entry.descriptor.status === 'approved') {
+      if (
+        entry.descriptor.source.candidateMetadataPath !== paths.metadata
+        || entry.descriptor.source.imageSha256 !== actual.sha256
+        || entry.descriptor.content.sourceSha256 !== actual.sha256
+      ) {
+        throw new Error('approved descriptor does not match the current candidate');
+      }
+    }
+    const evidence = {
+      paths,
+      candidate,
+      candidateBytes,
+      actual,
+      metadata: metadataSnapshot.pin,
+      prompt: null,
+      stdout: null,
+      stderr: null,
+      lastMessage: null,
+      derivationSource: derivationEvidence?.source ?? null
+    };
+    if (compiledCurrentSource) {
+      await assertCompiledCurrentSourceCandidate(loaded, entry, evidence);
+    }
+    return evidence;
+  }
   exactKeys(candidate.worker, [
     'command',
     'args',
@@ -4409,8 +5050,10 @@ function buildReviewRecord(entry, evidence, {
     throw new Error('compiled-current-source attestation policy must be boolean');
   }
   const legacy = evidence.candidate.schemaVersion === LEGACY_CANDIDATE_SCHEMA;
+  const revalidated =
+    evidence.candidate.schemaVersion === REVALIDATED_CANDIDATE_SCHEMA;
   const attestation = compiledCurrentSourceAttestation && legacy;
-  const persistedImageArguments = legacy
+  const persistedImageArguments = legacy || revalidated
     ? null
     : imageArguments(
         evidence.candidate.worker.args,
@@ -4421,7 +5064,9 @@ function buildReviewRecord(entry, evidence, {
       ? COMPILED_SOURCE_ATTESTATION_SCHEMA
       : legacy
         ? LEGACY_REVIEW_SCHEMA
-        : REVIEW_SCHEMA,
+        : revalidated
+          ? REVALIDATED_REVIEW_SCHEMA
+          : REVIEW_SCHEMA,
     theme: entry.descriptor.theme,
     familyId: entry.descriptor.id,
     decision,
@@ -4441,9 +5086,12 @@ function buildReviewRecord(entry, evidence, {
             derivation: structuredClone(evidence.candidate.derivation)
           }
         : {}),
+      ...(revalidated
+        ? { origin: structuredClone(evidence.candidate.origin) }
+        : {}),
       promptProfile: structuredClone(evidence.candidate.promptProfile),
       styleReferences: structuredClone(evidence.candidate.styleReferences),
-      ...(!legacy
+      ...(!legacy && !revalidated
         ? {
             styleReferenceMode: evidence.candidate.styleReferenceMode,
             styleReferenceProvenance: structuredClone(
@@ -4451,17 +5099,23 @@ function buildReviewRecord(entry, evidence, {
             )
           }
         : {}),
-      worker: {
-        command: evidence.candidate.worker.command,
-        ephemeral: evidence.candidate.worker.ephemeral,
-        invocationCount: evidence.candidate.worker.invocationCount,
-        timeoutMs: evidence.candidate.worker.timeoutMs,
-        ...(!legacy ? { imageArguments: persistedImageArguments } : {}),
-        prompt: evidence.prompt,
-        stdout: evidence.stdout,
-        stderr: evidence.stderr,
-        lastMessage: evidence.lastMessage
-      }
+      ...(!revalidated
+        ? {
+            worker: {
+              command: evidence.candidate.worker.command,
+              ephemeral: evidence.candidate.worker.ephemeral,
+              invocationCount: evidence.candidate.worker.invocationCount,
+              timeoutMs: evidence.candidate.worker.timeoutMs,
+              ...(!legacy
+                ? { imageArguments: persistedImageArguments }
+                : {}),
+              prompt: evidence.prompt,
+              stdout: evidence.stdout,
+              stderr: evidence.stderr,
+              lastMessage: evidence.lastMessage
+            }
+          }
+        : {})
     },
     ...(attestation
       ? { source: structuredClone(entry.descriptor.source) }
@@ -5850,6 +6504,37 @@ export async function auditBattleArtReviews({
         === stableJson(descriptor.promptProfile)
       && stableJson(record.candidate.styleReferences)
         === stableJson(descriptor.styleReferences);
+    const revalidated =
+      record.schemaVersion === REVALIDATED_REVIEW_SCHEMA;
+    let replayValidation = null;
+    if (revalidated) {
+      replayValidation = await import('./generate.mjs');
+      const audited = await replayValidation.auditFailedRouteAttempt({
+        root: loaded.root,
+        relativePath: record.candidate.origin.failureRecord.path
+      });
+      const originalDescriptor = {
+        path: audited.record.descriptor.path,
+        sha256: audited.record.descriptor.sha256,
+        contentVersion: audited.record.descriptor.contentVersion
+      };
+      if (
+        audited.file.sha256
+          !== record.candidate.origin.failureRecord.sha256
+        || audited.record.fullHash
+          !== record.candidate.origin.failureRecord.fullHash
+        || stableJson(audited.record.raw)
+          !== stableJson(record.candidate.origin.raw)
+        || stableJson(originalDescriptor)
+          !== stableJson(record.candidate.origin.originalDescriptor)
+        || audited.record.theme !== record.theme
+        || audited.record.familyId !== record.familyId
+      ) {
+        throw new Error(
+          `battle-art review ${relative} revalidation origin is stale`
+        );
+      }
+    }
     if (record.candidate.derivation !== undefined) {
       const rawArtifactBytes = await readPinnedRegularFile(
         loaded.root,
@@ -5889,6 +6574,14 @@ export async function auditBattleArtReviews({
           throw new Error(
             `battle-art review ${relative} route derivation does not reproduce`
           );
+        }
+        if (revalidated) {
+          await replayValidation.validatePreparedRouteGeometry({
+            bytes: reproduced.bytes,
+            descriptor,
+            finished: descriptor.routeFinishing !== undefined,
+            label: `battle-art review ${relative} reproduced route`
+          });
         }
       }
     }

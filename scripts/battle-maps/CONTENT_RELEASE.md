@@ -37,6 +37,14 @@ stages, approves, promotes, compiles, catalogs, or activates content.
 
 ## Approving a symbolic blueprint candidate
 
+Generate template-03-or-newer candidates from the staged standalone starter.
+The isolated worker copies that valid starter and makes bounded edits; accepted
+output must change at least two authoritative geometry groups, including a
+mask/surface, required-route, or spawn composition group. Reordering records or
+cells does not count, and connection-kind plus decoration-only edits are
+rejected. Map-specific retry safeguards may freeze geometry already proven by
+the semantic validator and direct the worker to a safer bounded edit.
+
 Approve a reviewed template-03-or-newer blueprint with a bounded rationale:
 
 ```bash
@@ -204,7 +212,9 @@ supported player/opponent roster size.
 - all exact runtime assets restored and hash verified;
 - a decoded PNG screenshot of at least 512×512 beneath
   `ai-image-metadata/battle-maps/review/<theme>/<template>/<contentId>/`; and
-- an explicit safe reviewer ID.
+- an explicit safe reviewer ID and concrete `--reason` describing the inspected
+  composition, topology, route seams, elevation, boundaries, and gameplay
+  readability.
 
 It writes immutable tracked metadata to
 `battle-maps/approvals/<theme>/<contentId>.v<version>.json`. The local
@@ -212,6 +222,12 @@ screenshot remains ignored evidence, but its exact path, bytes, dimensions,
 format, and SHA-256 are pinned by that record. The same approval includes a
 deterministic map-hash-bound boss/competitive capability report; catalog
 eligibility cannot claim a capability that report does not prove.
+
+Capability reports are upper bounds, not automatic catalog claims. The forest
+pilot deliberately publishes every current entry with `bossCapable: false`
+until boss-specific coverage and release acceptance are added; a structurally
+boss-capable approval alone must not make the map eligible for boss-required
+selection.
 
 ## Catalog definition and activation
 
@@ -221,7 +237,7 @@ Each immutable release has a closed definition at:
 
 ```json
 {
-  "schemaVersion": "battle-map-v3-catalog-definition-v1",
+  "schemaVersion": "battle-map-v3-catalog-definition-v2",
   "catalogReleaseId": "battle-map-v3-2026-08-01",
   "entries": [
     {
@@ -254,12 +270,25 @@ Each immutable release has a closed definition at:
 }
 ```
 
-The tracked definition document deliberately keeps the
-`battle-map-v3-catalog-definition-v1` authoring format. Adding an exact
-`ecologyProfile` to an ecology-qualified coverage query causes the builder to
-emit catalog schema 2 / selector 2 and to project that ecology onto every
-eligible runtime entry. `selectorVersion` belongs to the generated release;
-do not add it to the definition document.
+New tracked definitions use `battle-map-v3-catalog-definition-v2`. A cumulative
+definition may retain an exact previously published map by adding a
+`historicalPublication` witness to that entry with the earlier
+`catalogReleaseId` and `catalogFullHash`. The builder accepts that path only
+when the witness resolves directly to a legacy v1 definition rooted in normal
+current-map compilation and the self-hashed release, approval-bound definition
+entry, map hash, approval-file hash, selection metadata, archived asset bundle,
+and binary evidence all match exactly. Witnessed v2 definitions are rejected,
+which prevents future or cyclic witness chains from bypassing compilation. New
+content without that evidence still requires a current-recipe byte-identical
+recompile and a reasoned visual approval v2. Legacy v1 definitions and their
+historical approval records remain readable.
+
+The generated release uses catalog schema 3 with selector 2. Schema 3 pins each
+asset bundle by `(assetBundleId, assetBundleVersion, manifestFullHash)`, so a
+cumulative release can retain an older map and its exact bundle while adding a
+newer bundle version under the same release-family ID. Catalog schemas 1 and 2
+retain their original shapes and hash domains. `selectorVersion` belongs to the
+generated release; do not add it to the definition document.
 
 The authoritative coverage ID may repeat for different regional ecologies;
 order those rows by `(id, ecologyProfile)`. Complete-matrix acceptance
@@ -298,31 +327,62 @@ existing battle. Catalog content activates automatically, with V2 compatibility
 only when eligible V3 content is absent. Do not add an environment flag,
 client downgrade, enabled-profile list, or runtime rollout gate.
 
-## Current Borderwood reference release
+## Current cumulative forest reference release
 
-The production reference for this lifecycle is the tracked
-`battle-map-v3-forest-pilot-2026-07-30-r6` release:
+The active production-data reference for this lifecycle is the tracked
+`battle-map-v3-forest-pilot-2026-07-30-r16` release. It retains the exact r6
+Borderwood entry and publishes the complete approved Heartlands template-04
+and template-07 trios plus the Borderwood template-05 trio:
 
-- approved source template: `forest-template-02`;
-- approved blueprint: `forest-template-02-b`;
-- stable public content identity: `forest-template-01-b@12`;
-- ecology: `forest-iron-depths-borderwood`;
-- render profile: `forest-iron-depths-borderwood-v5`;
-- art bundle: `battle-art-descriptors-2026-07-30` version 6;
-- map full hash:
+- Borderwood reference: `forest-template-01-b@12`,
+  `forest-iron-depths-borderwood`, asset bundle version 6, map hash
   `sha256:cad472a23e3ff4cc3549076b0a4715df4611ee91f87cb095d7c699ffe1d372f8`;
-- catalog full hash:
-  `sha256:76af233bcb30c9716e1e07652134fbb9efdc928a83888f956ee321ad8d7cc85e`.
+- Heartlands A: `forest-template-04-a@9`,
+  `forest-heartlands-woodland`, asset bundle version 7, map hash
+  `sha256:4e60edd8fce88103da04d651eb4590ee474c222cfe45379690b5f27553e7b006`;
+- Heartlands B: `forest-template-04-b@9`, the same exact ecology and bundle,
+  map hash
+  `sha256:23a55dfe499edc8f463d1e264edc3a0c70c6d661df7cdd831920cbe498c8fa25`;
+- Heartlands C: `forest-template-04-c@9`, the same exact ecology and bundle,
+  map hash
+  `sha256:709a6454dbd30bd9dec7f6cada5c8767dab19fb8b72dedc0ba56b52bfd967edd`;
+- Borderwood A: `forest-template-05-a@6`,
+  `forest-iron-depths-borderwood`, asset bundle version 7, map hash
+  `sha256:0eca0d516b11bb9d997dbc1a08ccaff5121247c13cfa7361fb7386324b3ac3f2`;
+- Borderwood B: `forest-template-05-b@6`, the same exact ecology and bundle,
+  map hash
+  `sha256:03a18a91fefff361f6787b9317389569fa7cbc1b253d1828316015a51ae44661`;
+- Borderwood C: `forest-template-05-c@6`, the same exact ecology and bundle,
+  map hash
+  `sha256:7f1afbace02d1d19ae0e028da7600f05978667dfad152ed920aeb02a76e62fad`;
+- Heartlands storm-fallen-oak A: `forest-template-07-a@8`,
+  `forest-heartlands-woodland`, asset bundle version 10, map hash
+  `sha256:aa091727e1db41cedbb964b8e96a28f33fac5ba8f92f82fb0ff248b30bfbf02c`;
+- Heartlands storm-fallen-oak B: `forest-template-07-b@8`, the same exact
+  ecology and bundle, map hash
+  `sha256:550e2b3b4089e9e63c818fa7c26c0715c32c998885590cff91bbb062c9c559ac`;
+- Heartlands storm-fallen-oak C: `forest-template-07-c@8`, the same exact
+  ecology and bundle, map hash
+  `sha256:700fee842a625237aa815a224e3377045d088078e0513d183a5a73bcd4838a79`;
+- r16 catalog hash:
+  `sha256:c0978f801d4d496d8873d12d140aae6c012ceca9cf5134d62fdccd8901a8cd5f`.
 
-The successor template intentionally emits the existing stable content ID.
-This lets new battles select the improved map while persisted battles continue
-to resolve their stored versions. `forest-template-01-b@10` is an unapproved
-compile retained as lifecycle evidence; do not catalog or approve it.
-The approved r5/v11 release and historical r3/r4 releases with their v9 map
-remain immutable compatibility fixtures.
+The r6 release and definition remain immutable publication evidence for the
+historical Borderwood entry. The approved r5/v11 release and historical r3/r4
+releases with their v9 map remain immutable compatibility fixtures.
+The earlier template-03 source and blueprints also remain immutable evidence:
+their approved sidecar pins a superseded compiler and therefore cannot acquire
+a current compile recipe. The rejected template-06 maps remain uncataloged
+lifecycle evidence. The reviewed storm-fallen-oak composition was authored as
+the new template-07 identity through the current source, compiler-pin,
+blueprint-generation, and approval lifecycle.
 
 For Whispering Woods, node seed `1665986859` plus the exact Borderwood ecology
-selects v12 for every supported 1–5 player / 1–7 opponent roster. Other forest
-ecologies continue through the explicit V2 compatibility path until their own
-approved catalog entries exist. Never broaden the Borderwood entry to generic
-forest coverage.
+selects template-05 C@6 for every supported 1–5 player / 1–7 opponent roster.
+Other forest ecologies continue through the explicit V2 compatibility path
+unless they have their own approved catalog entry. Heartlands tiers 1–5 select
+deterministically among template-04 A@9, B@9, C@9 and template-07 A@8, B@8,
+and C@8 automatically;
+Borderwood tier 1 selects among the retained reference and template-05 A@6,
+B@6, and C@6. Never broaden either ecology-qualified entry to generic forest
+coverage.

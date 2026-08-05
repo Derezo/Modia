@@ -1,0 +1,98 @@
+{
+  "schemaVersion": "battle-art-family-descriptor-v2",
+  "id": "forest-heartlands-dry-ravine-loam",
+  "theme": "forest",
+  "category": "surface",
+  "familyGroup": "forest-heartlands-dry-ravine-loam",
+  "variantId": "surface-0",
+  "capabilities": {
+    "direction": null,
+    "routeTopology": null,
+    "surfaceVariant": 0,
+    "ecologyProfile": "forest-heartlands-woodland",
+    "tierBands": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "heightDeltas": [
+      0
+    ]
+  },
+  "status": "compiled",
+  "promptProfile": {
+    "id": "battle-art-family-v2",
+    "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+    "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+  },
+  "styleReferences": [
+    {
+      "id": "forest-source-template-01",
+      "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+      "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+    }
+  ],
+  "generationPrompt": "Create exactly one seam-safe orthographic isometric forest surface asset named forest-heartlands-dry-ravine-loam for ecology profile forest-heartlands-woodland; tier bands 1, 2, 3, 4, 5; surface variant 0. Author the declared orientation directly, preserve continuous neighboring materials and edge alignment, and include only the declared family content. Regional visual vocabulary: Heartlands Woodland uses a coherent pastoral forest of mature broad-canopy oak, field maple, and flowering hawthorn; warm meadow grass and bluebells; rounded cream-gray fieldstone; warm ochre loam and oak leaf litter; and dappled late-morning light. Keep this species mix, material palette, scale, and lighting explicitly consistent across every directional edge and transition. Depict a complete full ground diamond whose dominant identity is a dry ravine bed of firm warm ochre loam: one broad pale compacted wash, a few shallow naturally branching erosion rills, fine exposed roots, and sparse small embedded cream-gray pebbles. Make this materially distinct from lush clover, shaded fern-and-hazel litter, grassy fieldstone terrace, hawthorn-loop floor, and generic meadow ground. Keep the whole diamond a single flat traversable ground plane with no cliff, trench, hole, water, or implied elevation change. Carry the same dry-loam material continuously through every diamond edge with a quiet shared seam perimeter; keep distinctive rill forks, roots, and stones away from the rim. Its source-raster center is (128,64). Never depict internal tile boundaries, square subcells, checkerboards, mosaics, quilts, paving, contour grids, repeated cracks, evenly spaced stones, stripes, uniform noise, a clipped patch, or a floating island. Keep the field calm enough for characters and route overlays. Do not add a baked backdrop, black void, unrelated terrain wall, or presentation frame.",
+  "rasterContract": {
+    "schemaVersion": "battle-art-raster-contract-v1",
+    "kind": "opaque-tile-diamond",
+    "alphaThreshold": 240,
+    "minimumCoveredPermille": 1000,
+    "maximumExteriorCoveredPermille": 5
+  },
+  "canvas": {
+    "width": 256,
+    "height": 128
+  },
+  "placement": {
+    "pivot": {
+      "x": 128,
+      "y": 64
+    },
+    "anchor": {
+      "x": 128,
+      "y": 64
+    },
+    "footprint": {
+      "x": 0,
+      "y": 0,
+      "width": 1,
+      "height": 1
+    },
+    "collision": {
+      "kind": "none",
+      "cells": []
+    },
+    "drawBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 128
+    },
+    "occlusionBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
+    },
+    "stratum": "surface"
+  },
+  "content": {
+    "version": 1,
+    "sourceSha256": "sha256:396acec10cffeb320dd53997912ecce350c5f38e4a9329f4049b3871b91de81e",
+    "runtimeSha256": "sha256:1866e244df738b5866ab74f84d2e19b7f8e3cec89aa7508a9c1400670a36bb0a",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v10/forest/surface/forest-heartlands-dry-ravine-loam/v1/1866e244df738b5866ab74f84d2e19b7f8e3cec89aa7508a9c1400670a36bb0a.webp"
+  },
+  "source": {
+    "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-dry-ravine-loam/result.json",
+    "imagePath": "ai-image-metadata/battle-art/sources/forest/forest-heartlands-dry-ravine-loam/v1/396acec10cffeb320dd53997912ecce350c5f38e4a9329f4049b3871b91de81e.png",
+    "imageSha256": "sha256:396acec10cffeb320dd53997912ecce350c5f38e4a9329f4049b3871b91de81e",
+    "width": 256,
+    "height": 128,
+    "format": "png",
+    "reviewer": "codex-v3-template07-visual-assets",
+    "approvedAt": "2026-08-05T05:24:10.602Z"
+  }
+}

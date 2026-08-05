@@ -1,14 +1,68 @@
 {
   "schemaVersion": "battle-map-v3-active-release-pin-v1",
-  "catalogReleaseId": "battle-map-v3-forest-pilot-2026-07-30-r6",
-  "catalogPath": "battle-maps/catalog/releases/battle-map-v3-forest-pilot-2026-07-30-r6.json",
-  "catalogFullHash": "sha256:76af233bcb30c9716e1e07652134fbb9efdc928a83888f956ee321ad8d7cc85e",
+  "catalogReleaseId": "battle-map-v3-forest-pilot-2026-07-30-r16",
+  "catalogPath": "battle-maps/catalog/releases/battle-map-v3-forest-pilot-2026-07-30-r16.json",
+  "catalogFullHash": "sha256:c0978f801d4d496d8873d12d140aae6c012ceca9cf5134d62fdccd8901a8cd5f",
   "maps": [
     {
       "contentId": "forest-template-01-b",
       "contentVersion": 12,
       "path": "battle-maps/compiled/forest/forest-template-01-b.v12.json",
       "fullHash": "sha256:cad472a23e3ff4cc3549076b0a4715df4611ee91f87cb095d7c699ffe1d372f8"
+    },
+    {
+      "contentId": "forest-template-04-a",
+      "contentVersion": 9,
+      "path": "battle-maps/compiled/forest/forest-template-04-a.v9.json",
+      "fullHash": "sha256:4e60edd8fce88103da04d651eb4590ee474c222cfe45379690b5f27553e7b006"
+    },
+    {
+      "contentId": "forest-template-04-b",
+      "contentVersion": 9,
+      "path": "battle-maps/compiled/forest/forest-template-04-b.v9.json",
+      "fullHash": "sha256:23a55dfe499edc8f463d1e264edc3a0c70c6d661df7cdd831920cbe498c8fa25"
+    },
+    {
+      "contentId": "forest-template-04-c",
+      "contentVersion": 9,
+      "path": "battle-maps/compiled/forest/forest-template-04-c.v9.json",
+      "fullHash": "sha256:709a6454dbd30bd9dec7f6cada5c8767dab19fb8b72dedc0ba56b52bfd967edd"
+    },
+    {
+      "contentId": "forest-template-05-a",
+      "contentVersion": 6,
+      "path": "battle-maps/compiled/forest/forest-template-05-a.v6.json",
+      "fullHash": "sha256:0eca0d516b11bb9d997dbc1a08ccaff5121247c13cfa7361fb7386324b3ac3f2"
+    },
+    {
+      "contentId": "forest-template-05-b",
+      "contentVersion": 6,
+      "path": "battle-maps/compiled/forest/forest-template-05-b.v6.json",
+      "fullHash": "sha256:03a18a91fefff361f6787b9317389569fa7cbc1b253d1828316015a51ae44661"
+    },
+    {
+      "contentId": "forest-template-05-c",
+      "contentVersion": 6,
+      "path": "battle-maps/compiled/forest/forest-template-05-c.v6.json",
+      "fullHash": "sha256:7f1afbace02d1d19ae0e028da7600f05978667dfad152ed920aeb02a76e62fad"
+    },
+    {
+      "contentId": "forest-template-07-a",
+      "contentVersion": 8,
+      "path": "battle-maps/compiled/forest/forest-template-07-a.v8.json",
+      "fullHash": "sha256:aa091727e1db41cedbb964b8e96a28f33fac5ba8f92f82fb0ff248b30bfbf02c"
+    },
+    {
+      "contentId": "forest-template-07-b",
+      "contentVersion": 8,
+      "path": "battle-maps/compiled/forest/forest-template-07-b.v8.json",
+      "fullHash": "sha256:550e2b3b4089e9e63c818fa7c26c0715c32c998885590cff91bbb062c9c559ac"
+    },
+    {
+      "contentId": "forest-template-07-c",
+      "contentVersion": 8,
+      "path": "battle-maps/compiled/forest/forest-template-07-c.v8.json",
+      "fullHash": "sha256:700fee842a625237aa815a224e3377045d088078e0513d183a5a73bcd4838a79"
     }
   ]
 }

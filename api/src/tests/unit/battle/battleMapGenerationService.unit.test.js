@@ -41,9 +41,19 @@ const borderwoodEcologyContext = createBattleMapEcologyContext({
   name: 'Whispering Woods',
   node_type: 'forest',
   difficulty_tier: 1,
-  local_seed: 731,
+  local_seed: 5,
   region_id: 1,
   region_race: 'dwarf',
+  region_dominant_terrain: 'forest'
+});
+const heartlandsEcologyContext = createBattleMapEcologyContext({
+  id: 2,
+  name: 'Heartlands Woodland',
+  node_type: 'forest',
+  difficulty_tier: 5,
+  local_seed: 12,
+  region_id: 2,
+  region_race: 'human',
   region_dominant_terrain: 'forest'
 });
 
@@ -313,9 +323,9 @@ describe('authoritative battle-map generation', () => {
     )));
   });
 
-  it('selects, hydrates, and plays across the active forest v12 elevation contract', async () => {
+  it('automatically selects the active Borderwood pool in cumulative r16', async () => {
     const request = {
-      terrainSeed: 731,
+      terrainSeed: 5,
       nodeType: 'forest',
       mapWidth: 32,
       mapHeight: 32,
@@ -369,18 +379,18 @@ describe('authoritative battle-map generation', () => {
     assert.equal(generated.catalogCoverage, 'selected');
     assert.equal(
       generated.selectionProvenance.catalogReleaseId,
-      'battle-map-v3-forest-pilot-2026-07-30-r6'
+      'battle-map-v3-forest-pilot-2026-07-30-r16'
     );
     assert.equal(
       generated.selectionProvenance.catalogFullHash,
-      'sha256:76af233bcb30c9716e1e07652134fbb9efdc928a83888f956ee321ad8d7cc85e'
+      'sha256:c0978f801d4d496d8873d12d140aae6c012ceca9cf5134d62fdccd8901a8cd5f'
     );
     assert.equal(
       generated.selectionProvenance.ecologyProfile,
       'forest-iron-depths-borderwood'
     );
-    assert.equal(generated.selectionProvenance.mapContentId, 'forest-template-01-b');
-    assert.equal(generated.selectionProvenance.mapContentVersion, 12);
+    assert.equal(generated.selectionProvenance.mapContentId, 'forest-template-05-c');
+    assert.equal(generated.selectionProvenance.mapContentVersion, 6);
     assert.equal(generated.ecologyContext, borderwoodEcologyContext);
     assert.ok(generated.flatState.units.every(unit => (
       Number.isInteger(unit.tileX)
@@ -407,23 +417,8 @@ describe('authoritative battle-map generation', () => {
       [
         {
           kind: 'stairs',
-          direction: 'n',
-          assetKey: 'forest-borderwood-root-stairs-n'
-        },
-        {
-          kind: 'slope',
           direction: 'e',
-          assetKey: 'forest-borderwood-earth-ramp-e'
-        },
-        {
-          kind: 'stairs',
-          direction: 'n',
-          assetKey: 'forest-borderwood-root-stairs-s'
-        },
-        {
-          kind: 'stairs',
-          direction: 'n',
-          assetKey: 'forest-borderwood-root-stairs-s'
+          assetKey: 'forest-borderwood-root-stairs-e'
         },
         {
           kind: 'slope',
@@ -433,12 +428,27 @@ describe('authoritative battle-map generation', () => {
         {
           kind: 'stairs',
           direction: 'n',
-          assetKey: 'forest-borderwood-root-stairs-n'
+          assetKey: 'forest-borderwood-root-stairs-s'
+        },
+        {
+          kind: 'stairs',
+          direction: 'n',
+          assetKey: 'forest-borderwood-root-stairs-s'
+        },
+        {
+          kind: 'slope',
+          direction: 'w',
+          assetKey: 'forest-borderwood-earth-ramp-w'
         },
         {
           kind: 'slope',
           direction: 'n',
-          assetKey: 'forest-borderwood-earth-ramp-s'
+          assetKey: 'forest-borderwood-earth-ramp-n'
+        },
+        {
+          kind: 'stairs',
+          direction: 'n',
+          assetKey: 'forest-borderwood-root-stairs-s'
         },
         {
           kind: 'slope',
@@ -579,5 +589,85 @@ describe('authoritative battle-map generation', () => {
       { x: actor.tileX, y: actor.tileY },
       obstacleProbe.from
     );
+  });
+
+  it('automatically selects the active Heartlands map through tier 5', async () => {
+    const request = {
+      terrainSeed: 12,
+      nodeType: 'forest',
+      mapWidth: 32,
+      mapHeight: 32,
+      mode: 'pve',
+      difficultyTier: 5,
+      playerCount: 1,
+      enemyCount: 1,
+      ecologyContext: heartlandsEcologyContext,
+      initialMutableState: {
+        turn: 1,
+        units: [
+          {
+            id: 'player:1',
+            type: 'player',
+            class: 'ninja',
+            hp: 100,
+            maxHp: 100,
+            mp: 50,
+            maxMp: 50,
+            movement: 5,
+            attackRange: 1,
+            statusEffects: [],
+            skills: [],
+            skillCooldowns: {}
+          },
+          {
+            id: 'enemy:1',
+            type: 'enemy',
+            hp: 100,
+            maxHp: 100,
+            movement: 3,
+            statusEffects: []
+          }
+        ]
+      }
+    };
+
+    await assert.rejects(
+      generateBattleMap({
+        ...request,
+        clientCapabilities: v2Capabilities
+      }),
+      error => error.code === 'battle_map_upgrade_required'
+    );
+    const generated = await generateBattleMap({
+      ...request,
+      clientCapabilities: v3Capabilities
+    });
+
+    assert.equal(generated.battleMapSchemaVersion, 3);
+    assert.equal(generated.catalogCoverage, 'selected');
+    assert.equal(
+      generated.selectionProvenance.catalogReleaseId,
+      'battle-map-v3-forest-pilot-2026-07-30-r16'
+    );
+    assert.equal(
+      generated.selectionProvenance.catalogFullHash,
+      'sha256:c0978f801d4d496d8873d12d140aae6c012ceca9cf5134d62fdccd8901a8cd5f'
+    );
+    assert.equal(
+      generated.selectionProvenance.ecologyProfile,
+      'forest-heartlands-woodland'
+    );
+    assert.equal(generated.selectionProvenance.mapContentId, 'forest-template-07-c');
+    assert.equal(generated.selectionProvenance.mapContentVersion, 8);
+    assert.equal(generated.ecologyContext, heartlandsEcologyContext);
+    assert.deepEqual(
+      await battleMapV3FromFlatState(generated.flatState),
+      generated.finalMap
+    );
+    assert.ok(generated.flatState.units.every(unit => (
+      Number.isInteger(unit.tileX)
+      && Number.isInteger(unit.tileY)
+      && generated.finalMap.playableMask[unit.tileY][unit.tileX] === true
+    )));
   });
 });

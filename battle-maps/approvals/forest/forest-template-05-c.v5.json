@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "battle-map-v3-visual-approval-v2",
+  "decision": "approved",
+  "reviewer": "codex-r15-hardened-production-visual-review",
+  "reason": "Exact v5 render approved: the distinct west zigzag connects cleanly into the center without accidental seam merges, elevation transitions remain readable, formation spaces stay open, perimeter vegetation frames rather than occludes approaches, and the full camera preserves gameplay clarity.",
+  "checklistVersion": 2,
+  "theme": "forest",
+  "templateId": "forest-template-05",
+  "contentId": "forest-template-05-c",
+  "contentVersion": 5,
+  "mapPath": "battle-maps/compiled/forest/forest-template-05-c.v5.json",
+  "hashes": {
+    "authoritativeHash": "sha256:872b54c521354e506071bafa675de506b18c5b3cffecbd840027bcc3e19d0e79",
+    "fullHash": "sha256:626e87ab8d593d686d959f6b67dc5ac39aff62946c307a3067341361d15e3f73",
+    "visualHash": "sha256:7a9010351c961b0d6e069f90a887b45f92e0ee305cd8c890b81257e6dda2fb5a"
+  },
+  "sourceSidecar": {
+    "path": "ai-image-metadata/battle-maps/templates/forest/forest-template-05.json",
+    "fullHash": "sha256:45f407d629c40a42954a1ae97b0c5d835b17519e8e6ad9159a8a04abdb3b2c50"
+  },
+  "blueprint": {
+    "id": "forest-template-05-c",
+    "fullHash": "sha256:1f93970fc5e3378e7847390aebba73e94eb874b57fbe1b29a52e26dba70081e5",
+    "approvalIndexFullHash": "sha256:e6d3946071fe35f86cdf37abf8731bd7029a3dca783bc76ab1a07097a7908331"
+  },
+  "renderProfile": {
+    "id": "forest-iron-depths-borderwood-v5",
+    "path": "battle-maps/render-profiles/forest-borderwood-v5.json",
+    "fullHash": "sha256:e35459e124e6bcc16e6008d796f5feb1fcfc76b9d0f9b1a5c11e9f1c54ecd40e"
+  },
+  "tileCatalog": {
+    "id": "forest-borderwood-v5-tiles",
+    "version": 1,
+    "path": "battle-maps/tile-catalogs/forest-borderwood-v5.json",
+    "fullHash": "sha256:9c32448ffa019e2fd90442deb8b91545211e0ee5d4e8f8b8f2f5abe9aad7c1d7"
+  },
+  "assetBundle": {
+    "id": "battle-art-descriptors-2026-07-30",
+    "version": 7,
+    "path": "ai-image-metadata/battle-art/releases/battle-art-descriptors-2026-07-30.v7.json",
+    "manifestFullHash": "sha256:f6af2574a315cae7ee0b15a090a6c0919274fab9cb5e7f90aae76f16954008be"
+  },
+  "capabilityReport": {
+    "schemaVersion": "battle-map-v3-capability-report-v1",
+    "mapFullHash": "sha256:626e87ab8d593d686d959f6b67dc5ac39aff62946c307a3067341361d15e3f73",
+    "bossCapable": true,
+    "competitiveParity": false,
+    "parityCases": null
+  },
+  "screenshot": {
+    "path": "ai-image-metadata/battle-maps/review/forest/forest-template-05/forest-template-05-c/forest-template-05-c.v5.626e87ab8d59.png",
+    "bytes": 704006,
+    "width": 1088,
+    "height": 703,
+    "format": "png",
+    "sha256": "sha256:74d5cc8eecf1e6769ea030e56bf918494b0d5772517fe576d2a0565da7bc7bce"
+  }
+}

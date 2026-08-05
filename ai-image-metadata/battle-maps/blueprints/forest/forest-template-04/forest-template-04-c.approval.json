@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "battle-map-blueprint-approval-v2",
+  "id": "forest-template-04-c",
+  "theme": "forest",
+  "templateId": "forest-template-04",
+  "decision": "approved",
+  "reviewer": "codex-v3-heartlands-blueprint-review",
+  "blueprintPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-04/forest-template-04-c.json",
+  "blueprintFileSha256": "sha256:865cc7443267cd7afdc011cde13d23ef10d006136b1c70cfab221f0b0b523e8c",
+  "blueprintFullHash": "sha256:452b7f7c96d940753318f4fff3f637f25431644b89d16f03fcd23b455c9cb287",
+  "sourceImageSha256": "sha256:c622b9b0def37497cf12a96013c72cfff405ad15aaae2955b5a8820a6f7e9efd",
+  "promptProfile": {
+    "id": "map-blueprint-v2",
+    "path": "ai-image-metadata/battle-maps/prompts/map-blueprint-v2.json",
+    "sha256": "sha256:d9fd841812bcc9a4713d3ac8b1c81715f359e55d55098589f8970650fed7cdae"
+  },
+  "reason": "Mechanical preview and exact blueprint review confirm the retained flank branch, distinct route geometry, reachable formation shift, and preserved semantic topology.",
+  "fullHash": "sha256:278ddb90f8c13b34f7a3d102ced4de33a3be0357b6fdb8a53c23463d6adf64cf"
+}

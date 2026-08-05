@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "battle-map-blueprint-approval-index-v2",
+  "theme": "forest",
+  "templateId": "forest-template-04",
+  "entries": [
+    {
+      "id": "forest-template-04-a",
+      "blueprintPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-04/forest-template-04-a.json",
+      "approvalPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-04/forest-template-04-a.approval.json",
+      "blueprintFullHash": "sha256:181ed4c0034fbac575383d86a755e31650b6022ab2622a1f11124f4b8ac220f0",
+      "sourceImageSha256": "sha256:c622b9b0def37497cf12a96013c72cfff405ad15aaae2955b5a8820a6f7e9efd",
+      "promptProfileSha256": "sha256:d9fd841812bcc9a4713d3ac8b1c81715f359e55d55098589f8970650fed7cdae",
+      "reviewer": "codex-v3-heartlands-blueprint-review",
+      "decision": "approved",
+      "reason": "Mechanical preview and exact blueprint review confirm distinct interlocking routes, coordinated connections, reachable spawn movement, and preserved semantic regions.",
+      "approvalFullHash": "sha256:5ebba0c74b28ac921397a71ae9b39e3f560759e00b1a3cc57efcefa4b269836d"
+    },
+    {
+      "id": "forest-template-04-b",
+      "blueprintPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-04/forest-template-04-b.json",
+      "approvalPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-04/forest-template-04-b.approval.json",
+      "blueprintFullHash": "sha256:3ae5a7d8d44df85ac946d404e5eab677117cb8e263896acd38d4f33f556210c5",
+      "sourceImageSha256": "sha256:c622b9b0def37497cf12a96013c72cfff405ad15aaae2955b5a8820a6f7e9efd",
+      "promptProfileSha256": "sha256:d9fd841812bcc9a4713d3ac8b1c81715f359e55d55098589f8970650fed7cdae",
+      "reviewer": "codex-v3-heartlands-blueprint-review",
+      "decision": "approved",
+      "reason": "Mechanical preview and exact blueprint review confirm bounded terrace elevation authoring, a reachable formation shift, and exact dependent region membership.",
+      "approvalFullHash": "sha256:cff48ffefc6f624554aea29ce13d386540a4aff4a2ff693bcc89d60ecbf7d557"
+    },
+    {
+      "id": "forest-template-04-c",
+      "blueprintPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-04/forest-template-04-c.json",
+      "approvalPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-04/forest-template-04-c.approval.json",
+      "blueprintFullHash": "sha256:452b7f7c96d940753318f4fff3f637f25431644b89d16f03fcd23b455c9cb287",
+      "sourceImageSha256": "sha256:c622b9b0def37497cf12a96013c72cfff405ad15aaae2955b5a8820a6f7e9efd",
+      "promptProfileSha256": "sha256:d9fd841812bcc9a4713d3ac8b1c81715f359e55d55098589f8970650fed7cdae",
+      "reviewer": "codex-v3-heartlands-blueprint-review",
+      "decision": "approved",
+      "reason": "Mechanical preview and exact blueprint review confirm the retained flank branch, distinct route geometry, reachable formation shift, and preserved semantic topology.",
+      "approvalFullHash": "sha256:278ddb90f8c13b34f7a3d102ced4de33a3be0357b6fdb8a53c23463d6adf64cf"
+    }
+  ],
+  "fullHash": "sha256:de4b44604fddd67b88fa14fc58ae262c50ba165817d2aa045af8baf55c5129c1"
+}

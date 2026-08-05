@@ -1,0 +1,308 @@
+{
+  "schemaVersion": "battle-map-v3-catalog-definition-v2",
+  "catalogReleaseId": "battle-map-v3-forest-pilot-2026-07-30-r16",
+  "entries": [
+    {
+      "id": "entry:forest-template-01-b",
+      "mapPath": "battle-maps/compiled/forest/forest-template-01-b.v12.json",
+      "approvalPath": "battle-maps/approvals/forest/forest-template-01-b.v12.json",
+      "approvalFileSha256": "sha256:56e893a0572deb0fd4c3b0c995f9b274f5246ba51b8c3fb50b9e3d7189bb1e0a",
+      "orientation": "isometric-diamond",
+      "teamLayout": "players-vs-opponents",
+      "weight": 1,
+      "bossCapable": false,
+      "competitiveParity": false,
+      "historicalPublication": {
+        "catalogReleaseId": "battle-map-v3-forest-pilot-2026-07-30-r6",
+        "catalogFullHash": "sha256:76af233bcb30c9716e1e07652134fbb9efdc928a83888f956ee321ad8d7cc85e"
+      }
+    },
+    {
+      "id": "entry:forest-template-04-a",
+      "mapPath": "battle-maps/compiled/forest/forest-template-04-a.v9.json",
+      "approvalPath": "battle-maps/approvals/forest/forest-template-04-a.v9.json",
+      "approvalFileSha256": "sha256:3f0ca98702deb55de5982e128c590820917db55c59d00711565f89d4a468087d",
+      "orientation": "isometric-diamond",
+      "teamLayout": "players-vs-opponents",
+      "weight": 1,
+      "bossCapable": false,
+      "competitiveParity": false
+    },
+    {
+      "id": "entry:forest-template-04-b",
+      "mapPath": "battle-maps/compiled/forest/forest-template-04-b.v9.json",
+      "approvalPath": "battle-maps/approvals/forest/forest-template-04-b.v9.json",
+      "approvalFileSha256": "sha256:433c58b98e9dd2944ff5f984f99b24deca59d5f777acf4250753fae6a050bdee",
+      "orientation": "isometric-diamond",
+      "teamLayout": "players-vs-opponents",
+      "weight": 1,
+      "bossCapable": false,
+      "competitiveParity": false
+    },
+    {
+      "id": "entry:forest-template-04-c",
+      "mapPath": "battle-maps/compiled/forest/forest-template-04-c.v9.json",
+      "approvalPath": "battle-maps/approvals/forest/forest-template-04-c.v9.json",
+      "approvalFileSha256": "sha256:ee535eb9bb5d3438261bc3cf820704c1657fa3649456595338629956959c0b4e",
+      "orientation": "isometric-diamond",
+      "teamLayout": "players-vs-opponents",
+      "weight": 1,
+      "bossCapable": false,
+      "competitiveParity": false
+    },
+    {
+      "id": "entry:forest-template-05-a",
+      "mapPath": "battle-maps/compiled/forest/forest-template-05-a.v6.json",
+      "approvalPath": "battle-maps/approvals/forest/forest-template-05-a.v6.json",
+      "approvalFileSha256": "sha256:5c28993c189e9e05fa0ca5c92a92a0eaed805e2f387a435cb74e0704da219b3f",
+      "orientation": "isometric-diamond",
+      "teamLayout": "players-vs-opponents",
+      "weight": 1,
+      "bossCapable": false,
+      "competitiveParity": false
+    },
+    {
+      "id": "entry:forest-template-05-b",
+      "mapPath": "battle-maps/compiled/forest/forest-template-05-b.v6.json",
+      "approvalPath": "battle-maps/approvals/forest/forest-template-05-b.v6.json",
+      "approvalFileSha256": "sha256:7d8a2d4530ccb11403ceb36a7f4dbed35186e17ac87c0e446f67ec38e542dd6a",
+      "orientation": "isometric-diamond",
+      "teamLayout": "players-vs-opponents",
+      "weight": 1,
+      "bossCapable": false,
+      "competitiveParity": false
+    },
+    {
+      "id": "entry:forest-template-05-c",
+      "mapPath": "battle-maps/compiled/forest/forest-template-05-c.v6.json",
+      "approvalPath": "battle-maps/approvals/forest/forest-template-05-c.v6.json",
+      "approvalFileSha256": "sha256:693e573c44684225268df38f029ff8b11ca5a8c5ba66c2226473c57e5329f51a",
+      "orientation": "isometric-diamond",
+      "teamLayout": "players-vs-opponents",
+      "weight": 1,
+      "bossCapable": false,
+      "competitiveParity": false
+    },
+    {
+      "id": "entry:forest-template-07-a",
+      "mapPath": "battle-maps/compiled/forest/forest-template-07-a.v8.json",
+      "approvalPath": "battle-maps/approvals/forest/forest-template-07-a.v8.json",
+      "approvalFileSha256": "sha256:566ba6c9519c8f9846aaa6c6f414ead415791be1af99b2ddac9f81ab6fc33fd2",
+      "orientation": "isometric-diamond",
+      "teamLayout": "players-vs-opponents",
+      "weight": 1,
+      "bossCapable": false,
+      "competitiveParity": false
+    },
+    {
+      "id": "entry:forest-template-07-b",
+      "mapPath": "battle-maps/compiled/forest/forest-template-07-b.v8.json",
+      "approvalPath": "battle-maps/approvals/forest/forest-template-07-b.v8.json",
+      "approvalFileSha256": "sha256:eb1a0df094ec88041d737d77584da0e464b92b71fe21257a8998ec37bb59faae",
+      "orientation": "isometric-diamond",
+      "teamLayout": "players-vs-opponents",
+      "weight": 1,
+      "bossCapable": false,
+      "competitiveParity": false
+    },
+    {
+      "id": "entry:forest-template-07-c",
+      "mapPath": "battle-maps/compiled/forest/forest-template-07-c.v8.json",
+      "approvalPath": "battle-maps/approvals/forest/forest-template-07-c.v8.json",
+      "approvalFileSha256": "sha256:3d718f085e92e4dd29dfd4d884bfc52c75fd0717afbff772002ab76bedff1b60",
+      "orientation": "isometric-diamond",
+      "teamLayout": "players-vs-opponents",
+      "weight": 1,
+      "bossCapable": false,
+      "competitiveParity": false
+    }
+  ],
+  "coverageQueries": [
+    {
+      "id": "coverage:forest:pve:tier-1",
+      "theme": "forest",
+      "ecologyProfile": "forest-heartlands-woodland",
+      "sourceTier": 1,
+      "selectionBand": "tier-1",
+      "mode": "pve",
+      "dimensions": {
+        "width": 32,
+        "height": 32
+      },
+      "teamLayout": "players-vs-opponents",
+      "playerCounts": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "opponentCounts": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "requireBossCapable": false,
+      "requireCompetitiveParity": false
+    },
+    {
+      "id": "coverage:forest:pve:tier-1",
+      "theme": "forest",
+      "ecologyProfile": "forest-iron-depths-borderwood",
+      "sourceTier": 1,
+      "selectionBand": "tier-1",
+      "mode": "pve",
+      "dimensions": {
+        "width": 32,
+        "height": 32
+      },
+      "teamLayout": "players-vs-opponents",
+      "playerCounts": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "opponentCounts": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "requireBossCapable": false,
+      "requireCompetitiveParity": false
+    },
+    {
+      "id": "coverage:forest:pve:tier-2",
+      "theme": "forest",
+      "ecologyProfile": "forest-heartlands-woodland",
+      "sourceTier": 2,
+      "selectionBand": "tier-2",
+      "mode": "pve",
+      "dimensions": {
+        "width": 32,
+        "height": 32
+      },
+      "teamLayout": "players-vs-opponents",
+      "playerCounts": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "opponentCounts": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "requireBossCapable": false,
+      "requireCompetitiveParity": false
+    },
+    {
+      "id": "coverage:forest:pve:tier-3",
+      "theme": "forest",
+      "ecologyProfile": "forest-heartlands-woodland",
+      "sourceTier": 3,
+      "selectionBand": "tier-3",
+      "mode": "pve",
+      "dimensions": {
+        "width": 32,
+        "height": 32
+      },
+      "teamLayout": "players-vs-opponents",
+      "playerCounts": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "opponentCounts": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "requireBossCapable": false,
+      "requireCompetitiveParity": false
+    },
+    {
+      "id": "coverage:forest:pve:tier-4",
+      "theme": "forest",
+      "ecologyProfile": "forest-heartlands-woodland",
+      "sourceTier": 4,
+      "selectionBand": "tier-4",
+      "mode": "pve",
+      "dimensions": {
+        "width": 32,
+        "height": 32
+      },
+      "teamLayout": "players-vs-opponents",
+      "playerCounts": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "opponentCounts": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "requireBossCapable": false,
+      "requireCompetitiveParity": false
+    },
+    {
+      "id": "coverage:forest:pve:tier-5",
+      "theme": "forest",
+      "ecologyProfile": "forest-heartlands-woodland",
+      "sourceTier": 5,
+      "selectionBand": "tier-5",
+      "mode": "pve",
+      "dimensions": {
+        "width": 32,
+        "height": 32
+      },
+      "teamLayout": "players-vs-opponents",
+      "playerCounts": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "opponentCounts": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "requireBossCapable": false,
+      "requireCompetitiveParity": false
+    }
+  ]
+}

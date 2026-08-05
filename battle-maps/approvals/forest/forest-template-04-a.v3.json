@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "battle-map-v3-visual-approval-v2",
+  "decision": "approved",
+  "reviewer": "codex-v3-heartlands-render-review",
+  "reason": "The exact v3 render shows a visibly distinct compact interlocking loam-path knot with two readable formation crossings; route seams remain continuous through the center, separate slope and stair terrace approaches are legible, the organic canopy boundary is intact, landmarks avoid route obstruction, and both formation areas remain visually clear.",
+  "checklistVersion": 2,
+  "theme": "forest",
+  "templateId": "forest-template-04",
+  "contentId": "forest-template-04-a",
+  "contentVersion": 3,
+  "mapPath": "battle-maps/compiled/forest/forest-template-04-a.v3.json",
+  "hashes": {
+    "authoritativeHash": "sha256:7d009ff8550788f8e18a60ade6489778311508ec4e3d499d7742be12199310cc",
+    "fullHash": "sha256:c9dd54d112279337db3ccad541f7ca28a7518b0421ee83cd5c4b1a75219c0f87",
+    "visualHash": "sha256:66b9f40238e4f2ce8e1605819cad506237c50e9a7461b4ddb39bac6f647c20f9"
+  },
+  "sourceSidecar": {
+    "path": "ai-image-metadata/battle-maps/templates/forest/forest-template-04.json",
+    "fullHash": "sha256:3743aca6c2b1214c81e0c09dd26082692edab9f7ebd0649f5eeb8bc19279dcb2"
+  },
+  "blueprint": {
+    "id": "forest-template-04-a",
+    "fullHash": "sha256:181ed4c0034fbac575383d86a755e31650b6022ab2622a1f11124f4b8ac220f0",
+    "approvalIndexFullHash": "sha256:de4b44604fddd67b88fa14fc58ae262c50ba165817d2aa045af8baf55c5129c1"
+  },
+  "renderProfile": {
+    "id": "forest-heartlands-woodland-v1",
+    "path": "battle-maps/render-profiles/forest-heartlands-v1.json",
+    "fullHash": "sha256:a872213afae1120acfab28debeae6ec6633ff9a4e3e874bb6baf9161b02027bf"
+  },
+  "tileCatalog": {
+    "id": "forest-heartlands-v1-tiles",
+    "version": 1,
+    "path": "battle-maps/tile-catalogs/forest-heartlands-v1.json",
+    "fullHash": "sha256:0c0f946b7da9d1564380579629fe4d46f8f003e881b8006825000f60d1f9701d"
+  },
+  "assetBundle": {
+    "id": "battle-art-descriptors-2026-07-30",
+    "version": 7,
+    "path": "ai-image-metadata/battle-art/releases/battle-art-descriptors-2026-07-30.v7.json",
+    "manifestFullHash": "sha256:f6af2574a315cae7ee0b15a090a6c0919274fab9cb5e7f90aae76f16954008be"
+  },
+  "capabilityReport": {
+    "schemaVersion": "battle-map-v3-capability-report-v1",
+    "mapFullHash": "sha256:c9dd54d112279337db3ccad541f7ca28a7518b0421ee83cd5c4b1a75219c0f87",
+    "bossCapable": true,
+    "competitiveParity": false,
+    "parityCases": null
+  },
+  "screenshot": {
+    "path": "ai-image-metadata/battle-maps/review/forest/forest-template-04/forest-template-04-a/forest-template-04-a.v3.c9dd54d11227.png",
+    "bytes": 715041,
+    "width": 1088,
+    "height": 703,
+    "format": "png",
+    "sha256": "sha256:bd4c1964d91fd041f05a8d2f78d2149d77b100b690a5737e6db0e4eeb3269156"
+  }
+}

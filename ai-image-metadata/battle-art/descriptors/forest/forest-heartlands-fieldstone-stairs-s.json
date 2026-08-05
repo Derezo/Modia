@@ -21,7 +21,7 @@
       1
     ]
   },
-  "status": "approved",
+  "status": "compiled",
   "promptProfile": {
     "id": "battle-art-family-v2",
     "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
@@ -90,8 +90,8 @@
   "content": {
     "version": 1,
     "sourceSha256": "sha256:66235a3a3e44401e957114b4fd6b393b2d8433d056d8a1058c225366138b51db",
-    "runtimeSha256": null,
-    "immutableUrl": null
+    "runtimeSha256": "sha256:06393aa56edb43e1644cb0a7a0192938bb7985f7b5a933eda8360697b9fe5749",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v10/forest/connection-stairs/forest-heartlands-fieldstone-stairs-s/v1/06393aa56edb43e1644cb0a7a0192938bb7985f7b5a933eda8360697b9fe5749.webp"
   },
   "source": {
     "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-stairs-s/result.json",

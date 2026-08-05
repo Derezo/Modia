@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v2",
+  "theme": "forest",
+  "familyId": "forest-heartlands-dry-ravine-loam",
+  "decision": "approved",
+  "reviewer": "codex-v3-template07-visual-assets",
+  "reason": "The full seam-safe diamond reads as flat dry ochre loam with shallow erosion marks, sparse roots, and small stones, clearly separating the ravine floor without water or a baked wall.",
+  "reviewedAt": "2026-08-05T05:24:10.602Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-dry-ravine-loam.json",
+    "sha256": "sha256:391fb23da1e8549c52fe85834660cef2db9e15641d7a00901f584f171379aa0f",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-dry-ravine-loam/result.json",
+      "bytes": 2738,
+      "sha256": "sha256:7522ded98faefa9b73469a2bb3670c37e9c94aaceea38adc2df2fcba45dc7599"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-dry-ravine-loam/candidate.png",
+      "bytes": 40198,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:396acec10cffeb320dd53997912ecce350c5f38e4a9329f4049b3871b91de81e"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "styleReferenceMode": "attachments",
+    "styleReferenceProvenance": [
+      {
+        "id": "forest-source-template-01",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1",
+        "stagedBasename": "style-reference-01.png"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 600000,
+      "imageArguments": [
+        "style-reference-01.png"
+      ],
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-dry-ravine-loam/prompt.txt",
+        "bytes": 11083,
+        "sha256": "sha256:8930d4abfa42909bb9443307a734c89e58fda80396b3e4af389528e0c5b87721"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-dry-ravine-loam/worker.jsonl",
+        "bytes": 25311,
+        "sha256": "sha256:778f593f947f1f5ac63be6faeca41c9b9a56227ad6ee3697d12823bc87afd7f8"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-dry-ravine-loam/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-dry-ravine-loam/last-message.txt",
+        "bytes": 351,
+        "sha256": "sha256:fa66d857437b2decdcebf1b2ca33422480ada0643e2944452b4f3c0a1e611b37"
+      }
+    }
+  },
+  "fullHash": "sha256:34f9d8939209ec5287b34e772aaf17bcf17faf14f6733031431773a6520e2744"
+}

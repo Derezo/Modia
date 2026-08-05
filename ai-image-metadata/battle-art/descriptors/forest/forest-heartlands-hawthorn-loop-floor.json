@@ -1,0 +1,98 @@
+{
+  "schemaVersion": "battle-art-family-descriptor-v2",
+  "id": "forest-heartlands-hawthorn-loop-floor",
+  "theme": "forest",
+  "category": "surface",
+  "familyGroup": "forest-heartlands-hawthorn-loop-floor",
+  "variantId": "surface-0",
+  "capabilities": {
+    "direction": null,
+    "routeTopology": null,
+    "surfaceVariant": 0,
+    "ecologyProfile": "forest-heartlands-woodland",
+    "tierBands": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "heightDeltas": [
+      0
+    ]
+  },
+  "status": "compiled",
+  "promptProfile": {
+    "id": "battle-art-family-v2",
+    "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+    "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+  },
+  "styleReferences": [
+    {
+      "id": "forest-source-template-01",
+      "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+      "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+    }
+  ],
+  "generationPrompt": "Create exactly one seam-safe orthographic isometric forest surface asset named forest-heartlands-hawthorn-loop-floor for ecology profile forest-heartlands-woodland; tier bands 1, 2, 3, 4, 5; surface variant 0. Author the declared orientation directly, preserve continuous neighboring materials and edge alignment, and include only the declared family content. Regional visual vocabulary: Heartlands Woodland uses a coherent pastoral forest of mature broad-canopy oak, field maple, and flowering hawthorn; warm meadow grass and bluebells; rounded cream-gray fieldstone; warm ochre loam and oak leaf litter; and dappled late-morning light. Keep this species mix, material palette, scale, and lighting explicitly consistent across every directional edge and transition. Depict a complete full ground diamond whose dominant identity is the sheltered floor inside an old hawthorn loop: deep brown humus and decomposed hawthorn leaves, one soft crescent of thinner grass, sparse white petal flecks, a few muted red berry skins, and short weathered thorn-twig arcs lying flat. Make this materially distinct from flowering clover, fern-and-hazel litter, dry ravine loam, fieldstone terrace turf, and generic meadow ground. Suggest the sheltered ecology through floor debris only; do not draw the enclosing hedge, a closed ring, wreath, circular border, wall, or blocking thicket. Carry the same humus-and-leaf material continuously through every diamond edge with a quiet shared seam perimeter; keep petals, berries, and twig accents away from the rim. Its source-raster center is (128,64). Never depict internal tile boundaries, square subcells, checkerboards, mosaics, quilts, paving, contour grids, repeated stamps, evenly spaced debris, stripes, uniform noise, a clipped patch, or a floating island. Keep the field calm enough for characters and route overlays. Do not add a baked backdrop, black void, unrelated terrain wall, or presentation frame.",
+  "rasterContract": {
+    "schemaVersion": "battle-art-raster-contract-v1",
+    "kind": "opaque-tile-diamond",
+    "alphaThreshold": 240,
+    "minimumCoveredPermille": 1000,
+    "maximumExteriorCoveredPermille": 5
+  },
+  "canvas": {
+    "width": 256,
+    "height": 128
+  },
+  "placement": {
+    "pivot": {
+      "x": 128,
+      "y": 64
+    },
+    "anchor": {
+      "x": 128,
+      "y": 64
+    },
+    "footprint": {
+      "x": 0,
+      "y": 0,
+      "width": 1,
+      "height": 1
+    },
+    "collision": {
+      "kind": "none",
+      "cells": []
+    },
+    "drawBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 128
+    },
+    "occlusionBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
+    },
+    "stratum": "surface"
+  },
+  "content": {
+    "version": 1,
+    "sourceSha256": "sha256:a9cb93c91847191f3e3098293d82a392e710a3df33bd4ae618b90047a26a905e",
+    "runtimeSha256": "sha256:ba06c209ff95568f2feaf781e74f06af335ab87a9d77855b1af6aafb0dbc4963",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v10/forest/surface/forest-heartlands-hawthorn-loop-floor/v1/ba06c209ff95568f2feaf781e74f06af335ab87a9d77855b1af6aafb0dbc4963.webp"
+  },
+  "source": {
+    "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hawthorn-loop-floor/result.json",
+    "imagePath": "ai-image-metadata/battle-art/sources/forest/forest-heartlands-hawthorn-loop-floor/v1/a9cb93c91847191f3e3098293d82a392e710a3df33bd4ae618b90047a26a905e.png",
+    "imageSha256": "sha256:a9cb93c91847191f3e3098293d82a392e710a3df33bd4ae618b90047a26a905e",
+    "width": 256,
+    "height": 128,
+    "format": "png",
+    "reviewer": "codex-v3-template07-visual-assets",
+    "approvedAt": "2026-08-05T05:24:11.446Z"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "battle-map-blueprint-approval-v2",
+  "id": "forest-template-03-a",
+  "theme": "forest",
+  "templateId": "forest-template-03",
+  "decision": "approved",
+  "reviewer": "codex-v3-heartlands-review",
+  "blueprintPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-03/forest-template-03-a.json",
+  "blueprintFileSha256": "sha256:c7ef500193f67a338380e7754f1cd4f30ab0fd62ee3666fbfea80c35e4968172",
+  "blueprintFullHash": "sha256:235a9ae69dcdcebd44659f500b6b0a472fec98d3c92d1b2a51bf0ab6a383aa5b",
+  "sourceImageSha256": "sha256:c622b9b0def37497cf12a96013c72cfff405ad15aaae2955b5a8820a6f7e9efd",
+  "promptProfile": {
+    "id": "map-blueprint-v2",
+    "path": "ai-image-metadata/battle-maps/prompts/map-blueprint-v2.json",
+    "sha256": "sha256:d9fd841812bcc9a4713d3ac8b1c81715f359e55d55098589f8970650fed7cdae"
+  },
+  "reason": "Approved after mechanical preview and source-image comparison: the authored JSON prime preserves the Heartlands figure-eight dual approaches, compact central loam hollow, separately routed slope/stair access to the northern fieldstone overlook, five western formation slots, the reviewed 24-cell opponent pool, all five required topology-area identities, and complete 13-family renderer closure.",
+  "fullHash": "sha256:67aaa0ddaf121e573496ae28be57e3f637209d0064617d87fa647a40c6b46be3"
+}

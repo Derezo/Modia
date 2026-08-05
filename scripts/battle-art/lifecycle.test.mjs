@@ -38,6 +38,8 @@ import {
   LEGACY_EVIDENCE_REGISTRY_PATH,
   READINESS_PLAN_PATH,
   RENDER_PROFILE,
+  REVALIDATED_CANDIDATE_SCHEMA,
+  REVALIDATED_REVIEW_SCHEMA,
   REVIEW_SCHEMA,
   THEMES,
   approveCandidate,
@@ -58,6 +60,7 @@ import {
   hashFile,
   generatedArtifactPath,
   loadBattleArt,
+  inspectImageContents,
   prepareDirectRouteCandidate,
   readJson,
   recordCandidateReview,
@@ -93,6 +96,7 @@ import {
   countImagegenInvocations,
   generateBattleArt,
   parseGenerateArgs,
+  revalidateFailedRouteAttempt,
   runCommand
 } from './generate.mjs';
 import {
@@ -167,12 +171,22 @@ async function fixture({
   const directReferences = manifest.styleReferences.filter(reference => (
     reference.path.startsWith('ai-image-metadata/battle-art/sources/')
   ));
+  const directGeometryPrimeReferenceIds = new Set();
+  for (const descriptorRelative of manifest.descriptors) {
+    const descriptor = (await readJson(root, descriptorRelative)).value;
+    if (descriptor.directGeometryPrime?.sourceReferenceId !== undefined) {
+      directGeometryPrimeReferenceIds.add(
+        descriptor.directGeometryPrime.sourceReferenceId
+      );
+    }
+  }
   const directOwnerIds = new Set(directReferences.map(reference => (
     reference.path.split('/')[4]
   )));
   if (!preserveDirectStyleProvenance) {
     manifest.styleReferences = manifest.styleReferences.filter(reference => (
       !reference.path.startsWith('ai-image-metadata/battle-art/sources/')
+      || directGeometryPrimeReferenceIds.has(reference.id)
     ));
   }
   for (const reference of manifest.styleReferences) {
@@ -197,8 +211,19 @@ async function fixture({
       path.join(root, entry.failureRecord.path)
     );
   }
-  if (preserveDirectStyleProvenance) {
-    for (const family of directOwnerIds) {
+  const requiredDirectGeometryPrimeOwnerIds = new Set(
+    directReferences
+      .filter(reference => (
+        directGeometryPrimeReferenceIds.has(reference.id)
+      ))
+      .map(reference => reference.path.split('/')[4])
+  );
+  const provenanceOwnerIds = preserveDirectStyleProvenance
+    ? directOwnerIds
+    : requiredDirectGeometryPrimeOwnerIds;
+  const compiledAttestationOwnerIds = new Set();
+  if (provenanceOwnerIds.size > 0) {
+    for (const family of provenanceOwnerIds) {
       const descriptorRelative = manifest.descriptors.find(relative => (
         path.basename(relative, '.json') === family
       ));
@@ -206,6 +231,20 @@ async function fixture({
         REPOSITORY_ROOT,
         descriptorRelative
       )).value;
+      const currentReviewRelative =
+        `ai-image-metadata/battle-art/reviews/${ownerDescriptor.theme}/`
+        + `${family}/`
+        + `${ownerDescriptor.source.imageSha256.slice('sha256:'.length)}.json`;
+      const currentReview = (await readJson(
+        REPOSITORY_ROOT,
+        currentReviewRelative
+      )).value;
+      if (
+        currentReview.schemaVersion
+          === COMPILED_SOURCE_ATTESTATION_SCHEMA
+      ) {
+        compiledAttestationOwnerIds.add(family);
+      }
       await mkdir(
         path.join(root, 'ai-image-metadata/battle-art/reviews/forest'),
         { recursive: true }
@@ -223,7 +262,7 @@ async function fixture({
         ),
         { recursive: true }
       );
-      if (ownerDescriptor.status === 'compiled') {
+      if (compiledAttestationOwnerIds.has(family)) {
         const runtimeRelative =
           `frontend/public${ownerDescriptor.content.immutableUrl}`;
         await mkdir(path.dirname(path.join(root, runtimeRelative)), {
@@ -234,6 +273,23 @@ async function fixture({
           path.join(root, runtimeRelative)
         );
       }
+      await mkdir(
+        path.join(root, 'ai-image-metadata/battle-art/candidates/forest'),
+        { recursive: true }
+      );
+      await cp(
+        path.join(
+          REPOSITORY_ROOT,
+          'ai-image-metadata/battle-art/candidates/forest',
+          family
+        ),
+        path.join(
+          root,
+          'ai-image-metadata/battle-art/candidates/forest',
+          family
+        ),
+        { recursive: true }
+      );
     }
   }
   const excludedDescriptorPaths = manifest.descriptors.filter(
@@ -284,13 +340,35 @@ async function fixture({
   const descriptors = [];
   for (const descriptorRelative of manifest.descriptors) {
     const descriptor = (await readJson(root, descriptorRelative)).value;
-    const draft = preserveDirectStyleProvenance
-      && directOwnerIds.has(descriptor.id)
-      ? descriptor
+    const preserveCurrentDescriptor =
+      requiredDirectGeometryPrimeOwnerIds.has(descriptor.id)
+      || (
+        preserveDirectStyleProvenance
+        && directOwnerIds.has(descriptor.id)
+      );
+    const preserveDescriptorStyleReferences =
+      preserveCurrentDescriptor
+      || descriptor.directGeometryPrime !== undefined;
+    const draft = preserveCurrentDescriptor
+      ? compiledAttestationOwnerIds.has(descriptor.id)
+        ? descriptor
+        : {
+            ...descriptor,
+            status: 'approved',
+            content: {
+              ...descriptor.content,
+              runtimeSha256: null,
+              immutableUrl: null
+            }
+          }
       : {
           ...descriptor,
           status: 'draft',
-          styleReferences: structuredClone(manifest.styleReferences.slice(0, 1)),
+          styleReferences: structuredClone(
+            preserveDescriptorStyleReferences
+              ? descriptor.styleReferences
+              : manifest.styleReferences.slice(0, 1)
+          ),
           content: {
             ...descriptor.content,
             sourceSha256: null,
@@ -299,6 +377,15 @@ async function fixture({
           },
           source: null
         };
+    if (draft.source !== null) {
+      await mkdir(path.dirname(path.join(root, draft.source.imagePath)), {
+        recursive: true
+      });
+      await copyFile(
+        path.join(REPOSITORY_ROOT, draft.source.imagePath),
+        path.join(root, draft.source.imagePath)
+      );
+    }
     await writeFile(path.join(root, descriptorRelative), stableJson(draft));
     descriptors.push({ path: descriptorRelative, descriptor: draft });
   }
@@ -369,6 +456,17 @@ async function retainTrackedApprovedV1Evidence(root, familyId) {
     path.join(REPOSITORY_ROOT, descriptor.source.imagePath),
     path.join(root, descriptor.source.imagePath)
   );
+  if (descriptor.status === 'compiled') {
+    const runtimeRelative =
+      `frontend/public${descriptor.content.immutableUrl}`;
+    await mkdir(path.dirname(path.join(root, runtimeRelative)), {
+      recursive: true
+    });
+    await copyFile(
+      path.join(REPOSITORY_ROOT, runtimeRelative),
+      path.join(root, runtimeRelative)
+    );
+  }
   const candidateRelative =
     `ai-image-metadata/battle-art/candidates/forest/${familyId}`;
   await cp(
@@ -638,6 +736,111 @@ const HEARTLANDS_STRAIGHT_EW_REFERENCE =
   'ai-image-metadata/battle-art/sources/forest/'
   + 'forest-heartlands-loam-path-straight-ew/v1/'
   + 'c1e441f91c71349b3e49e1319a51af80bf69433ada4f74d8aa838e0be94abaf3.png';
+const HEARTLANDS_STRAIGHT_NS_V11_PINCHED_RAW =
+  'ai-image-metadata/battle-art/generated-artifacts/forest/'
+  + 'forest-heartlands-loam-path-straight-ns/'
+  + 'b4d67eb73e265a7f32c7eb0864f5725bfa7e14c71d05fef4f30d631244c40342.png';
+const HEARTLANDS_STRAIGHT_NS_V12_OVERLONG_RAW =
+  'ai-image-metadata/battle-art/generated-artifacts/forest/'
+  + 'forest-heartlands-loam-path-straight-ns/'
+  + 'f78da18c496ff17a1e065a9eff5edd9d9105d8b2e2bdd1946be7501e9fa6ca51.png';
+const HEARTLANDS_STRAIGHT_NS_V13_APPROVED_RAW =
+  'ai-image-metadata/battle-art/generated-artifacts/forest/'
+  + 'forest-heartlands-loam-path-straight-ns/'
+  + 'e02c939002b6463dc62bd03f1ca338c90009337e3eccded120bdd750154d14a2.png';
+const HEARTLANDS_CORNER_ES_REVALIDATABLE_FAILURE =
+  'ai-image-metadata/battle-art/generated-artifacts/forest/'
+  + 'forest-heartlands-loam-path-corner-es/failures/'
+  + '04ff0d33d42588c5f231dc1b9a0b9e717bbfa8d8b2b2f847a8f3f2773c30b0cd.json';
+async function copyFailedAttemptEvidence(root, failureRelative) {
+  const record = JSON.parse(await readFile(
+    path.join(REPOSITORY_ROOT, failureRelative),
+    'utf8'
+  ));
+  for (const relative of [failureRelative, record.raw.path]) {
+    await mkdir(path.dirname(path.join(root, relative)), { recursive: true });
+    await copyFile(
+      path.join(REPOSITORY_ROOT, relative),
+      path.join(root, relative)
+    );
+  }
+  return record;
+}
+
+async function syntheticRevalidatableCornerEsFailure(root, {
+  upperCorePixel = null
+} = {}) {
+  const record = JSON.parse(await readFile(
+    path.join(REPOSITORY_ROOT, HEARTLANDS_CORNER_ES_REVALIDATABLE_FAILURE),
+    'utf8'
+  ));
+  const descriptor = (await readJson(root, record.descriptor.path)).value;
+  const primeReference = descriptor.styleReferences.find(reference => (
+    reference.id === descriptor.directGeometryPrime.sourceReferenceId
+  ));
+  const decoded = await sharp(path.join(root, primeReference.path))
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const data = Buffer.from(decoded.data);
+  const anchor = descriptor.placement.anchor;
+  for (const endpoint of [{ x: 192, y: 96 }, { x: 64, y: 96 }]) {
+    const dx = endpoint.x - anchor.x;
+    const dy = endpoint.y - anchor.y;
+    const lengthSquared = (dx * dx) + (dy * dy);
+    for (let y = 0; y < decoded.info.height; y += 1) {
+      for (let x = 0; x < decoded.info.width; x += 1) {
+        const projection = (
+          ((x - anchor.x) * dx) + ((y - anchor.y) * dy)
+        ) / lengthSquared;
+        if (projection < 0.35 || projection > 1.08) continue;
+        const centerX = anchor.x + (projection * dx);
+        const centerY = anchor.y + (projection * dy);
+        if (Math.hypot(x - centerX, y - centerY) > 15) continue;
+        data.set(
+          [117, 76, 36, 255],
+          ((y * decoded.info.width) + x) * 4
+        );
+      }
+    }
+  }
+  if (upperCorePixel !== null) {
+    data.set(
+      [117, 76, 36, 255],
+      ((upperCorePixel.y * decoded.info.width) + upperCorePixel.x) * 4
+    );
+  }
+  const rawBytes = await sharp(data, {
+    raw: {
+      width: decoded.info.width,
+      height: decoded.info.height,
+      channels: 4
+    }
+  }).png().toBuffer();
+  const rawIdentity = await inspectImageContents('synthetic.png', rawBytes);
+  record.raw = {
+    ...rawIdentity,
+    path: generatedArtifactPath(record.descriptor.snapshot, rawIdentity)
+  };
+  record.rejection = {
+    name: 'Error',
+    message:
+      'synthetic historical contract rejected this otherwise immutable raw'
+  };
+  const { fullHash: _fullHash, ...projection } = record;
+  record.fullHash = sha256(Buffer.from(stableJson(projection)));
+  const failureRelative =
+    `${path.posix.dirname(record.raw.path)}/failures/`
+    + `${record.fullHash.slice('sha256:'.length)}.json`;
+  for (const [relative, contents] of [
+    [record.raw.path, rawBytes],
+    [failureRelative, Buffer.from(stableJson(record))]
+  ]) {
+    await mkdir(path.dirname(path.join(root, relative)), { recursive: true });
+    await writeFile(path.join(root, relative), contents);
+  }
+  return { path: failureRelative, record, rawBytes };
+}
 
 async function reflectedHeartlandsStraightNs({
   maximumCenterlineDistance = null
@@ -667,6 +870,47 @@ async function reflectedHeartlandsStraightNs({
       height: info.height,
       channels: 4
     }
+  }).png().toBuffer();
+}
+
+async function directStraightNsCandidate({
+  halfWidth = 15,
+  terminalExtensionPixels = 6
+} = {}) {
+  const width = 256;
+  const height = 128;
+  const anchor = { x: 128, y: 64 };
+  const armUnit = {
+    x: 2 / Math.sqrt(5),
+    y: -1 / Math.sqrt(5)
+  };
+  const perpendicularUnit = {
+    x: 1 / Math.sqrt(5),
+    y: 2 / Math.sqrt(5)
+  };
+  const terminalDistance = Math.hypot(64, 32);
+  const pixels = Buffer.alloc(width * height * 4);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const delta = { x: x - anchor.x, y: y - anchor.y };
+      const longitudinal =
+        (delta.x * armUnit.x) + (delta.y * armUnit.y);
+      const perpendicular = Math.abs(
+        (delta.x * perpendicularUnit.x)
+          + (delta.y * perpendicularUnit.y)
+      );
+      if (
+        Math.abs(longitudinal)
+          > terminalDistance + terminalExtensionPixels
+        || perpendicular > halfWidth
+      ) {
+        continue;
+      }
+      pixels.set([117, 76, 36, 255], ((y * width) + x) * 4);
+    }
+  }
+  return sharp(pixels, {
+    raw: { width, height, channels: 4 }
   }).png().toBuffer();
 }
 
@@ -711,14 +955,25 @@ describe('battle-art tracked contracts', () => {
       ));
       assert.deepEqual(
         liveDescriptor.styleReferences.map(reference => reference.id),
-        ['forest-source-template-01']
+        [
+          'forest-source-template-01',
+          'forest-heartlands-approved-route-straight-ew-v1'
+        ]
       );
       const descriptor = {
         ...structuredClone(liveDescriptor),
+        status: 'draft',
         styleReferences: [
           ...structuredClone(liveDescriptor.styleReferences),
           structuredClone(corrective)
-        ]
+        ],
+        content: {
+          ...structuredClone(liveDescriptor.content),
+          sourceSha256: null,
+          runtimeSha256: null,
+          immutableUrl: null
+        },
+        source: null
       };
       assert.equal(
         corrective.id,
@@ -761,7 +1016,7 @@ describe('battle-art tracked contracts', () => {
         }, {
           worker: async ({ styleFiles }) => {
             workerCalls += 1;
-            assert.equal(styleFiles.length, 2);
+            assert.equal(styleFiles.length, 3);
             throw new Error('fresh corrective staging reached worker');
           }
         }),
@@ -875,8 +1130,8 @@ describe('battle-art tracked contracts', () => {
   it('audits all themes, required categories, frozen pins, and forest coverage', async () => {
     const loaded = await loadBattleArt(REPOSITORY_ROOT);
     const result = await auditBattleArt({ root: REPOSITORY_ROOT });
-    assert.equal(loaded.manifest.version, 6);
-    assert.equal(loaded.descriptors.length, 51);
+    assert.equal(loaded.manifest.version, 10);
+    assert.equal(loaded.descriptors.length, 102);
     assert.equal(new Set(
       loaded.descriptors.map(entry => entry.descriptor.category)
     ).size, 7);
@@ -893,9 +1148,9 @@ describe('battle-art tracked contracts', () => {
       ).length,
       readiness: {
         plan: READINESS_PLAN_PATH,
-        plans: 1,
-        required: 43,
-        present: 43
+        plans: 6,
+        required: 298,
+        present: 298
       }
     });
   });
@@ -1149,6 +1404,36 @@ describe('battle-art tracked contracts', () => {
     ]) assert.equal(typeof packageJson.scripts[command], 'string', command);
     assert.equal(parseCommand(['audit']).command, 'audit');
     assert.equal(parseCommand(['archive']).command, 'archive');
+    assert.deepEqual(
+      parseCommand([
+        'revalidate-failure',
+        '--theme', 'forest',
+        '--family', 'forest-heartlands-loam-path-corner-es',
+        '--failure', HEARTLANDS_CORNER_ES_REVALIDATABLE_FAILURE,
+        '--project-root', '/tmp/modia-revalidation',
+        '--json'
+      ]),
+      {
+        command: 'revalidate-failure',
+        options: {
+          theme: 'forest',
+          family: 'forest-heartlands-loam-path-corner-es',
+          failure: HEARTLANDS_CORNER_ES_REVALIDATABLE_FAILURE,
+          root: '/tmp/modia-revalidation',
+          json: true
+        }
+      }
+    );
+    assert.throws(
+      () => parseCommand([
+        'revalidate-failure',
+        '--theme', 'forest',
+        '--family', 'forest-heartlands-loam-path-corner-es',
+        '--failure', HEARTLANDS_CORNER_ES_REVALIDATABLE_FAILURE,
+        '--force'
+      ]),
+      /unknown argument --force/
+    );
     assert.equal(
       parseCommand([
         'review',
@@ -1212,7 +1497,7 @@ describe('battle-art tracked contracts', () => {
       .filter(entry => entry.descriptor.status === 'compiled')
       .map(entry => entry.descriptor.id)
       .sort();
-    assert.equal(compiledFamilyIds.length, 51);
+    assert.equal(compiledFamilyIds.length, 102);
     assert.deepEqual(
       bundle.assets.map(asset => asset.key),
       compiledFamilyIds
@@ -1598,6 +1883,57 @@ describe('battle-art tracked contracts', () => {
 });
 
 describe('battle-art isolated generation and review boundary', () => {
+  it('rejects direct geometry prime metadata that drifts from pinned pixels',
+    async () => {
+      const root = await fixture();
+      const relative =
+        'ai-image-metadata/battle-art/descriptors/forest/'
+        + 'forest-heartlands-loam-path-corner-es.json';
+      const descriptor = (await readJson(root, relative)).value;
+      await assert.doesNotReject(loadBattleArt(root));
+      const cases = [
+        {
+          field: 'subjectBounds',
+          pattern: /subjectBounds does not match the pinned source raster/,
+          mutate: prime => {
+            prime.subjectBounds.width += 1;
+          }
+        },
+        {
+          field: 'coveragePermille',
+          pattern: /coveragePermille does not match the pinned source raster/,
+          mutate: prime => {
+            prime.coveragePermille += 1;
+          }
+        },
+        {
+          field: 'armSampleCenters',
+          pattern: /armSampleCenters are not canonical/,
+          mutate: prime => {
+            prime.armSampleCenters[0].x += 1;
+          }
+        },
+        {
+          field: 'apexTopProfile',
+          pattern: /apexTopProfile does not match the pinned source raster/,
+          mutate: prime => {
+            prime.apexTopProfile.alpha240Y[0] += 1;
+          }
+        }
+      ];
+      for (const testCase of cases) {
+        const changed = structuredClone(descriptor);
+        testCase.mutate(changed.directGeometryPrime);
+        await writeFile(path.join(root, relative), stableJson(changed));
+        await assert.rejects(
+          loadBattleArt(root),
+          testCase.pattern,
+          `${testCase.field} drift must fail closed`
+        );
+      }
+      await writeFile(path.join(root, relative), stableJson(descriptor));
+    });
+
   it('requires a transparent four-pixel canvas border for new route candidates', async () => {
     const descriptor = {
       id: 'test-route-transition',
@@ -1951,29 +2287,29 @@ describe('battle-art isolated generation and review boundary', () => {
       placement: { anchor }
     };
     await assert.doesNotReject(assertRouteArmMinimumCoreWidth({
-      bytes: await encodeArms({ e: 32, s: 38 }),
+      bytes: await encodeArms({ e: 30, s: 41 }),
       descriptor: heartlandsCornerEsDescriptor
     }));
     await assert.rejects(
       assertRouteArmMinimumCoreWidth({
-        bytes: await encodeArms({ e: 31, s: 31 }),
+        bytes: await encodeArms({ e: 29, s: 29 }),
         descriptor: heartlandsCornerEsDescriptor
       }),
-      /corner-es e arm opaque perpendicular span at 50% is 31 pixels; expected at least 32/
+      /corner-es e arm opaque perpendicular span at 50% is 29 pixels; expected at least 30/
     );
     await assert.rejects(
       assertRouteArmMinimumCoreWidth({
-        bytes: await encodeArms({ e: 39, s: 39 }),
+        bytes: await encodeArms({ e: 42, s: 42 }),
         descriptor: heartlandsCornerEsDescriptor
       }),
-      /corner-es e arm opaque perpendicular span at 50% is 39 pixels; expected at most 38/
+      /corner-es e arm opaque perpendicular span at 50% is 42 pixels; expected at most 41/
     );
     await assert.rejects(
       assertRouteArmMinimumCoreWidth({
-        bytes: await encodeArms({ e: 31, s: 38 }),
+        bytes: await encodeArms({ e: 29, s: 41 }),
         descriptor: heartlandsCornerEsDescriptor
       }),
-      /corner-es arm opaque perpendicular spans vary by 7 pixels \(31\.\.38\); expected at most 6/
+      /corner-es arm opaque perpendicular spans vary by 12 pixels \(29\.\.41\); expected at most 11/
     );
 
     await assert.doesNotReject(assertRouteArmMinimumCoreWidth({
@@ -2038,7 +2374,7 @@ describe('battle-art isolated generation and review boundary', () => {
               ? 55
               : 56;
         for (let y = topRow; y <= 84; y += 1) {
-          if (y === narrowRow && x === 135) continue;
+          if (y === narrowRow && x >= 134) continue;
           if (interiorCoreGap?.x === x && interiorCoreGap.y === y) {
             pixels.set(
               [117, 76, 36, 239],
@@ -2068,7 +2404,7 @@ describe('battle-art isolated generation and review boundary', () => {
       }
       if (upperPixel !== null) {
         pixels.set(
-          [117, 76, 36, 1],
+          [117, 76, 36, 255],
           ((upperPixel.y * canvas.width) + upperPixel.x) * 4
         );
       }
@@ -2082,24 +2418,24 @@ describe('battle-art isolated generation and review boundary', () => {
         descriptor
       }),
       {
-        minimumOpaqueRowRun: 16,
+        minimumOpaqueCoreHeight: 29,
         maximumApexTopStep: 1,
         maximumApexFlatRun: 3
       }
     );
     await assert.rejects(
       assertCornerEsAnchorArchPlacement({
-        bytes: await encode({ upperPixel: { x: 128, y: 40 } }),
+        bytes: await encode({ upperPixel: { x: 128, y: 32 } }),
         descriptor
       }),
-      /upper-center exclusion contains alpha at 128,40/
+      /upper-center exclusion contains alpha-at-least-240 at 128,32/
     );
     await assert.rejects(
       assertCornerEsAnchorArchPlacement({
         bytes: await encode({ narrowRow: 80 }),
         descriptor
       }),
-      /anchor-arch opaque run at y=80 is 15 pixels; expected at least 16/
+      /shared apex core contains a sub-240-alpha gap at 134,80/
     );
     await assert.rejects(
       assertCornerEsAnchorArchPlacement({
@@ -2122,7 +2458,7 @@ describe('battle-art isolated generation and review boundary', () => {
         }),
         descriptor
       }),
-      /apex core contains an interior sub-240-alpha gap at 128,70; expected every column in x=120\.\.135 to remain alpha-column-convex from its first alpha-at-least-240 pixel through y=84/
+      /shared apex core contains a sub-240-alpha gap at 128,70; expected x=120\.\.135 to remain alpha-at-least-240 for 29 consecutive rows/
     );
     await assert.doesNotReject(assertCornerEsAnchorArchPlacement({
       bytes: await encode({
@@ -2343,7 +2679,7 @@ describe('battle-art isolated generation and review boundary', () => {
     assert.match(prompt, /standalone \/bin\/cp from the current JSONL/);
     assert.match(
       prompt,
-      /parent lifecycle performs only exact-aspect whole-image resizing, chroma removal,\s+normalization, and generic raster validation/
+      /parent lifecycle performs only exact-aspect whole-image resizing, chroma removal,\s+normalization, generic raster validation, and topology-appropriate\s+deterministic route geometry validation/
     );
     assert.match(prompt, /must preserve the one generated route artifact without editing it/);
     assert.match(prompt, /source has the exact declared 2:1 aspect ratio/);
@@ -2439,7 +2775,7 @@ describe('battle-art isolated generation and review boundary', () => {
       );
     });
 
-  it('publishes a direct whole-image route with one-call provenance and preserves its immutable raw input',
+  it('publishes a deterministically finished route with one-call provenance and preserves its immutable raw input',
     async () => {
       const ignoreRules = await readFile(
         path.join(REPOSITORY_ROOT, '.gitignore'),
@@ -2457,9 +2793,23 @@ describe('battle-art isolated generation and review boundary', () => {
       const family = 'forest-heartlands-loam-path-straight-ns';
       const descriptorRelative =
         `ai-image-metadata/battle-art/descriptors/forest/${family}.json`;
-      await copyFile(
-        path.join(REPOSITORY_ROOT, descriptorRelative),
-        path.join(root, descriptorRelative)
+      const repositoryDescriptor = (await readJson(
+        REPOSITORY_ROOT,
+        descriptorRelative
+      )).value;
+      await writeFile(
+        path.join(root, descriptorRelative),
+        stableJson({
+          ...repositoryDescriptor,
+          status: 'draft',
+          content: {
+            ...repositoryDescriptor.content,
+            sourceSha256: null,
+            runtimeSha256: null,
+            immutableUrl: null
+          },
+          source: null
+        })
       );
       const fixtureManifest = (await readJson(
         root,
@@ -2484,7 +2834,10 @@ describe('battle-art isolated generation and review boundary', () => {
           { recursive: true }
         );
       }
-      const raw = await reflectedHeartlandsStraightNs();
+      const raw = await readFile(path.join(
+        REPOSITORY_ROOT,
+        HEARTLANDS_STRAIGHT_NS_V13_APPROVED_RAW
+      ));
       let workerCalls = 0;
       let environmentSource;
       const worker = async input => {
@@ -2565,32 +2918,56 @@ describe('battle-art isolated generation and review boundary', () => {
         format: 'png'
       });
       assert.deepEqual(candidate.derivation, {
-        schemaVersion: 'battle-art-route-direct-preparation-v1',
-        strategy: 'exact-aspect-whole-image-normalize-v1',
+        schemaVersion: 'battle-art-route-finishing-v1',
+        strategy: 'largest-component-box-v1',
         source: {
           path: rawPath,
           bytes: raw.length,
-          width: 256,
-          height: 128,
+          width: 1774,
+          height: 887,
           format: 'png',
           sha256: sha256(raw)
         },
-        resize: {
-          mode: 'exact-aspect-whole-image',
-          applied: false,
-          kernel: 'lanczos3',
-          targetWidth: 256,
-          targetHeight: 128
+        sourceBounds: {
+          x: 413,
+          y: 157,
+          width: 1054,
+          height: 566
         },
-        normalization: {
-          operation: 'normalize-generated-raster-v1',
-          format: 'png'
+        componentCount: 1,
+        coveredPixels: 206937,
+        selectedCoveredPixels: 206937,
+        detachedCoveredPixels: 0,
+        detachedCoveredPermille: 0,
+        maximumDetachedCoveredPermille: 20,
+        terminalClip: {
+          schemaVersion: 'battle-art-route-terminal-clip-v1',
+          maximumOverflowPixels: 8,
+          clearedPixels: 257
         },
+        targetBox: {
+          x: 46,
+          y: 8,
+          width: 164,
+          height: 112
+        },
+        scaleX: {
+          numerator: 164,
+          denominator: 1054
+        },
+        scaleY: {
+          numerator: 112,
+          denominator: 566
+        },
+        kernel: 'lanczos3',
         finalSha256: candidate.image.sha256
       });
       assert.deepEqual(
         candidate.styleReferences.map(reference => reference.id),
-        ['forest-source-template-01']
+        [
+          'forest-source-template-01',
+          'forest-heartlands-approved-route-straight-ew-v1'
+        ]
       );
       assert.equal(candidate.worker.invocationCount, 1);
       assert.deepEqual(await readFile(path.join(root, rawPath)), raw);
@@ -2626,7 +3003,7 @@ describe('battle-art isolated generation and review boundary', () => {
       );
       for (const mutate of [
         metadata => {
-          metadata.derivation.resize.targetWidth += 1;
+          metadata.derivation.targetBox.width += 1;
         },
         metadata => {
           metadata.derivation.finalSha256 = `sha256:${'0'.repeat(64)}`;
@@ -2644,7 +3021,7 @@ describe('battle-art isolated generation and review boundary', () => {
             theme: 'forest',
             family
           }),
-          /route derivation|resize target/
+          /route derivation|targetBox/
         );
         await writeFile(
           path.join(candidateDirectory, 'result.json'),
@@ -2800,32 +3177,49 @@ describe('battle-art isolated generation and review boundary', () => {
         reviewCountBefore + 1
       );
 
-      const replacementRaw = await sharp(raw)
-        .tint({ r: 178, g: 126, b: 71 })
-        .png()
-        .toBuffer();
+      const replacementDecoded = await sharp(raw)
+        .ensureAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+      for (let offset = 0;
+        offset < replacementDecoded.data.length;
+        offset += 4) {
+        const magentaBackground =
+          replacementDecoded.data[offset] >= 240
+          && replacementDecoded.data[offset + 1] <= 24
+          && replacementDecoded.data[offset + 2] >= 240;
+        if (magentaBackground) continue;
+        replacementDecoded.data[offset] = Math.min(
+          255,
+          replacementDecoded.data[offset] + 8
+        );
+      }
+      const replacementRaw = await sharp(replacementDecoded.data, {
+        raw: {
+          width: replacementDecoded.info.width,
+          height: replacementDecoded.info.height,
+          channels: 4
+        }
+      }).png().toBuffer();
       const replacementRawPath = generatedArtifactPath(descriptor, {
         sha256: sha256(replacementRaw),
         format: 'png'
       });
-      const replacementSource = {
-        path: replacementRawPath,
-        bytes: replacementRaw.length,
-        width: 256,
-        height: 128,
-        format: 'png',
-        sha256: sha256(replacementRaw)
-      };
-      const replacement = await prepareDirectRouteCandidate({
-        sourceBytes: replacementRaw,
-        source: replacementSource,
+      const replacement = await finishRouteArtifact({
+        bytes: replacementRaw,
         descriptor,
-        profile: loaded.promptProfile,
-        label: `${family} replacement direct route`
+        profile: loaded.promptProfile
       });
+      const replacementSource = await inspectImageContents(
+        replacementRawPath,
+        replacementRaw
+      );
       const replacementCandidate = {
         ...structuredClone(candidate),
-        derivation: replacement.derivation,
+        derivation: {
+          ...replacement.derivation,
+          source: replacementSource
+        },
         image: {
           path: candidate.image.path,
           bytes: replacement.bytes.length,
@@ -2855,7 +3249,7 @@ describe('battle-art isolated generation and review boundary', () => {
         family,
         reviewer: 'route-process-test',
         decision: 'approved',
-        reason: 'Replacement B passes deterministic direct-route review.',
+        reason: 'Replacement B passes deterministic route-finishing review.',
         approvedAt: '2026-07-31T12:01:00.000Z'
       });
       assert.equal(
@@ -3207,6 +3601,315 @@ describe('battle-art isolated generation and review boundary', () => {
       await writeFile(path.join(root, rawPath), raw);
     });
 
+  it('revalidates an immutable failed route attempt with zero worker calls and reviews its explicit v3 origin',
+    async () => {
+      const root = await fixture();
+      const family = 'forest-heartlands-loam-path-corner-es';
+      const failure = await copyFailedAttemptEvidence(
+        root,
+        HEARTLANDS_CORNER_ES_REVALIDATABLE_FAILURE
+      );
+      const failurePath = HEARTLANDS_CORNER_ES_REVALIDATABLE_FAILURE;
+      const failureBefore = await readFile(path.join(root, failurePath));
+      const rawBefore = await readFile(path.join(root, failure.raw.path));
+      let workerCalls = 0;
+      const result = await revalidateFailedRouteAttempt({
+        root,
+        theme: 'forest',
+        family,
+        failure: failurePath
+      }, {
+        worker: async () => {
+          workerCalls += 1;
+          throw new Error('revalidation must not invoke a worker');
+        }
+      });
+      assert.equal(workerCalls, 0);
+      assert.equal(result.results[0].status, 'revalidated');
+
+      const loaded = await loadBattleArt(root);
+      const entry = loaded.descriptors.find(
+        value => value.descriptor.id === family
+      );
+      const paths = candidatePaths(entry.descriptor);
+      const candidate = (await readJson(root, paths.metadata)).value;
+      assert.equal(candidate.schemaVersion, REVALIDATED_CANDIDATE_SCHEMA);
+      assert.equal(Object.hasOwn(candidate, 'worker'), false);
+      assert.equal(
+        candidate.origin.kind,
+        'failed-attempt-revalidation-v1'
+      );
+      assert.deepEqual(candidate.origin.raw, failure.raw);
+      assert.deepEqual(candidate.derivation.source, failure.raw);
+      assert.deepEqual(candidate.origin.originalDescriptor, {
+        path: failure.descriptor.path,
+        sha256: failure.descriptor.sha256,
+        contentVersion: failure.descriptor.contentVersion
+      });
+      assert.deepEqual(candidate.origin.failureRecord, {
+        path: failurePath,
+        sha256: sha256(failureBefore),
+        fullHash: failure.fullHash
+      });
+      assert.equal(
+        candidate.origin.validationDescriptorSha256,
+        candidate.descriptorSha256
+      );
+      assert.deepEqual(
+        await readFile(path.join(root, failure.raw.path)),
+        rawBefore
+      );
+      assert.deepEqual(
+        await readFile(
+          path.join(root, failurePath)
+        ),
+        failureBefore
+      );
+
+      const candidateMetadataBefore = await readFile(path.join(
+        root,
+        paths.metadata
+      ));
+      const tamperedCandidate = structuredClone(candidate);
+      tamperedCandidate.origin.failureRecord.sha256 =
+        `sha256:${'0'.repeat(64)}`;
+      await writeFile(
+        path.join(root, paths.metadata),
+        stableJson(tamperedCandidate)
+      );
+      await assert.rejects(
+        recordCandidateReview({
+          root,
+          theme: 'forest',
+          family,
+          reviewer: 'revalidation-reviewer@example.test',
+          decision: 'approved',
+          reason: 'The archived raw now passes every current deterministic route contract.',
+          reviewedAt: '2026-08-04T18:00:00.000Z'
+        }),
+        /origin does not match its audited failed attempt/
+      );
+      await writeFile(path.join(root, paths.metadata), candidateMetadataBefore);
+
+      const review = await recordCandidateReview({
+        root,
+        theme: 'forest',
+        family,
+        reviewer: 'revalidation-reviewer@example.test',
+        decision: 'approved',
+        reason: 'The archived raw now passes every current deterministic route contract.',
+        reviewedAt: '2026-08-04T18:00:00.000Z'
+      });
+      assert.equal(review.record.schemaVersion, REVALIDATED_REVIEW_SCHEMA);
+      assert.deepEqual(review.record.candidate.origin, candidate.origin);
+      assert.equal(Object.hasOwn(review.record.candidate, 'worker'), false);
+      const approval = await approveCandidate({
+        root,
+        theme: 'forest',
+        family,
+        reviewer: 'revalidation-reviewer@example.test',
+        decision: 'approved',
+        reason: 'The archived raw now passes every current deterministic route contract.',
+        approvedAt: '2026-08-04T18:00:00.000Z'
+      });
+      assert.equal(approval.sourceSha256, candidate.image.sha256);
+      assert.deepEqual(await auditBattleArtReviews({ root }), {
+        ok: true,
+        records: 2,
+        approved: 2,
+        rejected: 0
+      });
+    });
+
+  it('rejects tampered, wrong-family, noncanonical, duplicate, and still-failing replay attempts without publication',
+    async () => {
+      const family = 'forest-heartlands-loam-path-corner-es';
+      const options = (root, failure) => ({
+        root,
+        theme: 'forest',
+        family,
+        failure
+      });
+
+      const tamperedRoot = await fixture({
+        preserveDirectStyleProvenance: true
+      });
+      await copyFailedAttemptEvidence(
+        tamperedRoot,
+        HEARTLANDS_CORNER_ES_REVALIDATABLE_FAILURE
+      );
+      const tampered = JSON.parse(await readFile(
+        path.join(tamperedRoot, HEARTLANDS_CORNER_ES_REVALIDATABLE_FAILURE),
+        'utf8'
+      ));
+      tampered.rejection.message = 'tampered';
+      await writeFile(
+        path.join(tamperedRoot, HEARTLANDS_CORNER_ES_REVALIDATABLE_FAILURE),
+        stableJson(tampered)
+      );
+      await assert.rejects(
+        revalidateFailedRouteAttempt(options(
+          tamperedRoot,
+          HEARTLANDS_CORNER_ES_REVALIDATABLE_FAILURE
+        )),
+        /fullHash does not match its content/
+      );
+
+      const wrongFamilyRoot = await fixture({
+        preserveDirectStyleProvenance: true
+      });
+      await copyFailedAttemptEvidence(
+        wrongFamilyRoot,
+        HEARTLANDS_CORNER_ES_REVALIDATABLE_FAILURE
+      );
+      await assert.rejects(
+        revalidateFailedRouteAttempt({
+          root: wrongFamilyRoot,
+          theme: 'forest',
+          family: 'forest-heartlands-loam-path-straight-ns',
+          failure: HEARTLANDS_CORNER_ES_REVALIDATABLE_FAILURE
+        }),
+        /failed-attempt record belongs to/
+      );
+
+      const noncanonicalRoot = await fixture({
+        preserveDirectStyleProvenance: true
+      });
+      const copied = await copyFailedAttemptEvidence(
+        noncanonicalRoot,
+        HEARTLANDS_CORNER_ES_REVALIDATABLE_FAILURE
+      );
+      const noncanonical =
+        'ai-image-metadata/battle-art/generated-artifacts/forest/'
+        + 'forest-heartlands-loam-path-corner-es/failures/not-canonical.json';
+      await mkdir(path.dirname(path.join(noncanonicalRoot, noncanonical)), {
+        recursive: true
+      });
+      await writeFile(
+        path.join(noncanonicalRoot, noncanonical),
+        stableJson(copied)
+      );
+      await assert.rejects(
+        revalidateFailedRouteAttempt(options(
+          noncanonicalRoot,
+          noncanonical
+        )),
+        /path is not content-addressed/
+      );
+
+      const existingRoot = await fixture({
+        preserveDirectStyleProvenance: true
+      });
+      await copyFailedAttemptEvidence(
+        existingRoot,
+        HEARTLANDS_CORNER_ES_REVALIDATABLE_FAILURE
+      );
+      const existingPaths = candidatePaths({
+        theme: 'forest',
+        id: family
+      });
+      await mkdir(
+        path.dirname(path.join(existingRoot, existingPaths.metadata)),
+        { recursive: true }
+      );
+      await writeFile(
+        path.join(existingRoot, existingPaths.metadata),
+        '{}'
+      );
+      await assert.rejects(
+        revalidateFailedRouteAttempt(options(
+          existingRoot,
+          HEARTLANDS_CORNER_ES_REVALIDATABLE_FAILURE
+        )),
+        /requires no existing candidate publication/
+      );
+
+      const failingRoot = await fixture();
+      await retainTrackedApprovedV1Evidence(
+        failingRoot,
+        'forest-borderwood-dirt-path-corner-es'
+      );
+      const stillFailing = await syntheticRevalidatableCornerEsFailure(
+        failingRoot,
+        { upperCorePixel: { x: 128, y: 32 } }
+      );
+      const failedRecordBefore = await readFile(path.join(
+        failingRoot,
+        stillFailing.path
+      ));
+      const failedRawBefore = await readFile(path.join(
+        failingRoot,
+        stillFailing.record.raw.path
+      ));
+      await assert.rejects(
+        revalidateFailedRouteAttempt(options(
+          failingRoot,
+          stillFailing.path
+        )),
+        /upper-center exclusion contains alpha-at-least-240 at 128,32/
+      );
+      const failedPaths = candidatePaths({
+        theme: 'forest',
+        id: family
+      });
+      for (const relative of [
+        failedPaths.imagePng,
+        failedPaths.imageWebp,
+        failedPaths.metadata
+      ]) {
+        await assert.rejects(
+          readFile(path.join(failingRoot, relative)),
+          error => error.code === 'ENOENT'
+        );
+      }
+      assert.deepEqual(
+        await readFile(
+          path.join(failingRoot, stillFailing.path)
+        ),
+        failedRecordBefore
+      );
+      assert.deepEqual(
+        await readFile(path.join(failingRoot, stillFailing.record.raw.path)),
+        failedRawBefore
+      );
+    });
+
+  it('keeps ordinary v2 candidate and review evidence unchanged', async () => {
+    const root = await fixture({ preserveDirectStyleProvenance: true });
+    const family = 'forest-moss-surface';
+    await generateBattleArt({
+      projectRoot: root,
+      theme: 'forest',
+      family,
+      concurrency: 1,
+      timeoutMs: 10_000,
+      dryRun: false,
+      force: false,
+      resume: false
+    }, { worker: candidateWorker });
+    const loaded = await loadBattleArt(root);
+    const entry = loaded.descriptors.find(
+      value => value.descriptor.id === family
+    );
+    const candidate = (await readJson(
+      root,
+      candidatePaths(entry.descriptor).metadata
+    )).value;
+    assert.equal(candidate.schemaVersion, 'battle-art-candidate-v2');
+    assert.equal(Object.hasOwn(candidate, 'origin'), false);
+    const review = await recordCandidateReview({
+      root,
+      theme: 'forest',
+      family,
+      reviewer: 'v2-compatibility-reviewer@example.test',
+      decision: 'rejected',
+      reason: 'This preserves the existing v2 review evidence layout.',
+      reviewedAt: '2026-08-04T18:30:00.000Z'
+    });
+    assert.equal(review.record.schemaVersion, REVIEW_SCHEMA);
+    assert.equal(Object.hasOwn(review.record.candidate, 'origin'), false);
+  });
+
   it('backfills the frozen v6 8f1a failure after the descriptor advances',
     async () => {
       const root = await fixture();
@@ -3433,6 +4136,74 @@ describe('battle-art isolated generation and review boundary', () => {
         );
       }
     });
+
+  it('rejects a known overlong direct straight route before review publication',
+    async () => {
+    const root = await fixture();
+    const family = 'forest-heartlands-loam-path-straight-ns';
+    const raw = await readFile(path.join(
+      REPOSITORY_ROOT,
+      HEARTLANDS_STRAIGHT_NS_V12_OVERLONG_RAW
+    ));
+    let rejection;
+    await assert.rejects(
+      generateBattleArt({
+        projectRoot: root,
+        theme: 'forest',
+        family,
+        concurrency: 1,
+        timeoutMs: 10_000,
+        dryRun: false,
+        force: false,
+        resume: false
+      }, {
+        worker: async input => {
+          const result = await candidateWorker(input);
+          await replaceRouteWorkerCandidate({
+            workspace: input.workspace,
+            result,
+            bytes: raw
+          });
+          return result;
+        }
+      }),
+      error => {
+        rejection = error;
+        return /terminal clipping would remove 56‰ of covered pixels; expected at most 50‰/
+          .test(error.message);
+      }
+    );
+
+    const loaded = await loadBattleArt(root);
+    const descriptor = loaded.descriptors.find(
+      entry => entry.descriptor.id === family
+    ).descriptor;
+    const rawPath = generatedArtifactPath(descriptor, {
+      sha256: sha256(raw),
+      format: 'png'
+    });
+    assert.deepEqual(await readFile(path.join(root, rawPath)), raw);
+    const candidateRoot = path.join(
+      root,
+      'ai-image-metadata/battle-art/candidates/forest',
+      family
+    );
+    for (const file of ['candidate.png', 'candidate.webp', 'result.json']) {
+      await assert.rejects(
+        readFile(path.join(candidateRoot, file)),
+        error => error.code === 'ENOENT'
+      );
+    }
+    const failure = await auditFailedRouteAttempt({
+      root,
+      relativePath: rejection.failedAttemptEvidencePath
+    });
+    assert.equal(failure.record.raw.sha256, sha256(raw));
+    assert.match(
+      failure.record.rejection.message,
+      /terminal clipping would remove 56‰ of covered pixels/
+    );
+  });
 
   it('rejects straight routes that continue toward rectangular canvas corners',
     async () => {
@@ -4219,18 +4990,25 @@ describe('battle-art isolated generation and review boundary', () => {
     assert.match(prompt, /approved Borderwood corner-es topology/);
     assert.match(prompt, /tips at 25% and 75% canvas width and 75% canvas height/);
     assert.match(prompt, /50% width and 50% canvas height/);
-    assert.match(prompt, /x=112\.\.144 on every row from y=56 through y=84/);
-    assert.match(prompt, /x=112\.\.144 and y=36\.\.52 remains transparent/);
+    assert.match(
+      prompt,
+      /shared apex core x=120\.\.135 fully opaque for at least 29\s+consecutive rows/
+    );
+    assert.match(
+      prompt,
+      /apex core x=120\.\.135 remains below alpha 240 through y=32/
+    );
+    assert.match(prompt, /bounded\s+22-pixel upward shift/);
     assert.match(prompt, /Do not invert this into a\s+classic upright U/);
     assert.match(prompt, /raw imagegen subject itself/);
     assert.match(
       prompt,
       /Deterministic finishing may\s+only place the complete generated subject/i
     );
-    assert.match(prompt, /nearly constant 32–38 pixels wide through/);
+    assert.match(prompt, /nearly constant 30–41 pixels wide through/);
     assert.match(
       prompt,
-      /complete visible silhouette is\s+32–38 pixels wide, including the warm-loam core and\s+all grass or leaf verge pixels/
+      /complete visible silhouette is\s+30–41 pixels wide, including the warm-loam core and\s+all grass or leaf verge pixels/
     );
     assert.match(
       prompt,
@@ -4245,7 +5023,7 @@ describe('battle-art isolated generation and review boundary', () => {
     assert.match(prompt, /Prefer 34–36 pixels at each of the six samples/);
     assert.match(prompt, /never taper the E arm toward its 75% or 100%/);
     assert.match(prompt, /Do not add an oval central wear basin, flare, bulb, plaza/);
-    assert.match(prompt, /widest and narrowest runs within 6 pixels/);
+    assert.match(prompt, /widest and narrowest runs within 11 pixels/);
     assert.match(prompt, /upper exclusion visibly empty in the generated composition/);
     assert.doesNotMatch(
       prompt,
@@ -4262,11 +5040,19 @@ describe('battle-art isolated generation and review boundary', () => {
     );
     assert.match(
       prompt,
-      /copy the Frozen family art\s+direction verbatim as the complete prompt/
+      /copy the Frozen family art\s+direction verbatim\./
     );
     assert.match(
       prompt,
-      /add no preface,\s+suffix, sampling algorithm, finishing explanation, or other geometry\s+terms/
+      /Then append exactly one newline, the label "Geometry prime JSON: "/
+    );
+    assert.match(
+      prompt,
+      /"schemaVersion":"battle-art-direct-geometry-prime-v1".*"armSampleCenters"/
+    );
+    assert.match(
+      prompt,
+      /Add no other preface, suffix, sampling algorithm, finishing\s+explanation, or geometry terms/
     );
     assert.match(
       prompt,
@@ -4274,23 +5060,31 @@ describe('battle-art isolated generation and review boundary', () => {
     );
     assert.match(
       descriptor.generationPrompt,
-      /full 256-by-128 canvas and framing; the route subject, not the output canvas, occupies its 190-by-65 box at x=33\.\.222 and y=53\.\.117/
+      /full 256-by-128 canvas and framing; the route subject occupies its 190-by-65 box at x=33\.\.222 and y=53\.\.117/
     );
     assert.match(
       descriptor.generationPrompt,
-      /sole geometry exception is to shave back only the inner edge of the broad crown and mid-arms/
+      /Redraw only the inner contour and the inner edges of both seam tips/
     );
     assert.match(
       descriptor.generationPrompt,
-      /keep both seam tips and the entire outer contour fixed/
-    );
-    assert.doesNotMatch(
-      descriptor.generationPrompt,
-      /move the narrow E arm's inner edge inward/
+      /nearly constant 34–36 pixels wide at the E and S 50%, 75%, and 100% samples/
     );
     assert.match(
       descriptor.generationPrompt,
-      /Repaint only its surface materials.*warm ochre loam/s
+      /Widen each narrow seam tip inward by about 8 pixels/
+    );
+    assert.match(
+      descriptor.generationPrompt,
+      /shave the broad crown and mid-arm inner edges inward by about 3–5 pixels/
+    );
+    assert.match(
+      descriptor.generationPrompt,
+      /No required sample may be thinner than 32 pixels or thicker than 38 pixels/
+    );
+    assert.match(
+      descriptor.generationPrompt,
+      /Repaint only its surface.*warm ochre loam/s
     );
     assert.doesNotMatch(
       prompt,
@@ -4300,14 +5094,14 @@ describe('battle-art isolated generation and review boundary', () => {
       prompt,
       /Preserve its 190-by-65[^.]*surrounding negative space/
     );
-    assert.doesNotMatch(prompt, /add any needed width only inward/);
+    assert.match(prompt, /Widen each narrow seam tip inward/);
     assert.doesNotMatch(prompt, /Image [23] /);
     assert.doesNotMatch(prompt, /guides visual style, material, species/);
     assert.match(prompt, /overall nonzero-alpha bounding box\s+about 180–200 pixels wide/);
     assert.match(prompt, /never a near-full-\s*canvas semicircle or broad half-ring/);
     assert.match(
       prompt,
-      /visible apex core\s+column-convex/
+      /visible apex core\s+column-convex across one shared 29-row band/
     );
     assert.match(
       prompt,
@@ -4495,109 +5289,96 @@ describe('battle-art isolated generation and review boundary', () => {
     });
     assert.match(
       straightPrompt,
-      /following 1 hash-verified style reference image is already attached/
+      /following 2 hash-verified style reference images are already attached/
     );
     assert.match(
       straightPrompt,
-      /num_last_images_to_include to exactly 1/
+      /num_last_images_to_include to exactly 2/
     );
     assert.deepEqual(
       straight.styleReferences.map(reference => reference.id),
-      ['forest-source-template-01']
+      [
+        'forest-source-template-01',
+        'forest-heartlands-approved-route-straight-ew-v1'
+      ]
     );
-    assert.equal(straight.content.version, 12);
-    assert.equal(straight.status, 'draft');
-    assert.equal(straight.source, null);
-    assert.equal(straight.content.sourceSha256, null);
-    assert.equal(straight.content.runtimeSha256, null);
-    assert.equal(straight.content.immutableUrl, null);
-    assert.equal(straight.routeFinishing, undefined);
-    assert.doesNotMatch(straight.generationPrompt, /borderwood/i);
-    assert.doesNotMatch(straightPrompt, /borderwood/i);
-    assert.match(
-      straight.generationPrompt,
-      /Author the declared orientation directly/
+    assert.equal(straight.content.version, 13);
+    assert.equal(straight.status, 'compiled');
+    assert.equal(
+      straight.source.imageSha256,
+      'sha256:2919918dbb4b9ea40c37409179e8e15ff6294b32fef8b84e98c971966cf7104e'
     );
-    assert.match(
-      straight.generationPrompt,
-      /N upper-right terminal seam cross-section at \(192,32\).*anchor at \(128,64\).*S lower-left terminal seam cross-section at \(64,96\)/
+    assert.equal(
+      straight.content.sourceSha256,
+      'sha256:2919918dbb4b9ea40c37409179e8e15ff6294b32fef8b84e98c971966cf7104e'
     );
-    assert.match(
-      straight.generationPrompt,
-      /E lower-right target at \(192,96\) and W upper-left target at \(64,32\) fully transparent/
+    assert.equal(
+      straight.content.runtimeSha256,
+      'sha256:8f4a43bb9f7a23572be8ceab24fed931cdef2ad1c09f9ae0ebd4b56683338603'
     );
-    assert.match(
-      straight.generationPrompt,
-      /full 28–36 pixel warm-loam core centered through both seam targets without tapering/
+    assert.equal(
+      straight.content.immutableUrl,
+      '/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v10/'
+        + 'forest/route-transition/'
+        + 'forest-heartlands-loam-path-straight-ns/v13/'
+        + '8f4a43bb9f7a23572be8ceab24fed931cdef2ad1c09f9ae0ebd4b56683338603.webp'
     );
-    assert.match(
-      straight.generationPrompt,
-      /N=\(192,32\) and S=\(64,96\) explicitly as seam cross-sections, not cap centers/
+    assert.deepEqual(straight.routeFinishing.targetBox, {
+      x: 46,
+      y: 8,
+      width: 164,
+      height: 112
+    });
+    assert.equal(
+      straight.routeFinishing.maximumScaleAnisotropyPermille,
+      1350
     );
-    assert.match(
-      straight.generationPrompt,
-      /Continue that core only 4–6 pixels outward.*cap it at N=\(196,30\) and S=\(60,98\).*short, nearly straight transverse dirt edge/
+    assert.deepEqual(straight.routeFinishing.terminalClip, {
+      schemaVersion: 'battle-art-route-terminal-clip-v1',
+      maximumOverflowPixels: 8
+    });
+    assert.equal(
+      straight.routeFinishing.geometryPrime.sourceSha256,
+      'sha256:35bef1269c425846d16f7460590565d681c50894c63e7924caeebba5e69deceb'
     );
-    assert.match(
-      straight.generationPrompt,
-      /total visible terminal silhouette no more than 52 pixels transverse/
+    assert.deepEqual(
+      straight.routeFinishing.geometryPrime.subjectBounds,
+      { x: 65, y: 20, width: 132, height: 86 }
     );
-    assert.match(
-      straight.generationPrompt,
-      /no grass, leaves, pebbles, feather, or antialiasing outward of either cap/
-    );
-    assert.match(
-      straight.generationPrompt,
-      /outermost 4-pixel rectangular border clear/
-    );
-    assert.match(
-      straight.generationPrompt,
-      /no opaque terrain diamond, panel, slab, baked background/
-    );
-    assert.doesNotMatch(straight.generationPrompt, /corrective|rejected|mirror|edit Image/i);
-    assert.match(
-      straightPrompt,
-      /descriptor rasterContract is a hard acceptance requirement/
-    );
+    assert.match(straight.generationPrompt, /measured straight-ns JSON geometry prime/);
+    assert.match(straight.generationPrompt, /attached approved Heartlands straight-ew image/);
+    assert.match(straight.generationPrompt, /do not lengthen, round, point, or taper either terminal/);
+    assert.match(straight.generationPrompt, /strict 2:1 landscape canvas that is exactly twice as wide as it is tall/);
+    assert.match(straight.generationPrompt, /delivered file itself must retain the exact 2:1 landscape canvas/);
     assert.match(
       straightPrompt,
-      /parent lifecycle performs only exact-aspect whole-image resizing, chroma removal,\s+normalization, and generic raster validation/
-    );
-    assert.doesNotMatch(straightPrompt, /routeFinishing|corrective|rejected v7/i);
-    assert.match(straightPrompt, /continuous 28–36 pixel warm-loam core/);
-    assert.match(straightPrompt, /6–10 pixel irregular visible grass-and-leaf verge/);
-    assert.match(
-      straightPrompt,
-      /targets are terminal seam cross-sections, not final endpoints or cap centers/
+      /descriptor rasterContract and routeFinishing contract are hard acceptance requirements/
     );
     assert.match(
       straightPrompt,
-      /place the cap only just beyond it/
+      /performs one closed-form largest-component crop, resize, and placement/
     );
     assert.match(
       straightPrompt,
-      /cap it at N=\(196,30\) and S=\(60,98\) with a short, nearly straight transverse dirt edge/
+      /JSON geometry measured from attached reference forest-borderwood-approved-route-straight-ns-v1/
     );
-    assert.doesNotMatch(
+    assert.match(
       straightPrompt,
-      /exact named target as a terminal endpoint|final terminal endpoints/
+      /occupied 132x86 at \(65,20\), covered 122‰, and extended only 7 N \/ 1 S pixels/
     );
-    assert.doesNotMatch(
+    assert.match(
       straightPrompt,
-      /36–42 pixel complete visible route ribbon|4–7 pixel irregular/
+      /widening the near-opaque band to the current 28–52-pixel contract/
     );
-    assert.doesNotMatch(
+    assert.match(
       straightPrompt,
-      /fit-route-candidate\.mjs/
+      /Image 2 .* exact transform-equivalent straight-ew edit target and geometry authority/s
     );
     assert.match(
       straightPrompt,
       /straight-ns are N upper-right at 192,32 and S lower-left at 64,96/
     );
-    assert.match(
-      straightPrompt,
-      /forbidden E lower-right at 192,96, W upper-left at 64,32/
-    );
+    assert.doesNotMatch(straightPrompt, /corrective|rejected v7/i);
 
     const trackedTees = loaded.descriptors.filter(({ descriptor }) => (
       descriptor.capabilities?.routeTopology?.startsWith('tee-')
@@ -5017,7 +5798,12 @@ describe('battle-art isolated generation and review boundary', () => {
     assert.equal(descriptor.status, 'draft');
     assert.equal(descriptor.source, null);
     assert.equal(descriptor.content.immutableUrl, null);
-    assert.equal((await readJson(root, BUNDLE_PATH)).value.assets.length, 0);
+    assert.equal(
+      (await readJson(root, BUNDLE_PATH)).value.assets.some(
+        asset => asset.key === options.family
+      ),
+      false
+    );
 
     const resumed = await generateBattleArt(
       { ...options, resume: true },
@@ -5412,91 +6198,91 @@ describe('battle-art isolated generation and review boundary', () => {
     );
   });
 
-  it('publishes an oversized approved Borderwood route through the generic gate',
+  it('rejects a known pinched direct route before review publication',
     async () => {
     const root = await fixture();
-    const family = 'forest-borderwood-dirt-path-corner-es';
-    const tracked = await loadBattleArt(REPOSITORY_ROOT);
-    const approvedDescriptor = tracked.descriptors.find(
-      entry => entry.descriptor.id === family
-    ).descriptor;
-    const approvedBytes = await readFile(path.join(
+    const family = 'forest-heartlands-loam-path-straight-ns';
+    const raw = await readFile(path.join(
       REPOSITORY_ROOT,
-      approvedDescriptor.source.imagePath
+      HEARTLANDS_STRAIGHT_NS_V11_PINCHED_RAW
     ));
-    await assert.rejects(
-      assertRouteArmMinimumCoreWidth({
-        bytes: approvedBytes,
-        descriptor: approvedDescriptor
-      }),
-      /route corner-es e arm opaque perpendicular span at 100% is 27 pixels; expected at least 28/
-    );
-    let workerStdout;
     const worker = async input => {
       const result = await candidateWorker(input);
-      workerStdout = result.stdout;
-      const bytes = await sharp(approvedBytes)
-          .resize(1774, 887, { fit: 'fill' })
-          .png()
-          .toBuffer();
       await replaceRouteWorkerCandidate({
         workspace: input.workspace,
         result,
-        bytes
+        bytes: raw
       });
       return result;
     };
+    let rejection;
+    await assert.rejects(
+      generateBattleArt({
+        projectRoot: root,
+        theme: 'forest',
+        family,
+        concurrency: 1,
+        timeoutMs: 10_000,
+        dryRun: false,
+        force: false,
+        resume: false
+      }, { worker }),
+      error => {
+        rejection = error;
+        return /terminal clipping would remove 98‰ of covered pixels; expected at most 50‰/
+          .test(error.message);
+      }
+    );
 
-    const generated = await generateBattleArt({
-      projectRoot: root,
-      theme: 'forest',
-      family,
-      concurrency: 1,
-      timeoutMs: 10_000,
-      dryRun: false,
-      force: false,
-      resume: false
-    }, { worker });
-    assert.equal(generated.results[0].status, 'generated');
-
+    const loaded = await loadBattleArt(root);
+    const descriptor = loaded.descriptors.find(
+      entry => entry.descriptor.id === family
+    ).descriptor;
+    const rawPath = generatedArtifactPath(descriptor, {
+      sha256: sha256(raw),
+      format: 'png'
+    });
+    assert.deepEqual(await readFile(path.join(root, rawPath)), raw);
     const candidateRoot = path.join(
       root,
       'ai-image-metadata/battle-art/candidates/forest',
       family
     );
-    const prompt = await readFile(path.join(candidateRoot, 'prompt.txt'), 'utf8');
-    assert.match(prompt, /forest-borderwood-dirt-path-corner-es/);
-    assert.doesNotMatch(prompt, /fit-route-candidate\.mjs/);
+    for (const file of ['candidate.png', 'candidate.webp', 'result.json']) {
+      await assert.rejects(
+        readFile(path.join(candidateRoot, file)),
+        error => error.code === 'ENOENT'
+      );
+    }
+    const failure = await auditFailedRouteAttempt({
+      root,
+      relativePath: rejection.failedAttemptEvidencePath
+    });
+    assert.equal(failure.record.raw.sha256, sha256(raw));
     assert.match(
-      prompt,
-      /parent lifecycle performs only exact-aspect whole-image resizing, chroma removal,\s+normalization, and generic raster validation/
-    );
-    assert.equal(
-      await readFile(path.join(candidateRoot, 'worker.jsonl'), 'utf8'),
-      workerStdout.toString()
-    );
-    assert.doesNotMatch(workerStdout.toString(), /fit-route-candidate\.mjs/);
-    const metadata = JSON.parse(
-      await readFile(path.join(candidateRoot, 'result.json'), 'utf8')
-    );
-    assert.equal(metadata.worker.invocationCount, 1);
-    assert.deepEqual(
-      await sharp(path.join(root, metadata.image.path)).metadata().then(
-        ({ width, height, format }) => ({ width, height, format })
-      ),
-      { width: 256, height: 128, format: 'png' }
+      failure.record.rejection.message,
+      /terminal clipping would remove 98‰ of covered pixels/
     );
   });
 
   it('recovers preserved route evidence without another worker or imagegen call',
     async () => {
     const root = await fixture();
-    const family = 'forest-borderwood-dirt-path-corner-es';
+    const family = 'forest-heartlands-loam-path-straight-ns';
+    const raw = await readFile(path.join(
+      REPOSITORY_ROOT,
+      HEARTLANDS_STRAIGHT_NS_V13_APPROVED_RAW
+    ));
     let originalWorkspace;
     let environmentSource;
     const worker = async input => {
       originalWorkspace = input.workspace;
       const result = await candidateWorker(input);
+      await replaceRouteWorkerCandidate({
+        workspace: input.workspace,
+        result,
+        bytes: raw
+      });
       environmentSource = result.environmentSource;
       const message =
         'Copied the generated artifact unchanged to [candidate.png]'
@@ -5666,14 +6452,10 @@ describe('battle-art isolated generation and review boundary', () => {
   it('canonicalizes a verified WebP route artifact to PNG publication',
     async () => {
     const root = await fixture();
-    const family = 'forest-borderwood-dirt-path-corner-es';
-    const tracked = await loadBattleArt(REPOSITORY_ROOT);
-    const descriptor = tracked.descriptors.find(
-      entry => entry.descriptor.id === family
-    ).descriptor;
+    const family = 'forest-heartlands-loam-path-straight-ns';
     const approvedBytes = await readFile(path.join(
       REPOSITORY_ROOT,
-      descriptor.source.imagePath
+      HEARTLANDS_STRAIGHT_NS_V13_APPROVED_RAW
     ));
     const webpBytes = await sharp(approvedBytes)
       .webp({ lossless: true, effort: 6 })
@@ -5731,7 +6513,7 @@ describe('battle-art isolated generation and review boundary', () => {
 
   it('limits parent resizing to exact-aspect route sources', async () => {
     const routeRoot = await fixture();
-    const routeFamily = 'forest-borderwood-dirt-path-corner-es';
+    const routeFamily = 'forest-borderwood-dirt-path-corner-ne';
     await assert.rejects(
       generateBattleArt({
         projectRoot: routeRoot,
@@ -5797,7 +6579,7 @@ describe('battle-art isolated generation and review boundary', () => {
       generateBattleArt({
         projectRoot: root,
         theme: 'forest',
-        family: 'forest-borderwood-dirt-path-corner-es',
+        family: 'forest-borderwood-dirt-path-corner-ne',
         concurrency: 1,
         timeoutMs: 10_000,
         dryRun: false,
@@ -5819,7 +6601,7 @@ describe('battle-art isolated generation and review boundary', () => {
     );
   });
 
-  it('keeps legacy routes generic until a descriptor opts into route finishing',
+  it('validates direct route geometry without opting into route finishing',
     async () => {
     const root = await fixture();
     const family = 'forest-borderwood-dirt-path-corner-ne';
@@ -5842,7 +6624,7 @@ describe('battle-art isolated generation and review boundary', () => {
       for (let y = 0; y < height; y += 1) {
         for (let x = 0; x < width; x += 1) {
           if (!directions.some(direction => (
-            distanceToSegment(x, y, anchor, routeTargets[direction]) <= 6
+            distanceToSegment(x, y, anchor, routeTargets[direction]) <= 15
           )) && Math.hypot(x - anchor.x, y - anchor.y) > 24) {
             continue;
           }
@@ -5892,7 +6674,7 @@ describe('battle-art isolated generation and review boundary', () => {
     assert.ok((await readFile(path.join(candidateRoot, 'result.json'))).length > 0);
   });
 
-  it('keeps legacy route ends on their existing generic normalization',
+  it('keeps conforming direct route ends on whole-image normalization',
     async () => {
     const root = await fixture();
     const family = 'forest-borderwood-dirt-path-end-n';
@@ -5909,7 +6691,7 @@ describe('battle-art isolated generation and review boundary', () => {
       }
       for (let y = 0; y < height; y += 1) {
         for (let x = 0; x < width; x += 1) {
-          if (distanceToSegment(x, y, anchor, target) > 6) continue;
+          if (distanceToSegment(x, y, anchor, target) > 15) continue;
           pixels.set(
             [117, 76, 36, 255],
             ((y * width) + x) * 4
@@ -5956,45 +6738,17 @@ describe('battle-art isolated generation and review boundary', () => {
     async () => {
     const root = await fixture();
     const family = 'forest-borderwood-dirt-path-straight-ew';
+    const raw = await sharp(
+      await directStraightNsCandidate({ halfWidth: 20 })
+    ).flip().png().toBuffer();
     let workerStdout;
     const worker = async input => {
       const result = await candidateWorker(input);
       workerStdout = result.stdout;
-      const { width, height } = input.descriptor.canvas;
-      const anchor = input.descriptor.placement.anchor;
-      const routeTargets = {
-        n: { x: width * 0.75, y: height * 0.25 },
-        e: { x: width * 0.75, y: height * 0.75 },
-        s: { x: width * 0.25, y: height * 0.75 },
-        w: { x: width * 0.25, y: height * 0.25 }
-      };
-      const directions = topologyDirections(
-        input.descriptor.capabilities.routeTopology
-      );
-      const pixels = Buffer.alloc(width * height * 4);
-      for (let y = 0; y < height; y += 1) {
-        for (let x = 0; x < width; x += 1) {
-          const routeCore = directions.some(direction => (
-            distanceToSegment(x, y, anchor, routeTargets[direction]) <= 15
-          ));
-          const interiorDiamond = (
-            Math.abs(x - anchor.x) / ((width / 2) - 24)
-            + Math.abs(y - anchor.y) / ((height / 2) - 12)
-          ) <= 1;
-          if (!routeCore && !interiorDiamond) continue;
-          pixels.set(
-            [117, 76, 36, 255],
-            ((y * width) + x) * 4
-          );
-        }
-      }
-      const bytes = await sharp(pixels, {
-          raw: { width, height, channels: 4 }
-        }).png().toBuffer();
       await replaceRouteWorkerCandidate({
         workspace: input.workspace,
         result,
-        bytes
+        bytes: raw
       });
       return result;
     };
@@ -6210,8 +6964,8 @@ describe('battle-art isolated generation and review boundary', () => {
     }
     assert.deepEqual(await auditBattleArtReviews({ root }), {
       ok: true,
-      records: 2,
-      approved: 2,
+      records: 3,
+      approved: 3,
       rejected: 0
     });
     for (const { descriptor, review } of retained) {
@@ -6247,8 +7001,8 @@ describe('battle-art isolated generation and review boundary', () => {
     );
     assert.deepEqual(await auditBattleArtReviews({ root }), {
       ok: true,
-      records: 1,
-      approved: 0,
+      records: 2,
+      approved: 1,
       rejected: 1
     });
     await assert.rejects(
@@ -6497,7 +7251,7 @@ describe('battle-art isolated generation and review boundary', () => {
     const review = await copyTrackedReview(root, reviewRelative);
     const releaseRelative =
       'ai-image-metadata/battle-art/releases/'
-      + 'battle-art-descriptors-2026-07-30.v6.json';
+      + 'battle-art-descriptors-2026-07-30.v10.json';
     await mkdir(path.dirname(path.join(root, releaseRelative)), {
       recursive: true
     });
@@ -6731,8 +7485,8 @@ describe('battle-art isolated generation and review boundary', () => {
     });
     assert.deepEqual(await auditBattleArtReviews({ root }), {
       ok: true,
-      records: 1,
-      approved: 1,
+      records: 2,
+      approved: 2,
       rejected: 0
     });
 
@@ -6777,8 +7531,8 @@ describe('battle-art isolated generation and review boundary', () => {
     await rm(path.join(root, first.path));
     assert.deepEqual(await auditBattleArtReviews({ root }), {
       ok: true,
-      records: 1,
-      approved: 1,
+      records: 2,
+      approved: 2,
       rejected: 0
     });
   });
@@ -6825,8 +7579,8 @@ describe('battle-art isolated generation and review boundary', () => {
     );
     assert.deepEqual(await auditBattleArtReviews({ root: rejectedRoot }), {
       ok: true,
-      records: 1,
-      approved: 0,
+      records: 2,
+      approved: 1,
       rejected: 1
     });
     const rejectedRetry = await recordCandidateReview({
@@ -6908,8 +7662,8 @@ describe('battle-art isolated generation and review boundary', () => {
     assert.equal(approvedRecord.decision, 'approved');
     assert.deepEqual(await auditBattleArtReviews({ root: approvedRoot }), {
       ok: true,
-      records: 1,
-      approved: 1,
+      records: 2,
+      approved: 2,
       rejected: 0
     });
     const approvedMetadataPath = path.join(
@@ -6973,12 +7727,21 @@ describe('battle-art isolated generation and review boundary', () => {
       auditBattleArtReviews({ root: approvedRoot }),
       /review tree contains symlink/
     );
+    await rm(path.join(approvedRoot, backfill.path));
+    await writeFile(
+      path.join(approvedRoot, backfill.path),
+      stableJson(backfill.record)
+    );
+    const outsideReviewRoot = path.join(approvedRoot, 'outside-reviews');
+    await cp(
+      path.join(approvedRoot, 'ai-image-metadata/battle-art/reviews'),
+      outsideReviewRoot,
+      { recursive: true }
+    );
     await rm(path.join(
       approvedRoot,
       'ai-image-metadata/battle-art/reviews'
     ), { recursive: true });
-    const outsideReviewRoot = path.join(approvedRoot, 'outside-reviews');
-    await mkdir(outsideReviewRoot);
     await symlink(
       outsideReviewRoot,
       path.join(approvedRoot, 'ai-image-metadata/battle-art/reviews'),
@@ -7067,8 +7830,8 @@ describe('battle-art isolated generation and review boundary', () => {
     assert.equal(backfill.record.schemaVersion, REVIEW_SCHEMA);
     assert.deepEqual(await auditBattleArtReviews({ root }), {
       ok: true,
-      records: 1,
-      approved: 1,
+      records: 2,
+      approved: 2,
       rejected: 0
     });
 
@@ -7142,7 +7905,12 @@ describe('battle-art isolated generation and review boundary', () => {
           + `v${descriptor.content.version}/[0-9a-f]{64}\\.png$`
       )
     );
-    assert.equal((await readJson(root, BUNDLE_PATH)).value.assets.length, 0);
+    assert.equal(
+      (await readJson(root, BUNDLE_PATH)).value.assets.some(
+        asset => asset.key === family
+      ),
+      false
+    );
     await assert.rejects(
       generateBattleArt({
         ...{
@@ -7186,17 +7954,17 @@ describe('battle-art isolated generation and review boundary', () => {
     ), { recursive: true, force: true });
 
     const compiled = await compileApproved({ root });
-    assert.equal(compiled.compiled, 1);
+    assert.equal(compiled.compiled, 2);
     loaded = await loadBattleArt(root);
     descriptor = loaded.descriptors.find(entry => entry.descriptor.id === family).descriptor;
     assert.equal(descriptor.status, 'compiled');
     assert.deepEqual(await auditBattleArtReviews({ root }), {
       ok: true,
-      records: 1,
-      approved: 1,
+      records: 2,
+      approved: 2,
       rejected: 0
     });
-    assert.equal((await checkBattleArt({ root })).reviews.approved, 1);
+    assert.equal((await checkBattleArt({ root })).reviews.approved, 2);
     assert.match(
       descriptor.content.immutableUrl,
       /^\/assets\/battle-map-v3\/[^/]+\/v[1-9][0-9]*\/forest\/surface\//
@@ -7211,15 +7979,21 @@ describe('battle-art isolated generation and review boundary', () => {
     assert.equal(metadata.hasAlpha, true);
 
     const bundle = (await readJson(root, BUNDLE_PATH)).value;
-    assert.deepEqual(bundle.assets[0], {
+    assert.equal(bundle.assets.length, 2);
+    assert.deepEqual(bundle.assets.find(asset => asset.key === family), {
       key: 'forest-moss-surface',
       contentVersion: descriptor.content.version,
       contentHash: descriptor.content.runtimeSha256,
       immutableUrl: descriptor.content.immutableUrl
     });
-    assert.equal(bundle.renderers[0].pivot.x, descriptor.placement.pivot.x);
+    assert.equal(
+      bundle.renderers.find(renderer => renderer.id === family).pivot.x,
+      descriptor.placement.pivot.x
+    );
     const tamperedRenderer = structuredClone(bundle);
-    tamperedRenderer.renderers[0].pivot.x += 1;
+    tamperedRenderer.renderers.find(
+      renderer => renderer.id === family
+    ).pivot.x += 1;
     assert.notEqual(
       await computeBattleArtRendererManifestFullHash(tamperedRenderer),
       bundle.rendererManifestFullHash
@@ -7235,7 +8009,11 @@ describe('battle-art isolated generation and review boundary', () => {
   it('archives a complete immutable bundle and rejects identity replacement', async () => {
     const tracked = await loadBattleArt(REPOSITORY_ROOT);
     const routeFamilies = tracked.descriptors
-      .filter(entry => entry.descriptor.category === 'route-transition')
+      .filter(entry => (
+        entry.descriptor.category === 'route-transition'
+        && entry.descriptor.id
+          !== 'forest-borderwood-dirt-path-corner-es'
+      ))
       .map(entry => entry.descriptor.id);
     const root = await fixture({
       excludedFamilies: routeFamilies
@@ -7243,6 +8021,7 @@ describe('battle-art isolated generation and review boundary', () => {
     await addSyntheticStyleReference(root, 'forest-ancient-tree');
     const loaded = await loadBattleArt(root);
     for (const entry of loaded.descriptors) {
+      if (entry.descriptor.status === 'compiled') continue;
       await generateBattleArt({
         projectRoot: root,
         theme: entry.descriptor.theme,

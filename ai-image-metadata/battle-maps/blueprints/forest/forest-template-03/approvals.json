@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "battle-map-blueprint-approval-index-v2",
+  "theme": "forest",
+  "templateId": "forest-template-03",
+  "entries": [
+    {
+      "id": "forest-template-03-a",
+      "blueprintPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-03/forest-template-03-a.json",
+      "approvalPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-03/forest-template-03-a.approval.json",
+      "blueprintFullHash": "sha256:235a9ae69dcdcebd44659f500b6b0a472fec98d3c92d1b2a51bf0ab6a383aa5b",
+      "sourceImageSha256": "sha256:c622b9b0def37497cf12a96013c72cfff405ad15aaae2955b5a8820a6f7e9efd",
+      "promptProfileSha256": "sha256:d9fd841812bcc9a4713d3ac8b1c81715f359e55d55098589f8970650fed7cdae",
+      "reviewer": "codex-v3-heartlands-review",
+      "decision": "approved",
+      "reason": "Approved after mechanical preview and source-image comparison: the authored JSON prime preserves the Heartlands figure-eight dual approaches, compact central loam hollow, separately routed slope/stair access to the northern fieldstone overlook, five western formation slots, the reviewed 24-cell opponent pool, all five required topology-area identities, and complete 13-family renderer closure.",
+      "approvalFullHash": "sha256:67aaa0ddaf121e573496ae28be57e3f637209d0064617d87fa647a40c6b46be3"
+    },
+    {
+      "id": "forest-template-03-b",
+      "blueprintPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-03/forest-template-03-b.json",
+      "approvalPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-03/forest-template-03-b.approval.json",
+      "blueprintFullHash": "sha256:3159022f7d81aecd61568c957a0c29e43611659c40a3cbb9d6ddafa3e272a17f",
+      "sourceImageSha256": "sha256:c622b9b0def37497cf12a96013c72cfff405ad15aaae2955b5a8820a6f7e9efd",
+      "promptProfileSha256": "sha256:d9fd841812bcc9a4713d3ac8b1c81715f359e55d55098589f8970650fed7cdae",
+      "reviewer": "codex-v3-heartlands-review",
+      "decision": "approved",
+      "reason": "Approved as the compiler-required B sibling after mechanical preview: it preserves the validated dual-route Heartlands topology and full source-area identity while authoring a distinct eastern formation-approach stair transition and independent scene-feature placement; all spawn, mixed-access, connectivity, and 13-family closure checks pass.",
+      "approvalFullHash": "sha256:1fbe6fa7d6a0d9233f243e2995ed0ef3413b2aa32d2dbaf383e0fd72314b5958"
+    },
+    {
+      "id": "forest-template-03-c",
+      "blueprintPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-03/forest-template-03-c.json",
+      "approvalPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-03/forest-template-03-c.approval.json",
+      "blueprintFullHash": "sha256:9d24edfe063f59d6481af321b017b516c5e21cbc368566d44d2bd28511e0c089",
+      "sourceImageSha256": "sha256:c622b9b0def37497cf12a96013c72cfff405ad15aaae2955b5a8820a6f7e9efd",
+      "promptProfileSha256": "sha256:d9fd841812bcc9a4713d3ac8b1c81715f359e55d55098589f8970650fed7cdae",
+      "reviewer": "codex-v3-heartlands-review",
+      "decision": "approved",
+      "reason": "Approved as the compiler-required C sibling after mechanical preview: it preserves the validated Heartlands formation and overlook contracts while adding the explicit required western flank branch through the southern hawthorn fork, a distinct mid-route slope transition, and independent scene-feature placement; all connectivity and renderer-closure checks pass.",
+      "approvalFullHash": "sha256:2745767e699749f4dbc46023c32fd7c096d297f735563155a0e11b83314b4ce5"
+    }
+  ],
+  "fullHash": "sha256:5f4eb1e28f5b3f6512ddfbfa0dd035bb0a91552266bf668d2c9d5b059583d570"
+}

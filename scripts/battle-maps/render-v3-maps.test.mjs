@@ -20,9 +20,12 @@ import {
   buildReviewMetadata,
   buildViteCommand,
   captureMapReview,
+  collectReviewAssetBundles,
   launchViteHarness,
+  loadRuntimeBundleSource,
   parseRenderArgs,
   readSafeProjectJson,
+  resolveRuntimeBundleBinding,
   validateCompiledMapPath,
   verifyRuntimeBundleBinding
 } from './render-v3-maps.mjs';
@@ -63,11 +66,11 @@ function fakeRecord() {
   };
 }
 
-async function validRuntimeBundle() {
+async function validRuntimeBundle({ version = 1 } = {}) {
   const bundle = {
     schemaVersion: 'battle-art-runtime-bundle-v1',
     id: 'bundle:test',
-    version: 1,
+    version,
     manifestFullHash: null,
     rendererManifestFullHash: null,
     renderProfile: {
@@ -253,6 +256,10 @@ test('runtime binding recomputes renderer/manifest hashes and binds the map pin'
       rendererManifestFullHash: bundle.rendererManifestFullHash
     }
   );
+  assert.deepEqual(
+    await resolveRuntimeBundleBinding(record.map, bundle),
+    await verifyRuntimeBundleBinding(record.map, bundle)
+  );
   const staleRenderer = structuredClone(bundle);
   staleRenderer.rendererManifestFullHash = MAP_HASH;
   await assert.rejects(
@@ -264,6 +271,89 @@ test('runtime binding recomputes renderer/manifest hashes and binds the map pin'
   await assert.rejects(
     verifyRuntimeBundleBinding(stalePin, bundle),
     /does not bind/
+  );
+});
+
+test('runtime registry selects archived bundles and rejects absent or mismatched pins', async () => {
+  const current = await validRuntimeBundle({ version: 10 });
+  const archived = await validRuntimeBundle({ version: 7 });
+  const record = fakeRecord();
+  record.map.provenance.assetBundle = {
+    id: archived.id,
+    version: archived.version,
+    manifestFullHash: archived.manifestFullHash
+  };
+  const registry = {
+    schemaVersion: 'battle-art-runtime-bundle-registry-v1',
+    bundles: [current, archived]
+  };
+
+  assert.deepEqual(
+    await resolveRuntimeBundleBinding(record.map, registry),
+    {
+      id: archived.id,
+      version: archived.version,
+      manifestFullHash: archived.manifestFullHash,
+      rendererManifestFullHash: archived.rendererManifestFullHash
+    }
+  );
+
+  const absent = structuredClone(record.map);
+  absent.provenance.assetBundle.version = 6;
+  await assert.rejects(
+    resolveRuntimeBundleBinding(absent, registry),
+    /does not contain exactly one bundle matching/
+  );
+
+  const mismatched = structuredClone(record.map);
+  mismatched.provenance.assetBundle.manifestFullHash = MAP_HASH;
+  await assert.rejects(
+    resolveRuntimeBundleBinding(mismatched, registry),
+    /does not contain exactly one bundle matching/
+  );
+
+  await assert.rejects(
+    resolveRuntimeBundleBinding(record.map, {
+      ...registry,
+      bundles: [...registry.bundles, structuredClone(archived)]
+    }),
+    /does not contain exactly one bundle matching/
+  );
+});
+
+test('runtime bundle loader prefers the registry and falls back to the single bundle', async t => {
+  const root = await temporaryProject(t);
+  const generated = path.join(root, 'frontend/src/generated');
+  await mkdir(generated, { recursive: true });
+  const bundle = await validRuntimeBundle();
+  const registry = {
+    schemaVersion: 'battle-art-runtime-bundle-registry-v1',
+    bundles: [bundle]
+  };
+  await writeFile(
+    path.join(generated, 'battleMapV3RuntimeBundle.json'),
+    `${JSON.stringify(bundle)}\n`
+  );
+  await writeFile(
+    path.join(generated, 'battleMapV3RuntimeBundles.json'),
+    `${JSON.stringify(registry)}\n`
+  );
+
+  assert.deepEqual(await loadRuntimeBundleSource(root), registry);
+  await rm(path.join(generated, 'battleMapV3RuntimeBundles.json'));
+  assert.deepEqual(await loadRuntimeBundleSource(root), bundle);
+});
+
+test('gallery metadata retains distinct runtime bundle versions under one id', async () => {
+  const version6 = await validRuntimeBundle({ version: 6 });
+  const version7 = await validRuntimeBundle({ version: 7 });
+  const reviews = [version7, version6, version7].map(assetBundle => ({
+    metadata: { assetBundle }
+  }));
+
+  assert.deepEqual(
+    collectReviewAssetBundles(reviews),
+    [version6, version7]
   );
 });
 

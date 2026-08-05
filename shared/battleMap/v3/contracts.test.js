@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  BATTLE_MAP_V3_CATALOG_HASH_DOMAIN,
+  BATTLE_MAP_V3_CATALOG_PROJECTION_SCHEMA,
   assertBattleMapV3Candidate,
   assertBattleMapV3CatalogRelease,
   assertBattleMapV3CatalogMapPins,
@@ -9,6 +11,7 @@ import {
   assertVerifiedBattleMapV3Final,
   computeBattleMapV3CatalogHash,
   computeBattleMapV3Hashes,
+  createBattleMapV3CatalogHashProjection,
   createMinimalBattleMapV3FinalFixture,
   finalizeBattleMapV3,
   finalizeBattleMapV3CatalogRelease,
@@ -301,6 +304,16 @@ function createV2CatalogCandidate(finalMap) {
   candidate.catalogSchemaVersion = 2;
   candidate.selectorVersion = 2;
   candidate.entries[0].ecologyProfile = finalMap.ecologyProfile;
+  return candidate;
+}
+
+function createV3CatalogCandidate(finalMap) {
+  const candidate = createV2CatalogCandidate(finalMap);
+  candidate.catalogSchemaVersion = 3;
+  candidate.assetBundlePins[0].assetBundleVersion =
+    finalMap.provenance.assetBundle.version;
+  candidate.entries[0].assetBundleVersion =
+    finalMap.provenance.assetBundle.version;
   return candidate;
 }
 
@@ -632,6 +645,98 @@ test('catalog v2 pins exact map ecology while v1 remains byte-compatible', async
     await finalizeBattleMapV3CatalogRelease(wrongEcologyCandidate);
   await assert.rejects(
     () => assertBattleMapV3CatalogMapPins(wrongEcologyRelease, [finalMap]),
+    error => error.code === 'BATTLE_MAP_V3_CATALOG_MAP_PIN_MISMATCH'
+  );
+});
+
+test('catalog v3 pins exact asset bundle releases while v1 and v2 remain readable', async () => {
+  const candidate = createCandidate();
+  candidate.ecologyProfile = 'forest-iron-depths-borderwood';
+  candidate.scene = {
+    silhouette: 'organic-island',
+    exterior: 'forest-canopy',
+    backdrop: {
+      kind: 'sky-gradient',
+      topColor: '#6687A0',
+      horizonColor: '#B5CDD2',
+      bottomColor: '#E0D6C5',
+      hazeColor: '#D2E0DF'
+    }
+  };
+  const finalMap = await finalizeBattleMapV3(candidate);
+  const catalogCandidate = createV3CatalogCandidate(finalMap);
+  catalogCandidate.assetBundlePins.push({
+    assetBundleId: ASSET_BUNDLE_ID,
+    assetBundleVersion: 2,
+    manifestFullHash: HASH_B
+  });
+  const release = await finalizeBattleMapV3CatalogRelease(catalogCandidate);
+
+  assert.equal(
+    BATTLE_MAP_V3_CATALOG_HASH_DOMAIN,
+    'modia:battle-map-v3:catalog-release:v3'
+  );
+  assert.equal(
+    BATTLE_MAP_V3_CATALOG_PROJECTION_SCHEMA,
+    'battle-map-v3-catalog-release/projection-v3'
+  );
+  assert.equal(
+    createBattleMapV3CatalogHashProjection(createCatalogCandidate(finalMap))
+      .projectionSchema,
+    'battle-map-v3-catalog-release/projection-v1'
+  );
+  assert.equal(
+    createBattleMapV3CatalogHashProjection(createV2CatalogCandidate(finalMap))
+      .projectionSchema,
+    'battle-map-v3-catalog-release/projection-v2'
+  );
+  assert.equal(
+    createBattleMapV3CatalogHashProjection(catalogCandidate).projectionSchema,
+    BATTLE_MAP_V3_CATALOG_PROJECTION_SCHEMA
+  );
+  assert.equal(release.catalogSchemaVersion, 3);
+  assert.equal(release.selectorVersion, 2);
+  assert.deepEqual(await assertBattleMapV3CatalogMapPins(release, [finalMap]), release);
+
+  const duplicateIdentity = clone(catalogCandidate);
+  duplicateIdentity.assetBundlePins[1] = {
+    assetBundleId: ASSET_BUNDLE_ID,
+    assetBundleVersion: 1,
+    manifestFullHash: HASH_B
+  };
+  assert.equal(
+    validateBattleMapV3CatalogReleaseCandidate(duplicateIdentity).valid,
+    false
+  );
+
+  const descendingVersions = clone(catalogCandidate);
+  descendingVersions.assetBundlePins.reverse();
+  assert.equal(
+    validateBattleMapV3CatalogReleaseCandidate(descendingVersions).valid,
+    false
+  );
+
+  const unpinnedVersion = clone(catalogCandidate);
+  unpinnedVersion.entries[0].assetBundleVersion = 3;
+  assert.equal(
+    validateBattleMapV3CatalogReleaseCandidate(unpinnedVersion).valid,
+    false
+  );
+
+  const wrongVersionHash = clone(catalogCandidate);
+  wrongVersionHash.entries[0].assetBundleVersion = 2;
+  assert.equal(
+    validateBattleMapV3CatalogReleaseCandidate(wrongVersionHash).valid,
+    false
+  );
+
+  const wrongMapVersion = clone(catalogCandidate);
+  wrongMapVersion.entries[0].assetBundleVersion = 2;
+  wrongMapVersion.entries[0].assetBundleManifestFullHash = HASH_B;
+  const wrongMapVersionRelease =
+    await finalizeBattleMapV3CatalogRelease(wrongMapVersion);
+  await assert.rejects(
+    () => assertBattleMapV3CatalogMapPins(wrongMapVersionRelease, [finalMap]),
     error => error.code === 'BATTLE_MAP_V3_CATALOG_MAP_PIN_MISMATCH'
   );
 });

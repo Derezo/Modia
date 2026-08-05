@@ -1,0 +1,98 @@
+{
+  "schemaVersion": "battle-art-family-descriptor-v2",
+  "id": "forest-heartlands-fern-hazel-floor",
+  "theme": "forest",
+  "category": "surface",
+  "familyGroup": "forest-heartlands-fern-hazel-floor",
+  "variantId": "surface-0",
+  "capabilities": {
+    "direction": null,
+    "routeTopology": null,
+    "surfaceVariant": 0,
+    "ecologyProfile": "forest-heartlands-woodland",
+    "tierBands": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "heightDeltas": [
+      0
+    ]
+  },
+  "status": "compiled",
+  "promptProfile": {
+    "id": "battle-art-family-v2",
+    "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+    "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+  },
+  "styleReferences": [
+    {
+      "id": "forest-source-template-01",
+      "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+      "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+    }
+  ],
+  "generationPrompt": "Create exactly one seam-safe orthographic isometric forest surface asset named forest-heartlands-fern-hazel-floor for ecology profile forest-heartlands-woodland; tier bands 1, 2, 3, 4, 5; surface variant 0. Author the declared orientation directly, preserve continuous neighboring materials and edge alignment, and include only the declared family content. Regional visual vocabulary: Heartlands Woodland uses a coherent pastoral forest of mature broad-canopy oak, field maple, and flowering hawthorn; warm meadow grass and bluebells; rounded cream-gray fieldstone; warm ochre loam and oak leaf litter; and dappled late-morning light. Keep this species mix, material palette, scale, and lighting explicitly consistent across every directional edge and transition. Depict a complete full ground diamond whose dominant identity is a cool shaded fern-and-hazel understory floor: broad connected russet-brown hazel leaf mould, two low flattened sweeps of deep-green fern litter, and sparse irregular hazelnut shells, catkin fragments, and fine twigs. Make this materially distinct from flowering clover, bare dry ravine loam, fieldstone terrace turf, hawthorn-loop debris, and generic meadow ground. Carry the same leaf-mould material continuously through every diamond edge with a quiet shared seam perimeter; keep identifiable shells, twigs, and fern accents away from the rim. Its source-raster center is (128,64). Never depict standing shrubs, tall fronds, internal tile boundaries, square subcells, checkerboards, mosaics, quilts, paving, contour grids, repeated stamps, evenly spaced clusters, stripes, uniform noise, a clipped patch, or a floating island. Keep the field calm enough for characters and route overlays. Do not add a baked backdrop, black void, unrelated terrain wall, or presentation frame.",
+  "rasterContract": {
+    "schemaVersion": "battle-art-raster-contract-v1",
+    "kind": "opaque-tile-diamond",
+    "alphaThreshold": 240,
+    "minimumCoveredPermille": 1000,
+    "maximumExteriorCoveredPermille": 5
+  },
+  "canvas": {
+    "width": 256,
+    "height": 128
+  },
+  "placement": {
+    "pivot": {
+      "x": 128,
+      "y": 64
+    },
+    "anchor": {
+      "x": 128,
+      "y": 64
+    },
+    "footprint": {
+      "x": 0,
+      "y": 0,
+      "width": 1,
+      "height": 1
+    },
+    "collision": {
+      "kind": "none",
+      "cells": []
+    },
+    "drawBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 128
+    },
+    "occlusionBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
+    },
+    "stratum": "surface"
+  },
+  "content": {
+    "version": 1,
+    "sourceSha256": "sha256:5d8b210746bad64adc31cbff655789d702d6fc6e4318b7642710fc0eaab0c97a",
+    "runtimeSha256": "sha256:f901638297bd0f37de1f729f5a79b5ddcaf1a88ff6dd417f0b6b96cfb783d013",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v10/forest/surface/forest-heartlands-fern-hazel-floor/v1/f901638297bd0f37de1f729f5a79b5ddcaf1a88ff6dd417f0b6b96cfb783d013.webp"
+  },
+  "source": {
+    "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fern-hazel-floor/result.json",
+    "imagePath": "ai-image-metadata/battle-art/sources/forest/forest-heartlands-fern-hazel-floor/v1/5d8b210746bad64adc31cbff655789d702d6fc6e4318b7642710fc0eaab0c97a.png",
+    "imageSha256": "sha256:5d8b210746bad64adc31cbff655789d702d6fc6e4318b7642710fc0eaab0c97a",
+    "width": 256,
+    "height": 128,
+    "format": "png",
+    "reviewer": "codex-v3-template07-visual-assets",
+    "approvedAt": "2026-08-05T05:24:10.107Z"
+  }
+}

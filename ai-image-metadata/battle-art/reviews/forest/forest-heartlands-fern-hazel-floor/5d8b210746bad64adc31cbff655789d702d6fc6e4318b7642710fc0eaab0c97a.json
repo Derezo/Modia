@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v2",
+  "theme": "forest",
+  "familyId": "forest-heartlands-fern-hazel-floor",
+  "decision": "approved",
+  "reviewer": "codex-v3-template07-visual-assets",
+  "reason": "The full seam-safe diamond reads as shaded brown-green leaf mould with flattened fern cover and hazel debris, clearly darker and more sheltered than the clover surface without raised blocking forms.",
+  "reviewedAt": "2026-08-05T05:24:10.107Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-fern-hazel-floor.json",
+    "sha256": "sha256:680b3e84ab611f0fad40363a391635c8cea50182778551b6c595920268b71991",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fern-hazel-floor/result.json",
+      "bytes": 2748,
+      "sha256": "sha256:34d971cb653683d0a79ae3187d8d5b6af192e770b037545b254b3c392ef3f385"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fern-hazel-floor/candidate.png",
+      "bytes": 42071,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:5d8b210746bad64adc31cbff655789d702d6fc6e4318b7642710fc0eaab0c97a"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "styleReferenceMode": "attachments",
+    "styleReferenceProvenance": [
+      {
+        "id": "forest-source-template-01",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1",
+        "stagedBasename": "style-reference-01.png"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 600000,
+      "imageArguments": [
+        "style-reference-01.png"
+      ],
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fern-hazel-floor/prompt.txt",
+        "bytes": 10960,
+        "sha256": "sha256:79edae177a85f418833807f20d80454858448152e5c34fb802cb88c14010cb76"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fern-hazel-floor/worker.jsonl",
+        "bytes": 24786,
+        "sha256": "sha256:ad530e09e5da72e67f7220a1cd483dd8bec24079d2421f37a72214094eb05a5c"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fern-hazel-floor/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fern-hazel-floor/last-message.txt",
+        "bytes": 273,
+        "sha256": "sha256:569355950a3b8c94eb815e8e2f00e8768cbfa1169fd44f6a5caa7498561c1749"
+      }
+    }
+  },
+  "fullHash": "sha256:883f12d477b50dfc7ec700e9b4725e873f78a55a5ed8665288ba932e9e753098"
+}

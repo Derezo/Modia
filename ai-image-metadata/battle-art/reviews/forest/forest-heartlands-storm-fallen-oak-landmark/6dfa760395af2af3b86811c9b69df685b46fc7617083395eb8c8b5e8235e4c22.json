@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v2",
+  "theme": "forest",
+  "familyId": "forest-heartlands-storm-fallen-oak-landmark",
+  "decision": "approved",
+  "reviewer": "codex-v3-landmark-independent-review",
+  "reason": "Colossal coherent 8x3 storm-fallen oak with a dominant exposed root plate, uninterrupted furrowed trunk, and readable splintered crown; clean transparent cutout, no baked terrain or backdrop, correct anchor and 152 permille coverage, zero chroma fringe, and strong Heartlands Template07 hierarchy.",
+  "reviewedAt": "2026-08-05T06:57:47.733Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-storm-fallen-oak-landmark.json",
+    "sha256": "sha256:dad2702f24bac4a5e81b69426b80467dea704fe8c3d91e0e41bd22dae113b549",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-storm-fallen-oak-landmark/result.json",
+      "bytes": 2841,
+      "sha256": "sha256:bcf3ba9811118a12b1c72b1871f5e6fc6011aaa16032ccc5339da37e3fb4f153"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-storm-fallen-oak-landmark/candidate.png",
+      "bytes": 584460,
+      "width": 1536,
+      "height": 768,
+      "format": "png",
+      "sha256": "sha256:6dfa760395af2af3b86811c9b69df685b46fc7617083395eb8c8b5e8235e4c22"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "styleReferenceMode": "attachments",
+    "styleReferenceProvenance": [
+      {
+        "id": "forest-source-template-01",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1",
+        "stagedBasename": "style-reference-01.png"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 1200000,
+      "imageArguments": [
+        "style-reference-01.png"
+      ],
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-storm-fallen-oak-landmark/prompt.txt",
+        "bytes": 11743,
+        "sha256": "sha256:e9e97d3bf1a205a4848bf4e2dee7fedaaa0cf161b815362ca994f426099b55e0"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-storm-fallen-oak-landmark/worker.jsonl",
+        "bytes": 39643,
+        "sha256": "sha256:0b8e21c131f3d15c0e32bd1a71dd9e68e0bbb9ab8e842696afa374315a3ef8af"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-storm-fallen-oak-landmark/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-storm-fallen-oak-landmark/last-message.txt",
+        "bytes": 490,
+        "sha256": "sha256:58e2db7e3b9747f15f78c5d798dd9f85b4b92b960e83cec7b54020224d8b2df5"
+      }
+    }
+  },
+  "fullHash": "sha256:534f833e012124f71cf923d4290f8b9fbc4bba21fc88f3e1bb91aa88f2c5caeb"
+}

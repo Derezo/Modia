@@ -12,13 +12,17 @@ import path from 'node:path';
 import {
   CANDIDATE_SCHEMA,
   DESCRIPTOR_SCHEMA_V2,
+  FAILED_ATTEMPT_REVALIDATION_ORIGIN,
+  REVALIDATED_CANDIDATE_SCHEMA,
   RENDER_PROFILE,
   TIER_BANDS,
   assertAllowlistedLegacyCandidate,
   assertDescriptor,
+  assertFailedAttemptRevalidationOrigin,
   assertStyleReferenceProvenance,
   assertV2DescriptorsPlanned,
   atomicWrite,
+  candidateValidationDescriptorSha256,
   candidatePaths,
   correctiveStyleReferenceForConsumer,
   exactKeys,
@@ -114,9 +118,9 @@ const ROUTE_CORNER_AXIS_BY_TOPOLOGY = Object.freeze({
 const ROUTE_CORNER_MAXIMUM_COVERAGE_PERMILLE_V2 = 230;
 const ROUTE_ARM_SAMPLE_FRACTIONS = Object.freeze([0.5, 0.75, 1]);
 const ROUTE_ARM_MINIMUM_CORE_WIDTH = 28;
-const CORNER_ES_ARM_MINIMUM_CORE_WIDTH_V2 = 32;
-const CORNER_ES_ARM_MAXIMUM_CORE_WIDTH_V2 = 38;
-const CORNER_ES_MAXIMUM_ARM_CORE_SPREAD_V2 = 6;
+const CORNER_ES_ARM_MINIMUM_CORE_WIDTH_V2 = 30;
+const CORNER_ES_ARM_MAXIMUM_CORE_WIDTH_V2 = 41;
+const CORNER_ES_MAXIMUM_ARM_CORE_SPREAD_V2 = 11;
 const ROUTE_ARM_ALPHA_SPAN_CONTRACTS_BY_FAMILY_ID = Object.freeze({
   'forest-heartlands-loam-path-corner-es': Object.freeze({
     minimumPixels: CORNER_ES_ARM_MINIMUM_CORE_WIDTH_V2,
@@ -125,22 +129,16 @@ const ROUTE_ARM_ALPHA_SPAN_CONTRACTS_BY_FAMILY_ID = Object.freeze({
   })
 });
 const CORNER_ES_UPPER_CLEAR_BOUNDS = Object.freeze({
-  minimumX: 112,
-  maximumX: 144,
-  minimumY: 36,
-  maximumY: 52
+  minimumX: 120,
+  maximumX: 135,
+  minimumY: 0,
+  maximumY: 32
 });
-const CORNER_ES_ANCHOR_ARCH_BOUNDS = Object.freeze({
-  minimumX: 112,
-  maximumX: 144,
-  minimumY: 56,
-  maximumY: 84
-});
-const CORNER_ES_ANCHOR_ARCH_MINIMUM_ROW_RUN = 16;
 const CORNER_ES_APEX_CORE_BOUNDS = Object.freeze({
   minimumX: 120,
   maximumX: 135
 });
+const CORNER_ES_APEX_CORE_MINIMUM_HEIGHT = 29;
 const CORNER_ES_MAXIMUM_APEX_TOP_STEP = 4;
 const CORNER_ES_MAXIMUM_APEX_FLAT_RUN = 8;
 const ROUTE_ARM_VECTORS = Object.freeze({
@@ -510,40 +508,18 @@ export async function assertCornerEsAnchorArchPlacement({
       x <= CORNER_ES_UPPER_CLEAR_BOUNDS.maximumX;
       x += 1
     ) {
-      if (x < width && y < height && alphaAt(x, y) !== 0) {
+      if (
+        x < width
+        && y < height
+        && alphaAt(x, y) >= ROUTE_CORNER_OPAQUE_ALPHA_THRESHOLD
+      ) {
         throw new Error(
-          `${label} route corner-es upper-center exclusion contains alpha `
-          + `at ${x},${y}; expected x=112..144, y=36..52 to be transparent`
+          `${label} route corner-es upper-center exclusion contains `
+          + `alpha-at-least-${ROUTE_CORNER_OPAQUE_ALPHA_THRESHOLD} at `
+          + `${x},${y}; expected the apex core x=120..135 to remain below `
+          + 'alpha 240 through y=32'
         );
       }
-    }
-  }
-  let minimumOpaqueRowRun = Number.POSITIVE_INFINITY;
-  for (
-    let y = CORNER_ES_ANCHOR_ARCH_BOUNDS.minimumY;
-    y <= CORNER_ES_ANCHOR_ARCH_BOUNDS.maximumY;
-    y += 1
-  ) {
-    let longestRun = 0;
-    let currentRun = 0;
-    for (
-      let x = CORNER_ES_ANCHOR_ARCH_BOUNDS.minimumX;
-      x <= CORNER_ES_ANCHOR_ARCH_BOUNDS.maximumX;
-      x += 1
-    ) {
-      const opaque = x < width
-        && y < height
-        && alphaAt(x, y) >= ROUTE_CORNER_OPAQUE_ALPHA_THRESHOLD;
-      currentRun = opaque ? currentRun + 1 : 0;
-      longestRun = Math.max(longestRun, currentRun);
-    }
-    minimumOpaqueRowRun = Math.min(minimumOpaqueRowRun, longestRun);
-    if (longestRun < CORNER_ES_ANCHOR_ARCH_MINIMUM_ROW_RUN) {
-      throw new Error(
-        `${label} route corner-es anchor-arch opaque run at y=${y} is `
-        + `${longestRun} pixels; expected at least `
-        + `${CORNER_ES_ANCHOR_ARCH_MINIMUM_ROW_RUN} within x=112..144`
-      );
     }
   }
   const apexTopRows = [];
@@ -599,31 +575,34 @@ export async function assertCornerEsAnchorArchPlacement({
   if (Number.isSafeInteger(
     routeArmAlphaSpanContract(descriptor).maximumSpreadPixels
   )) {
+    const sharedCoreStartY = Math.max(...apexTopRows);
+    const sharedCoreEndY =
+      sharedCoreStartY + CORNER_ES_APEX_CORE_MINIMUM_HEIGHT - 1;
     for (
       let x = CORNER_ES_APEX_CORE_BOUNDS.minimumX;
       x <= CORNER_ES_APEX_CORE_BOUNDS.maximumX;
       x += 1
     ) {
-      const topRow = apexTopRows[x - CORNER_ES_APEX_CORE_BOUNDS.minimumX];
       for (
-        let y = topRow;
-        y <= CORNER_ES_ANCHOR_ARCH_BOUNDS.maximumY;
+        let y = sharedCoreStartY;
+        y <= sharedCoreEndY;
         y += 1
       ) {
         if (y >= height
           || alphaAt(x, y) < ROUTE_CORNER_OPAQUE_ALPHA_THRESHOLD) {
           throw new Error(
-            `${label} route corner-es apex core contains an interior `
-            + `sub-240-alpha gap at ${x},${y}; expected every column in `
-            + 'x=120..135 to remain alpha-column-convex from its first '
-            + 'alpha-at-least-240 pixel through y=84'
+            `${label} route corner-es shared apex core contains a `
+            + `sub-240-alpha gap at ${x},${y}; expected x=120..135 to `
+            + `remain alpha-at-least-240 for `
+            + `${CORNER_ES_APEX_CORE_MINIMUM_HEIGHT} consecutive rows from `
+            + `the lowest apex-column top at y=${sharedCoreStartY}`
           );
         }
       }
     }
   }
   return {
-    minimumOpaqueRowRun,
+    minimumOpaqueCoreHeight: CORNER_ES_APEX_CORE_MINIMUM_HEIGHT,
     maximumApexTopStep,
     maximumApexFlatRun
   };
@@ -909,16 +888,20 @@ const CORNER_PHYSICAL_SHAPES = Object.freeze({
     + 'semicircle or broad hollow half-ring. Put both seam-arm '
     + 'tips at 25% and 75% canvas width and 75% canvas height, then rise inward '
     + 'through one continuous rounded band at 50% width and 50% canvas height. '
-    + 'Keep at least a 16-pixel uninterrupted opaque warm-loam run inside '
-    + 'x=112..144 on every row from y=56 through y=84 while '
-    + 'x=112..144 and y=36..52 remains transparent. Do not invert this into a '
+    + 'Keep the shared apex core x=120..135 fully opaque for at least 29 '
+    + 'consecutive rows beginning at the lowest apex-column top, while the '
+    + 'apex core x=120..135 remains below alpha 240 through y=32. This '
+    + 'preserves the '
+    + 'JSON-prime core depth while allowing its whole crown a bounded '
+    + '22-pixel upward shift, without admitting a tall half-ring. Do not '
+    + 'invert this into a '
     + 'classic upright U with its open tips in the upper half. Compose this '
     + 'geometry in the raw imagegen subject itself. Make the generated loam core '
     + 'deliberately even and obey the arm-width contract stated below after the '
     + 'model output is resized as a whole to 256x128, with no center flare or '
     + 'seam-tip taper. Keep '
-    + 'the upper exclusion visibly empty in the generated composition and place '
-    + 'the center bridge across y=56..84. Deterministic finishing may '
+    + 'the upper exclusion visibly empty in the generated composition. '
+    + 'Deterministic finishing may '
     + 'only place the complete generated subject; it cannot repair an incorrect '
     + 'arch, add missing geometry, or remove internal route content',
   'corner-sw':
@@ -1196,10 +1179,18 @@ export function buildGenerationPrompt({
   const routeTopology = descriptor.capabilities?.routeTopology;
   const routeSubjectBoxFinishing = routeGeneration
     && descriptor.routeFinishing?.strategy === 'largest-component-box-v1';
+  const routeAnchorScaleFinishing = routeGeneration
+    && descriptor.routeFinishing?.strategy === 'anchor-scale-v1';
+  const directGeometryPrimePromptAppendInstruction =
+    descriptor.directGeometryPrime
+      ? ` Then append exactly one newline, the label "Geometry prime JSON: ", `
+        + `and this exact compact JSON with no changes: `
+        + `${JSON.stringify(descriptor.directGeometryPrime)}`
+      : '';
   const routeArmContract = routeArmAlphaSpanContract(descriptor);
   const usesAuthoredArmSpanContract = Number.isSafeInteger(
     routeArmContract.maximumSpreadPixels
-  );
+  ) && !routeAnchorScaleFinishing;
   const routeArmTargetRange = usesAuthoredArmSpanContract
     ? `${routeArmContract.minimumPixels}–${routeArmContract.maximumPixels}`
     : '28–36';
@@ -1207,6 +1198,23 @@ export function buildGenerationPrompt({
     ? ` Across the six required arm measurements, keep the widest and `
       + `narrowest runs within ${routeArmContract.maximumSpreadPixels} pixels `
       + 'of each other.'
+    : '';
+  const routeGeometryPrime = descriptor.routeFinishing?.geometryPrime;
+  const routeGeometryPrimeInstruction = routeGeometryPrime
+    ? ` The descriptor carries JSON geometry measured from attached reference `
+      + `${routeGeometryPrime.sourceReferenceId}: on its `
+      + `${routeGeometryPrime.canvas.width}x${routeGeometryPrime.canvas.height} `
+      + `canvas the connected subject occupied `
+      + `${routeGeometryPrime.subjectBounds.width}x`
+      + `${routeGeometryPrime.subjectBounds.height} at `
+      + `(${routeGeometryPrime.subjectBounds.x},`
+      + `${routeGeometryPrime.subjectBounds.y}), covered `
+      + `${routeGeometryPrime.coveragePermille}‰, and extended only `
+      + `${routeGeometryPrime.terminalOverflowPixels.n} N / `
+      + `${routeGeometryPrime.terminalOverflowPixels.s} S pixels beyond the `
+      + 'declared terminal planes. Treat those compact occupied proportions and '
+      + 'terminal cuts as the prime construction target while widening the '
+      + `near-opaque band to the current ${routeArmTargetRange}-pixel contract.`
     : '';
   const routeArmCompositionInstruction = usesAuthoredArmSpanContract
     ? `Generate every declared arm so its connected near-opaque route band at `
@@ -1233,12 +1241,13 @@ export function buildGenerationPrompt({
       + 'rely on partial transparency for shape or softness: a flat chroma '
       + 'source may normalize to a binary-alpha cutout.';
   const cornerEsApexContinuityInstruction = usesAuthoredArmSpanContract
-    ? ' Across x=120..135, make the visible apex core column-convex: from the '
-      + 'first visible loam pixel in each column through y=84, keep every pixel '
-      + 'filled by the same connected band. Put no isolated grass or leaf '
-      + 'accent above that central core or inside its upper exclusion. Paint '
-      + 'the central band solid with no magenta-background pinhole, grass '
-      + 'cutout, notch, or other transparent gap inside those columns.'
+    ? ' Across x=120..135, make the visible apex core column-convex across one '
+      + 'shared 29-row band beginning at the lowest first-visible loam pixel '
+      + 'among those columns. Keep every pixel in that band filled by the same '
+      + 'connected route. Put no isolated grass or leaf accent above that '
+      + 'central core or inside its upper exclusion. Paint the central band '
+      + 'solid with no magenta-background pinhole, grass cutout, notch, or '
+      + 'other transparent gap inside those columns.'
     : '';
   const routeTopologyClass = topology => (
     typeof topology === 'string'
@@ -1336,8 +1345,16 @@ export function buildGenerationPrompt({
       + (routeSubjectBoxFinishing
         ? `removes chroma, selects the one largest connected route component, `
           + `crops it once to its measured alpha bounds, resizes it once into `
-          + `the descriptor-pinned target box, despills the exterior alpha `
+          + `the descriptor-pinned target box, clips only overflow beyond any `
+          + `descriptor-pinned straight-route terminal planes, despills the exterior alpha `
           + `frontier, and runs the route and generic raster contracts.`
+        : routeAnchorScaleFinishing
+          ? `performs one exact-aspect whole-image normalization, uniformly `
+            + `scales the complete generated subject about the declared anchor `
+            + `by the descriptor-pinned factor, crops back to the declared `
+            + `canvas, clears the outermost four pixels and only forbidden `
+            + `capability-edge bands, normalizes once more, `
+            + `and runs the route and generic raster contracts.`
         : `performs any exact-aspect whole-image resize, removes chroma, `
           + `despills the exterior alpha frontier, and runs the generic raster `
           + `contract.`)
@@ -1409,12 +1426,13 @@ ${styleFiles.map((file, index) => (
           + 'redrawing the route from scratch. '
           + (index === styleFiles.length - 1
             ? 'It is intentionally the final attached reference; give it '
-              + 'precedence over every earlier image for macro geometry. '
+          + 'precedence over every earlier image for macro geometry. '
             : '')
           + 'For the imagegen prompt argument, copy the Frozen family art '
-          + 'direction verbatim as the complete prompt and add no preface, '
-          + 'suffix, sampling algorithm, finishing explanation, or other geometry '
-          + 'terms. The remaining route-contract prose in this worker task '
+          + `direction verbatim.${directGeometryPrimePromptAppendInstruction} `
+          + 'Add no other preface, suffix, sampling algorithm, finishing '
+          + 'explanation, or geometry terms. The remaining route-contract prose '
+          + 'in this worker task '
           + 'governs deterministic acceptance only and must not be forwarded '
           + 'into the imagegen prompt.'
         : `- Image ${index + 1} (${file}) is the exact approved `
@@ -1932,7 +1950,8 @@ ${styleFiles.map((file, index) => (
       + 'dark lower side, vertical side plane, rock-lined causeway, retaining '
       + 'wall, or raised platform silhouette.',
     'route-transition':
-      `${routeEndpointInstruction} ${routeArmCompositionInstruction} Never `
+      `${routeEndpointInstruction}${routeGeometryPrimeInstruction} `
+      + `${routeArmCompositionInstruction} Never `
       + 'generate a hairline, narrow '
       + 'ruler-straight streak, or threadlike track. '
       + 'Keep one connected path silhouette with no detached alpha component; each '
@@ -1951,6 +1970,12 @@ ${styleFiles.map((file, index) => (
         + `performs exactly one descriptor-pinned crop/resize/place operation `
         + `before normalization and contract checks. It does not enumerate, `
         + `score, or retry placements.`
+      : routeAnchorScaleFinishing
+        ? `The worker must not inspect or modify candidate.png after the one `
+          + `source copy. The parent lifecycle accepts only the exact declared `
+          + `2:1 source aspect, normalizes the whole image, and performs one `
+          + `descriptor-pinned uniform scale about the declared anchor before `
+          + `contract checks. It does not enumerate, score, or retry scales.`
       : `The worker must not inspect or modify candidate.png after the one source `
         + `copy. When the source has the exact declared 2:1 aspect ratio, the parent lifecycle `
         + `deterministically resizes the entire copied raster to the exact declared `
@@ -1968,13 +1993,24 @@ ${styleFiles.map((file, index) => (
         + `acceptance requirements. The worker must preserve the one generated `
         + `route artifact without editing it. The parent lifecycle performs one `
         + `closed-form largest-component crop, resize, and placement into the `
-        + `descriptor-pinned box, followed by chroma normalization and route `
+        + `descriptor-pinned box, followed by chroma normalization, the exact `
+        + `descriptor-pinned terminal-plane trim, and route `
         + `validation. It never searches alternatives and cannot repair topology, `
         + `reshape an arm, invent, repaint, or synthesize content.`
+      : routeAnchorScaleFinishing
+        ? `The descriptor rasterContract and routeFinishing contract are hard `
+          + `acceptance requirements. The worker must preserve the one generated `
+          + `route artifact without editing it. The parent lifecycle performs `
+          + `only the descriptor-pinned uniform whole-subject scale about the `
+          + `declared anchor, a four-pixel border clear, bounded removal at `
+          + `forbidden capability-edge bands, chroma normalization, and route `
+          + `validation. It never searches alternatives, changes `
+          + `individual arms, invents, repaints, or synthesizes content.`
       : `The descriptor rasterContract is a hard acceptance requirement. The worker `
         + `must preserve the one generated route artifact without editing it. The parent `
         + `lifecycle performs only exact-aspect whole-image resizing, chroma removal, `
-        + `normalization, and generic raster validation; it does not repair topology or `
+        + `normalization, generic raster validation, and topology-appropriate `
+        + `deterministic route geometry validation; it does not repair topology or `
         + `invent, repaint, crop, translate, or synthesize content.`
     : `The descriptor rasterContract is a hard acceptance requirement. Use deterministic local
 chroma removal, crop/scale, alpha masking, and canvas placement after the single imagegen
@@ -2391,6 +2427,8 @@ async function loadCandidate(root, descriptor, descriptorPath, paths, profile) {
     throw error;
   }
   const legacy = candidate?.schemaVersion === 'battle-art-candidate-v1';
+  const revalidated =
+    candidate?.schemaVersion === REVALIDATED_CANDIDATE_SCHEMA;
   exactKeys(candidate, [
     'schemaVersion',
     'familyId',
@@ -2399,15 +2437,20 @@ async function loadCandidate(root, descriptor, descriptorPath, paths, profile) {
     'descriptorSha256',
     'promptProfile',
     'styleReferences',
-    ...(!legacy ? ['styleReferenceMode', 'styleReferenceProvenance'] : []),
+    ...(!legacy && !revalidated
+      ? ['styleReferenceMode', 'styleReferenceProvenance']
+      : []),
     ...(!legacy && candidate.derivation !== undefined
       ? ['derivation']
       : []),
+    ...(revalidated ? ['origin'] : []),
     'image',
-    'worker',
+    ...(!revalidated ? ['worker'] : []),
     'status'
   ], 'candidate metadata');
-  if ((!legacy && candidate.schemaVersion !== CANDIDATE_SCHEMA)
+  if ((!legacy
+      && candidate.schemaVersion !== CANDIDATE_SCHEMA
+      && !revalidated)
     || candidate.familyId !== descriptor.id
     || candidate.theme !== descriptor.theme
     || candidate.descriptorPath !== descriptorPath
@@ -2424,7 +2467,7 @@ async function loadCandidate(root, descriptor, descriptorPath, paths, profile) {
       `${descriptor.id} candidate`
     );
   }
-  if (!legacy) {
+  if (!legacy && !revalidated) {
     const expectedProvenance = styleReferenceProvenance(
       descriptor.styleReferences
     );
@@ -2446,6 +2489,13 @@ async function loadCandidate(root, descriptor, descriptorPath, paths, profile) {
       || new Set(imagePaths).size !== imagePaths.length) {
       throw new Error(`${descriptor.id} candidate style attachment provenance is stale`);
     }
+  }
+  if (revalidated) {
+    await auditRevalidatedCandidateOrigin({
+      root,
+      descriptor,
+      candidate
+    });
   }
   const candidateBytes = await readPinnedRegularFile(
     root,
@@ -2688,26 +2738,11 @@ async function prepareVerifiedGeneratedCandidate({
     profile,
     label: `${descriptor.id} generated candidate`
   });
-  if (routeFinishing) {
-    await validateFinishedRouteArtifact({
+  if (routeGeneration) {
+    await validatePreparedRouteGeometry({
       bytes: candidateBytes,
-      descriptor
-    });
-    await assertRouteArmMinimumCoreWidth({
-      bytes: candidateBytes,
-      descriptor
-    });
-    await assertRouteCornerMinimumCoreWidth({
-      bytes: candidateBytes,
-      descriptor
-    });
-    await assertCornerEsAnchorArchPlacement({
-      bytes: candidateBytes,
-      descriptor
-    });
-    await assertRouteCornerMaximumCoverage({
-      bytes: candidateBytes,
-      descriptor
+      descriptor,
+      finished: routeFinishing !== undefined
     });
   }
   return {
@@ -2715,6 +2750,36 @@ async function prepareVerifiedGeneratedCandidate({
     normalizedFormat,
     derivation: finished?.derivation ?? direct?.derivation ?? null
   };
+}
+
+export async function validatePreparedRouteGeometry({
+  bytes,
+  descriptor,
+  finished = descriptor?.routeFinishing !== undefined,
+  label = `${descriptor?.id ?? 'route artifact'} generated candidate`
+} = {}) {
+  if (descriptor?.category !== 'route-transition') {
+    throw new Error(`${label} is not a route-transition artifact`);
+  }
+  if (!finished) {
+    await assertRouteTransitionCanvasBorderClear({
+      bytes,
+      descriptor
+    });
+  }
+  if (finished) {
+    await validateFinishedRouteArtifact({
+      bytes,
+      descriptor,
+      label
+    });
+  }
+  await assertRouteArmMinimumCoreWidth({ bytes, descriptor });
+  await assertRouteCornerMinimumCoreWidth({ bytes, descriptor });
+  await assertCornerEsAnchorArchPlacement({ bytes, descriptor });
+  await assertRouteCornerMaximumCoverage({ bytes, descriptor });
+  await assertRouteStraightMaximumCoverage({ bytes, descriptor });
+  await assertRouteStraightMaximumLongitudinalExtent({ bytes, descriptor });
 }
 
 async function publishVerifiedGeneratedCandidateUnchecked({
@@ -2889,7 +2954,12 @@ async function publishVerifiedGeneratedCandidate(options) {
   }
 }
 
-async function assertRecoveryPublicationAbsent(root, descriptor, paths) {
+async function assertRecoveryPublicationAbsent(
+  root,
+  descriptor,
+  paths,
+  operation = 'recovery'
+) {
   for (const relative of [
     paths.imagePng,
     paths.imageWebp,
@@ -2899,14 +2969,14 @@ async function assertRecoveryPublicationAbsent(root, descriptor, paths) {
       await lstat(resolveTracked(
         root,
         relative,
-        `${descriptor.id} recovery publication`
+        `${descriptor.id} ${operation} publication`
       ));
     } catch (error) {
       if (error.code === 'ENOENT') continue;
       throw error;
     }
     throw new Error(
-      `${descriptor.id} recovery requires no existing candidate publication`
+      `${descriptor.id} ${operation} requires no existing candidate publication`
     );
   }
 }
@@ -3264,7 +3334,51 @@ export async function auditFailedRouteAttempt({
   if (stableJson(inspectedRaw) !== stableJson(record.raw)) {
     throw new Error(`${label}.raw image identity does not match`);
   }
-  return { path: relativePath, record, rawBytes };
+  return {
+    path: relativePath,
+    file: structuredClone(evidence.pin),
+    record,
+    rawBytes
+  };
+}
+
+export async function auditRevalidatedCandidateOrigin({
+  root = SCRIPT_ROOT,
+  descriptor,
+  candidate,
+  label = `${descriptor?.id ?? 'route artifact'} candidate origin`
+} = {}) {
+  if (candidate?.schemaVersion !== REVALIDATED_CANDIDATE_SCHEMA) {
+    throw new Error(`${label} requires ${REVALIDATED_CANDIDATE_SCHEMA}`);
+  }
+  const descriptorSha256 = candidateValidationDescriptorSha256(descriptor);
+  assertFailedAttemptRevalidationOrigin(candidate.origin, {
+    theme: descriptor.theme,
+    familyId: descriptor.id,
+    validationDescriptorSha256: descriptorSha256,
+    derivationSource: candidate.derivation?.source
+  }, label);
+  const audited = await auditFailedRouteAttempt({
+    root,
+    relativePath: candidate.origin.failureRecord.path
+  });
+  const originalDescriptor = {
+    path: audited.record.descriptor.path,
+    sha256: audited.record.descriptor.sha256,
+    contentVersion: audited.record.descriptor.contentVersion
+  };
+  if (
+    candidate.origin.failureRecord.sha256 !== audited.file.sha256
+    || candidate.origin.failureRecord.fullHash !== audited.record.fullHash
+    || stableJson(candidate.origin.raw) !== stableJson(audited.record.raw)
+    || stableJson(candidate.origin.originalDescriptor)
+      !== stableJson(originalDescriptor)
+    || audited.record.theme !== descriptor.theme
+    || audited.record.familyId !== descriptor.id
+  ) {
+    throw new Error(`${label} does not match its audited failed attempt`);
+  }
+  return audited;
 }
 
 async function archiveFailedRouteAttempt({
@@ -4000,6 +4114,168 @@ async function recoverBattleArt(
     recover: true,
     concurrency: 0,
     timeoutMs: options.timeoutMs,
+    jobs: [{
+      family: entry.descriptor.id,
+      theme: entry.descriptor.theme,
+      outputDirectory: paths.directory
+    }],
+    results: [result]
+  };
+}
+
+export async function revalidateFailedRouteAttempt(options = {}) {
+  if (options.force !== undefined) {
+    throw new Error('battle-art failed-attempt revalidation does not accept force');
+  }
+  for (const key of ['theme', 'family', 'failure']) {
+    if (typeof options[key] !== 'string' || options[key].length === 0) {
+      throw new Error(`--${key} is required`);
+    }
+  }
+  const root = options.projectRoot ?? options.root ?? SCRIPT_ROOT;
+  const loaded = await loadBattleArt(root);
+  const [entry] = selectFamilies(loaded, {
+    theme: options.theme,
+    family: options.family
+  });
+  if (entry.descriptor.status !== 'draft') {
+    throw new Error(
+      `${entry.descriptor.id} is ${entry.descriptor.status}; `
+      + 'failed-attempt revalidation requires a draft family'
+    );
+  }
+  if (entry.descriptor.category !== 'route-transition') {
+    throw new Error(
+      `${entry.descriptor.id} is not a route-transition family`
+    );
+  }
+  if (entry.descriptor.schemaVersion === DESCRIPTOR_SCHEMA_V2) {
+    const readiness = await loadReadinessPlan(loaded.root);
+    assertV2DescriptorsPlanned([entry], readiness.plan);
+  }
+  const paths = candidatePaths(entry.descriptor);
+  const result = await withBattleArtCandidateLock({
+    root: loaded.root,
+    theme: entry.descriptor.theme,
+    family: entry.descriptor.id
+  }, async () => {
+    const lockedLoaded = await loadBattleArt(loaded.root);
+    const [lockedEntry] = selectFamilies(lockedLoaded, {
+      theme: entry.descriptor.theme,
+      family: entry.descriptor.id
+    });
+    const descriptor = lockedEntry.descriptor;
+    const lockedPaths = candidatePaths(descriptor);
+    if (
+      descriptor.status !== 'draft'
+      || descriptor.category !== 'route-transition'
+    ) {
+      throw new Error(
+        `${descriptor.id} is no longer an eligible draft route family`
+      );
+    }
+    await assertRecoveryPublicationAbsent(
+      lockedLoaded.root,
+      descriptor,
+      lockedPaths,
+      'failed-attempt revalidation'
+    );
+    try {
+      const audited = await auditFailedRouteAttempt({
+        root: lockedLoaded.root,
+        relativePath: options.failure
+      });
+      if (
+        audited.record.theme !== descriptor.theme
+        || audited.record.familyId !== descriptor.id
+      ) {
+        throw new Error(
+          `${descriptor.id} failed-attempt record belongs to `
+          + `${audited.record.theme}/${audited.record.familyId}`
+        );
+      }
+      const prepared = await prepareVerifiedGeneratedCandidate({
+        generatedBytes: audited.rawBytes,
+        descriptor,
+        profile: lockedLoaded.promptProfile,
+        generatedArtifact: audited.record.raw
+      });
+      if (prepared.derivation === null) {
+        throw new Error(
+          `${descriptor.id} revalidated route has no reproducible derivation`
+        );
+      }
+      const imageRelative = prepared.normalizedFormat === 'png'
+        ? lockedPaths.imagePng
+        : lockedPaths.imageWebp;
+      await atomicWrite(
+        lockedLoaded.root,
+        imageRelative,
+        prepared.candidateBytes
+      );
+      const image = await inspectImageContents(
+        imageRelative,
+        prepared.candidateBytes
+      );
+      const descriptorSha256 = candidateValidationDescriptorSha256(
+        descriptor
+      );
+      const candidate = {
+        schemaVersion: REVALIDATED_CANDIDATE_SCHEMA,
+        familyId: descriptor.id,
+        theme: descriptor.theme,
+        descriptorPath: lockedEntry.path,
+        descriptorSha256,
+        promptProfile: structuredClone(descriptor.promptProfile),
+        styleReferences: structuredClone(descriptor.styleReferences),
+        origin: {
+          kind: FAILED_ATTEMPT_REVALIDATION_ORIGIN,
+          failureRecord: {
+            path: audited.path,
+            sha256: audited.file.sha256,
+            fullHash: audited.record.fullHash
+          },
+          raw: structuredClone(audited.record.raw),
+          originalDescriptor: {
+            path: audited.record.descriptor.path,
+            sha256: audited.record.descriptor.sha256,
+            contentVersion: audited.record.descriptor.contentVersion
+          },
+          validationDescriptorSha256: descriptorSha256
+        },
+        derivation: {
+          ...structuredClone(prepared.derivation),
+          source: structuredClone(audited.record.raw)
+        },
+        image,
+        status: 'candidate-awaiting-review'
+      };
+      await auditRevalidatedCandidateOrigin({
+        root: lockedLoaded.root,
+        descriptor,
+        candidate
+      });
+      await atomicWrite(
+        lockedLoaded.root,
+        lockedPaths.metadata,
+        stableJson(candidate)
+      );
+      return {
+        family: descriptor.id,
+        theme: descriptor.theme,
+        status: 'revalidated',
+        image,
+        origin: structuredClone(candidate.origin)
+      };
+    } catch (error) {
+      await cleanCandidatePublication(lockedLoaded.root, lockedPaths);
+      throw error;
+    }
+  });
+  return {
+    ok: true,
+    revalidatedFailure: true,
+    concurrency: 0,
     jobs: [{
       family: entry.descriptor.id,
       theme: entry.descriptor.theme,

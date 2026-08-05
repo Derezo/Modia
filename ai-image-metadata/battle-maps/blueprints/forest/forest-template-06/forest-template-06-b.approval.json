@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "battle-map-blueprint-approval-v2",
+  "id": "forest-template-06-b",
+  "theme": "forest",
+  "templateId": "forest-template-06",
+  "decision": "approved",
+  "reviewer": "codex-v3-heartlands-blueprint-review",
+  "blueprintPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-06/forest-template-06-b.json",
+  "blueprintFileSha256": "sha256:b5d435765b4b216c2349f90fe81c02d55082909a5a9c43d1c395278e78ec55e2",
+  "blueprintFullHash": "sha256:870de1536389a323f7686134421b9ef6f8822a4fce4d366d3c9b8cbbb0391546",
+  "sourceImageSha256": "sha256:c622b9b0def37497cf12a96013c72cfff405ad15aaae2955b5a8820a6f7e9efd",
+  "promptProfile": {
+    "id": "map-blueprint-v2",
+    "path": "ai-image-metadata/battle-maps/prompts/map-blueprint-v2.json",
+    "sha256": "sha256:d9fd841812bcc9a4713d3ac8b1c81715f359e55d55098589f8970650fed7cdae"
+  },
+  "reason": "The B sibling keeps the approved dual-route Heartlands topology and all five source-area identities while providing a distinct stair-weighted eastern formation approach, shifted local formation anchor, and independent accent placement; spawn clearance, mixed access, connectivity, elevation, and 13-family closure checks all pass.",
+  "fullHash": "sha256:51f2a16543d85f0ce7955ae8413e2ca51656a214a01449bfab87f8b697a1b8aa"
+}

@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v2",
+  "theme": "forest",
+  "familyId": "forest-heartlands-storm-fallen-oak-root-mass",
+  "decision": "approved",
+  "reviewer": "codex-v3-fallen-oak-asset-review",
+  "reason": "The normalized 192x256 transparent cutout clearly reads as a storm-shattered ancient oak laid diagonally from a dominant exposed root plate, with splayed roots, broken limbs, sparse surviving leaves, leaf litter, and small Heartlands woodland accents. Its silhouette is distinct from the upright ancient-oak family, remains legible at isometric map scale, contacts the declared ground anchor cleanly, and carries no baked backdrop, frame, or unrelated structure.",
+  "reviewedAt": "2026-08-05T04:39:02.817Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-storm-fallen-oak-root-mass.json",
+    "sha256": "sha256:4ec9fab47deb752271c682fa7cd332476da2f536ef040417c6db9c62f1db6069",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-storm-fallen-oak-root-mass/result.json",
+      "bytes": 2848,
+      "sha256": "sha256:addb180d57d3adcb81399b6731a6c721c92864dc00ba9862d3fdd93e7ff01006"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-storm-fallen-oak-root-mass/candidate.png",
+      "bytes": 52000,
+      "width": 192,
+      "height": 256,
+      "format": "png",
+      "sha256": "sha256:35bad22c8ef6f9ad56b6f3d16cf010b45e9f82609c38eeda8bb6bd40819b2a2a"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "styleReferenceMode": "attachments",
+    "styleReferenceProvenance": [
+      {
+        "id": "forest-source-template-01",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1",
+        "stagedBasename": "style-reference-01.png"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 600000,
+      "imageArguments": [
+        "style-reference-01.png"
+      ],
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-storm-fallen-oak-root-mass/prompt.txt",
+        "bytes": 10262,
+        "sha256": "sha256:a0b7f48fd5b5b425d45168310446e32cdc3fe8ebafdfb5030d96f08156b41d88"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-storm-fallen-oak-root-mass/worker.jsonl",
+        "bytes": 27246,
+        "sha256": "sha256:a64f0586920f757ff0bbd7173da7853b6143472febc3bf3ab360f4f3b1765514"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-storm-fallen-oak-root-mass/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-storm-fallen-oak-root-mass/last-message.txt",
+        "bytes": 402,
+        "sha256": "sha256:4cadfd4e28ddd9febf65f3994018288edb85e958348a7ee7446392eab8343ea3"
+      }
+    }
+  },
+  "fullHash": "sha256:660e47b5ba7ec1589cfa3479e0f85d3ef0783460345bbc8de431b4d7004e66eb"
+}

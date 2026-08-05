@@ -20,7 +20,8 @@ import {
 } from './lifecycle.mjs';
 import {
   generateBattleArt,
-  parseGenerateArgs
+  parseGenerateArgs,
+  revalidateFailedRouteAttempt
 } from './generate.mjs';
 import {
   normalizeCandidates
@@ -114,6 +115,18 @@ export function parseCommand(argv = process.argv.slice(2)) {
     const json = argumentsList.includes('--json');
     const generateArgs = argumentsList.filter(argument => argument !== '--json');
     return { command, options: { ...parseGenerateArgs(generateArgs), json } };
+  }
+  if (command === 'revalidate-failure') {
+    const options = parseOptions(argumentsList, {
+      ...COMMON,
+      '--theme': { key: 'theme' },
+      '--family': { key: 'family' },
+      '--failure': { key: 'failure' }
+    });
+    for (const key of ['theme', 'family', 'failure']) {
+      if (!options[key]) throw new Error(`--${key} is required`);
+    }
+    return { command, options };
   }
   if (command === 'draft') {
     const options = parseOptions(argumentsList, {
@@ -292,6 +305,7 @@ Commands:
   draft --theme <theme> --category <category> --family <id> [variant capability flags] [--art-direction <text>] [--width n --height n --check|--force]
   generate [selection flags] [--family <id> ...] [--dry-run|--resume|--force] [--keep-going] [--concurrency 1-4]
   generate --family <id> --recover --timeout <original-seconds>
+  revalidate-failure --theme <theme> --family <id> --failure <canonical-record-path>
   normalize [selection flags] [--family <id> ...] [--check]
   preview [selection flags] [--family <id> ...] [--output <tracked.html>]
   review --theme <theme> --family <id> --reviewer <identity> --decision approved|rejected --reason <rationale>
@@ -323,6 +337,8 @@ export async function main(argv = process.argv.slice(2), dependencies) {
   else if (parsed.command === 'draft') result = await writeDraft(common);
   else if (parsed.command === 'generate') {
     result = await generateBattleArt({ ...options, projectRoot: root }, dependencies);
+  } else if (parsed.command === 'revalidate-failure') {
+    result = await revalidateFailedRouteAttempt(common);
   } else if (parsed.command === 'normalize') result = await normalizeCandidates(common);
   else if (parsed.command === 'preview') result = await writePreview(common);
   else if (parsed.command === 'review') result = await recordCandidateReview(common);

@@ -28,6 +28,7 @@ const PERIMETER_ACCENT_KINDS = new Set([
   'understory-accent'
 ]);
 const TREE_OBSTACLE_KIND = /(?:tree|pine|birch|cedar|fir|spruce|willow|oak|elm|ash)/i;
+const FALLEN_OAK_RENDER_PROFILE_ID = 'forest-heartlands-fallen-oak-v1';
 
 const CARDINAL_STEPS = Object.freeze([
   Object.freeze({ direction: 'n', dx: 0, dy: -1 }),
@@ -463,8 +464,12 @@ export function applyBattleMapV3RenderAdapter(grid, map) {
     map.theme === 'forest' &&
     map.scene?.silhouette === 'organic-island' &&
     map.scene.exterior === 'forest-canopy';
-  const surfaceFoundation = sceneAwareOrganicForest
-    ? uniqueAssetRecords(
+  let surfaceFoundation = null;
+  if (
+    sceneAwareOrganicForest &&
+    map.renderProfileId !== FALLEN_OAK_RENDER_PROFILE_ID
+  ) {
+    surfaceFoundation = uniqueAssetRecords(
       map.visualCells
         .flat()
         .filter(visualCell => visualCell?.surface)
@@ -483,8 +488,8 @@ export function applyBattleMapV3RenderAdapter(grid, map) {
         (left.renderer.variant?.surfaceVariant ?? Number.MAX_SAFE_INTEGER) -
           (right.renderer.variant?.surfaceVariant ?? Number.MAX_SAFE_INTEGER) ||
         left.asset.key.localeCompare(right.asset.key)
-      )[0] ?? null
-    : null;
+      )[0] ?? null;
+  }
   const legacyForestComposition =
     map.theme === 'forest' && !map.scene;
   const composeForestPerimeter =
@@ -738,6 +743,7 @@ export function applyBattleMapV3RenderAdapter(grid, map) {
     surfaceRenderers,
     layers,
     obstacleLayers,
+    renderProfileId: map.renderProfileId,
     renderProfile,
     scene: map.scene ?? null,
     surfaceFoundation

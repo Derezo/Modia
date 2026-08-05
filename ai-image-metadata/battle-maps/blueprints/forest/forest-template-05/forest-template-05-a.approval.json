@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "battle-map-blueprint-approval-v2",
+  "id": "forest-template-05-a",
+  "theme": "forest",
+  "templateId": "forest-template-05",
+  "decision": "approved",
+  "reviewer": "codex-v3-borderwood-bundle-refresh",
+  "blueprintPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-05/forest-template-05-a.json",
+  "blueprintFileSha256": "sha256:d09503b8018b5d54855292a322377c1717d05e6699d695560c745d19ba275acd",
+  "blueprintFullHash": "sha256:71f4ffa3df72e8cf6dedb425a12e0e4de1a5b702cf5c6899dd5291b73d53f24b",
+  "sourceImageSha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1",
+  "promptProfile": {
+    "id": "map-blueprint-v2",
+    "path": "ai-image-metadata/battle-maps/prompts/map-blueprint-v2.json",
+    "sha256": "sha256:d9fd841812bcc9a4713d3ac8b1c81715f359e55d55098589f8970650fed7cdae"
+  },
+  "reason": "Approved after strict mechanical preview of the deterministic JSON starter: variant A preserves the Borderwood clearing network, tier-1 player and opponent formation contracts, multiple connected approaches, current V2 semantic safeguards, and complete renderer asset-family closure.",
+  "fullHash": "sha256:5754db6a1e867f580af58bcf484a3fec26a85c3ccc791833354331641385bd6c"
+}

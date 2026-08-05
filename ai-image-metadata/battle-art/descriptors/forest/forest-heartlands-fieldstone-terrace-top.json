@@ -1,0 +1,98 @@
+{
+  "schemaVersion": "battle-art-family-descriptor-v2",
+  "id": "forest-heartlands-fieldstone-terrace-top",
+  "theme": "forest",
+  "category": "surface",
+  "familyGroup": "forest-heartlands-fieldstone-terrace-top",
+  "variantId": "surface-0",
+  "capabilities": {
+    "direction": null,
+    "routeTopology": null,
+    "surfaceVariant": 0,
+    "ecologyProfile": "forest-heartlands-woodland",
+    "tierBands": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "heightDeltas": [
+      0
+    ]
+  },
+  "status": "compiled",
+  "promptProfile": {
+    "id": "battle-art-family-v2",
+    "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+    "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+  },
+  "styleReferences": [
+    {
+      "id": "forest-source-template-01",
+      "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+      "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+    }
+  ],
+  "generationPrompt": "Create exactly one seam-safe orthographic isometric forest surface asset named forest-heartlands-fieldstone-terrace-top for ecology profile forest-heartlands-woodland; tier bands 1, 2, 3, 4, 5; surface variant 0. Author the declared orientation directly, preserve continuous neighboring materials and edge alignment, and include only the declared family content. Regional visual vocabulary: Heartlands Woodland uses a coherent pastoral forest of mature broad-canopy oak, field maple, and flowering hawthorn; warm meadow grass and bluebells; rounded cream-gray fieldstone; warm ochre loam and oak leaf litter; and dappled late-morning light. Keep this species mix, material palette, scale, and lighting explicitly consistent across every directional edge and transition. Depict a complete full ground diamond whose dominant identity is the level top of an old fieldstone terrace: firm cropped turf and warm packed soil crossed by one broad irregular band of rounded cream-gray stones set nearly flush with the ground, softened by moss and grass between stones. Make this materially distinct from clover glade, fern-and-hazel litter, dry ravine loam, hawthorn-loop floor, and generic meadow ground. The entire diamond is the horizontal terrace top only; show no retaining face, cliff, step, wall, raised rim, or dark vertical side. Carry quiet turf-and-soil continuously through every diamond edge, keeping the most recognizable stones away from the rim. Its source-raster center is (128,64). Never depict coursed masonry, a cobbled road, paving, internal tile boundaries, square subcells, checkerboards, mosaics, quilts, contour grids, repeated stamps, evenly spaced stones, stripes, uniform noise, a clipped patch, or a floating island. Keep the field calm enough for characters and route overlays. Do not add a baked backdrop, black void, unrelated terrain wall, or presentation frame.",
+  "rasterContract": {
+    "schemaVersion": "battle-art-raster-contract-v1",
+    "kind": "opaque-tile-diamond",
+    "alphaThreshold": 240,
+    "minimumCoveredPermille": 1000,
+    "maximumExteriorCoveredPermille": 5
+  },
+  "canvas": {
+    "width": 256,
+    "height": 128
+  },
+  "placement": {
+    "pivot": {
+      "x": 128,
+      "y": 64
+    },
+    "anchor": {
+      "x": 128,
+      "y": 64
+    },
+    "footprint": {
+      "x": 0,
+      "y": 0,
+      "width": 1,
+      "height": 1
+    },
+    "collision": {
+      "kind": "none",
+      "cells": []
+    },
+    "drawBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 128
+    },
+    "occlusionBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
+    },
+    "stratum": "surface"
+  },
+  "content": {
+    "version": 1,
+    "sourceSha256": "sha256:0093196f1eb1b593471f5b3256bee77d35be9d7bb58cfb1b2b9bfcea4791608f",
+    "runtimeSha256": "sha256:67e7e0156c8fea96bcbe43dd01fc707655486990d8ac4c163d307dce4b1b9e8a",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v10/forest/surface/forest-heartlands-fieldstone-terrace-top/v1/67e7e0156c8fea96bcbe43dd01fc707655486990d8ac4c163d307dce4b1b9e8a.webp"
+  },
+  "source": {
+    "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-terrace-top/result.json",
+    "imagePath": "ai-image-metadata/battle-art/sources/forest/forest-heartlands-fieldstone-terrace-top/v1/0093196f1eb1b593471f5b3256bee77d35be9d7bb58cfb1b2b9bfcea4791608f.png",
+    "imageSha256": "sha256:0093196f1eb1b593471f5b3256bee77d35be9d7bb58cfb1b2b9bfcea4791608f",
+    "width": 256,
+    "height": 128,
+    "format": "png",
+    "reviewer": "codex-v3-template07-visual-assets",
+    "approvedAt": "2026-08-05T05:24:11.029Z"
+  }
+}

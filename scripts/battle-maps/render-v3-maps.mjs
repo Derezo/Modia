@@ -32,6 +32,8 @@ export const GALLERY_SCHEMA_VERSION = 'battle-map-v3-render-gallery-v1';
 export const ACTIVE_RELEASE_PATH = 'battle-maps/catalog/active-release.json';
 export const RUNTIME_BUNDLE_PATH =
   'frontend/src/generated/battleMapV3RuntimeBundle.json';
+export const RUNTIME_BUNDLE_REGISTRY_PATH =
+  'frontend/src/generated/battleMapV3RuntimeBundles.json';
 export const DEFAULT_OUTPUT_DIRECTORY =
   'artifacts/battle-map-v3-render-reviews';
 export const DEFAULT_PORT = 4173;
@@ -389,6 +391,66 @@ export async function verifyRuntimeBundleBinding(map, runtimeBundle) {
     manifestFullHash: runtimeBundle.manifestFullHash,
     rendererManifestFullHash: runtimeBundle.rendererManifestFullHash
   });
+}
+
+export async function resolveRuntimeBundleBinding(map, runtimeBundleSource) {
+  const registry =
+    runtimeBundleSource?.schemaVersion ===
+    'battle-art-runtime-bundle-registry-v1';
+  if (!registry) {
+    return verifyRuntimeBundleBinding(map, runtimeBundleSource);
+  }
+  exactKeys(
+    runtimeBundleSource,
+    ['schemaVersion', 'bundles'],
+    'BattleMapV3 runtime bundle registry'
+  );
+  if (
+    !Array.isArray(runtimeBundleSource.bundles)
+    || runtimeBundleSource.bundles.length === 0
+  ) {
+    fail('BattleMapV3 runtime bundle registry must contain at least one bundle');
+  }
+  const pin = map?.provenance?.assetBundle;
+  if (
+    typeof pin?.id !== 'string'
+    || !Number.isSafeInteger(pin?.version)
+    || pin.version < 1
+    || !HASH_PATTERN.test(pin?.manifestFullHash)
+  ) {
+    fail('Compiled map asset-bundle pin is invalid');
+  }
+  const matches = runtimeBundleSource.bundles.filter(bundle => (
+    bundle?.id === pin.id
+    && bundle?.version === pin.version
+    && bundle?.manifestFullHash === pin.manifestFullHash
+  ));
+  if (matches.length !== 1) {
+    fail(
+      'BattleMapV3 runtime bundle registry does not contain exactly one '
+      + 'bundle matching the compiled map pin'
+    );
+  }
+  return verifyRuntimeBundleBinding(map, matches[0]);
+}
+
+export async function loadRuntimeBundleSource(projectRoot) {
+  try {
+    const { value } = await readSafeProjectJson(
+      projectRoot,
+      RUNTIME_BUNDLE_REGISTRY_PATH,
+      'frontend BattleMapV3 runtime bundle registry'
+    );
+    return value;
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+    const { value } = await readSafeProjectJson(
+      projectRoot,
+      RUNTIME_BUNDLE_PATH,
+      'frontend BattleMapV3 runtime bundle'
+    );
+    return value;
+  }
 }
 
 async function loadOneMap(projectRoot, relativePath) {
@@ -850,6 +912,31 @@ export function buildReviewMetadata({
   };
 }
 
+export function collectReviewAssetBundles(reviews) {
+  const bundles = new Map();
+  for (const review of reviews) {
+    const bundle = review?.metadata?.assetBundle;
+    const key = [
+      bundle?.id,
+      bundle?.version,
+      bundle?.manifestFullHash
+    ].join('\0');
+    const existing = bundles.get(key);
+    if (
+      existing
+      && JSON.stringify(existing) !== JSON.stringify(bundle)
+    ) {
+      fail('Gallery reviews contain inconsistent runtime bundle metadata');
+    }
+    bundles.set(key, bundle);
+  }
+  return [...bundles.values()].sort((left, right) => (
+    left.id.localeCompare(right.id)
+    || left.version - right.version
+    || left.manifestFullHash.localeCompare(right.manifestFullHash)
+  ));
+}
+
 export async function captureMapReview({
   projectRoot = SCRIPT_PROJECT_ROOT,
   record,
@@ -1045,14 +1132,13 @@ export async function renderScreenshots({
   includeGallery = false
 }) {
   validateProjectRelativePath(outputDirectory, 'output directory');
-  const { value: runtimeBundle } = await readSafeProjectJson(
-    projectRoot,
-    RUNTIME_BUNDLE_PATH,
-    'frontend BattleMapV3 runtime bundle'
-  );
+  const runtimeBundleSource = await loadRuntimeBundleSource(projectRoot);
   const bindings = new Map();
   for (const record of selection) {
-    const binding = await verifyRuntimeBundleBinding(record.map, runtimeBundle);
+    const binding = await resolveRuntimeBundleBinding(
+      record.map,
+      runtimeBundleSource
+    );
     bindings.set(record.path, binding);
   }
 
@@ -1095,12 +1181,7 @@ export async function renderScreenshots({
           screenshotSha256: review.metadata.screenshot.sha256,
           reviewMetadataPath: review.metadataPath
         })),
-        assetBundles: [...new Map(
-          reviews.map(review => [
-            review.metadata.assetBundle.id,
-            review.metadata.assetBundle
-          ])
-        ).values()].sort((left, right) => left.id.localeCompare(right.id)),
+        assetBundles: collectReviewAssetBundles(reviews),
         contactSheet
       };
       const manifestPath = `${outputDirectory}/gallery-manifest.json`;
@@ -1191,12 +1272,8 @@ export async function main(
   });
   if (options.mode === 'preview') {
     const record = selection[0];
-    const { value: runtimeBundle } = await readSafeProjectJson(
-      projectRoot,
-      RUNTIME_BUNDLE_PATH,
-      'frontend BattleMapV3 runtime bundle'
-    );
-    await verifyRuntimeBundleBinding(record.map, runtimeBundle);
+    const runtimeBundleSource = await loadRuntimeBundleSource(projectRoot);
+    await resolveRuntimeBundleBinding(record.map, runtimeBundleSource);
     const server = await launchHarness({
       projectRoot,
       port: options.port,

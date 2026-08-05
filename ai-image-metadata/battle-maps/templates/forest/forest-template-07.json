@@ -1,0 +1,294 @@
+{
+  "schemaVersion": "battle-map-source-template-v1",
+  "id": "forest-template-07",
+  "theme": "forest",
+  "status": "approved",
+  "tierEligibility": [
+    "tier-1",
+    "tier-2",
+    "tier-3",
+    "tier-4",
+    "tier-5"
+  ],
+  "supportedModes": [
+    "pve"
+  ],
+  "mapProfile": {
+    "width": 32,
+    "height": 32,
+    "orientation": "isometric-diamond",
+    "cameraFraming": "Keep the complete storm-fallen oak and root seam, both formation glades, and all three reconnecting approaches readable in the production isometric camera.",
+    "playerCapacity": {
+      "minimum": 1,
+      "maximum": 5
+    },
+    "candidatePoolSize": 24,
+    "maxAssignableOpponents": 7
+  },
+  "sourceImage": {
+    "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-07/reference.png",
+    "bytes": 3376844,
+    "width": 1254,
+    "height": 1254,
+    "format": "png",
+    "sha256": "sha256:07da685b434b24142b1f5f27188c482220728a66e44dfff46fd5560826a70917"
+  },
+  "styleAuthority": {
+    "kind": "supplied-composition-reference",
+    "usage": "Use the image for Heartlands color, material, storm-fallen oak scale, and pastoral woodland hierarchy; derive gameplay topology from this semantic contract.",
+    "literalTraceAllowed": false
+  },
+  "composition": {
+    "summary": "An irregular Heartlands forest hollow organized around an enormous storm-fallen ancient oak and exposed root mass spanning a shallow diagonal dry ravine, with a broad southwest clover glade, smaller northeast fern-and-hazel glade, northwest fieldstone terrace, and southeast hawthorn loop.",
+    "visualHierarchy": [
+      "The enormous storm-fallen ancient oak, shattered trunk, and exposed root mass dominate the central diagonal dry ravine without dividing the map into disconnected halves.",
+      "A broad sunlit clover glade in the southwest provides the principal open formation ground.",
+      "A smaller fern-and-hazel glade in the northeast provides a sheltered opposing formation ground.",
+      "A low northwest fieldstone terrace and a southeast hawthorn loop frame two outer reconnecting approaches.",
+      "Ancient oak, hazel, hawthorn, fern banks, roots, and rounded fieldstone shape an organic forest-owned boundary."
+    ],
+    "focalAreas": [
+      "storm-fallen ancient oak and exposed root mass",
+      "shallow diagonal dry ravine",
+      "broad southwest sunlit clover formation glade",
+      "smaller northeast fern-and-hazel formation glade",
+      "northwest low fieldstone terrace and lookout",
+      "southeast hawthorn loop"
+    ],
+    "negativeSpace": [
+      "Keep broad irregular breathing room inside the southwest clover glade and smaller northeast fern-and-hazel glade for readable formations.",
+      "Preserve navigable gaps around and beneath the fallen trunk and exposed root seam so the landmark never becomes a single choke.",
+      "Keep the northwest terrace and southeast hawthorn loop visually open enough to read as distinct reconnecting approaches.",
+      "Do not turn the dry ravine into water or a straight cleared strip."
+    ],
+    "density": [
+      "Open sunlit clover and warm meadow grass across the broad southwest glade.",
+      "Moderate ferns, hazel stools, leaf litter, and dappled shade around the smaller northeast glade.",
+      "Dense ancient oak, hazel, hawthorn, root, and fern masses along the irregular outer forest edge.",
+      "Sparse rounded fieldstone on the low northwest terrace and at a few gentle level transitions."
+    ]
+  },
+  "topologyIntent": {
+    "coordinateAuthority": "semantic-only",
+    "areas": [
+      {
+        "id": "fallen-oak-root-seam",
+        "description": "An enormous storm-fallen ancient oak and exposed root mass spanning the shallow diagonal dry ravine, with broad navigable passages around and beneath it.",
+        "required": true
+      },
+      {
+        "id": "southwest-clover-glade",
+        "description": "A broad irregular sunlit clover formation glade with distinct entries into the central, northwest, and southeast approaches.",
+        "required": true
+      },
+      {
+        "id": "northeast-fern-hazel-glade",
+        "description": "A smaller sheltered formation glade edged by ferns and hazel, with distinct entries from the oak seam, northwest terrace, and southeast loop.",
+        "required": true
+      },
+      {
+        "id": "northwest-fieldstone-terrace",
+        "description": "A broad low fieldstone terrace and lookout reached by gentle slopes and a few fieldstone stairs, never an isolated peak.",
+        "required": true
+      },
+      {
+        "id": "southeast-hawthorn-loop",
+        "description": "A curving low route enclosed by irregular hawthorn clusters that reconnects both glades around the southeast side.",
+        "required": true
+      }
+    ],
+    "relationships": [
+      {
+        "from": "southwest-clover-glade",
+        "to": "fallen-oak-root-seam",
+        "kind": "paired curved entries into broad passages around and beneath the fallen trunk and exposed roots",
+        "required": true
+      },
+      {
+        "from": "fallen-oak-root-seam",
+        "to": "northeast-fern-hazel-glade",
+        "kind": "reconnecting curved exits from both sides of the shallow dry ravine seam",
+        "required": true
+      },
+      {
+        "from": "southwest-clover-glade",
+        "to": "northwest-fieldstone-terrace",
+        "kind": "curved northwest ascent by gentle forest slopes with a few fieldstone stairs",
+        "required": true
+      },
+      {
+        "from": "northwest-fieldstone-terrace",
+        "to": "northeast-fern-hazel-glade",
+        "kind": "descending northwest terrace route that reconnects beyond the fallen oak",
+        "required": true
+      },
+      {
+        "from": "southwest-clover-glade",
+        "to": "southeast-hawthorn-loop",
+        "kind": "curved southeast departure between irregular hawthorn clusters",
+        "required": true
+      },
+      {
+        "from": "southeast-hawthorn-loop",
+        "to": "northeast-fern-hazel-glade",
+        "kind": "reconnecting southeast loop approach by gentle fern-edged slopes",
+        "required": true
+      },
+      {
+        "from": "fallen-oak-root-seam",
+        "to": "northwest-fieldstone-terrace",
+        "kind": "secondary root-edged branch that prevents the northwest route from becoming a corridor",
+        "required": true
+      },
+      {
+        "from": "fallen-oak-root-seam",
+        "to": "southeast-hawthorn-loop",
+        "kind": "secondary ravine-edge branch that prevents the southeast route from becoming a corridor",
+        "required": true
+      }
+    ]
+  },
+  "heightIntent": {
+    "levelCount": {
+      "minimum": 3,
+      "maximum": 4
+    },
+    "landforms": [
+      "shallow diagonal dry ravine",
+      "broad southwest clover shelf",
+      "gently raised northeast fern-and-hazel shelf",
+      "low northwest fieldstone terrace",
+      "soft southeast hawthorn slopes"
+    ],
+    "maxGradualSlope": 1,
+    "connections": [
+      "Use multiple broad gentle grassy, loamy, and fern-edged slopes for most level changes.",
+      "Use only a few low fieldstone stairs where the northwest terrace meets its curved approaches.",
+      "Keep the dry ravine shallow and crossable around several sides of the fallen trunk and root mass.",
+      "Keep every rise broad and connected; do not create an isolated peak or cliff-bound pad."
+    ]
+  },
+  "routeIntent": {
+    "primaryApproaches": [
+      "Provide exactly three broad tactical route families between the formation glades: around or beneath the fallen trunk and root seam, through the northwest fieldstone terrace, and around the southeast hawthorn loop.",
+      "Make all three curved approaches reconnect into one network at multiple points so no landmark, stair, or ravine crossing becomes a single choke.",
+      "Bend routes around the ancient oak, exposed roots, hazel stools, hawthorn, fern banks, and fieldstone instead of forming straight corridors."
+    ],
+    "secondaryApproaches": [
+      "Branch the central oak-seam approach toward both outer routes before they enter the formation glades.",
+      "Use multiple gentle slopes and only a few fieldstone stairs to keep elevation choices broad and readable.",
+      "Preserve more than one navigable passage around or beneath the fallen trunk and exposed root mass."
+    ],
+    "minimumApproachesPerFormation": 3
+  },
+  "boundaryIntent": {
+    "owners": [
+      "ancient oak trunks and canopy",
+      "hazel coppice and fern banks",
+      "flowering hawthorn thickets",
+      "exposed root masses",
+      "rounded Heartlands fieldstone",
+      "broad natural forest slopes"
+    ],
+    "irregularPlayableSilhouette": true,
+    "description": "Organic oak, hazel, fern, hawthorn, roots, fieldstone, and natural slopes own an uneven forest edge; never resolve the playable or rendered perimeter into a rectangle, grid, or continuous wall."
+  },
+  "spawnIntent": {
+    "sides": [
+      "players",
+      "opponents"
+    ],
+    "formationCharacter": "Opposing formations occupy the broad southwest sunlit clover glade and smaller northeast fern-and-hazel glade, each with local cover, maneuvering room, and access to all three reconnecting curved approaches.",
+    "minimumApproaches": 3,
+    "localClearanceTiles": 2,
+    "candidateRoles": [
+      "frontline",
+      "ranged",
+      "support",
+      "mobile",
+      "ambush",
+      "boss"
+    ],
+    "forbiddenBehavior": [
+      "Do not place candidates on detached pads.",
+      "Do not reserve full-height or full-width cleared spawn strips.",
+      "Do not mirror the two formation clearings or regularize them into matching shapes.",
+      "Do not make either formation depend on a single choke, stair, trunk passage, or ravine crossing.",
+      "Do not infer exact spawn coordinates by literally tracing the source image."
+    ]
+  },
+  "requiredLandmarks": [
+    "enormous storm-fallen ancient oak and exposed root mass",
+    "shallow diagonal dry ravine",
+    "broad southwest sunlit clover formation glade",
+    "smaller northeast fern-and-hazel formation glade",
+    "northwest low fieldstone terrace and lookout",
+    "southeast hawthorn loop",
+    "three reconnecting curved approaches around or beneath the oak seam and through both outer routes",
+    "multiple gentle slopes and a few fieldstone stairs",
+    "organic forest-owned boundary"
+  ],
+  "forbiddenPatterns": [
+    "rectangular perimeter or rectangular arena",
+    "grid-aligned topology or checkerboard materials",
+    "mirrored or matching formation clearings",
+    "full-height or full-width cleared strips",
+    "detached spawn pads",
+    "isolated peaks",
+    "single-choke formations, routes, stairs, or ravine crossings",
+    "water, wet streambeds, ponds, or rivers",
+    "bridges",
+    "buildings or constructed shelters",
+    "literal pixel, coordinate, or contour tracing",
+    "repeated straight boundaries",
+    "large visually ambiguous movement regions"
+  ],
+  "assetHints": {
+    "surfaces": [
+      "sunlit Heartlands clover and warm meadow grass",
+      "dry ochre ravine loam and oak leaf litter",
+      "dappled fern-and-hazel forest floor",
+      "soft grassed and fern-edged natural slopes"
+    ],
+    "connections": [
+      "curved dry loam paths",
+      "broad passages around and beneath the fallen trunk and root seam",
+      "multiple gradual forest slopes",
+      "a few rounded cream-gray fieldstone stairs"
+    ],
+    "obstacles": [
+      "enormous storm-fallen ancient oak trunk",
+      "exposed ancient oak root mass",
+      "hazel coppice",
+      "flowering hawthorn",
+      "rounded cream-gray fieldstone"
+    ],
+    "decorations": [
+      "sunlit clover",
+      "wood sorrel and ferns",
+      "oak and hazel leaf litter",
+      "hawthorn blossom",
+      "small rounded fieldstones and fallen twigs"
+    ]
+  },
+  "promptProfile": {
+    "id": "source-template-image-v1",
+    "path": "ai-image-metadata/battle-maps/prompts/source-template-image-v1.json",
+    "sha256": "sha256:6a4200193384b8682cb7cbc69ad6a819dc5cb4cfbd116c395b0f628b5a208f41"
+  },
+  "candidateMaps": [
+    "forest-template-07-a",
+    "forest-template-07-b",
+    "forest-template-07-c"
+  ],
+  "pins": {
+    "sourceImageSha256": "sha256:07da685b434b24142b1f5f27188c482220728a66e44dfff46fd5560826a70917",
+    "promptProfileSha256": "sha256:6a4200193384b8682cb7cbc69ad6a819dc5cb4cfbd116c395b0f628b5a208f41",
+    "approvedBlueprintSha256": "sha256:d483614b3f889d362e93e02940aa075d659ddb335cc4d6565447900c23e284f4",
+    "compilerSha256": "sha256:c8794c02d8978b56ea0ebcc1ea7947db94ae619c01c6feae3fe73efe8c8dfaa1"
+  },
+  "review": {
+    "decision": "approved",
+    "reviewer": "codex-v3-fallen-oak-source-review"
+  }
+}

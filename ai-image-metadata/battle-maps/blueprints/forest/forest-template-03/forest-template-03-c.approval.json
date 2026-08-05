@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "battle-map-blueprint-approval-v2",
+  "id": "forest-template-03-c",
+  "theme": "forest",
+  "templateId": "forest-template-03",
+  "decision": "approved",
+  "reviewer": "codex-v3-heartlands-review",
+  "blueprintPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-03/forest-template-03-c.json",
+  "blueprintFileSha256": "sha256:81c20523607dd6f9a26841f0929ab075d19dad923b4c84234a50ff3fc0961d3c",
+  "blueprintFullHash": "sha256:9d24edfe063f59d6481af321b017b516c5e21cbc368566d44d2bd28511e0c089",
+  "sourceImageSha256": "sha256:c622b9b0def37497cf12a96013c72cfff405ad15aaae2955b5a8820a6f7e9efd",
+  "promptProfile": {
+    "id": "map-blueprint-v2",
+    "path": "ai-image-metadata/battle-maps/prompts/map-blueprint-v2.json",
+    "sha256": "sha256:d9fd841812bcc9a4713d3ac8b1c81715f359e55d55098589f8970650fed7cdae"
+  },
+  "reason": "Approved as the compiler-required C sibling after mechanical preview: it preserves the validated Heartlands formation and overlook contracts while adding the explicit required western flank branch through the southern hawthorn fork, a distinct mid-route slope transition, and independent scene-feature placement; all connectivity and renderer-closure checks pass.",
+  "fullHash": "sha256:2745767e699749f4dbc46023c32fd7c096d297f735563155a0e11b83314b4ce5"
+}

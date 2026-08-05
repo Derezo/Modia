@@ -21,7 +21,7 @@
       0
     ]
   },
-  "status": "approved",
+  "status": "compiled",
   "promptProfile": {
     "id": "battle-art-family-v2",
     "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
@@ -82,8 +82,8 @@
   "content": {
     "version": 1,
     "sourceSha256": "sha256:2e73cf336d3c2dbc12c3d87f37adf59a385f5bca641f64586eca4095daf3cc0f",
-    "runtimeSha256": null,
-    "immutableUrl": null
+    "runtimeSha256": "sha256:3c745ddc64d6a1221bbf4d66b72376b32ae40f3e85b89deb8adb5b55bd83187d",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v10/forest/surface/forest-heartlands-meadow-ground-3/v1/3c745ddc64d6a1221bbf4d66b72376b32ae40f3e85b89deb8adb5b55bd83187d.webp"
   },
   "source": {
     "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-meadow-ground-3/result.json",

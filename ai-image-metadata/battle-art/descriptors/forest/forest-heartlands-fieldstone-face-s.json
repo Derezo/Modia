@@ -21,7 +21,7 @@
       1
     ]
   },
-  "status": "approved",
+  "status": "compiled",
   "promptProfile": {
     "id": "battle-art-family-v2",
     "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
@@ -86,8 +86,8 @@
   "content": {
     "version": 1,
     "sourceSha256": "sha256:c4dfc8d683f67288e549c96586bf4a167e29875443703a9ef4a04d999ac1f285",
-    "runtimeSha256": null,
-    "immutableUrl": null
+    "runtimeSha256": "sha256:f0e8aab2544ce9fd51f3373f978b946a9036bd151a0a84a4043b5a21f144c502",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v10/forest/exposed-face-boundary/forest-heartlands-fieldstone-face-s/v1/f0e8aab2544ce9fd51f3373f978b946a9036bd151a0a84a4043b5a21f144c502.webp"
   },
   "source": {
     "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-face-s/result.json",

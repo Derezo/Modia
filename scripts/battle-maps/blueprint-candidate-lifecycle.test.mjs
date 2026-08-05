@@ -28,6 +28,7 @@ import {
   buildBlueprintCodexArgs,
   buildCodexWorkerEnvironment,
   buildBlueprintPrompt,
+  createBlueprintAuthoredStarter,
   createBlueprintContractExample,
   DEFAULT_BLUEPRINT_COMPLETION_GRACE_MS,
   generateBlueprintCandidates,
@@ -49,6 +50,7 @@ import {
 } from './source-template-lifecycle.mjs';
 import {
   COMPILER_SOURCE_FILES,
+  ContentReleaseInternals,
   computeCurrentCompilerSourceSet
 } from './content-release-lifecycle.mjs';
 import {
@@ -75,6 +77,12 @@ const V2_MAP_IDS = [
   'forest-template-03-a',
   'forest-template-03-b',
   'forest-template-03-c'
+];
+const TEMPLATE_07 = 'forest-template-07';
+const TEMPLATE_07_MAP_IDS = [
+  'forest-template-07-a',
+  'forest-template-07-b',
+  'forest-template-07-c'
 ];
 
 async function temporaryDirectory(t) {
@@ -103,6 +111,11 @@ async function createFixture(t, {
   ]);
   const manifestPath = path.join(root, MANIFEST);
   const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+  if (template === TEMPLATE_07) {
+    manifest.templates[0] = structuredClone(
+      manifest.templates.find(record => record.id === TEMPLATE_07)
+    );
+  }
   manifest.templates[0].tierEligibility = ['tier-1'];
   manifest.templates[0].id = template;
   manifest.templates[0].sidecarPath =
@@ -175,6 +188,16 @@ function candidateRoot(root, mapId = MAP_IDS[0], template = TEMPLATE) {
 
 function approvedRoot(root, template = TEMPLATE) {
   return path.join(root, `ai-image-metadata/battle-maps/blueprints/${THEME}/${template}`);
+}
+
+async function previewCandidateForApproval(root, template, mapId) {
+  return previewBlueprintCandidates({
+    projectRoot: root,
+    theme: THEME,
+    template,
+    mapId,
+    all: false
+  });
 }
 
 async function exists(filePath) {
@@ -286,16 +309,20 @@ async function snapshotTree(root, relative = '') {
   return result;
 }
 
-function validWorker(mutator = value => value) {
+function validWorker(mutator = null) {
   return async ({ workspace, mapId }) => {
     const sidecar = JSON.parse(
       await readFile(path.join(workspace, 'inputs/sidecar.json'), 'utf8')
     );
-    const authored = createBlueprintContractExample(sidecar, mapId);
+    const usesV2AuthoredStarter =
+      sidecar.id === V2_TEMPLATE || sidecar.id === TEMPLATE_07;
+    const authored = usesV2AuthoredStarter
+      ? JSON.parse(await readFile(path.join(workspace, 'inputs/starter.json')))
+      : createBlueprintContractExample(sidecar, mapId);
     authored.decorations[0].cell.x += 1;
     const originalPlayerCell = { ...authored.spawn.playerSlots[0].cell };
     authored.spawn.playerSlots[0].cell.x += 1;
-    if (sidecar.id === V2_TEMPLATE) {
+    if (usesV2AuthoredStarter) {
       const playerFormation = authored.regions.find(region =>
         region.kind === 'formation-clearing'
         && region.cells.some(cell =>
@@ -308,10 +335,11 @@ function validWorker(mutator = value => value) {
       regionCell.x = authored.spawn.playerSlots[0].cell.x;
       regionCell.y = authored.spawn.playerSlots[0].cell.y;
     }
-    const blueprint = mutator(authored);
+    const blueprint = mutator === null ? authored : mutator(authored);
+    const candidateBytes = Buffer.from(`${JSON.stringify(blueprint)}\n`);
     await writeFile(
       path.join(workspace, 'candidate.json'),
-      `${JSON.stringify(blueprint)}\n`
+      candidateBytes
     );
     await writeFile(path.join(workspace, 'last-message.txt'), 'candidate written\n');
     return {
@@ -688,6 +716,7 @@ test('V2 semantic contract localizes formations and connects loop centerlines', 
     template: V2_TEMPLATE
   });
   const example = createBlueprintContractExample(sidecar, V2_MAP_IDS[0]);
+  assert.equal(sidecar.routeIntent.minimumApproachesPerFormation, 2);
   assert.equal(validateTemplateMapBlueprint(example).valid, true);
   assert.doesNotThrow(() =>
     BlueprintLifecycleInternals.validateV2BlueprintSemanticContract(example, sidecar)
@@ -1206,6 +1235,1873 @@ test('V2 semantic contract localizes formations and connects loop centerlines', 
   assert.equal(legacy.results[0].status, 'generated-awaiting-review');
 });
 
+test('V2 contract examples preserve every required source-template area identity', async () => {
+  const sidecar = JSON.parse(await readFile(
+    path.join(
+      PROJECT_ROOT,
+      'ai-image-metadata/battle-maps/templates/forest/forest-template-03.json'
+    ),
+    'utf8'
+  ));
+  for (const mapId of sidecar.candidateMaps) {
+    const example = createBlueprintContractExample(sidecar, mapId);
+    const regionIds = new Set(example.regions.map(region => region.id));
+    const requiredAreaIds = sidecar.topologyIntent.areas
+      .filter(area => area.required === true)
+      .map(area => area.id);
+    assert.deepEqual(
+      requiredAreaIds.filter(id => !regionIds.has(id)),
+      []
+    );
+    assert.doesNotThrow(() =>
+      BlueprintLifecycleInternals.validateV2BlueprintSemanticContract(
+        example,
+        sidecar
+      )
+    );
+  }
+
+  const invalid = createBlueprintContractExample(
+    sidecar,
+    sidecar.candidateMaps[0]
+  );
+  invalid.regions.find(
+    region => region.id === 'central-loam-hollow'
+  ).id = 'generic-central-junction';
+  assert.throws(
+    () => BlueprintLifecycleInternals.validateV2BlueprintSemanticContract(
+      invalid,
+      sidecar
+    ),
+    /missing central-loam-hollow/
+  );
+});
+
+test('V2 authored starters are distinct, standalone-valid, and semantic-valid',
+  async () => {
+  for (const template of [
+    'forest-template-03',
+    'forest-template-04',
+    'forest-template-05',
+    'forest-template-06',
+    'forest-template-07'
+  ]) {
+    const sidecar = JSON.parse(await readFile(
+      path.join(
+        PROJECT_ROOT,
+        `ai-image-metadata/battle-maps/templates/forest/${template}.json`
+      ),
+      'utf8'
+    ));
+    const signatures = [];
+    const starters = [];
+    for (const mapId of sidecar.candidateMaps) {
+      const example = createBlueprintContractExample(sidecar, mapId);
+      const starter = createBlueprintAuthoredStarter(sidecar, mapId);
+      assert.notDeepEqual(starter.connections, example.connections);
+      assert.notDeepEqual(starter.decorations, example.decorations);
+      assert.deepEqual(starter.renderMask, example.renderMask);
+      assert.equal(
+        starter.expectedAssetFamilies.length,
+        template === 'forest-template-07' ? 20 : 13
+      );
+      assert.equal(validateTemplateMapBlueprint(starter).valid, true);
+      assert.doesNotThrow(() =>
+        BlueprintLifecycleInternals.validateV2BlueprintSemanticContract(
+          starter,
+          sidecar
+        )
+      );
+      await BlueprintLifecycleInternals
+        .preflightCandidateWithSyntheticCompilerContext(starter, sidecar);
+      starters.push(starter);
+      signatures.push(ContentReleaseInternals.authoredDiversitySignatures({
+        ...starter,
+        spawnContract: starter.spawn
+      }));
+    }
+    for (const dimension of [
+      'route',
+      'elevationAndRegions',
+      'formation',
+      'obstacleAndBoundary'
+    ]) {
+      assert.equal(
+        new Set(signatures.map(signature => signature[dimension])).size,
+        sidecar.candidateMaps.length,
+        `${template}:${dimension}`
+      );
+    }
+    for (const starter of starters) {
+      assert.equal(starter.routes.length, 3);
+      if (template === 'forest-template-07') {
+        assert.ok(starter.routes.every(route =>
+          route.kind === 'primary' && route.required
+        ));
+        assert.equal(
+          starter.routes.some(route => route.id === 'route:flank-branch'),
+          false
+        );
+      } else {
+        assert.ok(starter.routes.some(route => route.id === 'route:flank-branch'));
+        assert.ok(starter.routes.every(route => route.material === 'ground'));
+      }
+    }
+  }
+});
+
+test('V2 authored starter supplies three valid compiler-input approaches per side',
+  async () => {
+  const sidecar = JSON.parse(await readFile(
+    path.join(
+      PROJECT_ROOT,
+      'ai-image-metadata/battle-maps/templates/forest/forest-template-03.json'
+    ),
+    'utf8'
+  ));
+  sidecar.spawnIntent.minimumApproaches = 3;
+  const starter = createBlueprintAuthoredStarter(
+    sidecar,
+    sidecar.candidateMaps[0]
+  );
+
+  assert.equal(validateTemplateMapBlueprint(starter).valid, true);
+  for (const side of ['player', 'opponent']) {
+    const exits = starter.spawn.exits.filter(exit => exit.side === side);
+    const approachRegions = starter.spawn.approachRegions.filter(
+      region => region.side === side
+    );
+    assert.ok(exits.length >= sidecar.spawnIntent.minimumApproaches, side);
+    assert.ok(
+      approachRegions.length >= sidecar.spawnIntent.minimumApproaches,
+      side
+    );
+    assert.equal(new Set(exits.map(exit => exit.cell.x)).size, exits.length);
+    assert.equal(
+      new Set(exits.map(exit => exit.approachRegionId)).size,
+      exits.length
+    );
+  }
+  assert.doesNotThrow(() =>
+    BlueprintLifecycleInternals.validateV2BlueprintSemanticContract(
+      starter,
+      sidecar
+    )
+  );
+});
+
+test('template-07 starter authors organic surfaces and fallen-oak landmark',
+  async () => {
+  const sidecar = JSON.parse(await readFile(
+    path.join(
+      PROJECT_ROOT,
+      'ai-image-metadata/battle-maps/templates/forest/forest-template-07.json'
+    ),
+    'utf8'
+  ));
+  const profile = JSON.parse(await readFile(
+    path.join(PROJECT_ROOT, BLUEPRINT_PROMPT_PATH_V2),
+    'utf8'
+  ));
+  const materialFeatures = new Map([
+    ['clover-glade', 'southwest-clover-glade'],
+    ['fern-hazel-glade', 'northeast-fern-hazel-glade'],
+    ['fieldstone-terrace', 'northwest-fieldstone-terrace'],
+    ['hawthorn-loop', 'southeast-hawthorn-loop'],
+    ['dry-ravine', 'fallen-oak-root-seam']
+  ]);
+  const landmarkOffsets = [
+    [0, 0], [1, 0], [2, 0], [2, 1], [3, 1],
+    [4, 1], [5, 1], [5, 2], [6, 2], [7, 2]
+  ];
+  const expectedComposition = {
+    a: {
+      anchor: [12, 19],
+      root: [17, 19]
+    },
+    b: {
+      anchor: [18, 14],
+      root: [18, 15]
+    },
+    c: {
+      anchor: [13, 19],
+      root: [18, 19]
+    }
+  };
+  const starters = [];
+
+  for (const mapId of sidecar.candidateMaps) {
+    const starter = createBlueprintAuthoredStarter(sidecar, mapId);
+    starters.push(starter);
+    assert.equal(starter.expectedAssetFamilies.length, 20);
+    assert.deepEqual(
+      starter.expectedAssetFamilies
+        .filter(record => record.category === 'surface')
+        .map(record => record.symbol)
+        .sort(),
+      [...materialFeatures.keys()].sort()
+    );
+    const coverage = new Map([...materialFeatures.keys()].map(symbol => [symbol, 0]));
+    for (const cell of starter.surfaceGrid.flat().filter(Boolean)) {
+      assert.equal(materialFeatures.get(cell.material), cell.featureId);
+      coverage.set(cell.material, coverage.get(cell.material) + 1);
+    }
+    for (const [symbol, count] of coverage) {
+      assert.ok(count > 0, `${mapId}:${symbol}`);
+    }
+    assert.ok(coverage.get('fern-hazel-glade') > 0);
+    assert.ok(
+      starter.routes.every(route => route.material === 'dry-ravine')
+    );
+    assert.equal(starter.routes.length, 3);
+    assert.ok(starter.routes.every(route =>
+      route.required && route.kind === 'primary'
+    ));
+    const playerFormationKeys = new Set(
+      starter.spawn.playerSlots.map(slot => `${slot.cell.x},${slot.cell.y}`)
+    );
+    const opponentFormationKeys = new Set(
+      starter.spawn.opponentCandidates.map(
+        candidate => `${candidate.cell.x},${candidate.cell.y}`
+      )
+    );
+    const touchesFormation = (cell, formationKeys) => [
+      [cell.x, cell.y],
+      [cell.x - 1, cell.y],
+      [cell.x + 1, cell.y],
+      [cell.x, cell.y - 1],
+      [cell.x, cell.y + 1]
+    ].some(([x, y]) => formationKeys.has(`${x},${y}`));
+    for (const route of starter.routes) {
+      assert.equal(touchesFormation(route.cells[0], playerFormationKeys), true);
+      assert.equal(
+        touchesFormation(route.cells.at(-1), opponentFormationKeys),
+        true
+      );
+    }
+    assert.equal(
+      new Set([
+        ...starter.surfaceGrid.flat()
+          .filter(Boolean)
+          .map(cell => cell.material),
+        ...starter.routes.map(route => route.material)
+      ]).has('ground'),
+      false
+    );
+    assert.equal(
+      starter.expectedAssetFamilies.filter(record =>
+        record.category === 'obstacle'
+        && record.symbol === 'fallen-oak-root-mass'
+      ).length,
+      1
+    );
+    assert.equal(
+      starter.expectedAssetFamilies.filter(record =>
+        record.category === 'obstacle'
+        && record.symbol === 'fallen-oak-landmark'
+      ).length,
+      1
+    );
+    assert.equal(
+      starter.expectedAssetFamilies.filter(record =>
+        record.category === 'boundary'
+        && record.symbol === 'fieldstone-face'
+      ).length,
+      1
+    );
+    assert.equal(
+      starter.boundaries.filter(
+        boundary => boundary.assetFamily === 'fieldstone-face'
+      ).length,
+      1
+    );
+    const rootMassObstacles = starter.obstacles.filter(
+      obstacle => obstacle.assetFamily === 'fallen-oak-root-mass'
+    );
+    assert.equal(rootMassObstacles.length, 1);
+    assert.equal(rootMassObstacles[0].id, 'obstacle:fallen-oak-root-mass');
+    assert.equal(rootMassObstacles[0].featureId, 'fallen-oak-root-seam');
+    assert.equal(rootMassObstacles[0].cells.length, 1);
+    assert.deepEqual(rootMassObstacles[0].anchor, rootMassObstacles[0].cells[0]);
+    const landmarkObstacles = starter.obstacles.filter(
+      obstacle => obstacle.assetFamily === 'fallen-oak-landmark'
+    );
+    assert.equal(landmarkObstacles.length, 1);
+    assert.equal(landmarkObstacles[0].id, 'obstacle:fallen-oak-landmark');
+    assert.equal(landmarkObstacles[0].featureId, 'fallen-oak-root-seam');
+    const variant = mapId.at(-1);
+    const expectedLandmarkCells = landmarkOffsets.map(([dx, dy]) => [
+      expectedComposition[variant].anchor[0] + dx,
+      expectedComposition[variant].anchor[1] + dy
+    ]);
+    assert.deepEqual(
+      landmarkObstacles[0].cells.map(cell => [cell.x, cell.y]),
+      expectedLandmarkCells
+    );
+    assert.deepEqual(
+      [rootMassObstacles[0].cells[0].x, rootMassObstacles[0].cells[0].y],
+      expectedComposition[variant].root
+    );
+    const xs = landmarkObstacles[0].cells.map(cell => cell.x);
+    const ys = landmarkObstacles[0].cells.map(cell => cell.y);
+    assert.deepEqual(
+      [Math.max(...xs) - Math.min(...xs) + 1,
+        Math.max(...ys) - Math.min(...ys) + 1],
+      [8, 3]
+    );
+    assert.ok(landmarkObstacles[0].cells.some(cell =>
+      Math.abs(cell.x - rootMassObstacles[0].cells[0].x)
+        + Math.abs(cell.y - rootMassObstacles[0].cells[0].y) === 1
+    ));
+    if (variant === 'c') {
+      const fixedCompositionCells = [
+        ...landmarkObstacles[0].cells,
+        ...rootMassObstacles[0].cells
+      ];
+      const routeCells = new Set(starter.routes.flatMap(route =>
+        route.cells.map(cell => `${cell.x},${cell.y}`)
+      ));
+      const otherObstacleCells = new Set(starter.obstacles
+        .filter(obstacle =>
+          obstacle.id !== landmarkObstacles[0].id
+          && obstacle.id !== rootMassObstacles[0].id
+        )
+        .flatMap(obstacle =>
+          obstacle.cells.map(cell => `${cell.x},${cell.y}`)
+        ));
+      assert.deepEqual(
+        fixedCompositionCells.filter(cell =>
+          routeCells.has(`${cell.x},${cell.y}`)
+        ),
+        [],
+        'variant C fallen-oak composition must not collide with routes'
+      );
+      assert.deepEqual(
+        fixedCompositionCells.filter(cell =>
+          otherObstacleCells.has(`${cell.x},${cell.y}`)
+        ),
+        [],
+        'variant C fallen-oak composition must not collide with other obstacles'
+      );
+    }
+    const landmarkMaterials = landmarkObstacles[0].cells.map(
+      cell => starter.surfaceGrid[cell.y][cell.x].material
+    );
+    assert.ok(
+      landmarkMaterials.filter(material => material === 'dry-ravine').length >= 2
+    );
+    assert.ok(landmarkMaterials.some(material => material !== 'dry-ravine'));
+    assert.equal(
+      starter.surfaceGrid[
+        rootMassObstacles[0].cells[0].y
+      ][rootMassObstacles[0].cells[0].x].material,
+      'dry-ravine'
+    );
+    assert.ok(starter.expectedAssetFamilies.some(record =>
+      record.category === 'obstacle' && record.symbol === 'ancient-tree'
+    ));
+    assert.ok(starter.obstacles.some(
+      obstacle => obstacle.assetFamily === 'ancient-tree'
+    ));
+    const referencedFamilies = new Set([
+      ...starter.surfaceGrid.flat()
+        .filter(Boolean)
+        .map(cell => `surface:${cell.material}`),
+      ...starter.routes.map(route => `route:${route.assetFamily}`),
+      ...starter.connections.map(connection =>
+        `connection:${connection.assetFamily}`
+      ),
+      ...starter.obstacles.map(obstacle =>
+        `obstacle:${obstacle.assetFamily}`
+      ),
+      ...starter.decorations.map(decoration =>
+        `decoration:${decoration.assetFamily}`
+      ),
+      ...starter.boundaries.map(boundary =>
+        `boundary:${boundary.assetFamily}`
+      )
+    ]);
+    assert.deepEqual(
+      starter.expectedAssetFamilies
+        .map(record => `${record.category}:${record.symbol}`)
+        .filter(key => !referencedFamilies.has(key)),
+      []
+    );
+    assert.equal(validateTemplateMapBlueprint(starter).valid, true);
+    assert.doesNotThrow(() =>
+      BlueprintLifecycleInternals.validateV2BlueprintSemanticContract(
+        starter,
+        sidecar
+      )
+    );
+    const passableComponentSizes =
+      BlueprintLifecycleInternals.passableTraversalComponents(starter)
+        .map(component => component.length);
+    assert.equal(
+      passableComponentSizes.length,
+      1,
+      `${mapId} passable traversal`
+    );
+    assert.ok(passableComponentSizes[0] > 640, `${mapId} passable area`);
+    assert.doesNotThrow(() =>
+      BlueprintLifecycleInternals.assertTemplate07VisualAuthorship(starter)
+    );
+    await BlueprintLifecycleInternals
+      .preflightCandidateWithSyntheticCompilerContext(starter, sidecar);
+  }
+  assert.doesNotThrow(() =>
+    BlueprintLifecycleInternals
+      .assertTemplate07DistinctMaterialSignatures(starters)
+  );
+  assert.doesNotThrow(() =>
+    BlueprintLifecycleInternals
+      .assertTemplate07DistinctMacroTopologies(starters)
+  );
+  const diversityMinimums =
+    BlueprintLifecycleInternals.TEMPLATE_07_MINIMUM_DIVERSITY_RATIOS;
+  for (let left = 0; left < starters.length; left += 1) {
+    for (let right = left + 1; right < starters.length; right += 1) {
+      const ratios = BlueprintLifecycleInternals
+        .template07SiblingDiversityRatios(starters[left], starters[right]);
+      for (const [dimension, minimum] of Object.entries(diversityMinimums)) {
+        assert.ok(
+          ratios[dimension] >= minimum,
+          `${left}:${right}:${dimension}:${ratios[dimension]}`
+        );
+      }
+    }
+  }
+  const v4LikeSharedSilhouette =
+    starters.map(starter => structuredClone(starter));
+  for (const sibling of v4LikeSharedSilhouette.slice(1)) {
+    sibling.renderMask =
+      structuredClone(v4LikeSharedSilhouette[0].renderMask);
+    sibling.playableMask =
+      structuredClone(v4LikeSharedSilhouette[0].playableMask);
+  }
+  assert.doesNotThrow(() =>
+    BlueprintLifecycleInternals.assertTemplate07DistinctMaterialSignatures(
+      v4LikeSharedSilhouette
+    )
+  );
+  assert.throws(
+    () => BlueprintLifecycleInternals.assertTemplate07DistinctMacroTopologies(
+      v4LikeSharedSilhouette
+    ),
+    /sibling coarseSilhouette diversity ratio .* below required 0\.045/
+  );
+  const isolatedCellFor = blueprint => {
+    const obstacles = new Set(blueprint.obstacles.flatMap(obstacle =>
+      obstacle.cells.map(cell => `${cell.x},${cell.y}`)
+    ));
+    const connectionCells = new Set(blueprint.connections.flatMap(connection => [
+      `${connection.from.x},${connection.from.y}`,
+      `${connection.to.x},${connection.to.y}`
+    ]));
+    for (let y = 2; y < blueprint.dimensions.height - 2; y += 1) {
+      for (let x = 2; x < blueprint.dimensions.width - 2; x += 1) {
+        const key = `${x},${y}`;
+        if (
+          !blueprint.playableMask[y][x]
+          || obstacles.has(key)
+          || connectionCells.has(key)
+        ) continue;
+        const neighbors = [
+          pointForTest(x - 1, y),
+          pointForTest(x + 1, y),
+          pointForTest(x, y - 1),
+          pointForTest(x, y + 1)
+        ];
+        if (neighbors.every(cell => (
+          blueprint.playableMask[cell.y][cell.x]
+          && !obstacles.has(`${cell.x},${cell.y}`)
+          && blueprint.elevation[cell.y][cell.x] === blueprint.elevation[y][x]
+        ))) return pointForTest(x, y);
+      }
+    }
+    assert.fail('expected an interior passable cell for isolation regression');
+  };
+  for (const index of [1, 2]) {
+    const cell = isolatedCellFor(starters[index]);
+    const disconnected = structuredClone(starters[index]);
+    disconnected.elevation[cell.y][cell.x] =
+      disconnected.elevation[cell.y][cell.x] === 0 ? 1 : 0;
+    const components =
+      BlueprintLifecycleInternals.passableTraversalComponents(disconnected);
+    const passableCount =
+      BlueprintLifecycleInternals.passableTraversalComponents(starters[index])
+        [0].length;
+    assert.deepEqual(
+      components.map(component => component.length),
+      [passableCount - 1, 1]
+    );
+    assert.deepEqual(components[1], [cell]);
+    assert.throws(
+      () => BlueprintLifecycleInternals.validateV2BlueprintSemanticContract(
+        disconnected,
+        sidecar
+      ),
+      new RegExp(
+        `component sizes \\[${passableCount - 1}, 1\\]; isolated cells `
+          + `${cell.x},${cell.y}`
+      )
+    );
+  }
+  const bridgeCell = isolatedCellFor(starters[1]);
+  const oneWayBridge = structuredClone(starters[1]);
+  oneWayBridge.elevation[bridgeCell.y][bridgeCell.x] =
+    oneWayBridge.elevation[bridgeCell.y][bridgeCell.x] === 0 ? 1 : 0;
+  oneWayBridge.connections.push({
+    id: 'connection:isolated-cell-regression',
+    from: bridgeCell,
+    to: pointForTest(bridgeCell.x + 1, bridgeCell.y),
+    kind: 'slope',
+    traversable: true,
+    bidirectional: false,
+    featureId: 'feature:terraces',
+    assetFamily: 'slope'
+  });
+  assert.deepEqual(
+    BlueprintLifecycleInternals.passableTraversalComponents(oneWayBridge)
+      .map(component => component.length),
+    [
+      BlueprintLifecycleInternals.passableTraversalComponents(starters[1])
+        [0].length - 1,
+      1
+    ]
+  );
+  oneWayBridge.connections.at(-1).bidirectional = true;
+  assert.deepEqual(
+    BlueprintLifecycleInternals.passableTraversalComponents(oneWayBridge)
+      .map(component => component.length),
+    [
+      BlueprintLifecycleInternals.passableTraversalComponents(starters[1])
+        [0].length
+    ]
+  );
+  assert.doesNotThrow(() =>
+    BlueprintLifecycleInternals.validateV2BlueprintSemanticContract(
+      oneWayBridge,
+      sidecar
+    )
+  );
+  const twoCellTraversal = {
+    dimensions: { width: 2, height: 1 },
+    playableMask: [[true, true]],
+    elevation: [[0, 0]],
+    obstacles: [],
+    connections: []
+  };
+  assert.deepEqual(
+    BlueprintLifecycleInternals.passableTraversalComponents(twoCellTraversal)
+      .map(component => component.length),
+    [2]
+  );
+  twoCellTraversal.connections.push({
+    from: pointForTest(0, 0),
+    to: pointForTest(1, 0),
+    traversable: false,
+    bidirectional: true
+  });
+  assert.deepEqual(
+    BlueprintLifecycleInternals.passableTraversalComponents(twoCellTraversal)
+      .map(component => component.length),
+    [1, 1]
+  );
+  twoCellTraversal.connections[0].traversable = true;
+  twoCellTraversal.connections[0].bidirectional = false;
+  assert.deepEqual(
+    BlueprintLifecycleInternals.passableTraversalComponents(twoCellTraversal)
+      .map(component => component.length),
+    [1, 1]
+  );
+  twoCellTraversal.connections[0].bidirectional = true;
+  assert.deepEqual(
+    BlueprintLifecycleInternals.passableTraversalComponents(twoCellTraversal)
+      .map(component => component.length),
+    [2]
+  );
+  const copiedRoutes = starters.map(starter => structuredClone(starter));
+  copiedRoutes[1].routes = structuredClone(copiedRoutes[0].routes);
+  copiedRoutes[1].routes[0].cells[1].y -= 1;
+  assert.throws(
+    () => BlueprintLifecycleInternals
+      .assertTemplate07DistinctMacroTopologies(copiedRoutes),
+    /sibling route diversity ratio .* below required 0\.15/
+  );
+  const copiedRouteCellsRenamed =
+    starters.map(starter => structuredClone(starter));
+  copiedRouteCellsRenamed[1].routes =
+    structuredClone(copiedRouteCellsRenamed[0].routes);
+  copiedRouteCellsRenamed[1].routes.forEach((route, index) => {
+    route.id = `renamed-required-primary-route:${index}`;
+  });
+  const renamedRouteRatios =
+    BlueprintLifecycleInternals.template07SiblingDiversityRatios(
+      copiedRouteCellsRenamed[0],
+      copiedRouteCellsRenamed[1]
+    );
+  assert.equal(renamedRouteRatios.route, 0);
+  assert.equal(renamedRouteRatios.coarseRoutes, 0);
+  assert.throws(
+    () => BlueprintLifecycleInternals
+      .assertTemplate07DistinctMacroTopologies(copiedRouteCellsRenamed),
+    /sibling route diversity ratio 0\.0000 is below required 0\.15/
+  );
+  const copiedFormation = starters.map(starter => structuredClone(starter));
+  copiedFormation[1].spawn.playerSlots =
+    structuredClone(copiedFormation[0].spawn.playerSlots);
+  copiedFormation[1].spawn.opponentCandidates =
+    structuredClone(copiedFormation[0].spawn.opponentCandidates);
+  copiedFormation[1].spawn.exits =
+    structuredClone(copiedFormation[0].spawn.exits);
+  copiedFormation[1].spawn.playerSlots[0].cell.x += 1;
+  assert.throws(
+    () => BlueprintLifecycleInternals
+      .assertTemplate07DistinctMacroTopologies(copiedFormation),
+    /sibling formationAndExits diversity ratio .* below required 0\.20/
+  );
+  const copiedElevationAndRegions =
+    starters.map(starter => structuredClone(starter));
+  copiedElevationAndRegions[1].elevation =
+    structuredClone(copiedElevationAndRegions[0].elevation);
+  copiedElevationAndRegions[1].elevation[2][15] =
+    copiedElevationAndRegions[1].elevation[2][15] === 0 ? 1 : 0;
+  assert.throws(
+    () => BlueprintLifecycleInternals
+      .assertTemplate07DistinctMacroTopologies(copiedElevationAndRegions),
+    /sibling elevation diversity ratio .* below required 0\.05/
+  );
+  const copiedRegions = starters.map(starter => structuredClone(starter));
+  const aNonFormationRegions = copiedRegions[0].regions.filter(
+    region => region.kind !== 'formation-clearing'
+  );
+  copiedRegions[1].regions
+    .filter(region => region.kind !== 'formation-clearing')
+    .forEach((region, index) => {
+      region.cells = structuredClone(aNonFormationRegions[index].cells);
+    });
+  copiedRegions[1].regions.find(
+    region => region.kind === 'flank-clearing'
+  ).cells[0].x -= 1;
+  assert.throws(
+    () => BlueprintLifecycleInternals
+      .assertTemplate07DistinctMacroTopologies(copiedRegions),
+    /sibling nonFormationRegions diversity ratio .* below required 0\.25/
+  );
+  const aLowerAncientTree = starters[0].obstacles.find(
+    obstacle => obstacle.id === 'obstacle:lower-ancient-tree'
+  );
+  assert.deepEqual(aLowerAncientTree.cells, [pointForTest(12, 25)]);
+  const aObstacleKeys = new Set(starters[0].obstacles.flatMap(
+    obstacle => obstacle.cells.map(cell => `${cell.x},${cell.y}`)
+  ));
+  assert.equal(aObstacleKeys.has('13,23'), false);
+  assert.equal(starters[0].elevation[23][13], starters[0].elevation[23][14]);
+
+  const tooFewPrimaryFamilies = structuredClone(starters[0]);
+  tooFewPrimaryFamilies.routes[2].kind = 'secondary';
+  assert.throws(
+    () => BlueprintLifecycleInternals.validateV2BlueprintSemanticContract(
+      tooFewPrimaryFamilies,
+      sidecar
+    ),
+    /at least 3 distinct required primary formation-to-formation route records/
+  );
+  const reversedFamily = structuredClone(starters[0]);
+  reversedFamily.routes[0].cells.reverse();
+  assert.throws(
+    () => BlueprintLifecycleInternals.validateV2BlueprintSemanticContract(
+      reversedFamily,
+      sidecar
+    ),
+    /must be ordered from an endpoint.*player formation.*opponent formation/
+  );
+  const sharedFormationPortal = structuredClone(starters[0]);
+  sharedFormationPortal.routes[1].cells[0] = {
+    ...sharedFormationPortal.routes[0].cells[0]
+  };
+  assert.throws(
+    () => BlueprintLifecycleInternals.validateV2BlueprintSemanticContract(
+      sharedFormationPortal,
+      sidecar
+    ),
+    /must use distinct ordered player and opponent endpoints/
+  );
+  const sharedInternalVertex = structuredClone(starters[0]);
+  sharedInternalVertex.routes[1].cells[5] = {
+    ...sharedInternalVertex.routes[0].cells[5]
+  };
+  assert.throws(
+    () => BlueprintLifecycleInternals.validateV2BlueprintSemanticContract(
+      sharedInternalVertex,
+      sidecar
+    ),
+    /must be internally vertex-disjoint route families/
+  );
+  const danglingSecondary = structuredClone(starters[0]);
+  danglingSecondary.routes.push({
+    ...structuredClone(danglingSecondary.routes[0]),
+    id: 'route:dangling-secondary',
+    kind: 'secondary',
+    cells: [
+      pointForTest(6, 18),
+      pointForTest(5, 18),
+      pointForTest(4, 18),
+      pointForTest(3, 18)
+    ]
+  });
+  assert.throws(
+    () => BlueprintLifecycleInternals.validateV2BlueprintSemanticContract(
+      danglingSecondary,
+      sidecar
+    ),
+    /required secondary route route:dangling-secondary is a dangling branch/
+  );
+  const malformedRouteIntent = structuredClone(sidecar);
+  malformedRouteIntent.routeIntent.minimumApproachesPerFormation = '3';
+  assert.throws(
+    () => BlueprintLifecycleInternals.validateV2BlueprintSemanticContract(
+      starters[0],
+      malformedRouteIntent
+    ),
+    /minimumApproachesPerFormation must be an integer/
+  );
+  const withLandmarkPlacement = (blueprint, anchor, root) => {
+    const invalid = structuredClone(blueprint);
+    const landmark = invalid.obstacles.find(
+      obstacle => obstacle.assetFamily === 'fallen-oak-landmark'
+    );
+    landmark.cells = landmarkOffsets.map(([dx, dy]) => pointForTest(
+      anchor[0] + dx,
+      anchor[1] + dy
+    ));
+    landmark.anchor = pointForTest(...anchor);
+    landmark.occlusionBounds = {
+      minX: anchor[0],
+      minY: anchor[1],
+      maxX: anchor[0] + 7,
+      maxY: anchor[1] + 2
+    };
+    const rootMass = invalid.obstacles.find(
+      obstacle => obstacle.assetFamily === 'fallen-oak-root-mass'
+    );
+    rootMass.cells = [pointForTest(...root)];
+    rootMass.anchor = pointForTest(...root);
+    return invalid;
+  };
+  assert.throws(
+    () => BlueprintLifecycleInternals.assertTemplate07VisualAuthorship(
+      withLandmarkPlacement(starters[0], [8, 14], [7, 14])
+    ),
+    /fixed A composition/
+  );
+  assert.throws(
+    () => BlueprintLifecycleInternals.assertTemplate07VisualAuthorship(
+      withLandmarkPlacement(starters[2], [12, 19], [12, 18])
+    ),
+    /fixed C composition/
+  );
+
+  const rectangular = structuredClone(starters[0]);
+  rectangular.surfaceGrid.forEach(row => row.forEach(cell => {
+    if (cell?.material === 'clover-glade') {
+      cell.material = 'fern-hazel-glade';
+      cell.featureId = 'northeast-fern-hazel-glade';
+    }
+  }));
+  for (let y = 21; y <= 25; y += 1) {
+    for (let x = 6; x <= 10; x += 1) {
+      rectangular.surfaceGrid[y][x] = {
+        material: 'clover-glade',
+        featureId: 'southwest-clover-glade'
+      };
+    }
+  }
+  assert.throws(
+    () => BlueprintLifecycleInternals
+      .assertTemplate07OrganicSurfaceGeometry(rectangular),
+    /not rectangular or checkerboard-like/
+  );
+
+  const checkerboard = structuredClone(starters[0]);
+  checkerboard.surfaceGrid.forEach(row => row.forEach(cell => {
+    if (cell?.material === 'clover-glade') {
+      cell.material = 'fern-hazel-glade';
+      cell.featureId = 'northeast-fern-hazel-glade';
+    }
+  }));
+  for (let y = 19; y <= 26; y += 1) {
+    for (let x = 6; x <= 13; x += 1) {
+      if ((x + y) % 2 !== 0 || checkerboard.surfaceGrid[y][x] === null) continue;
+      checkerboard.surfaceGrid[y][x] = {
+        material: 'clover-glade',
+        featureId: 'southwest-clover-glade'
+      };
+    }
+  }
+  assert.throws(
+    () => BlueprintLifecycleInternals
+      .assertTemplate07OrganicSurfaceGeometry(checkerboard),
+    /not rectangular or checkerboard-like/
+  );
+
+  const shortRavine = structuredClone(starters[0]);
+  let retainedRavineCells = 0;
+  shortRavine.surfaceGrid.forEach(row => row.forEach(cell => {
+    if (cell?.material !== 'dry-ravine') return;
+    retainedRavineCells += 1;
+    if (retainedRavineCells <= 24) return;
+    cell.material = 'hawthorn-loop';
+    cell.featureId = 'southeast-hawthorn-loop';
+  }));
+  assert.throws(
+    () => BlueprintLifecycleInternals
+      .assertTemplate07OrganicSurfaceGeometry(shortRavine),
+    /Template-07 dry-ravine/
+  );
+  assert.throws(
+    () => BlueprintLifecycleInternals
+      .assertTemplate07DistinctMaterialSignatures([
+        starters[0],
+        structuredClone(starters[0])
+      ]),
+    /meaningfully distinct organic signatures/
+  );
+
+  const prompt = buildBlueprintPrompt({
+    profile,
+    sidecar,
+    mapId: sidecar.candidateMaps[0],
+    textTemplateFallback: true
+  });
+  assert.match(prompt, /fixed 20-symbol compiler contract/);
+  assert.match(prompt, /clover-glade:southwest-clover-glade/);
+  assert.match(prompt, /fern-hazel-glade:northeast-fern-hazel-glade/);
+  assert.match(prompt, /fieldstone-terrace:northwest-fieldstone-terrace/);
+  assert.match(prompt, /hawthorn-loop:southeast-hawthorn-loop/);
+  assert.match(prompt, /dry-ravine:fallen-oak-root-seam/);
+  assert.match(prompt, /8 by 3 diagonal footprint/);
+  assert.match(prompt, /rectangles, quadrant bands,\s+or checkerboards/);
+  assert.match(prompt, /cardinally adjacent one-cell/);
+  assert.match(
+    prompt,
+    /boundary:fieldstone-face so the\s+fieldstone-terrace material/
+  );
+  assert.match(prompt, /Template-07 Variant A bounded-authoring safeguard/);
+  assert.match(
+    prompt,
+    /preserve every required\s+route record's ordered centerline cells exactly/
+  );
+  assert.match(
+    prompt,
+    /spawn at \(5, 24\) exactly one cardinal\s+step to \(6, 24\)/
+  );
+  assert.match(prompt, /routeIntent\.minimumApproachesPerFormation/);
+  assert.match(prompt, /dangling secondary branch cannot/);
+  assert.match(
+    prompt,
+    /variant-specific\s+formation and elevation\/region macro topology/
+  );
+  assert.match(
+    prompt,
+    /decoration:west-accent from \(5, 11\) exactly one cardinal step to \(6, 11\)/
+  );
+  assert.doesNotMatch(prompt, /fixed 14-symbol compiler contract/);
+  const promptB = buildBlueprintPrompt({
+    profile,
+    sidecar,
+    mapId: sidecar.candidateMaps[1],
+    textTemplateFallback: true
+  });
+  assert.match(
+    promptB,
+    /spawn\s+at \(6, 24\) exactly one cardinal step to \(7, 24\)/
+  );
+  assert.match(
+    promptB,
+    /decoration:west-accent from \(6, 12\) exactly one\s+cardinal step to \(7, 12\)/
+  );
+  const promptC = buildBlueprintPrompt({
+    profile,
+    sidecar,
+    mapId: sidecar.candidateMaps[2],
+    textTemplateFallback: true
+  });
+  assert.match(
+    promptC,
+    /spawn\s+at \(7, 23\) exactly one cardinal step to \(8, 23\)/
+  );
+  assert.match(
+    promptC,
+    /decoration:west-accent from \(7, 11\) exactly one\s+cardinal step to \(8, 11\)/
+  );
+  assert.match(
+    promptC,
+    /landmark anchor at \(13, 19\)\s+and root mass at \(18, 19\)/
+  );
+
+  const contract = BlueprintLifecycleInternals.blueprintContract(
+    sidecar,
+    sidecar.candidateMaps[0]
+  );
+  assert.deepEqual(
+    contract.assetFamilyGeometry.find(
+      record => record.symbol === 'fallen-oak-landmark'
+    ),
+    {
+      category: 'obstacle',
+      symbol: 'fallen-oak-landmark',
+      footprint: { width: 8, height: 3 },
+      collisionCells: landmarkOffsets.map(([x, y]) => pointForTest(x, y)),
+      authoringRule:
+        'exactly one diagonal ten-cell record; anchor at collision cell 0,0'
+    }
+  );
+});
+
+test('template-07 final approval rejects duplicate sibling material grids',
+  async t => {
+  const root = await createFixture(t, {
+    template: TEMPLATE_07,
+    mapIds: TEMPLATE_07_MAP_IDS
+  });
+  const sidecarPath = path.join(
+    root,
+    `ai-image-metadata/battle-maps/templates/${THEME}/${TEMPLATE_07}.json`
+  );
+  const sidecar = JSON.parse(await readFile(sidecarPath, 'utf8'));
+  const duplicateSurfaceGrid = structuredClone(createBlueprintAuthoredStarter(
+    sidecar,
+    TEMPLATE_07_MAP_IDS[0]
+  ).surfaceGrid);
+  const worker = async ({ workspace }) => {
+    const blueprint = JSON.parse(await readFile(
+      path.join(workspace, 'inputs/starter.json'),
+      'utf8'
+    ));
+    blueprint.surfaceGrid = blueprint.renderMask.map((row, y) =>
+      row.map((rendered, x) => {
+        if (!rendered) return null;
+        return structuredClone(
+          duplicateSurfaceGrid[y][x] ?? blueprint.surfaceGrid[y][x]
+        );
+      })
+    );
+    const landmark = blueprint.obstacles.find(
+      obstacle => obstacle.assetFamily === 'fallen-oak-landmark'
+    );
+    const rootMass = blueprint.obstacles.find(
+      obstacle => obstacle.assetFamily === 'fallen-oak-root-mass'
+    );
+    for (const cell of landmark.cells.slice(-2).concat(rootMass.cells)) {
+      blueprint.surfaceGrid[cell.y][cell.x] = {
+        material: 'dry-ravine',
+        featureId: 'fallen-oak-root-seam'
+      };
+    }
+    const bankCell = landmark.cells[0];
+    blueprint.surfaceGrid[bankCell.y][bankCell.x] = {
+      material: 'clover-glade',
+      featureId: 'southwest-clover-glade'
+    };
+    blueprint.decorations[0].cell.x += 1;
+    const previousPlayerCell = { ...blueprint.spawn.playerSlots[0].cell };
+    blueprint.spawn.playerSlots[0].cell.x += 1;
+    const playerRegion = blueprint.regions.find(region =>
+      region.kind === 'formation-clearing'
+      && region.cells.some(cell =>
+        cell.x === previousPlayerCell.x && cell.y === previousPlayerCell.y
+      )
+    );
+    const playerRegionCell = playerRegion.cells.find(cell =>
+      cell.x === previousPlayerCell.x && cell.y === previousPlayerCell.y
+    );
+    playerRegionCell.x = blueprint.spawn.playerSlots[0].cell.x;
+    playerRegionCell.y = blueprint.spawn.playerSlots[0].cell.y;
+    await writeFile(
+      path.join(workspace, 'candidate.json'),
+      `${JSON.stringify(blueprint)}\n`
+    );
+    await writeFile(path.join(workspace, 'last-message.txt'), 'candidate written\n');
+    return {
+      stdout: Buffer.from('{"type":"fake-worker"}\n'),
+      stderr: Buffer.alloc(0),
+      args: ['fake-worker']
+    };
+  };
+  await generateBlueprintCandidates(
+    generateOptions(root, {
+      template: TEMPLATE_07,
+      mapIds: TEMPLATE_07_MAP_IDS
+    }),
+    { worker }
+  );
+  for (const mapId of TEMPLATE_07_MAP_IDS) {
+    await previewCandidateForApproval(root, TEMPLATE_07, mapId);
+  }
+
+  const approve = (mapId, updatePins = false) => approveBlueprintCandidate({
+    projectRoot: root,
+    theme: THEME,
+    template: TEMPLATE_07,
+    mapId,
+    reviewer: 'test-reviewer',
+    decision: 'approved',
+    reason: 'Organic Template-07 composition reviewed.',
+    force: false,
+    updatePins
+  });
+  await approve(TEMPLATE_07_MAP_IDS[0]);
+  await approve(TEMPLATE_07_MAP_IDS[1]);
+  const beforeFinalApproval = await readFile(sidecarPath);
+  await assert.rejects(
+    approve(TEMPLATE_07_MAP_IDS[2], true),
+    /meaningfully distinct organic signatures/
+  );
+  assert.deepEqual(await readFile(sidecarPath), beforeFinalApproval);
+  assert.equal(
+    await exists(path.join(
+      approvedRoot(root, TEMPLATE_07),
+      `${TEMPLATE_07_MAP_IDS[2]}.json`
+    )),
+    false
+  );
+});
+
+test('mechanical review evidence projects routes, portals, exits, and regions',
+  async () => {
+  const sidecar = JSON.parse(await readFile(
+    path.join(
+      PROJECT_ROOT,
+      'ai-image-metadata/battle-maps/templates/forest/forest-template-07.json'
+    ),
+    'utf8'
+  ));
+  const blueprint = createBlueprintAuthoredStarter(
+    sidecar,
+    sidecar.candidateMaps[0]
+  );
+  const candidate = value => ({
+    blueprint: value,
+    metadata: {
+      blueprint: {
+        fileSha256: `sha256:${'1'.repeat(64)}`,
+        fullHash: `sha256:${'2'.repeat(64)}`
+      }
+    }
+  });
+  const artifacts = value =>
+    BlueprintLifecycleInternals.mechanicalPreviewArtifacts(
+      candidate(value),
+      value.candidateId,
+      `review/${value.candidateId}`
+    );
+  const baseline = artifacts(blueprint);
+  const svg = baseline.svgBytes.toString('utf8');
+  assert.match(svg, /id="required-primary-routes"/);
+  assert.match(svg, /route:northwest/);
+  assert.match(svg, /id="traversable-connections"/);
+  assert.match(svg, /(?:slope|stairs)/);
+  assert.match(svg, /id="formation-exits"/);
+  assert.match(svg, /exit:player-west/);
+  assert.match(svg, /id="tactical-regions"/);
+  assert.match(svg, /northwest-fieldstone-terrace/);
+  assert.equal(
+    baseline.report.schemaVersion,
+    'battle-map-blueprint-mechanical-preview-v2'
+  );
+  assert.equal(baseline.report.requiredPrimaryRoutes.length, 3);
+  assert.equal(
+    baseline.report.traversableConnections.length,
+    blueprint.connections.filter(connection => connection.traversable).length
+  );
+  assert.equal(baseline.report.exits.length, 6);
+  assert.deepEqual(
+    baseline.report.nonFormationRegions.map(region => region.id).sort(),
+    blueprint.regions
+      .filter(region => region.kind !== 'formation-clearing')
+      .map(region => region.id)
+      .sort()
+  );
+
+  const mutations = {
+    route: value => {
+      value.routes[0].cells[4].x += 1;
+    },
+    connection: value => {
+      const connection = value.connections.find(record => record.traversable);
+      connection.kind = connection.kind === 'stairs' ? 'slope' : 'stairs';
+    },
+    exit: value => {
+      value.spawn.exits[0].cell.x += 1;
+    },
+    region: value => {
+      value.regions.find(
+        record => record.kind === 'flank-clearing'
+      ).cells[0].x -= 1;
+    }
+  };
+  for (const [dimension, mutate] of Object.entries(mutations)) {
+    const changed = structuredClone(blueprint);
+    mutate(changed);
+    const changedArtifacts = artifacts(changed);
+    assert.notDeepEqual(
+      changedArtifacts.svgBytes,
+      baseline.svgBytes,
+      `${dimension} must alter SVG evidence`
+    );
+    assert.notEqual(
+      JSON.stringify(changedArtifacts.report),
+      JSON.stringify(baseline.report),
+      `${dimension} must alter report evidence`
+    );
+  }
+});
+
+test('template-07 approvals persist v3 mechanical review provenance', async t => {
+  const root = await createFixture(t, {
+    template: TEMPLATE_07,
+    mapIds: TEMPLATE_07_MAP_IDS
+  });
+  await generateBlueprintCandidates(
+    generateOptions(root, {
+      template: TEMPLATE_07,
+      mapIds: TEMPLATE_07_MAP_IDS,
+      concurrency: 2
+    }),
+    { worker: validWorker() }
+  );
+  for (const mapId of TEMPLATE_07_MAP_IDS) {
+    await previewCandidateForApproval(root, TEMPLATE_07, mapId);
+    await approveBlueprintCandidate({
+      projectRoot: root,
+      theme: THEME,
+      template: TEMPLATE_07,
+      mapId,
+      reviewer: 'test-reviewer',
+      decision: 'approved',
+      reason: 'Organic Template-07 composition and mechanical preview reviewed.',
+      force: false,
+      updatePins: mapId === TEMPLATE_07_MAP_IDS.at(-1)
+    });
+  }
+  const approvalRoot = approvedRoot(root, TEMPLATE_07);
+  const index = JSON.parse(
+    await readFile(path.join(approvalRoot, 'approvals.json'), 'utf8')
+  );
+  assert.equal(
+    index.schemaVersion,
+    'battle-map-blueprint-approval-index-v3'
+  );
+  for (const entry of index.entries) {
+    assert.match(entry.mechanicalReviewReportSha256, /^sha256:[0-9a-f]{64}$/);
+    const approval = JSON.parse(
+      await readFile(path.join(approvalRoot, `${entry.id}.approval.json`), 'utf8')
+    );
+    assert.equal(approval.schemaVersion, 'battle-map-blueprint-approval-v3');
+    assert.equal(
+      approval.mechanicalReview.reportFileSha256,
+      entry.mechanicalReviewReportSha256
+    );
+    assert.match(
+      approval.mechanicalReview.reportPath,
+      new RegExp(`/previews/${entry.blueprintFullHash.slice(7)}/mechanical-report\\.json$`)
+    );
+  }
+  const verified = await verifyApprovedBlueprints({
+    projectRoot: root,
+    theme: THEME,
+    template: TEMPLATE_07
+  });
+  assert.equal(verified.ok, true);
+  assert.equal(verified.aggregatePinValid, true);
+  const firstEntry = index.entries[0];
+  const firstApproval = JSON.parse(
+    await readFile(
+      path.join(approvalRoot, `${firstEntry.id}.approval.json`),
+      'utf8'
+    )
+  );
+  const reportPath = path.join(root, firstApproval.mechanicalReview.reportPath);
+  const previewPath = path.join(root, firstApproval.mechanicalReview.previewPath);
+  const reportBytes = await readFile(reportPath);
+  const previewBytes = await readFile(previewPath);
+  const assertEvidenceRejected = async pattern => {
+    const result = await verifyApprovedBlueprints({
+      projectRoot: root,
+      theme: THEME,
+      template: TEMPLATE_07
+    });
+    assert.equal(result.ok, false);
+    assert.match(result.results[0].error, pattern);
+  };
+
+  await rm(reportPath);
+  await assertEvidenceRejected(/both the exact mechanical review report/);
+  await writeFile(reportPath, reportBytes);
+  await rm(previewPath);
+  await assertEvidenceRejected(/both the exact mechanical review report/);
+  await writeFile(previewPath, previewBytes);
+
+  await writeFile(reportPath, '{"tampered":true}\n');
+  await assertEvidenceRejected(/exact mechanical review report/);
+  await writeFile(reportPath, reportBytes);
+  await writeFile(previewPath, '<svg>tampered</svg>');
+  await assertEvidenceRejected(/exact hash-bound mechanical preview artifact/);
+  await writeFile(previewPath, previewBytes);
+
+  await rm(reportPath);
+  await rm(previewPath);
+  await assertEvidenceRejected(/both the exact mechanical review report/);
+  await writeFile(reportPath, reportBytes);
+  await writeFile(previewPath, previewBytes);
+
+  const external = path.join(root, 'mechanical-review-symlink-target');
+  await writeFile(external, reportBytes);
+  await rm(reportPath);
+  await symlink(external, reportPath);
+  await assertEvidenceRejected(/regular non-symlink file|symbolic-link/);
+  await rm(reportPath);
+  await writeFile(reportPath, reportBytes);
+});
+
+test('mechanical evidence read rejects a parent-directory swap after open', async t => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'modia-review-race-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const relativePath = 'review/current/mechanical-report.json';
+  const parent = path.join(root, 'review/current');
+  const savedParent = path.join(root, 'review/original');
+  const replacement = path.join(root, 'review/replacement');
+  await mkdir(parent, { recursive: true });
+  await mkdir(replacement, { recursive: true });
+  await writeFile(path.join(parent, 'mechanical-report.json'), '{"safe":true}\n');
+  await writeFile(
+    path.join(replacement, 'mechanical-report.json'),
+    '{"evil":true}\n'
+  );
+
+  await assert.rejects(
+    BlueprintLifecycleInternals.readRegularAttemptEvidence(
+      path.join(root, relativePath),
+      'mechanical review report',
+      MAX_BLUEPRINT_BYTES,
+      {
+        projectRoot: root,
+        relativePath,
+        afterOpen: async () => {
+          await rename(parent, savedParent);
+          await rename(replacement, parent);
+        }
+      }
+    ),
+    /changed while being captured/
+  );
+});
+
+test('template-07 forced approval migrates a verified V2 index transactionally',
+  async t => {
+  const root = await createFixture(t, {
+    template: TEMPLATE_07,
+    mapIds: TEMPLATE_07_MAP_IDS
+  });
+  await generateBlueprintCandidates(
+    generateOptions(root, {
+      template: TEMPLATE_07,
+      mapIds: TEMPLATE_07_MAP_IDS,
+      concurrency: 2
+    }),
+    { worker: validWorker() }
+  );
+  for (const mapId of TEMPLATE_07_MAP_IDS) {
+    await previewCandidateForApproval(root, TEMPLATE_07, mapId);
+  }
+
+  const approvalRoot = approvedRoot(root, TEMPLATE_07);
+  await mkdir(approvalRoot, { recursive: true });
+  const legacyEntries = [];
+  for (const mapId of TEMPLATE_07_MAP_IDS) {
+    const metadata = JSON.parse(await readFile(
+      path.join(candidateRoot(root, mapId, TEMPLATE_07), 'result.json'),
+      'utf8'
+    ));
+    legacyEntries.push({
+      id: mapId,
+      blueprintPath:
+        `ai-image-metadata/battle-maps/blueprints/${THEME}/${TEMPLATE_07}/`
+          + `${mapId}.json`,
+      approvalPath:
+        `ai-image-metadata/battle-maps/blueprints/${THEME}/${TEMPLATE_07}/`
+          + `${mapId}.approval.json`,
+      blueprintFullHash: metadata.blueprint.fullHash,
+      sourceImageSha256: metadata.sourceImageSha256,
+      promptProfileSha256: metadata.promptProfile.sha256,
+      reviewer: 'legacy-reviewer',
+      decision: 'approved',
+      reason: 'Legacy symbolic review predates mechanical provenance.',
+      approvalFullHash: sha256Bytes(Buffer.from(`legacy:${mapId}`))
+    });
+  }
+  const legacyIndex = BlueprintLifecycleInternals.finalizeApprovalIndex({
+    schemaVersion: 'battle-map-blueprint-approval-index-v2',
+    theme: THEME,
+    templateId: TEMPLATE_07,
+    entries: legacyEntries
+  });
+  const indexPath = path.join(approvalRoot, 'approvals.json');
+  await writeFile(indexPath, `${JSON.stringify(legacyIndex, null, 2)}\n`);
+  const sidecarPath = path.join(
+    root,
+    `ai-image-metadata/battle-maps/templates/${THEME}/${TEMPLATE_07}.json`
+  );
+  const sidecar = JSON.parse(await readFile(sidecarPath, 'utf8'));
+  sidecar.pins.approvedBlueprintSha256 = legacyIndex.fullHash;
+  await writeFile(sidecarPath, `${JSON.stringify(sidecar, null, 2)}\n`);
+
+  const approvalOptions = {
+    projectRoot: root,
+    theme: THEME,
+    template: TEMPLATE_07,
+    mapId: TEMPLATE_07_MAP_IDS[0],
+    reviewer: 'migration-reviewer',
+    decision: 'approved',
+    reason: 'Exact mechanical preview and three-route topology reviewed.',
+    force: false,
+    updatePins: false
+  };
+  const legacyIndexBytes = await readFile(indexPath);
+  const legacySidecarBytes = await readFile(sidecarPath);
+  await assert.rejects(
+    approveBlueprintCandidate(approvalOptions),
+    /V2-to-V3 migration requires --force/
+  );
+  assert.deepEqual(await readFile(indexPath), legacyIndexBytes);
+  assert.deepEqual(await readFile(sidecarPath), legacySidecarBytes);
+
+  const malformedIndex = {
+    ...legacyIndex,
+    fullHash: `sha256:${'0'.repeat(64)}`
+  };
+  await writeFile(indexPath, `${JSON.stringify(malformedIndex, null, 2)}\n`);
+  await assert.rejects(
+    approveBlueprintCandidate({ ...approvalOptions, force: true }),
+    /approval index full hash mismatch/
+  );
+  await writeFile(indexPath, legacyIndexBytes);
+
+  const blueprintPath = path.join(
+    approvalRoot,
+    `${TEMPLATE_07_MAP_IDS[0]}.json`
+  );
+  const approvalPath = path.join(
+    approvalRoot,
+    `${TEMPLATE_07_MAP_IDS[0]}.approval.json`
+  );
+  await assert.rejects(
+    approveBlueprintCandidate({
+      ...approvalOptions,
+      force: true,
+      beforeSidecarUpdate: async () => {
+        throw new Error('injected V2-to-V3 migration sidecar failure');
+      }
+    }),
+    /injected V2-to-V3 migration sidecar failure/
+  );
+  assert.equal(await exists(blueprintPath), false);
+  assert.equal(await exists(approvalPath), false);
+  assert.deepEqual(await readFile(indexPath), legacyIndexBytes);
+  assert.deepEqual(await readFile(sidecarPath), legacySidecarBytes);
+
+  const migrated = await approveBlueprintCandidate({
+    ...approvalOptions,
+    force: true
+  });
+  assert.equal(migrated.promoted, true);
+  assert.equal(migrated.sidecarUpdated, true);
+  const v3Index = JSON.parse(await readFile(indexPath, 'utf8'));
+  assert.equal(
+    v3Index.schemaVersion,
+    'battle-map-blueprint-approval-index-v3'
+  );
+  assert.deepEqual(
+    v3Index.entries.map(entry => entry.id),
+    [TEMPLATE_07_MAP_IDS[0]]
+  );
+  assert.match(
+    v3Index.entries[0].mechanicalReviewReportSha256,
+    /^sha256:[0-9a-f]{64}$/
+  );
+  assert.equal(
+    JSON.parse(await readFile(sidecarPath, 'utf8'))
+      .pins.approvedBlueprintSha256,
+    null
+  );
+});
+
+test('template-07 rejection reads a valid legacy V2 index without migrating it',
+  async t => {
+  const root = await createFixture(t, {
+    template: TEMPLATE_07,
+    mapIds: TEMPLATE_07_MAP_IDS
+  });
+  await generateBlueprintCandidates(
+    generateOptions(root, {
+      template: TEMPLATE_07,
+      mapIds: TEMPLATE_07_MAP_IDS,
+      concurrency: 2
+    }),
+    { worker: validWorker() }
+  );
+  const approvalRoot = approvedRoot(root, TEMPLATE_07);
+  await mkdir(approvalRoot, { recursive: true });
+  const legacyEntries = [];
+  for (const mapId of TEMPLATE_07_MAP_IDS) {
+    const metadata = JSON.parse(await readFile(
+      path.join(candidateRoot(root, mapId, TEMPLATE_07), 'result.json'),
+      'utf8'
+    ));
+    legacyEntries.push({
+      id: mapId,
+      blueprintPath:
+        `ai-image-metadata/battle-maps/blueprints/${THEME}/${TEMPLATE_07}/`
+          + `${mapId}.json`,
+      approvalPath:
+        `ai-image-metadata/battle-maps/blueprints/${THEME}/${TEMPLATE_07}/`
+          + `${mapId}.approval.json`,
+      blueprintFullHash: metadata.blueprint.fullHash,
+      sourceImageSha256: metadata.sourceImageSha256,
+      promptProfileSha256: metadata.promptProfile.sha256,
+      reviewer: 'legacy-reviewer',
+      decision: 'approved',
+      reason: 'Legacy symbolic review predates mechanical provenance.',
+      approvalFullHash: sha256Bytes(Buffer.from(`legacy:${mapId}`))
+    });
+  }
+  const legacyIndex = BlueprintLifecycleInternals.finalizeApprovalIndex({
+    schemaVersion: 'battle-map-blueprint-approval-index-v2',
+    theme: THEME,
+    templateId: TEMPLATE_07,
+    entries: legacyEntries
+  });
+  const indexPath = path.join(approvalRoot, 'approvals.json');
+  await writeFile(indexPath, `${JSON.stringify(legacyIndex, null, 2)}\n`);
+  const sidecarPath = path.join(
+    root,
+    `ai-image-metadata/battle-maps/templates/${THEME}/${TEMPLATE_07}.json`
+  );
+  const sidecar = JSON.parse(await readFile(sidecarPath, 'utf8'));
+  sidecar.pins.approvedBlueprintSha256 = legacyIndex.fullHash;
+  await writeFile(sidecarPath, `${JSON.stringify(sidecar, null, 2)}\n`);
+
+  await generateBlueprintCandidates(
+    generateOptions(root, {
+      template: TEMPLATE_07,
+      mapIds: [TEMPLATE_07_MAP_IDS[0]],
+      force: true
+    }),
+    {
+      worker: validWorker(blueprint => {
+        blueprint.decorations[1].cell.x -= 1;
+        return blueprint;
+      })
+    }
+  );
+  const indexBefore = await readFile(indexPath);
+  const sidecarBefore = await readFile(sidecarPath);
+  const rejectionOptions = {
+    projectRoot: root,
+    theme: THEME,
+    template: TEMPLATE_07,
+    mapId: TEMPLATE_07_MAP_IDS[0],
+    reviewer: 'migration-reviewer',
+    decision: 'rejected',
+    reason: 'New candidate hash did not pass mechanical review.',
+    force: false,
+    updatePins: false
+  };
+  const rejected = await approveBlueprintCandidate(rejectionOptions);
+  assert.equal(rejected.promoted, false);
+  assert.equal(rejected.approvalInvalidated, false);
+  assert.equal(rejected.sidecarUpdated, false);
+  assert.deepEqual(await readFile(indexPath), indexBefore);
+  assert.deepEqual(await readFile(sidecarPath), sidecarBefore);
+  assert.equal(
+    await exists(path.join(
+      root,
+      `ai-image-metadata/battle-maps/review/${THEME}/${TEMPLATE_07}/`
+        + `${TEMPLATE_07_MAP_IDS[0]}/rejection.json`
+    )),
+    true
+  );
+
+  const malformedIndex = {
+    ...legacyIndex,
+    fullHash: `sha256:${'0'.repeat(64)}`
+  };
+  const malformedBytes =
+    Buffer.from(`${JSON.stringify(malformedIndex, null, 2)}\n`);
+  await writeFile(indexPath, malformedBytes);
+  await assert.rejects(
+    approveBlueprintCandidate(rejectionOptions),
+    /approval index full hash mismatch/
+  );
+  assert.deepEqual(await readFile(indexPath), malformedBytes);
+  assert.deepEqual(await readFile(sidecarPath), sidecarBefore);
+});
+
+test('template-07 rejection can record an exact historical prompt-era candidate',
+  async t => {
+  const root = await createFixture(t, {
+    template: TEMPLATE_07,
+    mapIds: TEMPLATE_07_MAP_IDS
+  });
+  const mapId = TEMPLATE_07_MAP_IDS[0];
+  await generateBlueprintCandidates(
+    generateOptions(root, {
+      template: TEMPLATE_07,
+      mapIds: [mapId]
+    }),
+    { worker: validWorker() }
+  );
+  const candidateDirectory = candidateRoot(root, mapId, TEMPLATE_07);
+  const metadataPath = path.join(candidateDirectory, 'result.json');
+  const blueprintPath = path.join(candidateDirectory, 'candidate.json');
+  const metadataBytes = await readFile(metadataPath);
+  const blueprintBytes = await readFile(blueprintPath);
+  const metadata = JSON.parse(metadataBytes);
+  const promptPath = path.join(root, BLUEPRINT_PROMPT_PATH_V2);
+  const currentPrompt = JSON.parse(await readFile(promptPath, 'utf8'));
+  currentPrompt.variantBriefs.a +=
+    ' This later profile deliberately differs from the candidate-era profile.';
+  const currentPromptBytes =
+    Buffer.from(`${JSON.stringify(currentPrompt, null, 2)}\n`);
+  await writeFile(promptPath, currentPromptBytes);
+  assert.notEqual(
+    metadata.promptProfile.sha256,
+    sha256Bytes(currentPromptBytes)
+  );
+
+  const rejectionOptions = {
+    projectRoot: root,
+    theme: THEME,
+    template: TEMPLATE_07,
+    mapId,
+    reviewer: 'historical-candidate-reviewer',
+    decision: 'rejected',
+    reason: 'Rejected the exact historical blueprint bytes after route review.',
+    force: false,
+    updatePins: false
+  };
+  const rejected = await approveBlueprintCandidate(rejectionOptions);
+  assert.equal(rejected.promoted, false);
+  assert.equal(rejected.approval.blueprintFullHash, metadata.blueprint.fullHash);
+  assert.deepEqual(rejected.approval.promptProfile, metadata.promptProfile);
+  const evidencePath = path.join(
+    root,
+    `ai-image-metadata/battle-maps/review/${THEME}/${TEMPLATE_07}/${mapId}/`
+      + `rejections/${metadata.blueprint.fullHash.slice(7)}.json`
+  );
+  const evidence = JSON.parse(await readFile(evidencePath, 'utf8'));
+  assert.equal(evidence.blueprintFullHash, metadata.blueprint.fullHash);
+  assert.equal(evidence.blueprintFileSha256, metadata.blueprint.fileSha256);
+  assert.deepEqual(evidence.promptProfile, metadata.promptProfile);
+  assert.deepEqual(await readFile(metadataPath), metadataBytes);
+  assert.deepEqual(await readFile(blueprintPath), blueprintBytes);
+
+  const malformedMetadata = structuredClone(metadata);
+  malformedMetadata.promptProfile.sha256 = `sha256:${'A'.repeat(64)}`;
+  await writeFile(
+    metadataPath,
+    `${JSON.stringify(malformedMetadata, null, 2)}\n`
+  );
+  await assert.rejects(
+    approveBlueprintCandidate(rejectionOptions),
+    /candidate prompt profile sha256 must be a lowercase SHA-256 pin/
+  );
+  await writeFile(metadataPath, metadataBytes);
+
+  await assert.rejects(
+    approveBlueprintCandidate({
+      ...rejectionOptions,
+      decision: 'approved'
+    }),
+    /candidate prompt-profile pin is stale/
+  );
+});
+
+test('V2 rejects an unchanged standalone-valid authored starter', async t => {
+  const root = await createFixture(t, {
+    template: V2_TEMPLATE,
+    mapIds: V2_MAP_IDS
+  });
+  await assert.rejects(
+    generateBlueprintCandidates(
+      generateOptions(root, {
+        template: V2_TEMPLATE,
+        mapIds: [V2_MAP_IDS[0]]
+      }),
+      {
+        worker: async ({ workspace }) => {
+          const starterBytes = await readFile(
+            path.join(workspace, 'inputs/starter.json')
+          );
+          const starter = JSON.parse(starterBytes);
+          const stagedSidecar = JSON.parse(await readFile(
+            path.join(workspace, 'inputs/sidecar.json'),
+            'utf8'
+          ));
+          assert.equal(validateTemplateMapBlueprint(starter).valid, true);
+          assert.doesNotThrow(() =>
+            BlueprintLifecycleInternals.validateV2BlueprintSemanticContract(
+              starter,
+              stagedSidecar
+            )
+          );
+          await writeFile(path.join(workspace, 'candidate.json'), starterBytes);
+          return {
+            stdout: Buffer.from('{"type":"fake-worker"}\n'),
+            stderr: Buffer.alloc(0),
+            args: ['fake-worker']
+          };
+        }
+      }
+    ),
+    error => {
+      assert.equal(error.code, 'UNAUTHORED_TEMPLATE_MAP_BLUEPRINT');
+      assert.match(
+        error.message,
+        /at least two authoritative geometry groups relative to inputs\/starter\.json/
+      );
+      return true;
+    }
+  );
+  assert.equal(
+    await exists(path.join(
+      candidateRoot(root, V2_MAP_IDS[0], V2_TEMPLATE),
+      'result.json'
+    )),
+    false
+  );
+});
+
+test('V2 does not count record or cell reordering as authored geometry', async t => {
+  const root = await createFixture(t, {
+    template: V2_TEMPLATE,
+    mapIds: V2_MAP_IDS
+  });
+  await assert.rejects(
+    generateBlueprintCandidates(
+      generateOptions(root, {
+        template: V2_TEMPLATE,
+        mapIds: [V2_MAP_IDS[0]]
+      }),
+      {
+        worker: async ({ workspace }) => {
+          const starter = JSON.parse(await readFile(
+            path.join(workspace, 'inputs/starter.json'),
+            'utf8'
+          ));
+          for (const key of [
+            'routes',
+            'connections',
+            'playerSlots',
+            'opponentCandidates',
+            'opponentZones',
+            'exits',
+            'obstacles',
+            'decorations',
+            'boundaries'
+          ]) {
+            const records = Object.hasOwn(starter.spawn, key)
+              ? starter.spawn[key]
+              : starter[key];
+            records.reverse();
+          }
+          starter.spawn.opponentZones[0].cells.reverse();
+          starter.obstacles[0].cells.reverse();
+          for (const boundary of starter.boundaries) {
+            boundary.edges.reverse();
+          }
+          await writeFile(
+            path.join(workspace, 'candidate.json'),
+            `${JSON.stringify(starter)}\n`
+          );
+          return {
+            stdout: Buffer.from('{"type":"fake-worker"}\n'),
+            stderr: Buffer.alloc(0),
+            args: ['fake-worker']
+          };
+        }
+      }
+    ),
+    error => {
+      assert.equal(error.code, 'UNAUTHORED_TEMPLATE_MAP_BLUEPRINT');
+      assert.match(error.message, /at least two authoritative geometry groups/);
+      return true;
+    }
+  );
+});
+
+test('V2 does not count route direction or connection endpoint orientation as authored geometry',
+  async t => {
+  const root = await createFixture(t, {
+    template: V2_TEMPLATE,
+    mapIds: V2_MAP_IDS
+  });
+  await assert.rejects(
+    generateBlueprintCandidates(
+      generateOptions(root, {
+        template: V2_TEMPLATE,
+        mapIds: [V2_MAP_IDS[0]]
+      }),
+      {
+        worker: async ({ workspace }) => {
+          const starter = JSON.parse(await readFile(
+            path.join(workspace, 'inputs/starter.json'),
+            'utf8'
+          ));
+          const requiredRoute = starter.routes.find(route => route.required);
+          requiredRoute.cells.reverse();
+          const connection = starter.connections.find(
+            record => record.bidirectional
+          );
+          [connection.from, connection.to] = [connection.to, connection.from];
+          await writeFile(
+            path.join(workspace, 'candidate.json'),
+            `${JSON.stringify(starter)}\n`
+          );
+          return {
+            stdout: Buffer.from('{"type":"fake-worker"}\n'),
+            stderr: Buffer.alloc(0),
+            args: ['fake-worker']
+          };
+        }
+      }
+    ),
+    error => {
+      assert.equal(error.code, 'UNAUTHORED_TEMPLATE_MAP_BLUEPRINT');
+      assert.match(error.message, /at least two authoritative geometry groups/);
+      return true;
+    }
+  );
+});
+
+test('V2 rejects connection and decoration edits without a core composition change',
+  async t => {
+  const root = await createFixture(t, {
+    template: V2_TEMPLATE,
+    mapIds: V2_MAP_IDS
+  });
+  await assert.rejects(
+    generateBlueprintCandidates(
+      generateOptions(root, {
+        template: V2_TEMPLATE,
+        mapIds: [V2_MAP_IDS[0]]
+      }),
+      {
+        worker: async ({ workspace }) => {
+          const starter = JSON.parse(await readFile(
+            path.join(workspace, 'inputs/starter.json')
+          ));
+          const connection = starter.connections[1];
+          connection.kind =
+            connection.kind === 'stairs' ? 'slope' : 'stairs';
+          connection.assetFamily = connection.kind;
+          starter.decorations[0].cell.x += 1;
+          await writeFile(
+            path.join(workspace, 'candidate.json'),
+            `${JSON.stringify(starter)}\n`
+          );
+          return {
+            stdout: Buffer.from('{"type":"fake-worker"}\n'),
+            stderr: Buffer.alloc(0),
+            args: ['fake-worker']
+          };
+        }
+      }
+    ),
+    error => {
+      assert.equal(error.code, 'UNAUTHORED_TEMPLATE_MAP_BLUEPRINT');
+      assert.match(error.message, /at least one core composition group/);
+      return true;
+    }
+  );
+});
+
+test('V2 bounded authoring survives resume reopen and approval', async t => {
+  const root = await createFixture(t, {
+    template: V2_TEMPLATE,
+    mapIds: V2_MAP_IDS
+  });
+  const options = generateOptions(root, {
+    template: V2_TEMPLATE,
+    mapIds: [V2_MAP_IDS[0]]
+  });
+  await generateBlueprintCandidates(options, { worker: validWorker() });
+  const rootPath = candidateRoot(root, V2_MAP_IDS[0], V2_TEMPLATE);
+  const blueprintPath = path.join(rootPath, 'candidate.json');
+  const metadataPath = path.join(rootPath, 'result.json');
+  const authoredBlueprint = JSON.parse(await readFile(blueprintPath, 'utf8'));
+  const sidecar = JSON.parse(await readFile(
+    path.join(
+      root,
+      `ai-image-metadata/battle-maps/templates/${THEME}/${V2_TEMPLATE}.json`
+    ),
+    'utf8'
+  ));
+  const starter = createBlueprintAuthoredStarter(sidecar, V2_MAP_IDS[0]);
+  assert.notDeepEqual(authoredBlueprint.spawn, starter.spawn);
+  assert.notDeepEqual(authoredBlueprint.decorations, starter.decorations);
+  assert.equal(validateTemplateMapBlueprint(authoredBlueprint).valid, true);
+  assert.doesNotThrow(() =>
+    BlueprintLifecycleInternals.validateV2BlueprintSemanticContract(
+      authoredBlueprint,
+      sidecar
+    )
+  );
+
+  const reserializedBytes =
+    Buffer.from(`${JSON.stringify(authoredBlueprint)}\n`);
+  await writeFile(blueprintPath, reserializedBytes);
+  const metadata = JSON.parse(await readFile(metadataPath, 'utf8'));
+  metadata.blueprint.bytes = reserializedBytes.byteLength;
+  metadata.blueprint.fileSha256 = sha256Bytes(reserializedBytes);
+  await writeFile(metadataPath, `${JSON.stringify(metadata, null, 2)}\n`);
+
+  let workerCalls = 0;
+  const worker = async parameters => {
+    workerCalls += 1;
+    return validWorker()(parameters);
+  };
+  const resumed = await generateBlueprintCandidates(
+    { ...options, resume: true },
+    { worker }
+  );
+  assert.equal(workerCalls, 0);
+  assert.equal(resumed.results[0].status, 'skipped-complete');
+
+  await previewCandidateForApproval(root, V2_TEMPLATE, V2_MAP_IDS[0]);
+  const approval = await approveBlueprintCandidate({
+    projectRoot: root,
+    theme: THEME,
+    template: V2_TEMPLATE,
+    mapId: V2_MAP_IDS[0],
+    reviewer: 'reviewer@example.test',
+    decision: 'approved',
+    reason: 'Bounded core composition and scene-feature authoring reviewed.',
+    force: false,
+    updatePins: false
+  });
+  assert.equal(approval.promoted, true);
+  assert.deepEqual(
+    await readFile(path.join(
+      approvedRoot(root, V2_TEMPLATE),
+      `${V2_MAP_IDS[0]}.json`
+    )),
+    reserializedBytes
+  );
+});
+
 test('blueprint prompt states the complete grid and compiler-topology invariants', async t => {
   const root = await createFixture(t, {
     template: V2_TEMPLATE,
@@ -1265,8 +3161,31 @@ test('blueprint prompt states the complete grid and compiler-topology invariants
   assert.match(prompt, /opponent zone named by zoneId/);
   assert.match(
     prompt,
-    /expectedAssetFamilies byte-for-byte equivalent to\s+completeShapeExample/
+    /expectedAssetFamilies byte-for-byte equivalent to\s+inputs\/starter\.json/
   );
+  assert.match(prompt, /cp inputs\/starter\.json candidate\.json/);
+  assert.match(prompt, /standalone schema-valid, V2-semantic-valid/);
+  assert.match(prompt, /then make targeted, bounded edits/);
+  assert.match(
+    prompt,
+    /change at least two authoritative\s+geometry groups relative to the starter/
+  );
+  assert.match(
+    prompt,
+    /at least one changed group must be\s+core composition/
+  );
+  assert.match(
+    prompt,
+    /Connection-kind plus decorative-only edits are insufficient/
+  );
+  assert.match(
+    prompt,
+    /Preserve candidateId, templateId, all existing record identities/
+  );
+  assert.match(prompt, /every required\s+topology area ID/);
+  assert.match(prompt, /fixed expectedAssetFamilies closure/);
+  assert.match(prompt, /Do not merely reserialize the starter/);
+  assert.doesNotMatch(prompt, /exact immutable prime/);
   assert.match(prompt, /fixed 13-symbol compiler contract/);
   assert.match(prompt, /never invent ecology-specific replacements/);
   assert.match(
@@ -1293,17 +3212,39 @@ test('blueprint prompt states the complete grid and compiler-topology invariants
     ),
     'prompt must enumerate every approved sidecar topology area ID'
   );
-  assert.match(prompt, /generic completeShapeExample region IDs are placeholders/);
-  assert.match(prompt, /do not mirror or transpose the completeShapeExample/i);
+  assert.match(prompt, /starter already carries those exact reviewed identities/);
+  assert.match(prompt, /do not mirror or transpose\s+inputs\/starter\.json/i);
+  assert.match(prompt, /explicit third required flank route/);
+  assert.match(prompt, /C-specific connection-kind\s+selection/);
+  assert.match(prompt, /fixed decoration:west-accent cell/);
   assert.match(
     prompt,
-    /Change the render\/playable masks, elevation, connection geometry, and spawn geometry/
+    /moving one player formation spawn cell one cardinal\s+step/
   );
-  assert.match(prompt, /explicit third required flank branch/);
-  assert.match(prompt, /at least three required route segments/);
+  assert.match(prompt, /moving one other decoration cell one cardinal step/);
+  assert.match(prompt, /candidate must retain three\s+required route segments/);
   assert.match(prompt, /placed on exits or inside any approach region/);
   assert.match(prompt, /exact side's spawn cells/);
   assert.match(prompt, /bounding-box width or height exceeds half/);
+
+  const variantBPrompt = buildBlueprintPrompt({
+    profile,
+    sidecar,
+    mapId: V2_MAP_IDS[1],
+    textTemplateFallback: false
+  });
+  assert.match(
+    variantBPrompt,
+    /preserve every required route record's ordered\s+centerline cells exactly/
+  );
+  assert.match(
+    variantBPrompt,
+    /moving one formation spawn cell one cardinal step/
+  );
+  assert.match(
+    variantBPrompt,
+    /updating the matching formation-clearing region cell/
+  );
   assert.match(prompt, /annotations do not create route connectivity/);
 
   const promptA = buildBlueprintPrompt({
@@ -1324,9 +3265,13 @@ test('blueprint prompt states the complete grid and compiler-topology invariants
     mapId: V2_MAP_IDS[1],
     textTemplateFallback: true
   });
-  assert.match(promptB, /elevated and staging clearing region cells must each/);
+  assert.match(promptB, /Elevated and staging clearing region cells must each/);
   assert.match(promptB, /form a cardinally connected semantic area/);
-  assert.match(promptB, /routes curved and visually distinct/);
+  assert.match(
+    promptB,
+    /preserve every required route record's ordered\s+centerline cells exactly/
+  );
+  assert.match(promptB, /bounded elevation\/connection edit, not a route edit/);
   assert.match(promptB, /long side-by-side parallel adjacency ladder/);
 
   for (const candidatePrompt of [promptA, promptB, prompt]) {
@@ -1348,6 +3293,16 @@ test('blueprint prompt states the complete grid and compiler-topology invariants
   });
   assert.doesNotMatch(legacyPrompt, /must be actually referenced at least/);
   assert.doesNotMatch(legacyPrompt, /Shared V2 composition safeguards/);
+  assert.doesNotMatch(legacyPrompt, /cp inputs\/starter\.json candidate\.json/);
+  assert.doesNotMatch(legacyPrompt, /exact immutable prime/);
+  assert.match(
+    legacyPrompt,
+    /changing at least two\s+authoritative geometry groups/
+  );
+  assert.match(
+    legacyPrompt,
+    /completeShapeExample\.expectedAssetFamilies/
+  );
 });
 
 test('worker completion monitor accepts only a stable, strictly valid fixed candidate', async t => {
@@ -3392,6 +5347,14 @@ test('text-template fallback candidates retain a verifiable frozen prompt', asyn
     generateOptions(root, { textTemplateFallback: true }),
     { worker: validWorker() }
   );
+  const reviewRoot = path.join(
+    root,
+    `ai-image-metadata/battle-maps/review/${THEME}/${TEMPLATE}/${MAP_IDS[0]}`
+  );
+  await mkdir(reviewRoot, { recursive: true });
+  await writeFile(path.join(reviewRoot, 'mechanical-preview.png'), 'legacy\n');
+  await writeFile(path.join(reviewRoot, 'unrelated-render.png'), 'stale\n');
+  await writeFile(path.join(reviewRoot, 'review-notes.txt'), 'preserve\n');
   const preview = await previewBlueprintCandidates({
     projectRoot: root,
     theme: THEME,
@@ -3401,6 +5364,32 @@ test('text-template fallback candidates retain a verifiable frozen prompt', asyn
   });
   assert.equal(preview.ok, true);
   assert.equal(preview.results[0].mapId, MAP_IDS[0]);
+  assert.equal(await exists(path.join(reviewRoot, 'mechanical-preview.png')), false);
+  assert.equal(await exists(path.join(reviewRoot, 'unrelated-render.png')), true);
+  assert.equal(await exists(path.join(reviewRoot, 'review-notes.txt')), true);
+  const svgBytes = await readFile(path.join(reviewRoot, 'mechanical-preview.svg'));
+  const report = JSON.parse(
+    await readFile(path.join(reviewRoot, 'mechanical-report.json'), 'utf8')
+  );
+  const candidateMetadata = JSON.parse(
+    await readFile(path.join(candidateRoot(root), 'result.json'), 'utf8')
+  );
+  assert.equal(
+    report.blueprintFileSha256,
+    candidateMetadata.blueprint.fileSha256
+  );
+  assert.equal(report.blueprintFullHash, candidateMetadata.blueprint.fullHash);
+  assert.equal(report.previewFileSha256, sha256Bytes(svgBytes));
+  assert.equal(
+    report.previewPath,
+    `ai-image-metadata/battle-maps/review/${THEME}/${TEMPLATE}/`
+      + `${MAP_IDS[0]}/previews/`
+      + `${candidateMetadata.blueprint.fullHash.slice(7)}/mechanical-preview.svg`
+  );
+  assert.equal(
+    await exists(path.join(root, report.previewPath)),
+    true
+  );
 });
 
 test('workspace inputs are immutable and undeclared outputs are rejected without promotion', async t => {
@@ -4156,6 +6145,37 @@ test('approval is explicit, hash-pinned, and complete release verification is cl
   await assert.rejects(
     approveBlueprintCandidate({
       ...baseApproval,
+      mapId: MAP_IDS[0]
+    }),
+    /exact mechanical review report/
+  );
+  for (const mapId of MAP_IDS) {
+    await previewCandidateForApproval(root, TEMPLATE, mapId);
+  }
+  const firstCandidateMetadata = JSON.parse(await readFile(
+    path.join(candidateRoot(root), 'result.json'),
+    'utf8'
+  ));
+  let firstPreviewPath = path.join(
+    root,
+    `ai-image-metadata/battle-maps/review/${THEME}/${TEMPLATE}/`
+      + `${MAP_IDS[0]}/previews/`
+      + `${firstCandidateMetadata.blueprint.fullHash.slice(7)}/`
+      + 'mechanical-preview.svg'
+  );
+  const firstPreviewBytes = await readFile(firstPreviewPath);
+  await writeFile(firstPreviewPath, '<svg>tampered</svg>');
+  await assert.rejects(
+    approveBlueprintCandidate({
+      ...baseApproval,
+      mapId: MAP_IDS[0]
+    }),
+    /exact hash-bound mechanical preview artifact/
+  );
+  await writeFile(firstPreviewPath, firstPreviewBytes);
+  await assert.rejects(
+    approveBlueprintCandidate({
+      ...baseApproval,
       mapId: MAP_IDS[0],
       updatePins: true
     }),
@@ -4170,6 +6190,45 @@ test('approval is explicit, hash-pinned, and complete release verification is cl
   });
   assert.equal(rejection.promoted, false);
   assert.equal(await exists(approvedRoot(root)), false);
+  await assert.rejects(
+    approveBlueprintCandidate({
+      ...baseApproval,
+      mapId: MAP_IDS[0]
+    }),
+    /exact candidate hash was rejected/
+  );
+  await generateBlueprintCandidates(
+    generateOptions(root, {
+      mapIds: [MAP_IDS[0]],
+      force: true
+    }),
+    {
+      worker: validWorker(blueprint => {
+        blueprint.decorations[1].cell.x -= 1;
+        return blueprint;
+      })
+    }
+  );
+  await assert.rejects(
+    approveBlueprintCandidate({
+      ...baseApproval,
+      mapId: MAP_IDS[0]
+    }),
+    /exact mechanical review report/
+  );
+  await previewCandidateForApproval(root, TEMPLATE, MAP_IDS[0]);
+  const replacementCandidateMetadata = JSON.parse(await readFile(
+    path.join(candidateRoot(root), 'result.json'),
+    'utf8'
+  ));
+  firstPreviewPath = path.join(
+    root,
+    `ai-image-metadata/battle-maps/review/${THEME}/${TEMPLATE}/`
+      + `${MAP_IDS[0]}/previews/`
+      + `${replacementCandidateMetadata.blueprint.fullHash.slice(7)}/`
+      + 'mechanical-preview.svg'
+  );
+  const approvedPreviewBytes = await readFile(firstPreviewPath);
 
   await approveBlueprintCandidate({ ...baseApproval, mapId: MAP_IDS[0] });
   await approveBlueprintCandidate({ ...baseApproval, mapId: MAP_IDS[1] });
@@ -4232,6 +6291,10 @@ test('approval is explicit, hash-pinned, and complete release verification is cl
     'battle-map-blueprint-approval-index-v1'
   );
   assert.equal(Object.hasOwn(legacyIndex.entries[0], 'reason'), false);
+  assert.equal(
+    Object.hasOwn(legacyIndex.entries[0], 'mechanicalReviewReportSha256'),
+    false
+  );
   const { sidecar } = await loadTemplateSidecar({
     projectRoot: root,
     theme: THEME,
@@ -4242,6 +6305,18 @@ test('approval is explicit, hash-pinned, and complete release verification is cl
     verified.approvalIndexFullHash
   );
   assert.equal(sidecar.review.reviewer, 'reviewer-2');
+  await writeFile(firstPreviewPath, '<svg>tampered after approval</svg>');
+  const previewTampered = await verifyApprovedBlueprints({
+    projectRoot: root,
+    theme: THEME,
+    template: TEMPLATE
+  });
+  assert.equal(previewTampered.ok, false);
+  assert.match(
+    previewTampered.results[0].error,
+    /exact hash-bound mechanical preview artifact/
+  );
+  await writeFile(firstPreviewPath, approvedPreviewBytes);
 
   const approvalPath = path.join(
     approvedRoot(root),
@@ -4254,6 +6329,7 @@ test('approval is explicit, hash-pinned, and complete release verification is cl
     sha256:
       'sha256:954512d0cce94919913758f5bc23a204becf9f9dd010c7c4724e013d32438795'
   });
+  assert.equal(Object.hasOwn(approval, 'mechanicalReview'), false);
   approval.reviewer = 'spoofed-reviewer';
   await writeFile(approvalPath, `${JSON.stringify(approval, null, 2)}\n`);
   const tampered = await verifyApprovedBlueprints({
@@ -4263,6 +6339,381 @@ test('approval is explicit, hash-pinned, and complete release verification is cl
   });
   assert.equal(tampered.ok, false);
   assert.match(tampered.results[0].error, /exact reviewed inputs/);
+});
+
+test('historical v1 approvals verify without mechanical preview evidence',
+  async t => {
+  const root = await createFixture(t);
+  await generateBlueprintCandidates(
+    generateOptions(root, { mapIds: MAP_IDS, concurrency: 2 }),
+    { worker: validWorker() }
+  );
+  for (const mapId of MAP_IDS) {
+    await previewCandidateForApproval(root, TEMPLATE, mapId);
+    await approveBlueprintCandidate({
+      projectRoot: root,
+      theme: THEME,
+      template: TEMPLATE,
+      mapId,
+      reviewer: 'legacy-reviewer',
+      decision: 'approved',
+      force: false,
+      updatePins: mapId === MAP_IDS.at(-1)
+    });
+  }
+  const rootPath = approvedRoot(root);
+  const indexPath = path.join(rootPath, 'approvals.json');
+  const index = JSON.parse(await readFile(indexPath, 'utf8'));
+  for (const entry of index.entries) {
+    delete entry.mechanicalReviewReportSha256;
+    const approvalPath = path.join(rootPath, `${entry.id}.approval.json`);
+    const approval = JSON.parse(await readFile(approvalPath, 'utf8'));
+    delete approval.mechanicalReview;
+    await writeFile(approvalPath, `${JSON.stringify(approval, null, 2)}\n`);
+    const reviewRoot = path.join(
+      root,
+      `ai-image-metadata/battle-maps/review/${THEME}/${TEMPLATE}/${entry.id}`
+    );
+    await rm(path.join(reviewRoot, 'previews'), { recursive: true, force: true });
+    await rm(path.join(reviewRoot, 'mechanical-preview.svg'), { force: true });
+    await rm(path.join(reviewRoot, 'mechanical-report.json'), { force: true });
+  }
+  const legacyIndex =
+    BlueprintLifecycleInternals.finalizeApprovalIndex(index);
+  await writeFile(indexPath, `${JSON.stringify(legacyIndex, null, 2)}\n`);
+  const sidecarPath = path.join(
+    root,
+    `ai-image-metadata/battle-maps/templates/${THEME}/${TEMPLATE}.json`
+  );
+  const sidecar = JSON.parse(await readFile(sidecarPath, 'utf8'));
+  sidecar.pins.approvedBlueprintSha256 = legacyIndex.fullHash;
+  await writeFile(sidecarPath, `${JSON.stringify(sidecar, null, 2)}\n`);
+
+  const verified = await verifyApprovedBlueprints({
+    projectRoot: root,
+    theme: THEME,
+    template: TEMPLATE
+  });
+  assert.equal(verified.ok, true);
+  assert.equal(verified.aggregatePinValid, true);
+});
+
+test('promotion sidecar failure restores every approval artifact and retries',
+  async t => {
+  const root = await createFixture(t);
+  await generateBlueprintCandidates(
+    generateOptions(root, { mapIds: MAP_IDS, concurrency: 2 }),
+    { worker: validWorker() }
+  );
+  const approve = (mapId, overrides = {}) => approveBlueprintCandidate({
+    projectRoot: root,
+    theme: THEME,
+    template: TEMPLATE,
+    mapId,
+    reviewer: 'transaction-reviewer',
+    decision: 'approved',
+    force: false,
+    updatePins: mapId === MAP_IDS.at(-1),
+    ...overrides
+  });
+  for (const mapId of MAP_IDS) {
+    await previewCandidateForApproval(root, TEMPLATE, mapId);
+    await approve(mapId);
+  }
+  await generateBlueprintCandidates(
+    generateOptions(root, {
+      mapIds: [MAP_IDS[0]],
+      force: true
+    }),
+    {
+      worker: validWorker(blueprint => {
+        blueprint.decorations[1].cell.x -= 1;
+        return blueprint;
+      })
+    }
+  );
+  await previewCandidateForApproval(root, TEMPLATE, MAP_IDS[0]);
+  const rootPath = approvedRoot(root);
+  const sidecarPath = path.join(
+    root,
+    `ai-image-metadata/battle-maps/templates/${THEME}/${TEMPLATE}.json`
+  );
+  const transactionPaths = [
+    path.join(rootPath, `${MAP_IDS[0]}.json`),
+    path.join(rootPath, `${MAP_IDS[0]}.approval.json`),
+    path.join(rootPath, 'approvals.json'),
+    sidecarPath
+  ];
+  const before = await Promise.all(transactionPaths.map(filePath => readFile(filePath)));
+  await assert.rejects(
+    approve(MAP_IDS[0], {
+      force: true,
+      updatePins: true,
+      beforeSidecarUpdate: async () => {
+        throw new Error('injected promotion sidecar failure');
+      }
+    }),
+    /injected promotion sidecar failure/
+  );
+  const after = await Promise.all(transactionPaths.map(filePath => readFile(filePath)));
+  assert.deepEqual(after, before);
+
+  const retried = await approve(MAP_IDS[0], {
+    force: true,
+    updatePins: true
+  });
+  assert.equal(retried.promoted, true);
+  assert.equal(retried.sidecarUpdated, true);
+  assert.equal(
+    (await verifyApprovedBlueprints({
+      projectRoot: root,
+      theme: THEME,
+      template: TEMPLATE
+    })).ok,
+    true
+  );
+});
+
+test('promotion rollback removes newly created approval artifacts', async t => {
+  const root = await createFixture(t);
+  await generateBlueprintCandidates(
+    generateOptions(root, { mapIds: MAP_IDS, concurrency: 2 }),
+    { worker: validWorker() }
+  );
+  const approve = (mapId, overrides = {}) => approveBlueprintCandidate({
+    projectRoot: root,
+    theme: THEME,
+    template: TEMPLATE,
+    mapId,
+    reviewer: 'transaction-reviewer',
+    decision: 'approved',
+    force: false,
+    updatePins: mapId === MAP_IDS.at(-1),
+    ...overrides
+  });
+  for (const mapId of MAP_IDS) {
+    await previewCandidateForApproval(root, TEMPLATE, mapId);
+    await approve(mapId);
+  }
+  const rootPath = approvedRoot(root);
+  const blueprintPath = path.join(rootPath, `${MAP_IDS[0]}.json`);
+  const approvalPath = path.join(rootPath, `${MAP_IDS[0]}.approval.json`);
+  const indexPath = path.join(rootPath, 'approvals.json');
+  const sidecarPath = path.join(
+    root,
+    `ai-image-metadata/battle-maps/templates/${THEME}/${TEMPLATE}.json`
+  );
+  await rm(blueprintPath);
+  await rm(approvalPath);
+  const indexBefore = await readFile(indexPath);
+  const sidecarBefore = await readFile(sidecarPath);
+  await assert.rejects(
+    approve(MAP_IDS[0], {
+      force: true,
+      updatePins: true,
+      beforeSidecarUpdate: async () => {
+        throw new Error('injected new-artifact sidecar failure');
+      }
+    }),
+    /injected new-artifact sidecar failure/
+  );
+  assert.equal(await exists(blueprintPath), false);
+  assert.equal(await exists(approvalPath), false);
+  assert.deepEqual(await readFile(indexPath), indexBefore);
+  assert.deepEqual(await readFile(sidecarPath), sidecarBefore);
+
+  const retried = await approve(MAP_IDS[0], {
+    force: true,
+    updatePins: true
+  });
+  assert.equal(retried.promoted, true);
+  assert.equal(await exists(blueprintPath), true);
+  assert.equal(await exists(approvalPath), true);
+  assert.equal(
+    (await verifyApprovedBlueprints({
+      projectRoot: root,
+      theme: THEME,
+      template: TEMPLATE
+    })).ok,
+    true
+  );
+});
+
+test('rejection invalidates only an approval with the exact candidate hash',
+  async t => {
+  const seedApprovedRelease = async t => {
+    const root = await createFixture(t);
+    await generateBlueprintCandidates(
+      generateOptions(root, { mapIds: MAP_IDS, concurrency: 2 }),
+      { worker: validWorker() }
+    );
+    for (const mapId of MAP_IDS) {
+      await previewCandidateForApproval(root, TEMPLATE, mapId);
+      await approveBlueprintCandidate({
+        projectRoot: root,
+        theme: THEME,
+        template: TEMPLATE,
+        mapId,
+        reviewer: 'reviewer-1',
+        decision: 'approved',
+        force: false,
+        updatePins: mapId === MAP_IDS.at(-1)
+      });
+    }
+    return root;
+  };
+  const rejectionOptions = (root, mapId) => ({
+    projectRoot: root,
+    theme: THEME,
+    template: TEMPLATE,
+    mapId,
+    reviewer: 'reviewer-2',
+    decision: 'rejected',
+    force: false,
+    updatePins: false
+  });
+
+  await t.test('matching approval is removed and aggregate pin is cleared',
+    async t => {
+    const root = await seedApprovedRelease(t);
+    const candidateMetadata = JSON.parse(await readFile(
+      path.join(candidateRoot(root), 'result.json'),
+      'utf8'
+    ));
+    const rejection = await approveBlueprintCandidate(
+      rejectionOptions(root, MAP_IDS[0])
+    );
+    assert.equal(rejection.approvalInvalidated, true);
+    assert.equal(rejection.sidecarUpdated, true);
+    const index = JSON.parse(await readFile(
+      path.join(approvedRoot(root), 'approvals.json'),
+      'utf8'
+    ));
+    assert.deepEqual(index.entries.map(entry => entry.id), MAP_IDS.slice(1));
+    const { sidecar } = await loadTemplateSidecar({
+      projectRoot: root,
+      theme: THEME,
+      template: TEMPLATE
+    });
+    assert.equal(sidecar.pins.approvedBlueprintSha256, null);
+    assert.equal(
+      await exists(path.join(approvedRoot(root), `${MAP_IDS[0]}.json`)),
+      true,
+      'unreferenced approved bytes remain as historical evidence'
+    );
+    assert.equal(
+      await exists(path.join(
+        root,
+        `ai-image-metadata/battle-maps/review/${THEME}/${TEMPLATE}/${MAP_IDS[0]}/`
+          + `rejections/${candidateMetadata.blueprint.fullHash.slice(7)}.json`
+      )),
+      true
+    );
+  });
+
+  await t.test('different-hash retry preserves the older approved release',
+    async t => {
+    const root = await seedApprovedRelease(t);
+    const indexPath = path.join(approvedRoot(root), 'approvals.json');
+    const sidecarPath = path.join(
+      root,
+      `ai-image-metadata/battle-maps/templates/${THEME}/${TEMPLATE}.json`
+    );
+    const indexBefore = await readFile(indexPath);
+    const sidecarBefore = await readFile(sidecarPath);
+    await generateBlueprintCandidates(
+      generateOptions(root, {
+        mapIds: [MAP_IDS[0]],
+        force: true
+      }),
+      {
+        worker: validWorker(blueprint => {
+          blueprint.decorations[1].cell.x -= 1;
+          return blueprint;
+        })
+      }
+    );
+    await previewCandidateForApproval(root, TEMPLATE, MAP_IDS[0]);
+    const rejection = await approveBlueprintCandidate(
+      rejectionOptions(root, MAP_IDS[0])
+    );
+    assert.equal(rejection.approvalInvalidated, false);
+    assert.equal(rejection.sidecarUpdated, false);
+    assert.deepEqual(await readFile(indexPath), indexBefore);
+    assert.deepEqual(await readFile(sidecarPath), sidecarBefore);
+    assert.equal(
+      (await verifyApprovedBlueprints({
+        projectRoot: root,
+        theme: THEME,
+        template: TEMPLATE
+      })).ok,
+      true
+    );
+  });
+
+  await t.test('rejection evidence conflict leaves approval state untouched',
+    async t => {
+    const root = await seedApprovedRelease(t);
+    const metadata = JSON.parse(await readFile(
+      path.join(candidateRoot(root), 'result.json'),
+      'utf8'
+    ));
+    const conflictPath = path.join(
+      root,
+      `ai-image-metadata/battle-maps/review/${THEME}/${TEMPLATE}/${MAP_IDS[0]}/`
+        + `rejections/${metadata.blueprint.fullHash.slice(7)}.json`
+    );
+    await mkdir(path.dirname(conflictPath), { recursive: true });
+    await writeFile(conflictPath, '{"conflicting":true}\n');
+    const indexPath = path.join(approvedRoot(root), 'approvals.json');
+    const sidecarPath = path.join(
+      root,
+      `ai-image-metadata/battle-maps/templates/${THEME}/${TEMPLATE}.json`
+    );
+    const indexBefore = await readFile(indexPath);
+    const sidecarBefore = await readFile(sidecarPath);
+    await assert.rejects(
+      approveBlueprintCandidate(rejectionOptions(root, MAP_IDS[0])),
+      /rejection evidence has conflicting bytes/
+    );
+    assert.deepEqual(await readFile(indexPath), indexBefore);
+    assert.deepEqual(await readFile(sidecarPath), sidecarBefore);
+  });
+
+  await t.test('sidecar update failure rolls back the index and retry reconciles',
+    async t => {
+    const root = await seedApprovedRelease(t);
+    const indexPath = path.join(approvedRoot(root), 'approvals.json');
+    const sidecarPath = path.join(
+      root,
+      `ai-image-metadata/battle-maps/templates/${THEME}/${TEMPLATE}.json`
+    );
+    const indexBefore = await readFile(indexPath);
+    const sidecarBefore = await readFile(sidecarPath);
+    await assert.rejects(
+      approveBlueprintCandidate({
+        ...rejectionOptions(root, MAP_IDS[0]),
+        beforeSidecarUpdate: async () => {
+          throw new Error('injected rejection sidecar failure');
+        }
+      }),
+      /injected rejection sidecar failure/
+    );
+    assert.deepEqual(await readFile(indexPath), indexBefore);
+    assert.deepEqual(await readFile(sidecarPath), sidecarBefore);
+    const retried = await approveBlueprintCandidate(
+      rejectionOptions(root, MAP_IDS[0])
+    );
+    assert.equal(retried.approvalInvalidated, true);
+    assert.equal(retried.sidecarUpdated, true);
+    const index = JSON.parse(await readFile(indexPath, 'utf8'));
+    assert.deepEqual(index.entries.map(entry => entry.id), MAP_IDS.slice(1));
+    assert.equal(
+      JSON.parse(await readFile(sidecarPath, 'utf8'))
+        .pins.approvedBlueprintSha256,
+      null
+    );
+  });
 });
 
 test('template-03 approvals require rationale and pin it in v2 record and index hashes', async t => {
@@ -4278,6 +6729,9 @@ test('template-03 approvals require rationale and pin it in v2 record and index 
     }),
     { worker: validWorker() }
   );
+  for (const mapId of V2_MAP_IDS) {
+    await previewCandidateForApproval(root, V2_TEMPLATE, mapId);
+  }
   const v2PromptBytes = await readFile(path.join(root, BLUEPRINT_PROMPT_PATH_V2));
   const candidateMetadata = JSON.parse(
     await readFile(
@@ -4329,10 +6783,15 @@ test('template-03 approvals require rationale and pin it in v2 record and index 
   assert.equal(approval.reason, reasons[0]);
   assert.deepEqual(approval.promptProfile, candidateMetadata.promptProfile);
   assert.match(approval.fullHash, /^sha256:[0-9a-f]{64}$/);
+  assert.equal(Object.hasOwn(approval, 'mechanicalReview'), false);
 
   const indexPath = path.join(v2Root, 'approvals.json');
   const index = JSON.parse(await readFile(indexPath, 'utf8'));
   assert.equal(index.schemaVersion, 'battle-map-blueprint-approval-index-v2');
+  assert.equal(
+    Object.hasOwn(index.entries[0], 'mechanicalReviewReportSha256'),
+    false
+  );
   assert.deepEqual(index.entries.map(entry => entry.reason), reasons);
   assert.deepEqual(
     index.entries.map(entry => entry.promptProfileSha256),
@@ -4392,6 +6851,9 @@ test('force approval prunes stale prompt-era entries before rebuilding the index
   });
 
   await generation();
+  for (const mapId of MAP_IDS) {
+    await previewCandidateForApproval(root, TEMPLATE, mapId);
+  }
   await approval(MAP_IDS[0]);
   await approval(MAP_IDS[1]);
   await approval(MAP_IDS[2], { updatePins: true });
@@ -4401,6 +6863,9 @@ test('force approval prunes stale prompt-era entries before rebuilding the index
   prompt.negativeConstraints.push('new frozen prompt-era constraint');
   await writeFile(promptPath, `${JSON.stringify(prompt, null, 2)}\n`);
   await generation({ force: true });
+  for (const mapId of MAP_IDS) {
+    await previewCandidateForApproval(root, TEMPLATE, mapId);
+  }
 
   await assert.rejects(
     approval(MAP_IDS[0]),

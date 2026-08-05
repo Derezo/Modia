@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "battle-map-blueprint-approval-v2",
+  "id": "forest-template-03-b",
+  "theme": "forest",
+  "templateId": "forest-template-03",
+  "decision": "approved",
+  "reviewer": "codex-v3-heartlands-review",
+  "blueprintPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-03/forest-template-03-b.json",
+  "blueprintFileSha256": "sha256:343848cd6a79b563813c3ba0be4196067ac86f0cdc9f1fc4e7bbe2573f3e7460",
+  "blueprintFullHash": "sha256:3159022f7d81aecd61568c957a0c29e43611659c40a3cbb9d6ddafa3e272a17f",
+  "sourceImageSha256": "sha256:c622b9b0def37497cf12a96013c72cfff405ad15aaae2955b5a8820a6f7e9efd",
+  "promptProfile": {
+    "id": "map-blueprint-v2",
+    "path": "ai-image-metadata/battle-maps/prompts/map-blueprint-v2.json",
+    "sha256": "sha256:d9fd841812bcc9a4713d3ac8b1c81715f359e55d55098589f8970650fed7cdae"
+  },
+  "reason": "Approved as the compiler-required B sibling after mechanical preview: it preserves the validated dual-route Heartlands topology and full source-area identity while authoring a distinct eastern formation-approach stair transition and independent scene-feature placement; all spawn, mixed-access, connectivity, and 13-family closure checks pass.",
+  "fullHash": "sha256:1fbe6fa7d6a0d9233f243e2995ed0ef3413b2aa32d2dbaf383e0fd72314b5958"
+}

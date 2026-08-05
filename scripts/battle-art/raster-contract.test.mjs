@@ -6,6 +6,8 @@ import { describe, it } from 'node:test';
 import sharp from 'sharp';
 
 import {
+  decodeCanonicalRaster,
+  measureDirectGeometryPrimeRaster,
   normalizeGeneratedRasterBytes,
   prepareRuntimeRaster,
   validateRasterBytes,
@@ -140,6 +142,54 @@ async function encode(data, width, height, format = 'png') {
 }
 
 describe('battle-art deterministic raster contract', () => {
+  it('measures direct geometry prime fields from exact source alpha', async () => {
+    const width = 64;
+    const height = 32;
+    const apexTop = [4, 5, 6, 4, 5, 6, 4, 5, 6];
+    const bytes = await encode(
+      rawRaster(width, height, (x, y) => {
+        const apexIndex = x - 28;
+        if (apexIndex >= 0
+          && apexIndex < apexTop.length
+          && y === apexTop[apexIndex]) {
+          return [90, 60, 30, 240];
+        }
+        if ((x === 5 && y === 2) || (x === 50 && y === 30)) {
+          return [90, 60, 30, 1];
+        }
+        return [0, 0, 0, 0];
+      }),
+      width,
+      height
+    );
+    const measured = await measureDirectGeometryPrimeRaster({
+      bytes,
+      prime: {
+        canvas: { width, height },
+        anchor: { x: 32, y: 16 },
+        alphaThreshold: 240
+      },
+      label: 'synthetic direct geometry prime'
+    });
+    assert.deepEqual(measured, {
+      subjectBounds: { x: 5, y: 2, width: 46, height: 29 },
+      coveragePermille: 5,
+      armSampleCenters: [
+        { direction: 'e', percent: 50, x: 40, y: 20 },
+        { direction: 'e', percent: 75, x: 44, y: 22 },
+        { direction: 'e', percent: 100, x: 48, y: 24 },
+        { direction: 's', percent: 50, x: 24, y: 20 },
+        { direction: 's', percent: 75, x: 20, y: 22 },
+        { direction: 's', percent: 100, x: 16, y: 24 }
+      ],
+      apexTopProfile: {
+        xStart: 28,
+        xStep: 1,
+        alpha240Y: apexTop
+      }
+    });
+  });
+
   it('rejects the archived inset moss art and accepts an exact full diamond', async () => {
     const { descriptor, profile } = await inputs();
     const archived = await json(
@@ -1066,5 +1116,43 @@ describe('battle-art deterministic raster contract', () => {
         }
       }
     }
+  });
+
+  it('despills chroma exposed only after low-alpha cutout noise is cleared', async () => {
+    const { descriptor, profile } = await inputs(
+      'forest-borderwood-fern-cluster'
+    );
+    const { width, height } = descriptor.canvas;
+    const generated = await encode(
+      rawRaster(width, height, (x, y) => {
+        const inSubject = x >= 50 && x <= 78 && y >= 100 && y <= 120;
+        const inFringe = x >= 49 && x <= 79 && y >= 99 && y <= 121;
+        const inNoise = x >= 48 && x <= 80 && y >= 98 && y <= 122;
+        if (inSubject) return [44, 86, 35, 255];
+        if (inFringe) return [170, 50, 180, 255];
+        if (inNoise) return [44, 86, 35, 8];
+        return [255, 0, 255, 255];
+      }),
+      width,
+      height
+    );
+    const normalized = await normalizeGeneratedRasterBytes({
+      bytes: generated,
+      descriptor,
+      profile,
+      format: 'png'
+    });
+    const result = await decodeCanonicalRaster(
+      normalized,
+      profile,
+      'noise-shielded fringe cutout',
+      { chromaRemovalMultiplier: 3 }
+    );
+    assert.equal(result.residualExteriorChromaPixels, 0);
+    const clearedNoise = ((98 * width) + 48) * 4;
+    assert.equal(result.data[clearedNoise + 3], 0);
+    const despilledFringe = ((99 * width) + 49) * 4;
+    assert.equal(result.data[despilledFringe + 3], 255);
+    assert.ok(result.data[despilledFringe + 1] > 50);
   });
 });

@@ -1,7 +1,7 @@
 {
   "schemaVersion": "battle-art-manifest-v1",
   "releaseId": "battle-art-descriptors-2026-07-30",
-  "version": 7,
+  "version": 10,
   "frozen": true,
   "themes": [
     "forest",
@@ -122,6 +122,9 @@
     "ai-image-metadata/battle-art/descriptors/forest/forest-fern-cluster.json",
     "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-ancient-oak.json",
     "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-bluebell-cluster.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-clover-glade-ground.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-dry-ravine-loam.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-fern-hazel-floor.json",
     "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-field-maple.json",
     "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-fieldstone-face-e.json",
     "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-fieldstone-face-n.json",
@@ -131,6 +134,8 @@
     "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-fieldstone-stairs-n.json",
     "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-fieldstone-stairs-s.json",
     "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-fieldstone-stairs-w.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-fieldstone-terrace-top.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-hawthorn-loop-floor.json",
     "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-hawthorn-thicket.json",
     "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-hedgerow-edge-e.json",
     "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-hedgerow-edge-n.json",
@@ -163,6 +168,9 @@
     "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-meadow-ground-3.json",
     "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-oak-leaf-litter.json",
     "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-rounded-fieldstone.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-storm-fallen-oak-landmark.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-storm-fallen-oak-root-mass.json",
+    "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-storm-fallen-oak-trunk.json",
     "ai-image-metadata/battle-art/descriptors/forest/forest-low-shrub.json",
     "ai-image-metadata/battle-art/descriptors/forest/forest-moss-surface.json",
     "ai-image-metadata/battle-art/descriptors/forest/forest-rock-boundary.json",
@@ -170,10 +178,14 @@
   ],
   "historicalReleases": [
     "ai-image-metadata/battle-art/releases/battle-art-descriptors-2026-07-30.v1.json",
+    "ai-image-metadata/battle-art/releases/battle-art-descriptors-2026-07-30.v10.json",
     "ai-image-metadata/battle-art/releases/battle-art-descriptors-2026-07-30.v2.json",
     "ai-image-metadata/battle-art/releases/battle-art-descriptors-2026-07-30.v3.json",
     "ai-image-metadata/battle-art/releases/battle-art-descriptors-2026-07-30.v4.json",
     "ai-image-metadata/battle-art/releases/battle-art-descriptors-2026-07-30.v5.json",
-    "ai-image-metadata/battle-art/releases/battle-art-descriptors-2026-07-30.v6.json"
+    "ai-image-metadata/battle-art/releases/battle-art-descriptors-2026-07-30.v6.json",
+    "ai-image-metadata/battle-art/releases/battle-art-descriptors-2026-07-30.v7.json",
+    "ai-image-metadata/battle-art/releases/battle-art-descriptors-2026-07-30.v8.json",
+    "ai-image-metadata/battle-art/releases/battle-art-descriptors-2026-07-30.v9.json"
   ]
 }

@@ -1,0 +1,235 @@
+{
+  "schemaVersion": "battle-map-source-template-v1",
+  "id": "forest-template-05",
+  "theme": "forest",
+  "status": "approved",
+  "tierEligibility": [
+    "tier-1"
+  ],
+  "supportedModes": [
+    "pve"
+  ],
+  "mapProfile": {
+    "width": 32,
+    "height": 32,
+    "orientation": "isometric-diamond",
+    "cameraFraming": "Keep the irregular forest boundary and all formation areas readable in the production isometric camera.",
+    "playerCapacity": {
+      "minimum": 1,
+      "maximum": 5
+    },
+    "candidatePoolSize": 24,
+    "maxAssignableOpponents": 7
+  },
+  "sourceImage": {
+    "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-05/reference.png",
+    "bytes": 3610385,
+    "width": 1254,
+    "height": 1254,
+    "format": "png",
+    "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+  },
+  "styleAuthority": {
+    "kind": "supplied-composition-reference",
+    "usage": "Use the image for visual hierarchy, biome rhythm, and spatial motifs; derive gameplay topology from this semantic contract.",
+    "literalTraceAllowed": false
+  },
+  "composition": {
+    "summary": "An enclosed woodland composition organized around differently sized clearings, curved routes, terraces, and dense biome-owned edges.",
+    "visualHierarchy": [
+      "A broad lower clearing anchors the scene without becoming a full-width edge strip.",
+      "Smaller upper and lateral spaces create distinct staging and lookout opportunities.",
+      "Rock, root, and canopy masses frame routes and own the scene boundary."
+    ],
+    "focalAreas": [
+      "broad lower formation clearing",
+      "upper elevated lookout",
+      "lateral staging clearing",
+      "terraced route junctions"
+    ],
+    "negativeSpace": [
+      "Keep navigable breathing room inside clearings rather than along a flat map edge.",
+      "Preserve readable gaps around stairs and route forks."
+    ],
+    "density": [
+      "Dense forest and rock formations at the perimeter.",
+      "Moderate vegetation and landmark density along paths.",
+      "Open but irregular interiors within formation clearings."
+    ]
+  },
+  "topologyIntent": {
+    "coordinateAuthority": "semantic-only",
+    "areas": [
+      {
+        "id": "lower-clearing",
+        "description": "Broad irregular formation area nested inside the woodland boundary.",
+        "required": true
+      },
+      {
+        "id": "upper-lookout",
+        "description": "Smaller elevated staging area with more than one meaningful approach.",
+        "required": true
+      },
+      {
+        "id": "lateral-clearing",
+        "description": "Secondary side clearing that creates a route choice and flanking opportunity.",
+        "required": true
+      },
+      {
+        "id": "central-route-junction",
+        "description": "Curved junction where main and secondary approaches remain visually legible.",
+        "required": true
+      }
+    ],
+    "relationships": [
+      {
+        "from": "lower-clearing",
+        "to": "central-route-junction",
+        "kind": "two curved approaches",
+        "required": true
+      },
+      {
+        "from": "central-route-junction",
+        "to": "upper-lookout",
+        "kind": "terraced ascent with a readable stair connection",
+        "required": true
+      },
+      {
+        "from": "central-route-junction",
+        "to": "lateral-clearing",
+        "kind": "secondary woodland path",
+        "required": true
+      },
+      {
+        "from": "lateral-clearing",
+        "to": "upper-lookout",
+        "kind": "optional alternate approach",
+        "required": false
+      }
+    ]
+  },
+  "heightIntent": {
+    "levelCount": {
+      "minimum": 3,
+      "maximum": 4
+    },
+    "landforms": [
+      "broad gradual terraces",
+      "rock-backed ridges",
+      "a modest elevated lookout",
+      "shallow natural basins around clearing edges"
+    ],
+    "maxGradualSlope": 1,
+    "connections": [
+      "Use stairs where a main route changes level.",
+      "Use cliffs only where rock or root formations visually explain the boundary.",
+      "Do not create isolated single-tile peaks or unexplained drops."
+    ]
+  },
+  "routeIntent": {
+    "primaryApproaches": [
+      "Connect the lower clearing to the upper lookout through at least two tactically distinct paths.",
+      "Bend primary paths around biome features rather than drawing straight corridors."
+    ],
+    "secondaryApproaches": [
+      "Connect the lateral clearing into the main network without making it a dead-end spawn pad.",
+      "Include at least one route choice influenced by terrace, rock, or vegetation."
+    ],
+    "minimumApproachesPerFormation": 2
+  },
+  "boundaryIntent": {
+    "owners": [
+      "dense tree canopy",
+      "root masses",
+      "rock formations",
+      "elevated landforms"
+    ],
+    "irregularPlayableSilhouette": true,
+    "description": "The biome owns both the rendered and playable edge; avoid a rectangular arena wall or a uniformly cleared perimeter."
+  },
+  "spawnIntent": {
+    "sides": [
+      "players",
+      "opponents"
+    ],
+    "formationCharacter": "Two opposing formation opportunities embedded inside clearings, with local cover and multiple exits.",
+    "minimumApproaches": 2,
+    "localClearanceTiles": 2,
+    "candidateRoles": [
+      "frontline",
+      "ranged",
+      "support",
+      "mobile",
+      "ambush",
+      "boss"
+    ],
+    "forbiddenBehavior": [
+      "Do not place candidates on detached pads.",
+      "Do not reserve a full-height or full-width cleared spawn strip.",
+      "Do not make either side depend on one choke point.",
+      "Do not infer exact spawn coordinates from the source pixels."
+    ]
+  },
+  "requiredLandmarks": [
+    "differently sized clearings",
+    "curved dirt path network",
+    "readable terraced ascent",
+    "small number of biome-integrated stairs",
+    "rock and root formations",
+    "dense forest-owned outer boundary"
+  ],
+  "forbiddenPatterns": [
+    "full-height or full-width cleared strips",
+    "arbitrary freestanding walls",
+    "unexplained single-tile peaks",
+    "detached spawn pads",
+    "checkerboard materials",
+    "repeated straight boundaries",
+    "large visually ambiguous movement regions",
+    "literal pixel or coordinate tracing"
+  ],
+  "assetHints": {
+    "surfaces": [
+      "forest grass",
+      "packed dirt",
+      "mossy rock"
+    ],
+    "connections": [
+      "root-edged stairs",
+      "stone-and-earth stairs",
+      "gradual vegetated slopes"
+    ],
+    "obstacles": [
+      "dense trees",
+      "root masses",
+      "mossy boulders",
+      "rock ridges"
+    ],
+    "decorations": [
+      "ferns",
+      "leaf litter",
+      "small stones",
+      "fallen branches"
+    ]
+  },
+  "promptProfile": {
+    "id": "source-template-image-v1",
+    "path": "ai-image-metadata/battle-maps/prompts/source-template-image-v1.json",
+    "sha256": "sha256:6a4200193384b8682cb7cbc69ad6a819dc5cb4cfbd116c395b0f628b5a208f41"
+  },
+  "candidateMaps": [
+    "forest-template-05-a",
+    "forest-template-05-b",
+    "forest-template-05-c"
+  ],
+  "pins": {
+    "sourceImageSha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1",
+    "promptProfileSha256": "sha256:6a4200193384b8682cb7cbc69ad6a819dc5cb4cfbd116c395b0f628b5a208f41",
+    "approvedBlueprintSha256": "sha256:e6d3946071fe35f86cdf37abf8731bd7029a3dca783bc76ab1a07097a7908331",
+    "compilerSha256": "sha256:c8794c02d8978b56ea0ebcc1ea7947db94ae619c01c6feae3fe73efe8c8dfaa1"
+  },
+  "review": {
+    "decision": "approved",
+    "reviewer": "codex-v3-borderwood-bundle-refresh"
+  }
+}

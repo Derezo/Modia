@@ -1035,9 +1035,12 @@ describe('BattleMapV3RenderAdapter', () => {
   });
 
   it('pins a deterministic map-owned regional surface foundation for organic forests', async () => {
-    const [map, runtimeBundles] = await Promise.all([
+    const [map, fallenOakMap, runtimeBundles] = await Promise.all([
       readTrackedJson(
         '../../../../battle-maps/compiled/forest/forest-template-01-b.v11.json'
+      ),
+      readTrackedJson(
+        '../../../../battle-maps/compiled/forest/forest-template-07-a.v6.json'
       ),
       readTrackedJson('../../generated/battleMapV3RuntimeBundles.json')
     ]);
@@ -1055,6 +1058,10 @@ describe('BattleMapV3RenderAdapter', () => {
     const first = apply(map);
     const second = apply(map);
     const foundation = first.battleMapV3RenderData.surfaceFoundation;
+    assert.equal(
+      first.battleMapV3RenderData.renderProfileId,
+      map.renderProfileId
+    );
     assert.ok(foundation);
     assert.equal(foundation.renderer.variant.surfaceVariant, 0);
     assert.equal(
@@ -1089,6 +1096,26 @@ describe('BattleMapV3RenderAdapter', () => {
     cave.theme = 'cave';
     cave.scene.exterior = 'cave-rock';
     assert.equal(apply(cave).battleMapV3RenderData.surfaceFoundation, null);
+
+    assert.equal(
+      fallenOakMap.visualCells.flat().some(
+        visualCell =>
+          visualCell?.surface?.key ===
+          'forest-heartlands-clover-glade-ground'
+      ),
+      true,
+      'the fallen-oak map contains the shared clover semantic surface'
+    );
+    const fallenOak = apply(fallenOakMap);
+    assert.equal(
+      fallenOak.battleMapV3RenderData.renderProfileId,
+      'forest-heartlands-fallen-oak-v1'
+    );
+    assert.equal(
+      fallenOak.battleMapV3RenderData.surfaceFoundation,
+      null,
+      'the fallen-oak profile renders semantic surfaces without a shared foundation'
+    );
     clearBattleMapV3RuntimeManifest();
   });
 

@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v2",
+  "theme": "forest",
+  "familyId": "forest-heartlands-fieldstone-terrace-top",
+  "decision": "approved",
+  "reviewer": "codex-v3-template07-visual-assets",
+  "reason": "The full seam-safe diamond presents a level turf terrace with a broad flush band of rounded cream-gray fieldstones, visibly distinct while remaining a passable horizontal surface.",
+  "reviewedAt": "2026-08-05T05:24:11.029Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-fieldstone-terrace-top.json",
+    "sha256": "sha256:2fce3cb7151bd6b20701c46456ac7d34a48958d65c6b1fbd137290aafc1b5ffd",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-terrace-top/result.json",
+      "bytes": 2808,
+      "sha256": "sha256:d024e3ce09e56a8839af7220d6abe6181c1f9ef5631e0a7104237ddf1b6c080a"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-terrace-top/candidate.png",
+      "bytes": 46853,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:0093196f1eb1b593471f5b3256bee77d35be9d7bb58cfb1b2b9bfcea4791608f"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "styleReferenceMode": "attachments",
+    "styleReferenceProvenance": [
+      {
+        "id": "forest-source-template-01",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1",
+        "stagedBasename": "style-reference-01.png"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 600000,
+      "imageArguments": [
+        "style-reference-01.png"
+      ],
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-terrace-top/prompt.txt",
+        "bytes": 11134,
+        "sha256": "sha256:888f49e9dc7cd55d1582a55baa57a09867420f7c8ed71e0026930632806f3aff"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-terrace-top/worker.jsonl",
+        "bytes": 24781,
+        "sha256": "sha256:84140396e168b04916c5b29568000249118c9292a5e764cb301541c57ad53e0d"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-terrace-top/worker.stderr.log",
+        "bytes": 180,
+        "sha256": "sha256:11c71314adf860ad9b6d427c93ba8b7c583bb7439bc420bb9d3b26b3bc3bb8b0"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-fieldstone-terrace-top/last-message.txt",
+        "bytes": 367,
+        "sha256": "sha256:75100fdf483047e1006f039e766df16b747d8ffe8c366a9e702724eb64d97d3c"
+      }
+    }
+  },
+  "fullHash": "sha256:f227483b96f0dd31dd33102d6473c9425664dd9adc58c2385abe1fbe8ce6e041"
+}

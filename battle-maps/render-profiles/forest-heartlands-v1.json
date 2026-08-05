@@ -1,0 +1,420 @@
+{
+  "schemaVersion": "battle-map-render-profile-v2",
+  "id": "forest-heartlands-woodland-v1",
+  "theme": "forest",
+  "ecologyProfile": "forest-heartlands-woodland",
+  "assetBundleId": "battle-art-descriptors-2026-07-30",
+  "scene": {
+    "silhouette": "organic-island",
+    "exterior": "forest-canopy",
+    "backdrop": {
+      "kind": "sky-gradient",
+      "topColor": "#4E6F8B",
+      "horizonColor": "#9DB8C4",
+      "bottomColor": "#D7C5A9",
+      "hazeColor": "#C9D8D8"
+    }
+  },
+  "surfaceVariantCount": 4,
+  "elevationFaceSymbols": {
+    "ground": "earth-face"
+  },
+  "assetBindings": [
+    {
+      "category": "surface",
+      "symbol": "ground",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "surfaceVariant": 0
+      },
+      "assetKey": "forest-heartlands-meadow-ground-0"
+    },
+    {
+      "category": "surface",
+      "symbol": "ground",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "surfaceVariant": 1
+      },
+      "assetKey": "forest-heartlands-meadow-ground-1"
+    },
+    {
+      "category": "surface",
+      "symbol": "ground",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "surfaceVariant": 2
+      },
+      "assetKey": "forest-heartlands-meadow-ground-2"
+    },
+    {
+      "category": "surface",
+      "symbol": "ground",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "surfaceVariant": 3
+      },
+      "assetKey": "forest-heartlands-meadow-ground-3"
+    },
+    {
+      "category": "route",
+      "symbol": "path",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "routeTopology": "end-n"
+      },
+      "assetKey": "forest-heartlands-loam-path-end-n"
+    },
+    {
+      "category": "route",
+      "symbol": "path",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "routeTopology": "end-e"
+      },
+      "assetKey": "forest-heartlands-loam-path-end-e"
+    },
+    {
+      "category": "route",
+      "symbol": "path",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "routeTopology": "end-s"
+      },
+      "assetKey": "forest-heartlands-loam-path-end-s"
+    },
+    {
+      "category": "route",
+      "symbol": "path",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "routeTopology": "end-w"
+      },
+      "assetKey": "forest-heartlands-loam-path-end-w"
+    },
+    {
+      "category": "route",
+      "symbol": "path",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "routeTopology": "straight-ns"
+      },
+      "assetKey": "forest-heartlands-loam-path-straight-ns"
+    },
+    {
+      "category": "route",
+      "symbol": "path",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "routeTopology": "straight-ew"
+      },
+      "assetKey": "forest-heartlands-loam-path-straight-ew"
+    },
+    {
+      "category": "route",
+      "symbol": "path",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "routeTopology": "corner-ne"
+      },
+      "assetKey": "forest-heartlands-loam-path-corner-ne"
+    },
+    {
+      "category": "route",
+      "symbol": "path",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "routeTopology": "corner-es"
+      },
+      "assetKey": "forest-heartlands-loam-path-corner-es"
+    },
+    {
+      "category": "route",
+      "symbol": "path",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "routeTopology": "corner-sw"
+      },
+      "assetKey": "forest-heartlands-loam-path-corner-sw"
+    },
+    {
+      "category": "route",
+      "symbol": "path",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "routeTopology": "corner-wn"
+      },
+      "assetKey": "forest-heartlands-loam-path-corner-wn"
+    },
+    {
+      "category": "route",
+      "symbol": "path",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "routeTopology": "tee-nes"
+      },
+      "assetKey": "forest-heartlands-loam-path-tee-nes"
+    },
+    {
+      "category": "route",
+      "symbol": "path",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "routeTopology": "tee-esw"
+      },
+      "assetKey": "forest-heartlands-loam-path-tee-esw"
+    },
+    {
+      "category": "route",
+      "symbol": "path",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "routeTopology": "tee-nsw"
+      },
+      "assetKey": "forest-heartlands-loam-path-tee-nsw"
+    },
+    {
+      "category": "route",
+      "symbol": "path",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "routeTopology": "tee-wne"
+      },
+      "assetKey": "forest-heartlands-loam-path-tee-wne"
+    },
+    {
+      "category": "route",
+      "symbol": "path",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "routeTopology": "cross"
+      },
+      "assetKey": "forest-heartlands-loam-path-cross"
+    },
+    {
+      "category": "route",
+      "symbol": "path",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "routeTopology": "isolated"
+      },
+      "assetKey": "forest-heartlands-loam-path-isolated"
+    },
+    {
+      "category": "connection",
+      "symbol": "stairs",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "direction": "n",
+        "heightDelta": 1
+      },
+      "assetKey": "forest-heartlands-fieldstone-stairs-n"
+    },
+    {
+      "category": "connection",
+      "symbol": "stairs",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "direction": "e",
+        "heightDelta": 1
+      },
+      "assetKey": "forest-heartlands-fieldstone-stairs-e"
+    },
+    {
+      "category": "connection",
+      "symbol": "stairs",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "direction": "s",
+        "heightDelta": 1
+      },
+      "assetKey": "forest-heartlands-fieldstone-stairs-s"
+    },
+    {
+      "category": "connection",
+      "symbol": "stairs",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "direction": "w",
+        "heightDelta": 1
+      },
+      "assetKey": "forest-heartlands-fieldstone-stairs-w"
+    },
+    {
+      "category": "connection",
+      "symbol": "slope",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "direction": "n",
+        "heightDelta": 1
+      },
+      "assetKey": "forest-heartlands-loam-slope-n"
+    },
+    {
+      "category": "connection",
+      "symbol": "slope",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "direction": "e",
+        "heightDelta": 1
+      },
+      "assetKey": "forest-heartlands-loam-slope-e"
+    },
+    {
+      "category": "connection",
+      "symbol": "slope",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "direction": "s",
+        "heightDelta": 1
+      },
+      "assetKey": "forest-heartlands-loam-slope-s"
+    },
+    {
+      "category": "connection",
+      "symbol": "slope",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "direction": "w",
+        "heightDelta": 1
+      },
+      "assetKey": "forest-heartlands-loam-slope-w"
+    },
+    {
+      "category": "boundary",
+      "symbol": "forest-edge",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "direction": "n",
+        "heightDelta": 1
+      },
+      "assetKey": "forest-heartlands-hedgerow-edge-n"
+    },
+    {
+      "category": "boundary",
+      "symbol": "forest-edge",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "direction": "e",
+        "heightDelta": 1
+      },
+      "assetKey": "forest-heartlands-hedgerow-edge-e"
+    },
+    {
+      "category": "boundary",
+      "symbol": "forest-edge",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "direction": "s",
+        "heightDelta": 1
+      },
+      "assetKey": "forest-heartlands-hedgerow-edge-s"
+    },
+    {
+      "category": "boundary",
+      "symbol": "forest-edge",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "direction": "w",
+        "heightDelta": 1
+      },
+      "assetKey": "forest-heartlands-hedgerow-edge-w"
+    },
+    {
+      "category": "boundary",
+      "symbol": "earth-face",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "direction": "n",
+        "heightDelta": 1
+      },
+      "assetKey": "forest-heartlands-fieldstone-face-n"
+    },
+    {
+      "category": "boundary",
+      "symbol": "earth-face",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "direction": "e",
+        "heightDelta": 1
+      },
+      "assetKey": "forest-heartlands-fieldstone-face-e"
+    },
+    {
+      "category": "boundary",
+      "symbol": "earth-face",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "direction": "s",
+        "heightDelta": 1
+      },
+      "assetKey": "forest-heartlands-fieldstone-face-s"
+    },
+    {
+      "category": "boundary",
+      "symbol": "earth-face",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland",
+        "direction": "w",
+        "heightDelta": 1
+      },
+      "assetKey": "forest-heartlands-fieldstone-face-w"
+    },
+    {
+      "category": "obstacle",
+      "symbol": "ancient-tree",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland"
+      },
+      "assetKey": "forest-heartlands-ancient-oak"
+    },
+    {
+      "category": "obstacle",
+      "symbol": "ironpine",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland"
+      },
+      "assetKey": "forest-heartlands-field-maple"
+    },
+    {
+      "category": "obstacle",
+      "symbol": "moss-boulder",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland"
+      },
+      "assetKey": "forest-heartlands-rounded-fieldstone"
+    },
+    {
+      "category": "obstacle",
+      "symbol": "pale-birch",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland"
+      },
+      "assetKey": "forest-heartlands-hawthorn-thicket"
+    },
+    {
+      "category": "decoration",
+      "symbol": "accent",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland"
+      },
+      "assetKey": "forest-heartlands-bluebell-cluster"
+    },
+    {
+      "category": "decoration",
+      "symbol": "fallen-branch",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland"
+      },
+      "assetKey": "forest-heartlands-oak-leaf-litter"
+    },
+    {
+      "category": "decoration",
+      "symbol": "low-shrub",
+      "match": {
+        "ecologyProfile": "forest-heartlands-woodland"
+      },
+      "assetKey": "forest-heartlands-meadow-grass"
+    }
+  ]
+}

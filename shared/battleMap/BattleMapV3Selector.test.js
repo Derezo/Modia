@@ -51,15 +51,30 @@ async function release(
   catalogSchemaVersion = 1
 ) {
   const map = await createMinimalBattleMapV3FinalFixture();
+  const selectorVersion = catalogSchemaVersion === 3
+    ? 2
+    : catalogSchemaVersion;
   return finalizeBattleMapV3CatalogRelease({
     catalogSchemaVersion,
     catalogReleaseId,
-    selectorVersion: catalogSchemaVersion,
+    selectorVersion,
     assetBundlePins: [{
       assetBundleId: map.provenance.assetBundle.id,
+      ...(catalogSchemaVersion >= 3
+        ? { assetBundleVersion: map.provenance.assetBundle.version }
+        : {}),
       manifestFullHash: map.provenance.assetBundle.manifestFullHash
     }],
-    entries: entries.map(record => ({ ...record, catalogReleaseId }))
+    entries: entries.map(record => ({
+      ...record,
+      catalogReleaseId,
+      ...(catalogSchemaVersion >= 3
+        ? {
+          assetBundleVersion:
+            record.assetBundleVersion ?? map.provenance.assetBundle.version
+        }
+        : {})
+    }))
   });
 }
 
@@ -158,6 +173,28 @@ test('BattleMapV3 selector v2 uses exact ecology coverage in its digest and prov
   assert.equal(heartlands.coverage, 'selected');
   assert.notEqual(borderwood.selectorDigest, heartlands.selectorDigest);
   assert.equal(absent.coverage, 'absent');
+});
+
+test('BattleMapV3 catalog v3 keeps selector v2 behavior with exact bundle version pins', async () => {
+  const map = await createMinimalBattleMapV3FinalFixture();
+  const catalog = await release([
+    entry(map, {
+      ecologyProfile: 'forest-iron-depths-borderwood'
+    })
+  ], 'catalog:test-v3', 3);
+  const selection = await selectBattleMapV3CatalogEntry(catalog, query({
+    ecologyProfile: 'forest-iron-depths-borderwood'
+  }));
+
+  assert.equal(catalog.catalogSchemaVersion, 3);
+  assert.equal(catalog.selectorVersion, 2);
+  assert.equal(catalog.assetBundlePins[0].assetBundleVersion, 1);
+  assert.equal(selection.coverage, 'selected');
+  assert.equal(selection.entry.assetBundleVersion, 1);
+  assert.equal(
+    selection.provenance.ecologyProfile,
+    'forest-iron-depths-borderwood'
+  );
 });
 
 test('BattleMapV3 selector fails closed on invalid capacity and zero weights', async () => {

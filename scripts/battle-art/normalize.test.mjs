@@ -15,6 +15,7 @@ import sharp from 'sharp';
 
 import {
   CANDIDATE_SCHEMA,
+  CORRECTIVE_STYLE_REFERENCE_REGISTRY_PATH,
   approveCandidate,
   candidatePaths,
   inspectImageContents,
@@ -64,6 +65,7 @@ async function fixture() {
     source: null
   };
   for (const relative of [
+    CORRECTIVE_STYLE_REFERENCE_REGISTRY_PATH,
     manifest.promptProfile.path,
     ...manifest.styleReferences.map(reference => reference.path)
   ]) {

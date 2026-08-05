@@ -21,7 +21,7 @@
       0
     ]
   },
-  "status": "approved",
+  "status": "compiled",
   "promptProfile": {
     "id": "battle-art-family-v2",
     "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
@@ -81,8 +81,8 @@
   "content": {
     "version": 1,
     "sourceSha256": "sha256:07efeed70b035cf9301b82494a76a909214d4b27f96127c2476905fd4dd73246",
-    "runtimeSha256": null,
-    "immutableUrl": null
+    "runtimeSha256": "sha256:3a642bbf5dd613f5c043f1ef1cec4bd1cb8dd9bcb89d8f67547015d959b48e26",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v10/forest/route-transition/forest-heartlands-loam-path-cross/v1/3a642bbf5dd613f5c043f1ef1cec4bd1cb8dd9bcb89d8f67547015d959b48e26.webp"
   },
   "source": {
     "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-cross/result.json",

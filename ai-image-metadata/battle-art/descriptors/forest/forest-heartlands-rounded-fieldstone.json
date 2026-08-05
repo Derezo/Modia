@@ -21,7 +21,7 @@
       0
     ]
   },
-  "status": "approved",
+  "status": "compiled",
   "promptProfile": {
     "id": "battle-art-family-v2",
     "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
@@ -86,8 +86,8 @@
   "content": {
     "version": 1,
     "sourceSha256": "sha256:576a51d5c1d97abf8640f1f618388bf3ddbfe585e7892850bbe2b9f6cb00a3e7",
-    "runtimeSha256": null,
-    "immutableUrl": null
+    "runtimeSha256": "sha256:05e6dfdfd4a647b4fcc5649f7d64c4793bf10bfa4095cab0614131b6b0a8681c",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v10/forest/blocking-obstacle/forest-heartlands-rounded-fieldstone/v1/05e6dfdfd4a647b4fcc5649f7d64c4793bf10bfa4095cab0614131b6b0a8681c.webp"
   },
   "source": {
     "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-rounded-fieldstone/result.json",

@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "battle-map-v3-render-review-v1",
+  "map": {
+    "path": "battle-maps/compiled/forest/forest-template-07-c.v5.json",
+    "contentId": "forest-template-07-c",
+    "contentVersion": 5,
+    "fullHash": "sha256:695f6bd176566e691f540ca73344ee108ccad2067cd229b457e5d98a547670f6"
+  },
+  "assetBundle": {
+    "id": "battle-art-descriptors-2026-07-30",
+    "version": 10,
+    "manifestFullHash": "sha256:1f456f81c986327cc2615a7450590a0f3a1aea46e727c18ca3ed3cd0e8baca29",
+    "rendererManifestFullHash": "sha256:f63853a447b8d3ec6cff7a699475367554c0dc5badf5f8977386094865b6eef9"
+  },
+  "renderer": {
+    "harnessPage": "/battle-map-visual.html",
+    "harnessModule": "frontend/src/dev/BattleMapVisualHarness.js",
+    "harnessUrl": "http://127.0.0.1:4173/battle-map-visual.html?artifact=%2F%40fs%2F%2Fhome%2Feric%2FProjects%2FModia%2Fbattle-maps%2Fcompiled%2Fforest%2Fforest-template-07-c.v5.json&autorun=1"
+  },
+  "screenshot": {
+    "path": "artifacts/battle-map-v3-render-reviews/template07-v5-production/forest-template-07-c.v5.695f6bd17656.png",
+    "sha256": "sha256:3faeedf5beb29fc5f087c82f7362466d1ed4338b9375ab0cc5c3950a701d20d8",
+    "bytes": 719774,
+    "width": 1088,
+    "height": 703
+  },
+  "renderMetrics": {
+    "renderDurationMs": 246,
+    "renderedCells": 852,
+    "exactAssetSelections": 40,
+    "worldBounds": {
+      "width": 1472,
+      "height": 864,
+      "worldMinX": -736,
+      "worldMinY": 48,
+      "worldMaxX": 736,
+      "worldMaxY": 912,
+      "offsetX": 736,
+      "offsetY": -48
+    }
+  }
+}

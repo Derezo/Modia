@@ -1,0 +1,216 @@
+{
+  "schemaVersion": "battle-map-v3-catalog-definition-v1",
+  "catalogReleaseId": "battle-map-v3-forest-pilot-2026-07-30-r8",
+  "entries": [
+    {
+      "id": "entry:forest-template-04-a",
+      "mapPath": "battle-maps/compiled/forest/forest-template-04-a.v2.json",
+      "approvalPath": "battle-maps/approvals/forest/forest-template-04-a.v2.json",
+      "approvalFileSha256": "sha256:8e1fc6b8eaa9e8d378fca757fb9e13c7257c2566bab3226a4574b7aa034158e3",
+      "orientation": "isometric-diamond",
+      "teamLayout": "players-vs-opponents",
+      "weight": 1,
+      "bossCapable": false,
+      "competitiveParity": false
+    },
+    {
+      "id": "entry:forest-template-05-b",
+      "mapPath": "battle-maps/compiled/forest/forest-template-05-b.v2.json",
+      "approvalPath": "battle-maps/approvals/forest/forest-template-05-b.v2.json",
+      "approvalFileSha256": "sha256:4394efbad2702b522137e7b8aa0117cac5be1dd07df44d61cfddea383e1a274a",
+      "orientation": "isometric-diamond",
+      "teamLayout": "players-vs-opponents",
+      "weight": 1,
+      "bossCapable": false,
+      "competitiveParity": false
+    }
+  ],
+  "coverageQueries": [
+    {
+      "id": "coverage:forest:pve:tier-1",
+      "theme": "forest",
+      "ecologyProfile": "forest-heartlands-woodland",
+      "sourceTier": 1,
+      "selectionBand": "tier-1",
+      "mode": "pve",
+      "dimensions": {
+        "width": 32,
+        "height": 32
+      },
+      "teamLayout": "players-vs-opponents",
+      "playerCounts": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "opponentCounts": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "requireBossCapable": false,
+      "requireCompetitiveParity": false
+    },
+    {
+      "id": "coverage:forest:pve:tier-1",
+      "theme": "forest",
+      "ecologyProfile": "forest-iron-depths-borderwood",
+      "sourceTier": 1,
+      "selectionBand": "tier-1",
+      "mode": "pve",
+      "dimensions": {
+        "width": 32,
+        "height": 32
+      },
+      "teamLayout": "players-vs-opponents",
+      "playerCounts": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "opponentCounts": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "requireBossCapable": false,
+      "requireCompetitiveParity": false
+    },
+    {
+      "id": "coverage:forest:pve:tier-2",
+      "theme": "forest",
+      "ecologyProfile": "forest-heartlands-woodland",
+      "sourceTier": 2,
+      "selectionBand": "tier-2",
+      "mode": "pve",
+      "dimensions": {
+        "width": 32,
+        "height": 32
+      },
+      "teamLayout": "players-vs-opponents",
+      "playerCounts": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "opponentCounts": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "requireBossCapable": false,
+      "requireCompetitiveParity": false
+    },
+    {
+      "id": "coverage:forest:pve:tier-3",
+      "theme": "forest",
+      "ecologyProfile": "forest-heartlands-woodland",
+      "sourceTier": 3,
+      "selectionBand": "tier-3",
+      "mode": "pve",
+      "dimensions": {
+        "width": 32,
+        "height": 32
+      },
+      "teamLayout": "players-vs-opponents",
+      "playerCounts": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "opponentCounts": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "requireBossCapable": false,
+      "requireCompetitiveParity": false
+    },
+    {
+      "id": "coverage:forest:pve:tier-4",
+      "theme": "forest",
+      "ecologyProfile": "forest-heartlands-woodland",
+      "sourceTier": 4,
+      "selectionBand": "tier-4",
+      "mode": "pve",
+      "dimensions": {
+        "width": 32,
+        "height": 32
+      },
+      "teamLayout": "players-vs-opponents",
+      "playerCounts": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "opponentCounts": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "requireBossCapable": false,
+      "requireCompetitiveParity": false
+    },
+    {
+      "id": "coverage:forest:pve:tier-5",
+      "theme": "forest",
+      "ecologyProfile": "forest-heartlands-woodland",
+      "sourceTier": 5,
+      "selectionBand": "tier-5",
+      "mode": "pve",
+      "dimensions": {
+        "width": 32,
+        "height": 32
+      },
+      "teamLayout": "players-vs-opponents",
+      "playerCounts": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "opponentCounts": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "requireBossCapable": false,
+      "requireCompetitiveParity": false
+    }
+  ]
+}

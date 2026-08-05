@@ -496,11 +496,20 @@ describe('BattleGrid unified painter queue', () => {
     let routeCurves = 0;
     const routeJoins = [];
     const routeFills = [];
+    const routeDraws = [];
     const alphaStack = [];
+    const filterStack = [];
     const ctx = {
       globalAlpha: 1,
-      save() { alphaStack.push(this.globalAlpha); },
-      restore() { this.globalAlpha = alphaStack.pop(); },
+      filter: 'none',
+      save() {
+        alphaStack.push(this.globalAlpha);
+        filterStack.push(this.filter);
+      },
+      restore() {
+        this.globalAlpha = alphaStack.pop();
+        this.filter = filterStack.pop();
+      },
       translate() {},
       scale() {},
       beginPath() {},
@@ -518,7 +527,15 @@ describe('BattleGrid unified painter queue', () => {
         });
       },
       clip() { routeClips++; },
-      drawImage(image) { order.push(image.id); }
+      drawImage(image) {
+        order.push(image.id);
+        if (image.id === 'route') {
+          routeDraws.push({
+            alpha: this.globalAlpha,
+            filter: this.filter
+          });
+        }
+      }
     };
     grid.render(ctx, { '0,0': 'rgba(30, 120, 220, 0.5)' }, null, {
       entities: [{ gridX: 0, gridY: 0, getRenderDepth: () => 0 }],
@@ -534,6 +551,10 @@ describe('BattleGrid unified painter queue', () => {
       { color: '#a08352', alpha: 0.18 },
       { color: '#80613d', alpha: 0.32 }
     ]);
+    assert.deepEqual(routeDraws, [{
+      alpha: 1,
+      filter: 'brightness(101%) saturate(96%)'
+    }]);
     assert.ok(routeCurves >= 4, 'both underpaint passes follow curved topology');
     assert.equal(routeJoins.length, 2);
     assert.ok(routeJoins[0].radiusX > routeJoins[1].radiusX);
@@ -544,6 +565,55 @@ describe('BattleGrid unified painter queue', () => {
         'route joins follow the 2:1 isometric projection'
       );
     }
+
+    const defaultRouteFills = structuredClone(routeFills);
+    const defaultRouteJoins = structuredClone(routeJoins);
+    const defaultRouteDraws = structuredClone(routeDraws);
+    order.length = 0;
+    routeFills.length = 0;
+    routeJoins.length = 0;
+    routeDraws.length = 0;
+    grid.battleMapV3RenderData.renderProfileId = 'non-fallen-oak-profile';
+    grid.render(ctx, { '0,0': 'rgba(30, 120, 220, 0.5)' }, null, {
+      entities: [{ gridX: 0, gridY: 0, getRenderDepth: () => 0 }],
+      renderEntity: () => order.push('unit')
+    });
+
+    assert.deepEqual(
+      order,
+      ['surface', 'route', 'highlight', 'unit', 'obstacle']
+    );
+    assert.deepEqual(routeFills, defaultRouteFills);
+    assert.deepEqual(routeJoins, defaultRouteJoins);
+    assert.deepEqual(routeDraws, defaultRouteDraws);
+
+    order.length = 0;
+    routeFills.length = 0;
+    routeJoins.length = 0;
+    routeDraws.length = 0;
+    grid.battleMapV3RenderData.renderProfileId =
+      'forest-heartlands-fallen-oak-v1';
+    grid.render(ctx, { '0,0': 'rgba(30, 120, 220, 0.5)' }, null, {
+      entities: [{ gridX: 0, gridY: 0, getRenderDepth: () => 0 }],
+      renderEntity: () => order.push('unit')
+    });
+
+    assert.deepEqual(
+      order,
+      ['surface', 'route', 'highlight', 'unit', 'obstacle'],
+      'the fallen-oak route treatment preserves painter order'
+    );
+    assert.deepEqual(routeFills, [
+      { color: '#ad8b57', alpha: 0.16 },
+      { color: '#8a6b42', alpha: 0.22 }
+    ]);
+    assert.equal(routeJoins.length, 2);
+    assert.ok(routeJoins[0].radiusX > defaultRouteJoins[0].radiusX);
+    assert.ok(routeJoins[1].radiusX > defaultRouteJoins[1].radiusX);
+    assert.deepEqual(routeDraws, [{
+      alpha: 0.18,
+      filter: 'brightness(89%) saturate(60%)'
+    }]);
   });
 
   it('bridges the complete elevation gap for a north-facing connection', () => {
@@ -790,6 +860,7 @@ describe('BattleGrid unified painter queue', () => {
       surfaceRenderers: [[null, null], [null, null]],
       layers: [[[], []], [[], []]],
       obstacleLayers: [],
+      renderProfileId: 'legacy-forest-profile',
       renderProfile: {
         sourcePixelScale: 4,
         tileWidth: 64,
@@ -855,6 +926,16 @@ describe('BattleGrid unified painter queue', () => {
       'rgba(133, 124, 73, 0.28)'
     ]);
     assert.ok(colors.every(color => !['#000000', '#493a25', '#4b3522'].includes(color)));
+
+    events.length = 0;
+    grid.battleMapV3RenderData.renderProfileId =
+      'forest-heartlands-fallen-oak-v1';
+    grid.renderBattleMapV3Asset(ctx, eastLayer, 100, 80);
+    assert.deepEqual(
+      events,
+      ['bridge', 'face'],
+      'the fallen-oak profile draws the elevation face only inside its clipped bridge'
+    );
 
     events.length = 0;
     grid.renderBattleMapV3Asset(ctx, {
@@ -980,6 +1061,17 @@ describe('BattleGrid unified painter queue', () => {
       const [, hueRotate] = /hue-rotate\((\d+)deg\)/.exec(filter) ?? [];
       assert.ok(Number(hueRotate) >= 4 && Number(hueRotate) <= 20);
     }
+
+    draws.length = 0;
+    grid.battleMapV3RenderData.renderProfileId =
+      'forest-heartlands-fallen-oak-v1';
+    grid.battleMapV3RenderData.surfaceFoundation = null;
+    grid.renderBattleMapV3Tile(ctx, 100, 80, 0, 0);
+    assert.deepEqual(
+      draws,
+      [{ id: first.key, alpha: 1 }],
+      'foundation-free fallen-oak semantic surfaces remain fully opaque'
+    );
   });
 
   it('includes a larger asymmetric surface foundation in V3 world bounds', () => {

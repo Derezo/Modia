@@ -32,6 +32,9 @@ async function fixture({
     selectorVersion: catalogSchemaVersion,
     assetBundlePins: [{
       assetBundleId: map.provenance.assetBundle.id,
+      ...(catalogSchemaVersion >= 3
+        ? { assetBundleVersion: map.provenance.assetBundle.version }
+        : {}),
       manifestFullHash: map.provenance.assetBundle.manifestFullHash
     }],
     entries: [{
@@ -51,6 +54,9 @@ async function fixture({
       candidatePoolSize: map.spawnContract.capacities.candidatePoolSize,
       maxAssignableOpponents: map.spawnContract.capacities.maxAssignableOpponents,
       assetBundleId: map.provenance.assetBundle.id,
+      ...(catalogSchemaVersion >= 3
+        ? { assetBundleVersion: map.provenance.assetBundle.version }
+        : {}),
       assetBundleManifestFullHash: map.provenance.assetBundle.manifestFullHash,
       weight: 1,
       bossCapable: false,
@@ -117,6 +123,104 @@ test('deployed selector returns automatic V3 coverage without any activation inp
   assert.equal(selected.coverage, 'selected');
   assert.equal(selected.map.hashes.fullHash, value.map.hashes.fullHash);
   assert.equal(selected.provenance.catalogReleaseId, value.release.catalogReleaseId);
+});
+
+test('active r16 coverage automatically selects every approved Heartlands variant', async () => {
+  const query = {
+    theme: 'forest',
+    ecologyProfile: 'forest-heartlands-woodland',
+    sourceTier: 5,
+    selectionBand: 'tier-5',
+    mode: 'pve',
+    partyCapacityBand: 'players-1-5',
+    opposingRosterCapacityBand: 'opponents-1-7',
+    dimensions: { width: 32, height: 32 },
+    teamLayout: 'players-vs-opponents',
+    playerCount: 5,
+    opponentCount: 7,
+    requireBossCapable: false,
+    requireCompetitiveParity: false
+  };
+  const selected = await Promise.all([0, 1, 3, 4, 7, 8].map(encounterSeed =>
+    selectDeployedBattleMapV3({ ...query, encounterSeed })
+  ));
+
+  assert.deepEqual(
+    new Set(selected.map(result => result.map.contentId)),
+    new Set([
+      'forest-template-04-a',
+      'forest-template-04-b',
+      'forest-template-04-c',
+      'forest-template-07-a',
+      'forest-template-07-b',
+      'forest-template-07-c'
+    ])
+  );
+  assert.ok(selected.every(result => (
+    result.coverage === 'selected'
+    && result.provenance.catalogReleaseId
+      === 'battle-map-v3-forest-pilot-2026-07-30-r16'
+  )));
+});
+
+test('active r16 coverage automatically selects every approved Borderwood variant', async () => {
+  const query = {
+    theme: 'forest',
+    ecologyProfile: BORDERWOOD_ECOLOGY_PROFILE,
+    sourceTier: 1,
+    selectionBand: 'tier-1',
+    mode: 'pve',
+    partyCapacityBand: 'players-1-5',
+    opposingRosterCapacityBand: 'opponents-1-7',
+    dimensions: { width: 32, height: 32 },
+    teamLayout: 'players-vs-opponents',
+    playerCount: 5,
+    opponentCount: 7,
+    requireBossCapable: false,
+    requireCompetitiveParity: false
+  };
+  const selected = await Promise.all([0, 1, 5, 6].map(encounterSeed =>
+    selectDeployedBattleMapV3({ ...query, encounterSeed })
+  ));
+
+  assert.deepEqual(
+    new Set(selected.map(result => result.map.contentId)),
+    new Set([
+      'forest-template-01-b',
+      'forest-template-05-a',
+      'forest-template-05-b',
+      'forest-template-05-c'
+    ])
+  );
+  assert.ok(selected.every(result => (
+    result.coverage === 'selected'
+    && result.provenance.catalogReleaseId
+      === 'battle-map-v3-forest-pilot-2026-07-30-r16'
+  )));
+});
+
+test('active r16 deliberately withholds boss eligibility pending boss coverage acceptance', async () => {
+  const selection = await selectDeployedBattleMapV3({
+    encounterSeed: 17,
+    theme: 'forest',
+    ecologyProfile: BORDERWOOD_ECOLOGY_PROFILE,
+    sourceTier: 1,
+    selectionBand: 'tier-1',
+    mode: 'pve',
+    partyCapacityBand: 'players-1-5',
+    opposingRosterCapacityBand: 'opponents-1-7',
+    dimensions: { width: 32, height: 32 },
+    teamLayout: 'players-vs-opponents',
+    playerCount: 5,
+    opponentCount: 7,
+    requireBossCapable: true,
+    requireCompetitiveParity: false
+  });
+
+  assert.equal(selection.coverage, 'absent');
+  assert.deepEqual(selection.eligibleMapContentIds, []);
+  assert.equal(selection.entry, null);
+  assert.equal(selection.map, null);
 });
 
 test('schema-2 deployed selector automatically requires exact ecology coverage', async () => {

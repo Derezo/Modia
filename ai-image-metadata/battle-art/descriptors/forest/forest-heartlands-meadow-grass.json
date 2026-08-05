@@ -21,7 +21,7 @@
       0
     ]
   },
-  "status": "approved",
+  "status": "compiled",
   "promptProfile": {
     "id": "battle-art-family-v2",
     "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
@@ -81,8 +81,8 @@
   "content": {
     "version": 1,
     "sourceSha256": "sha256:120bf2cf9c742ed392682fca9ca8aae540e94f718a76d23bc78107bfa5301bf7",
-    "runtimeSha256": null,
-    "immutableUrl": null
+    "runtimeSha256": "sha256:bcb8b84fb40c331ad69eb43ab81972f373f772cc5fa2102d66ba4975b4029d0e",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v10/forest/nonblocking-decoration/forest-heartlands-meadow-grass/v1/bcb8b84fb40c331ad69eb43ab81972f373f772cc5fa2102d66ba4975b4029d0e.webp"
   },
   "source": {
     "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-meadow-grass/result.json",

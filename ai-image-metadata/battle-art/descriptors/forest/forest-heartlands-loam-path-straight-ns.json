@@ -21,7 +21,55 @@
       0
     ]
   },
-  "status": "draft",
+  "routeFinishing": {
+    "schemaVersion": "battle-art-route-finishing-v1",
+    "strategy": "largest-component-box-v1",
+    "targetBox": {
+      "x": 46,
+      "y": 8,
+      "width": 164,
+      "height": 112
+    },
+    "maximumDetachedCoveredPermille": 20,
+    "maximumScaleAnisotropyPermille": 1350,
+    "terminalClip": {
+      "schemaVersion": "battle-art-route-terminal-clip-v1",
+      "maximumOverflowPixels": 8
+    },
+    "geometryPrime": {
+      "schemaVersion": "battle-art-route-geometry-prime-v1",
+      "sourceReferenceId": "forest-borderwood-approved-route-straight-ns-v1",
+      "sourceSha256": "sha256:35bef1269c425846d16f7460590565d681c50894c63e7924caeebba5e69deceb",
+      "topology": "straight-ns",
+      "canvas": {
+        "width": 256,
+        "height": 128
+      },
+      "anchor": {
+        "x": 128,
+        "y": 64
+      },
+      "subjectBounds": {
+        "x": 65,
+        "y": 20,
+        "width": 132,
+        "height": 86
+      },
+      "coveredPixels": 4026,
+      "coveragePermille": 122,
+      "terminalOverflowPixels": {
+        "n": 7,
+        "s": 1
+      }
+    },
+    "armAlphaSpan": {
+      "alphaThreshold": 240,
+      "minimumPixels": 28,
+      "maximumPixels": 52,
+      "maximumSpreadPixels": 12
+    }
+  },
+  "status": "compiled",
   "promptProfile": {
     "id": "battle-art-family-v2",
     "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
@@ -32,9 +80,14 @@
       "id": "forest-source-template-01",
       "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
       "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+    },
+    {
+      "id": "forest-heartlands-approved-route-straight-ew-v1",
+      "path": "ai-image-metadata/battle-art/sources/forest/forest-heartlands-loam-path-straight-ew/v1/c1e441f91c71349b3e49e1319a51af80bf69433ada4f74d8aa838e0be94abaf3.png",
+      "sha256": "sha256:c1e441f91c71349b3e49e1319a51af80bf69433ada4f74d8aa838e0be94abaf3"
     }
   ],
-  "generationPrompt": "Create exactly one seam-safe orthographic isometric forest route-transition asset named forest-heartlands-loam-path-straight-ns for ecology profile forest-heartlands-woodland; tier bands 1, 2, 3, 4, 5; exact route topology straight-ns. Author the declared orientation directly as one continuous rising-right path from the N upper-right terminal seam cross-section at (192,32), through the anchor at (128,64), to the S lower-left terminal seam cross-section at (64,96) on the 256x128 canvas. Treat N=(192,32) and S=(64,96) explicitly as seam cross-sections, not cap centers. Keep the E lower-right target at (192,96) and W upper-left target at (64,32) fully transparent. Use Heartlands Woodland materials: warm ochre loam, meadow grass, bluebells, oak leaf litter, small cream-gray fieldstones, and dappled late-morning light. Carry the full 28–36 pixel warm-loam core centered through both seam targets without tapering. Continue that core only 4–6 pixels outward along each arm vector, then cap it at N=(196,30) and S=(60,98) with a short, nearly straight transverse dirt edge. Keep the total visible terminal silhouette no more than 52 pixels transverse. Place no grass, leaves, pebbles, feather, or antialiasing outward of either cap. Keep the remaining canvas transparent and the outermost 4-pixel rectangular border clear. Render only the route overlay: no opaque terrain diamond, panel, slab, baked background, exterior scenery, presentation frame, detached pixels, text, black void, or E/W branch.",
+  "generationPrompt": "Create exactly one seam-safe orthographic isometric forest route-transition asset named forest-heartlands-loam-path-straight-ns for ecology profile forest-heartlands-woodland; tier bands 1, 2, 3, 4, 5; exact route topology straight-ns. Render on a strict 2:1 landscape canvas that is exactly twice as wide as it is tall; never use a square, portrait, or taller-than-wide canvas. Use the descriptor's measured straight-ns JSON geometry prime as the compact construction authority: a rising-right centerline, short occupied proportions, generous exterior padding, and steep perpendicular terminal cuts. Use the attached approved Heartlands straight-ew image only as the transform-equivalent material and nearly uniform band-width authority. Rotate that visual treatment into the required rising-right straight-ns orientation while preserving the JSON prime's compact terminal reach. Author one generous, nearly uniform 32–40 pixel warm-loam core with a low attached 6–10 pixel pastoral verge; do not lengthen, round, point, or taper either terminal. No grass, flowers, leaves, stones, or antialiasing may protrude beyond either terminal cut. Keep the complete subject comfortably inside the landscape canvas with generous perfectly flat #ff00ff exterior on all four sides. Use Heartlands Woodland materials: warm ochre loam, meadow grass, sparse bluebells, oak leaf litter, small cream-gray fieldstones, and dappled late-morning light. Preserve one connected isolated silhouette; do not add E/W branches or extend decoration past the terminal cuts. Render only the route overlay: no opaque terrain diamond, panel, slab, baked background, exterior scenery, presentation frame, detached pixels, text, black void, shadow, or alternate variant. The delivered file itself must retain the exact 2:1 landscape canvas.",
   "rasterContract": {
     "schemaVersion": "battle-art-raster-contract-v1",
     "kind": "transparent-cutout",
@@ -79,10 +132,19 @@
     "stratum": "route"
   },
   "content": {
-    "version": 12,
-    "sourceSha256": null,
-    "runtimeSha256": null,
-    "immutableUrl": null
+    "version": 13,
+    "sourceSha256": "sha256:2919918dbb4b9ea40c37409179e8e15ff6294b32fef8b84e98c971966cf7104e",
+    "runtimeSha256": "sha256:8f4a43bb9f7a23572be8ceab24fed931cdef2ad1c09f9ae0ebd4b56683338603",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v10/forest/route-transition/forest-heartlands-loam-path-straight-ns/v13/8f4a43bb9f7a23572be8ceab24fed931cdef2ad1c09f9ae0ebd4b56683338603.webp"
   },
-  "source": null
+  "source": {
+    "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-straight-ns/result.json",
+    "imagePath": "ai-image-metadata/battle-art/sources/forest/forest-heartlands-loam-path-straight-ns/v13/2919918dbb4b9ea40c37409179e8e15ff6294b32fef8b84e98c971966cf7104e.png",
+    "imageSha256": "sha256:2919918dbb4b9ea40c37409179e8e15ff6294b32fef8b84e98c971966cf7104e",
+    "width": 256,
+    "height": 128,
+    "format": "png",
+    "reviewer": "codex-v3-heartlands-art-review",
+    "approvedAt": "2026-08-04T05:56:00.219Z"
+  }
 }

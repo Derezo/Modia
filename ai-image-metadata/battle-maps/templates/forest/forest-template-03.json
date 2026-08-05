@@ -271,7 +271,7 @@
   "pins": {
     "sourceImageSha256": "sha256:c622b9b0def37497cf12a96013c72cfff405ad15aaae2955b5a8820a6f7e9efd",
     "promptProfileSha256": "sha256:6a4200193384b8682cb7cbc69ad6a819dc5cb4cfbd116c395b0f628b5a208f41",
-    "approvedBlueprintSha256": null,
+    "approvedBlueprintSha256": "sha256:5f4eb1e28f5b3f6512ddfbfa0dd035bb0a91552266bf668d2c9d5b059583d570",
     "compilerSha256": "sha256:59e05298142a9e5c0b9bc32b04a87c1127e15cebff8af9feafe2a3a6da167ab9"
   },
   "review": {

@@ -15,6 +15,7 @@ import { afterEach, describe, it } from 'node:test';
 import {
   BUNDLE_PATH,
   BUNDLE_REGISTRY_PATH,
+  CORRECTIVE_STYLE_REFERENCE_REGISTRY_PATH,
   DESCRIPTOR_SCHEMA_V1,
   DESCRIPTOR_SCHEMA_V2,
   FRONTEND_BUNDLE_PATH,
@@ -61,6 +62,10 @@ async function fixture() {
     path.join(REPOSITORY_ROOT, 'ai-image-metadata/battle-art/manifest.json'),
     path.join(metadataRoot, 'manifest.json')
   );
+  await copyFile(
+    path.join(REPOSITORY_ROOT, CORRECTIVE_STYLE_REFERENCE_REGISTRY_PATH),
+    path.join(root, CORRECTIVE_STYLE_REFERENCE_REGISTRY_PATH)
+  );
   for (const directory of ['prompts', 'descriptors']) {
     await cp(
       path.join(REPOSITORY_ROOT, `ai-image-metadata/battle-art/${directory}`),
@@ -98,6 +103,9 @@ async function fixture() {
       },
       source: null
     };
+    // This reduced fixture gives every draft the same synthetic style reference,
+    // so remove optional per-family geometry provenance that would no longer bind.
+    delete draft.directGeometryPrime;
     await writeFile(path.join(root, relative), stableJson(draft));
     descriptors.push({ path: relative, descriptor: draft });
   }

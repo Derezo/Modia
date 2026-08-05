@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "battle-map-blueprint-approval-v3",
+  "id": "forest-template-07-c",
+  "theme": "forest",
+  "templateId": "forest-template-07",
+  "decision": "approved",
+  "reviewer": "codex-template07-independent-mechanical-review",
+  "blueprintPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-07/forest-template-07-c.json",
+  "blueprintFileSha256": "sha256:34b4267fca6d6e1ab28ad3d995d8f566c05349387c38bf42de60c26391b5123a",
+  "blueprintFullHash": "sha256:0fed8f8a9d89efaddf5bc477f84a966d44ba48f8a07da65b54d65c3505f2ee0e",
+  "sourceImageSha256": "sha256:07da685b434b24142b1f5f27188c482220728a66e44dfff46fd5560826a70917",
+  "promptProfile": {
+    "id": "map-blueprint-v2",
+    "path": "ai-image-metadata/battle-maps/prompts/map-blueprint-v2.json",
+    "sha256": "sha256:d9fd841812bcc9a4713d3ac8b1c81715f359e55d55098589f8970650fed7cdae"
+  },
+  "reason": "Exact regenerated candidate independently approved: one strict 714-cell passable component, three internally vertex-disjoint formation routes, no obstacle or route collisions, and the storm-fallen oak and root mass now occupy the central dry-ravine focal seam while all sibling diversity floors remain clear.",
+  "mechanicalReview": {
+    "schemaVersion": "battle-map-blueprint-mechanical-review-v1",
+    "reportPath": "ai-image-metadata/battle-maps/review/forest/forest-template-07/forest-template-07-c/previews/0fed8f8a9d89efaddf5bc477f84a966d44ba48f8a07da65b54d65c3505f2ee0e/mechanical-report.json",
+    "reportFileSha256": "sha256:522d5a75f69cc20652584f5b440ab7907606832daced84e7d5f4873a3c7df52b",
+    "previewPath": "ai-image-metadata/battle-maps/review/forest/forest-template-07/forest-template-07-c/previews/0fed8f8a9d89efaddf5bc477f84a966d44ba48f8a07da65b54d65c3505f2ee0e/mechanical-preview.svg",
+    "previewFileSha256": "sha256:21a223754626addef254456dac1d658acee2ac2ea59201ca8585459d6d17ea89"
+  },
+  "fullHash": "sha256:ce5205b38dde9c08b92364f238647f9352d994163d0bd15763a964e57733a641"
+}

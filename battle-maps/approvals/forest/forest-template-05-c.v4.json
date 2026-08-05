@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "battle-map-v3-visual-approval-v2",
+  "decision": "approved",
+  "reviewer": "codex-validator-carry-forward-production-visual-review",
+  "reason": "Exact v4 carry-forward render approved: the distinct west zigzag and branch connect cleanly into the central junction without seam gaps or false wall merges, vegetation and deadwood frame rather than occlude formation approaches, elevations remain coherent, the organic edge is intact, and the full camera preserves gameplay clarity.",
+  "checklistVersion": 2,
+  "theme": "forest",
+  "templateId": "forest-template-05",
+  "contentId": "forest-template-05-c",
+  "contentVersion": 4,
+  "mapPath": "battle-maps/compiled/forest/forest-template-05-c.v4.json",
+  "hashes": {
+    "authoritativeHash": "sha256:ed666d1f517ff933831c4fbb954e827957f613a468889e23e44ecd3c559ed1df",
+    "fullHash": "sha256:272f19bd3acae5f9ca12e51c333f88795537371c53a8ccfcff2285bede9f39da",
+    "visualHash": "sha256:8e7b4c7a7514840babd0f7c37558fffa26f389e50239b762ca96601a5da8c5c2"
+  },
+  "sourceSidecar": {
+    "path": "ai-image-metadata/battle-maps/templates/forest/forest-template-05.json",
+    "fullHash": "sha256:45f407d629c40a42954a1ae97b0c5d835b17519e8e6ad9159a8a04abdb3b2c50"
+  },
+  "blueprint": {
+    "id": "forest-template-05-c",
+    "fullHash": "sha256:1f93970fc5e3378e7847390aebba73e94eb874b57fbe1b29a52e26dba70081e5",
+    "approvalIndexFullHash": "sha256:e6d3946071fe35f86cdf37abf8731bd7029a3dca783bc76ab1a07097a7908331"
+  },
+  "renderProfile": {
+    "id": "forest-iron-depths-borderwood-v5",
+    "path": "battle-maps/render-profiles/forest-borderwood-v5.json",
+    "fullHash": "sha256:e35459e124e6bcc16e6008d796f5feb1fcfc76b9d0f9b1a5c11e9f1c54ecd40e"
+  },
+  "tileCatalog": {
+    "id": "forest-borderwood-v5-tiles",
+    "version": 1,
+    "path": "battle-maps/tile-catalogs/forest-borderwood-v5.json",
+    "fullHash": "sha256:9c32448ffa019e2fd90442deb8b91545211e0ee5d4e8f8b8f2f5abe9aad7c1d7"
+  },
+  "assetBundle": {
+    "id": "battle-art-descriptors-2026-07-30",
+    "version": 7,
+    "path": "ai-image-metadata/battle-art/releases/battle-art-descriptors-2026-07-30.v7.json",
+    "manifestFullHash": "sha256:f6af2574a315cae7ee0b15a090a6c0919274fab9cb5e7f90aae76f16954008be"
+  },
+  "capabilityReport": {
+    "schemaVersion": "battle-map-v3-capability-report-v1",
+    "mapFullHash": "sha256:272f19bd3acae5f9ca12e51c333f88795537371c53a8ccfcff2285bede9f39da",
+    "bossCapable": true,
+    "competitiveParity": false,
+    "parityCases": null
+  },
+  "screenshot": {
+    "path": "ai-image-metadata/battle-maps/review/forest/forest-template-05/forest-template-05-c/forest-template-05-c.v4.272f19bd3aca.png",
+    "bytes": 702289,
+    "width": 1088,
+    "height": 703,
+    "format": "png",
+    "sha256": "sha256:db11496f0382d1464827bd775979701048a419df967cc65aa6c6694d01d7c50b"
+  }
+}

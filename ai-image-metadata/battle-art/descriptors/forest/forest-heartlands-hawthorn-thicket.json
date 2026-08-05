@@ -21,7 +21,7 @@
       0
     ]
   },
-  "status": "approved",
+  "status": "compiled",
   "promptProfile": {
     "id": "battle-art-family-v2",
     "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
@@ -86,8 +86,8 @@
   "content": {
     "version": 1,
     "sourceSha256": "sha256:fc45e80662cefd1095a523ead3330aa2d8c18cbe5839be867777963e678656ce",
-    "runtimeSha256": null,
-    "immutableUrl": null
+    "runtimeSha256": "sha256:f24f7f59540bfbdf78fded9c9c6d761179a95a5fdb55a8c542f3c21f6276d185",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v10/forest/blocking-obstacle/forest-heartlands-hawthorn-thicket/v1/f24f7f59540bfbdf78fded9c9c6d761179a95a5fdb55a8c542f3c21f6276d185.webp"
   },
   "source": {
     "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-hawthorn-thicket/result.json",

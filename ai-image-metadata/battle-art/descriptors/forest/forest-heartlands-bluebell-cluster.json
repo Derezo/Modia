@@ -21,7 +21,7 @@
       0
     ]
   },
-  "status": "approved",
+  "status": "compiled",
   "promptProfile": {
     "id": "battle-art-family-v2",
     "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
@@ -81,8 +81,8 @@
   "content": {
     "version": 1,
     "sourceSha256": "sha256:034ff367dbfa174a7ef483e6bc3270311c4837b83002d26f7748387aa08d478d",
-    "runtimeSha256": null,
-    "immutableUrl": null
+    "runtimeSha256": "sha256:effb3c9156ef01da06a706b001cce94b83d2a50d3c73d333fd13f869c1d20252",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v10/forest/nonblocking-decoration/forest-heartlands-bluebell-cluster/v1/effb3c9156ef01da06a706b001cce94b83d2a50d3c73d333fd13f869c1d20252.webp"
   },
   "source": {
     "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-bluebell-cluster/result.json",

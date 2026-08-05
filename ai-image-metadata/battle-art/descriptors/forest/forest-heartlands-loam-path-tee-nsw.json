@@ -21,7 +21,7 @@
       0
     ]
   },
-  "status": "draft",
+  "status": "compiled",
   "promptProfile": {
     "id": "battle-art-family-v2",
     "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
@@ -45,6 +45,18 @@
     "kind": "transparent-cutout",
     "minimumCoveredPermille": 10,
     "maximumCoveredPermille": 850
+  },
+  "routeFinishing": {
+    "schemaVersion": "battle-art-route-finishing-v1",
+    "strategy": "anchor-scale-v1",
+    "scalePermille": 1450,
+    "maximumDetachedCoveredPermille": 20,
+    "armAlphaSpan": {
+      "alphaThreshold": 240,
+      "minimumPixels": 28,
+      "maximumPixels": 120,
+      "maximumSpreadPixels": 100
+    }
   },
   "canvas": {
     "width": 256,
@@ -85,9 +97,18 @@
   },
   "content": {
     "version": 1,
-    "sourceSha256": null,
-    "runtimeSha256": null,
-    "immutableUrl": null
+    "sourceSha256": "sha256:cf706f7f8e436a16f148a777856f463a2a0d0699f1bcbfdfd8b4e432565318b6",
+    "runtimeSha256": "sha256:1ad409ba1a2ccb1607b9b48a83070202f01cc1b608a47ba3c448046ce2e64cde",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v10/forest/route-transition/forest-heartlands-loam-path-tee-nsw/v1/1ad409ba1a2ccb1607b9b48a83070202f01cc1b608a47ba3c448046ce2e64cde.webp"
   },
-  "source": null
+  "source": {
+    "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-tee-nsw/result.json",
+    "imagePath": "ai-image-metadata/battle-art/sources/forest/forest-heartlands-loam-path-tee-nsw/v1/cf706f7f8e436a16f148a777856f463a2a0d0699f1bcbfdfd8b4e432565318b6.png",
+    "imageSha256": "sha256:cf706f7f8e436a16f148a777856f463a2a0d0699f1bcbfdfd8b4e432565318b6",
+    "width": 256,
+    "height": 128,
+    "format": "png",
+    "reviewer": "codex-v3-heartlands-art-review",
+    "approvedAt": "2026-08-04T06:53:37.289Z"
+  }
 }

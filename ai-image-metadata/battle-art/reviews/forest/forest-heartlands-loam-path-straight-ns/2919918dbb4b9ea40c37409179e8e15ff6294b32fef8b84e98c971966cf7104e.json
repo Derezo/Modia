@@ -1,0 +1,135 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v2",
+  "theme": "forest",
+  "familyId": "forest-heartlands-loam-path-straight-ns",
+  "decision": "approved",
+  "reviewer": "codex-v3-heartlands-art-review",
+  "reason": "Approved after direct visual inspection and deterministic route validation: the isolated Heartlands loam ribbon has coherent warm-loam/meadow/bluebell materials, correct rising-right N/S orientation, clean perpendicular terminal cuts, no detached or baked terrain, zero residual chroma fringe, 195 permille coverage, uniform alpha-240 arm samples of N 38/38/32 and S 36/35/34, and symmetric 7.6-pixel terminal overflow within the pinned 8-pixel planes.",
+  "reviewedAt": "2026-08-04T05:56:00.219Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-straight-ns.json",
+    "sha256": "sha256:6c53788e55ef3f0d7028a980cbe7e3c13c2ea2ea14e2f7aef7b5c5e403e53320",
+    "contentVersion": 13
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-straight-ns/result.json",
+      "bytes": 4848,
+      "sha256": "sha256:ecbdc2ccab8940f7a4e2de0f6473fbccaca4b145daa701a2281351467a7d8eea"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-straight-ns/candidate.png",
+      "bytes": 23321,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:2919918dbb4b9ea40c37409179e8e15ff6294b32fef8b84e98c971966cf7104e"
+    },
+    "derivation": {
+      "schemaVersion": "battle-art-route-finishing-v1",
+      "strategy": "largest-component-box-v1",
+      "source": {
+        "path": "ai-image-metadata/battle-art/generated-artifacts/forest/forest-heartlands-loam-path-straight-ns/e02c939002b6463dc62bd03f1ca338c90009337e3eccded120bdd750154d14a2.png",
+        "bytes": 1343323,
+        "width": 1774,
+        "height": 887,
+        "format": "png",
+        "sha256": "sha256:e02c939002b6463dc62bd03f1ca338c90009337e3eccded120bdd750154d14a2"
+      },
+      "sourceBounds": {
+        "x": 413,
+        "y": 157,
+        "width": 1054,
+        "height": 566
+      },
+      "componentCount": 1,
+      "coveredPixels": 206937,
+      "selectedCoveredPixels": 206937,
+      "detachedCoveredPixels": 0,
+      "detachedCoveredPermille": 0,
+      "maximumDetachedCoveredPermille": 20,
+      "terminalClip": {
+        "schemaVersion": "battle-art-route-terminal-clip-v1",
+        "maximumOverflowPixels": 8,
+        "clearedPixels": 257
+      },
+      "targetBox": {
+        "x": 46,
+        "y": 8,
+        "width": 164,
+        "height": 112
+      },
+      "scaleX": {
+        "numerator": 164,
+        "denominator": 1054
+      },
+      "scaleY": {
+        "numerator": 112,
+        "denominator": 566
+      },
+      "kernel": "lanczos3",
+      "finalSha256": "sha256:2919918dbb4b9ea40c37409179e8e15ff6294b32fef8b84e98c971966cf7104e"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      },
+      {
+        "id": "forest-heartlands-approved-route-straight-ew-v1",
+        "path": "ai-image-metadata/battle-art/sources/forest/forest-heartlands-loam-path-straight-ew/v1/c1e441f91c71349b3e49e1319a51af80bf69433ada4f74d8aa838e0be94abaf3.png",
+        "sha256": "sha256:c1e441f91c71349b3e49e1319a51af80bf69433ada4f74d8aa838e0be94abaf3"
+      }
+    ],
+    "styleReferenceMode": "attachments",
+    "styleReferenceProvenance": [
+      {
+        "id": "forest-source-template-01",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1",
+        "stagedBasename": "style-reference-01.png"
+      },
+      {
+        "id": "forest-heartlands-approved-route-straight-ew-v1",
+        "sha256": "sha256:c1e441f91c71349b3e49e1319a51af80bf69433ada4f74d8aa838e0be94abaf3",
+        "stagedBasename": "style-reference-02.png"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 300000,
+      "imageArguments": [
+        "style-reference-01.png",
+        "style-reference-02.png"
+      ],
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-straight-ns/prompt.txt",
+        "bytes": 15678,
+        "sha256": "sha256:fd1d9a060ec3f9006322fd6982e0d5a5bbf2ed56d69177d35d5d2ccff9cb4dc4"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-straight-ns/worker.jsonl",
+        "bytes": 26449,
+        "sha256": "sha256:9b15dfce0d05ebb874932b18c44441699aae89ab67c3df8a16283a935770fc5a"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-straight-ns/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-straight-ns/last-message.txt",
+        "bytes": 212,
+        "sha256": "sha256:671c47cf5d2dcfbee622d05cfe95caf527dd15db78de146fea56edd89b57acf5"
+      }
+    }
+  },
+  "fullHash": "sha256:a8ced17f1519d58f17b001dcec9ef98f9e6cb968ae25fe0dd68f387263ff4e8f"
+}

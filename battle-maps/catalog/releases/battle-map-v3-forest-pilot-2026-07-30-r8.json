@@ -1,0 +1,80 @@
+{
+  "assetBundlePins": [
+    {
+      "assetBundleId": "battle-art-descriptors-2026-07-30",
+      "manifestFullHash": "sha256:f6af2574a315cae7ee0b15a090a6c0919274fab9cb5e7f90aae76f16954008be"
+    }
+  ],
+  "catalogReleaseId": "battle-map-v3-forest-pilot-2026-07-30-r8",
+  "catalogSchemaVersion": 2,
+  "entries": [
+    {
+      "assetBundleId": "battle-art-descriptors-2026-07-30",
+      "assetBundleManifestFullHash": "sha256:f6af2574a315cae7ee0b15a090a6c0919274fab9cb5e7f90aae76f16954008be",
+      "bossCapable": false,
+      "candidatePoolSize": 24,
+      "catalogReleaseId": "battle-map-v3-forest-pilot-2026-07-30-r8",
+      "competitiveParity": false,
+      "dimensions": {
+        "height": 32,
+        "width": 32
+      },
+      "ecologyProfile": "forest-heartlands-woodland",
+      "id": "entry:forest-template-04-a",
+      "mapContentId": "forest-template-04-a",
+      "mapContentVersion": 2,
+      "mapFullHash": "sha256:815212024ec2189b20dc891a8cae1476db2f1b27067688c9d7803da02a14d322",
+      "maxAssignableOpponents": 7,
+      "orientation": "isometric-diamond",
+      "playerCapacity": 5,
+      "renderProfileId": "forest-heartlands-woodland-v1",
+      "sourceTemplateId": "forest-template-04",
+      "supportedModes": [
+        "pve"
+      ],
+      "teamLayout": "players-vs-opponents",
+      "theme": "forest",
+      "tierEligibility": [
+        "tier-1",
+        "tier-2",
+        "tier-3",
+        "tier-4",
+        "tier-5"
+      ],
+      "weight": 1
+    },
+    {
+      "assetBundleId": "battle-art-descriptors-2026-07-30",
+      "assetBundleManifestFullHash": "sha256:f6af2574a315cae7ee0b15a090a6c0919274fab9cb5e7f90aae76f16954008be",
+      "bossCapable": false,
+      "candidatePoolSize": 24,
+      "catalogReleaseId": "battle-map-v3-forest-pilot-2026-07-30-r8",
+      "competitiveParity": false,
+      "dimensions": {
+        "height": 32,
+        "width": 32
+      },
+      "ecologyProfile": "forest-iron-depths-borderwood",
+      "id": "entry:forest-template-05-b",
+      "mapContentId": "forest-template-05-b",
+      "mapContentVersion": 2,
+      "mapFullHash": "sha256:762968b78c035076ff23658e11fd97ad4540346c6dd0bf1a931dc35c81cd57b8",
+      "maxAssignableOpponents": 7,
+      "orientation": "isometric-diamond",
+      "playerCapacity": 5,
+      "renderProfileId": "forest-iron-depths-borderwood-v5",
+      "sourceTemplateId": "forest-template-05",
+      "supportedModes": [
+        "pve"
+      ],
+      "teamLayout": "players-vs-opponents",
+      "theme": "forest",
+      "tierEligibility": [
+        "tier-1"
+      ],
+      "weight": 1
+    }
+  ],
+  "selectorVersion": 2,
+  "catalogFullHash": "sha256:4d45e6c39d9017e8e22202ac52e94f1495bdc97bd9951b22461c58bf455a2d46"
+}

@@ -258,31 +258,31 @@ describe('BattleMapSession', () => {
     assert.equal(result.state.stateRevision, 2);
   });
 
-  it('hydrates the active forest V12 map with its exact generated runtime bundle', async () => {
+  it('hydrates an active Heartlands r16 map with its exact generated runtime bundle', async () => {
     const [activeRelease, map, runtimeBundles] = await Promise.all([
       readTrackedJson('../../../../battle-maps/catalog/active-release.json'),
       readTrackedJson(
-        '../../../../battle-maps/compiled/forest/forest-template-01-b.v12.json'
+        '../../../../battle-maps/compiled/forest/forest-template-07-a.v8.json'
       ),
       readTrackedJson('../../generated/battleMapV3RuntimeBundles.json')
     ]);
     const activeMap = activeRelease.maps.find(
-      entry => entry.contentId === 'forest-template-01-b'
+      entry => entry.contentId === 'forest-template-07-a'
     );
 
     assert.equal(
       activeRelease.catalogReleaseId,
-      'battle-map-v3-forest-pilot-2026-07-30-r6'
+      'battle-map-v3-forest-pilot-2026-07-30-r16'
     );
     assert.deepEqual(activeMap, {
-      contentId: 'forest-template-01-b',
-      contentVersion: 12,
-      path: 'battle-maps/compiled/forest/forest-template-01-b.v12.json',
+      contentId: 'forest-template-07-a',
+      contentVersion: 8,
+      path: 'battle-maps/compiled/forest/forest-template-07-a.v8.json',
       fullHash: map.hashes.fullHash
     });
     assert.equal(map.battleMapSchemaVersion, 3);
     assert.equal(map.terrainGenerationVersion, 3);
-    assert.equal(map.contentVersion, 12);
+    assert.equal(map.contentVersion, 8);
     assert.equal(map.hashes.fullHash, activeMap.fullHash);
 
     assert.equal(
@@ -302,7 +302,7 @@ describe('BattleMapSession', () => {
     );
 
     const snapshot = createBattleStateSnapshotV1({
-      battleId: 'active-forest-v12-session',
+      battleId: 'active-forest-r16-session',
       stateRevision: 1,
       battleMap: map,
       mutableState: mutable()

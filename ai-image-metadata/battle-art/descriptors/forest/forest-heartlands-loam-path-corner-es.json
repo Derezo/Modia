@@ -21,7 +21,7 @@
       0
     ]
   },
-  "status": "draft",
+  "status": "compiled",
   "promptProfile": {
     "id": "battle-art-family-v2",
     "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
@@ -34,12 +34,87 @@
       "sha256": "sha256:c0277f2744dff9adb241a9ab5240b709d3d91ca2d0e78e2b83bf863263a358cd"
     }
   ],
-  "generationPrompt": "Edit Image 1 only and treat it as the exact layout target, not loose inspiration. Preserve Image 1's full 256-by-128 canvas and framing; the route subject, not the output canvas, occupies its 190-by-65 box at x=33..222 and y=53..117. Preserve its outer contour, shallow E-to-S trajectory, endpoint positions, crown height, rounded bend, and every exterior background position. Repaint only its surface materials in crisp orthographic 16-bit style: warm ochre loam, warm meadow grass, sparse bluebells, oak leaf litter, and small cream-gray stones in dappled late-morning light. The sole geometry exception is to shave back only the inner edge of the broad crown and mid-arms until their thickness matches the narrow seam-tip thickness of both arms; keep both seam tips and the entire outer contour fixed, and blend the correction smoothly through the bend. Keep all decoration sparse and attached to the route. Use one perfectly flat #ff00ff background. Add no terrain platform, props, side faces, shadows, holes, detached pixels, text, frame, or alternate variant.",
+  "generationPrompt": "Edit Image 1 as the exact layout target. Preserve Image 1's full 256-by-128 canvas and framing; the route subject occupies its 190-by-65 box at x=33..222 and y=53..117. Keep the convex outer contour, E-to-S trajectory, endpoint centers, and rounded bend. Redraw only the inner contour and the inner edges of both seam tips so the full visible route band is a nearly constant 34–36 pixels wide at the E and S 50%, 75%, and 100% samples. Widen each narrow seam tip inward by about 8 pixels without moving its endpoint center or outer edge; shave the broad crown and mid-arm inner edges inward by about 3–5 pixels; blend smoothly through the bend. No required sample may be thinner than 32 pixels or thicker than 38 pixels. Repaint only its surface in crisp orthographic 16-bit style: warm ochre loam, meadow grass, and sparse bluebells in dappled late-morning light. Keep decoration sparse and attached. Use one flat #ff00ff background. Add no terrain platform, side faces, shadows, holes, detached pixels, text, frame, or variant.",
   "rasterContract": {
     "schemaVersion": "battle-art-raster-contract-v1",
     "kind": "transparent-cutout",
     "minimumCoveredPermille": 10,
     "maximumCoveredPermille": 850
+  },
+  "directGeometryPrime": {
+    "schemaVersion": "battle-art-direct-geometry-prime-v1",
+    "sourceReferenceId": "forest-borderwood-approved-route-corner-es-v1",
+    "sourceSha256": "sha256:c0277f2744dff9adb241a9ab5240b709d3d91ca2d0e78e2b83bf863263a358cd",
+    "topology": "corner-es",
+    "canvas": {
+      "width": 256,
+      "height": 128
+    },
+    "alphaThreshold": 240,
+    "anchor": {
+      "x": 128,
+      "y": 64
+    },
+    "subjectBounds": {
+      "x": 33,
+      "y": 53,
+      "width": 190,
+      "height": 65
+    },
+    "coveragePermille": 208,
+    "armSampleCenters": [
+      {
+        "direction": "e",
+        "percent": 50,
+        "x": 160,
+        "y": 80
+      },
+      {
+        "direction": "e",
+        "percent": 75,
+        "x": 176,
+        "y": 88
+      },
+      {
+        "direction": "e",
+        "percent": 100,
+        "x": 192,
+        "y": 96
+      },
+      {
+        "direction": "s",
+        "percent": 50,
+        "x": 96,
+        "y": 80
+      },
+      {
+        "direction": "s",
+        "percent": 75,
+        "x": 80,
+        "y": 88
+      },
+      {
+        "direction": "s",
+        "percent": 100,
+        "x": 64,
+        "y": 96
+      }
+    ],
+    "apexTopProfile": {
+      "xStart": 112,
+      "xStep": 4,
+      "alpha240Y": [
+        56,
+        56,
+        55,
+        55,
+        55,
+        55,
+        55,
+        55,
+        56
+      ]
+    }
   },
   "canvas": {
     "width": 256,
@@ -80,9 +155,18 @@
   },
   "content": {
     "version": 9,
-    "sourceSha256": null,
-    "runtimeSha256": null,
-    "immutableUrl": null
+    "sourceSha256": "sha256:3a8e8d244323ab90c55d72fff5e083b46ea3b7c8ba50956e76cfdbe91055a1c2",
+    "runtimeSha256": "sha256:9744551fc5c78f8111dda7479fc4fa6807c8877af36d4c19afa6a5cb925c14e8",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v10/forest/route-transition/forest-heartlands-loam-path-corner-es/v9/9744551fc5c78f8111dda7479fc4fa6807c8877af36d4c19afa6a5cb925c14e8.webp"
   },
-  "source": null
+  "source": {
+    "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-es/result.json",
+    "imagePath": "ai-image-metadata/battle-art/sources/forest/forest-heartlands-loam-path-corner-es/v9/3a8e8d244323ab90c55d72fff5e083b46ea3b7c8ba50956e76cfdbe91055a1c2.png",
+    "imageSha256": "sha256:3a8e8d244323ab90c55d72fff5e083b46ea3b7c8ba50956e76cfdbe91055a1c2",
+    "width": 256,
+    "height": 128,
+    "format": "png",
+    "reviewer": "codex-v3-heartlands-art-review",
+    "approvedAt": "2026-08-04T07:46:42.259Z"
+  }
 }

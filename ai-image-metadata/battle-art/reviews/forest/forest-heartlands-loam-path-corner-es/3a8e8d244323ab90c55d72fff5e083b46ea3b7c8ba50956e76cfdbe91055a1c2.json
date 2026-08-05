@@ -1,0 +1,88 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v3",
+  "theme": "forest",
+  "familyId": "forest-heartlands-loam-path-corner-es",
+  "decision": "approved",
+  "reviewer": "codex-v3-heartlands-art-review",
+  "reason": "Approved after visual inspection of the immutable revalidated raw: the shallow corner-es arch, endpoint alignment, solid JSON-relative apex core, width metrics, transparency, and Heartlands loam/verge treatment are release-ready.",
+  "reviewedAt": "2026-08-04T07:46:42.259Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-corner-es.json",
+    "sha256": "sha256:4ccbeee4b810bd48de3207e278884db653f9789f0b34696ccd4c632c138806a4",
+    "contentVersion": 9
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-es/result.json",
+      "bytes": 3357,
+      "sha256": "sha256:76ade58e1f1aa3fbb67fea02b6fcb57eff4da21b46ce59aaa8f62daa12c8c8f1"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-corner-es/candidate.png",
+      "bytes": 22438,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:3a8e8d244323ab90c55d72fff5e083b46ea3b7c8ba50956e76cfdbe91055a1c2"
+    },
+    "derivation": {
+      "schemaVersion": "battle-art-route-direct-preparation-v1",
+      "strategy": "exact-aspect-whole-image-normalize-v1",
+      "source": {
+        "path": "ai-image-metadata/battle-art/generated-artifacts/forest/forest-heartlands-loam-path-corner-es/397c0e4ddcf75454d133fee2f4ddffbf5c322d32a4e6d859eed465e0e20552fc.png",
+        "bytes": 1337542,
+        "width": 1774,
+        "height": 887,
+        "format": "png",
+        "sha256": "sha256:397c0e4ddcf75454d133fee2f4ddffbf5c322d32a4e6d859eed465e0e20552fc"
+      },
+      "resize": {
+        "mode": "exact-aspect-whole-image",
+        "applied": true,
+        "kernel": "lanczos3",
+        "targetWidth": 256,
+        "targetHeight": 128
+      },
+      "normalization": {
+        "operation": "normalize-generated-raster-v1",
+        "format": "png"
+      },
+      "finalSha256": "sha256:3a8e8d244323ab90c55d72fff5e083b46ea3b7c8ba50956e76cfdbe91055a1c2"
+    },
+    "origin": {
+      "kind": "failed-attempt-revalidation-v1",
+      "failureRecord": {
+        "path": "ai-image-metadata/battle-art/generated-artifacts/forest/forest-heartlands-loam-path-corner-es/failures/04ff0d33d42588c5f231dc1b9a0b9e717bbfa8d8b2b2f847a8f3f2773c30b0cd.json",
+        "sha256": "sha256:d5a4572cb6c3ab7815c07a347bb7c9e3c98b0b991b8290623aa551f31d535ebf",
+        "fullHash": "sha256:04ff0d33d42588c5f231dc1b9a0b9e717bbfa8d8b2b2f847a8f3f2773c30b0cd"
+      },
+      "raw": {
+        "path": "ai-image-metadata/battle-art/generated-artifacts/forest/forest-heartlands-loam-path-corner-es/397c0e4ddcf75454d133fee2f4ddffbf5c322d32a4e6d859eed465e0e20552fc.png",
+        "bytes": 1337542,
+        "width": 1774,
+        "height": 887,
+        "format": "png",
+        "sha256": "sha256:397c0e4ddcf75454d133fee2f4ddffbf5c322d32a4e6d859eed465e0e20552fc"
+      },
+      "originalDescriptor": {
+        "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-loam-path-corner-es.json",
+        "sha256": "sha256:4ccbeee4b810bd48de3207e278884db653f9789f0b34696ccd4c632c138806a4",
+        "contentVersion": 9
+      },
+      "validationDescriptorSha256": "sha256:4ccbeee4b810bd48de3207e278884db653f9789f0b34696ccd4c632c138806a4"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-borderwood-approved-route-corner-es-v1",
+        "path": "ai-image-metadata/battle-art/sources/forest/forest-borderwood-dirt-path-corner-es/v1/c0277f2744dff9adb241a9ab5240b709d3d91ca2d0e78e2b83bf863263a358cd.png",
+        "sha256": "sha256:c0277f2744dff9adb241a9ab5240b709d3d91ca2d0e78e2b83bf863263a358cd"
+      }
+    ]
+  },
+  "fullHash": "sha256:9ee428e83f579d8611c82e33eeae22601d185e7a22d8b7a8adc457d08c2e7a18"
+}

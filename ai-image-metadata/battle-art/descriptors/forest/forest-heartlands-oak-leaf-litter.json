@@ -21,7 +21,7 @@
       0
     ]
   },
-  "status": "approved",
+  "status": "compiled",
   "promptProfile": {
     "id": "battle-art-family-v2",
     "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
@@ -81,8 +81,8 @@
   "content": {
     "version": 1,
     "sourceSha256": "sha256:32e6ff2cf044c64e41f24ee515c82b1ac3f3c29ff368c6341f6c08793e3abde7",
-    "runtimeSha256": null,
-    "immutableUrl": null
+    "runtimeSha256": "sha256:1ffcf3225ab0c46ae0564919f304c48ec9bfbc09b7cd7d418db2a2ff93db177d",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v10/forest/nonblocking-decoration/forest-heartlands-oak-leaf-litter/v1/1ffcf3225ab0c46ae0564919f304c48ec9bfbc09b7cd7d418db2a2ff93db177d.webp"
   },
   "source": {
     "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-oak-leaf-litter/result.json",

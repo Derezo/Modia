@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "battle-map-v3-visual-approval-v2",
+  "decision": "approved",
+  "reviewer": "codex-r16-race-hardened-production-visual-review",
+  "reason": "Exact v6 render approved: route branches and elevation bands remain coherent, the west approach and formation fields are unobstructed, perimeter vegetation frames play, and no collision, seam, crop, or occlusion regression is present.",
+  "checklistVersion": 2,
+  "theme": "forest",
+  "templateId": "forest-template-05",
+  "contentId": "forest-template-05-c",
+  "contentVersion": 6,
+  "mapPath": "battle-maps/compiled/forest/forest-template-05-c.v6.json",
+  "hashes": {
+    "authoritativeHash": "sha256:ad43a6ae5fbb0430168e093bad3e786675fa7dfc4747ed48952dee99c2e2b33d",
+    "fullHash": "sha256:7f1afbace02d1d19ae0e028da7600f05978667dfad152ed920aeb02a76e62fad",
+    "visualHash": "sha256:008e28cef638b1bd65b654b6d404d662dce8265f847bf0c445a799dfd1bec3da"
+  },
+  "sourceSidecar": {
+    "path": "ai-image-metadata/battle-maps/templates/forest/forest-template-05.json",
+    "fullHash": "sha256:45f407d629c40a42954a1ae97b0c5d835b17519e8e6ad9159a8a04abdb3b2c50"
+  },
+  "blueprint": {
+    "id": "forest-template-05-c",
+    "fullHash": "sha256:1f93970fc5e3378e7847390aebba73e94eb874b57fbe1b29a52e26dba70081e5",
+    "approvalIndexFullHash": "sha256:e6d3946071fe35f86cdf37abf8731bd7029a3dca783bc76ab1a07097a7908331"
+  },
+  "renderProfile": {
+    "id": "forest-iron-depths-borderwood-v5",
+    "path": "battle-maps/render-profiles/forest-borderwood-v5.json",
+    "fullHash": "sha256:e35459e124e6bcc16e6008d796f5feb1fcfc76b9d0f9b1a5c11e9f1c54ecd40e"
+  },
+  "tileCatalog": {
+    "id": "forest-borderwood-v5-tiles",
+    "version": 1,
+    "path": "battle-maps/tile-catalogs/forest-borderwood-v5.json",
+    "fullHash": "sha256:9c32448ffa019e2fd90442deb8b91545211e0ee5d4e8f8b8f2f5abe9aad7c1d7"
+  },
+  "assetBundle": {
+    "id": "battle-art-descriptors-2026-07-30",
+    "version": 7,
+    "path": "ai-image-metadata/battle-art/releases/battle-art-descriptors-2026-07-30.v7.json",
+    "manifestFullHash": "sha256:f6af2574a315cae7ee0b15a090a6c0919274fab9cb5e7f90aae76f16954008be"
+  },
+  "capabilityReport": {
+    "schemaVersion": "battle-map-v3-capability-report-v1",
+    "mapFullHash": "sha256:7f1afbace02d1d19ae0e028da7600f05978667dfad152ed920aeb02a76e62fad",
+    "bossCapable": true,
+    "competitiveParity": false,
+    "parityCases": null
+  },
+  "screenshot": {
+    "path": "ai-image-metadata/battle-maps/review/forest/forest-template-05/forest-template-05-c/forest-template-05-c.v6.7f1afbace02d.png",
+    "bytes": 703805,
+    "width": 1088,
+    "height": 703,
+    "format": "png",
+    "sha256": "sha256:aa7e1a6e9208dd39182d0b309fed5c6933ac179f4f053efe5a62b2b3d9b27875"
+  }
+}

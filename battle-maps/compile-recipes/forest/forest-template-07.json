@@ -1,0 +1,215 @@
+{
+  "schemaVersion": "battle-map-v3-compile-recipe-v1",
+  "theme": "forest",
+  "templateId": "forest-template-07",
+  "sourceSidecar": {
+    "path": "ai-image-metadata/battle-maps/templates/forest/forest-template-07.json",
+    "fullHash": "sha256:679d2a63d2aeb330cfa8f95f909067a05dcbc2f095b1a902ae22d2e3a6364849"
+  },
+  "blueprintApprovalIndex": {
+    "path": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-07/approvals.json",
+    "fullHash": "sha256:d483614b3f889d362e93e02940aa075d659ddb335cc4d6565447900c23e284f4"
+  },
+  "renderProfile": {
+    "path": "battle-maps/render-profiles/forest-heartlands-fallen-oak-v1.json",
+    "fullHash": "sha256:36a3b37cbc3f7220718166d6684363080092819afb11fcab04d77b007811ccfd"
+  },
+  "tileCatalog": {
+    "path": "battle-maps/tile-catalogs/forest-heartlands-fallen-oak-v1.json",
+    "fullHash": "sha256:76e14aa45c8255c285cf1251c134989135091e7f7cba240912836773536ee8f6"
+  },
+  "assetBundle": {
+    "path": "ai-image-metadata/battle-art/runtime-asset-bundle.json",
+    "manifestFullHash": "sha256:1f456f81c986327cc2615a7450590a0f3a1aea46e727c18ca3ed3cd0e8baca29"
+  },
+  "compiler": {
+    "id": "template-map-compiler",
+    "version": 5,
+    "fullHash": "sha256:c8794c02d8978b56ea0ebcc1ea7947db94ae619c01c6feae3fe73efe8c8dfaa1",
+    "sourceFiles": [
+      {
+        "path": "shared/battleMap/canonicalJson.js",
+        "sha256": "sha256:bf68caaa185e4e93126b35d5e4a101458ae516aeb517672c099200b67aebc03a"
+      },
+      {
+        "path": "shared/battleMap/v3/blueprint.js",
+        "sha256": "sha256:5e2df47ba716d50cc51a9ccc5bdab0f8b4f11aa9df9e7f1b034b76f23f93a53c"
+      },
+      {
+        "path": "shared/battleMap/v3/compiler.js",
+        "sha256": "sha256:1f08c270f2681cddfa55930f44ef61380c1768ebba9a86f52500d648a7d738fe"
+      },
+      {
+        "path": "shared/battleMap/v3/hashes.js",
+        "sha256": "sha256:2caabc9b8c2dd156fa6e80829ecb58548e3971434ce4d63b7d628ce342d9a659"
+      },
+      {
+        "path": "shared/battleMap/v3/schema.js",
+        "sha256": "sha256:860009f59b4f149cc7e2d7ce92ba16662e3c9d3ad9baa62923290a425ede208b"
+      },
+      {
+        "path": "shared/battleMap/v3/traversalView.js",
+        "sha256": "sha256:085b97e05a4cf19c88e76453ea0268c1e9f2fec641e60a4476329184451692b9"
+      },
+      {
+        "path": "shared/battleMap/v3/validation.js",
+        "sha256": "sha256:215ea564b00bcefcb55edcfb17d61d3e9cede29c8939dab6048343fb738cc157"
+      },
+      {
+        "path": "shared/mapgen/v1/obstacles.js",
+        "sha256": "sha256:c91012d4e1647823642f598bd4a69562a8e6d8454e730999366369149ef19950"
+      },
+      {
+        "path": "shared/mapgen/v1/terrain.js",
+        "sha256": "sha256:5bdbb0505b99b1c0519222ef00efea4ca665d4c4f662530387574cc9802e395a"
+      },
+      {
+        "path": "shared/obstacles.js",
+        "sha256": "sha256:ff48da2a04053cb2ed19840a972d037967bb2035cf62806d83eb83976a76f49f"
+      },
+      {
+        "path": "shared/terrain.js",
+        "sha256": "sha256:4817f39b92c3227c845ccac5ec68e513130679939111cd4911e031d3c0c333d4"
+      },
+      {
+        "path": "shared/traversal.js",
+        "sha256": "sha256:83d7fadd44f8db05b210222bc107fb33fee46d6eff5b34bcc32c1f1a421f29f6"
+      }
+    ]
+  },
+  "validator": {
+    "id": "battle-map-v3-validator",
+    "version": 5,
+    "fullHash": "sha256:1e08db3b081e67501f933db2b913db5e22001a2e86c7f194d61127f802752a34",
+    "sourceFiles": [
+      {
+        "path": "package-lock.json",
+        "sha256": "sha256:83ff722e6c05213d8b9993625af258d8c1c61c90a5ca11669d31166454a0f47b"
+      },
+      {
+        "path": "scripts/battle-art/candidate-lock.mjs",
+        "sha256": "sha256:f6de23389aeb655ac92c81448544fb570aabbcfa4e3609e73d0bed39ee4b80f0"
+      },
+      {
+        "path": "scripts/battle-art/lifecycle.mjs",
+        "sha256": "sha256:806d10179994be4cae0dc101e2faf9eb40a6cbbbec9f8decce979cb875977eab"
+      },
+      {
+        "path": "scripts/battle-art/raster-contract.mjs",
+        "sha256": "sha256:3fd59d0eae4616b0faf1f3cdee0380c535c2c90ddf9900e6f6b8071ae3b7b67b"
+      },
+      {
+        "path": "scripts/battle-maps/blueprint-candidate-lifecycle.mjs",
+        "sha256": "sha256:27597fdc8ecad60b4d9dbdbce824edc708141712f9788cfd295fae2e51c56194"
+      },
+      {
+        "path": "scripts/battle-maps/blueprint-v2-semantic-contract.mjs",
+        "sha256": "sha256:877baea348b22ddaa538acba1463026cde94fa2738e599a828cff1ac0dfed8b6"
+      },
+      {
+        "path": "scripts/battle-maps/content-release-lifecycle.mjs",
+        "sha256": "sha256:0454810afddaf00fb58c1701bdc299b1181fe8bc2f7a9304e53fc81528d9b259"
+      },
+      {
+        "path": "scripts/battle-maps/persistent-exclusive-lock.mjs",
+        "sha256": "sha256:7e08aede155c667d52cb1812e246fb9c91ac32ea2bbb355155ee73a723c04b88"
+      },
+      {
+        "path": "scripts/battle-maps/source-template-lifecycle.mjs",
+        "sha256": "sha256:673293b7a22e36f7b8fa834590eec9a274da429c48fd668f68eb728156c09edd"
+      },
+      {
+        "path": "shared/battleMap/BattleMapV3EcologyProfiles.js",
+        "sha256": "sha256:6c14cd4f5f6e35ad309321afdb507473e24d830894130260b97ba880f214a07f"
+      },
+      {
+        "path": "shared/battleMap/BattleMapV3Resolvers.js",
+        "sha256": "sha256:23e1daf301557cdb4066b04cee6930c63ddee9a5730d32968b0be2e6ef03d7c6"
+      },
+      {
+        "path": "shared/battleMap/BattleMapV3Selector.js",
+        "sha256": "sha256:29f6691f7b19288ab404c0a459a28de714a858650fdd562159b670a3c053e2fd"
+      },
+      {
+        "path": "shared/battleMap/canonicalJson.js",
+        "sha256": "sha256:bf68caaa185e4e93126b35d5e4a101458ae516aeb517672c099200b67aebc03a"
+      },
+      {
+        "path": "shared/battleMap/v3/blueprint.js",
+        "sha256": "sha256:5e2df47ba716d50cc51a9ccc5bdab0f8b4f11aa9df9e7f1b034b76f23f93a53c"
+      },
+      {
+        "path": "shared/battleMap/v3/catalog.js",
+        "sha256": "sha256:b218fe2cabe47c9816f8d766168acce04a28cc8645ad7722afbb2192c43a653c"
+      },
+      {
+        "path": "shared/battleMap/v3/compiler.js",
+        "sha256": "sha256:1f08c270f2681cddfa55930f44ef61380c1768ebba9a86f52500d648a7d738fe"
+      },
+      {
+        "path": "shared/battleMap/v3/hashes.js",
+        "sha256": "sha256:2caabc9b8c2dd156fa6e80829ecb58548e3971434ce4d63b7d628ce342d9a659"
+      },
+      {
+        "path": "shared/battleMap/v3/index.js",
+        "sha256": "sha256:debcf0583f1ee67606fbbdbea788b0059283f83c8c85239ae602cc09553e03f1"
+      },
+      {
+        "path": "shared/battleMap/v3/schema.js",
+        "sha256": "sha256:860009f59b4f149cc7e2d7ce92ba16662e3c9d3ad9baa62923290a425ede208b"
+      },
+      {
+        "path": "shared/battleMap/v3/spawnMatcher.js",
+        "sha256": "sha256:9997fca8dcea8623c5ee84fafcb3d1a4f3b28d1cb2694c80ad6e295319eddcf3"
+      },
+      {
+        "path": "shared/battleMap/v3/traversalView.js",
+        "sha256": "sha256:085b97e05a4cf19c88e76453ea0268c1e9f2fec641e60a4476329184451692b9"
+      },
+      {
+        "path": "shared/battleMap/v3/validation.js",
+        "sha256": "sha256:215ea564b00bcefcb55edcfb17d61d3e9cede29c8939dab6048343fb738cc157"
+      },
+      {
+        "path": "shared/mapgen/v1/obstacles.js",
+        "sha256": "sha256:c91012d4e1647823642f598bd4a69562a8e6d8454e730999366369149ef19950"
+      },
+      {
+        "path": "shared/mapgen/v1/terrain.js",
+        "sha256": "sha256:5bdbb0505b99b1c0519222ef00efea4ca665d4c4f662530387574cc9802e395a"
+      },
+      {
+        "path": "shared/obstacles.js",
+        "sha256": "sha256:ff48da2a04053cb2ed19840a972d037967bb2035cf62806d83eb83976a76f49f"
+      },
+      {
+        "path": "shared/terrain.js",
+        "sha256": "sha256:4817f39b92c3227c845ccac5ec68e513130679939111cd4911e031d3c0c333d4"
+      },
+      {
+        "path": "shared/traversal.js",
+        "sha256": "sha256:83d7fadd44f8db05b210222bc107fb33fee46d6eff5b34bcc32c1f1a421f29f6"
+      }
+    ]
+  },
+  "maps": [
+    {
+      "blueprintId": "forest-template-07-a",
+      "contentId": "forest-template-07-a",
+      "contentVersion": 8,
+      "templateRevision": 1
+    },
+    {
+      "blueprintId": "forest-template-07-b",
+      "contentId": "forest-template-07-b",
+      "contentVersion": 8,
+      "templateRevision": 1
+    },
+    {
+      "blueprintId": "forest-template-07-c",
+      "contentId": "forest-template-07-c",
+      "contentVersion": 8,
+      "templateRevision": 1
+    }
+  ]
+}

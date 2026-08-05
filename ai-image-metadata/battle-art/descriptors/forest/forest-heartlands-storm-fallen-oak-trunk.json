@@ -1,0 +1,114 @@
+{
+  "schemaVersion": "battle-art-family-descriptor-v2",
+  "id": "forest-heartlands-storm-fallen-oak-trunk",
+  "theme": "forest",
+  "category": "blocking-obstacle",
+  "familyGroup": "forest-heartlands-storm-fallen-oak-trunk",
+  "variantId": "diagonal-root-join",
+  "capabilities": {
+    "direction": null,
+    "routeTopology": null,
+    "surfaceVariant": null,
+    "ecologyProfile": "forest-heartlands-woodland",
+    "tierBands": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "heightDeltas": [
+      0
+    ]
+  },
+  "status": "compiled",
+  "promptProfile": {
+    "id": "battle-art-family-v2",
+    "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+    "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+  },
+  "styleReferences": [
+    {
+      "id": "forest-source-template-01",
+      "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+      "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+    }
+  ],
+  "generationPrompt": "Create exactly one seam-safe orthographic isometric forest blocking-obstacle asset named forest-heartlands-storm-fallen-oak-trunk for ecology profile forest-heartlands-woodland; tier bands 1, 2, 3, 4, 5. Author one coherent transparent cutout spanning the declared 4-by-2 footprint and include only the declared family content. Regional visual vocabulary: Heartlands Woodland uses a coherent pastoral forest of mature broad-canopy oak, field maple, and flowering hawthorn; warm meadow grass and bluebells; rounded cream-gray fieldstone; warm ochre loam and oak leaf litter; and dappled late-morning light. Keep this species mix, material palette, scale, and lighting explicitly consistent. Depict one dominant, massive storm-fallen ancient oak trunk running coherently along the footprint diagonal through solid collision cells (0,0), (1,0), (2,1), and (3,1), with an unbroken taper and readable ancient furrowed oak bark. At one end, visibly join that same trunk into a large exposed root plate: the trunk and root plate must read as one uprooted tree, not two separate props. Add only restrained broken limb stubs, sparse attached oak leaves, moss, and splintered storm damage that preserve the long diagonal silhouette. The root plate may hold a small amount of clinging soil between roots, but render no ground plane, grass base, soil diamond, shadow carpet, terrain patch, or other baked ground beneath the object. Keep all non-object pixels transparent, use one clean grounded isometric cutout, and do not split, duplicate, crop, or frame the trunk. Do not add a baked backdrop, black void, unrelated terrain wall, presentation frame, standing tree, or disconnected root mass.",
+  "rasterContract": {
+    "schemaVersion": "battle-art-raster-contract-v1",
+    "kind": "transparent-cutout",
+    "minimumCoveredPermille": 10,
+    "maximumCoveredPermille": 850
+  },
+  "canvas": {
+    "width": 768,
+    "height": 384
+  },
+  "placement": {
+    "pivot": {
+      "x": 384,
+      "y": 336
+    },
+    "anchor": {
+      "x": 384,
+      "y": 336
+    },
+    "footprint": {
+      "x": 0,
+      "y": 0,
+      "width": 4,
+      "height": 2
+    },
+    "collision": {
+      "kind": "solid",
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 0
+        },
+        {
+          "x": 2,
+          "y": 1
+        },
+        {
+          "x": 3,
+          "y": 1
+        }
+      ]
+    },
+    "drawBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 768,
+      "height": 384
+    },
+    "occlusionBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 768,
+      "height": 288
+    },
+    "stratum": "obstacle"
+  },
+  "content": {
+    "version": 1,
+    "sourceSha256": "sha256:84091b03af23586cfdada732a9f1f9785b0a1c279170f1d8a3d08d9a3fb996ba",
+    "runtimeSha256": "sha256:dfdc9171e5403e3609df6537b9d03baecf29130b3c5aa7e20f8e8bb3d430abd7",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v10/forest/blocking-obstacle/forest-heartlands-storm-fallen-oak-trunk/v1/dfdc9171e5403e3609df6537b9d03baecf29130b3c5aa7e20f8e8bb3d430abd7.webp"
+  },
+  "source": {
+    "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-storm-fallen-oak-trunk/result.json",
+    "imagePath": "ai-image-metadata/battle-art/sources/forest/forest-heartlands-storm-fallen-oak-trunk/v1/84091b03af23586cfdada732a9f1f9785b0a1c279170f1d8a3d08d9a3fb996ba.png",
+    "imageSha256": "sha256:84091b03af23586cfdada732a9f1f9785b0a1c279170f1d8a3d08d9a3fb996ba",
+    "width": 768,
+    "height": 384,
+    "format": "png",
+    "reviewer": "codex-v3-template07-visual-assets",
+    "approvedAt": "2026-08-05T05:24:11.862Z"
+  }
+}

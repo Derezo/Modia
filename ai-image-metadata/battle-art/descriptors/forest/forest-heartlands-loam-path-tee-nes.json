@@ -21,7 +21,7 @@
       0
     ]
   },
-  "status": "approved",
+  "status": "compiled",
   "promptProfile": {
     "id": "battle-art-family-v2",
     "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
@@ -86,8 +86,8 @@
   "content": {
     "version": 1,
     "sourceSha256": "sha256:3c149484c1d8e32a84e785332b7691b2014b373058e04ce12192087241be2bd5",
-    "runtimeSha256": null,
-    "immutableUrl": null
+    "runtimeSha256": "sha256:17aa796fe7e83add97bedf2c985df4eda8431b822d9e7bee77f059bb74596d36",
+    "immutableUrl": "/assets/battle-map-v3/battle-art-descriptors-2026-07-30/v10/forest/route-transition/forest-heartlands-loam-path-tee-nes/v1/17aa796fe7e83add97bedf2c985df4eda8431b822d9e7bee77f059bb74596d36.webp"
   },
   "source": {
     "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-loam-path-tee-nes/result.json",

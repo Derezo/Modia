@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "battle-map-blueprint-approval-v2",
+  "id": "forest-template-06-c",
+  "theme": "forest",
+  "templateId": "forest-template-06",
+  "decision": "approved",
+  "reviewer": "codex-v3-heartlands-blueprint-review",
+  "blueprintPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-06/forest-template-06-c.json",
+  "blueprintFileSha256": "sha256:1413b2852a1f52526eadc9edfe9cd1719d0feecb44d7dc86491cf3a8da3384fc",
+  "blueprintFullHash": "sha256:b24a3295f1becf722df64d04cea0a008d30df0cf759c36a40b993ffeb69c86e3",
+  "sourceImageSha256": "sha256:c622b9b0def37497cf12a96013c72cfff405ad15aaae2955b5a8820a6f7e9efd",
+  "promptProfile": {
+    "id": "map-blueprint-v2",
+    "path": "ai-image-metadata/battle-maps/prompts/map-blueprint-v2.json",
+    "sha256": "sha256:d9fd841812bcc9a4713d3ac8b1c81715f359e55d55098589f8970650fed7cdae"
+  },
+  "reason": "The C sibling preserves the validated Heartlands formation and overlook contracts while adding the explicit western flank branch through the southern hawthorn fork, a distinct mixed slope/stair transition pattern, and independent lower formation placement; both loop crossings, connectivity, capacity, and renderer closure remain valid.",
+  "fullHash": "sha256:c4315cdd4d217a476f326199bca25aeaae83d10a9a3ca5590a2d0fde4ca91f8b"
+}

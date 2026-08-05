@@ -1,4 +1,5 @@
 const LEGACY_BLUEPRINT_TEMPLATE_PATTERN = /-template-(?:01|02)$/;
+const TEMPLATE_07_ID = 'forest-template-07';
 // Eight consecutive adjacency rungs occupy one quarter of the fixed 32-cell
 // V2 canvas and read as a parallel ladder. Seven or fewer preserves room for
 // compact figure-eight crossings and interlocking junctions.
@@ -30,6 +31,11 @@ function sameCellSet(left, right) {
 }
 
 function routeIntentRequiresConnectedCenterlines(routeIntent) {
+  if (
+    routeIntent !== null
+    && typeof routeIntent === 'object'
+    && Object.hasOwn(routeIntent, 'minimumApproachesPerFormation')
+  ) return true;
   const text = JSON.stringify(routeIntent).toLowerCase();
   return text.includes('interlocking loops') || text.includes('figure-eight');
 }
@@ -41,6 +47,100 @@ function cardinalNeighbors(cell) {
     `${cell.x},${cell.y - 1}`,
     `${cell.x},${cell.y + 1}`
   ];
+}
+
+export function passableTraversalComponents(blueprint) {
+  const blockedCellKeys = new Set(
+    blueprint.obstacles.flatMap(obstacle => obstacle.cells).map(cellKey)
+  );
+  const remaining = new Set();
+  for (let y = 0; y < blueprint.dimensions.height; y += 1) {
+    for (let x = 0; x < blueprint.dimensions.width; x += 1) {
+      const key = `${x},${y}`;
+      if (
+        blueprint.playableMask[y][x] === true
+        && !blockedCellKeys.has(key)
+      ) remaining.add(key);
+    }
+  }
+  const cardinalConnectionsByEdge = new Map(
+    blueprint.connections
+      .filter(connection => (
+        Math.abs(connection.from.x - connection.to.x)
+          + Math.abs(connection.from.y - connection.to.y) === 1
+      ))
+      .map(connection => [
+        undirectedEdgeKey(connection.from, connection.to),
+        connection
+      ])
+  );
+  const components = [];
+  while (remaining.size > 0) {
+    const first = remaining.values().next().value;
+    remaining.delete(first);
+    const queue = [first];
+    const cells = [];
+    while (queue.length > 0) {
+      const currentKey = queue.pop();
+      const [x, y] = currentKey.split(',').map(Number);
+      const current = { x, y };
+      cells.push(current);
+      for (const adjacentKey of cardinalNeighbors(current)) {
+        if (!remaining.has(adjacentKey)) continue;
+        const [adjacentX, adjacentY] = adjacentKey.split(',').map(Number);
+        const adjacent = { x: adjacentX, y: adjacentY };
+        const connection = cardinalConnectionsByEdge.get(
+          undirectedEdgeKey(current, adjacent)
+        );
+        const level =
+          blueprint.elevation[y][x]
+            === blueprint.elevation[adjacentY][adjacentX];
+        if (level) {
+          if (
+            connection
+            && (
+              connection.traversable !== true
+              || connection.bidirectional !== true
+            )
+          ) continue;
+        } else if (
+          connection?.traversable !== true
+          || connection.bidirectional !== true
+        ) {
+          continue;
+        }
+        remaining.delete(adjacentKey);
+        queue.push(adjacentKey);
+      }
+    }
+    components.push(cells);
+  }
+  return components.sort((left, right) => right.length - left.length);
+}
+
+function assertTemplate07PassableTraversalConnected(blueprint) {
+  const components = passableTraversalComponents(blueprint);
+  if (components.length === 1) return;
+  const isolatedCells = components
+    .filter(component => component.length === 1)
+    .map(component => cellKey(component[0]));
+  fail(
+    'Template-07 passable traversal must form one connected component using '
+      + 'cardinal same-level adjacency or an exact declared traversable '
+      + 'bidirectional cardinal elevation connection; component sizes '
+      + `[${components.map(component => component.length).join(', ')}]`
+      + (
+        isolatedCells.length === 0
+          ? ''
+          : `; isolated cells ${isolatedCells.join(', ')}`
+      )
+  );
+}
+
+function minimumManhattanDistance(cell, targets) {
+  return Math.min(...targets.map(target => (
+    Math.abs(cell.x - target.x) + Math.abs(cell.y - target.y)
+  )));
 }
 
 function assertCardinallyConnected(cells, message) {
@@ -108,12 +208,6 @@ function parallelRouteLadderLength(leftRoute, rightRoute) {
   );
 }
 
-function minimumManhattanDistance(cell, targets) {
-  return Math.min(...targets.map(target => (
-    Math.abs(cell.x - target.x) + Math.abs(cell.y - target.y)
-  )));
-}
-
 function addResidualEdge(graph, from, to, capacity) {
   const forward = { to, capacity, reverse: null };
   const reverse = { to: from, capacity: 0, reverse: forward };
@@ -130,7 +224,8 @@ function maximumVertexDisjointRoutePaths({
   routes,
   playerCells,
   opponentCells,
-  limit
+  limit,
+  orderedEndpoints
 }) {
   const routeCells = new Map();
   const routeEdges = new Map();
@@ -148,16 +243,21 @@ function maximumVertexDisjointRoutePaths({
     }
     const first = route.cells[0];
     const last = route.cells.at(-1);
-    const forwardDistance =
-      minimumManhattanDistance(first, playerCells)
-      + minimumManhattanDistance(last, opponentCells);
-    const reverseDistance =
-      minimumManhattanDistance(last, playerCells)
-      + minimumManhattanDistance(first, opponentCells);
-    const playerEndpoint = forwardDistance <= reverseDistance ? first : last;
-    const opponentEndpoint = forwardDistance <= reverseDistance ? last : first;
-    playerEndpoints.add(cellKey(playerEndpoint));
-    opponentEndpoints.add(cellKey(opponentEndpoint));
+    if (orderedEndpoints) {
+      playerEndpoints.add(cellKey(first));
+      opponentEndpoints.add(cellKey(last));
+    } else {
+      const forwardDistance =
+        minimumManhattanDistance(first, playerCells)
+        + minimumManhattanDistance(last, opponentCells);
+      const reverseDistance =
+        minimumManhattanDistance(last, playerCells)
+        + minimumManhattanDistance(first, opponentCells);
+      const playerEndpoint = forwardDistance <= reverseDistance ? first : last;
+      const opponentEndpoint = forwardDistance <= reverseDistance ? last : first;
+      playerEndpoints.add(cellKey(playerEndpoint));
+      opponentEndpoints.add(cellKey(opponentEndpoint));
+    }
   }
 
   const graph = new Map();
@@ -224,6 +324,9 @@ export function usesBlueprintV2SemanticContract(templateId) {
 }
 
 export function validateV2BlueprintSemanticContract(blueprint, sidecar) {
+  if (sidecar.id === TEMPLATE_07_ID) {
+    assertTemplate07PassableTraversalConnected(blueprint);
+  }
   const playerCells = blueprint.spawn.playerSlots.map(slot => slot.cell);
   const opponentCells =
     blueprint.spawn.opponentCandidates.map(candidate => candidate.cell);
@@ -246,6 +349,16 @@ export function validateV2BlueprintSemanticContract(blueprint, sidecar) {
   const requiredRouteCellKeys = new Set(
     requiredRoutes.flatMap(route => route.cells).map(cellKey)
   );
+  const regionIds = new Set(blueprint.regions.map(region => region.id));
+  const missingRequiredAreaIds = sidecar.topologyIntent.areas
+    .filter(area => area.required === true && !regionIds.has(area.id))
+    .map(area => area.id);
+  if (missingRequiredAreaIds.length > 0) {
+    fail(
+      'V2 blueprint requires region records for every required topology area; '
+        + `missing ${missingRequiredAreaIds.join(', ')}`
+    );
+  }
   const traversableConnections =
     blueprint.connections.filter(connection => connection.traversable);
   if (traversableConnections.length > sidecar.mapProfile.width) {
@@ -305,7 +418,10 @@ export function validateV2BlueprintSemanticContract(blueprint, sidecar) {
     }
   }
 
-  if (/-c$/.test(blueprint.candidateId)) {
+  if (
+    /-c$/.test(blueprint.candidateId)
+    && sidecar.routeIntent.minimumApproachesPerFormation < 3
+  ) {
     if (requiredRoutes.length < 3) {
       fail('V2 variant C requires at least three required route segments');
     }
@@ -377,6 +493,96 @@ export function validateV2BlueprintSemanticContract(blueprint, sidecar) {
   }
 
   if (routeIntentRequiresConnectedCenterlines(sidecar.routeIntent)) {
+    const minimumApproaches =
+      sidecar.routeIntent.minimumApproachesPerFormation;
+    if (!Number.isInteger(minimumApproaches) || minimumApproaches < 2) {
+      fail(
+        'V2 routeIntent.minimumApproachesPerFormation must be an integer '
+          + 'greater than or equal to 2'
+      );
+    }
+    const primaryRoutes = requiredRoutes.filter(route => route.kind === 'primary');
+    if (minimumApproaches >= 3 && primaryRoutes.length < minimumApproaches) {
+      fail(
+        `V2 route intent requires at least ${minimumApproaches} distinct required `
+          + 'primary formation-to-formation route records'
+      );
+    }
+    const playerCellKeys = new Set(playerCells.map(cellKey));
+    const opponentCellKeys = new Set(opponentCells.map(cellKey));
+    if (minimumApproaches >= 3) {
+      for (const route of primaryRoutes) {
+        const first = route.cells[0];
+        const last = route.cells.at(-1);
+        if (
+          !cellsIntersectOrCardinallyTouch([first], playerCellKeys)
+          || !cellsIntersectOrCardinallyTouch([last], opponentCellKeys)
+        ) {
+          fail(
+            `V2 required primary route ${route.id} must be ordered from an endpoint `
+              + 'that intersects or cardinally touches the player formation to an '
+              + 'endpoint that intersects or cardinally touches the opponent formation'
+          );
+        }
+      }
+      if (
+        new Set(primaryRoutes.map(route => cellKey(route.cells[0]))).size
+          !== primaryRoutes.length
+        || new Set(primaryRoutes.map(route => cellKey(route.cells.at(-1)))).size
+          !== primaryRoutes.length
+      ) {
+        fail(
+          'V2 required primary formation-to-formation route records must use '
+            + 'distinct ordered player and opponent endpoints'
+        );
+      }
+      for (let leftIndex = 0; leftIndex < primaryRoutes.length; leftIndex += 1) {
+        const left = primaryRoutes[leftIndex];
+        const leftInternalCells = new Set(left.cells.slice(1, -1).map(cellKey));
+        for (
+          let rightIndex = leftIndex + 1;
+          rightIndex < primaryRoutes.length;
+          rightIndex += 1
+        ) {
+          const right = primaryRoutes[rightIndex];
+          if (
+            right.cells.slice(1, -1).some(cell =>
+              leftInternalCells.has(cellKey(cell))
+            )
+          ) {
+            fail(
+              `V2 required primary routes ${left.id} and ${right.id} must be `
+                + 'internally vertex-disjoint route families'
+            );
+          }
+        }
+      }
+      const primaryRouteCellKeys = new Set(
+        primaryRoutes.flatMap(route => route.cells).map(cellKey)
+      );
+      for (const route of requiredRoutes.filter(
+        record => record.kind === 'secondary'
+      )) {
+        const attachedCellKeys = new Set([
+          ...primaryRouteCellKeys,
+          ...playerCellKeys,
+          ...opponentCellKeys
+        ]);
+        if (
+          !cellsIntersectOrCardinallyTouch([route.cells[0]], attachedCellKeys)
+          || !cellsIntersectOrCardinallyTouch(
+            [route.cells.at(-1)],
+            attachedCellKeys
+          )
+        ) {
+          fail(
+            `V2 required secondary route ${route.id} is a dangling branch; `
+              + 'both ordered endpoints must attach to the primary route network '
+              + 'or a formation'
+          );
+        }
+      }
+    }
     const requiredCells = requiredRoutes.flatMap(route => route.cells);
     const remaining = new Set(requiredCells.map(cellKey));
     const first = remaining.values().next().value;
@@ -404,14 +610,12 @@ export function validateV2BlueprintSemanticContract(blueprint, sidecar) {
           + 'annotations do not establish route connectivity'
       );
     }
-    const minimumApproaches =
-      sidecar.routeIntent.minimumApproachesPerFormation;
-    const primaryRoutes = requiredRoutes.filter(route => route.kind === 'primary');
     const disjointApproaches = maximumVertexDisjointRoutePaths({
       routes: primaryRoutes,
       playerCells,
       opponentCells,
-      limit: minimumApproaches
+      limit: minimumApproaches,
+      orderedEndpoints: minimumApproaches >= 3
     });
     if (disjointApproaches < minimumApproaches) {
       fail(

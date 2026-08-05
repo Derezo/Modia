@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "battle-map-v3-visual-approval-v2",
+  "decision": "approved",
+  "reviewer": "codex-r16-race-hardened-production-visual-review",
+  "reason": "Exact v9 render approved: the central loop and junction remain legible, terrace transitions are aligned, formation approaches remain open, organic boundaries are intact, and no obstruction, seam, occlusion, or framing regression is present.",
+  "checklistVersion": 2,
+  "theme": "forest",
+  "templateId": "forest-template-04",
+  "contentId": "forest-template-04-a",
+  "contentVersion": 9,
+  "mapPath": "battle-maps/compiled/forest/forest-template-04-a.v9.json",
+  "hashes": {
+    "authoritativeHash": "sha256:58c7a77b766ef2bf386b3568c9744d620536456798b58a6474fa85ae84490a6e",
+    "fullHash": "sha256:4e60edd8fce88103da04d651eb4590ee474c222cfe45379690b5f27553e7b006",
+    "visualHash": "sha256:aa8eb7a1863f230cbdf0e2eb8c4e280c34204f2e238030c85009c4e61e18cce5"
+  },
+  "sourceSidecar": {
+    "path": "ai-image-metadata/battle-maps/templates/forest/forest-template-04.json",
+    "fullHash": "sha256:3743aca6c2b1214c81e0c09dd26082692edab9f7ebd0649f5eeb8bc19279dcb2"
+  },
+  "blueprint": {
+    "id": "forest-template-04-a",
+    "fullHash": "sha256:181ed4c0034fbac575383d86a755e31650b6022ab2622a1f11124f4b8ac220f0",
+    "approvalIndexFullHash": "sha256:de4b44604fddd67b88fa14fc58ae262c50ba165817d2aa045af8baf55c5129c1"
+  },
+  "renderProfile": {
+    "id": "forest-heartlands-woodland-v1",
+    "path": "battle-maps/render-profiles/forest-heartlands-v1.json",
+    "fullHash": "sha256:a872213afae1120acfab28debeae6ec6633ff9a4e3e874bb6baf9161b02027bf"
+  },
+  "tileCatalog": {
+    "id": "forest-heartlands-v1-tiles",
+    "version": 1,
+    "path": "battle-maps/tile-catalogs/forest-heartlands-v1.json",
+    "fullHash": "sha256:0c0f946b7da9d1564380579629fe4d46f8f003e881b8006825000f60d1f9701d"
+  },
+  "assetBundle": {
+    "id": "battle-art-descriptors-2026-07-30",
+    "version": 7,
+    "path": "ai-image-metadata/battle-art/releases/battle-art-descriptors-2026-07-30.v7.json",
+    "manifestFullHash": "sha256:f6af2574a315cae7ee0b15a090a6c0919274fab9cb5e7f90aae76f16954008be"
+  },
+  "capabilityReport": {
+    "schemaVersion": "battle-map-v3-capability-report-v1",
+    "mapFullHash": "sha256:4e60edd8fce88103da04d651eb4590ee474c222cfe45379690b5f27553e7b006",
+    "bossCapable": true,
+    "competitiveParity": false,
+    "parityCases": null
+  },
+  "screenshot": {
+    "path": "ai-image-metadata/battle-maps/review/forest/forest-template-04/forest-template-04-a/forest-template-04-a.v9.4e60edd8fce8.png",
+    "bytes": 713118,
+    "width": 1088,
+    "height": 703,
+    "format": "png",
+    "sha256": "sha256:a253b1abf3956035b8730a7b8030e16c6307ec79c174c5bc0bf662bffa0b3105"
+  }
+}

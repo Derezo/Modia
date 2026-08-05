@@ -66,13 +66,17 @@ import {
 } from './blueprint-v2-semantic-contract.mjs';
 
 export const COMPILE_RECIPE_SCHEMA = 'battle-map-v3-compile-recipe-v1';
-export const MAP_VISUAL_APPROVAL_SCHEMA = 'battle-map-v3-visual-approval-v1';
-export const CATALOG_DEFINITION_SCHEMA = 'battle-map-v3-catalog-definition-v1';
+export const LEGACY_MAP_VISUAL_APPROVAL_SCHEMA =
+  'battle-map-v3-visual-approval-v1';
+export const MAP_VISUAL_APPROVAL_SCHEMA = 'battle-map-v3-visual-approval-v2';
+export const LEGACY_CATALOG_DEFINITION_SCHEMA =
+  'battle-map-v3-catalog-definition-v1';
+export const CATALOG_DEFINITION_SCHEMA = 'battle-map-v3-catalog-definition-v2';
 export const ACTIVE_RELEASE_SCHEMA = 'battle-map-v3-active-release-pin-v1';
 export const COMPILER_SOURCE_SET_DOMAIN = 'modia:battle-map-v3:compiler-source-set:v1';
 export const VALIDATOR_SOURCE_SET_DOMAIN = 'modia:battle-map-v3:validator-source-set:v1';
 export const RENDER_PROFILE_HASH_DOMAIN = 'modia:battle-map-v3:render-profile:v1';
-export const MAP_APPROVAL_CHECKLIST_VERSION = 1;
+export const MAP_APPROVAL_CHECKLIST_VERSION = 2;
 export const COMPILER_SOURCE_FILES = Object.freeze([
   'shared/battleMap/canonicalJson.js',
   'shared/battleMap/v3/blueprint.js',
@@ -92,6 +96,7 @@ export const VALIDATOR_SOURCE_FILES = Object.freeze([
   'scripts/battle-art/candidate-lock.mjs',
   'scripts/battle-art/lifecycle.mjs',
   'scripts/battle-art/raster-contract.mjs',
+  'scripts/battle-maps/blueprint-candidate-lifecycle.mjs',
   'scripts/battle-maps/blueprint-v2-semantic-contract.mjs',
   'scripts/battle-maps/content-release-lifecycle.mjs',
   'scripts/battle-maps/persistent-exclusive-lock.mjs',
@@ -124,8 +129,9 @@ const ART_BUNDLE_PATH =
 const FRONTEND_ART_BUNDLE_MIRROR_PATH =
   'frontend/src/generated/battleMapV3RuntimeBundle.json';
 const LEGACY_BLUEPRINT_APPROVAL_TEMPLATE_PATTERN = /-template-(?:01|02)$/;
+const BLUEPRINT_APPROVAL_V3_TEMPLATE_PATTERN = /-template-(\d+)$/;
 const CONTROL_CHARACTER_PATTERN = /[\u0000-\u001f\u007f-\u009f]/;
-const MAX_BLUEPRINT_APPROVAL_REASON_BYTES = 1000;
+const MAX_APPROVAL_REASON_BYTES = 1000;
 
 const SCRIPT_PROJECT_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -186,6 +192,10 @@ const DEFINITION_ENTRY_KEYS = Object.freeze([
   'weight',
   'bossCapable',
   'competitiveParity'
+]);
+const HISTORICAL_PUBLICATION_KEYS = Object.freeze([
+  'catalogReleaseId',
+  'catalogFullHash'
 ]);
 const COVERAGE_QUERY_KEYS = Object.freeze([
   'id',
@@ -266,17 +276,29 @@ function sha256Pin(value, label) {
 
 function blueprintApprovalSchemas(templateId) {
   const legacy = LEGACY_BLUEPRINT_APPROVAL_TEMPLATE_PATTERN.test(templateId);
-  return legacy
-    ? {
-        index: 'battle-map-blueprint-approval-index-v1',
-        record: 'battle-map-blueprint-approval-v1',
-        v2: false
-      }
-    : {
-        index: 'battle-map-blueprint-approval-index-v2',
-        record: 'battle-map-blueprint-approval-v2',
-        v2: true
-      };
+  if (legacy) {
+    return {
+      index: 'battle-map-blueprint-approval-index-v1',
+      record: 'battle-map-blueprint-approval-v1',
+      v2: false,
+      v3: false
+    };
+  }
+  const match = BLUEPRINT_APPROVAL_V3_TEMPLATE_PATTERN.exec(templateId);
+  if (match !== null && Number(match[1]) >= 7) {
+    return {
+      index: 'battle-map-blueprint-approval-index-v3',
+      record: 'battle-map-blueprint-approval-v3',
+      v2: true,
+      v3: true
+    };
+  }
+  return {
+    index: 'battle-map-blueprint-approval-index-v2',
+    record: 'battle-map-blueprint-approval-v2',
+    v2: true,
+    v3: false
+  };
 }
 
 function blueprintPromptProfile(templateId) {
@@ -300,11 +322,11 @@ function approvalReason(value, label) {
     || value.length === 0
     || value !== value.trim()
     || CONTROL_CHARACTER_PATTERN.test(value)
-    || Buffer.byteLength(value, 'utf8') > MAX_BLUEPRINT_APPROVAL_REASON_BYTES
+    || Buffer.byteLength(value, 'utf8') > MAX_APPROVAL_REASON_BYTES
   ) {
     fail(
       `${label} must be a non-empty, trimmed, control-free rationale of at most `
-        + `${MAX_BLUEPRINT_APPROVAL_REASON_BYTES} UTF-8 bytes`
+        + `${MAX_APPROVAL_REASON_BYTES} UTF-8 bytes`
     );
   }
   return value;
@@ -403,29 +425,61 @@ async function assertNoSymlinkPath(projectRoot, relativePath, {
 }
 
 async function readTrackedBytes(projectRoot, relativePath, label, {
-  maxBytes = MAX_JSON_BYTES
+  maxBytes = MAX_JSON_BYTES,
+  afterOpen = async () => {}
 } = {}) {
   const absolute = await assertNoSymlinkPath(projectRoot, relativePath, { label });
+  const lexicalBefore = await lstat(absolute);
+  if (lexicalBefore.isSymbolicLink() || !lexicalBefore.isFile()) {
+    fail(`${label} must be a regular non-symlink file`);
+  }
   let handle;
   try {
     handle = await open(
       absolute,
       fsConstants.O_RDONLY | (fsConstants.O_NOFOLLOW ?? 0)
     );
-    const details = await handle.stat();
-    if (!details.isFile()) fail(`${label} must be a regular file`);
-    if (details.size < 1 || details.size > maxBytes) {
+    const openedBefore = await handle.stat();
+    if (
+      !openedBefore.isFile()
+      || openedBefore.dev !== lexicalBefore.dev
+      || openedBefore.ino !== lexicalBefore.ino
+      || openedBefore.size !== lexicalBefore.size
+      || openedBefore.mtimeMs !== lexicalBefore.mtimeMs
+    ) {
+      fail(`${label} changed while being opened`);
+    }
+    if (openedBefore.size < 1 || openedBefore.size > maxBytes) {
       fail(`${label} byte size must be 1..${maxBytes}`);
     }
-    const [physicalRoot, physicalPath] = await Promise.all([
+    await afterOpen(Object.freeze({ absolutePath: absolute, relativePath }));
+    const bytes = await handle.readFile();
+    const [openedAfter, lexicalAfter, physicalRoot, physicalPath] = await Promise.all([
+      handle.stat(),
+      lstat(absolute),
       realpath(path.resolve(projectRoot)),
       realpath(absolute)
     ]);
     const expectedPhysical = path.join(physicalRoot, ...relativePath.split('/'));
+    if (
+      !lexicalAfter.isFile()
+      || lexicalAfter.isSymbolicLink()
+      || openedAfter.dev !== openedBefore.dev
+      || openedAfter.ino !== openedBefore.ino
+      || openedAfter.size !== openedBefore.size
+      || openedAfter.mtimeMs !== openedBefore.mtimeMs
+      || lexicalAfter.dev !== openedBefore.dev
+      || lexicalAfter.ino !== openedBefore.ino
+      || lexicalAfter.size !== openedBefore.size
+      || lexicalAfter.mtimeMs !== openedBefore.mtimeMs
+      || bytes.byteLength !== openedBefore.size
+    ) {
+      fail(`${label} changed while being read`);
+    }
     if (physicalPath !== expectedPhysical) {
       fail(`${label} resolves through a forbidden symlink`);
     }
-    return await handle.readFile();
+    return bytes;
   } finally {
     await handle?.close();
   }
@@ -742,6 +796,7 @@ function validateApprovalIndex(index, { theme, templateId, expectedPath, expecte
       'promptProfileSha256',
       'reviewer',
       'decision',
+      ...(schemas.v3 ? ['mechanicalReviewReportSha256'] : []),
       ...(schemas.v2 ? ['reason', 'approvalFullHash'] : [])
     ], label);
     safeId(entry.id, `${label}.id`);
@@ -751,6 +806,12 @@ function validateApprovalIndex(index, { theme, templateId, expectedPath, expecte
     sha256Pin(entry.blueprintFullHash, `${label}.blueprintFullHash`);
     sha256Pin(entry.sourceImageSha256, `${label}.sourceImageSha256`);
     sha256Pin(entry.promptProfileSha256, `${label}.promptProfileSha256`);
+    if (schemas.v3) {
+      sha256Pin(
+        entry.mechanicalReviewReportSha256,
+        `${label}.mechanicalReviewReportSha256`
+      );
+    }
     if (schemas.v2) {
       approvalReason(entry.reason, `${label}.reason`);
       sha256Pin(entry.approvalFullHash, `${label}.approvalFullHash`);
@@ -799,6 +860,7 @@ function validateBlueprintApprovalRecord(
     'blueprintFullHash',
     'sourceImageSha256',
     'promptProfile',
+    ...(schemas.v3 ? ['mechanicalReview'] : []),
     ...(schemas.v2 ? ['reason', 'fullHash'] : [])
   ], `blueprint approval ${entry.id}`);
   exactObject(
@@ -806,6 +868,36 @@ function validateBlueprintApprovalRecord(
     ['id', 'path', 'sha256'],
     `blueprint approval ${entry.id}.promptProfile`
   );
+  if (schemas.v3) {
+    exactObject(approval.mechanicalReview, [
+      'schemaVersion',
+      'reportPath',
+      'reportFileSha256',
+      'previewPath',
+      'previewFileSha256'
+    ], `blueprint approval ${entry.id}.mechanicalReview`);
+    sha256Pin(
+      approval.mechanicalReview.reportFileSha256,
+      `blueprint approval ${entry.id}.mechanicalReview.reportFileSha256`
+    );
+    sha256Pin(
+      approval.mechanicalReview.previewFileSha256,
+      `blueprint approval ${entry.id}.mechanicalReview.previewFileSha256`
+    );
+    const reviewRoot =
+      `ai-image-metadata/battle-maps/review/${theme}/${templateId}/${entry.id}/`
+      + `previews/${entry.blueprintFullHash.slice(7)}`;
+    if (
+      approval.mechanicalReview.schemaVersion
+        !== 'battle-map-blueprint-mechanical-review-v1'
+      || approval.mechanicalReview.reportPath
+        !== `${reviewRoot}/mechanical-report.json`
+      || approval.mechanicalReview.previewPath
+        !== `${reviewRoot}/mechanical-preview.svg`
+      || approval.mechanicalReview.reportFileSha256
+        !== entry.mechanicalReviewReportSha256
+    ) fail(`blueprint approval ${entry.id} mechanical review provenance is invalid`);
+  }
   if (schemas.v2) {
     approvalReason(approval.reason, `blueprint approval ${entry.id}.reason`);
     sha256Pin(approval.fullHash, `blueprint approval ${entry.id}.fullHash`);
@@ -865,6 +957,28 @@ async function validateBlueprintApproval(
     sidecar,
     blueprintPrompt
   });
+  if (blueprintApprovalSchemas(templateId).v3) {
+    const [{ bytes: reportBytes }, previewBytes] = await Promise.all([
+      readTrackedJson(
+        projectRoot,
+        approval.mechanicalReview.reportPath,
+        `blueprint approval ${entry.id} mechanical review report`
+      ),
+      readTrackedBytes(
+        projectRoot,
+        approval.mechanicalReview.previewPath,
+        `blueprint approval ${entry.id} mechanical review preview`
+      )
+    ]);
+    if (
+      bytesSha256(reportBytes)
+        !== approval.mechanicalReview.reportFileSha256
+      || bytesSha256(previewBytes)
+        !== approval.mechanicalReview.previewFileSha256
+    ) {
+      fail(`blueprint approval ${entry.id} mechanical review evidence hash mismatch`);
+    }
+  }
   const blueprintBytes = await readTrackedBytes(
     projectRoot,
     entry.blueprintPath,
@@ -1892,13 +2006,44 @@ export async function validateCompiledTemplate(options, dependencies = {}) {
   return compileApprovedTemplate({ ...options, checkOnly: true }, dependencies);
 }
 
-function validateMapApprovalRecord(record, expected = {}) {
-  exactObject(record, APPROVAL_KEYS, 'map visual approval');
+function validateMapApprovalRecord(record, expected = {}, {
+  catalogDefinitionSchema = null,
+  historicalPublicationValidated = false
+} = {}) {
+  const legacy =
+    record?.schemaVersion === LEGACY_MAP_VISUAL_APPROVAL_SCHEMA;
+  const current = record?.schemaVersion === MAP_VISUAL_APPROVAL_SCHEMA;
   if (
-    record.schemaVersion !== MAP_VISUAL_APPROVAL_SCHEMA
+    catalogDefinitionSchema !== null
+    && catalogDefinitionSchema !== LEGACY_CATALOG_DEFINITION_SCHEMA
+    && catalogDefinitionSchema !== CATALOG_DEFINITION_SCHEMA
+  ) fail('catalog definition schema for map visual approval is invalid');
+  if (
+    catalogDefinitionSchema === CATALOG_DEFINITION_SCHEMA
+    && !historicalPublicationValidated
+    && !current
+  ) {
+    fail(
+      'catalog definition v2 entries without a validated '
+      + 'historicalPublication witness require '
+      + `${MAP_VISUAL_APPROVAL_SCHEMA} with a concrete reason`
+    );
+  }
+  exactObject(
+    record,
+    current ? [...APPROVAL_KEYS, 'reason'] : APPROVAL_KEYS,
+    'map visual approval'
+  );
+  if (
+    (!legacy && !current)
     || record.decision !== 'approved'
-    || record.checklistVersion !== MAP_APPROVAL_CHECKLIST_VERSION
+    || record.checklistVersion !== (
+      legacy ? 1 : MAP_APPROVAL_CHECKLIST_VERSION
+    )
   ) fail('map visual approval state/schema is invalid');
+  if (current) {
+    approvalReason(record.reason, 'map visual approval.reason');
+  }
   safeId(record.reviewer, 'map visual approval.reviewer');
   supportedTheme(record.theme, 'map visual approval.theme');
   safeId(record.templateId, 'map visual approval.templateId');
@@ -2048,10 +2193,12 @@ export async function approveCompiledMap({
   templateId,
   mapId,
   screenshotPath,
-  reviewer
+  reviewer,
+  reason
 }) {
   safeId(mapId, 'mapId');
   safeId(reviewer, 'reviewer');
+  approvalReason(reason, 'reason');
   trackedPath(screenshotPath, 'screenshotPath');
   const loaded = await loadCompileRecipe({
     projectRoot,
@@ -2104,6 +2251,7 @@ export async function approveCompiledMap({
     schemaVersion: MAP_VISUAL_APPROVAL_SCHEMA,
     decision: 'approved',
     reviewer,
+    reason,
     checklistVersion: MAP_APPROVAL_CHECKLIST_VERSION,
     theme,
     templateId,
@@ -2167,8 +2315,11 @@ export async function approveCompiledMap({
 
 function validateCatalogDefinition(definition, releaseId) {
   exactObject(definition, CATALOG_DEFINITION_KEYS, 'catalog definition');
+  const legacy =
+    definition.schemaVersion === LEGACY_CATALOG_DEFINITION_SCHEMA;
+  const current = definition.schemaVersion === CATALOG_DEFINITION_SCHEMA;
   if (
-    definition.schemaVersion !== CATALOG_DEFINITION_SCHEMA
+    (!legacy && !current)
     || definition.catalogReleaseId !== releaseId
   ) fail('catalog definition identity/schema is invalid');
   safeId(definition.catalogReleaseId, 'catalog definition.catalogReleaseId');
@@ -2179,7 +2330,15 @@ function validateCatalogDefinition(definition, releaseId) {
   let priorMapPath = null;
   definition.entries.forEach((entry, index) => {
     const label = `catalog definition.entries[${index}]`;
-    exactObject(entry, DEFINITION_ENTRY_KEYS, label);
+    const hasHistoricalPublication =
+      Object.hasOwn(entry, 'historicalPublication');
+    exactObject(
+      entry,
+      current && hasHistoricalPublication
+        ? [...DEFINITION_ENTRY_KEYS, 'historicalPublication']
+        : DEFINITION_ENTRY_KEYS,
+      label
+    );
     safeId(entry.id, `${label}.id`);
     trackedPath(entry.mapPath, `${label}.mapPath`);
     trackedPath(entry.approvalPath, `${label}.approvalPath`);
@@ -2189,6 +2348,27 @@ function validateCatalogDefinition(definition, releaseId) {
     positiveInteger(entry.weight, `${label}.weight`, 1_000_000);
     boolean(entry.bossCapable, `${label}.bossCapable`);
     boolean(entry.competitiveParity, `${label}.competitiveParity`);
+    if (hasHistoricalPublication) {
+      exactObject(
+        entry.historicalPublication,
+        HISTORICAL_PUBLICATION_KEYS,
+        `${label}.historicalPublication`
+      );
+      safeId(
+        entry.historicalPublication.catalogReleaseId,
+        `${label}.historicalPublication.catalogReleaseId`
+      );
+      sha256Pin(
+        entry.historicalPublication.catalogFullHash,
+        `${label}.historicalPublication.catalogFullHash`
+      );
+      if (
+        entry.historicalPublication.catalogReleaseId
+          === definition.catalogReleaseId
+      ) {
+        fail(`${label}.historicalPublication must name an earlier release`);
+      }
+    }
     if (ids.has(entry.id)) fail(`${label}.id is duplicated`);
     ids.add(entry.id);
     if (priorMapPath !== null && priorMapPath >= entry.mapPath) {
@@ -2275,11 +2455,248 @@ function validateCatalogDefinition(definition, releaseId) {
   return definition;
 }
 
+function definitionEntryPublicationProjection(entry) {
+  return Object.fromEntries(
+    DEFINITION_ENTRY_KEYS.map(key => [key, entry[key]])
+  );
+}
+
+async function validateHistoricalPublicationWitness(
+  projectRoot,
+  definitionEntry,
+  map
+) {
+  const witness = definitionEntry.historicalPublication;
+  if (witness === undefined) return null;
+  const priorReleaseId = witness.catalogReleaseId;
+  const [
+    { value: priorDefinition },
+    { value: priorReleaseInput }
+  ] = await Promise.all([
+    readTrackedJson(
+      projectRoot,
+      releaseDefinitionPath(priorReleaseId),
+      'historical catalog definition'
+    ),
+    readTrackedJson(
+      projectRoot,
+      catalogReleasePath(priorReleaseId),
+      'historical catalog release'
+    )
+  ]);
+  validateCatalogDefinition(priorDefinition, priorReleaseId);
+  if (priorDefinition.schemaVersion !== LEGACY_CATALOG_DEFINITION_SCHEMA) {
+    fail(
+      `catalog map ${map.contentId} historical publication witness must `
+      + 'reference a legacy catalog definition v1 rooted in normal '
+      + 'current-map compilation'
+    );
+  }
+  const priorRelease = await normalizeBattleMapV3CatalogRelease(
+    priorReleaseInput
+  );
+  if (
+    priorRelease.catalogReleaseId !== priorReleaseId
+    || priorRelease.catalogFullHash !== witness.catalogFullHash
+  ) {
+    fail(
+      `catalog map ${map.contentId} historical publication witness `
+      + 'does not match its exact verified release'
+    );
+  }
+  const priorDefinitionEntry = priorDefinition.entries.find(entry =>
+    entry.id === definitionEntry.id
+    && entry.mapPath === definitionEntry.mapPath
+  );
+  if (
+    !priorDefinitionEntry
+    || canonicalizeJson(
+      definitionEntryPublicationProjection(priorDefinitionEntry)
+    ) !== canonicalizeJson(
+      definitionEntryPublicationProjection(definitionEntry)
+    )
+  ) {
+    fail(
+      `catalog map ${map.contentId} historical publication witness `
+      + 'does not match its exact approval-bound definition entry'
+    );
+  }
+  const priorReleaseEntry = priorRelease.entries.find(entry =>
+    entry.id === definitionEntry.id
+  );
+  const expectedPriorReleaseEntry = catalogEntryFromMap(
+    priorReleaseId,
+    priorDefinitionEntry,
+    map,
+    priorRelease.catalogSchemaVersion
+  );
+  if (
+    !priorReleaseEntry
+    || canonicalizeJson(priorReleaseEntry)
+      !== canonicalizeJson(expectedPriorReleaseEntry)
+  ) {
+    fail(
+      `catalog map ${map.contentId} historical publication witness `
+      + 'does not match its exact map and asset pins'
+    );
+  }
+  return { priorDefinitionEntry, priorRelease };
+}
+
+async function verifyHistoricallyPublishedVisualApproval(
+  projectRoot,
+  definitionEntry,
+  map,
+  approval,
+  binaryMode,
+  strictBattleArtAlreadyVerified,
+  publication
+) {
+  if (publication === null) return null;
+  const [
+    sidecarLoaded,
+    profileLoaded,
+    tileCatalogLoaded,
+    artBundleLoaded,
+    artBundleRegistryLoaded,
+    artBundleMirrorLoaded,
+    battleArtLoaded
+  ] = await Promise.all([
+    readTrackedJson(
+      projectRoot,
+      approval.sourceSidecar.path,
+      'historical map source sidecar'
+    ),
+    readTrackedJson(
+      projectRoot,
+      approval.renderProfile.path,
+      'historical map render profile'
+    ),
+    readTrackedJson(
+      projectRoot,
+      approval.tileCatalog.path,
+      'historical map tile catalog'
+    ),
+    readTrackedJson(
+      projectRoot,
+      ART_BUNDLE_PATH,
+      'current art runtime bundle'
+    ),
+    readTrackedJson(
+      projectRoot,
+      BUNDLE_REGISTRY_PATH,
+      'art runtime bundle registry'
+    ),
+    readTrackedJson(
+      projectRoot,
+      FRONTEND_ART_BUNDLE_MIRROR_PATH,
+      'frontend art runtime bundle mirror'
+    ),
+    loadBattleArt(projectRoot)
+  ]);
+  const sidecar = sidecarLoaded.value;
+  if (
+    sidecar.id !== map.templateId
+    || sidecar.theme !== map.theme
+    || sidecar.status !== 'approved'
+    || sidecar.review?.decision !== 'approved'
+    || await computeTemplateMapSourceSidecarFullHash(sidecar)
+      !== approval.sourceSidecar.fullHash
+    || sidecar.mapProfile?.orientation !== definitionEntry.orientation
+  ) fail(`historical catalog map ${map.contentId} source-sidecar pin mismatch`);
+
+  const renderProfile = profileLoaded.value;
+  if (
+    renderProfile.id !== approval.renderProfile.id
+    || map.renderProfileId !== renderProfile.id
+    || stableSha256(renderProfile, RENDER_PROFILE_HASH_DOMAIN)
+      !== approval.renderProfile.fullHash
+  ) fail(`historical catalog map ${map.contentId} render-profile pin mismatch`);
+  const tileCatalog = tileCatalogLoaded.value;
+  if (
+    tileCatalog.id !== approval.tileCatalog.id
+    || tileCatalog.version !== approval.tileCatalog.version
+    || await computeTemplateMapTileCatalogFullHash(tileCatalog)
+      !== approval.tileCatalog.fullHash
+    || tileCatalog.fullHash !== approval.tileCatalog.fullHash
+  ) fail(`historical catalog map ${map.contentId} tile-catalog pin mismatch`);
+
+  const currentArtBundle = artBundleLoaded.value;
+  assertRuntimeBundleMirror(currentArtBundle, artBundleMirrorLoaded.value);
+  const expectedCurrentArtBundle = await buildBattleArtBundle(
+    battleArtLoaded.manifest,
+    battleArtLoaded.descriptors
+  );
+  if (
+    canonicalizeJson(currentArtBundle)
+      !== canonicalizeJson(expectedCurrentArtBundle)
+  ) fail('art runtime bundle does not match its strict descriptor/placement catalog');
+  const artBundleRegistry = artBundleRegistryLoaded.value;
+  const expectedArtBundleRegistry = buildBattleArtBundleRegistry(
+    battleArtLoaded.historicalReleases,
+    expectedCurrentArtBundle
+  );
+  if (
+    canonicalizeJson(artBundleRegistry)
+      !== canonicalizeJson(expectedArtBundleRegistry)
+  ) fail('art runtime bundle registry does not match immutable release history');
+  if (binaryMode === 'require' && !strictBattleArtAlreadyVerified) {
+    await checkBattleArt({ root: projectRoot });
+  }
+  let resolvedArtBundle;
+  try {
+    resolvedArtBundle = resolveArchivedRuntimeBundle(
+      battleArtLoaded.historicalReleases,
+      artBundleRegistry,
+      map.provenance.assetBundle
+    );
+  } catch (error) {
+    fail(error.message);
+  }
+  if (
+    approval.assetBundle.path !== resolvedArtBundle.path
+    || approval.assetBundle.id !== map.provenance.assetBundle.id
+    || approval.assetBundle.version !== map.provenance.assetBundle.version
+    || approval.assetBundle.manifestFullHash
+      !== map.provenance.assetBundle.manifestFullHash
+  ) fail(`historical catalog map ${map.contentId} asset-bundle approval pin mismatch`);
+  const assetBundle = await compilerAssetBundleProjection(
+    resolvedArtBundle.bundle
+  );
+  assertExactMapAssets(map, assetBundle);
+  assertMapRendererContracts(map, resolvedArtBundle.bundle);
+  const skippedBinaryChecks = [];
+  const verifiedAssetCount = await verifyRuntimeBundleBinaries(
+    projectRoot,
+    assetBundle,
+    binaryMode,
+    skippedBinaryChecks
+  );
+  await validateScreenshotEvidence(
+    projectRoot,
+    approval.screenshot,
+    binaryMode,
+    skippedBinaryChecks
+  );
+  return {
+    map,
+    approval,
+    assetBundle,
+    skippedBinaryChecks,
+    verifiedAssetCount,
+    historicalPublication: publication
+  };
+}
+
 async function verifyVisualApproval(
   projectRoot,
   definitionEntry,
   binaryMode,
-  { recipeCache = null, strictBattleArtAlreadyVerified = false } = {}
+  {
+    catalogDefinitionSchema = null,
+    recipeCache = null,
+    strictBattleArtAlreadyVerified = false
+  } = {}
 ) {
   const [
     { value: mapInput, bytes: mapBytes },
@@ -2298,6 +2715,11 @@ async function verifyVisualApproval(
     definitionEntry.mapPath !== expectedMapPath
     || definitionEntry.approvalPath !== expectedApprovalPath
   ) fail(`catalog map ${map.contentId} does not use its fixed paths`);
+  const publication = await validateHistoricalPublicationWitness(
+    projectRoot,
+    definitionEntry,
+    map
+  );
   validateMapApprovalRecord(approval, {
     theme: map.theme,
     templateId: map.templateId,
@@ -2305,6 +2727,9 @@ async function verifyVisualApproval(
     contentVersion: map.contentVersion,
     mapPath: definitionEntry.mapPath,
     hashes: map.hashes
+  }, {
+    catalogDefinitionSchema,
+    historicalPublicationValidated: publication !== null
   });
   if (
     canonicalizeJson(approval.capabilityReport)
@@ -2315,6 +2740,16 @@ async function verifyVisualApproval(
     approval.capabilityReport,
     map.contentId
   );
+  const historical = await verifyHistoricallyPublishedVisualApproval(
+    projectRoot,
+    definitionEntry,
+    map,
+    approval,
+    binaryMode,
+    strictBattleArtAlreadyVerified,
+    publication
+  );
+  if (historical !== null) return historical;
   const recipeCacheKey =
     `${map.theme}\0${map.templateId}\0`
     + `${map.provenance.assetBundle.id}\0`
@@ -2411,8 +2846,13 @@ async function verifyVisualApproval(
   };
 }
 
-function catalogEntryFromMap(releaseId, definitionEntry, map) {
-  return {
+function catalogEntryFromMap(
+  releaseId,
+  definitionEntry,
+  map,
+  catalogSchemaVersion = BATTLE_MAP_V3_CATALOG_SCHEMA_VERSION
+) {
+  const entry = {
     id: definitionEntry.id,
     mapContentId: map.contentId,
     mapContentVersion: map.contentVersion,
@@ -2436,6 +2876,11 @@ function catalogEntryFromMap(releaseId, definitionEntry, map) {
     competitiveParity: definitionEntry.competitiveParity,
     sourceTemplateId: map.templateId
   };
+  if (catalogSchemaVersion < 2) delete entry.ecologyProfile;
+  if (catalogSchemaVersion >= 3) {
+    entry.assetBundleVersion = map.provenance.assetBundle.version;
+  }
+  return entry;
 }
 
 function capacityBand(opponentCount) {
@@ -2779,6 +3224,7 @@ export async function buildCatalogRelease({
   const verified = [];
   for (const entry of definition.entries) {
     verified.push(await verifyVisualApproval(root, entry, binaryMode, {
+      catalogDefinitionSchema: definition.schemaVersion,
       recipeCache,
       strictBattleArtAlreadyVerified
     }));
@@ -2790,27 +3236,30 @@ export async function buildCatalogRelease({
   const assetPinMap = new Map();
   for (const map of maps) {
     const id = map.provenance.assetBundle.id;
+    const version = map.provenance.assetBundle.version;
     const hash = map.provenance.assetBundle.manifestFullHash;
-    if (assetPinMap.has(id) && assetPinMap.get(id) !== hash) {
-      fail(`catalog release mixes hashes for asset bundle ${id}`);
+    const identity = `${id}\0${version}`;
+    if (assetPinMap.has(identity) && assetPinMap.get(identity).hash !== hash) {
+      fail(`catalog release mixes hashes for asset bundle ${id}@${version}`);
     }
-    assetPinMap.set(id, hash);
+    assetPinMap.set(identity, { id, version, hash });
   }
   const candidate = {
     catalogSchemaVersion: BATTLE_MAP_V3_CATALOG_SCHEMA_VERSION,
     catalogReleaseId: releaseId,
     selectorVersion: BATTLE_MAP_V3_SELECTOR_VERSION,
-    assetBundlePins: [...assetPinMap]
-      .map(([assetBundleId, manifestFullHash]) => ({
-        assetBundleId,
-        manifestFullHash
+    assetBundlePins: [...assetPinMap.values()]
+      .map(({ id, version, hash }) => ({
+        assetBundleId: id,
+        assetBundleVersion: version,
+        manifestFullHash: hash
       }))
-      .sort((left, right) => left.assetBundleId.localeCompare(right.assetBundleId)),
+      .sort((left, right) =>
+        left.assetBundleId.localeCompare(right.assetBundleId)
+        || left.assetBundleVersion - right.assetBundleVersion
+      ),
     entries
   };
-  if (candidate.assetBundlePins.length !== 1) {
-    fail('a deployed catalog release must bind exactly one frontend runtime asset bundle');
-  }
   const release = await finalizeBattleMapV3CatalogRelease(candidate);
   await assertBattleMapV3CatalogMapPins(release, maps);
   if (release.entries.length !== maps.length) {
@@ -2912,6 +3361,7 @@ function parseArgs(argv, allowed) {
     else if (flag === '--map') once('mapId', valueFor());
     else if (flag === '--screenshot') once('screenshotPath', valueFor());
     else if (flag === '--reviewer') once('reviewer', valueFor());
+    else if (flag === '--reason') once('reason', valueFor());
     else if (flag === '--release') once('releaseId', valueFor());
     else if (flag === '--project-root') once('projectRoot', path.resolve(valueFor()));
     else if (flag === '--metadata-only' && inline === undefined) once('metadataOnly', true);
@@ -2956,6 +3406,7 @@ export function parseApprovalArgs(argv = process.argv.slice(2)) {
     '--map',
     '--screenshot',
     '--reviewer',
+    '--reason',
     '--project-root'
   ]));
   if (options.help) return options;
@@ -2963,6 +3414,7 @@ export function parseApprovalArgs(argv = process.argv.slice(2)) {
   safeId(options.templateId, '--template');
   safeId(options.mapId, '--map');
   safeId(options.reviewer, '--reviewer');
+  approvalReason(options.reason, '--reason');
   trackedPath(options.screenshotPath, '--screenshot');
   return options;
 }
@@ -3022,5 +3474,6 @@ export const ContentReleaseInternals = Object.freeze({
   atomicWrite,
   readTrackedBytes,
   canonicalizeCoordinateItems,
-  authoredDiversitySignatures
+  authoredDiversitySignatures,
+  validateHistoricalPublicationWitness
 });

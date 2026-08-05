@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v2",
+  "theme": "forest",
+  "familyId": "forest-heartlands-clover-glade-ground",
+  "decision": "approved",
+  "reviewer": "codex-v3-template07-visual-assets",
+  "reason": "The full seam-safe diamond reads as bright emerald clover with scattered white blossoms and a restrained warm-loam reveal, preserving an open sunlit formation surface without props or backdrop.",
+  "reviewedAt": "2026-08-05T05:24:09.729Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/forest/forest-heartlands-clover-glade-ground.json",
+    "sha256": "sha256:76f1f4755e75ca7f27fea71b576d8cde03ee13aac4ddfe2646d029d75773ff82",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-clover-glade-ground/result.json",
+      "bytes": 2778,
+      "sha256": "sha256:c426fc367709d0665e272bfd482777b3dc33f3bfafcac9c5b454a5992e0db84a"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-clover-glade-ground/candidate.png",
+      "bytes": 47282,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:1e0f6cb4b553476d19c7b4aa8ee5e6b526d26b3a5a5bfc62642836e42d303ccd"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "forest-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/forest/forest-template-01/reference.png",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1"
+      }
+    ],
+    "styleReferenceMode": "attachments",
+    "styleReferenceProvenance": [
+      {
+        "id": "forest-source-template-01",
+        "sha256": "sha256:8cf941a0c4038c390908104d8f5be565eb3d4cc8e456f0c2cfbb469234ff2de1",
+        "stagedBasename": "style-reference-01.png"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 600000,
+      "imageArguments": [
+        "style-reference-01.png"
+      ],
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-clover-glade-ground/prompt.txt",
+        "bytes": 10851,
+        "sha256": "sha256:ef16739ec600a315bcb146215577b03dc0b16ae3899981baab1f31befedac47c"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-clover-glade-ground/worker.jsonl",
+        "bytes": 29461,
+        "sha256": "sha256:ef9510eb75a9e3f3c819d4be021fbb1ce9d839169d2f4f94d0f42c8855dc2597"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-clover-glade-ground/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/forest/forest-heartlands-clover-glade-ground/last-message.txt",
+        "bytes": 399,
+        "sha256": "sha256:1829a4c1e5c779e9c8088ff3227ae908f0123839a1e6f4502f23eb2b89d8ec3f"
+      }
+    }
+  },
+  "fullHash": "sha256:4ea7b7199b4ae97d6cc8daa7704c34bddca6707383bc189b35f212ab713d6f30"
+}

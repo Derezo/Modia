@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "battle-map-blueprint-approval-index-v3",
+  "theme": "forest",
+  "templateId": "forest-template-07",
+  "entries": [
+    {
+      "id": "forest-template-07-a",
+      "blueprintPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-07/forest-template-07-a.json",
+      "approvalPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-07/forest-template-07-a.approval.json",
+      "blueprintFullHash": "sha256:1d0b1d871254c722db6d50c62208c3c426aed6f214bd8a42897769f841d1ebe9",
+      "sourceImageSha256": "sha256:07da685b434b24142b1f5f27188c482220728a66e44dfff46fd5560826a70917",
+      "promptProfileSha256": "sha256:d9fd841812bcc9a4713d3ac8b1c81715f359e55d55098589f8970650fed7cdae",
+      "reviewer": "codex-template07-independent-mechanical-review",
+      "decision": "approved",
+      "mechanicalReviewReportSha256": "sha256:a868e671d46fef2827cc655326b3eb46f7cadbe3fcc3c09dde51b2d1f3fd48c4",
+      "reason": "Exact candidate independently approved: one strict passable component, three internally vertex-disjoint formation routes, pinned fallen-oak and root semantics, and a distinct tall scalloped macro silhouette; production rendering remains separately gated.",
+      "approvalFullHash": "sha256:adca2af3fda95a63db43436c9c4d5319a546a90f4ff75802154203a0f1bb5236"
+    },
+    {
+      "id": "forest-template-07-b",
+      "blueprintPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-07/forest-template-07-b.json",
+      "approvalPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-07/forest-template-07-b.approval.json",
+      "blueprintFullHash": "sha256:4a4e5fcec46fb54c3f8ef3477283eaae92d7177962e05bd7fc322372c0be1965",
+      "sourceImageSha256": "sha256:07da685b434b24142b1f5f27188c482220728a66e44dfff46fd5560826a70917",
+      "promptProfileSha256": "sha256:d9fd841812bcc9a4713d3ac8b1c81715f359e55d55098589f8970650fed7cdae",
+      "reviewer": "codex-template07-independent-mechanical-review",
+      "decision": "approved",
+      "mechanicalReviewReportSha256": "sha256:4bc15975df73f916aec41209cc3a2ac75fc1de210b76dce3006f8fab39e2552e",
+      "reason": "Exact candidate independently approved: one strict passable component, three internally vertex-disjoint formation routes, pinned fallen-oak and root semantics, and a distinct broad central-right macro composition; production rendering remains separately gated.",
+      "approvalFullHash": "sha256:a3884f68c25fd4066afbb654c4203e40891caa03e43654e3e2f405f13c272c5e"
+    },
+    {
+      "id": "forest-template-07-c",
+      "blueprintPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-07/forest-template-07-c.json",
+      "approvalPath": "ai-image-metadata/battle-maps/blueprints/forest/forest-template-07/forest-template-07-c.approval.json",
+      "blueprintFullHash": "sha256:0fed8f8a9d89efaddf5bc477f84a966d44ba48f8a07da65b54d65c3505f2ee0e",
+      "sourceImageSha256": "sha256:07da685b434b24142b1f5f27188c482220728a66e44dfff46fd5560826a70917",
+      "promptProfileSha256": "sha256:d9fd841812bcc9a4713d3ac8b1c81715f359e55d55098589f8970650fed7cdae",
+      "reviewer": "codex-template07-independent-mechanical-review",
+      "decision": "approved",
+      "mechanicalReviewReportSha256": "sha256:522d5a75f69cc20652584f5b440ab7907606832daced84e7d5f4873a3c7df52b",
+      "reason": "Exact regenerated candidate independently approved: one strict 714-cell passable component, three internally vertex-disjoint formation routes, no obstacle or route collisions, and the storm-fallen oak and root mass now occupy the central dry-ravine focal seam while all sibling diversity floors remain clear.",
+      "approvalFullHash": "sha256:ce5205b38dde9c08b92364f238647f9352d994163d0bd15763a964e57733a641"
+    }
+  ],
+  "fullHash": "sha256:d483614b3f889d362e93e02940aa075d659ddb335cc4d6565447900c23e284f4"
+}

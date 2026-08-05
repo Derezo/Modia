@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "battle-map-v3-visual-approval-v2",
+  "decision": "approved",
+  "reviewer": "codex-r15-hardened-production-visual-review",
+  "reason": "Exact v7 render approved: the horizontal fallen oak clearly divides the green, ravine, and dark-bank masses, faint broad routes remain continuously traceable across surfaces, elevation connections and formation fields stay unobstructed, the wide organic edge is coherent, and framing is complete.",
+  "checklistVersion": 2,
+  "theme": "forest",
+  "templateId": "forest-template-07",
+  "contentId": "forest-template-07-b",
+  "contentVersion": 7,
+  "mapPath": "battle-maps/compiled/forest/forest-template-07-b.v7.json",
+  "hashes": {
+    "authoritativeHash": "sha256:83baef5f5ef0adaf01712dce63d82d12767c79389e6644d5ec1eb6f66724579f",
+    "fullHash": "sha256:949b3fd0581247e74b8533037e8847b35aebddedee2aa02dc61178ecb4892b0c",
+    "visualHash": "sha256:626a8a6a51de0fbd7f985cbc659fe0a564ffb803708033ecc93ce48683b69773"
+  },
+  "sourceSidecar": {
+    "path": "ai-image-metadata/battle-maps/templates/forest/forest-template-07.json",
+    "fullHash": "sha256:679d2a63d2aeb330cfa8f95f909067a05dcbc2f095b1a902ae22d2e3a6364849"
+  },
+  "blueprint": {
+    "id": "forest-template-07-b",
+    "fullHash": "sha256:4a4e5fcec46fb54c3f8ef3477283eaae92d7177962e05bd7fc322372c0be1965",
+    "approvalIndexFullHash": "sha256:d483614b3f889d362e93e02940aa075d659ddb335cc4d6565447900c23e284f4"
+  },
+  "renderProfile": {
+    "id": "forest-heartlands-fallen-oak-v1",
+    "path": "battle-maps/render-profiles/forest-heartlands-fallen-oak-v1.json",
+    "fullHash": "sha256:36a3b37cbc3f7220718166d6684363080092819afb11fcab04d77b007811ccfd"
+  },
+  "tileCatalog": {
+    "id": "forest-heartlands-fallen-oak-v1-tiles",
+    "version": 1,
+    "path": "battle-maps/tile-catalogs/forest-heartlands-fallen-oak-v1.json",
+    "fullHash": "sha256:76e14aa45c8255c285cf1251c134989135091e7f7cba240912836773536ee8f6"
+  },
+  "assetBundle": {
+    "id": "battle-art-descriptors-2026-07-30",
+    "version": 10,
+    "path": "ai-image-metadata/battle-art/releases/battle-art-descriptors-2026-07-30.v10.json",
+    "manifestFullHash": "sha256:1f456f81c986327cc2615a7450590a0f3a1aea46e727c18ca3ed3cd0e8baca29"
+  },
+  "capabilityReport": {
+    "schemaVersion": "battle-map-v3-capability-report-v1",
+    "mapFullHash": "sha256:949b3fd0581247e74b8533037e8847b35aebddedee2aa02dc61178ecb4892b0c",
+    "bossCapable": true,
+    "competitiveParity": false,
+    "parityCases": null
+  },
+  "screenshot": {
+    "path": "ai-image-metadata/battle-maps/review/forest/forest-template-07/forest-template-07-b/forest-template-07-b.v7.949b3fd05812.png",
+    "bytes": 663274,
+    "width": 1088,
+    "height": 703,
+    "format": "png",
+    "sha256": "sha256:d0af392f91718a42f8b3188fd74f0a5222bd45a88e67d2a18e488c6904e729ef"
+  }
+}
