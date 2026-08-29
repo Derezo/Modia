@@ -336,7 +336,7 @@ Health endpoint: `https://modia.mittonvillage.com/api/health`. Production runs o
 
 ## CI Pipeline
 
-No GitHub Actions are wired up after the v0.5.0 lsd migration — legacy `.github/workflows/` was removed alongside the bash deploy scripts. Reintroduce CI workflows against `lsd`-managed deploys when needed; in the meantime, run lint/tests locally before tagging.
+The bash deploy scripts' workflows were removed in the v0.5.0 lsd migration; one workflow remains, `.github/workflows/worldgen-ci.yml`. Ecosystem policy is local verification, so do not extend it or add new ones — run lint/tests locally before tagging.
 
 ## Documentation
 
