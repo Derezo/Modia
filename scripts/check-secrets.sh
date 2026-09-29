@@ -89,6 +89,12 @@ check_file() {
             if echo "$content" | grep -qiE '(your[_-]?secret|example|placeholder|xxx|replace[_-]?me|changeme|todo)'; then
                 continue
             fi
+            # Skip environment reads that carry no string literal on the line
+            # (a literal fallback on the same line is still blocked)
+            if echo "$content" | grep -qiE 'jwt[_-]?secret\s*[=:]\s*process\.env\.' \
+                && ! echo "$content" | grep -qE "['\"\`]"; then
+                continue
+            fi
             echo -e "${BLOCKED}: Possible JWT secret found in ${file}:${line_num}"
             echo "  Content: ${content}"
             findings=1

@@ -24,6 +24,7 @@
     "db:fresh": "bash scripts/db-fresh.sh",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
+    "test:shell": "bats tests/",
     "battle-maps:audit": "node scripts/audit-battle-maps.js",
     "battle-maps:audit:test": "node --test scripts/audit-battle-maps.test.js shared/mapgen/battleMapAudit.test.js",
     "battle-maps:v2:gallery": "node scripts/audit-battle-maps.js --versions=2 --node-types=forest,cave,mountain,bridge,castle,dungeon,swamp,volcano,plains,arena,guild,elven_grove,dwarven_mine,vampiric_crypt,orcish_warcamp,human_ruins --seeds=0,997 --sizes=32x32 --modes=pve --emit-gallery --output-dir=docs/generated/battle-maps",
