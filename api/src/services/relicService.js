@@ -25,6 +25,7 @@ export async function getAllRelics(userId) {
        rt.description,
        rt.rarity,
        rt.acquisition_type,
+       rt.acquisition_id,
        rt.effects,
        CASE WHEN ur.id IS NOT NULL THEN true ELSE false END as owned,
        ur.acquired_at
@@ -34,16 +35,25 @@ export async function getAllRelics(userId) {
     [userId]
   );
 
-  return result.rows.map(row => ({
-    id: row.id,
-    key: row.key,
-    name: row.name,
-    description: row.description,
-    rarity: row.rarity,
-    acquisitionType: row.acquisition_type,
-    effects: row.effects,
-    owned: row.owned,
-    acquiredAt: row.acquired_at
+  return Promise.all(result.rows.map(async (row) => {
+    // Unowned relics carry whether they can be claimed now and, if not,
+    // what is still required (the same check claimRelic enforces).
+    const eligibility = row.owned
+      ? { canClaim: false, validationMessage: '' }
+      : await checkRelicEligibility(userId, row);
+    return {
+      id: row.id,
+      key: row.key,
+      name: row.name,
+      description: row.description,
+      rarity: row.rarity,
+      acquisitionType: row.acquisition_type,
+      effects: row.effects,
+      owned: row.owned,
+      acquiredAt: row.acquired_at,
+      claimable: eligibility.canClaim,
+      requirement: eligibility.validationMessage || null
+    };
   }));
 }
 
@@ -100,10 +110,11 @@ export async function hasRelic(userId, relicKey) {
  * Get relic effects if user owns it
  * @param {number} userId - User ID
  * @param {string} relicKey - Relic key
+ * @param {{ query: Function }} [db] - Optional database executor (pool or transaction client)
  * @returns {Promise<Object|null>} Relic effects or null if not owned
  */
-export async function getRelicEffects(userId, relicKey) {
-  const result = await query(
+export async function getRelicEffects(userId, relicKey, db = { query }) {
+  const result = await db.query(
     `SELECT rt.effects FROM user_relics ur
      JOIN relic_templates rt ON rt.id = ur.relic_id
      WHERE ur.user_id = $1 AND rt.key = $2`,
@@ -160,45 +171,14 @@ export async function grantRelic(userId, relicKey) {
 }
 
 /**
- * Claim a relic (validates acquisition requirements)
+ * Check whether a user meets a relic's acquisition requirements.
+ * Shared by claimRelic (enforcement) and getAllRelics (so the collection UI
+ * can disable Claim and say what is still needed).
  * @param {number} userId - User ID
- * @param {number} relicId - Relic template ID
- * @returns {Promise<Object>} Result with claimed relic info
+ * @param {{key:string, acquisition_type:string, acquisition_id:*}} template - relic_templates row
+ * @returns {Promise<{canClaim: boolean, validationMessage: string}>}
  */
-export async function claimRelic(userId, relicId) {
-  // Get relic template
-  const templateResult = await query(
-    `SELECT id, key, name, description, rarity, acquisition_type, acquisition_id, effects
-     FROM relic_templates WHERE id = $1`,
-    [relicId]
-  );
-
-  if (templateResult.rows.length === 0) {
-    // SECURITY: Use AppError(404) instead of plain Error so errorHandler returns proper 404
-    throw new AppError('Relic not found', 404);
-  }
-
-  const template = templateResult.rows[0];
-
-  // Check if already owned
-  const existingResult = await query(
-    'SELECT id FROM user_relics WHERE user_id = $1 AND relic_id = $2',
-    [userId, relicId]
-  );
-
-  if (existingResult.rows.length > 0) {
-    return {
-      success: false,
-      message: 'You already own this relic',
-      relic: {
-        id: template.id,
-        key: template.key,
-        name: template.name
-      }
-    };
-  }
-
-  // Validate acquisition requirements based on type
+async function checkRelicEligibility(userId, template) {
   let canClaim = false;
   let validationMessage = '';
 
@@ -326,6 +306,51 @@ export async function claimRelic(userId, relicId) {
       validationMessage = 'Unknown acquisition type';
   }
 
+  return { canClaim, validationMessage };
+}
+
+/**
+ * Claim a relic (validates acquisition requirements)
+ * @param {number} userId - User ID
+ * @param {number} relicId - Relic template ID
+ * @returns {Promise<Object>} Result with claimed relic info
+ */
+export async function claimRelic(userId, relicId) {
+  // Get relic template
+  const templateResult = await query(
+    `SELECT id, key, name, description, rarity, acquisition_type, acquisition_id, effects
+     FROM relic_templates WHERE id = $1`,
+    [relicId]
+  );
+
+  if (templateResult.rows.length === 0) {
+    // SECURITY: Use AppError(404) instead of plain Error so errorHandler returns proper 404
+    throw new AppError('Relic not found', 404);
+  }
+
+  const template = templateResult.rows[0];
+
+  // Check if already owned
+  const existingResult = await query(
+    'SELECT id FROM user_relics WHERE user_id = $1 AND relic_id = $2',
+    [userId, relicId]
+  );
+
+  if (existingResult.rows.length > 0) {
+    return {
+      success: false,
+      message: 'You already own this relic',
+      relic: {
+        id: template.id,
+        key: template.key,
+        name: template.name
+      }
+    };
+  }
+
+  // Validate acquisition requirements based on type
+  const { canClaim, validationMessage } = await checkRelicEligibility(userId, template);
+
   if (!canClaim) {
     return {
       success: false,
@@ -366,10 +391,11 @@ export async function claimRelic(userId, relicId) {
  * Get the effective marketplace fee rate for a user
  * Default is 5%, but Merchant's Seal reduces it to 3%
  * @param {number} userId - User ID
+ * @param {{ query: Function }} [db] - Optional database executor (pool or transaction client)
  * @returns {Promise<number>} Fee rate (0.05 or 0.03)
  */
-export async function getMarketplaceFeeRate(userId) {
-  const effects = await getRelicEffects(userId, 'merchants_seal');
+export async function getMarketplaceFeeRate(userId, db = { query }) {
+  const effects = await getRelicEffects(userId, 'merchants_seal', db);
 
   if (effects && effects.fee_rate) {
     return effects.fee_rate;

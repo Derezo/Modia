@@ -1214,3 +1214,116 @@ describe('getTradeHistory (mock)', () => {
     assert.strictEqual(result[0].totalGold, 500);
   });
 });
+
+// =============================================================================
+// NUMERIC RARITY NORMALIZATION TESTS
+// =============================================================================
+
+describe('normalizeRarityName', () => {
+  test('should return common for null/undefined', async () => {
+    const { normalizeRarityName } = await import('../../services/marketplace/constants.js');
+
+    assert.strictEqual(normalizeRarityName(null), 'common');
+    assert.strictEqual(normalizeRarityName(undefined), 'common');
+  });
+
+  test('should pass through valid rarity name strings', async () => {
+    const { normalizeRarityName } = await import('../../services/marketplace/constants.js');
+
+    assert.strictEqual(normalizeRarityName('common'), 'common');
+    assert.strictEqual(normalizeRarityName('uncommon'), 'uncommon');
+    assert.strictEqual(normalizeRarityName('rare'), 'rare');
+    assert.strictEqual(normalizeRarityName('epic'), 'epic');
+    assert.strictEqual(normalizeRarityName('legendary'), 'legendary');
+  });
+
+  test('should handle case-insensitive rarity names', async () => {
+    const { normalizeRarityName } = await import('../../services/marketplace/constants.js');
+
+    assert.strictEqual(normalizeRarityName('COMMON'), 'common');
+    assert.strictEqual(normalizeRarityName('Rare'), 'rare');
+    assert.strictEqual(normalizeRarityName('LEGENDARY'), 'legendary');
+  });
+
+  test('should convert numeric rarity 1-5 to names', async () => {
+    const { normalizeRarityName } = await import('../../services/marketplace/constants.js');
+
+    assert.strictEqual(normalizeRarityName(1), 'common');
+    assert.strictEqual(normalizeRarityName(2), 'uncommon');
+    assert.strictEqual(normalizeRarityName(3), 'rare');
+    assert.strictEqual(normalizeRarityName(4), 'epic');
+    assert.strictEqual(normalizeRarityName(5), 'legendary');
+  });
+
+  test('should convert numeric string rarity to names', async () => {
+    const { normalizeRarityName } = await import('../../services/marketplace/constants.js');
+
+    assert.strictEqual(normalizeRarityName('1'), 'common');
+    assert.strictEqual(normalizeRarityName('2'), 'uncommon');
+    assert.strictEqual(normalizeRarityName('3'), 'rare');
+    assert.strictEqual(normalizeRarityName('4'), 'epic');
+    assert.strictEqual(normalizeRarityName('5'), 'legendary');
+  });
+
+  test('should return common for out-of-range numeric values', async () => {
+    const { normalizeRarityName } = await import('../../services/marketplace/constants.js');
+
+    assert.strictEqual(normalizeRarityName(0), 'common');
+    assert.strictEqual(normalizeRarityName(6), 'common');
+    assert.strictEqual(normalizeRarityName(-1), 'common');
+  });
+
+  test('should return common for invalid strings', async () => {
+    const { normalizeRarityName } = await import('../../services/marketplace/constants.js');
+
+    assert.strictEqual(normalizeRarityName('invalid'), 'common');
+    assert.strictEqual(normalizeRarityName(''), 'common');
+  });
+});
+
+// =============================================================================
+// RELIC FEE RATE TESTS
+// =============================================================================
+
+describe('getMarketplaceFeeRate', () => {
+  test('should return default 5% rate when user has no Merchant Seal', async () => {
+    const { getMarketplaceFeeRate } = await import('../../services/relicService.js');
+
+    // Mock database that returns no relic effects
+    const mockDb = {
+      query: async () => ({ rows: [] })
+    };
+
+    const rate = await getMarketplaceFeeRate(123, mockDb);
+    assert.strictEqual(rate, 0.05);
+  });
+
+  test('should return 3% rate when user has Merchant Seal relic', async () => {
+    const { getMarketplaceFeeRate } = await import('../../services/relicService.js');
+
+    // Mock database that returns Merchant Seal effects
+    const mockDb = {
+      query: async () => ({
+        rows: [{ effects: { fee_rate: 0.03 } }]
+      })
+    };
+
+    const rate = await getMarketplaceFeeRate(123, mockDb);
+    assert.strictEqual(rate, 0.03);
+  });
+
+  test('should use provided db executor (transaction client)', async () => {
+    const { getMarketplaceFeeRate } = await import('../../services/relicService.js');
+
+    let queryCalled = false;
+    const mockClient = {
+      query: async () => {
+        queryCalled = true;
+        return { rows: [] };
+      }
+    };
+
+    await getMarketplaceFeeRate(123, mockClient);
+    assert.strictEqual(queryCalled, true, 'Should use provided db executor');
+  });
+});

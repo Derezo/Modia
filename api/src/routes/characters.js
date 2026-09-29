@@ -2,7 +2,8 @@ import express from 'express';
 import { query, withTransaction } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
-import { RACES, CLASSES, GENDERS, MAX_PARTY_SIZE, calculateStats, STARTING_EXPERIENCE, RACE_BASE_STATS } from '../config/constants.js';
+import { RACES, CLASSES, GENDERS, calculateStats, STARTING_EXPERIENCE, RACE_BASE_STATS } from '../config/constants.js';
+import { STARTING_CONSUMABLES } from '../../../shared/constants.js';
 import { validateCharacterName } from '../utils/nameValidation.js';
 import { parseIntOrThrow } from '../utils/validateNumericParam.js';
 import * as staminaService from '../services/staminaService.js';
@@ -245,10 +246,12 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
 }));
 
 // POST /api/characters - Create new character
+// Finding 43: This route is now atomic and race-free using a transaction with row locking
 router.post('/', authenticate, characterCreateLimiter, asyncHandler(async (req, res) => {
   const { name: rawName, race, characterClass, gender = 'other' } = req.body;
+  const userId = req.user.userId;
 
-  // Validation
+  // Validation (before transaction to fail fast)
   if (!rawName || !race || !characterClass) {
     throw new AppError('Name, race, and class are required', 400);
   }
@@ -268,134 +271,131 @@ router.post('/', authenticate, characterCreateLimiter, asyncHandler(async (req, 
     throw new AppError(`Invalid gender. Must be one of: ${Object.values(GENDERS).join(', ')}`, 400);
   }
 
-  // Block manual character creation after first character
-  // Party members must be recruited through guild recruitment
-  const existingCount = await query(
-    'SELECT COUNT(*) FROM characters WHERE user_id = $1',
-    [req.user.userId]
-  );
-  if (parseInt(existingCount.rows[0].count, 10) > 0) {
-    throw new AppError('Cannot create characters manually. Use guild recruitment.', 400);
-  }
-
-  // Calculate initial stats
+  // Calculate initial stats before transaction (no DB needed)
   const stats = calculateStats(race, characterClass, 1);
 
-  // Find next available party slot
-  const slotResult = await query(
-    `SELECT COALESCE(MAX(party_slot), 0) + 1 as next_slot
-     FROM characters WHERE user_id = $1 AND party_slot IS NOT NULL`,
-    [req.user.userId]
-  );
-  const nextSlot = Math.min(slotResult.rows[0].next_slot, MAX_PARTY_SIZE);
+  // All character creation happens atomically in a transaction
+  const character = await withTransaction(async (client) => {
+    // Lock the user row to prevent concurrent character creation races
+    // This ensures only one request can proceed at a time for this user
+    await client.query(
+      'SELECT id FROM users WHERE id = $1 FOR UPDATE',
+      [userId]
+    );
 
-  // Look up home region by race for spawn location
-  const regionResult = await query(
-    'SELECT id, castle_node_id FROM world_regions WHERE race = $1',
-    [race]
-  );
+    // Re-check character count inside the transaction (race-safe)
+    // Block manual character creation after first character
+    // Party members must be recruited through guild recruitment
+    const existingCount = await client.query(
+      'SELECT COUNT(*) FROM characters WHERE user_id = $1',
+      [userId]
+    );
+    if (parseInt(existingCount.rows[0].count, 10) > 0) {
+      throw new AppError('Cannot create characters manually. Use guild recruitment.', 400);
+    }
 
-  if (regionResult.rows.length === 0) {
-    throw new AppError('Invalid race for spawn location', 400);
-  }
+    // Look up home region by race for spawn location
+    const regionResult = await client.query(
+      'SELECT id, castle_node_id FROM world_regions WHERE race = $1',
+      [race]
+    );
 
-  const region = regionResult.rows[0];
-  const spawnNodeId = region.castle_node_id;
-  const homeRegionId = region.id;
+    if (regionResult.rows.length === 0) {
+      throw new AppError('Invalid race for spawn location', 400);
+    }
 
-  if (!spawnNodeId) {
-    console.error(`[CharacterCreate] ERROR: No castle_node_id for race ${race} in world_regions`);
-    throw new AppError('Unable to determine spawn location', 500);
-  }
+    const region = regionResult.rows[0];
+    const spawnNodeId = region.castle_node_id;
+    const homeRegionId = region.id;
 
-  // Insert character at racial homeland castle with starting experience
-  // Note: Gold is stored at user level (users.gold), not per-character
-  const result = await query(
-    `INSERT INTO characters (
-       user_id, name, race, class, gender, level, experience,
-       hp_current, hp_max, mp_current, mp_max,
-       strength, intelligence, agility, vitality, luck,
-       party_slot, current_node_id, home_region_id
-     )
-     VALUES ($1, $2, $3, $4, $5, 1, $6, $7, $7, $8, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-     RETURNING *`,
-    [
-      req.user.userId, name, race, characterClass, gender,
-      STARTING_EXPERIENCE,
-      stats.hpMax, stats.mpMax,
-      stats.strength, stats.intelligence, stats.agility, stats.vitality, stats.luck,
-      nextSlot <= MAX_PARTY_SIZE ? nextSlot : null,
-      spawnNodeId,
-      homeRegionId
-    ]
-  );
+    if (!spawnNodeId) {
+      console.error(`[CharacterCreate] ERROR: No castle_node_id for race ${race} in world_regions`);
+      throw new AppError('Unable to determine spawn location', 500);
+    }
 
-  const character = result.rows[0];
+    // Insert character at racial homeland castle with starting experience
+    // First character always gets party_slot = 1
+    // Note: Gold is stored at user level (users.gold), not per-character
+    const result = await client.query(
+      `INSERT INTO characters (
+         user_id, name, race, class, gender, level, experience,
+         hp_current, hp_max, mp_current, mp_max,
+         strength, intelligence, agility, vitality, luck,
+         party_slot, current_node_id, home_region_id
+       )
+       VALUES ($1, $2, $3, $4, $5, 1, $6, $7, $7, $8, $8, $9, $10, $11, $12, $13, 1, $14, $15)
+       RETURNING *`,
+      [
+        userId, name, race, characterClass, gender,
+        STARTING_EXPERIENCE,
+        stats.hpMax, stats.mpMax,
+        stats.strength, stats.intelligence, stats.agility, stats.vitality, stats.luck,
+        spawnNodeId,
+        homeRegionId
+      ]
+    );
 
-  // Grant starter equipment
-  const starterItems = STARTER_EQUIPMENT[characterClass];
-  if (starterItems) {
-    for (const itemName of starterItems) {
-      await query(
-        `INSERT INTO character_items (character_id, item_template_id, quantity, is_equipped, equipped_slot)
-         SELECT $1, id, 1, true, equipment_slot
-         FROM item_templates WHERE name = $2`,
-        [character.id, itemName]
+    const newCharacter = result.rows[0];
+
+    // Grant starter equipment
+    const starterItems = STARTER_EQUIPMENT[characterClass];
+    if (starterItems) {
+      for (const itemName of starterItems) {
+        await client.query(
+          `INSERT INTO character_items (character_id, item_template_id, quantity, is_equipped, equipped_slot)
+           SELECT $1, id, 1, true, equipment_slot
+           FROM item_templates WHERE name = $2`,
+          [newCharacter.id, itemName]
+        );
+      }
+    }
+
+    // Grant starter skills
+    const starterSkills = STARTER_SKILLS[characterClass];
+    if (starterSkills) {
+      for (const skillId of starterSkills) {
+        await client.query(
+          `INSERT INTO character_skills (character_id, skill_id, level)
+           VALUES ($1, $2, 1)
+           ON CONFLICT (character_id, skill_id) DO NOTHING`,
+          [newCharacter.id, skillId]
+        );
+      }
+    }
+
+    // Grant starting consumables to shared inventory (character_id NULL)
+    // This matches registrationService.js so players get the same start regardless of path
+    for (const { templateId, quantity } of STARTING_CONSUMABLES) {
+      await client.query(
+        `INSERT INTO character_items (user_id, character_id, item_template_id, quantity, is_equipped)
+         VALUES ($1, NULL, $2, $3, false)`,
+        [userId, templateId, quantity]
       );
     }
-  }
 
-  // Grant starter skills
-  const starterSkills = STARTER_SKILLS[characterClass];
-  if (starterSkills) {
-    for (const skillId of starterSkills) {
-      await query(
-        `INSERT INTO character_skills (character_id, skill_id, level)
-         VALUES ($1, $2, 1)
-         ON CONFLICT (character_id, skill_id) DO NOTHING`,
-        [character.id, skillId]
+    // Grant starting trait based on race/class combination
+    const startingTraitResult = await client.query(
+      'SELECT trait_id FROM starting_trait_mappings WHERE race = $1 AND class = $2',
+      [race, characterClass]
+    );
+
+    if (startingTraitResult.rows.length > 0) {
+      const traitId = startingTraitResult.rows[0].trait_id;
+      await client.query(
+        `INSERT INTO character_traits (character_id, trait_id)
+         VALUES ($1, $2)
+         ON CONFLICT (character_id, trait_id) DO NOTHING`,
+        [newCharacter.id, traitId]
       );
+      console.log(`[CharacterCreate] Assigned starting trait ${traitId} to character ${newCharacter.id}`);
     }
-  }
 
-  // Grant starting trait based on race/class combination
-  const startingTraitResult = await query(
-    'SELECT trait_id FROM starting_trait_mappings WHERE race = $1 AND class = $2',
-    [race, characterClass]
-  );
+    // Initialize node discovery inside transaction
+    console.log(`[CharacterCreate] Discovering spawn node for user ${userId}: nodeId=${spawnNodeId}`);
+    await discoverNodeAndAdjacent(userId, spawnNodeId, client);
 
-  if (startingTraitResult.rows.length > 0) {
-    const traitId = startingTraitResult.rows[0].trait_id;
-    await query(
-      `INSERT INTO character_traits (character_id, trait_id)
-       VALUES ($1, $2)
-       ON CONFLICT (character_id, trait_id) DO NOTHING`,
-      [character.id, traitId]
-    );
-    console.log(`[CharacterCreate] Assigned starting trait ${traitId} to character ${character.id}`);
-  }
-
-  // Initialize node discovery for character's spawn location
-  // This ensures the racial homeland castle and adjacent nodes are visible on the world map
-  console.log(`[CharacterCreate] Discovering spawn node for user ${req.user.userId}: nodeId=${spawnNodeId}`);
-
-  try {
-    await discoverNodeAndAdjacent(req.user.userId, spawnNodeId);
-
-    // Verify discovery succeeded
-    const verifyResult = await query(
-      'SELECT COUNT(*) as count FROM user_node_discovery WHERE user_id = $1',
-      [req.user.userId]
-    );
-    console.log(`[CharacterCreate] Discovery complete: user ${req.user.userId} now has ${verifyResult.rows[0].count} discovered nodes`);
-
-    if (parseInt(verifyResult.rows[0].count, 10) === 0) {
-      console.error(`[CharacterCreate] WARNING: Discovery produced 0 nodes for user ${req.user.userId}, spawnNodeId=${spawnNodeId}`);
-    }
-  } catch (err) {
-    console.error(`[CharacterCreate] Discovery FAILED for user ${req.user.userId}, spawnNodeId=${spawnNodeId}:`, err.message);
-    // Don't throw - character was created, discovery failure shouldn't block
-  }
+    return newCharacter;
+  });
 
   res.status(201).json({ character });
 }));

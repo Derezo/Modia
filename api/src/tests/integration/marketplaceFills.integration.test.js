@@ -445,6 +445,156 @@ describe('Marketplace Complete Fills', () => {
     });
   });
 
+  describe('Seller net gold assertions', () => {
+    it('should deduct 5% marketplace fee from seller proceeds', async () => {
+      const price = 1000;
+      const quantity = 1;
+
+      // Get seller's initial gold
+      const initialGold = await query('SELECT gold FROM users WHERE id = $1', [seller.userId]);
+      const sellerInitialGold = parseInt(initialGold.rows[0].gold, 10);
+
+      // Seller places a sell limit order
+      const sellRes = await request(
+        'POST',
+        '/api/marketplace/orders/limit',
+        {
+          itemTemplateId: stackableItemId,
+          side: 'sell',
+          price,
+          quantity,
+          characterId: sellerCharacter.id
+        },
+        seller.accessToken
+      );
+
+      assert.strictEqual(sellRes.status, 200, `Sell order failed: ${JSON.stringify(sellRes.body)}`);
+
+      // Buyer places a matching buy limit order
+      const buyRes = await request(
+        'POST',
+        '/api/marketplace/orders/limit',
+        {
+          itemTemplateId: stackableItemId,
+          side: 'buy',
+          price,
+          quantity,
+          characterId: buyerCharacter.id
+        },
+        buyer.accessToken
+      );
+
+      assert.strictEqual(buyRes.status, 200, `Buy order failed: ${JSON.stringify(buyRes.body)}`);
+
+      // Verify seller received net gold (gross - 5% fee)
+      const finalGold = await query('SELECT gold FROM users WHERE id = $1', [seller.userId]);
+      const sellerFinalGold = parseInt(finalGold.rows[0].gold, 10);
+
+      const grossAmount = price * quantity;
+      const expectedTax = Math.floor(grossAmount * 0.05);
+      const expectedNet = grossAmount - expectedTax;
+
+      assert.strictEqual(
+        sellerFinalGold - sellerInitialGold,
+        expectedNet,
+        `Seller should receive net gold after 5% fee: expected ${expectedNet}, got ${sellerFinalGold - sellerInitialGold}`
+      );
+
+      // Verify the tax was logged
+      const taxEntry = await query(
+        `SELECT tax_amount, tax_rate, gross_amount, net_amount
+         FROM marketplace_tax_ledger
+         WHERE seller_id = $1
+         ORDER BY created_at DESC LIMIT 1`,
+        [seller.userId]
+      );
+      assert.strictEqual(parseInt(taxEntry.rows[0].tax_amount, 10), expectedTax);
+      assert.strictEqual(parseFloat(taxEntry.rows[0].tax_rate), 0.05);
+    });
+
+    it('should apply 3% fee when seller has Merchant Seal relic', async () => {
+      const price = 1000;
+      const quantity = 1;
+
+      // Grant Merchant's Seal relic to seller (simulated by inserting directly)
+      // First get the relic template id
+      const relicResult = await query(
+        `SELECT id FROM relic_templates WHERE key = 'merchants_seal'`
+      );
+
+      if (relicResult.rows.length === 0) {
+        console.log('Skipping test - Merchant Seal relic not found');
+        return;
+      }
+
+      const relicId = relicResult.rows[0].id;
+
+      // Grant the relic to the seller
+      await query(
+        `INSERT INTO user_relics (user_id, relic_id)
+         VALUES ($1, $2)
+         ON CONFLICT (user_id, relic_id) DO NOTHING`,
+        [seller.userId, relicId]
+      );
+
+      // Get seller's initial gold
+      const initialGold = await query('SELECT gold FROM users WHERE id = $1', [seller.userId]);
+      const sellerInitialGold = parseInt(initialGold.rows[0].gold, 10);
+
+      // Seller places a sell limit order
+      const sellRes = await request(
+        'POST',
+        '/api/marketplace/orders/limit',
+        {
+          itemTemplateId: stackableItemId,
+          side: 'sell',
+          price,
+          quantity,
+          characterId: sellerCharacter.id
+        },
+        seller.accessToken
+      );
+
+      assert.strictEqual(sellRes.status, 200, `Sell order failed: ${JSON.stringify(sellRes.body)}`);
+
+      // Buyer places a matching buy limit order
+      const buyRes = await request(
+        'POST',
+        '/api/marketplace/orders/limit',
+        {
+          itemTemplateId: stackableItemId,
+          side: 'buy',
+          price,
+          quantity,
+          characterId: buyerCharacter.id
+        },
+        buyer.accessToken
+      );
+
+      assert.strictEqual(buyRes.status, 200, `Buy order failed: ${JSON.stringify(buyRes.body)}`);
+
+      // Verify seller received net gold (gross - 3% fee due to Merchant's Seal)
+      const finalGold = await query('SELECT gold FROM users WHERE id = $1', [seller.userId]);
+      const sellerFinalGold = parseInt(finalGold.rows[0].gold, 10);
+
+      const grossAmount = price * quantity;
+      const expectedTax = Math.floor(grossAmount * 0.03); // 3% with Merchant's Seal
+      const expectedNet = grossAmount - expectedTax;
+
+      assert.strictEqual(
+        sellerFinalGold - sellerInitialGold,
+        expectedNet,
+        `Seller with Merchant Seal should receive net gold after 3% fee: expected ${expectedNet}, got ${sellerFinalGold - sellerInitialGold}`
+      );
+
+      // Cleanup - remove the relic so it doesn't affect other tests
+      await query(
+        'DELETE FROM user_relics WHERE user_id = $1 AND relic_id = $2',
+        [seller.userId, relicId]
+      );
+    });
+  });
+
   describe('Non-stackable item rejection', () => {
     it('should reject limit orders for non-stackable items', async () => {
       // Find a non-stackable item (weapon or armor)

@@ -346,7 +346,8 @@ export async function placeLimitOrder(client, userId, characterId, itemTemplateI
     }
 
     // Get the seller's tax rate (may be reduced by Merchant's Seal relic)
-    const sellerTaxRate = await getMarketplaceFeeRate(sellerUserId);
+    // Get seller's tax rate using transaction client to avoid nested pool checkouts
+    const sellerTaxRate = await getMarketplaceFeeRate(sellerUserId, client);
 
     const trade = await executeTrade(client, buyOrder, sellOrder, tradeQty, executionPrice, itemName, sellerTaxRate);
     trades.push(trade);
@@ -358,6 +359,23 @@ export async function placeLimitOrder(client, userId, characterId, itemTemplateI
   // (handles edge cases like price improvement leaving excess reservation)
   if (remainingQuantity === 0 && side === 'buy') {
     await releaseGold(client, order.id);
+  }
+
+  // Also release stranded reservations for matched resting buy orders that reached filled
+  // (the sell side filling resting buy orders)
+  if (side === 'sell') {
+    for (const trade of trades) {
+      // trade._auditInfo has the buyOrderId for resting buy orders we matched
+      if (trade._auditInfo?.buyOrderId) {
+        const buyOrderCheck = await client.query(
+          'SELECT status FROM market_orders WHERE id = $1',
+          [trade._auditInfo.buyOrderId]
+        );
+        if (buyOrderCheck.rows[0]?.status === 'filled') {
+          await releaseGold(client, trade._auditInfo.buyOrderId);
+        }
+      }
+    }
   }
 
   // Refetch order to get updated status
@@ -569,7 +587,8 @@ export async function executeMarketOrder(client, userId, characterId, itemTempla
 
     if (side === 'buy') {
       // Get seller's tax rate (may be reduced by Merchant's Seal relic)
-      const sellerTaxRate = await getMarketplaceFeeRate(order.user_id);
+      // Pass client to avoid nested pool checkouts
+      const sellerTaxRate = await getMarketplaceFeeRate(order.user_id, client);
 
       // Calculate marketplace fee for seller
       const grossGold = executionPrice * matchQty;
@@ -644,7 +663,8 @@ export async function executeMarketOrder(client, userId, characterId, itemTempla
   let sellerTaxRate = DEFAULT_TAX_RATE;
   if (side === 'sell' && totalProceeds > 0) {
     // Get seller's tax rate (may be reduced by Merchant's Seal relic)
-    sellerTaxRate = await getMarketplaceFeeRate(userId);
+    // Pass client to avoid nested pool checkouts
+    sellerTaxRate = await getMarketplaceFeeRate(userId, client);
     totalTax = Math.floor(totalProceeds * sellerTaxRate);
     netProceeds = totalProceeds - totalTax;
 
@@ -666,6 +686,20 @@ export async function executeMarketOrder(client, userId, characterId, itemTempla
 
   // Note: cleanup of zero-amount reservations/escrow is no longer needed
   // consumeReservation and reduceEscrow now delete rows that reach 0
+
+  // Release stranded gold reservations for resting buy orders that reached filled
+  // (market sell side fills resting buy orders)
+  if (side === 'sell') {
+    for (const { order } of ordersToMatch) {
+      const buyOrderCheck = await client.query(
+        'SELECT status FROM market_orders WHERE id = $1',
+        [order.id]
+      );
+      if (buyOrderCheck.rows[0]?.status === 'filled') {
+        await releaseGold(client, order.id);
+      }
+    }
+  }
 
   const itemName = itemResult.rows[0].name;
 

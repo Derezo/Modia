@@ -14,7 +14,7 @@
 
 import { AppError } from '../../middleware/errorHandler.js';
 import { MAX_GOLD } from '../../config/constants.js';
-import { DEFAULT_TAX_RATE, AUGMENT_VALUES, RARITY_MULTIPLIERS, normalizeRarityName } from './constants.js';
+import { AUGMENT_VALUES, RARITY_MULTIPLIERS, normalizeRarityName } from './constants.js';
 import { getMarketplaceFeeRate } from '../relicService.js';
 
 /**
@@ -274,7 +274,8 @@ export async function buyItemListing(client, buyerUserId, buyerCharacterId, list
   }
 
   // Get seller's tax rate (may be reduced by Merchant's Seal relic)
-  const sellerTaxRate = await getMarketplaceFeeRate(listing.seller_id);
+  // Pass client to avoid nested pool checkouts
+  const sellerTaxRate = await getMarketplaceFeeRate(listing.seller_id, client);
 
   // Can't buy your own listing
   if (listing.seller_id === buyerUserId) {
@@ -436,6 +437,7 @@ export async function getUserListings(client, userId) {
        il.item_template_id,
        it.name as template_name,
        it.item_type,
+       it.stat_bonuses as template_stats,
        it.sprite_id
      FROM item_listings il
      JOIN item_templates it ON il.item_template_id = it.id
@@ -453,6 +455,12 @@ export async function getUserListings(client, userId) {
       templateName: row.template_name,
       itemType: row.item_type,
       rarity: normalizeRarityName(mods.rarity),
+      material: mods.material || null,
+      // Same stat/augment shape as getItemListings so "My Listings" can show
+      // the rolled item, not '-' in every Stats/Augments cell.
+      baseStats: mods.baseStats || row.template_stats || {},
+      bonusStats: mods.bonusStats || {},
+      augments: mods.augments || [],
       spriteId: row.sprite_id,
       price: parseInt(row.price, 10),
       suggestedPrice: row.suggested_price ? parseInt(row.suggested_price, 10) : null,
@@ -508,10 +516,13 @@ export async function getSellableInventory(client, userId) {
     // Normalize rarity from modifications or template (handles numeric 1-5)
     const rarity = normalizeRarityName(modifications.rarity ?? row.rarity);
 
-    // Calculate suggested price using the sync function
+    // Price on the rolled rarity only, like createListing and the
+    // suggested-price route. A template's own rarity is already priced into
+    // base_price (an Elixir's 300g), so multiplying it again inflated the
+    // estimate for plain consumables.
     const { suggestedPrice } = calculateSuggestedPrice({
       basePrice: row.base_price,
-      rarity,
+      rarity: modifications.rarity,
       augments
     });
 

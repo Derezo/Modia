@@ -535,5 +535,253 @@ describe('Characters API', () => {
       assert.ok(res.body.error.includes('main character'),
         `Expected error about main character, got: ${res.body.error}`);
     });
+
+    it('should delete character with marketplace_audit history (FK SET NULL)', async () => {
+      // Create a recruited character that can be deleted
+      // Name must be <= 24 chars (varchar(24) constraint)
+      const charToDelete = await createTestPartyCharacter(user.userId, {
+        name: `MktHist${Date.now() % 10000000}`
+      });
+      let auditId = null;
+
+      try {
+        // Create marketplace audit entry referencing this character
+        const insertResult = await query(
+          `INSERT INTO marketplace_audit (event_type, user_id, character_id, event_data)
+           VALUES ('test_event', $1, $2, '{"test": true}')
+           RETURNING id`,
+          [user.userId, charToDelete.id]
+        );
+        auditId = insertResult.rows[0].id;
+
+        // Verify the audit entry exists
+        const beforeDelete = await query(
+          'SELECT id FROM marketplace_audit WHERE character_id = $1',
+          [charToDelete.id]
+        );
+        assert.ok(beforeDelete.rows.length > 0, 'Audit entry should exist before delete');
+
+        // Delete the character - should succeed due to ON DELETE SET NULL
+        const res = await request('DELETE', `/api/characters/${charToDelete.id}`, null, user.accessToken);
+        assert.strictEqual(res.status, 200, 'Character deletion should succeed');
+
+        // Verify the audit entry still exists but character_id is NULL
+        const afterDelete = await query(
+          'SELECT id, character_id FROM marketplace_audit WHERE id = $1',
+          [auditId]
+        );
+        assert.ok(afterDelete.rows.length > 0, 'Audit entry should still exist after delete');
+        assert.strictEqual(afterDelete.rows[0].character_id, null, 'character_id should be NULL after FK SET NULL');
+      } finally {
+        // Cleanup
+        if (auditId) {
+          await query('DELETE FROM marketplace_audit WHERE id = $1', [auditId]).catch(() => {});
+        }
+      }
+    });
+
+    it('should delete character with item_escrow row (open sell order, FK SET NULL)', async () => {
+      // Test that deleting a character with an open sell order works
+      // item_escrow.character_id has ON DELETE SET NULL
+      const charToDelete = await createTestPartyCharacter(user.userId, {
+        name: `Escrow${Date.now() % 10000000}`
+      });
+      let orderId = null;
+      let escrowId = null;
+
+      try {
+        // Find a stackable tradeable item
+        const itemResult = await query(
+          `SELECT id FROM item_templates
+           WHERE is_tradeable IS NOT FALSE
+           AND is_stackable = TRUE
+           AND item_type IN ('consumable', 'material')
+           LIMIT 1`
+        );
+        assert.ok(itemResult.rows.length > 0, 'Need a stackable tradeable item');
+        const itemTemplateId = itemResult.rows[0].id;
+
+        // Create a market order (sell side, open status)
+        const orderResult = await query(
+          `INSERT INTO market_orders (user_id, item_template_id, side, price, quantity, status)
+           VALUES ($1, $2, 'sell', 100, 5, 'open')
+           RETURNING id`,
+          [user.userId, itemTemplateId]
+        );
+        orderId = orderResult.rows[0].id;
+
+        // Create item_escrow referencing the character
+        // This simulates having escrowed items from a character's inventory for a sell order
+        const escrowResult = await query(
+          `INSERT INTO item_escrow (order_id, character_id, item_template_id, quantity)
+           VALUES ($1, $2, $3, 5)
+           RETURNING id`,
+          [orderId, charToDelete.id, itemTemplateId]
+        );
+        escrowId = escrowResult.rows[0].id;
+
+        // Delete the character - should succeed due to ON DELETE SET NULL
+        const res = await request('DELETE', `/api/characters/${charToDelete.id}`, null, user.accessToken);
+        assert.strictEqual(res.status, 200, 'Character deletion should succeed with item_escrow');
+
+        // Verify item_escrow still exists but character_id is NULL
+        const afterDelete = await query(
+          'SELECT id, character_id FROM item_escrow WHERE id = $1',
+          [escrowId]
+        );
+        assert.ok(afterDelete.rows.length > 0, 'item_escrow row should still exist');
+        assert.strictEqual(afterDelete.rows[0].character_id, null, 'character_id should be NULL after FK SET NULL');
+      } finally {
+        // Cleanup
+        if (escrowId) {
+          await query('DELETE FROM item_escrow WHERE id = $1', [escrowId]).catch(() => {});
+        }
+        if (orderId) {
+          await query('DELETE FROM market_orders WHERE id = $1', [orderId]).catch(() => {});
+        }
+      }
+    });
+
+    it('should delete character with item_listing_sales history (FK SET NULL)', async () => {
+      // Test that deleting a character that has bought items works
+      // item_listing_sales.buyer_character_id has ON DELETE SET NULL
+      //
+      // Setup: Create a seller user/character (persists) and a buyer character (to delete)
+      // The listing is owned by seller, the sale records buyer_character_id = charToDelete
+      // When charToDelete is deleted, item_listing_sales.buyer_character_id -> NULL
+
+      const sellerUser = await createTrackedUser();
+      const sellerChar = await createTestCharacter(sellerUser.accessToken);
+      const charToDelete = await createTestPartyCharacter(user.userId, {
+        name: `Buyer${Date.now() % 10000000}`
+      });
+
+      let characterItemId = null;
+      let listingId = null;
+      let saleId = null;
+
+      try {
+        // Find a tradeable equipment item
+        const itemResult = await query(
+          'SELECT id FROM item_templates WHERE is_tradeable IS NOT FALSE LIMIT 1'
+        );
+        assert.ok(itemResult.rows.length > 0, 'Need a tradeable item');
+        const itemTemplateId = itemResult.rows[0].id;
+
+        // Create a character_item owned by the seller user (shared inventory: user_id set, character_id null)
+        const itemInsert = await query(
+          'INSERT INTO character_items (user_id, item_template_id, quantity) ' +
+          'VALUES ($1, $2, 1) ' +
+          'RETURNING id',
+          [sellerUser.userId, itemTemplateId]
+        );
+        characterItemId = itemInsert.rows[0].id;
+
+        // Create a sold listing from the seller
+        const listingResult = await query(
+          'INSERT INTO item_listings (seller_id, character_id, character_item_id, item_template_id, price, status) ' +
+          "VALUES ($1, $2, $3, $4, 100, 'sold') " +
+          'RETURNING id',
+          [sellerUser.userId, sellerChar.id, characterItemId, itemTemplateId]
+        );
+        listingId = listingResult.rows[0].id;
+
+        // Create an item_listing_sales record with charToDelete as buyer
+        const saleResult = await query(
+          `INSERT INTO item_listing_sales (listing_id, buyer_id, buyer_character_id, seller_id, item_template_id, price)
+           VALUES ($1, $2, $3, $4, $5, 100)
+           RETURNING id`,
+          [listingId, user.userId, charToDelete.id, sellerUser.userId, itemTemplateId]
+        );
+        saleId = saleResult.rows[0].id;
+
+        // Verify the sale exists with the buyer character
+        const beforeDelete = await query(
+          'SELECT buyer_character_id FROM item_listing_sales WHERE id = $1',
+          [saleId]
+        );
+        assert.strictEqual(beforeDelete.rows[0].buyer_character_id, charToDelete.id);
+
+        // Delete the buyer character - should succeed due to ON DELETE SET NULL
+        const res = await request('DELETE', `/api/characters/${charToDelete.id}`, null, user.accessToken);
+        assert.strictEqual(res.status, 200, 'Character deletion should succeed with item_listing_sales');
+
+        // Verify item_listing_sales still exists but buyer_character_id is NULL
+        const afterDelete = await query(
+          'SELECT id, buyer_character_id FROM item_listing_sales WHERE id = $1',
+          [saleId]
+        );
+        assert.ok(afterDelete.rows.length > 0, 'item_listing_sales row should still exist');
+        assert.strictEqual(afterDelete.rows[0].buyer_character_id, null, 'buyer_character_id should be NULL after FK SET NULL');
+      } finally {
+        // Cleanup in reverse order of creation
+        if (saleId) {
+          await query('DELETE FROM item_listing_sales WHERE id = $1', [saleId]).catch(() => {});
+        }
+        if (listingId) {
+          await query('DELETE FROM item_listings WHERE id = $1', [listingId]).catch(() => {});
+        }
+        if (characterItemId) {
+          await query('DELETE FROM character_items WHERE id = $1', [characterItemId]).catch(() => {});
+        }
+      }
+    });
+
+    it('should allow user deletion with market_trades history (FK SET NULL)', async () => {
+      // Test that deleting a user with market_trades works
+      // market_trades.buyer_id and seller_id have ON DELETE SET NULL
+      const tradeUser = await createTrackedUser();
+      // Create a character so the user has complete data (character not used in test)
+      const _tradeChar = await createTestCharacter(tradeUser.accessToken);
+      let tradeId = null;
+
+      try {
+        // Find a tradeable item
+        const itemResult = await query(
+          'SELECT id FROM item_templates WHERE is_tradeable IS NOT FALSE LIMIT 1'
+        );
+        assert.ok(itemResult.rows.length > 0, 'Need a tradeable item');
+        const itemTemplateId = itemResult.rows[0].id;
+
+        // Create a market_trades record with the user as buyer
+        const tradeResult = await query(
+          'INSERT INTO market_trades (item_template_id, buyer_id, seller_id, price, quantity, total_gold) ' +
+          'VALUES ($1, $2, $2, 100, 1, 100) ' +
+          'RETURNING id',
+          [itemTemplateId, tradeUser.userId]
+        );
+        tradeId = tradeResult.rows[0].id;
+
+        // Verify the trade exists
+        const beforeDelete = await query(
+          'SELECT buyer_id, seller_id FROM market_trades WHERE id = $1',
+          [tradeId]
+        );
+        assert.strictEqual(beforeDelete.rows[0].buyer_id, tradeUser.userId);
+        assert.strictEqual(beforeDelete.rows[0].seller_id, tradeUser.userId);
+
+        // Delete the user via cleanupTestUser (which cascades)
+        // This removes the user from tracking so we don't double-delete
+        const userIdToDelete = tradeUser.userId;
+        const idx = createdUserIds.indexOf(userIdToDelete);
+        if (idx !== -1) createdUserIds.splice(idx, 1);
+
+        await cleanupTestUser(userIdToDelete);
+
+        // Verify market_trades still exists but buyer_id and seller_id are NULL
+        const afterDelete = await query(
+          'SELECT id, buyer_id, seller_id FROM market_trades WHERE id = $1',
+          [tradeId]
+        );
+        assert.ok(afterDelete.rows.length > 0, 'market_trades row should still exist');
+        assert.strictEqual(afterDelete.rows[0].buyer_id, null, 'buyer_id should be NULL after FK SET NULL');
+        assert.strictEqual(afterDelete.rows[0].seller_id, null, 'seller_id should be NULL after FK SET NULL');
+      } finally {
+        // Cleanup
+        if (tradeId) {
+          await query('DELETE FROM market_trades WHERE id = $1', [tradeId]).catch(() => {});
+        }
+      }
+    });
   });
 });
