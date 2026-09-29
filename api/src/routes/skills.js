@@ -15,6 +15,7 @@ import {
 } from '../services/characterLevelService.js';
 import { scaleSkillAttributes } from '../config/skillScaling.js';
 import { calculateStats } from '../../../shared/constants.js';
+import { parseIntOrThrow } from '../utils/validateNumericParam.js';
 
 const router = express.Router();
 
@@ -213,7 +214,7 @@ router.get('/tree/:guildId', authenticate, asyncHandler(async (req, res) => {
 
 // GET /api/characters/:characterId/skills - Get character's learned skills
 router.get('/characters/:characterId/skills', authenticate, asyncHandler(async (req, res) => {
-  const { characterId } = req.params;
+  const characterId = parseIntOrThrow(req.params.characterId, 'characterId');
 
   // Verify character ownership
   const charResult = await query(
@@ -247,7 +248,7 @@ router.get('/characters/:characterId/skills', authenticate, asyncHandler(async (
   }
 
   res.json({
-    characterId: parseInt(characterId, 10),
+    characterId,
     class: character.class,
     level: character.level,
     xpPool: character.experience || 0,
@@ -333,7 +334,7 @@ router.get('/guilds', authenticate, asyncHandler(async (req, res) => {
 // GET /api/skills/advancement/:characterId - Get advancement tiers for character's guild
 // Advancement now requires completing quests - use /api/advancement/* endpoints
 router.get('/advancement/:characterId', authenticate, asyncHandler(async (req, res) => {
-  const { characterId } = req.params;
+  const characterId = parseIntOrThrow(req.params.characterId, 'characterId');
 
   // Verify character ownership
   const charResult = await query(

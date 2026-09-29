@@ -65,6 +65,7 @@ import {
   createNegotiatedBattleStateSnapshot,
   sendWithAck
 } from '../messageReliability.js';
+import { buildEquipmentStatsLateral } from '../equipmentStats.js';
 
 // Register completeMatch with turnTimer to break circular dependency
 setCompleteMatchFn(completeMatch);
@@ -575,7 +576,10 @@ function checkMatchReady(matchId) {
 
 /**
  * Get a player's battle party characters with stats and equipment
- * Uses LATERAL JOIN to properly extract equipment bonuses from stat_bonuses JSON field
+ * Uses shared equipment stats helper that properly handles:
+ * - Generated items: modifications.baseStats (rarity/level scaled)
+ * - Augments: modifications.bonusStats
+ * - HP/MP normalization: maps hp_max to hp, mp_max to mp
  * @param {number} userId - User ID
  * @param {Object|null} client - Optional caller-owned pg client
  * @param {Array<number>|null} characterIds - Optional exact character IDs to hydrate
@@ -602,21 +606,7 @@ async function getPlayerBattleParty(userId, client = null, characterIds = null) 
             COALESCE(eq.equip_magic_defense, 0) as equip_magic_defense
      FROM characters c
      LEFT JOIN LATERAL (
-       SELECT
-         SUM(COALESCE((it.stat_bonuses->>'strength')::int, 0) + COALESCE((ci.modifications->>'strength')::int, 0)) as equip_strength,
-         SUM(COALESCE((it.stat_bonuses->>'intelligence')::int, 0) + COALESCE((ci.modifications->>'intelligence')::int, 0)) as equip_intelligence,
-         SUM(COALESCE((it.stat_bonuses->>'agility')::int, 0) + COALESCE((ci.modifications->>'agility')::int, 0)) as equip_agility,
-         SUM(COALESCE((it.stat_bonuses->>'vitality')::int, 0) + COALESCE((ci.modifications->>'vitality')::int, 0)) as equip_vitality,
-         SUM(COALESCE((it.stat_bonuses->>'luck')::int, 0) + COALESCE((ci.modifications->>'luck')::int, 0)) as equip_luck,
-         SUM(COALESCE((it.stat_bonuses->>'hp')::int, 0) + COALESCE((ci.modifications->>'hp_max')::int, 0)) as equip_hp,
-         SUM(COALESCE((it.stat_bonuses->>'mp')::int, 0) + COALESCE((ci.modifications->>'mp_max')::int, 0)) as equip_mp,
-         SUM(COALESCE((it.stat_bonuses->>'attack')::int, 0) + COALESCE((ci.modifications->>'attack')::int, 0)) as equip_attack,
-         SUM(COALESCE((it.stat_bonuses->>'defense')::int, 0) + COALESCE((ci.modifications->>'defense')::int, 0)) as equip_defense,
-         SUM(COALESCE((it.stat_bonuses->>'magic_attack')::int, 0) + COALESCE((ci.modifications->>'magic_attack')::int, 0)) as equip_magic_attack,
-         SUM(COALESCE((it.stat_bonuses->>'magic_defense')::int, 0) + COALESCE((ci.modifications->>'magic_defense')::int, 0)) as equip_magic_defense
-       FROM character_items ci
-       JOIN item_templates it ON ci.item_template_id = it.id
-       WHERE ci.character_id = c.id AND ci.equipped_slot IS NOT NULL
+       ${buildEquipmentStatsLateral()}
      ) eq ON true
      WHERE c.user_id = $1
        AND ($2::int[] IS NULL OR c.id = ANY($2::int[]))

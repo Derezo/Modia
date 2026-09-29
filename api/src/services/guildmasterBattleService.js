@@ -28,6 +28,7 @@ import { createPlayerBattleUnit } from './battleUnitFactory.js';
 import { loadActiveZodiacAbilities } from './zodiacAbilityService.js';
 import { loadZodiacCollectionBonus } from './zodiacCollectionBonusService.js';
 import * as bossService from './bossService.js';
+import { sumEquipmentStats } from './equipmentStats.js';
 
 const BASE_CLASSES = ['warrior', 'wizard', 'monk', 'chemist'];
 
@@ -370,7 +371,7 @@ export async function createSoloPlayerUnit(character, { client = null } = {}) {
     equip_intelligence: equipmentBonuses.intelligence || 0,
     equip_agility: equipmentBonuses.agility || 0,
     equip_vitality: equipmentBonuses.vitality || 0,
-    equip_luck: 0,
+    equip_luck: equipmentBonuses.luck || 0,
     equip_attack: equipmentBonuses.attack || 0,
     equip_defense: equipmentBonuses.defense || 0,
     equip_magic_attack: equipmentBonuses.magicAttack || 0,
@@ -574,32 +575,13 @@ export function createDiscipleUnit(className, challengerLevel, index) {
 
 /**
  * Calculate equipment stat bonuses
+ * Uses shared equipment stats helper that properly handles:
+ * - Generated items: modifications.baseStats (rarity/level scaled)
+ * - Augments: modifications.bonusStats
+ * - HP/MP normalization: maps hp_max to hp, mp_max to mp
  */
 function calculateEquipmentBonuses(equipment) {
-  const bonuses = {
-    hp: 0,
-    mp: 0,
-    attack: 0,
-    defense: 0,
-    magicAttack: 0,
-    magicDefense: 0,
-    strength: 0,
-    intelligence: 0,
-    agility: 0,
-    vitality: 0
-  };
-
-  for (const item of equipment) {
-    const statBonuses = item.stat_bonuses || {};
-
-    for (const [stat, value] of Object.entries(statBonuses)) {
-      if (bonuses[stat] !== undefined) {
-        bonuses[stat] += value;
-      }
-    }
-  }
-
-  return bonuses;
+  return sumEquipmentStats(equipment);
 }
 
 /**

@@ -8,6 +8,63 @@ import {
 import { ZODIAC_CRYSTALS } from '../../../../shared/constants.js';
 
 describe('guildmaster player battle snapshot', () => {
+  it('applies equipment luck bonus from augmented items', async () => {
+    const zodiacSigns = Object.keys(ZODIAC_CRYSTALS);
+    const client = {
+      async query(sql) {
+        if (sql.includes('FROM characters c')) {
+          return {
+            rows: [{
+              id: 88,
+              user_id: 502,
+              name: 'Lucky Challenger',
+              class: 'warrior',
+              race: 'human',
+              gender: 'male',
+              level: 15,
+              hp_current: 100,
+              hp_max: 100,
+              mp_current: 50,
+              mp_max: 50,
+              strength: 80,
+              intelligence: 40,
+              agility: 35,
+              vitality: 60,
+              luck: 10
+            }]
+          };
+        }
+        if (sql.includes('FROM character_items')) {
+          // Equipment with bonusStats.luck (from augment)
+          return {
+            rows: [{
+              stat_bonuses: { strength: 5 },
+              modifications: JSON.stringify({
+                baseStats: { strength: 8 },
+                bonusStats: { luck: 4 }
+              })
+            }]
+          };
+        }
+        if (sql.includes('FROM character_skills')) {
+          return { rows: [] };
+        }
+        if (sql.includes('FROM user_shrine_visits')) {
+          return { rows: [] };
+        }
+        if (sql.includes('FROM user_zodiac_crystals')) {
+          return { rows: [] };
+        }
+        throw new Error(`Unexpected query: ${sql}`);
+      }
+    };
+
+    const unit = await createSoloPlayerUnit({ id: 88, level: 15 }, { client });
+
+    // Base luck is 10, equipment provides +4 from bonusStats.luck
+    assert.equal(unit.luck, 14, 'equipment luck bonus should be applied');
+  });
+
   it('loads the owning account collection through the injected client', async () => {
     const zodiacSigns = Object.keys(ZODIAC_CRYSTALS);
     const calls = [];

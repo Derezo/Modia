@@ -109,8 +109,10 @@ async function calculateEquipmentValue(characterId) {
 
     // Count augments from modifications JSON
     const modifications = item.modifications || {};
-    // Count non-null values in modifications as augments
-    const augmentCount = Object.values(modifications).filter(v => v !== null && v !== undefined).length;
+    // Use the actual augments array, not all modifications keys
+    // Fixes: modifications contains generationSeed, material, rarity, baseStats, etc.
+    const augments = Array.isArray(modifications.augments) ? modifications.augments : [];
+    const augmentCount = augments.length;
     const augmentBonus = augmentCount * AUGMENT_BONUS;
 
     totalValue += Math.floor(basePrice * rarityMultiplier) + augmentBonus;

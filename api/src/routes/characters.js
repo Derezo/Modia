@@ -4,9 +4,11 @@ import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import { RACES, CLASSES, GENDERS, MAX_PARTY_SIZE, calculateStats, STARTING_EXPERIENCE, RACE_BASE_STATS } from '../config/constants.js';
 import { validateCharacterName } from '../utils/nameValidation.js';
+import { parseIntOrThrow } from '../utils/validateNumericParam.js';
 import * as staminaService from '../services/staminaService.js';
 import { assertNoUnsettledFishingSession } from '../services/fishingTravelGuard.js';
 import { discoverNodeAndAdjacent } from '../services/world/discoveryService.js';
+import { buildEquipmentStatsLateral } from '../services/equipmentStats.js';
 import {
   characterCreateLimiter,
   characterDeleteLimiter,
@@ -180,6 +182,50 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
     firstChar.party_slot = 1;
   }
 
+  // Load equipped items per character for formation badge calculations
+  // Returns: { [characterId]: { [slot]: { templateId, type, level_requirement, class_restriction, slot, subSlot, stats } } }
+  const characterIds = result.rows.map(c => c.id);
+  const equipmentResult = characterIds.length > 0
+    ? await query(
+      `SELECT ci.character_id, ci.equipped_slot,
+              it.id as template_id, it.item_type, it.equipment_slot,
+              it.level_requirement, it.class_restriction, it.rarity as template_rarity,
+              it.stat_bonuses, ci.modifications
+       FROM character_items ci
+       JOIN item_templates it ON ci.item_template_id = it.id
+       WHERE ci.character_id = ANY($1) AND ci.equipped_slot IS NOT NULL`,
+      [characterIds]
+    )
+    : { rows: [] };
+
+  // Group equipment by character
+  const equipmentByCharacter = {};
+  for (const row of equipmentResult.rows) {
+    if (!equipmentByCharacter[row.character_id]) {
+      equipmentByCharacter[row.character_id] = {};
+    }
+    // Parse stats for power calculation
+    const templateStats = typeof row.stat_bonuses === 'string'
+      ? JSON.parse(row.stat_bonuses)
+      : row.stat_bonuses || {};
+    const mods = typeof row.modifications === 'string'
+      ? JSON.parse(row.modifications)
+      : row.modifications || {};
+    const baseStats = mods.baseStats || templateStats;
+    const bonusStats = mods.bonusStats || {};
+
+    equipmentByCharacter[row.character_id][row.equipped_slot] = {
+      templateId: row.template_id,
+      type: row.item_type,
+      equipmentSlot: row.equipment_slot,
+      rarity: row.template_rarity,
+      levelRequirement: row.level_requirement,
+      classRestriction: row.class_restriction,
+      baseStats,
+      bonusStats
+    };
+  }
+
   // Calculate current stamina with the user's active shrine regeneration
   // windows. The batch service keeps this summary consistent with the
   // dedicated stamina endpoint and world-travel checks.
@@ -189,7 +235,8 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
   const characters = result.rows.map(char => ({
     ...char,
     stamina_current: staminaByCharacter[char.id]?.current
-      ?? staminaService.calculateCurrentStamina(char)
+      ?? staminaService.calculateCurrentStamina(char),
+    equipment: equipmentByCharacter[char.id] || {}
   }));
 
   // Prevent browser caching to avoid showing stale character lists across sessions
@@ -433,7 +480,7 @@ router.get('/preview', asyncHandler(async (req, res) => {
 
 // GET /api/characters/:id - Get character details
 router.get('/:id', authenticate, asyncHandler(async (req, res) => {
-  const { id } = req.params;
+  const id = parseIntOrThrow(req.params.id, 'id');
 
   const result = await query(
     `SELECT c.*, wn.name as current_node_name, wn.node_type as current_node_type
@@ -447,7 +494,7 @@ router.get('/:id', authenticate, asyncHandler(async (req, res) => {
     throw new AppError('Character not found', 404);
   }
 
-  const staminaInfo = await staminaService.getStaminaInfo(parseInt(id, 10));
+  const staminaInfo = await staminaService.getStaminaInfo(id);
   const character = {
     ...result.rows[0],
     stamina_current: staminaInfo.current
@@ -458,7 +505,7 @@ router.get('/:id', authenticate, asyncHandler(async (req, res) => {
 
 // GET /api/characters/:id/stamina - Get detailed stamina info for a character
 router.get('/:id/stamina', authenticate, asyncHandler(async (req, res) => {
-  const { id } = req.params;
+  const id = parseIntOrThrow(req.params.id, 'id');
 
   // Verify ownership
   const ownership = await query(
@@ -470,13 +517,13 @@ router.get('/:id/stamina', authenticate, asyncHandler(async (req, res) => {
     throw new AppError('Character not found', 404);
   }
 
-  const staminaInfo = await staminaService.getStaminaInfo(parseInt(id, 10));
+  const staminaInfo = await staminaService.getStaminaInfo(id);
   res.json({ stamina: staminaInfo });
 }));
 
 // PUT /api/characters/:id - Update character (name only for now)
 router.put('/:id', authenticate, characterUpdateLimiter, asyncHandler(async (req, res) => {
-  const { id } = req.params;
+  const id = parseIntOrThrow(req.params.id, 'id');
   const { name: rawName } = req.body;
 
   if (!rawName) {
@@ -502,7 +549,7 @@ router.put('/:id', authenticate, characterUpdateLimiter, asyncHandler(async (req
 
 // DELETE /api/characters/:id - Delete character
 router.delete('/:id', authenticate, characterDeleteLimiter, asyncHandler(async (req, res) => {
-  const { id } = req.params;
+  const id = parseIntOrThrow(req.params.id, 'id');
   await withTransaction(
     client => deleteCharacterWithClient(client, req.user.userId, id)
   );
@@ -524,61 +571,34 @@ router.post('/respawn', authenticate, asyncHandler(async (req, res) => {
 
 // GET /api/characters/:id/stats - Get computed stats with equipment
 router.get('/:id/stats', authenticate, asyncHandler(async (req, res) => {
-  const { id } = req.params;
+  const id = parseIntOrThrow(req.params.id, 'id');
 
   // Get base character stats with equipped item bonuses
-  // Combines: base stats + item_templates.stat_bonuses + character_items.modifications
+  // Uses shared equipment stats helper that properly handles:
+  // - Generated items: modifications.baseStats (rarity/level scaled)
+  // - Augments: modifications.bonusStats
+  // - HP/MP normalization: maps hp_max to hp, mp_max to mp
   const charResult = await query(
     `SELECT c.*,
-            COALESCE(SUM(
-              COALESCE((it.stat_bonuses->>'strength')::int, 0) +
-              COALESCE((ci.modifications->>'strength')::int, 0)
-            ), 0) as equip_strength,
-            COALESCE(SUM(
-              COALESCE((it.stat_bonuses->>'intelligence')::int, 0) +
-              COALESCE((ci.modifications->>'intelligence')::int, 0)
-            ), 0) as equip_intelligence,
-            COALESCE(SUM(
-              COALESCE((it.stat_bonuses->>'agility')::int, 0) +
-              COALESCE((ci.modifications->>'agility')::int, 0)
-            ), 0) as equip_agility,
-            COALESCE(SUM(
-              COALESCE((it.stat_bonuses->>'vitality')::int, 0) +
-              COALESCE((ci.modifications->>'vitality')::int, 0)
-            ), 0) as equip_vitality,
-            COALESCE(SUM(
-              COALESCE((it.stat_bonuses->>'luck')::int, 0) +
-              COALESCE((ci.modifications->>'luck')::int, 0)
-            ), 0) as equip_luck,
-            COALESCE(SUM(
-              COALESCE((it.stat_bonuses->>'hp')::int, 0) +
-              COALESCE((ci.modifications->>'hp_max')::int, 0)
-            ), 0) as equip_hp,
-            COALESCE(SUM(
-              COALESCE((it.stat_bonuses->>'mp')::int, 0) +
-              COALESCE((ci.modifications->>'mp_max')::int, 0)
-            ), 0) as equip_mp,
-            COALESCE(SUM(
-              COALESCE((it.stat_bonuses->>'attack')::int, 0) +
-              COALESCE((ci.modifications->>'attack')::int, 0)
-            ), 0) as equip_attack,
-            COALESCE(SUM(
-              COALESCE((it.stat_bonuses->>'defense')::int, 0) +
-              COALESCE((ci.modifications->>'defense')::int, 0)
-            ), 0) as equip_defense,
-            COALESCE(SUM(
-              COALESCE((it.stat_bonuses->>'magic_attack')::int, 0) +
-              COALESCE((ci.modifications->>'magic_attack')::int, 0)
-            ), 0) as equip_magic_attack,
-            COALESCE(SUM(
-              COALESCE((it.stat_bonuses->>'magic_defense')::int, 0) +
-              COALESCE((ci.modifications->>'magic_defense')::int, 0)
-            ), 0) as equip_magic_defense
+            COALESCE(eq.equip_strength, 0) as equip_strength,
+            COALESCE(eq.equip_intelligence, 0) as equip_intelligence,
+            COALESCE(eq.equip_agility, 0) as equip_agility,
+            COALESCE(eq.equip_vitality, 0) as equip_vitality,
+            COALESCE(eq.equip_luck, 0) as equip_luck,
+            COALESCE(eq.equip_hp, 0) as equip_hp,
+            COALESCE(eq.equip_mp, 0) as equip_mp,
+            COALESCE(eq.equip_attack, 0) as equip_attack,
+            COALESCE(eq.equip_defense, 0) as equip_defense,
+            COALESCE(eq.equip_magic_attack, 0) as equip_magic_attack,
+            COALESCE(eq.equip_magic_defense, 0) as equip_magic_defense
      FROM characters c
-     LEFT JOIN character_items ci ON c.id = ci.character_id AND ci.equipped_slot IS NOT NULL
-     LEFT JOIN item_templates it ON ci.item_template_id = it.id
+     LEFT JOIN LATERAL (
+       ${buildEquipmentStatsLateral()}
+     ) eq ON true
      WHERE c.id = $1 AND c.user_id = $2
-     GROUP BY c.id`,
+     GROUP BY c.id, eq.equip_strength, eq.equip_intelligence, eq.equip_agility,
+              eq.equip_vitality, eq.equip_luck, eq.equip_hp, eq.equip_mp,
+              eq.equip_attack, eq.equip_defense, eq.equip_magic_attack, eq.equip_magic_defense`,
     [id, req.user.userId]
   );
 

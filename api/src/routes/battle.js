@@ -73,6 +73,7 @@ import {
   cleanupBattleSequences,
   startCleanupTimer
 } from '../services/battleActionSequence.js';
+import { buildEquipmentStatsLateral } from '../services/equipmentStats.js';
 
 const router = express.Router();
 
@@ -333,6 +334,10 @@ function requireCompatibleBattleMap(negotiation) {
 }
 
 async function loadPveBattleParty(queryFn, userId) {
+  // Uses shared equipment stats helper that properly handles:
+  // - Generated items: modifications.baseStats (rarity/level scaled)
+  // - Augments: modifications.bonusStats
+  // - HP/MP normalization: maps hp_max to hp, mp_max to mp
   return queryFn(
     `SELECT c.id, c.name, c.race, c.gender, c.class, c.level,
             c.hp_current, c.hp_max, c.mp_current, c.mp_max,
@@ -351,21 +356,7 @@ async function loadPveBattleParty(queryFn, userId) {
             COALESCE(eq.equip_magic_defense, 0) as equip_magic_defense
      FROM characters c
      LEFT JOIN LATERAL (
-       SELECT
-         SUM(COALESCE((it.stat_bonuses->>'strength')::int, 0) + COALESCE((ci.modifications->>'strength')::int, 0)) as equip_strength,
-         SUM(COALESCE((it.stat_bonuses->>'intelligence')::int, 0) + COALESCE((ci.modifications->>'intelligence')::int, 0)) as equip_intelligence,
-         SUM(COALESCE((it.stat_bonuses->>'agility')::int, 0) + COALESCE((ci.modifications->>'agility')::int, 0)) as equip_agility,
-         SUM(COALESCE((it.stat_bonuses->>'vitality')::int, 0) + COALESCE((ci.modifications->>'vitality')::int, 0)) as equip_vitality,
-         SUM(COALESCE((it.stat_bonuses->>'luck')::int, 0) + COALESCE((ci.modifications->>'luck')::int, 0)) as equip_luck,
-         SUM(COALESCE((it.stat_bonuses->>'hp')::int, 0) + COALESCE((ci.modifications->>'hp_max')::int, 0)) as equip_hp,
-         SUM(COALESCE((it.stat_bonuses->>'mp')::int, 0) + COALESCE((ci.modifications->>'mp_max')::int, 0)) as equip_mp,
-         SUM(COALESCE((it.stat_bonuses->>'attack')::int, 0) + COALESCE((ci.modifications->>'attack')::int, 0)) as equip_attack,
-         SUM(COALESCE((it.stat_bonuses->>'defense')::int, 0) + COALESCE((ci.modifications->>'defense')::int, 0)) as equip_defense,
-         SUM(COALESCE((it.stat_bonuses->>'magic_attack')::int, 0) + COALESCE((ci.modifications->>'magic_attack')::int, 0)) as equip_magic_attack,
-         SUM(COALESCE((it.stat_bonuses->>'magic_defense')::int, 0) + COALESCE((ci.modifications->>'magic_defense')::int, 0)) as equip_magic_defense
-       FROM character_items ci
-       JOIN item_templates it ON ci.item_template_id = it.id
-       WHERE ci.character_id = c.id AND ci.equipped_slot IS NOT NULL
+       ${buildEquipmentStatsLateral()}
      ) eq ON true
      WHERE c.user_id = $1 AND c.party_slot <= $2 AND c.party_slot IS NOT NULL
      ORDER BY c.party_slot ASC`,
@@ -626,14 +617,17 @@ async function handleBattleEnd(
       if (!distributed.idempotent) {
         await consumeBattleInventoryItem(client, consumedInventoryId, userId);
         await bossService.cleanupBossEncounter(battleId, { client });
-        const leaderResult = await client.query(
-          `SELECT id
+        // Finding 41: Look up ALL party character IDs, not just the leader
+        // This enables advancement quest progress for non-leader party members
+        const partyResult = await client.query(
+          `SELECT id, party_slot
            FROM characters
-           WHERE user_id = $1 AND party_slot = 1
-           LIMIT 1`,
+           WHERE user_id = $1 AND party_slot IS NOT NULL
+           ORDER BY party_slot`,
           [userId]
         );
-        const partyLeaderId = leaderResult.rows[0]?.id;
+        const partyCharacterIds = partyResult.rows.map(row => row.id);
+        const partyLeaderId = partyResult.rows.find(row => row.party_slot === 1)?.id;
         if (!partyLeaderId) {
           throw new Error(
             `Cannot enqueue terminal progression for battle ${battleId}: `
@@ -646,6 +640,7 @@ async function handleBattleEnd(
           payload: buildPveTerminalProgressionPayload({
             battleId,
             partyLeaderId,
+            partyCharacterIds,
             rewardsData,
             isAdvancementBattle:
               distributed.envelope?.isAdvancementBattle ?? false,

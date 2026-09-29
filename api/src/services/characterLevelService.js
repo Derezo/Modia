@@ -95,6 +95,14 @@ function getLevelProgress(spentXP, currentLevel = null) {
  * Uses CLASS_GROWTH from shared/constants.js as canonical source.
  * Stats gained per level-up are based on class growth rates.
  *
+ * Uses cumulative floor difference instead of floor(growth * levelsGained)
+ * to correctly handle fractional growth rates like luck 0.5:
+ * - floor(0.5 * 1) = 0 for each single level
+ * - But floor(0.5 * 19) = 9 for 19 levels at once
+ *
+ * The cumulative approach ensures consistent results regardless of whether
+ * levels are gained one at a time or in bulk.
+ *
  * @param {number} oldLevel - Previous level
  * @param {number} newLevel - New level
  * @param {string} characterClass - Character's class
@@ -102,16 +110,20 @@ function getLevelProgress(spentXP, currentLevel = null) {
  */
 function calculateLevelUpStatGains(oldLevel, newLevel, characterClass) {
   const growth = CLASS_GROWTH[characterClass] || CLASS_GROWTH[CLASSES.WARRIOR];
-  const levelsGained = newLevel - oldLevel;
+
+  // Cumulative floor difference: the stat at newLevel minus the stat at oldLevel
+  // This ensures the same total gain whether leveling 1->20 at once or 1->2->3->...->20
+  const cumulativeGain = (g) =>
+    Math.floor(g * (newLevel - 1)) - Math.floor(g * (oldLevel - 1));
 
   return {
-    hp: Math.floor(growth.hp * levelsGained),
-    mp: Math.floor(growth.mp * levelsGained),
-    str: Math.floor(growth.strength * levelsGained),
-    int: Math.floor(growth.intelligence * levelsGained),
-    agi: Math.floor(growth.agility * levelsGained),
-    vit: Math.floor(growth.vitality * levelsGained),
-    luck: Math.floor((growth.luck || 0) * levelsGained)
+    hp: cumulativeGain(growth.hp),
+    mp: cumulativeGain(growth.mp),
+    str: cumulativeGain(growth.strength),
+    int: cumulativeGain(growth.intelligence),
+    agi: cumulativeGain(growth.agility),
+    vit: cumulativeGain(growth.vitality),
+    luck: cumulativeGain(growth.luck || 0)
   };
 }
 
