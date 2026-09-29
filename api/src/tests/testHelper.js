@@ -12,7 +12,9 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const BASE_URL = process.env.TEST_API_BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
+// Local dev runs the API on PORT from .env (3001). Keep the fallback in step
+// with that so a missing PORT never targets an unrelated app on 3000.
+const BASE_URL = process.env.TEST_API_BASE_URL || `http://localhost:${process.env.PORT || 3001}`;
 const REQUEST_TIMEOUT_MS = Number.parseInt(process.env.TEST_REQUEST_TIMEOUT_MS || '30000', 10);
 
 // ============================================================================
@@ -57,6 +59,55 @@ async function runCleanup() {
  *
  * @param {Array<number>} userIds - Complete set of test-owned user IDs
  */
+/**
+ * Wait until the running API's terminal outbox worker has released every
+ * claim on the given battles' terminal effect events.
+ *
+ * cleanupTestUsers() deliberately refuses to delete users while a terminal
+ * event is actively claimed. A suite whose last test commits a terminal
+ * battle event must therefore let the asynchronous worker finish its drain
+ * tick before cleanup, or teardown races the worker.
+ *
+ * @param {number[]} battleIds - Battle ids whose outbox rows to wait on
+ * @param {Object} [options]
+ * @param {number} [options.timeoutMs=10000] - Give up after this long
+ * @param {number} [options.intervalMs=100] - Poll interval
+ */
+async function waitForTerminalOutboxSettled(
+  battleIds,
+  { timeoutMs = 10000, intervalMs = 100 } = {}
+) {
+  const ids = [...new Set(
+    (battleIds || [])
+      .map(Number)
+      .filter(battleId => Number.isSafeInteger(battleId) && battleId > 0)
+  )];
+  if (ids.length === 0) return;
+
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const claimed = await query(
+      `SELECT battle_id, event_key, attempts, last_error
+       FROM battle_terminal_effect_outbox
+       WHERE battle_id = ANY($1::int[])
+         AND claim_token IS NOT NULL
+         AND processed_at IS NULL
+       ORDER BY id`,
+      [ids]
+    );
+    if (claimed.rows.length === 0) return;
+    if (Date.now() >= deadline) {
+      const detail = claimed.rows
+        .map(row => `${row.event_key} (battle ${row.battle_id}, attempts ${row.attempts}, last_error ${row.last_error ?? 'none'})`)
+        .join('; ');
+      throw new Error(
+        `Terminal outbox events still claimed after ${timeoutMs}ms: ${detail}`
+      );
+    }
+    await new Promise(resolve => setTimeout(resolve, intervalMs));
+  }
+}
+
 async function cleanupTestUsers(userIds) {
   const normalizedUserIds = [...new Set(
     (userIds || [])
@@ -426,7 +477,11 @@ async function sendRequest(method, path, body = null, token = null, bypassRateLi
 
   const options = {
     method,
-    headers
+    headers,
+    // One connection per request. Node's global agent keeps sockets alive,
+    // and reusing one the server's keepAliveTimeout has just closed surfaces
+    // as a spurious ECONNRESET late in long sequential suites.
+    agent: false
   };
 
   return new Promise((resolve, reject) => {
@@ -672,6 +727,26 @@ async function resetRateLimitersViaApi() {
   return true;
 }
 
+/**
+ * Fail fast unless this process runs under the rate-limit runner.
+ *
+ * The rate-limit suites assert exact limiter thresholds and reset limiter
+ * state through the API, so they need a server started with NODE_ENV=test
+ * and TEST_RATE_LIMITS=true. runRateLimitTests.js starts exactly that server
+ * on a private port and exports TEST_API_BASE_URL. A direct `node --test`
+ * run would otherwise silently hit whatever server listens on PORT (the dev
+ * server, with development limits) and fail for reasons unrelated to the
+ * limiter code under test.
+ */
+function assertRateLimitHarness() {
+  if (!process.env.TEST_API_BASE_URL || process.env.RATE_LIMIT_TEST_RUNNER !== '1') {
+    throw new Error(
+      'Rate-limit suites must run via `npm run test:ratelimit -w api` '
+      + '(runner-owned server with NODE_ENV=test and TEST_RATE_LIMITS=true)'
+    );
+  }
+}
+
 async function resetAllLimiterStats() {
   return resetRateLimitersViaApi();
 }
@@ -716,5 +791,9 @@ export {
   resetLimiterStats,
   resetAllLimiterStats,
   resetRateLimitersViaApi,
-  isRateLimitingEnabled
+  isRateLimitingEnabled,
+  assertRateLimitHarness,
+
+  // Battle teardown
+  waitForTerminalOutboxSettled
 };

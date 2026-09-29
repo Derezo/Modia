@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { login, TEST_USER } from './helpers/index.js';
 
 /**
  * Battle System E2E Tests
@@ -15,12 +16,8 @@ import { test, expect } from '@playwright/test';
 test.describe('Battle System', () => {
   // Login and navigate to world map before each test
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-
-    // Login with seeded test user
-    await page.getByPlaceholder('Username').fill('derezo');
-    await page.getByPlaceholder('Password').fill('password');
-    await page.getByRole('button', { name: /login/i }).click();
+    // Skip the title intro, log in, and wait for the auth scene to exit
+    await login(page, TEST_USER.username, TEST_USER.password);
 
     // Wait for game to load
     await page.waitForTimeout(2000);
@@ -236,12 +233,8 @@ test.describe('Battle System', () => {
 test.describe('Battle Actions', () => {
   // Helper function to get into battle
   async function enterBattle(page) {
-    await page.goto('/');
-
-    // Login
-    await page.getByPlaceholder('Username').fill('derezo');
-    await page.getByPlaceholder('Password').fill('password');
-    await page.getByRole('button', { name: /login/i }).click();
+    // Skip the title intro, log in, and wait for the auth scene to exit
+    await login(page, TEST_USER.username, TEST_USER.password);
     await page.waitForTimeout(2000);
 
     // Select character if needed
@@ -367,12 +360,8 @@ test.describe('Battle Actions', () => {
 
 test.describe('Battle Completion', () => {
   test('should return to world map after battle ends', async ({ page }) => {
-    await page.goto('/');
-
-    // Login
-    await page.getByPlaceholder('Username').fill('derezo');
-    await page.getByPlaceholder('Password').fill('password');
-    await page.getByRole('button', { name: /login/i }).click();
+    // Skip the title intro, log in, and wait for the auth scene to exit
+    await login(page, TEST_USER.username, TEST_USER.password);
     await page.waitForTimeout(2000);
 
     const characterCards = page.locator('.character-card, [data-character-id]');
@@ -398,11 +387,8 @@ test.describe('Battle Completion', () => {
     // This test verifies the victory UI elements exist and are structured correctly
     // Full battle completion requires defeating all enemies which may take extended time
 
-    await page.goto('/');
-
-    await page.getByPlaceholder('Username').fill('derezo');
-    await page.getByPlaceholder('Password').fill('password');
-    await page.getByRole('button', { name: /login/i }).click();
+    // Skip the title intro, log in, and wait for the auth scene to exit
+    await login(page, TEST_USER.username, TEST_USER.password);
     await page.waitForTimeout(2000);
 
     const characterCards = page.locator('.character-card, [data-character-id]');
@@ -441,11 +427,8 @@ test.describe('Battle Completion', () => {
 
   test('should have continue button on battle result screen', async ({ page }) => {
     // Verify the continue button element exists in battle UI structure
-    await page.goto('/');
-
-    await page.getByPlaceholder('Username').fill('derezo');
-    await page.getByPlaceholder('Password').fill('password');
-    await page.getByRole('button', { name: /login/i }).click();
+    // Skip the title intro, log in, and wait for the auth scene to exit
+    await login(page, TEST_USER.username, TEST_USER.password);
     await page.waitForTimeout(2000);
 
     const characterCards = page.locator('.character-card, [data-character-id]');

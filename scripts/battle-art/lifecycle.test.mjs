@@ -8842,6 +8842,86 @@ describe('battle-art isolated generation and review boundary', () => {
       profile: loaded.promptProfile,
       styleFiles: ['style-reference-01.png']
     });
+    // Pinned cave route prompt hashes must not move when a family is
+    // approved: approval fills only lifecycle fields (status, source,
+    // content.sourceSha256), and an approved descriptor can never be
+    // regenerated, so its approved-state prompt has no meaning. Each pin
+    // therefore names a lifecycle-independent input:
+    // - families whose tracked routeFinishing contract was attached while
+    //   recovering a failed raw pin the prompt that raw was generated from,
+    //   rebuilt from the content-addressed failure record's frozen snapshot;
+    // - every other family pins its tracked descriptor projected back to
+    //   draft (a no-op for descriptors that are still drafts).
+    const draftPrompt = id => {
+      const draft = structuredClone(descriptor(id));
+      draft.status = 'draft';
+      draft.source = null;
+      draft.content.sourceSha256 = null;
+      return buildGenerationPrompt({
+        descriptor: draft,
+        profile: loaded.promptProfile,
+        styleFiles: ['style-reference-01.png']
+      });
+    };
+    const recoveredRouteFailures = {
+      'end-e': '2adf19d488183e613297203f7859642b3095b1ae6059616bf820132f3b366074',
+      cross: '7e20a22acb5cde38544cefd2c76d7631bd7fbcbd6532f3f055210637f3373e7f',
+      'tee-esw': 'd45d3f819ee6e66aca7bb2263ac6288d72fb1802150109f1497289bd571ed5d9',
+      'tee-nes': '814be1295cfd4785c0ce0cb37e0ebeb7e99aa9d469f364dc1a76b766d0e8c98a',
+      'tee-nsw': 'f1acb480ad736728307a384d2d6d724f15907e8c197e6c5576d40615b352ab61',
+      'tee-wne': '3edd76fd2a2062df3cc641fd959f13a91c57d930c126a63bf51841370635ae05'
+    };
+    const pinnedCaveRoutePrompt = async topology => {
+      const id = `cave-limestone-curved-passage-${topology}`;
+      const failureId = recoveredRouteFailures[topology];
+      if (failureId === undefined) {
+        return draftPrompt(id);
+      }
+      const record = JSON.parse(await readFile(path.join(
+        REPOSITORY_ROOT,
+        'ai-image-metadata/battle-art/generated-artifacts/cave',
+        id,
+        'failures',
+        `${failureId}.json`
+      ), 'utf8'));
+      const snapshot = record.descriptor.snapshot;
+      assert.equal(snapshot.id, id, topology);
+      assert.equal(snapshot.status, 'draft', topology);
+      assert.equal(snapshot.routeFinishing, undefined, topology);
+      assert.equal(
+        descriptor(id).routeFinishing === undefined,
+        false,
+        `${topology} recovery attached routeFinishing`
+      );
+      return buildGenerationPrompt({
+        descriptor: snapshot,
+        profile: loaded.promptProfile,
+        styleFiles: ['style-reference-01.png']
+      });
+    };
+    const assertApprovedRegenerationRefused = async (id, label) => {
+      if (descriptor(id).status === 'draft') {
+        return;
+      }
+      await assert.rejects(
+        generateBattleArt({
+          projectRoot: REPOSITORY_ROOT,
+          theme: 'cave',
+          family: id,
+          concurrency: 1,
+          timeoutMs: 10_000,
+          dryRun: true,
+          force: false,
+          resume: false
+        }, {
+          worker: async () => {
+            throw new Error('approved descriptor reached worker');
+          }
+        }),
+        /archive and publish a new descriptor revision before regeneration/,
+        label
+      );
+    };
     const forestPrompt = buildPrompt('forest-borderwood-dirt-path-corner-es');
     const normalizedForestPrompt = forestPrompt.replaceAll(
       CANONICAL_ROUTE_SKILL_READ_COMMAND,
@@ -9137,9 +9217,9 @@ describe('battle-art isolated generation and review boundary', () => {
     for (const [topology, instruction] of Object.entries(
       endCoordinateInstructions
     )) {
-      const prompt = buildPrompt(
-        `cave-limestone-curved-passage-${topology}`
-      );
+      const endId = `cave-limestone-curved-passage-${topology}`;
+      const prompt = await pinnedCaveRoutePrompt(topology);
+      await assertApprovedRegenerationRefused(endId, topology);
       const compact = prompt.match(
         /BEGIN FROZEN ROUTE IMAGEGEN PROMPT\n([\s\S]*?)\nEND FROZEN ROUTE IMAGEGEN PROMPT/
       )?.[1];
@@ -9273,7 +9353,9 @@ describe('battle-art isolated generation and review boundary', () => {
       'corner-sw': 'sha256:c6650cdd91e839489b299c3c211b48a4a6fa010dea58861d39fb3f9887fa0b3c',
       'corner-wn': 'sha256:0d778844c88c78391bfbb6fe8345f296a9559917805db5d329518b4062cc5564',
       cross: 'sha256:fba6e5d500f1ebe95c904ef30c627916e4e3b25fa5139ef60643f7749b70b2d5',
-      isolated: 'sha256:462c096ee9e437e3c4e77023572ef403683d23a34d432cd18ab8d56f0a944913',
+      // Draft projection of the approved isolated descriptor; the former pin
+      // (462c096e...) hashed its approved-state prompt.
+      isolated: 'sha256:781d47989d6dc5994ec62e551105d3c035815d4df4186c2c1a539d75ae9dd1f5',
       'tee-esw': 'sha256:dcc5349da23f73deb4d4da0f004210f34752ef4ba679301bead2b5d9dcfc6542',
       'tee-nes': 'sha256:1f7874d18c08afc9412098c003e47368cbba0ed7f56b50f9a4ed454560516894',
       'tee-nsw': 'sha256:3e71025643ad7fdc0f8c82f64061935c63b4c3ec542ab6c31235279480fb160b',
@@ -9282,9 +9364,11 @@ describe('battle-art isolated generation and review boundary', () => {
     for (const [topology, expectedHash] of Object.entries(
       unchangedNonEndPromptHashes
     )) {
-      const prompt = buildPrompt(
-        `cave-limestone-curved-passage-${topology}`
-      ).replaceAll(
+      await assertApprovedRegenerationRefused(
+        `cave-limestone-curved-passage-${topology}`,
+        topology
+      );
+      const prompt = (await pinnedCaveRoutePrompt(topology)).replaceAll(
         CANONICAL_ROUTE_SKILL_READ_COMMAND,
         '<CANONICAL_ROUTE_SKILL_READ_COMMAND>'
       );

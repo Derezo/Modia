@@ -8,6 +8,7 @@ import {
   resetAllLimiterStats,
   getRateLimiterStats,
   isRateLimitingEnabled,
+  assertRateLimitHarness,
   cleanupTestUser,
   runCleanup
 } from '../testHelper.js';
@@ -17,6 +18,8 @@ describe('Battle Rate Limiting', () => {
   let testCharacter;
 
   before(async () => {
+    // Fail fast when not launched by runRateLimitTests.js.
+    assertRateLimitHarness();
     // Verify rate limiting is enabled for these tests
     assert.strictEqual(
       isRateLimitingEnabled(),

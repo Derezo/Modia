@@ -11,6 +11,7 @@ import {
   getClient,
   cleanupTestUser,
   cleanupTestUsers,
+  waitForTerminalOutboxSettled,
   BASE_URL
 } from '../testHelper.js';
 import {
@@ -177,6 +178,28 @@ describe('Battle API', () => {
       )
       : { rows: [] };
     const terminalEventKeys = terminalEvents.rows.map(event => event.event_key);
+    // The running API's outbox worker drains committed terminal events on
+    // its own interval. Cleanup deliberately refuses to delete users while an
+    // event is claimed, so let any in-flight drain finish first.
+    const userBattles = userId
+      ? await query(
+        `SELECT b.id
+         FROM battles b
+         WHERE b.player1_id = $1
+            OR b.player2_id = $1
+            OR EXISTS (
+              SELECT 1
+              FROM battle_players bp
+              WHERE bp.battle_id = b.id
+                AND bp.user_id = $1
+            )`,
+        [userId]
+      )
+      : { rows: [] };
+    await waitForTerminalOutboxSettled([
+      ...userBattles.rows.map(row => row.id),
+      ...(battleId ? [battleId] : [])
+    ]);
     await ctx.cleanup();
 
     if (battleId) {

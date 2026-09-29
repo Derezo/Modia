@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { login, navigateToWorldMap, TEST_USER } from './helpers/index.js';
+import { AUTH_SELECTORS, gotoAuth, login, navigateToWorldMap, TEST_USER } from './helpers/index.js';
 
 /**
  * Error Handling E2E Tests
@@ -13,40 +13,41 @@ import { login, navigateToWorldMap, TEST_USER } from './helpers/index.js';
 
 test.describe('Authentication Errors', () => {
   test('should show error for invalid credentials', async ({ page }) => {
-    await page.goto('/');
+    await gotoAuth(page);
 
-    await page.getByPlaceholder('Username').fill('invaliduser');
-    await page.getByPlaceholder('Password').fill('wrongpassword');
-    await page.getByRole('button', { name: /login/i }).click();
+    await page.locator(AUTH_SELECTORS.username).fill('invaliduser');
+    await page.locator(AUTH_SELECTORS.password).fill('wrongpassword');
+    await page.locator(AUTH_SELECTORS.submit).click();
 
     // Should show error message
-    const error = page.locator('.error, [role="alert"], .toast-error, :text("invalid"):visible, :text("incorrect"):visible');
-    await expect(error.first()).toBeVisible({ timeout: 5000 });
+    const error = page.locator(AUTH_SELECTORS.error);
+    await expect(error).toBeVisible({ timeout: 5000 });
+    await expect(error).toHaveText(/invalid|incorrect/i);
 
-    // Should stay on login page
-    await expect(page).toHaveURL(/login/i, { timeout: 2000 });
+    // Should stay on the login form
+    await expect(page.locator(AUTH_SELECTORS.form)).toBeVisible();
   });
 
   test('should show error for empty username', async ({ page }) => {
-    await page.goto('/');
+    await gotoAuth(page);
 
-    await page.getByPlaceholder('Password').fill('somepassword');
-    await page.getByRole('button', { name: /login/i }).click();
+    await page.locator(AUTH_SELECTORS.password).fill('somepassword');
+    await page.locator(AUTH_SELECTORS.submit).click();
 
     // Should show validation error
-    const usernameInput = page.getByPlaceholder('Username');
+    const usernameInput = page.locator(AUTH_SELECTORS.username);
     const isInvalid = await usernameInput.evaluate(el => !el.validity.valid);
     expect(isInvalid).toBe(true);
   });
 
   test('should show error for empty password', async ({ page }) => {
-    await page.goto('/');
+    await gotoAuth(page);
 
-    await page.getByPlaceholder('Username').fill('someuser');
-    await page.getByRole('button', { name: /login/i }).click();
+    await page.locator(AUTH_SELECTORS.username).fill('someuser');
+    await page.locator(AUTH_SELECTORS.submit).click();
 
     // Should show validation error or error message
-    const passwordInput = page.getByPlaceholder('Password');
+    const passwordInput = page.locator(AUTH_SELECTORS.password);
     const isInvalid = await passwordInput.evaluate(el => !el.validity.valid);
     expect(isInvalid).toBe(true);
   });
@@ -67,7 +68,7 @@ test.describe('Session Handling', () => {
     await page.waitForTimeout(2000);
 
     // Should be redirected to login or show auth error
-    const loginForm = page.getByPlaceholder('Username');
+    const loginForm = page.locator(AUTH_SELECTORS.username);
     const authError = page.locator(':text("session"):visible, :text("login"):visible, :text("expired"):visible');
 
     const isOnLogin = await loginForm.isVisible({ timeout: 5000 });
@@ -97,7 +98,7 @@ test.describe('Session Handling', () => {
 
 test.describe('Network Error Handling', () => {
   test('should show error when server is unreachable', async ({ page }) => {
-    await page.goto('/');
+    await gotoAuth(page);
 
     // Block API requests
     await page.route('**/api/**', route => {
@@ -105,17 +106,17 @@ test.describe('Network Error Handling', () => {
     });
 
     // Try to login
-    await page.getByPlaceholder('Username').fill(TEST_USER.username);
-    await page.getByPlaceholder('Password').fill(TEST_USER.password);
-    await page.getByRole('button', { name: /login/i }).click();
+    await page.locator(AUTH_SELECTORS.username).fill(TEST_USER.username);
+    await page.locator(AUTH_SELECTORS.password).fill(TEST_USER.password);
+    await page.locator(AUTH_SELECTORS.submit).click();
 
     // Should show network error
-    const error = page.locator('.error, [role="alert"], .toast-error, :text("network"):visible, :text("connection"):visible, :text("failed"):visible');
+    const error = page.locator(`${AUTH_SELECTORS.error}:visible, .error, [role="alert"], .toast-error, :text("network"):visible, :text("connection"):visible, :text("failed"):visible`);
     await expect(error.first()).toBeVisible({ timeout: 5000 });
   });
 
   test('should show error for slow network timeout', async ({ page }) => {
-    await page.goto('/');
+    await gotoAuth(page);
 
     // Delay all API responses significantly
     await page.route('**/api/**', async route => {
@@ -124,9 +125,9 @@ test.describe('Network Error Handling', () => {
     });
 
     // Try to login
-    await page.getByPlaceholder('Username').fill(TEST_USER.username);
-    await page.getByPlaceholder('Password').fill(TEST_USER.password);
-    await page.getByRole('button', { name: /login/i }).click();
+    await page.locator(AUTH_SELECTORS.username).fill(TEST_USER.username);
+    await page.locator(AUTH_SELECTORS.password).fill(TEST_USER.password);
+    await page.locator(AUTH_SELECTORS.submit).click();
 
     // Should show loading state or timeout error eventually
     const loading = page.locator('.loading, .spinner, [aria-busy="true"]');
@@ -160,13 +161,13 @@ test.describe('Rate Limiting', () => {
       }
     });
 
-    await page.goto('/');
+    await gotoAuth(page);
 
     // Make multiple rapid login attempts
     for (let i = 0; i < 5; i++) {
-      await page.getByPlaceholder('Username').fill(`user${i}`);
-      await page.getByPlaceholder('Password').fill('wrongpass');
-      await page.getByRole('button', { name: /login/i }).click();
+      await page.locator(AUTH_SELECTORS.username).fill(`user${i}`);
+      await page.locator(AUTH_SELECTORS.password).fill('wrongpass');
+      await page.locator(AUTH_SELECTORS.submit).click();
       await page.waitForTimeout(100);
     }
 

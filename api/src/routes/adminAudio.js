@@ -998,6 +998,73 @@ router.get('/verify-status', asyncHandler(async (req, res) => {
 // DURATION SYNC ROUTES
 // ============================================================================
 
+// Threshold for considering durations mismatched (in seconds)
+const DURATION_MISMATCH_THRESHOLD = 0.5;
+
+// ffprobe runs as a child process per asset. Probing a whole library one file
+// at a time takes tens of seconds; an unbounded Promise.all would fork one
+// process per asset. Four workers keeps the route fast without flooding the
+// host (the dev host caps parallel test/tool workers at 4).
+const DURATION_PROBE_CONCURRENCY = 4;
+
+/**
+ * Map items through an async mapper with at most `limit` in flight.
+ * Results keep the input order.
+ */
+async function mapWithConcurrency(items, limit, mapper) {
+  const results = new Array(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const index = next;
+      next += 1;
+      results[index] = await mapper(items[index], index);
+    }
+  };
+  const workerCount = Math.min(limit, items.length);
+  await Promise.all(Array.from({ length: workerCount }, worker));
+  return results;
+}
+
+/**
+ * Load the assets of one audio type from metadata.
+ */
+async function loadAudioAssets(type) {
+  if (type === 'music') {
+    const { tracks } = await loadMusicMetadata();
+    return tracks;
+  }
+  const { effects } = await loadSFXMetadata();
+  return effects;
+}
+
+/**
+ * Probe the on-disk duration of a generated asset.
+ * @returns {Promise<{probed: boolean, actualDuration: number|null}>}
+ *   probed is false for assets that are not generated or whose file is
+ *   missing; actualDuration is null when extraction failed.
+ */
+async function probeAssetDuration(asset) {
+  if (!asset.generated || !asset.path) {
+    return { probed: false, actualDuration: null };
+  }
+  const audioPath = resolveAudioPath(asset.path);
+  if (!audioPath || !existsSync(audioPath)) {
+    return { probed: false, actualDuration: null };
+  }
+  return {
+    probed: true,
+    actualDuration: await extractDurationWithFallback(audioPath)
+  };
+}
+
+/**
+ * Probe every asset's duration with bounded concurrency.
+ */
+function probeAssetDurations(assets) {
+  return mapWithConcurrency(assets, DURATION_PROBE_CONCURRENCY, probeAssetDuration);
+}
+
 /**
  * GET /api/admin/audio/verify-durations
  * Non-destructive check for duration mismatches between metadata and actual audio files
@@ -1018,27 +1085,20 @@ router.get('/verify-durations', asyncHandler(async (req, res) => {
     details: []
   };
 
-  // Threshold for considering durations mismatched (in seconds)
-  const MISMATCH_THRESHOLD = 0.5;
+  const assets = await loadAudioAssets(type);
+  const probes = await probeAssetDurations(assets);
 
-  // Helper to verify duration for an asset
-  const verifyAssetDuration = async (asset) => {
+  assets.forEach((asset, index) => {
     results.total++;
 
-    // Only check generated assets with a path
-    if (!asset.generated || !asset.path) {
-      return;
-    }
-
-    const audioPath = resolveAudioPath(asset.path);
-    if (!audioPath || !existsSync(audioPath)) {
+    // Only check generated assets with a file on disk
+    const { probed, actualDuration } = probes[index];
+    if (!probed) {
       return;
     }
 
     results.checked++;
 
-    // Extract actual duration from file
-    const actualDuration = await extractDurationWithFallback(audioPath);
     if (actualDuration === null) {
       return;
     }
@@ -1047,7 +1107,7 @@ router.get('/verify-durations', asyncHandler(async (req, res) => {
     const diff = Math.abs(actualDuration - metadataDuration);
 
     // Flag if difference exceeds threshold
-    if (diff > MISMATCH_THRESHOLD) {
+    if (diff > DURATION_MISMATCH_THRESHOLD) {
       results.mismatches++;
       results.details.push({
         id: asset.id,
@@ -1057,20 +1117,7 @@ router.get('/verify-durations', asyncHandler(async (req, res) => {
         diff: Math.round(diff * 100) / 100
       });
     }
-  };
-
-  // Process requested type
-  if (type === 'music') {
-    const { tracks } = await loadMusicMetadata();
-    for (const track of tracks) {
-      await verifyAssetDuration(track);
-    }
-  } else {
-    const { effects } = await loadSFXMetadata();
-    for (const effect of effects) {
-      await verifyAssetDuration(effect);
-    }
-  }
+  });
 
   res.json({
     type,
@@ -1098,35 +1145,26 @@ router.post('/sync-durations', asyncHandler(async (req, res) => {
     details: []
   };
 
-  // Threshold for considering durations mismatched (in seconds)
-  const MISMATCH_THRESHOLD = 0.5;
+  // Durations are probed in parallel, but metadata updates stay sequential:
+  // each update rewrites the type's shared metadata file.
+  const assets = await loadAudioAssets(type);
+  const probes = await probeAssetDurations(assets);
 
-  // Helper to sync duration for an asset
-  const syncAssetDuration = async (asset, assetType) => {
+  for (const [index, asset] of assets.entries()) {
     results.scanned++;
 
-    // Only process generated assets with a path
-    if (!asset.generated || !asset.path) {
-      return;
-    }
-
-    const audioPath = resolveAudioPath(asset.path);
-    if (!audioPath || !existsSync(audioPath)) {
-      return;
-    }
-
-    // Extract actual duration from file
-    const actualDuration = await extractDurationWithFallback(audioPath);
-    if (actualDuration === null) {
-      return;
+    // Only process generated assets with a readable duration
+    const { probed, actualDuration } = probes[index];
+    if (!probed || actualDuration === null) {
+      continue;
     }
 
     const metadataDuration = asset.duration || 0;
     const diff = Math.abs(actualDuration - metadataDuration);
 
     // Only process if difference exceeds threshold
-    if (diff <= MISMATCH_THRESHOLD) {
-      return;
+    if (diff <= DURATION_MISMATCH_THRESHOLD) {
+      continue;
     }
 
     results.mismatches++;
@@ -1143,32 +1181,19 @@ router.post('/sync-durations', asyncHandler(async (req, res) => {
     // Apply fix if not dry run
     if (dryRun !== 'true') {
       try {
-        await updateAudioMetadata(assetType, asset.id, {
+        await updateAudioMetadata(type, asset.id, {
           duration: roundedDuration
         });
         results.fixed++;
         detailEntry.status = 'fixed';
       } catch (err) {
-        console.error(`Failed to sync duration for ${assetType}/${asset.id}:`, err);
+        console.error(`Failed to sync duration for ${type}/${asset.id}:`, err);
         detailEntry.status = 'error';
         detailEntry.error = 'Failed to update metadata';
       }
     }
 
     results.details.push(detailEntry);
-  };
-
-  // Process requested type
-  if (type === 'music') {
-    const { tracks } = await loadMusicMetadata();
-    for (const track of tracks) {
-      await syncAssetDuration(track, 'music');
-    }
-  } else {
-    const { effects } = await loadSFXMetadata();
-    for (const effect of effects) {
-      await syncAssetDuration(effect, 'sfx');
-    }
   }
 
   res.json({

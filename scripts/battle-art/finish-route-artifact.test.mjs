@@ -28,6 +28,45 @@ const PROFILE = Object.freeze({
   })
 });
 
+// Failure records snapshot the descriptor as it was when the raw failed: a
+// draft with no route finishing, no approved source and no source hash.
+// Approving the recovered artifact later fills in only those lifecycle
+// fields, so project the tracked descriptor back onto the snapshot's
+// lifecycle before comparing everything else byte-for-byte.
+function projectToFailureSnapshot(trackedDescriptor, snapshot) {
+  const projected = structuredClone(trackedDescriptor);
+  delete projected.routeFinishing;
+  projected.status = snapshot.status;
+  projected.source = structuredClone(snapshot.source);
+  projected.content.sourceSha256 = snapshot.content.sourceSha256;
+  return projected;
+}
+
+// When the tracked descriptor has been approved, its approved source must be
+// exactly the deterministic recovery of the failed raw, and that file must be
+// on disk with the recorded hash.
+async function assertApprovedSourceMatchesRecovery(
+  trackedDescriptor,
+  finalSha256
+) {
+  if (trackedDescriptor.status === 'draft') {
+    assert.equal(trackedDescriptor.source, null);
+    assert.equal(trackedDescriptor.content.sourceSha256, null);
+    return;
+  }
+  assert.equal(trackedDescriptor.status, 'approved');
+  assert.equal(trackedDescriptor.source.imageSha256, finalSha256);
+  assert.equal(trackedDescriptor.content.sourceSha256, finalSha256);
+  const approvedBytes = await readFile(new URL(
+    `../../${trackedDescriptor.source.imagePath}`,
+    import.meta.url
+  ));
+  assert.equal(
+    `sha256:${createHash('sha256').update(approvedBytes).digest('hex')}`,
+    finalSha256
+  );
+}
+
 function descriptor(overrides = {}) {
   return {
     id: 'test-route-artifact',
@@ -266,10 +305,11 @@ describe('bounded route artifact finishing', () => {
           maximumSpreadPixels: 12
         }
       });
-      const descriptorBeforeRecovery = structuredClone(routeDescriptor);
-      delete descriptorBeforeRecovery.routeFinishing;
       assert.deepEqual(
-        descriptorBeforeRecovery,
+        projectToFailureSnapshot(
+          routeDescriptor,
+          failure.record.descriptor.snapshot
+        ),
         failure.record.descriptor.snapshot
       );
       assert.equal(
@@ -328,6 +368,10 @@ describe('bounded route artifact finishing', () => {
         finalSha256:
           'sha256:a68ff0f96fa10adf8293504b03a4dcf4c34e9c387655f5ef31004d73e1de5375'
       });
+      await assertApprovedSourceMatchesRecovery(
+        routeDescriptor,
+        first.derivation.finalSha256
+      );
 
       const finishedValidation = await validateFinishedRouteArtifact({
         bytes: first.bytes,
@@ -420,6 +464,10 @@ describe('bounded route artifact finishing', () => {
         assert.deepEqual(first.derivation, second.derivation);
         assert.equal(first.derivation.strategy, 'corner-arm-local-warp-v1');
         assert.equal(first.derivation.finalSha256, `sha256:${routeCase.final}`);
+        await assertApprovedSourceMatchesRecovery(
+          routeDescriptor,
+          `sha256:${routeCase.final}`
+        );
         assert.deepEqual(first.derivation.sourceBounds, routeCase.bounds);
         assert.deepEqual([
           first.derivation.componentCount,
@@ -633,10 +681,11 @@ describe('bounded route artifact finishing', () => {
           `sha256:${routeCase.failureFile}`
         );
         assert.equal(failure.record.fullHash, `sha256:${routeCase.failure}`);
-        const descriptorBeforeRecovery = structuredClone(routeDescriptor);
-        delete descriptorBeforeRecovery.routeFinishing;
         assert.deepEqual(
-          descriptorBeforeRecovery,
+          projectToFailureSnapshot(
+            routeDescriptor,
+            failure.record.descriptor.snapshot
+          ),
           failure.record.descriptor.snapshot
         );
         assert.equal(routeDescriptor.routeFinishing.strategy,
@@ -674,6 +723,10 @@ describe('bounded route artifact finishing', () => {
         assert.deepEqual(first, second);
         assert.equal(first.bytes.length, routeCase.bytes);
         assert.equal(first.derivation.finalSha256, `sha256:${routeCase.final}`);
+        await assertApprovedSourceMatchesRecovery(
+          routeDescriptor,
+          `sha256:${routeCase.final}`
+        );
         assert.equal(first.derivation.source.sha256,
           failure.record.raw.sha256);
         assert.deepEqual([

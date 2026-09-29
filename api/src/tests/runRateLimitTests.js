@@ -178,7 +178,9 @@ try {
     TEST_REDIS: '',
     REDIS_URL: '',
     PORT: String(port),
-    TEST_API_BASE_URL: baseUrl
+    TEST_API_BASE_URL: baseUrl,
+    // Marks the test process as runner-owned; see assertRateLimitHarness().
+    RATE_LIMIT_TEST_RUNNER: '1'
   };
 
   serverProcess = spawn(process.execPath, ['src/index.js'], {

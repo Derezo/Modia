@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { login, TEST_USER } from './helpers/index.js';
 
 /**
  * Character Creation and Selection E2E Tests
@@ -7,12 +8,8 @@ import { test, expect } from '@playwright/test';
 test.describe('Character Management', () => {
   // Login before each test
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-
-    // Login with test user
-    await page.getByPlaceholder('Username').fill('derezo');
-    await page.getByPlaceholder('Password').fill('password');
-    await page.getByRole('button', { name: /login/i }).click();
+    // Skip the title intro, log in, and wait for the auth scene to exit
+    await login(page, TEST_USER.username, TEST_USER.password);
 
     // Wait for navigation to character select
     await page.waitForURL(/character|select|world/i, { timeout: 10000 });

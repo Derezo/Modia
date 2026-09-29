@@ -27,47 +27,90 @@ export function generateTestCredentials() {
 }
 
 /**
+ * Stable selectors for the DOM auth form rendered by AuthScene and the
+ * registration wizard it opens. The form lives in the UI overlay above the
+ * canvas; its placeholders change with the login/register mode, so match ids.
+ */
+export const AUTH_SELECTORS = Object.freeze({
+  form: '#auth-form',
+  username: '#username',
+  email: '#email',
+  password: '#password',
+  confirmPassword: '#confirm-password',
+  submit: '#auth-btn',
+  modeToggle: '#mode-toggle',
+  error: '#auth-error',
+  wizard: '.regwiz-container'
+});
+
+/**
+ * Open the game and get past the title intro cinematic to the login form.
+ * TitleIntroScene skips on a canvas click or Space/Enter/Escape; AuthScene
+ * then fades its DOM form in once its transition and font are ready.
+ * @param {import('@playwright/test').Page} page - Playwright page
+ */
+export async function gotoAuth(page) {
+  await page.goto('/');
+  const form = page.locator(AUTH_SELECTORS.form);
+  await expect(async () => {
+    if (!(await form.isVisible())) {
+      await page.keyboard.press('Escape');
+    }
+    await expect(form).toBeVisible({ timeout: 1000 });
+  }).toPass({ timeout: 20000 });
+  // AuthScene moves focus to #username on a timer after the fade starts.
+  // Wait for that to happen: fill() types into the focused element, so a
+  // late focus change would redirect a password fill into the username box.
+  await expect(page.locator(AUTH_SELECTORS.username)).toBeFocused({ timeout: 5000 });
+}
+
+/**
  * Login to the game with given credentials
  * @param {import('@playwright/test').Page} page - Playwright page
  * @param {string} username - Username
  * @param {string} password - Password
  */
 export async function login(page, username = TEST_USER.username, password = TEST_USER.password) {
-  await page.goto('/');
+  await gotoAuth(page);
 
-  // Fill login form
-  await page.getByPlaceholder('Username').fill(username);
-  await page.getByPlaceholder('Password').fill(password);
-  await page.getByRole('button', { name: /login/i }).click();
+  await page.locator(AUTH_SELECTORS.username).fill(username);
+  await page.locator(AUTH_SELECTORS.password).fill(password);
+  await page.locator(AUTH_SELECTORS.submit).click();
 
-  // Wait for successful login (redirects away from login)
-  await expect(page).not.toHaveURL(/login/i, { timeout: 10000 });
+  // The game is a single-page canvas app: a successful login leaves the
+  // auth scene, which removes the form from the overlay.
+  await expect(page.locator(AUTH_SELECTORS.form)).toHaveCount(0, { timeout: 15000 });
 }
 
 /**
- * Register a new user
+ * Open the registration wizard from the login form.
+ * @param {import('@playwright/test').Page} page - Playwright page
+ */
+export async function openRegistrationWizard(page) {
+  await gotoAuth(page);
+  await page.locator(AUTH_SELECTORS.modeToggle).click();
+  await expect(page.locator(AUTH_SELECTORS.wizard)).toBeVisible({ timeout: 5000 });
+}
+
+/**
+ * Register a new account through step 1 of the registration wizard.
+ * Leaves the page on wizard step 2 (character creation); a new account's
+ * first character is created by the wizard itself.
  * @param {import('@playwright/test').Page} page - Playwright page
  * @param {string} username - Username
  * @param {string} email - Email
  * @param {string} password - Password
  */
 export async function register(page, username, email, password) {
-  await page.goto('/');
+  await openRegistrationWizard(page);
 
-  // Navigate to registration
-  await page.getByRole('link', { name: /register|sign up|create account/i }).click();
+  await page.locator('#regwiz-username').fill(username);
+  await page.locator('#regwiz-email').fill(email);
+  await page.locator('#regwiz-password').fill(password);
+  await page.locator('#regwiz-confirm').fill(password);
+  await page.locator('#regwiz-next').click();
 
-  // Fill registration form
-  await page.getByPlaceholder('Username').fill(username);
-  await page.getByPlaceholder('Email').fill(email);
-  await page.getByPlaceholder('Password').first().fill(password);
-  await page.getByPlaceholder('Confirm Password').fill(password);
-
-  // Submit registration
-  await page.getByRole('button', { name: /register|sign up|create/i }).click();
-
-  // Wait for success
-  await expect(page).toHaveURL(/character|select/i, { timeout: 10000 });
+  await expect(page.locator('.regwiz-title')).toContainText(/create.*hero/i, { timeout: 10000 });
 }
 
 /**

@@ -8,6 +8,7 @@ import {
   resetAllLimiterStats,
   getRateLimiterStats,
   isRateLimitingEnabled,
+  assertRateLimitHarness,
   cleanupTestUser,
   runCleanup
 } from '../testHelper.js';
@@ -16,6 +17,8 @@ describe('Auth Rate Limiting', () => {
   const createdUserIds = [];
 
   before(async () => {
+    // Fail fast when not launched by runRateLimitTests.js.
+    assertRateLimitHarness();
     // Verify rate limiting is enabled for these tests
     assert.strictEqual(
       isRateLimitingEnabled(),

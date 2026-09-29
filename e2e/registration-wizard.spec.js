@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { generateTestCredentials } from './helpers/index.js';
+import { AUTH_SELECTORS, generateTestCredentials, gotoAuth } from './helpers/index.js';
 
 /**
  * Registration Wizard E2E Tests
@@ -15,15 +15,14 @@ import { generateTestCredentials } from './helpers/index.js';
 
 test.describe('Registration Wizard', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    // Wait for auth scene to load
-    await page.waitForTimeout(1500);
+    // Skip the title intro and wait for the login form
+    await gotoAuth(page);
   });
 
   test.describe('Complete Registration Flow', () => {
     test('should complete full registration from account to world entry', async ({ page }) => {
       // Navigate to registration by clicking Register link
-      const registerLink = page.getByRole('link', { name: /register/i });
+      const registerLink = page.locator(AUTH_SELECTORS.modeToggle);
       await expect(registerLink).toBeVisible({ timeout: 10000 });
       await registerLink.click();
 
@@ -90,7 +89,7 @@ test.describe('Registration Wizard', () => {
   test.describe('Back Navigation', () => {
     test('should preserve Step 1 data when navigating back from Step 2', async ({ page }) => {
       // Navigate to registration
-      const registerLink = page.getByRole('link', { name: /register/i });
+      const registerLink = page.locator(AUTH_SELECTORS.modeToggle);
       await expect(registerLink).toBeVisible({ timeout: 10000 });
       await registerLink.click();
 
@@ -130,7 +129,7 @@ test.describe('Registration Wizard', () => {
   test.describe('Preview Card Updates', () => {
     test('should update preview card when race selection changes', async ({ page }) => {
       // Navigate to registration
-      const registerLink = page.getByRole('link', { name: /register/i });
+      const registerLink = page.locator(AUTH_SELECTORS.modeToggle);
       await expect(registerLink).toBeVisible({ timeout: 10000 });
       await registerLink.click();
 
@@ -177,7 +176,7 @@ test.describe('Registration Wizard', () => {
 
     test('should update preview card when class selection changes', async ({ page }) => {
       // Navigate to registration
-      const registerLink = page.getByRole('link', { name: /register/i });
+      const registerLink = page.locator(AUTH_SELECTORS.modeToggle);
       await expect(registerLink).toBeVisible({ timeout: 10000 });
       await registerLink.click();
 
@@ -221,7 +220,7 @@ test.describe('Registration Wizard', () => {
 
     test('should show description when race is selected', async ({ page }) => {
       // Navigate to registration
-      const registerLink = page.getByRole('link', { name: /register/i });
+      const registerLink = page.locator(AUTH_SELECTORS.modeToggle);
       await expect(registerLink).toBeVisible({ timeout: 10000 });
       await registerLink.click();
 
@@ -250,7 +249,7 @@ test.describe('Registration Wizard', () => {
   test.describe('Step 1 Validation', () => {
     test('should show error when clicking Next with empty fields', async ({ page }) => {
       // Navigate to registration
-      const registerLink = page.getByRole('link', { name: /register/i });
+      const registerLink = page.locator(AUTH_SELECTORS.modeToggle);
       await expect(registerLink).toBeVisible({ timeout: 10000 });
       await registerLink.click();
 
@@ -270,7 +269,7 @@ test.describe('Registration Wizard', () => {
 
     test('should show error for username too short', async ({ page }) => {
       // Navigate to registration
-      const registerLink = page.getByRole('link', { name: /register/i });
+      const registerLink = page.locator(AUTH_SELECTORS.modeToggle);
       await expect(registerLink).toBeVisible({ timeout: 10000 });
       await registerLink.click();
 
@@ -297,7 +296,7 @@ test.describe('Registration Wizard', () => {
 
     test('should show error for invalid email', async ({ page }) => {
       // Navigate to registration
-      const registerLink = page.getByRole('link', { name: /register/i });
+      const registerLink = page.locator(AUTH_SELECTORS.modeToggle);
       await expect(registerLink).toBeVisible({ timeout: 10000 });
       await registerLink.click();
 
@@ -320,7 +319,7 @@ test.describe('Registration Wizard', () => {
 
     test('should show error for password too short', async ({ page }) => {
       // Navigate to registration
-      const registerLink = page.getByRole('link', { name: /register/i });
+      const registerLink = page.locator(AUTH_SELECTORS.modeToggle);
       await expect(registerLink).toBeVisible({ timeout: 10000 });
       await registerLink.click();
 
@@ -343,7 +342,7 @@ test.describe('Registration Wizard', () => {
 
     test('should show error for mismatched passwords', async ({ page }) => {
       // Navigate to registration
-      const registerLink = page.getByRole('link', { name: /register/i });
+      const registerLink = page.locator(AUTH_SELECTORS.modeToggle);
       await expect(registerLink).toBeVisible({ timeout: 10000 });
       await registerLink.click();
 
@@ -374,7 +373,7 @@ test.describe('Registration Wizard', () => {
   test.describe('Step 2 Validation', () => {
     test('should show error when submitting without character name', async ({ page }) => {
       // Navigate to registration
-      const registerLink = page.getByRole('link', { name: /register/i });
+      const registerLink = page.locator(AUTH_SELECTORS.modeToggle);
       await expect(registerLink).toBeVisible({ timeout: 10000 });
       await registerLink.click();
 
@@ -406,7 +405,7 @@ test.describe('Registration Wizard', () => {
 
     test('should show error when submitting without selecting race/class/gender', async ({ page }) => {
       // Navigate to registration
-      const registerLink = page.getByRole('link', { name: /register/i });
+      const registerLink = page.locator(AUTH_SELECTORS.modeToggle);
       await expect(registerLink).toBeVisible({ timeout: 10000 });
       await registerLink.click();
 
@@ -439,7 +438,7 @@ test.describe('Registration Wizard', () => {
   test.describe('Trait Tooltip Display', () => {
     test('should display tooltip when hovering over trait badge', async ({ page }) => {
       // Navigate to registration
-      const registerLink = page.getByRole('link', { name: /register/i });
+      const registerLink = page.locator(AUTH_SELECTORS.modeToggle);
       await expect(registerLink).toBeVisible({ timeout: 10000 });
       await registerLink.click();
 
@@ -491,7 +490,7 @@ test.describe('Registration Wizard', () => {
   test.describe('UI State and Indicators', () => {
     test('should show correct step indicators throughout flow', async ({ page }) => {
       // Navigate to registration
-      const registerLink = page.getByRole('link', { name: /register/i });
+      const registerLink = page.locator(AUTH_SELECTORS.modeToggle);
       await expect(registerLink).toBeVisible({ timeout: 10000 });
       await registerLink.click();
 
@@ -519,7 +518,7 @@ test.describe('Registration Wizard', () => {
 
     test('should disable submit button while loading', async ({ page }) => {
       // Navigate to registration
-      const registerLink = page.getByRole('link', { name: /register/i });
+      const registerLink = page.locator(AUTH_SELECTORS.modeToggle);
       await expect(registerLink).toBeVisible({ timeout: 10000 });
       await registerLink.click();
 
@@ -557,7 +556,7 @@ test.describe('Registration Wizard', () => {
   test.describe('Mode Switching', () => {
     test('should switch back to login form from registration wizard', async ({ page }) => {
       // Navigate to registration
-      const registerLink = page.getByRole('link', { name: /register/i });
+      const registerLink = page.locator(AUTH_SELECTORS.modeToggle);
       await expect(registerLink).toBeVisible({ timeout: 10000 });
       await registerLink.click();
 

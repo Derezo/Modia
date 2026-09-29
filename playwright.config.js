@@ -1,5 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 
+// The API listens on PORT from .env (3001 in local dev); the frontend dev
+// server is fixed at 8080. Playwright does not load .env, so default here.
+const API_PORT = process.env.PORT || 3001;
+
 /**
  * Playwright configuration for Modia E2E tests
  * @see https://playwright.dev/docs/test-configuration
@@ -46,7 +50,7 @@ export default defineConfig({
   webServer: [
     {
       command: 'npm run dev:api',
-      url: 'http://localhost:3000/api/health',
+      url: `http://localhost:${API_PORT}/api/health`,
       reuseExistingServer: !process.env.CI,
       timeout: 120 * 1000,
     },

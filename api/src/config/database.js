@@ -38,7 +38,10 @@ const pool = new Pool({
   password: process.env.DB_PASSWORD || '',
   max: isTestEnv ? 5 : 20,
   idleTimeoutMillis: isTestEnv ? 1000 : 30000,
-  connectionTimeoutMillis: 2000,
+  // Production fails fast on pool exhaustion. Dev and test servers absorb
+  // bursts from parallel integration suites (--test-concurrency=4) instead
+  // of failing requests with "Connection terminated due to connection timeout".
+  connectionTimeoutMillis: process.env.NODE_ENV === 'production' ? 2000 : 10000,
   // Allow Node.js to exit when pool is idle (important for tests)
   allowExitOnIdle: isTestEnv,
 });

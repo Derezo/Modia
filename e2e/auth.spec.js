@@ -1,81 +1,96 @@
 import { test, expect } from '@playwright/test';
+import {
+  AUTH_SELECTORS,
+  TEST_USER,
+  generateTestCredentials,
+  gotoAuth,
+  login
+} from './helpers/index.js';
 
 /**
  * Authentication E2E Tests
  *
- * Tests the login and registration flow for the game.
+ * Tests the login form and the entry into the registration wizard.
+ * The full wizard flow is covered by registration-wizard.spec.js.
  */
 
 test.describe('Authentication', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await gotoAuth(page);
   });
 
   test('should display login scene on initial load', async ({ page }) => {
-    // Check for login form elements
-    await expect(page.getByPlaceholder('Username')).toBeVisible();
-    await expect(page.getByPlaceholder('Password')).toBeVisible();
-    await expect(page.getByRole('button', { name: /login/i })).toBeVisible();
+    await expect(page.locator(AUTH_SELECTORS.username)).toBeVisible();
+    await expect(page.locator(AUTH_SELECTORS.password)).toBeVisible();
+    await expect(page.locator(AUTH_SELECTORS.submit)).toHaveText(/login/i);
+    // Register-only fields stay in the DOM but are collapsed in login mode
+    // (zero height, transparent, unfocusable), so check the collapse state.
+    await expect(page.locator('#email-group')).toHaveClass(/\bhidden\b/);
+    await expect(page.locator('#confirm-group')).toHaveClass(/\bhidden\b/);
+    await expect(page.locator(AUTH_SELECTORS.email)).toHaveAttribute('tabindex', '-1');
+    await expect(page.locator(AUTH_SELECTORS.confirmPassword)).toHaveAttribute('tabindex', '-1');
   });
 
   test('should show error for invalid credentials', async ({ page }) => {
-    // Fill in invalid credentials
-    await page.getByPlaceholder('Username').fill('invaliduser');
-    await page.getByPlaceholder('Password').fill('wrongpassword');
+    const { username } = generateTestCredentials();
+    await page.locator(AUTH_SELECTORS.username).fill(username);
+    await page.locator(AUTH_SELECTORS.password).fill('wrongpassword');
 
-    // Click login
-    await page.getByRole('button', { name: /login/i }).click();
+    await page.locator(AUTH_SELECTORS.submit).click();
 
-    // Should show error message
-    await expect(page.getByText(/invalid|incorrect|error/i)).toBeVisible({ timeout: 5000 });
+    const error = page.locator(AUTH_SELECTORS.error);
+    await expect(error).toBeVisible({ timeout: 5000 });
+    await expect(error).toHaveText(/invalid|incorrect/i);
+    // A failed login stays on the auth form.
+    await expect(page.locator(AUTH_SELECTORS.form)).toBeVisible();
   });
 
   test('should navigate to registration from login', async ({ page }) => {
-    // Click register link
-    await page.getByRole('link', { name: /register|sign up|create account/i }).click();
+    await expect(page.locator(AUTH_SELECTORS.modeToggle)).toHaveText(/register/i);
+    await page.locator(AUTH_SELECTORS.modeToggle).click();
 
-    // Should show registration form
-    await expect(page.getByPlaceholder('Email')).toBeVisible();
-    await expect(page.getByPlaceholder('Confirm Password')).toBeVisible();
+    // Register mode replaces the login form with the registration wizard.
+    await expect(page.locator(AUTH_SELECTORS.wizard)).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('.regwiz-title')).toContainText(/create.*account/i);
+    await expect(page.locator('#regwiz-email')).toBeVisible();
+    await expect(page.locator('#regwiz-confirm')).toBeVisible();
+    await expect(page.locator(AUTH_SELECTORS.form)).toHaveCount(0);
   });
 
   test('should register a new user', async ({ page }) => {
-    // Navigate to registration
-    await page.getByRole('link', { name: /register|sign up|create account/i }).click();
+    await page.locator(AUTH_SELECTORS.modeToggle).click();
+    await expect(page.locator(AUTH_SELECTORS.wizard)).toBeVisible({ timeout: 5000 });
 
-    // Generate unique credentials
-    const timestamp = Date.now();
-    const username = `e2etest_${timestamp}`;
-    const email = `e2etest_${timestamp}@test.com`;
-    const password = 'TestPassword123!';
+    const { username, email, password } = generateTestCredentials();
+    await page.locator('#regwiz-username').fill(username);
+    await page.locator('#regwiz-email').fill(email);
+    await page.locator('#regwiz-password').fill(password);
+    await page.locator('#regwiz-confirm').fill(password);
 
-    // Fill registration form
-    await page.getByPlaceholder('Username').fill(username);
-    await page.getByPlaceholder('Email').fill(email);
-    await page.getByPlaceholder('Password').first().fill(password);
-    await page.getByPlaceholder('Confirm Password').fill(password);
+    await page.locator('#regwiz-next').click();
 
-    // Submit registration
-    await page.getByRole('button', { name: /register|sign up|create/i }).click();
+    // Step 1 accepted: the wizard advances to hero creation.
+    await expect(page.locator('.regwiz-title')).toContainText(/create.*hero/i, { timeout: 10000 });
+    await expect(page.locator('.regwiz-step-indicator.active')).toContainText('2');
 
-    // Should redirect to character select (empty state) or login success
-    await expect(page).toHaveURL(/character|select|login/i, { timeout: 10000 });
+    // The account and its first character are created together on submit.
+    await page.locator('[data-race="human"]').click();
+    await page.locator('[data-class="warrior"]').click();
+    await page.locator('[data-gender="male"]').click();
+    const charName = `Hero${Date.now().toString(36).slice(-6)}`;
+    await page.locator('#regwiz-charname').fill(charName);
+    await page.locator('#regwiz-submit').click();
+
+    await expect(page.locator('.regwiz-success-title')).toContainText(charName, { timeout: 15000 });
+
+    // The new account can log in.
+    await login(page, username, password);
   });
 
   test('should login with valid credentials', async ({ page }) => {
-    // Use test user (created by seed or previous test)
-    // Note: In real tests, you'd create a user first or use a seeded test user
-    const username = 'derezo';  // Seeded dev user
-    const password = 'password';
+    await login(page, TEST_USER.username, TEST_USER.password);
 
-    // Fill login form
-    await page.getByPlaceholder('Username').fill(username);
-    await page.getByPlaceholder('Password').fill(password);
-
-    // Click login
-    await page.getByRole('button', { name: /login/i }).click();
-
-    // Should navigate away from login
-    await expect(page).not.toHaveURL(/login/i, { timeout: 10000 });
+    await expect(page.locator(AUTH_SELECTORS.error)).toHaveCount(0);
+    await expect(page.locator('canvas').first()).toBeVisible();
   });
 });

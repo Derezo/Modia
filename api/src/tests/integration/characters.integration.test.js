@@ -236,6 +236,28 @@ describe('Characters API', () => {
       assert.ok(char.luck !== undefined);
     });
 
+    it('should include equipment object with equipped items', async () => {
+      const res = await request('GET', '/api/characters', null, user.accessToken);
+
+      assert.strictEqual(res.status, 200);
+      assert.ok(Array.isArray(res.body.characters), 'Response should have characters array');
+
+      for (const char of res.body.characters) {
+        // Every character should have an equipment object (even if empty)
+        assert.ok('equipment' in char, `Character ${char.name} should have equipment field`);
+        assert.ok(typeof char.equipment === 'object', 'Equipment should be an object');
+
+        // If there are equipped items, verify structure
+        for (const [slot, item] of Object.entries(char.equipment)) {
+          assert.ok(item.templateId !== undefined, `Item in ${slot} should have templateId`);
+          assert.ok(item.type !== undefined, `Item in ${slot} should have type`);
+          assert.ok(item.equipmentSlot !== undefined, `Item in ${slot} should have equipmentSlot`);
+          assert.ok(item.levelRequirement !== undefined, `Item in ${slot} should have levelRequirement`);
+          assert.ok('rarity' in item, `Item in ${slot} should have rarity field`);
+        }
+      }
+    });
+
     it('should reject unauthenticated requests', async () => {
       const res = await request('GET', '/api/characters');
 
