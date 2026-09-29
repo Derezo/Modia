@@ -79,13 +79,15 @@ router.post('/:id/claim', authenticate, relicClaimLimiter, asyncHandler(async (r
 // ============================================
 // POST /api/relics/grant/:key - Grant a relic (admin/quest reward)
 // For use by quest completion handlers, achievements, etc.
-// SECURITY: Only available in development mode
+// SECURITY: Only available in development/test environments
 // ============================================
 router.post('/grant/:key', authenticate, asyncHandler(async (req, res) => {
   const { key } = req.params;
 
-  // Only allow in development - production grants should use internal service calls
-  if (process.env.NODE_ENV === 'production') {
+  // SECURITY: Only allow in explicit development/test environments
+  // Production grants should use internal service calls, not exposed endpoints
+  const allowedEnvironments = ['development', 'test'];
+  if (!allowedEnvironments.includes(process.env.NODE_ENV)) {
     throw new AppError('This endpoint is disabled in production', 403);
   }
 

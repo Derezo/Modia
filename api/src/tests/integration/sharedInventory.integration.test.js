@@ -1072,4 +1072,215 @@ describe('Shared Inventory System', () => {
       }
     });
   });
+
+  describe('Equipment Slot Validation (Finding 111)', () => {
+    it('should reject body armor equipped to head slot', async () => {
+      const createdItems = [];
+
+      try {
+        // Find a body armor template
+        const bodyArmorResult = await query(
+          "SELECT id, name FROM item_templates WHERE item_type = 'armor' AND equipment_slot = 'body' LIMIT 1"
+        );
+        if (bodyArmorResult.rows.length === 0) {
+          // Skip if no body armor exists
+          return;
+        }
+        const bodyArmorId = bodyArmorResult.rows[0].id;
+
+        // Create body armor in shared pool
+        const itemId = await createSharedPoolItem(testUser.userId, bodyArmorId, 1, false);
+        createdItems.push(itemId);
+
+        // Try to equip to head slot - should fail
+        const res = await request('POST', '/api/inventory/equip', {
+          characterId: testCharacter1.id,
+          itemInstanceId: itemId,
+          slot: 'head'
+        }, testUser.accessToken);
+
+        assert.strictEqual(res.status, 400, 'Should reject body armor in head slot');
+        assert.ok(res.body.error.includes('body'), 'Error should mention correct slot');
+
+      } finally {
+        await cleanupTestItems(createdItems);
+      }
+    });
+
+    it('should reject main_hand weapon equipped to off_hand slot', async () => {
+      const createdItems = [];
+
+      try {
+        // Find a main_hand weapon template
+        const mainHandResult = await query(
+          "SELECT id, name FROM item_templates WHERE item_type = 'weapon' AND equipment_slot = 'main_hand' LIMIT 1"
+        );
+        if (mainHandResult.rows.length === 0) {
+          return;
+        }
+        const mainHandWeaponId = mainHandResult.rows[0].id;
+
+        // Create weapon in shared pool
+        const itemId = await createSharedPoolItem(testUser.userId, mainHandWeaponId, 1, false);
+        createdItems.push(itemId);
+
+        // Try to equip to off_hand slot - should fail (dual-wield not implemented)
+        const res = await request('POST', '/api/inventory/equip', {
+          characterId: testCharacter1.id,
+          itemInstanceId: itemId,
+          slot: 'off_hand'
+        }, testUser.accessToken);
+
+        assert.strictEqual(res.status, 400, 'Should reject main_hand weapon in off_hand');
+        assert.ok(res.body.error.includes('main_hand'), 'Error should mention correct slot');
+
+      } finally {
+        await cleanupTestItems(createdItems);
+      }
+    });
+
+    it('should allow head armor equipped to head slot', async () => {
+      const createdItems = [];
+
+      try {
+        // Find a head armor template
+        const headArmorResult = await query(
+          "SELECT id, name FROM item_templates WHERE item_type = 'armor' AND equipment_slot = 'head' LIMIT 1"
+        );
+        if (headArmorResult.rows.length === 0) {
+          return;
+        }
+        const headArmorId = headArmorResult.rows[0].id;
+
+        // Create head armor in shared pool
+        const itemId = await createSharedPoolItem(testUser.userId, headArmorId, 1, false);
+        createdItems.push(itemId);
+
+        // Equip to head slot - should succeed
+        const res = await request('POST', '/api/inventory/equip', {
+          characterId: testCharacter1.id,
+          itemInstanceId: itemId,
+          slot: 'head'
+        }, testUser.accessToken);
+
+        assert.strictEqual(res.status, 200, 'Should allow head armor in head slot');
+
+        // Cleanup: unequip
+        await request('POST', '/api/inventory/unequip', {
+          characterId: testCharacter1.id,
+          slot: 'head'
+        }, testUser.accessToken);
+
+      } finally {
+        await cleanupTestItems(createdItems);
+      }
+    });
+  });
+
+  describe('Consumable Item Usage (Finding 2)', () => {
+    it('should restore HP when using Health Potion on damaged character', async () => {
+      const createdItems = [];
+
+      try {
+        // Find Health Potion template (template ID 12 per task, or search by name)
+        const potionResult = await query(
+          "SELECT id FROM item_templates WHERE effect_type = 'heal_hp' AND item_type = 'consumable' LIMIT 1"
+        );
+        if (potionResult.rows.length === 0) {
+          return; // Skip if no heal_hp consumable exists
+        }
+        const potionId = potionResult.rows[0].id;
+
+        // Create potion in shared pool
+        const itemId = await createSharedPoolItem(testUser.userId, potionId, 2, false);
+        createdItems.push(itemId);
+
+        // Damage the character
+        await query(
+          'UPDATE characters SET hp_current = GREATEST(hp_max - 50, 1) WHERE id = $1',
+          [testCharacter1.id]
+        );
+
+        // Get current HP before using potion
+        const beforeResult = await query(
+          'SELECT hp_current, hp_max FROM characters WHERE id = $1',
+          [testCharacter1.id]
+        );
+        const hpBefore = beforeResult.rows[0].hp_current;
+        const hpMax = beforeResult.rows[0].hp_max;
+
+        // Use the potion
+        const res = await request('POST', '/api/inventory/use', {
+          itemInstanceId: itemId,
+          targetCharacterId: testCharacter1.id
+        }, testUser.accessToken);
+
+        assert.strictEqual(res.status, 200, 'Potion use should succeed');
+        assert.ok(res.body.effects.hp_restored > 0, 'Should restore some HP');
+
+        // Verify HP increased
+        const afterResult = await query(
+          'SELECT hp_current FROM characters WHERE id = $1',
+          [testCharacter1.id]
+        );
+        const hpAfter = afterResult.rows[0].hp_current;
+        assert.ok(hpAfter > hpBefore, 'HP should have increased');
+
+        // Verify quantity decreased
+        const itemAfter = await query(
+          'SELECT quantity FROM character_items WHERE id = $1',
+          [itemId]
+        );
+        assert.strictEqual(itemAfter.rows[0].quantity, 1, 'Quantity should decrease by 1');
+
+        // Restore character HP for other tests
+        await query('UPDATE characters SET hp_current = hp_max WHERE id = $1', [testCharacter1.id]);
+
+      } finally {
+        await cleanupTestItems(createdItems);
+      }
+    });
+
+    it('should reject Antidote use outside battle and preserve quantity', async () => {
+      const createdItems = [];
+
+      try {
+        // Find Antidote (cure_poison) template
+        const antidoteResult = await query(
+          "SELECT id FROM item_templates WHERE effect_type = 'cure_poison' AND item_type = 'consumable' LIMIT 1"
+        );
+        if (antidoteResult.rows.length === 0) {
+          return; // Skip if no cure_poison consumable exists
+        }
+        const antidoteId = antidoteResult.rows[0].id;
+
+        // Create antidote in shared pool with quantity 3
+        const itemId = await createSharedPoolItem(testUser.userId, antidoteId, 3, false);
+        createdItems.push(itemId);
+
+        // Try to use antidote outside battle - should fail
+        const res = await request('POST', '/api/inventory/use', {
+          itemInstanceId: itemId,
+          targetCharacterId: testCharacter1.id
+        }, testUser.accessToken);
+
+        assert.strictEqual(res.status, 400, 'Antidote should be rejected outside battle');
+        assert.ok(
+          res.body.error.toLowerCase().includes('status') ||
+          res.body.error.toLowerCase().includes('battle'),
+          'Error should explain no status to cure'
+        );
+
+        // Verify quantity unchanged
+        const itemAfter = await query(
+          'SELECT quantity FROM character_items WHERE id = $1',
+          [itemId]
+        );
+        assert.strictEqual(itemAfter.rows[0].quantity, 3, 'Quantity should remain unchanged');
+
+      } finally {
+        await cleanupTestItems(createdItems);
+      }
+    });
+  });
 });

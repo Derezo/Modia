@@ -1,10 +1,10 @@
 /**
  * @module world/stamina
- * @description Stamina management routes - recovery at town nodes
+ * @description Stamina management routes - recovery at settlement nodes
  *
  * Key responsibilities:
  * - Stamina restoration for gold (requires Vitality Charm relic)
- * - Town node location verification
+ * - Settlement node location verification (castle, city, village, keep, palace)
  *
  * @see ../world.js - Main router that composes this module
  */
@@ -16,6 +16,10 @@ import { asyncHandler, AppError } from '../../middleware/errorHandler.js';
 import * as staminaService from '../../services/staminaService.js';
 
 const router = express.Router();
+
+// Settlement node types where stamina can be restored
+// These match the node types that worldgen actually produces (see api/src/db/worldgen/constants.js SETTLEMENT_TYPES)
+const STAMINA_RESTORE_NODE_TYPES = ['castle', 'city', 'village', 'keep', 'palace'];
 
 // ============================================================================
 // STAMINA ENDPOINTS
@@ -62,9 +66,9 @@ router.post('/restore', authenticate, staminaRestoreLimiter, asyncHandler(async 
 
   const character = charResult.rows[0];
 
-  // Verify character is at a town node
-  if (character.node_type !== 'town') {
-    throw new AppError('Stamina restore is only available at town nodes', 400);
+  // Verify character is at a settlement node (castle, city, village, keep, palace)
+  if (!STAMINA_RESTORE_NODE_TYPES.includes(character.node_type)) {
+    throw new AppError('Stamina restore is only available at settlement nodes (castles, cities, villages)', 400);
   }
 
   // Perform stamina restore and logging in a transaction

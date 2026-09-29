@@ -45,7 +45,9 @@ function formatItem(item) {
     level_requirement: item.level_requirement || 0,
     class_restriction: item.class_restriction || [],
     // Sprite ID for item icon display
-    spriteId: item.sprite_id
+    spriteId: item.sprite_id,
+    // Equipment slot from template (for slot validation on client)
+    equipmentSlot: item.equipment_slot || null
   };
 }
 
@@ -58,7 +60,7 @@ router.get('/shared', authenticate, gameReadLimiter, asyncHandler(async (req, re
     `SELECT ci.id as instance_id, ci.quantity, ci.modifications,
             it.id as template_id, it.name, it.item_type, it.rarity,
             it.stat_bonuses, it.description, it.level_requirement, it.class_restriction,
-            it.sprite_id
+            it.sprite_id, it.equipment_slot
      FROM character_items ci
      JOIN item_templates it ON ci.item_template_id = it.id
      WHERE ci.user_id = $1 AND ci.equipped_slot IS NULL
@@ -91,7 +93,7 @@ router.get('/:characterId', authenticate, gameReadLimiter, asyncHandler(async (r
     `SELECT ci.id as instance_id, ci.quantity, ci.equipped_slot, ci.modifications,
             it.id as template_id, it.name, it.item_type, it.rarity,
             it.stat_bonuses, it.description, it.level_requirement, it.class_restriction,
-            it.sprite_id
+            it.sprite_id, it.equipment_slot
      FROM character_items ci
      JOIN item_templates it ON ci.item_template_id = it.id
      WHERE ci.character_id = $1 AND ci.equipped_slot IS NOT NULL
@@ -112,6 +114,16 @@ router.get('/:characterId', authenticate, gameReadLimiter, asyncHandler(async (r
 router.post('/equip', authenticate, inventoryLimiter, asyncHandler(async (req, res) => {
   const { characterId, itemInstanceId, slot } = req.body;
 
+  // Validate numeric inputs
+  const parsedCharacterId = parseInt(characterId, 10);
+  const parsedItemInstanceId = parseInt(itemInstanceId, 10);
+  if (isNaN(parsedCharacterId)) {
+    throw new AppError('Invalid character ID', 400);
+  }
+  if (isNaN(parsedItemInstanceId)) {
+    throw new AppError('Invalid item instance ID', 400);
+  }
+
   // Validate slot
   if (!EQUIPMENT_SLOTS.includes(slot)) {
     throw new AppError('Invalid equipment slot', 400);
@@ -126,7 +138,7 @@ router.post('/equip', authenticate, inventoryLimiter, asyncHandler(async (req, r
        FROM characters
        WHERE id = $1 AND user_id = $2
        FOR UPDATE`,
-      [characterId, req.user.userId]
+      [parsedCharacterId, req.user.userId]
     );
     if (charResult.rows.length === 0) {
       throw new AppError('Character not found', 404);
@@ -145,7 +157,7 @@ router.post('/equip', authenticate, inventoryLimiter, asyncHandler(async (req, r
        JOIN item_templates it ON ci.item_template_id = it.id
        WHERE ci.id = $1 AND (ci.character_id = $2 OR ci.user_id = $3)
        FOR UPDATE OF ci`,
-      [itemInstanceId, characterId, req.user.userId]
+      [parsedItemInstanceId, parsedCharacterId, req.user.userId]
     );
 
     if (itemResult.rows.length === 0) {
@@ -191,12 +203,20 @@ router.post('/equip', authenticate, inventoryLimiter, asyncHandler(async (req, r
       throw new AppError(`${item.item_type} cannot be equipped in ${slot}`, 400);
     }
 
+    // SECURITY: Validate template equipment_slot matches the requested slot
+    // All items (weapons, armor, accessories) must match exactly.
+    // Dual-wield is a planned feature (CHARACTER_PROGRESSION.md) but not yet implemented.
+    // Allowing main_hand weapons in off_hand would double weapon stats until the passive exists.
+    if (item.equipment_slot && item.equipment_slot !== slot) {
+      throw new AppError(`${item.name} can only be equipped in the ${item.equipment_slot} slot`, 400);
+    }
+
     // Unequip any item currently in this slot - move to shared pool
     await client.query(
       `UPDATE character_items
        SET equipped_slot = NULL, character_id = NULL, user_id = $3
        WHERE character_id = $1 AND equipped_slot = $2`,
-      [characterId, slot, req.user.userId]
+      [parsedCharacterId, slot, req.user.userId]
     );
 
     // Equip the new item - transfer ownership from shared pool to character
@@ -204,18 +224,24 @@ router.post('/equip', authenticate, inventoryLimiter, asyncHandler(async (req, r
       `UPDATE character_items
        SET equipped_slot = $1, character_id = $2, user_id = NULL
        WHERE id = $3`,
-      [slot, characterId, itemInstanceId]
+      [slot, parsedCharacterId, parsedItemInstanceId]
     );
   });
 
   // Return updated inventory
-  const updatedInventory = await getCharacterInventory(characterId);
+  const updatedInventory = await getCharacterInventory(parsedCharacterId);
   res.json(updatedInventory);
 }));
 
 // POST /api/inventory/unequip - Unequip an item
 router.post('/unequip', authenticate, inventoryLimiter, asyncHandler(async (req, res) => {
   const { characterId, slot } = req.body;
+
+  // Validate numeric input
+  const parsedCharacterId = parseInt(characterId, 10);
+  if (isNaN(parsedCharacterId)) {
+    throw new AppError('Invalid character ID', 400);
+  }
 
   // Validate slot
   if (!EQUIPMENT_SLOTS.includes(slot)) {
@@ -228,7 +254,7 @@ router.post('/unequip', authenticate, inventoryLimiter, asyncHandler(async (req,
        FROM characters
        WHERE id = $1 AND user_id = $2
        FOR UPDATE`,
-      [characterId, req.user.userId]
+      [parsedCharacterId, req.user.userId]
     );
     if (charResult.rows.length === 0) {
       throw new AppError('Character not found', 404);
@@ -242,7 +268,7 @@ router.post('/unequip', authenticate, inventoryLimiter, asyncHandler(async (req,
        SET equipped_slot = NULL, character_id = NULL, user_id = $3
        WHERE character_id = $1 AND equipped_slot = $2
        RETURNING id`,
-      [characterId, slot, req.user.userId]
+      [parsedCharacterId, slot, req.user.userId]
     );
     if (result.rows.length === 0) {
       throw new AppError('No item equipped in that slot', 400);
@@ -250,7 +276,7 @@ router.post('/unequip', authenticate, inventoryLimiter, asyncHandler(async (req,
   });
 
   // Return updated inventory
-  const updatedInventory = await getCharacterInventory(characterId);
+  const updatedInventory = await getCharacterInventory(parsedCharacterId);
   res.json(updatedInventory);
 }));
 
@@ -259,7 +285,13 @@ router.post('/use', authenticate, inventoryLimiter, asyncHandler(async (req, res
   const { itemInstanceId, targetCharacterId } = req.body;
   const userId = req.user.userId;
 
-  if (!targetCharacterId) {
+  // Validate numeric inputs
+  const parsedItemInstanceId = parseInt(itemInstanceId, 10);
+  const parsedTargetCharacterId = parseInt(targetCharacterId, 10);
+  if (isNaN(parsedItemInstanceId)) {
+    throw new AppError('Invalid item instance ID', 400);
+  }
+  if (isNaN(parsedTargetCharacterId)) {
     throw new AppError('Target character ID is required', 400);
   }
 
@@ -269,7 +301,7 @@ router.post('/use', authenticate, inventoryLimiter, asyncHandler(async (req, res
        FROM characters
        WHERE id = $1 AND user_id = $2
        FOR UPDATE`,
-      [targetCharacterId, userId]
+      [parsedTargetCharacterId, userId]
     );
     if (targetResult.rows.length === 0) {
       throw new AppError('Target character not found', 404);
@@ -286,7 +318,7 @@ router.post('/use', authenticate, inventoryLimiter, asyncHandler(async (req, res
        JOIN item_templates it ON ci.item_template_id = it.id
        WHERE ci.id = $1 AND ci.user_id = $2
        FOR UPDATE OF ci`,
-      [itemInstanceId, userId]
+      [parsedItemInstanceId, userId]
     );
     if (itemResult.rows.length === 0) {
       throw new AppError('Item not found in shared inventory', 404);
@@ -297,37 +329,119 @@ router.post('/use', authenticate, inventoryLimiter, asyncHandler(async (req, res
     }
     const stats = item.stat_bonuses || {};
 
-    // Apply item effects
-    if (stats.hp_restore) {
-      const newHp = Math.min(target.hp_max, target.hp_current + stats.hp_restore);
-      await client.query(
-        'UPDATE characters SET hp_current = $1 WHERE id = $2',
-        [newHp, targetCharacterId]
-      );
+    // Derive effect from effect_type/effect_value (canonical), falling back to stat_bonuses
+    // Canonical types: heal_hp, heal_mp, heal_both, cure_poison, cure_all, revive
+    const effectType = item.effect_type;
+    const effectValue = item.effect_value || 0;
+    const appliedEffects = {};
+    let effectApplied = false;
+
+    // Check for revive on living target BEFORE decrementing
+    if (effectType === 'revive' && target.hp_current > 0) {
+      throw new AppError('Cannot use revive item on a living character', 400);
     }
 
-    if (stats.mp_restore) {
-      const newMp = Math.min(target.mp_max, target.mp_current + stats.mp_restore);
+    // Check for heal on dead target BEFORE decrementing
+    if (effectType && effectType !== 'revive' && target.hp_current <= 0) {
+      throw new AppError('Cannot use this item on a defeated character', 400);
+    }
+
+    // Apply effects based on effect_type (matches battle actionProcessor.js semantics)
+    if (effectType === 'heal_hp') {
+      const healAmount = Math.min(effectValue, target.hp_max - target.hp_current);
+      if (healAmount > 0) {
+        await client.query(
+          'UPDATE characters SET hp_current = hp_current + $1 WHERE id = $2',
+          [healAmount, parsedTargetCharacterId]
+        );
+        appliedEffects.hp_restored = healAmount;
+        effectApplied = true;
+      }
+    } else if (effectType === 'heal_mp') {
+      const mpAmount = Math.min(effectValue, target.mp_max - target.mp_current);
+      if (mpAmount > 0) {
+        await client.query(
+          'UPDATE characters SET mp_current = mp_current + $1 WHERE id = $2',
+          [mpAmount, parsedTargetCharacterId]
+        );
+        appliedEffects.mp_restored = mpAmount;
+        effectApplied = true;
+      }
+    } else if (effectType === 'heal_both') {
+      // heal_both: HP = effectValue, MP = effectValue / 2 (per stateEvaluator/actionProcessor)
+      const healAmount = Math.min(effectValue, target.hp_max - target.hp_current);
+      const mpAmount = Math.min(Math.floor(effectValue / 2), target.mp_max - target.mp_current);
+      if (healAmount > 0 || mpAmount > 0) {
+        await client.query(
+          'UPDATE characters SET hp_current = LEAST(hp_current + $1, hp_max), mp_current = LEAST(mp_current + $2, mp_max) WHERE id = $3',
+          [healAmount, mpAmount, parsedTargetCharacterId]
+        );
+        if (healAmount > 0) appliedEffects.hp_restored = healAmount;
+        if (mpAmount > 0) appliedEffects.mp_restored = mpAmount;
+        effectApplied = true;
+      }
+    } else if (effectType === 'revive') {
+      // revive only works when hp_current <= 0, sets HP to effectValue% of hp_max
+      const reviveHp = Math.floor(target.hp_max * effectValue / 100);
       await client.query(
-        'UPDATE characters SET mp_current = $1 WHERE id = $2',
-        [newMp, targetCharacterId]
+        'UPDATE characters SET hp_current = $1 WHERE id = $2',
+        [reviveHp, parsedTargetCharacterId]
       );
+      appliedEffects.revived = true;
+      appliedEffects.hp_restored = reviveHp;
+      effectApplied = true;
+    } else if (effectType === 'cure_poison' || effectType === 'cure_all') {
+      // Out-of-battle status effects are not persistent - these items only work in battle
+      // Throw error BEFORE decrementing to preserve the item for actual battle use
+      throw new AppError('There is no status effect to cure outside battle', 400);
+    }
+
+    // Fallback to stat_bonuses.hp_restore/mp_restore if no effect_type
+    if (!effectApplied && (stats.hp_restore || stats.mp_restore)) {
+      if (stats.hp_restore) {
+        const healAmount = Math.min(stats.hp_restore, target.hp_max - target.hp_current);
+        if (healAmount > 0) {
+          await client.query(
+            'UPDATE characters SET hp_current = hp_current + $1 WHERE id = $2',
+            [healAmount, parsedTargetCharacterId]
+          );
+          appliedEffects.hp_restored = healAmount;
+          effectApplied = true;
+        }
+      }
+
+      if (stats.mp_restore) {
+        const mpAmount = Math.min(stats.mp_restore, target.mp_max - target.mp_current);
+        if (mpAmount > 0) {
+          await client.query(
+            'UPDATE characters SET mp_current = mp_current + $1 WHERE id = $2',
+            [mpAmount, parsedTargetCharacterId]
+          );
+          appliedEffects.mp_restored = mpAmount;
+          effectApplied = true;
+        }
+      }
+    }
+
+    // Reject BEFORE decrementing if no effect was applicable
+    if (!effectApplied) {
+      throw new AppError('This item has no out-of-battle effect', 400);
     }
 
     // Reduce quantity or remove item
     if (item.quantity > 1) {
       await client.query(
         'UPDATE character_items SET quantity = quantity - 1 WHERE id = $1',
-        [itemInstanceId]
+        [parsedItemInstanceId]
       );
     } else {
       await client.query(
         'DELETE FROM character_items WHERE id = $1',
-        [itemInstanceId]
+        [parsedItemInstanceId]
       );
     }
 
-    return { name: item.name, effects: stats };
+    return { name: item.name, effects: appliedEffects };
   });
 
   res.json({
@@ -341,6 +455,12 @@ router.post('/use', authenticate, inventoryLimiter, asyncHandler(async (req, res
 router.post('/discard', authenticate, inventoryLimiter, asyncHandler(async (req, res) => {
   const { itemInstanceId } = req.body;
   const userId = req.user.userId;
+
+  // Validate numeric input
+  const parsedItemInstanceId = parseInt(itemInstanceId, 10);
+  if (isNaN(parsedItemInstanceId)) {
+    throw new AppError('Invalid item instance ID', 400);
+  }
 
   // SECURITY: Strict quantity validation to prevent exploits
   // If quantity not provided, we'll discard all after checking ownership
@@ -360,7 +480,7 @@ router.post('/discard', authenticate, inventoryLimiter, asyncHandler(async (req,
     // Get item info with lock - check shared pool ownership
     const itemResult = await client.query(
       'SELECT id, quantity, equipped_slot, listed FROM character_items WHERE id = $1 AND user_id = $2 FOR UPDATE',
-      [itemInstanceId, userId]
+      [parsedItemInstanceId, userId]
     );
 
     if (itemResult.rows.length === 0) {
@@ -388,12 +508,12 @@ router.post('/discard', authenticate, inventoryLimiter, asyncHandler(async (req,
 
     if (finalDiscardQty >= item.quantity) {
       // Remove entire stack
-      await client.query('DELETE FROM character_items WHERE id = $1', [itemInstanceId]);
+      await client.query('DELETE FROM character_items WHERE id = $1', [parsedItemInstanceId]);
     } else {
       // Reduce quantity
       await client.query(
         'UPDATE character_items SET quantity = quantity - $1 WHERE id = $2',
-        [finalDiscardQty, itemInstanceId]
+        [finalDiscardQty, parsedItemInstanceId]
       );
     }
 
@@ -420,7 +540,7 @@ async function getCharacterInventory(characterId) {
     `SELECT ci.id as instance_id, ci.quantity, ci.equipped_slot, ci.modifications,
             it.id as template_id, it.name, it.item_type, it.rarity,
             it.stat_bonuses, it.description, it.level_requirement, it.class_restriction,
-            it.sprite_id
+            it.sprite_id, it.equipment_slot
      FROM character_items ci
      JOIN item_templates it ON ci.item_template_id = it.id
      WHERE ci.character_id = $1

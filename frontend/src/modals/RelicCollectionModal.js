@@ -425,10 +425,11 @@ export class RelicCollectionModal {
     this.error = null;
 
     try {
-      // Fetch zodiac collection and general relics in parallel
+      // Fetch zodiac collection and ALL relics (not just owned) in parallel
+      // GET /relics returns all relics with ownership status
       const [zodiacResponse, relicsResponse] = await Promise.all([
         this.game.api.get('/world/zodiac-collection'),
-        this.game.api.get('/relics/owned')
+        this.game.api.get('/relics')
       ]);
 
       this.zodiacData = zodiacResponse;
@@ -438,6 +439,48 @@ export class RelicCollectionModal {
       console.error('Failed to load relic data:', err);
       this.error = err.message || 'Failed to load collection';
       this.isLoading = false;
+    }
+  }
+
+  async claimRelic(relicId) {
+    try {
+      const result = await this.game.api.claimRelic(relicId);
+      if (result.success) {
+        // Reload data to show updated ownership
+        await this.loadData();
+        this.updateContent();
+        // Show success toast using typed helper
+        if (this.game.toast) {
+          this.game.toast.success('Relic Claimed', result.message || 'Relic claimed!');
+        }
+      } else {
+        // Show validation message using typed helper
+        if (this.game.toast) {
+          this.game.toast.warning('Cannot Claim', result.message || 'Cannot claim this relic');
+        }
+      }
+    } catch (err) {
+      console.error('Failed to claim relic:', err);
+      // Show error toast using typed helper
+      if (this.game.toast) {
+        this.game.toast.error('Claim Failed', err.message || 'Failed to claim relic');
+      }
+    }
+  }
+
+  updateContent() {
+    if (!this.element) return;
+    const content = this.element.querySelector('.relic-collection-content');
+    if (!content) return;
+
+    if (this.isLoading) {
+      content.innerHTML = '<div class="relic-collection-loading">Loading collection...</div>';
+    } else if (this.error) {
+      content.innerHTML = `<div class="relic-collection-error">${escapeHtml(this.error)}</div>`;
+    } else {
+      content.innerHTML = '';
+      content.appendChild(this.createZodiacSection());
+      content.appendChild(this.createRelicsSection());
     }
   }
 
@@ -584,14 +627,15 @@ export class RelicCollectionModal {
     section.className = 'relic-collection-section';
 
     const relics = this.relicsData?.relics || [];
-    const ownedCount = relics.length;
+    const ownedCount = relics.filter(r => r.owned).length;
+    const totalCount = relics.length;
 
     // Section header
     const header = document.createElement('div');
     header.className = 'relic-section-header';
     header.innerHTML = `
       <h3 class="relic-section-title">Adventure Relics</h3>
-      <span class="relic-section-progress">${ownedCount} owned</span>
+      <span class="relic-section-progress">${ownedCount}/${totalCount}</span>
     `;
     section.appendChild(header);
 
@@ -608,7 +652,7 @@ export class RelicCollectionModal {
         font-style: italic;
         font-size: 12px;
       `;
-      empty.textContent = 'No relics discovered yet. Explore the world to find them!';
+      empty.textContent = 'No relics available. Explore the world to find them!';
       list.appendChild(empty);
     } else {
       for (const relic of relics) {
@@ -622,19 +666,40 @@ export class RelicCollectionModal {
 
   createRelicItem(relic) {
     const el = document.createElement('div');
-    el.className = 'relic-item relic-item--owned';
+    el.className = `relic-item ${relic.owned ? 'relic-item--owned' : 'relic-item--locked'}`;
 
     // Get icon based on relic key or type
-    const icon = this.getRelicIcon(relic.relic_key);
+    const icon = this.getRelicIcon(relic.key);
 
-    el.innerHTML = `
-      <span class="relic-icon">${icon}</span>
-      <div class="relic-info">
-        <div class="relic-name">${escapeHtml(relic.name)}</div>
-        <div class="relic-desc">${escapeHtml(relic.description || 'A mysterious artifact')}</div>
-      </div>
-      <span class="relic-status relic-status--owned">Owned</span>
-    `;
+    if (relic.owned) {
+      el.innerHTML = `
+        <span class="relic-icon">${icon}</span>
+        <div class="relic-info">
+          <div class="relic-name">${escapeHtml(relic.name)}</div>
+          <div class="relic-desc">${escapeHtml(relic.description || 'A mysterious artifact')}</div>
+        </div>
+        <span class="relic-status relic-status--owned">Owned</span>
+      `;
+    } else {
+      el.innerHTML = `
+        <span class="relic-icon">${icon}</span>
+        <div class="relic-info">
+          <div class="relic-name">${escapeHtml(relic.name)}</div>
+          <div class="relic-desc">${escapeHtml(relic.description || 'A mysterious artifact')}</div>
+        </div>
+      `;
+
+      // Add Claim button for unowned relics
+      const claimBtn = document.createElement('button');
+      claimBtn.className = 'relic-collection-btn relic-claim-btn';
+      claimBtn.textContent = 'Claim';
+      claimBtn.style.cssText = 'padding: 4px 12px; font-size: 11px;';
+      claimBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.claimRelic(relic.id);
+      }, { signal: this.abortController.signal });
+      el.appendChild(claimBtn);
+    }
 
     return el;
   }

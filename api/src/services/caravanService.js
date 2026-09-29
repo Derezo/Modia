@@ -519,7 +519,12 @@ export async function processPurchase(userId, nodeId, itemId, quantity = 1) {
     // Acquire advisory lock on this caravan+item combination to prevent race conditions
     // This ensures only one purchase of a specific item at a specific caravan can proceed at a time
     // Advisory lock key: combine nodeId and itemId hash
-    const lockKey = nodeId * 100000 + Math.abs(itemId.split('').reduce((a, b) => a + b.charCodeAt(0), 0) % 100000);
+    // SECURITY: Coerce itemId to string to prevent TypeError when a numeric value is passed
+    const itemIdStr = String(itemId ?? '');
+    if (!itemIdStr) {
+      throw new Error('Item ID is required');
+    }
+    const lockKey = nodeId * 100000 + Math.abs(itemIdStr.split('').reduce((a, b) => a + b.charCodeAt(0), 0) % 100000);
     await client.query('SELECT pg_advisory_xact_lock($1)', [lockKey]);
 
     // Get caravan data

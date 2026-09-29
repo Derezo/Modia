@@ -9,6 +9,7 @@
  */
 
 import { query } from '../config/database.js';
+import { AppError } from '../middleware/errorHandler.js';
 
 /**
  * Get all relic templates with user ownership status
@@ -173,7 +174,8 @@ export async function claimRelic(userId, relicId) {
   );
 
   if (templateResult.rows.length === 0) {
-    throw new Error('Relic not found');
+    // SECURITY: Use AppError(404) instead of plain Error so errorHandler returns proper 404
+    throw new AppError('Relic not found', 404);
   }
 
   const template = templateResult.rows[0];
@@ -202,36 +204,42 @@ export async function claimRelic(userId, relicId) {
 
   switch (template.acquisition_type) {
     case 'quest':
-      // Check if user has completed the required advancement quest
-      // acquisition_id refers to the quest_template_id
-      if (template.acquisition_id) {
+      // Quest relics are now class-agnostic: complete ANY tier-1 advancement quest.
+      // This makes relics obtainable by all players regardless of starting class.
+      // The acquisition_id (if set) specifies the tier required (default: tier 1).
+      {
+        const requiredTier = template.acquisition_id || 1;
         const questResult = await query(
           `SELECT 1 FROM character_quests cq
            JOIN characters c ON c.id = cq.character_id
+           JOIN advancement_quest_templates aqt ON aqt.id = cq.quest_template_id
            WHERE c.user_id = $1
-             AND cq.quest_template_id = $2
-             AND cq.status = 'completed'`,
-          [userId, template.acquisition_id]
+             AND aqt.tier <= $2
+             AND cq.status = 'completed'
+           LIMIT 1`,
+          [userId, requiredTier]
         );
         canClaim = questResult.rows.length > 0;
-        validationMessage = canClaim ? '' : 'Complete the required quest to claim this relic';
-      } else {
-        // No specific quest required - check daily quest history as fallback
-        const anyQuestResult = await query(
-          `SELECT 1 FROM daily_quest_history dqh
-           JOIN characters c ON c.id = dqh.character_id
-           WHERE c.user_id = $1
-           LIMIT 1`,
-          [userId]
-        );
-        canClaim = anyQuestResult.rows.length > 0;
-        validationMessage = canClaim ? '' : 'Complete at least one quest to claim this relic';
+        validationMessage = canClaim ? '' : `Complete any tier ${requiredTier} guild advancement quest to claim this relic`;
       }
       break;
 
     case 'node':
-      // Check if user has discovered and visited the specific node
-      if (template.acquisition_id) {
+      // For cartographers_eye (watchtower relic): check if user has visited ANY watchtower.
+      // This is world-seed-independent and matches the relic's description.
+      // Other node relics may use specific acquisition_id if needed.
+      if (template.key === 'cartographers_eye') {
+        const watchtowerResult = await query(
+          `SELECT 1 FROM user_node_discovery und
+           JOIN world_nodes wn ON wn.id = und.node_id
+           WHERE und.user_id = $1 AND und.discovery_method = 'travel' AND wn.node_type = 'watchtower'
+           LIMIT 1`,
+          [userId]
+        );
+        canClaim = watchtowerResult.rows.length > 0;
+        validationMessage = canClaim ? '' : 'Visit any watchtower to claim this relic';
+      } else if (template.acquisition_id) {
+        // Other node relics: check specific node by ID
         const nodeResult = await query(
           `SELECT 1 FROM user_node_discovery
            WHERE user_id = $1 AND node_id = $2 AND discovery_method = 'travel'`,
@@ -240,7 +248,9 @@ export async function claimRelic(userId, relicId) {
         canClaim = nodeResult.rows.length > 0;
         validationMessage = canClaim ? '' : 'Visit the required location to claim this relic';
       } else {
-        canClaim = true;
+        // SECURITY: No acquisition_id and not a special case means relic is not yet claimable
+        canClaim = false;
+        validationMessage = 'This relic is not yet obtainable';
       }
       break;
 
@@ -278,15 +288,25 @@ export async function claimRelic(userId, relicId) {
         canClaim = hasRequiredTier;
         validationMessage = canClaim ? '' : `Advance a character to guild tier ${requiredTier} to claim this relic`;
       } else {
-        // No tier required - any guild membership counts
-        canClaim = true;
+        // SECURITY: No acquisition_id means relic is not yet claimable
+        canClaim = false;
+        validationMessage = 'This relic is not yet obtainable';
       }
       break;
 
     case 'achievement':
-      // Check PvP achievements (currently the only achievement system implemented)
-      // acquisition_id is the achievement_key
-      if (template.acquisition_id) {
+      // Achievement relics: special case for merchants_seal (marketplace sales)
+      // Other achievement relics use pvp_achievements table
+      if (template.key === 'merchants_seal') {
+        // merchants_seal: complete at least 1 marketplace sale
+        const salesResult = await query(
+          'SELECT 1 FROM market_trades WHERE seller_id = $1 LIMIT 1',
+          [userId]
+        );
+        canClaim = salesResult.rows.length > 0;
+        validationMessage = canClaim ? '' : 'Complete at least one marketplace sale to claim this relic';
+      } else if (template.acquisition_id) {
+        // Other achievement relics: check pvp_achievements table
         const achievementResult = await query(
           `SELECT 1 FROM pvp_achievements
            WHERE user_id = $1 AND achievement_key = $2`,
@@ -295,13 +315,9 @@ export async function claimRelic(userId, relicId) {
         canClaim = achievementResult.rows.length > 0;
         validationMessage = canClaim ? '' : 'Complete the required achievement to claim this relic';
       } else {
-        // No specific achievement required - check if user has any achievement
-        const anyAchievementResult = await query(
-          'SELECT 1 FROM pvp_achievements WHERE user_id = $1 LIMIT 1',
-          [userId]
-        );
-        canClaim = anyAchievementResult.rows.length > 0;
-        validationMessage = canClaim ? '' : 'Earn an achievement to claim this relic';
+        // SECURITY: No acquisition_id and not a special case means relic is not yet claimable
+        canClaim = false;
+        validationMessage = 'This relic is not yet obtainable';
       }
       break;
 

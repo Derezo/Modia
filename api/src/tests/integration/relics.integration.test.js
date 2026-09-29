@@ -86,19 +86,20 @@ describe('Relics API', () => {
       assert.strictEqual(res.status, 400);
     });
 
-    it('should successfully claim once the required quest is completed in the database', async () => {
+    it('should successfully claim once any tier-1 advancement quest is completed', async () => {
       const character = await ctx.createCharacter(claimUser.accessToken);
 
       // Find a quest-acquisition relic the user does not yet own
+      // acquisition_id now represents the tier requirement (1 = any tier-1 quest)
       const tplResult = await query(
         `SELECT id, key, acquisition_id FROM relic_templates
-         WHERE acquisition_type = 'quest' AND acquisition_id IS NOT NULL
+         WHERE acquisition_type = 'quest'
            AND id NOT IN (SELECT relic_id FROM user_relics WHERE user_id = $1)
          LIMIT 1`,
         [claimUser.userId]
       );
-      // If no quest-with-acquisition-id relic exists, skip silently
-      if (tplResult.rows.length === 0) return;
+      // Assert that a quest relic exists (regression guard for migration 062/063)
+      assert.ok(tplResult.rows.length > 0, 'Expected at least one quest relic to exist');
       const questRelic = tplResult.rows[0];
 
       // First attempt — without a completed quest, the claim must be rejected
@@ -110,12 +111,19 @@ describe('Relics API', () => {
       );
       assert.strictEqual(blockedRes.status, 400, 'claim must require a real completion');
 
-      // Insert a completed character_quest row tied to the relic's acquisition_id
+      // Get any tier-1 advancement quest template
+      const questTplResult = await query(
+        `SELECT id FROM advancement_quest_templates WHERE tier = 1 LIMIT 1`
+      );
+      assert.ok(questTplResult.rows.length > 0, 'Expected tier-1 quest template to exist');
+      const questTemplateId = questTplResult.rows[0].id;
+
+      // Insert a completed character_quest row for any tier-1 quest (class-agnostic)
+      // Character is freshly created, so no conflict possible - use plain INSERT
       await query(
         `INSERT INTO character_quests (character_id, quest_template_id, status, completed_at)
-         VALUES ($1, $2, 'completed', NOW())
-         ON CONFLICT (character_id, quest_template_id) DO UPDATE SET status = 'completed', completed_at = NOW()`,
-        [character.id, questRelic.acquisition_id]
+         VALUES ($1, $2, 'completed', NOW())`,
+        [character.id, questTemplateId]
       );
 
       const res = await request(
@@ -132,7 +140,40 @@ describe('Relics API', () => {
       // Cleanup
       await query(
         'DELETE FROM character_quests WHERE character_id = $1 AND quest_template_id = $2',
-        [character.id, questRelic.acquisition_id]
+        [character.id, questTemplateId]
+      );
+    });
+
+    it('should return 404 for unknown relic id', async () => {
+      const res = await request(
+        'POST',
+        '/api/relics/999999/claim',
+        {},
+        claimUser.accessToken
+      );
+      assert.strictEqual(res.status, 404);
+      assert.ok(res.body.error.toLowerCase().includes('not found'));
+    });
+
+    it('should require marketplace sale to claim merchants_seal', async () => {
+      // Get merchants_seal relic ID
+      const relicsRes = await request('GET', '/api/relics', null, claimUser.accessToken);
+      const merchantsRelic = relicsRes.body.relics.find(r => r.key === 'merchants_seal');
+      assert.ok(merchantsRelic, 'merchants_seal relic should exist');
+
+      // Fresh user has no marketplace sales, claim should fail
+      const res = await request(
+        'POST',
+        `/api/relics/${merchantsRelic.id}/claim`,
+        {},
+        claimUser.accessToken
+      );
+
+      assert.strictEqual(res.status, 400);
+      assert.ok(
+        res.body.error.toLowerCase().includes('marketplace') ||
+        res.body.error.toLowerCase().includes('sale'),
+        'Error should mention marketplace sale requirement'
       );
     });
 

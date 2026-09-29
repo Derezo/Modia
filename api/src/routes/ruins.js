@@ -20,11 +20,11 @@ const PUZZLE_SEED_SALT_V1 = 0x52555A31;
 const REWARD_SEED_SALT_V1 = 0x52575231;
 const MAX_SOLUTION_MOVES = 4096;
 
-// Puzzle configuration by tier
+// Puzzle configuration by tier (parMoves is now computed per-puzzle)
 const PUZZLE_CONFIG = {
-  1: { gridSize: 3, minMoves: 8, parMoves: 15 },
-  2: { gridSize: 4, minMoves: 15, parMoves: 30 },
-  3: { gridSize: 5, minMoves: 30, parMoves: 50 }
+  1: { gridSize: 3, minMoves: 8 },
+  2: { gridSize: 4, minMoves: 15 },
+  3: { gridSize: 5, minMoves: 30 }
 };
 
 // Rewards by tier
@@ -147,6 +147,133 @@ function getTierDefinition(tierValue) {
   }
 
   return { tier, config, rewards };
+}
+
+/**
+ * Calculate Manhattan distance heuristic for a puzzle state
+ * @param {number[]} tiles - Current tile positions (0 = empty)
+ * @param {number} gridSize - Size of grid
+ * @returns {number} Sum of Manhattan distances for all tiles
+ */
+function calculateManhattanDistance(tiles, gridSize) {
+  let distance = 0;
+  for (let i = 0; i < tiles.length; i++) {
+    const tile = tiles[i];
+    if (tile === 0) continue; // Skip empty tile
+
+    // Current position
+    const currentRow = Math.floor(i / gridSize);
+    const currentCol = i % gridSize;
+
+    // Target position (tile 1 goes to index 0, tile 2 goes to index 1, etc.)
+    const targetIndex = tile - 1;
+    const targetRow = Math.floor(targetIndex / gridSize);
+    const targetCol = targetIndex % gridSize;
+
+    distance += Math.abs(currentRow - targetRow) + Math.abs(currentCol - targetCol);
+  }
+  return distance;
+}
+
+/**
+ * Calculate linear conflict heuristic addition
+ * Linear conflict occurs when two tiles are in their goal row/column but in wrong order
+ * @param {number[]} tiles - Current tile positions
+ * @param {number} gridSize - Size of grid
+ * @returns {number} Number of linear conflicts * 2
+ */
+function calculateLinearConflicts(tiles, gridSize) {
+  let conflicts = 0;
+
+  // Check row conflicts
+  for (let row = 0; row < gridSize; row++) {
+    for (let i = 0; i < gridSize - 1; i++) {
+      const pos1 = row * gridSize + i;
+      const tile1 = tiles[pos1];
+      if (tile1 === 0) continue;
+
+      const tile1TargetRow = Math.floor((tile1 - 1) / gridSize);
+      if (tile1TargetRow !== row) continue; // tile1 not in its goal row
+
+      for (let j = i + 1; j < gridSize; j++) {
+        const pos2 = row * gridSize + j;
+        const tile2 = tiles[pos2];
+        if (tile2 === 0) continue;
+
+        const tile2TargetRow = Math.floor((tile2 - 1) / gridSize);
+        if (tile2TargetRow !== row) continue; // tile2 not in its goal row
+
+        // Both tiles are in their goal row, check if they're in conflict
+        const tile1TargetCol = (tile1 - 1) % gridSize;
+        const tile2TargetCol = (tile2 - 1) % gridSize;
+        if (tile1TargetCol > tile2TargetCol) {
+          conflicts++;
+        }
+      }
+    }
+  }
+
+  // Check column conflicts
+  for (let col = 0; col < gridSize; col++) {
+    for (let i = 0; i < gridSize - 1; i++) {
+      const pos1 = i * gridSize + col;
+      const tile1 = tiles[pos1];
+      if (tile1 === 0) continue;
+
+      const tile1TargetCol = (tile1 - 1) % gridSize;
+      if (tile1TargetCol !== col) continue; // tile1 not in its goal column
+
+      for (let j = i + 1; j < gridSize; j++) {
+        const pos2 = j * gridSize + col;
+        const tile2 = tiles[pos2];
+        if (tile2 === 0) continue;
+
+        const tile2TargetCol = (tile2 - 1) % gridSize;
+        if (tile2TargetCol !== col) continue; // tile2 not in its goal column
+
+        // Both tiles are in their goal column, check if they're in conflict
+        const tile1TargetRow = Math.floor((tile1 - 1) / gridSize);
+        const tile2TargetRow = Math.floor((tile2 - 1) / gridSize);
+        if (tile1TargetRow > tile2TargetRow) {
+          conflicts++;
+        }
+      }
+    }
+  }
+
+  return conflicts * 2; // Each conflict adds at least 2 moves
+}
+
+/**
+ * Compute achievable par for a puzzle based on its actual difficulty
+ * Uses Manhattan distance + linear conflicts as a lower bound, then adds slack
+ * @param {number[]} tiles - Puzzle tile positions
+ * @param {number} gridSize - Size of grid
+ * @returns {number} Par moves that is actually achievable
+ */
+function computePar(tiles, gridSize) {
+  const manhattan = calculateManhattanDistance(tiles, gridSize);
+  const linearConflicts = calculateLinearConflicts(tiles, gridSize);
+  const lowerBound = manhattan + linearConflicts;
+
+  // The lower bound is admissible (never overestimates), but the true optimum
+  // may be higher. Add a multiplier and slack to ensure par is achievable.
+  // For 3x3: use 1.3x + 3 (small puzzles, closer to optimal play)
+  // For 4x4: use 1.4x + 5 (medium puzzles)
+  // For 5x5: use 1.5x + 8 (large puzzles, more variation from optimal)
+  let multiplier, slack;
+  if (gridSize === 3) {
+    multiplier = 1.3;
+    slack = 3;
+  } else if (gridSize === 4) {
+    multiplier = 1.4;
+    slack = 5;
+  } else {
+    multiplier = 1.5;
+    slack = 8;
+  }
+
+  return Math.ceil(lowerBound * multiplier) + slack;
 }
 
 function createPuzzleState(localSeed, gridSize) {
@@ -281,7 +408,12 @@ router.get('/:nodeId/puzzle', authenticate, async (req, res) => {
     const race = node.region_race || 'human';
     const theme = PUZZLE_THEMES[race] || PUZZLE_THEMES.human;
 
-    const puzzleState = isCompleted ? null : createPuzzleState(node.local_seed, config.gridSize);
+    // Always generate puzzle state to compute par (even if completed)
+    const canonicalPuzzle = createPuzzleState(node.local_seed, config.gridSize);
+    const puzzleState = isCompleted ? null : canonicalPuzzle;
+
+    // Compute achievable par based on actual puzzle difficulty
+    const parMoves = computePar(canonicalPuzzle, config.gridSize);
     const rewardPreview = createRewardPreview(node.local_seed, rewards);
 
     res.json({
@@ -290,7 +422,7 @@ router.get('/:nodeId/puzzle', authenticate, async (req, res) => {
       tier,
       puzzleVersion: PUZZLE_ALGORITHM_VERSION,
       gridSize: config.gridSize,
-      parMoves: config.parMoves,
+      parMoves,
       theme: {
         name: theme.name,
         description: theme.description,
@@ -379,10 +511,12 @@ router.post('/:nodeId/solve', authenticate, ruinsSolveLimiter, async (req, res) 
       return res.status(400).json({ error: 'Invalid solution: move sequence does not solve this puzzle' });
     }
 
+    // Compute achievable par based on actual puzzle difficulty
+    const parMoves = computePar(initialPuzzle, config.gridSize);
     const rewardPreview = createRewardPreview(node.local_seed, rewards);
     const moveCount = moves.length;
-    const underPar = moveCount <= config.parMoves;
-    const goldReward = getAwardedGold(rewardPreview, config.parMoves, moveCount);
+    const underPar = moveCount <= parMoves;
+    const goldReward = getAwardedGold(rewardPreview, parMoves, moveCount);
 
     // Claim before awarding. The conditional conflict branch supports legacy
     // unsolved rows while ensuring only one concurrent transaction can claim.
@@ -481,6 +615,9 @@ export default router;
 export {
   MAX_SOLUTION_MOVES,
   PUZZLE_ALGORITHM_VERSION,
+  calculateLinearConflicts,
+  calculateManhattanDistance,
+  computePar,
   createPuzzleSolution,
   createPuzzleState,
   createRewardPreview,

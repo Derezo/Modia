@@ -511,6 +511,8 @@ router.post('/:nodeId/:shopType/sell', authenticate, shopSellLimiter, asyncHandl
     }
 
     // Add to shop inventory (if shop sells this item type)
+    // SECURITY: Player-sold stock uses restock_quantity=0 so it never regenerates
+    // This prevents players from permanently stocking drop-only or caravan-exclusive items
     const config = SHOP_CONFIG[shopType];
     if (config.itemTypes.includes(item.item_type)) {
       // Check if shop already has this item
@@ -521,14 +523,16 @@ router.post('/:nodeId/:shopType/sell', authenticate, shopSellLimiter, asyncHandl
       );
 
       if (shopInvResult.rows.length > 0) {
+        // Existing row: only update quantity, keep original restock_quantity
         await client.query(
           'UPDATE npc_shop_inventory SET quantity = quantity + $1 WHERE id = $2',
           [sellQuantity, shopInvResult.rows[0].id]
         );
       } else {
+        // New player-sold row: restock_quantity=0 for buy-back only (never regenerates)
         await client.query(
           `INSERT INTO npc_shop_inventory (node_id, shop_type, item_template_id, quantity, restock_quantity)
-           VALUES ($1, $2, $3, $4, $4)`,
+           VALUES ($1, $2, $3, $4, 0)`,
           [nodeIdNum, shopType, item.item_template_id, sellQuantity]
         );
       }
@@ -583,12 +587,14 @@ router.get('/:nodeId/:shopType/sell-inventory', authenticate, asyncHandler(async
     `SELECT
        ci.id as instance_id,
        ci.quantity,
+       ci.modifications,
        it.id as template_id,
        it.name,
        it.description,
        it.item_type,
        it.base_price,
        it.rarity,
+       it.stat_bonuses,
        it.is_tradeable,
        it.sprite_id
      FROM character_items ci
@@ -602,19 +608,38 @@ router.get('/:nodeId/:shopType/sell-inventory', authenticate, asyncHandler(async
     [req.user.userId]
   );
 
-  // Format items with sell prices
-  const items = itemsResult.rows.map(item => ({
-    instanceId: item.instance_id,
-    templateId: item.template_id,
-    name: item.name,
-    description: item.description,
-    type: item.item_type,
-    rarity: item.rarity,
-    quantity: item.quantity,
-    basePrice: item.base_price,
-    sellPrice: calculateSellPrice(item.base_price),
-    spriteId: item.sprite_id
-  }));
+  // Rarity names by level
+  const RARITY_NAMES = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+
+  // Format items with sell prices and rolled item data from modifications
+  const items = itemsResult.rows.map(item => {
+    const mods = item.modifications || {};
+    // Use rolled rarity if available, else template rarity
+    const effectiveRarity = mods.rarity ?? item.rarity;
+    const rarityName = RARITY_NAMES[effectiveRarity - 1] || 'common';
+    // Use rolled stats if available, else template stats
+    const baseStats = mods.baseStats || item.stat_bonuses || {};
+    const bonusStats = mods.bonusStats || {};
+
+    return {
+      instanceId: item.instance_id,
+      templateId: item.template_id,
+      // Use generated name if available, fallback to template name
+      name: mods.generatedName || item.name,
+      displayName: mods.generatedName || item.name,
+      templateName: item.name,
+      description: item.description,
+      type: item.item_type,
+      rarity: rarityName,
+      quantity: item.quantity,
+      baseStats,
+      bonusStats,
+      augments: mods.augments || [],
+      basePrice: item.base_price,
+      sellPrice: calculateSellPrice(item.base_price),
+      spriteId: item.sprite_id
+    };
+  });
 
   res.json({
     nodeId: nodeIdNum,
