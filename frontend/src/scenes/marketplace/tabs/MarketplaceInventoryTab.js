@@ -45,7 +45,7 @@ export function renderInventoryTab(mainContent, sidePanel, context) {
     },
     selectionMode: 'single',
     emptyMessage: 'No items available to sell. Unequip items or acquire more items to list them here.',
-    maxHeight: 600,
+    maxHeight: null, // Height comes from the flex layout in marketplace.css
     onRowSelect: (item) => showSellItemPanel(item, sidePanel, context)
   });
 

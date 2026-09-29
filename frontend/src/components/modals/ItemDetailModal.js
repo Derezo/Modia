@@ -34,20 +34,21 @@ import {
 } from '../../ui/parchment/ParchmentTheme.js';
 import {
   formatStatName,
-  formatAugmentEffect as formatAugmentEffectUtil
+  formatStatAmount,
+  formatAugmentEffect as formatAugmentEffectUtil,
+  describeAugment,
+  resolveAugmentIconName,
+  normalizeRarity,
+  sumItemStats,
+  getItemRequirements,
+  RARITY_TEXT_COLORS
 } from '../../utils/statDisplay.js';
 import { escapeHtml } from '../../utils/escapeHtml.js';
 
 const STYLE_ID = 'item-detail-modal-styles';
 
-// Rarity colors
-const RARITY_COLORS = {
-  common: '#5a4a3a',
-  uncommon: '#2d6b2d',
-  rare: '#0055aa',
-  epic: '#7722aa',
-  legendary: '#cc6600'
-};
+// Rarity colors (shared parchment-readable palette)
+const RARITY_COLORS = RARITY_TEXT_COLORS;
 
 export class ItemDetailModal {
   /**
@@ -143,6 +144,7 @@ export class ItemDetailModal {
         font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
         margin: 0 0 ${PARCHMENT_SPACING.xs};
         color: ${PARCHMENT_COLORS.text.primary};
+        overflow-wrap: anywhere;
       }
 
       .item-detail-name.rarity-common { color: ${RARITY_COLORS.common}; }
@@ -218,6 +220,42 @@ export class ItemDetailModal {
         color: ${PARCHMENT_COLORS.state.success};
       }
 
+      .item-detail-stat-value--negative {
+        color: ${PARCHMENT_COLORS.state.error};
+      }
+
+      .item-detail-stat-bonus {
+        font-weight: normal;
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
+        color: ${PARCHMENT_COLORS.text.muted};
+        margin-left: 4px;
+      }
+
+      .item-detail-requirements {
+        display: flex;
+        flex-wrap: wrap;
+        gap: ${PARCHMENT_SPACING.xs};
+      }
+
+      .item-detail-requirement {
+        padding: 2px 8px;
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        border-radius: ${PARCHMENT_RADIUS.sm};
+        background: ${PARCHMENT_COLORS.dark};
+        color: ${PARCHMENT_COLORS.text.secondary};
+        border: 1px solid ${PARCHMENT_COLORS.border};
+      }
+
+      .item-detail-requirement--met {
+        color: ${PARCHMENT_COLORS.state.success};
+      }
+
+      .item-detail-requirement--unmet {
+        color: ${PARCHMENT_COLORS.state.error};
+        border-color: ${PARCHMENT_COLORS.state.error};
+      }
+
       .item-detail-augments {
         display: flex;
         flex-direction: column;
@@ -240,8 +278,30 @@ export class ItemDetailModal {
 
       .item-detail-augment-text {
         flex: 1;
+        min-width: 0;
         font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
         color: ${PARCHMENT_COLORS.text.primary};
+      }
+
+      .item-detail-augment-name {
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        color: ${PARCHMENT_COLORS.text.secondary};
+      }
+
+      .item-detail-augment-stat {
+        color: ${PARCHMENT_COLORS.state.success};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+      }
+
+      .item-detail-augment--inactive .item-detail-augment-effect {
+        color: ${PARCHMENT_COLORS.text.muted};
+      }
+
+      .item-detail-augment-tag {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
+        font-style: italic;
+        color: ${PARCHMENT_COLORS.text.muted};
+        white-space: nowrap;
       }
 
       .item-detail-actions {
@@ -324,11 +384,12 @@ export class ItemDetailModal {
    */
   renderContent() {
     const item = this.item;
-    const rarity = item.rarity || 'common';
+    const rarity = normalizeRarity(item.rarity);
 
-    // Combine base and bonus stats
-    const allStats = { ...(item.baseStats || {}), ...(item.bonusStats || {}) };
+    // Sum base and bonus stats (a bonus sharing a key adds to the base value)
+    const allStats = sumItemStats(item);
     const hasStats = Object.keys(allStats).length > 0 || item.attack || item.defense;
+    const requirementsHtml = this.renderRequirements();
 
     // Check if consumable
     const isConsumable = item.type === 'consumable';
@@ -343,7 +404,7 @@ export class ItemDetailModal {
           <div class="item-detail-title-section">
             <h3 class="item-detail-name rarity-${rarity}">${escapeHtml(item.name)}</h3>
             <div class="item-detail-badges">
-              <span class="item-detail-badge item-detail-badge--type">${escapeHtml(item.type)}</span>
+              <span class="item-detail-badge item-detail-badge--type">${escapeHtml(item.type || '')}</span>
               <span class="item-detail-badge item-detail-badge--rarity">${escapeHtml(rarity)}</span>
               ${item.material ? `<span class="item-detail-badge">${escapeHtml(item.material)}</span>` : ''}
             </div>
@@ -354,6 +415,9 @@ export class ItemDetailModal {
         ${item.description ? `
           <p class="item-detail-description">${escapeHtml(item.description)}</p>
         ` : ''}
+
+        <!-- Requirements -->
+        ${requirementsHtml}
 
         <!-- Stats -->
         ${hasStats ? `
@@ -399,19 +463,63 @@ export class ItemDetailModal {
    * @returns {string} HTML
    */
   renderStats(stats) {
+    const base = this.item?.baseStats || {};
+    const bonus = this.item?.bonusStats || {};
+
     return Object.entries(stats)
       .filter(([, v]) => v && v !== 0)
       .map(([k, v]) => {
-        const label = formatStatName(k, false); // Use full stat names
-        const sign = v > 0 ? '+' : '';
+        const label = escapeHtml(formatStatName(k, false)); // Use full stat names
+        const amount = escapeHtml(formatStatAmount(k, v));
+        const negative = typeof v === 'number' && v < 0;
+        // Show where the number comes from when an augment bonus adds to a base stat
+        const bonusValue = Number(bonus[k]) || 0;
+        const baseValue = Number(base[k]) || 0;
+        const breakdown = bonusValue && baseValue
+          ? `<span class="item-detail-stat-bonus">(${escapeHtml(formatStatAmount(k, baseValue))} base ${escapeHtml(formatStatAmount(k, bonusValue))} bonus)</span>`
+          : '';
         return `
           <div class="item-detail-stat">
             <span class="item-detail-stat-label">${label}</span>
-            <span class="item-detail-stat-value">${sign}${v}</span>
+            <span class="item-detail-stat-value${negative ? ' item-detail-stat-value--negative' : ''}">${amount}${breakdown}</span>
           </div>
         `;
       })
       .join('');
+  }
+
+  /**
+   * Render level / class requirements, coloured by whether any party member meets them
+   * @returns {string} HTML
+   */
+  renderRequirements() {
+    const { level, classes } = getItemRequirements(this.item);
+    if (level <= 0 && classes.length === 0) return '';
+
+    const characters = Array.isArray(this.characters) ? this.characters : [];
+    const stateClass = (met) => {
+      if (characters.length === 0) return '';
+      return met ? ' item-detail-requirement--met' : ' item-detail-requirement--unmet';
+    };
+
+    const chips = [];
+    if (level > 0) {
+      const met = characters.some(c => Number(c.level || 0) >= level);
+      chips.push(`<span class="item-detail-requirement${stateClass(met)}" title="${met ? 'A party member meets this level' : 'No party member is high enough level'}">Level ${level}+</span>`);
+    }
+    if (classes.length > 0) {
+      const lower = classes.map(c => String(c).toLowerCase());
+      const met = characters.some(c => lower.includes(String(c.class || c.className || '').toLowerCase()));
+      const label = classes.map(c => formatStatName(String(c))).join(', ');
+      chips.push(`<span class="item-detail-requirement${stateClass(met)}" title="${met ? 'A party member can use this' : 'No party member has this class'}">${escapeHtml(label)} only</span>`);
+    }
+
+    return `
+      <div class="item-detail-section">
+        <div class="item-detail-section-title">Requirements</div>
+        <div class="item-detail-requirements">${chips.join('')}</div>
+      </div>
+    `;
   }
 
   /**
@@ -420,15 +528,21 @@ export class ItemDetailModal {
    * @returns {string} HTML
    */
   renderAugment(aug) {
-    const category = aug.category || aug.type || 'holy';
-    const effect = this.formatAugmentEffect(aug);
+    const iconName = resolveAugmentIconName(aug);
+    const { name, effect, statText, active } = describeAugment(aug);
+    const inactive = typeof aug === 'object' && !active;
 
     return `
-      <div class="item-detail-augment">
+      <div class="item-detail-augment${inactive ? ' item-detail-augment--inactive' : ''}">
         <span class="item-detail-augment-icon">
-          ${Icon.html('augments', category, { size: 'sm' }) || ''}
+          ${Icon.html('augments', iconName, { size: 'sm', title: name || effect }) || ''}
         </span>
-        <span class="item-detail-augment-text">${escapeHtml(effect)}</span>
+        <span class="item-detail-augment-text">
+          ${name ? `<span class="item-detail-augment-name">${escapeHtml(name)}</span>${effect ? ': ' : ''}` : ''}
+          ${effect ? `<span class="item-detail-augment-effect">${escapeHtml(effect)}</span>` : ''}
+          ${statText ? ` <span class="item-detail-augment-stat">(${escapeHtml(statText)})</span>` : ''}
+        </span>
+        ${inactive && effect ? '<span class="item-detail-augment-tag" title="This effect is shown for reference and is not yet applied in combat">not yet active</span>' : ''}
       </div>
     `;
   }

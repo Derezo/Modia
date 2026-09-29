@@ -4,6 +4,7 @@
 
 import { COLUMN_CONFIGS } from './itemDataTableColumns.js';
 import { escapeHtml } from '../../utils/escapeHtml.js';
+import { normalizeRarity } from '../../utils/statDisplay.js';
 
 /**
  * Static class for rendering table rows
@@ -18,7 +19,7 @@ export class ItemDataTableRow {
    * @returns {string} HTML string for the row
    */
   static render(item, columns, isSelected = false, index = 0) {
-    const rarityClass = `rarity-${item.rarity || 'common'}`;
+    const rarityClass = `rarity-${normalizeRarity(item.rarity)}`;
     const selectedClass = isSelected ? 'selected' : '';
 
     const cells = columns.map(columnKey => {

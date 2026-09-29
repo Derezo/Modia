@@ -776,6 +776,9 @@
 /* ItemDataTable Container for Browse Tab */
 .marketplace-browse-table {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   overflow: hidden;
   background: linear-gradient(to bottom, #f0e8d8 0%, #e8dcc8 100%);
   border: 2px solid #8b7355;
@@ -785,13 +788,17 @@
 .marketplace-browse-table .item-data-table-container {
   border: none;
   border-radius: 0;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   background: transparent;
 }
 
+/* Body fills whatever the filters and header leave (no guessed offset) */
 .marketplace-browse-table .item-data-table-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
   max-height: none;
-  height: calc(100% - 80px);
 }
 
 /* Marketplace-specific table styling */

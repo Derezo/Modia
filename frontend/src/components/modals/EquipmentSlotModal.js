@@ -39,34 +39,19 @@ import {
 import {
   formatStatName,
   formatStatValue,
-  formatAugmentEffect,
-  calculateStatChanges
+  formatStatAmount,
+  describeAugment,
+  resolveAugmentIconName,
+  calculateStatChanges,
+  calculateItemPower,
+  sumItemStats,
+  normalizeRarity,
+  matchesEquipmentSlot,
+  getEquipRestriction
 } from '../../utils/statDisplay.js';
-import { escapeHtml } from '../../utils/escapeHtml.js';
+import { escapeHtml, escapeHtmlAttribute } from '../../utils/escapeHtml.js';
 
 const STYLE_ID = 'equipment-slot-modal-styles';
-
-// Slot to equipment type mapping
-const SLOT_TYPE_MAP = {
-  head: ['armor'],
-  body: ['armor'],
-  legs: ['armor'],
-  feet: ['armor'],
-  main_hand: ['weapon'],
-  off_hand: ['weapon', 'shield'],
-  accessory: ['accessory']
-};
-
-// Slot to valid sub-slots (if equipment has slot property)
-const SLOT_SUBSLOT_MAP = {
-  head: ['head'],
-  body: ['body', 'chest'],
-  legs: ['legs'],
-  feet: ['feet'],
-  main_hand: ['main_hand', 'weapon', 'one_hand', 'two_hand'],
-  off_hand: ['off_hand', 'shield', 'one_hand'],
-  accessory: ['accessory', 'ring', 'amulet', 'trinket']
-};
 
 export class EquipmentSlotModal {
   /**
@@ -210,6 +195,50 @@ export class EquipmentSlotModal {
       .equipment-slot-card-name.rarity-rare { color: #0055aa; }
       .equipment-slot-card-name.rarity-epic { color: #7722aa; }
       .equipment-slot-card-name.rarity-legendary { color: #cc6600; }
+
+      .equipment-slot-available-name.rarity-common { color: #5a4a3a; }
+      .equipment-slot-available-name.rarity-uncommon { color: #2d6b2d; }
+      .equipment-slot-available-name.rarity-rare { color: #0055aa; }
+      .equipment-slot-available-name.rarity-epic { color: #7722aa; }
+      .equipment-slot-available-name.rarity-legendary { color: #cc6600; }
+
+      .equipment-slot-card-stat-value--negative {
+        color: ${PARCHMENT_COLORS.state.error} !important;
+      }
+
+      .equipment-slot-card-effect-name {
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+      }
+
+      .equipment-slot-card-effect--inactive .equipment-slot-card-effect-desc {
+        color: ${PARCHMENT_COLORS.text.muted};
+        font-style: italic;
+      }
+
+      /* Items the character cannot use: listed with the reason, not selectable */
+      .equipment-slot-available-item.ineligible {
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+
+      .equipment-slot-available-item.ineligible:hover {
+        background: transparent;
+      }
+
+      .equipment-slot-available-item.ineligible .equipment-slot-available-radio {
+        visibility: hidden;
+      }
+
+      .equipment-slot-available-reason {
+        flex-shrink: 0;
+        padding: 1px 6px;
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        color: ${PARCHMENT_COLORS.state.error};
+        border: 1px solid ${PARCHMENT_COLORS.state.error};
+        border-radius: ${PARCHMENT_RADIUS.sm};
+        white-space: nowrap;
+      }
 
       .equipment-slot-card-badges {
         display: flex;
@@ -379,7 +408,7 @@ export class EquipmentSlotModal {
         border: ${getParchmentBorder()};
         border-radius: ${PARCHMENT_RADIUS.md};
         background: ${PARCHMENT_COLORS.light};
-        max-height: 180px;
+        max-height: min(40vh, 320px);
       }
 
       ${getParchmentScrollbarCSS('.equipment-slot-available-list')}
@@ -536,6 +565,12 @@ export class EquipmentSlotModal {
 
     const availableItems = this.getAvailableItems();
 
+    // Preserve scroll positions across re-renders (selecting an item re-renders)
+    const previousList = contentEl.querySelector('.equipment-slot-available-list');
+    const listScrollTop = previousList ? previousList.scrollTop : 0;
+    const scrollHost = this.getScrollHost(contentEl);
+    const hostScrollTop = scrollHost ? scrollHost.scrollTop : 0;
+
     contentEl.innerHTML = `
       <div class="equipment-slot-modal-content">
         <!-- Side-by-Side Comparison -->
@@ -566,9 +601,31 @@ export class EquipmentSlotModal {
       </div>
     `;
 
+    const newList = contentEl.querySelector('.equipment-slot-available-list');
+    if (newList && listScrollTop) newList.scrollTop = listScrollTop;
+    if (scrollHost && hostScrollTop) scrollHost.scrollTop = hostScrollTop;
+
     this.updateCompositedIcons(contentEl, availableItems);
 
     this.bindEvents();
+  }
+
+  /**
+   * Find the element that scrolls the modal body (the content element itself
+   * or its nearest scrollable ancestor)
+   * @param {HTMLElement} contentEl - Modal content element
+   * @returns {HTMLElement|null}
+   */
+  getScrollHost(contentEl) {
+    let el = contentEl;
+    while (el && el !== document.body) {
+      if (el.scrollHeight > el.clientHeight) {
+        const overflowY = typeof getComputedStyle === 'function' ? getComputedStyle(el).overflowY : '';
+        if (overflowY === 'auto' || overflowY === 'scroll') return el;
+      }
+      el = el.parentElement;
+    }
+    return null;
   }
 
   /**
@@ -595,7 +652,7 @@ export class EquipmentSlotModal {
       `;
     }
 
-    const rarity = item.rarity || 'common';
+    const rarity = normalizeRarity(item.rarity);
     const allStats = this.getAllItemStats(item);
     const hasStats = Object.keys(allStats).length > 0;
     const augments = item.augments || [];
@@ -616,7 +673,8 @@ export class EquipmentSlotModal {
             </div>
             <div class="equipment-slot-card-badges">
               <span class="equipment-slot-card-badge">${rarity}</span>
-              ${item.material ? `<span class="equipment-slot-card-badge">${item.material}</span>` : ''}
+              ${item.material ? `<span class="equipment-slot-card-badge">${escapeHtml(item.material)}</span>` : ''}
+              ${this.renderRequirementBadge(item)}
             </div>
           </div>
         </div>
@@ -660,12 +718,12 @@ export class EquipmentSlotModal {
     return Object.entries(stats)
       .filter(([, v]) => v && v !== 0)
       .map(([k, v]) => {
-        const label = formatStatName(k, false);
-        const sign = v > 0 ? '+' : '';
+        const label = escapeHtml(formatStatName(k, false));
+        const negative = typeof v === 'number' && v < 0;
         return `
           <div class="equipment-slot-card-stat">
             <span class="equipment-slot-card-stat-label">${label}</span>
-            <span class="equipment-slot-card-stat-value">${sign}${v}</span>
+            <span class="equipment-slot-card-stat-value${negative ? ' equipment-slot-card-stat-value--negative' : ''}">${escapeHtml(formatStatAmount(k, v))}</span>
           </div>
         `;
       })
@@ -678,17 +736,46 @@ export class EquipmentSlotModal {
    * @returns {string} HTML
    */
   renderCardAugment(aug) {
-    const category = aug.category || aug.type || 'holy';
-    const effectText = formatAugmentEffect(aug);
+    const iconName = resolveAugmentIconName(aug);
+    const { name, effect, statText, active } = describeAugment(aug);
+    const inactive = typeof aug === 'object' && !active;
+    const tooltip = inactive && effect
+      ? `${effect} (not yet applied in combat)`
+      : (effect || name);
 
     return `
-      <div class="equipment-slot-card-effect">
+      <div class="equipment-slot-card-effect${inactive ? ' equipment-slot-card-effect--inactive' : ''}" title="${escapeHtmlAttribute(tooltip)}">
         <span class="equipment-slot-card-effect-icon">
-          ${Icon.html('augments', category, { size: 'sm' }) || ''}
+          ${Icon.html('augments', iconName, { size: 'sm', title: name || effect }) || ''}
         </span>
-        <span class="equipment-slot-card-effect-text">${escapeHtml(effectText)}</span>
+        <span class="equipment-slot-card-effect-text">
+          ${name ? `<span class="equipment-slot-card-effect-name">${escapeHtml(name)}</span>${effect ? ': ' : ''}` : ''}
+          ${effect ? `<span class="equipment-slot-card-effect-desc">${escapeHtml(effect)}</span>` : ''}
+          ${statText ? ` (${escapeHtml(statText)})` : ''}
+        </span>
       </div>
     `;
+  }
+
+  /**
+   * Render a badge explaining why the character cannot use an item
+   * @param {Object} item - Item
+   * @returns {string} HTML (empty when usable)
+   */
+  renderRequirementBadge(item) {
+    const reason = this.getIneligibilityReason(item);
+    return reason
+      ? `<span class="equipment-slot-available-reason">${escapeHtml(reason)}</span>`
+      : '';
+  }
+
+  /**
+   * Reason this character cannot equip the item (level/class), or null
+   * @param {Object} item - Item
+   * @returns {string|null}
+   */
+  getIneligibilityReason(item) {
+    return getEquipRestriction(item, { level: this.characterLevel, class: this.characterClass });
   }
 
   /**
@@ -697,23 +784,7 @@ export class EquipmentSlotModal {
    * @returns {Object} Combined stats
    */
   getAllItemStats(item) {
-    if (!item) return {};
-
-    const stats = {};
-    if (item.attack) stats.attack = item.attack;
-    if (item.defense) stats.defense = item.defense;
-
-    const baseStats = item.baseStats || {};
-    const bonusStats = item.bonusStats || {};
-
-    Object.entries(baseStats).forEach(([k, v]) => {
-      if (v) stats[k] = (stats[k] || 0) + v;
-    });
-    Object.entries(bonusStats).forEach(([k, v]) => {
-      if (v) stats[k] = (stats[k] || 0) + v;
-    });
-
-    return stats;
+    return sumItemStats(item, { includeCombat: true });
   }
 
   /**
@@ -742,10 +813,8 @@ export class EquipmentSlotModal {
     }
 
     const changesHtml = changes.map(({ stat, diff }) => {
-      const statName = formatStatName(stat, false);
-      const sign = diff > 0 ? '+' : '';
       const className = diff > 0 ? 'stat-positive' : 'stat-negative';
-      return `<span class="equipment-slot-change ${className}">${statName} ${sign}${diff}</span>`;
+      return `<span class="equipment-slot-change ${className}">${escapeHtml(formatStatValue(stat, diff, false))}</span>`;
     }).join('');
 
     return `
@@ -761,51 +830,22 @@ export class EquipmentSlotModal {
    * @returns {Array} Filtered items sorted by power
    */
   getAvailableItems() {
-    return this.inventory
-      .filter(item => this.canEquipInSlot(item))
-      .sort((a, b) => this.calculateItemPower(b) - this.calculateItemPower(a));
+    const slotItems = this.inventory.filter(item => matchesEquipmentSlot(item, this.slotKey));
+    const byPower = (a, b) => this.calculateItemPower(b) - this.calculateItemPower(a);
+    const eligible = slotItems.filter(item => !this.getIneligibilityReason(item)).sort(byPower);
+    const ineligible = slotItems.filter(item => this.getIneligibilityReason(item)).sort(byPower);
+    // Usable items first; items the character can't use yet follow with a reason
+    return [...eligible, ...ineligible];
   }
 
   /**
-   * Check if item can be equipped in this slot
+   * Check if item can be equipped in this slot by this character
    * @param {Object} item - Item to check
    * @returns {boolean}
    */
   canEquipInSlot(item) {
     if (!item) return false;
-
-    // Check level requirement
-    const levelReq = item.level_requirement || item.levelRequirement || 0;
-    if (levelReq > 0 && this.characterLevel < levelReq) {
-      return false;
-    }
-
-    // Check type matches slot
-    const validTypes = SLOT_TYPE_MAP[this.slotKey] || [];
-    const itemType = (item.type || '').toLowerCase();
-
-    if (!validTypes.includes(itemType)) {
-      return false;
-    }
-
-    // Check sub-slot if item specifies one
-    if (item.slot) {
-      const validSubslots = SLOT_SUBSLOT_MAP[this.slotKey] || [];
-      const itemSlot = item.slot.toLowerCase();
-      if (!validSubslots.includes(itemSlot)) {
-        return false;
-      }
-    }
-
-    // Check class restrictions (handle both API naming conventions)
-    const classRestrictions = item.classRestrictions || item.class_restriction || item.classRestriction || [];
-    if (classRestrictions.length > 0) {
-      const charClass = (this.characterClass || '').toLowerCase();
-      const allowed = classRestrictions.some(c => c.toLowerCase() === charClass);
-      if (!allowed) return false;
-    }
-
-    return true;
+    return matchesEquipmentSlot(item, this.slotKey) && !this.getIneligibilityReason(item);
   }
 
   /**
@@ -823,27 +863,30 @@ export class EquipmentSlotModal {
     }
 
     return items.map((item, index) => {
-      const rarity = item.rarity || 'common';
+      const rarity = normalizeRarity(item.rarity);
       const stats = this.getItemStatsSummary(item);
       const itemId = item.instanceId || item.id || index;
       const isSelected = this.selectedItem &&
         (this.selectedItem.instanceId || this.selectedItem.id) === (item.instanceId || item.id);
       const iconHtml = ItemIcon.html({ item, size: 'sm' });
+      const reason = this.getIneligibilityReason(item);
 
       return `
         <div
-          class="equipment-slot-available-item rarity-${rarity}${isSelected ? ' selected' : ''}"
-          data-item-id="${itemId}"
+          class="equipment-slot-available-item rarity-${rarity}${isSelected ? ' selected' : ''}${reason ? ' ineligible' : ''}"
+          data-item-id="${escapeHtmlAttribute(String(itemId))}"
           data-index="${index}"
+          ${reason ? `aria-disabled="true" data-ineligible="true" title="${escapeHtmlAttribute(reason)}"` : ''}
         >
           <div class="equipment-slot-available-radio"></div>
           <div class="equipment-slot-available-icon" data-available-item-icon="${index}">${iconHtml}</div>
           <div class="equipment-slot-available-info">
-            <div class="equipment-slot-available-name">
+            <div class="equipment-slot-available-name rarity-${rarity}" title="${escapeHtmlAttribute(item.name || '')}">
               ${escapeHtml(item.name)}
             </div>
-            ${stats ? `<div class="equipment-slot-available-stats">${stats}</div>` : ''}
+            ${stats ? `<div class="equipment-slot-available-stats">${escapeHtml(stats)}</div>` : ''}
           </div>
+          ${reason ? `<span class="equipment-slot-available-reason">${escapeHtml(reason)}</span>` : ''}
         </div>
       `;
     }).join('');
@@ -896,32 +939,25 @@ export class EquipmentSlotModal {
    * @returns {string} Stats summary
    */
   getItemStatsSummary(item) {
-    const parts = [];
-    if (item.attack) parts.push(formatStatValue('attack', item.attack, true));
-    if (item.defense) parts.push(formatStatValue('defense', item.defense, true));
-
-    const stats = { ...(item.baseStats || {}), ...(item.bonusStats || {}) };
-    Object.entries(stats).slice(0, 2).forEach(([k, v]) => {
-      if (v) {
-        parts.push(formatStatValue(k, v, true));
-      }
-    });
-
-    return parts.slice(0, 3).join(', ');
+    const stats = sumItemStats(item, { includeCombat: true });
+    const parts = Object.entries(stats)
+      .filter(([, v]) => typeof v === 'number' && v !== 0)
+      .slice(0, 3)
+      .map(([k, v]) => formatStatValue(k, v, true));
+    const augmentCount = (item.augments || []).length;
+    if (augmentCount > 0) {
+      parts.push(`${augmentCount} augment${augmentCount > 1 ? 's' : ''}`);
+    }
+    return parts.join(', ');
   }
 
   /**
-   * Calculate item power for comparison
+   * Calculate item power for comparison (attack + defense + summed stats)
    * @param {Object} item - Item data
    * @returns {number} Power value
    */
   calculateItemPower(item) {
-    if (!item) return 0;
-
-    let power = (item.attack || 0) + (item.defense || 0);
-    const stats = { ...(item.baseStats || {}), ...(item.bonusStats || {}) };
-    Object.values(stats).forEach(v => { power += v || 0; });
-    return power;
+    return calculateItemPower(item);
   }
 
   /**
@@ -966,7 +1002,10 @@ export class EquipmentSlotModal {
    */
   selectItem(index) {
     const availableItems = this.getAvailableItems();
-    this.selectedItem = availableItems[index] || null;
+    const item = availableItems[index] || null;
+    // Items the character cannot use are listed for information only
+    if (item && this.getIneligibilityReason(item)) return;
+    this.selectedItem = item;
 
     // Re-render the entire content to update comparison cards and stat changes
     this.render();

@@ -8,7 +8,14 @@ import { ItemIcon } from '../../../components/ItemIcon.js';
 import { parchmentToast } from '../../../ui/parchment/ParchmentToast.js';
 import { getRarityName, formatStatName, RARITY_COLORS } from '../marketplaceUtils.js';
 import { loadOrderBook, renderOrderBookAndTrade, initMarketDashboard } from './MarketplaceTradePanel.js';
-import { escapeHtml } from '../../../utils/escapeHtml.js';
+import { escapeHtml, escapeHtmlAttribute } from '../../../utils/escapeHtml.js';
+import {
+  formatStatAmount,
+  sumItemStats,
+  describeAugment,
+  resolveAugmentIconName
+} from '../../../utils/statDisplay.js';
+import { Icon } from '../../../components/Icon.js';
 
 /**
  * Render the Search/Browse tab
@@ -48,7 +55,7 @@ export function renderSearchTab(mainContent, sidePanel, context) {
     },
     selectionMode: 'single',
     emptyMessage: 'No items found. Try adjusting your search.',
-    maxHeight: 600,
+    maxHeight: null, // Height comes from the flex layout in marketplace.css
     onRowSelect: (item) => handleBrowseItemSelect(item, sidePanel, context),
     onRowDoubleClick: (item) => handleBrowseItemSelect(item, sidePanel, context)
   });
@@ -274,22 +281,35 @@ function renderEquipmentListingCard(listing, templateItem, index) {
     sellerName
   } = listing;
 
-  // Format stats
-  const baseStatsHtml = Object.entries(baseStats || {})
-    .map(([stat, val]) => `<span class="stat-badge">+${val} ${formatStatName(stat)}</span>`)
+  // Sum base and bonus stats per key (a bonus adds to the base value)
+  const summed = sumItemStats({ baseStats, bonusStats });
+  const statsHtml = Object.entries(summed)
+    .map(([stat, val]) => {
+      const isBonus = Number((bonusStats || {})[stat]) > 0;
+      const amount = formatStatAmount(stat, val);
+      return `<span class="stat-badge${isBonus ? ' bonus' : ''}">${escapeHtml(amount ? `${amount} ${formatStatName(stat)}` : formatStatName(stat))}</span>`;
+    })
     .join('');
 
-  const bonusStatsHtml = Object.entries(bonusStats || {})
-    .map(([stat, val]) => `<span class="stat-badge bonus">+${val} ${formatStatName(stat)}</span>`)
-    .join('');
-
-  // Format augments
+  // Augments: icon + effect text, affix name as tooltip
   const augmentsHtml = (augments || []).map(aug => {
-    const augName = aug.category || aug.name || aug;
-    return `<span class="augment-badge">${augName}</span>`;
+    if (typeof aug === 'string') {
+      return `<span class="augment-badge">${escapeHtml(aug)}</span>`;
+    }
+    const { name, effect, text } = describeAugment(aug);
+    const icon = Icon.html('augments', resolveAugmentIconName(aug), { size: 'sm', title: name || effect }) || '';
+    return `<span class="augment-badge" title="${escapeHtmlAttribute(text)}" style="display: inline-flex; align-items: center; gap: 3px;">${icon}${escapeHtml(effect || name)}</span>`;
   }).join('');
 
-  const rarityColor = RARITY_COLORS[rarity] || RARITY_COLORS.common;
+  // Rarity may arrive as a 1-5 number for generated items
+  const rarityName = getRarityName(rarity);
+  const rarityColor = RARITY_COLORS[rarityName] || RARITY_COLORS.common;
+  const metaLine = [rarityName, material]
+    .filter(Boolean)
+    .map(s => String(s))
+    .map(s => s.charAt(0).toUpperCase() + s.slice(1))
+    .join(' • ');
+  const price = Number(askPrice || 0).toLocaleString();
   const iconItem = getEquipmentListingIconItem(listing, templateItem);
 
   return `
@@ -304,18 +324,18 @@ function renderEquipmentListingCard(listing, templateItem, index) {
         <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
           <span data-equipment-listing-icon="${index}">${ItemIcon.html({ item: iconItem, size: 'md' })}</span>
           <div>
-            <div style="font-weight: bold; color: ${rarityColor};">${escapeHtml(generatedName || '')}</div>
-            <div style="font-size: 12px; color: #5a4a3a;">${[rarity, material].filter(Boolean).map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' • ')}</div>
+            <div style="font-weight: bold; color: ${rarityColor}; overflow-wrap: anywhere;">${escapeHtml(generatedName || '')}</div>
+            <div style="font-size: 12px; color: #5a4a3a;">${escapeHtml(metaLine)}</div>
           </div>
         </div>
         <div style="text-align: right;">
-          <div style="font-weight: bold; color: #2d2418;">${askPrice.toLocaleString()}g</div>
+          <div style="font-weight: bold; color: #2d2418;">${price}g</div>
           <div style="font-size: 12px; color: #7a6a5a;">by ${escapeHtml(sellerName || '')}</div>
         </div>
       </div>
-      ${(baseStatsHtml || bonusStatsHtml || augmentsHtml) ? `
+      ${(statsHtml || augmentsHtml) ? `
         <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; font-size: 12px;">
-          ${baseStatsHtml}${bonusStatsHtml}${augmentsHtml}
+          ${statsHtml}${augmentsHtml}
         </div>
       ` : ''}
       <button class="equipment-buy-btn" data-listing-id="${listingId}" style="
@@ -327,7 +347,7 @@ function renderEquipmentListingCard(listing, templateItem, index) {
         color: white;
         font-weight: bold;
         cursor: pointer;
-      ">Buy for ${askPrice.toLocaleString()}g</button>
+      ">Buy for ${price}g</button>
     </div>
   `;
 }
@@ -367,7 +387,7 @@ async function handleBuyListing(listing, context) {
     action: 'buy',
     item: {
       name: listing.generatedName,
-      rarity: listing.rarity,
+      rarity: getRarityName(listing.rarity),
       itemType: listing.itemType || context.selectedItem?.itemType,
       spriteId: listing.spriteId || context.selectedItem?.spriteId,
       augments: listing.augments || []

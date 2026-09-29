@@ -34,7 +34,16 @@ import {
   getParchmentBorder
 } from '../../ui/parchment/ParchmentTheme.js';
 import { getAssetPath, getOptimalSize } from '@shared/assetPaths.js';
-import { escapeHtml } from '../../utils/escapeHtml.js';
+import { escapeHtml, escapeHtmlAttribute } from '../../utils/escapeHtml.js';
+import {
+  formatStatValue,
+  sumItemStats,
+  calculateItemPower,
+  normalizeRarity,
+  matchesEquipmentSlot,
+  getEquipRestriction,
+  RARITY_TEXT_COLORS
+} from '../../utils/statDisplay.js';
 import { resolveAvailableSkillXp } from './characterModalModel.js';
 
 const STYLE_ID = 'character-modal-styles';
@@ -276,7 +285,21 @@ export class CharacterModal {
         flex: 1;
         min-width: 0;
         font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
+
+      /* Rarity colours scoped to this modal (no global .rarity-* rules) */
+      .character-modal-slot-item.rarity-common { color: ${RARITY_TEXT_COLORS.common}; }
+      .character-modal-slot-item.rarity-uncommon { color: ${RARITY_TEXT_COLORS.uncommon}; font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold}; }
+      .character-modal-slot-item.rarity-rare { color: ${RARITY_TEXT_COLORS.rare}; font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold}; }
+      .character-modal-slot-item.rarity-epic { color: ${RARITY_TEXT_COLORS.epic}; font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold}; }
+      .character-modal-slot-item.rarity-legendary { color: ${RARITY_TEXT_COLORS.legendary}; font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold}; }
+      .character-modal-equipment-slot.rarity-uncommon { border-left: 3px solid ${RARITY_TEXT_COLORS.uncommon}; }
+      .character-modal-equipment-slot.rarity-rare { border-left: 3px solid ${RARITY_TEXT_COLORS.rare}; }
+      .character-modal-equipment-slot.rarity-epic { border-left: 3px solid ${RARITY_TEXT_COLORS.epic}; }
+      .character-modal-equipment-slot.rarity-legendary { border-left: 3px solid ${RARITY_TEXT_COLORS.legendary}; }
 
       .character-modal-slot-icon {
         flex: 0 0 auto;
@@ -289,6 +312,11 @@ export class CharacterModal {
       }
 
       .character-modal-slot-stats {
+        flex-shrink: 0;
+        max-width: 45%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
         font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
         color: ${PARCHMENT_COLORS.state.success};
       }
@@ -600,15 +628,16 @@ export class CharacterModal {
     }
 
     const stats = this.getItemStatsSummary(item);
+    const rarity = normalizeRarity(item.rarity);
 
     return `
-      <div class="character-modal-equipment-slot" data-slot="${slot.key}">
+      <div class="character-modal-equipment-slot rarity-${rarity}" data-slot="${slot.key}">
         <span class="character-modal-slot-name">${slot.name}</span>
         <span class="character-modal-slot-icon" data-equipment-icon="${slot.key}">
           ${ItemIcon.html({ item, size: 'sm' })}
         </span>
-        <span class="character-modal-slot-item rarity-${item.rarity || 'common'}">${escapeHtml(item.name)}</span>
-        ${stats ? `<span class="character-modal-slot-stats">${stats}</span>` : ''}
+        <span class="character-modal-slot-item rarity-${rarity}" title="${escapeHtmlAttribute(item.name || '')}">${escapeHtml(item.name)}</span>
+        ${stats ? `<span class="character-modal-slot-stats" title="${escapeHtmlAttribute(stats)}">${escapeHtml(stats)}</span>` : ''}
       </div>
     `;
   }
@@ -645,19 +674,19 @@ export class CharacterModal {
    * @returns {string} Stats summary
    */
   getItemStatsSummary(item) {
-    const parts = [];
-    if (item.attack) parts.push(`+${item.attack} ATK`);
-    if (item.defense) parts.push(`+${item.defense} DEF`);
+    // Base and bonus stats are summed per key (a bonus adds to, not replaces, the base)
+    const stats = sumItemStats(item, { includeCombat: true });
+    const parts = Object.entries(stats)
+      .filter(([, v]) => typeof v === 'number' && v !== 0)
+      .slice(0, 3)
+      .map(([k, v]) => formatStatValue(k, v, true));
 
-    const stats = { ...(item.baseStats || {}), ...(item.bonusStats || {}) };
-    Object.entries(stats).slice(0, 2).forEach(([k, v]) => {
-      if (v) {
-        const abbrev = k.substring(0, 3).toUpperCase();
-        parts.push(`+${v} ${abbrev}`);
-      }
-    });
+    const augmentCount = (item.augments || []).length;
+    if (augmentCount > 0) {
+      parts.push(`${augmentCount} aug`);
+    }
 
-    return parts.slice(0, 3).join(', ');
+    return parts.join(', ');
   }
 
   /**
@@ -790,47 +819,22 @@ export class CharacterModal {
    * @returns {number} Power value
    */
   calculateItemPower(item) {
-    if (!item) return 0;
-
-    let power = (item.attack || 0) + (item.defense || 0);
-    const stats = { ...(item.baseStats || {}), ...(item.bonusStats || {}) };
-    Object.values(stats).forEach(v => { power += v || 0; });
-    return power;
+    return calculateItemPower(item);
   }
 
   /**
-   * Check if item can be equipped in slot
+   * Check if item can be equipped in slot by this character.
+   * Mirrors the server rule: armor/accessories must match their template slot;
+   * a main_hand weapon may go in either hand; off_hand only in off_hand; the
+   * character must meet level and class requirements.
    * @param {Object} item - Item data
    * @param {string} slotKey - Equipment slot key
    * @returns {boolean}
    */
   canEquipInSlot(item, slotKey) {
     if (!item) return false;
-
-    // Check level requirement
-    const levelReq = item.level_requirement || item.levelRequirement || 0;
-    if (levelReq > 0 && this.character && this.character.level < levelReq) {
-      return false;
-    }
-
-    // Check class restriction
-    const classRestriction = item.class_restriction || item.classRestriction || [];
-    if (classRestriction.length > 0 && this.character && !classRestriction.includes(this.character.class)) {
-      return false;
-    }
-
-    const slotMap = {
-      head: ['armor'],
-      body: ['armor'],
-      legs: ['armor'],
-      feet: ['armor'],
-      main_hand: ['weapon'],
-      off_hand: ['weapon', 'shield'],
-      accessory: ['accessory']
-    };
-
-    const validTypes = slotMap[slotKey] || [];
-    return validTypes.includes(item.type);
+    if (!matchesEquipmentSlot(item, slotKey)) return false;
+    return !getEquipRestriction(item, this.character);
   }
 
   /**

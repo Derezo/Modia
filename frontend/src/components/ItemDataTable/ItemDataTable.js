@@ -10,6 +10,7 @@ import { COLUMN_PRESETS } from './itemDataTableColumns.js';
 import { ItemDataTableFilters } from './ItemDataTableFilters.js';
 import { ItemDataTableHeader } from './ItemDataTableHeader.js';
 import { ItemDataTableRow } from './ItemDataTableRow.js';
+import { normalizeRarity } from '../../utils/statDisplay.js';
 
 /**
  * ItemDataTable - Main component class
@@ -297,7 +298,7 @@ export class ItemDataTable {
       }
 
       // Rarity filter
-      if (filters.rarity && item.rarity !== filters.rarity) {
+      if (filters.rarity && normalizeRarity(item.rarity) !== filters.rarity) {
         return false;
       }
 

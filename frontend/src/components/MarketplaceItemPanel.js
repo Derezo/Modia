@@ -5,41 +5,16 @@
 
 import { Icon } from './Icon.js';
 import { ItemIcon } from './ItemIcon.js';
-import { escapeHtml } from '../utils/escapeHtml.js';
+import { escapeHtml, escapeHtmlAttribute } from '../utils/escapeHtml.js';
+import {
+  formatStatName,
+  formatStatAmount,
+  sumItemStats,
+  normalizeRarity,
+  describeAugment,
+  resolveAugmentIconName
+} from '../utils/statDisplay.js';
 
-// Augment icon mappings
-const AUGMENT_ICONS = {
-  fire: { category: 'augments', name: 'fire' },
-  ice: { category: 'augments', name: 'ice' },
-  lightning: { category: 'augments', name: 'lightning' },
-  poison: { category: 'augments', name: 'poison' },
-  holy: { category: 'augments', name: 'holy' },
-  dark: { category: 'augments', name: 'dark' },
-  strength: { category: 'augments', name: 'strength' },
-  intelligence: { category: 'augments', name: 'intelligence' },
-  agility: { category: 'augments', name: 'agility' },
-  vitality: { category: 'augments', name: 'vitality' },
-  luck: { category: 'augments', name: 'luck' },
-  critical: { category: 'augments', name: 'critical' },
-  defense: { category: 'augments', name: 'defense' },
-  dragon_slayer: { category: 'augments', name: 'dragon-slayer' },
-  undead_slayer: { category: 'augments', name: 'undead-slayer' },
-  demon_slayer: { category: 'augments', name: 'demon-slayer' },
-  speed: { category: 'augments', name: 'speed' },
-  damage: { category: 'augments', name: 'damage' },
-  power: { category: 'augments', name: 'power' },
-  magic_defense: { category: 'augments', name: 'magic_defense' },
-  armor: { category: 'augments', name: 'armor' },
-  hp: { category: 'augments', name: 'hp' },
-  mp: { category: 'augments', name: 'mp' },
-  regen: { category: 'augments', name: 'regen' },
-  mp_regen: { category: 'augments', name: 'mp_regen' },
-  accuracy: { category: 'augments', name: 'accuracy' },
-  crit: { category: 'augments', name: 'crit' },
-  block: { category: 'augments', name: 'block' },
-  spell_resist: { category: 'augments', name: 'spell_resist' },
-  protection: { category: 'augments', name: 'protection' }
-};
 
 // Parchment theme colors (shared with marketplace scene)
 const PARCHMENT = {
@@ -187,6 +162,7 @@ export class MarketplaceItemPanel {
         font-size: 14px;
         margin-bottom: 4px;
         line-height: 1.3;
+        overflow-wrap: anywhere;
       }
 
       .listing-name.common { color: ${PARCHMENT.rarity.common}; }
@@ -227,6 +203,25 @@ export class MarketplaceItemPanel {
 
       .stat-value.bonus {
         color: #3d6b35;
+      }
+
+      .stat-value.negative {
+        color: #8b2a2a;
+      }
+
+      .stat-bonus-note {
+        color: ${PARCHMENT.text.muted};
+        font-size: 11px;
+        margin-left: 4px;
+      }
+
+      .augment-name {
+        font-weight: bold;
+      }
+
+      .augment-item.inactive .augment-effect {
+        color: ${PARCHMENT.text.muted};
+        font-style: italic;
       }
 
       .listing-augments {
@@ -450,35 +445,45 @@ export class MarketplaceItemPanel {
       sellerName
     } = listing;
 
-    // Format stats
-    const baseStatsHtml = Object.entries(baseStats || {})
-      .map(([stat, val]) => `
+    // Sum base and bonus stats per key; show where a bonus added to a base value
+    const summed = sumItemStats({ baseStats, bonusStats });
+    const statsHtml = Object.entries(summed)
+      .map(([stat, val]) => {
+        const bonus = Number((bonusStats || {})[stat]) || 0;
+        const base = Number((baseStats || {})[stat]) || 0;
+        const valueClass = typeof val === 'number' && val < 0 ? 'negative' : (bonus && !base ? 'bonus' : '');
+        const note = bonus && base
+          ? `<span class="stat-bonus-note">(${escapeHtml(formatStatAmount(stat, bonus))} bonus)</span>`
+          : '';
+        return `
         <div class="stat-row">
-          <span class="stat-label">${this.formatStatName(stat)}</span>
-          <span class="stat-value">+${val}</span>
+          <span class="stat-label">${escapeHtml(this.formatStatName(stat))}</span>
+          <span class="stat-value ${valueClass}">${escapeHtml(formatStatAmount(stat, val))}${note}</span>
         </div>
-      `).join('');
+      `;
+      }).join('');
 
-    const bonusStatsHtml = Object.entries(bonusStats || {})
-      .map(([stat, val]) => `
-        <div class="stat-row">
-          <span class="stat-label">${this.formatStatName(stat)}</span>
-          <span class="stat-value bonus">+${val}</span>
-        </div>
-      `).join('');
-
-    // Format augments
-    const augmentsHtml = (augments || []).map(aug => `
-      <div class="augment-item">
+    // Format augments: name, effect and rolled stat
+    const augmentsHtml = (augments || []).map(aug => {
+      const { name, effect, statText, active } = describeAugment(aug);
+      const inactive = typeof aug === 'object' && !active;
+      const title = inactive && effect ? `${effect} (not yet applied in combat)` : (effect || name);
+      return `
+      <div class="augment-item${inactive ? ' inactive' : ''}" title="${escapeHtmlAttribute(title)}">
         <span class="augment-icon">${this.getAugmentIcon(aug)}</span>
-        <span>${this.formatAugmentEffect(aug)}</span>
+        <span>
+          ${name ? `<span class="augment-name">${escapeHtml(name)}</span>${effect ? ': ' : ''}` : ''}
+          ${effect ? `<span class="augment-effect">${escapeHtml(effect)}</span>` : ''}
+          ${statText ? ` (${escapeHtml(statText)})` : ''}
+        </span>
       </div>
-    `).join('');
+    `;
+    }).join('');
 
-    // Meta line: Rarity + Material
-    const metaParts = [];
-    if (rarity) metaParts.push(this.capitalize(rarity));
-    if (material) metaParts.push(this.capitalize(material));
+    // Meta line: Rarity + Material (rarity may arrive as a 1-5 number)
+    const rarityName = normalizeRarity(rarity);
+    const metaParts = [this.capitalize(rarityName)];
+    if (material) metaParts.push(this.capitalize(String(material)));
     const metaLine = metaParts.join(' • ');
     const listingIndex = this.listings.indexOf(listing);
     const iconItem = this.getListingIconItem(listing);
@@ -489,16 +494,15 @@ export class MarketplaceItemPanel {
           <div class="listing-item-heading">
             <span data-listing-item-icon="${listingIndex}">${ItemIcon.html({ item: iconItem, size: 'md' })}</span>
             <div>
-              <div class="listing-name ${rarity || 'common'}">${escapeHtml(generatedName)}</div>
+              <div class="listing-name ${rarityName}">${escapeHtml(generatedName)}</div>
               <div class="listing-meta">${escapeHtml(metaLine)}</div>
             </div>
           </div>
         </div>
         <div class="listing-body">
-          ${(baseStatsHtml || bonusStatsHtml) ? `
+          ${statsHtml ? `
             <div class="listing-stats">
-              ${baseStatsHtml}
-              ${bonusStatsHtml}
+              ${statsHtml}
             </div>
           ` : ''}
           ${augmentsHtml ? `
@@ -509,7 +513,7 @@ export class MarketplaceItemPanel {
         </div>
         <div class="listing-footer">
           <div>
-            <div class="listing-price">${askPrice.toLocaleString()} gold</div>
+            <div class="listing-price">${Number(askPrice || 0).toLocaleString()} gold</div>
             <div class="listing-seller">Seller: ${escapeHtml(sellerName)}</div>
           </div>
           <button class="listing-buy-btn" data-listing-id="${listingId}">Buy</button>
@@ -541,94 +545,23 @@ export class MarketplaceItemPanel {
   }
 
   /**
-   * Format stat name for display
+   * Format stat name for display (shared abbreviations)
    */
   formatStatName(stat) {
-    const names = {
-      strength: 'STR',
-      intelligence: 'INT',
-      agility: 'AGI',
-      vitality: 'VIT',
-      luck: 'LCK',
-      hp_max: 'Max HP',
-      mp_max: 'Max MP',
-      physical_attack: 'P.ATK',
-      physical_defense: 'P.DEF',
-      magic_attack: 'M.ATK',
-      magic_defense: 'M.DEF'
-    };
-    return names[stat] || stat.toUpperCase().replace(/_/g, ' ');
+    return formatStatName(stat, true);
   }
 
   /**
-   * Get icon for augment category
+   * Get icon for an augment (every category maps to an existing icon file)
    */
   getAugmentIcon(augment) {
-    const category = augment.category || augment.effect?.type || '';
-    const iconConfig = AUGMENT_ICONS[category];
-    if (iconConfig) {
-      return Icon.html(iconConfig.category, iconConfig.name, { size: 'sm' });
-    }
-    // Fallback to holy icon for unknown augments
-    return Icon.html('augments', 'holy', { size: 'sm' });
-  }
-
-  /**
-   * Format augment effect for display
-   * (Copied from InventoryPanel for consistency)
-   */
-  formatAugmentEffect(augment) {
-    if (!augment.effect) return augment.name || '';
-
-    const effect = augment.effect;
-    switch (effect.type) {
-      case 'fire_damage':
-      case 'ice_damage':
-      case 'lightning_damage':
-      case 'holy_damage':
-      case 'dark_damage':
-        return `+${Math.round(effect.value * 100)}% ${effect.type.replace('_', ' ')}`;
-      case 'poison_chance':
-      case 'crit_chance':
-      case 'block_chance':
-        return `+${Math.round(effect.value * 100)}% ${effect.type.replace('_', ' ')}`;
-      case 'burn_chance':
-      case 'slow_chance':
-      case 'stun_chance':
-        return `${Math.round(effect.value * 100)}% chance to ${effect.type.split('_')[0]}`;
-      case 'lifesteal':
-      case 'heal_on_hit':
-        return `${Math.round(effect.value * 100)}% ${effect.type.replace('_', ' ')}`;
-      case 'damage_bonus':
-      case 'physical_attack':
-      case 'physical_defense':
-      case 'magic_defense':
-      case 'damage_reduction':
-        return `+${Math.round(effect.value * 100)}% ${effect.type.replace(/_/g, ' ')}`;
-      case 'damage_vs':
-        return `+${Math.round(effect.value * 100)}% damage vs ${effect.target}`;
-      case 'stat_bonus':
-        return `${augment.name}`;
-      case 'effect_multiplier':
-        return `${Math.round((effect.value - 1) * 100)}% stronger effect`;
-      case 'hot':
-        return `+${effect.value} HP/turn for ${effect.duration} turns`;
-      case 'hot_percent':
-        return `+${Math.round(effect.value * 100)}% max HP/turn for ${effect.duration} turns`;
-      case 'mp_bonus':
-        return `+${effect.value} MP restored`;
-      case 'mp_regen':
-        return `+${effect.value} MP/turn for ${effect.duration} turns`;
-      case 'cleanse':
-        return effect.targets === 'all' ? 'Cures all debuffs' : `Cures ${effect.targets.join(', ')}`;
-      case 'buff':
-        return `+${effect.value} ${effect.stat.toUpperCase()} for ${effect.duration} turns`;
-      default:
-        return augment.name || '';
-    }
+    const { name, effect } = describeAugment(augment);
+    return Icon.html('augments', resolveAugmentIconName(augment), { size: 'sm', title: name || effect });
   }
 
   capitalize(str) {
-    return str ? str.charAt(0).toUpperCase() + str.slice(1).replace(/_/g, ' ') : '';
+    if (str === null || str === undefined || str === '') return '';
+    const text = String(str);
+    return text.charAt(0).toUpperCase() + text.slice(1).replace(/_/g, ' ');
   }
 }

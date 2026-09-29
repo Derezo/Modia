@@ -27,29 +27,54 @@
 import { Icon } from '../Icon.js';
 import { ItemIcon } from '../ItemIcon.js';
 
-import { escapeHtml } from '../../utils/escapeHtml.js';
+import { escapeHtml, escapeHtmlAttribute } from '../../utils/escapeHtml.js';
+import {
+  formatStatValue,
+  sumItemStats,
+  calculateItemPower,
+  normalizeRarity,
+  describeAugment,
+  resolveAugmentIconName
+} from '../../utils/statDisplay.js';
 
 /**
- * Format stat abbreviation
- * @param {string} stat - Full stat name
- * @returns {string} Abbreviated stat name
+ * Format a stat delta/value in the compact "+5 STR" form
+ * @param {string} stat - Stat key
+ * @param {number|boolean} value - Value
+ * @returns {string} Formatted text
  */
-function formatStatAbbrev(stat) {
-  const abbrevs = {
-    strength: 'STR',
-    intelligence: 'INT',
-    agility: 'AGI',
-    vitality: 'VIT',
-    defense: 'DEF',
-    magicDefense: 'MDEF',
-    attack: 'ATK',
-    magicAttack: 'MATK',
-    criticalChance: 'CRIT',
-    criticalDamage: 'CDMG',
-    evasion: 'EVA',
-    accuracy: 'ACC'
-  };
-  return abbrevs[stat] || stat.substring(0, 3).toUpperCase();
+function formatStatAbbrev(stat, value) {
+  return formatStatValue(stat, value, true);
+}
+
+/**
+ * Numeric entries of an item's summed stats
+ * @param {Object} item - Item
+ * @param {boolean} [includeCombat=false] - Include attack/defense
+ * @returns {Array<[string, number|boolean]>}
+ */
+function statEntries(item, includeCombat = false) {
+  return Object.entries(sumItemStats(item, { includeCombat }))
+    .filter(([, v]) => v === true || (typeof v === 'number' && v !== 0));
+}
+
+/**
+ * Render the item name span with rarity colour, ellipsis and full-name tooltip
+ * @param {Object} item - Item
+ * @param {string} fallback - Fallback name
+ * @returns {string} HTML
+ */
+function renderItemName(item, fallback) {
+  const rawName = item.name || item.templateName || fallback;
+  const rarityClass = `rarity-${normalizeRarity(item.rarity)}`;
+  const augmentCount = Array.isArray(item.augments) ? item.augments.length : 0;
+  const augmentTitle = augmentCount > 0
+    ? item.augments.map(aug => describeAugment(aug).text).filter(Boolean).join('\n')
+    : '';
+  const augmentChip = augmentCount > 0
+    ? `<span class="item-data-table-aug-count" title="${escapeHtmlAttribute(augmentTitle)}">${augmentCount} aug</span>`
+    : '';
+  return `<span class="item-data-table-item-name ${rarityClass}" title="${escapeHtmlAttribute(rawName)}">${escapeHtml(rawName)}</span>${augmentChip}`;
 }
 
 /**
@@ -94,12 +119,10 @@ export const COLUMN_RENDERERS = {
   iconName: (item) => {
     // Initial render uses standard icon (non-blocking)
     const iconHtml = ItemIcon.html({ item, size: 'sm' });
-    const rarityClass = `rarity-${item.rarity || 'common'}`;
-    const name = escapeHtml(item.name || item.templateName || 'Unknown Item');
 
     // Generate unique ID for async update
     const itemId = item.id || item.inventory_id || Math.random().toString(36).slice(2);
-    const iconContainerId = `item-icon-${itemId}`;
+    const iconContainerId = `item-icon-${String(itemId).replace(/[^\w-]/g, '_')}`;
 
     // Check if compositing is needed (has augments and valid rarity/sprite)
     const hasAugments = item.augments && item.augments.length > 0;
@@ -129,17 +152,20 @@ export const COLUMN_RENDERERS = {
     return `
       <div class="item-data-table-icon-name">
         <span id="${iconContainerId}">${iconHtml}</span>
-        <span class="item-data-table-item-name ${rarityClass}">${name}</span>
+        ${renderItemName(item, 'Unknown Item')}
       </div>
     `;
   },
 
   /**
-   * Quantity column
+   * Quantity column. Unlimited stock (caravan starter gear) renders as infinity.
    */
   quantity: (item) => {
+    if (item.unlimitedStock === true || item.quantity === Infinity) {
+      return '<span class="item-data-table-quantity item-data-table-quantity--unlimited" title="Unlimited stock">&infin;</span>';
+    }
     if (!item.quantity || item.quantity <= 1) return '';
-    return `<span class="item-data-table-quantity">x${item.quantity}</span>`;
+    return `<span class="item-data-table-quantity">x${escapeHtml(String(item.quantity))}</span>`;
   },
 
   /**
@@ -159,18 +185,20 @@ export const COLUMN_RENDERERS = {
    * Stats preview column - shows top 3 stats
    */
   stats: (item) => {
-    const stats = { ...(item.baseStats || {}), ...(item.bonusStats || {}) };
-    const entries = Object.entries(stats).filter(([, v]) => v && v !== 0);
+    // Base and bonus stats sum per key (a bonus adds to, not replaces, the base)
+    const entries = statEntries(item);
 
     if (entries.length === 0) return '-';
 
-    return entries
+    const all = entries.map(([k, v]) => formatStatAbbrev(k, v));
+    const shown = entries
       .slice(0, 3)
       .map(([k, v]) => {
-        const sign = v > 0 ? '+' : '';
-        return `<span class="item-data-table-stat-bonus">${sign}${v} ${formatStatAbbrev(k)}</span>`;
+        const cls = typeof v === 'number' && v < 0 ? 'stat-negative' : 'item-data-table-stat-bonus';
+        return `<span class="${cls}">${escapeHtml(formatStatAbbrev(k, v))}</span>`;
       })
       .join(', ');
+    return `<span class="item-data-table-stats" title="${escapeHtmlAttribute(all.join(', '))}">${shown}</span>`;
   },
 
   /**
@@ -182,8 +210,8 @@ export const COLUMN_RENDERERS = {
     return `
       <div class="item-data-table-augments">
         ${item.augments.slice(0, 4).map(aug => {
-    const category = aug.category || aug.type || 'holy';
-    return Icon.html('augments', category, { size: 'sm' }) || '';
+    const { text } = describeAugment(aug);
+    return Icon.html('augments', resolveAugmentIconName(aug), { size: 'sm', title: text }) || '';
   }).join('')}
       </div>
     `;
@@ -253,12 +281,10 @@ export const COLUMN_RENDERERS = {
 
     const item = row.item;
     const iconHtml = ItemIcon.html({ item, size: 'sm' });
-    const rarityClass = `rarity-${item.rarity || 'common'}`;
-    const name = escapeHtml(item.name || 'Unknown');
 
     // Generate unique ID for async update
     const itemId = item.id || item.inventory_id || Math.random().toString(36).slice(2);
-    const iconContainerId = `equipped-icon-${itemId}`;
+    const iconContainerId = `equipped-icon-${String(itemId).replace(/[^\w-]/g, '_')}`;
 
     // Check if compositing is needed (has augments and valid rarity/sprite)
     const hasAugments = item.augments && item.augments.length > 0;
@@ -286,7 +312,7 @@ export const COLUMN_RENDERERS = {
     return `
       <div class="item-data-table-icon-name">
         <span id="${iconContainerId}">${iconHtml}</span>
-        <span class="item-data-table-item-name ${rarityClass}">${name}</span>
+        ${renderItemName(item, 'Unknown')}
       </div>
     `;
   },
@@ -304,58 +330,34 @@ export const COLUMN_RENDERERS = {
     // If no comparison item, show dashes
     if (!current && !item) return '-';
 
-    // Get stats from both items
-    const itemStats = { ...(item?.baseStats || {}), ...(item?.bonusStats || {}) };
-    const currentStats = { ...(current?.baseStats || {}), ...(current?.bonusStats || {}) };
-
-    // Calculate total stats for simple comparison
-    const itemPower = (item?.attack || 0) + (item?.defense || 0) +
-      Object.values(itemStats).reduce((a, b) => a + (b || 0), 0);
-    const currentPower = (current?.attack || 0) + (current?.defense || 0) +
-      Object.values(currentStats).reduce((a, b) => a + (b || 0), 0);
+    // Summed stats (attack/defense included) for both items
+    const itemStats = sumItemStats(item, { includeCombat: true });
+    const currentStats = sumItemStats(current, { includeCombat: true });
+    const itemPower = calculateItemPower(item);
+    const currentPower = calculateItemPower(current);
 
     // If comparing to nothing (empty slot), show all as positive
     if (!current) {
-      const entries = Object.entries(itemStats).filter(([, v]) => v && v !== 0);
-      if (entries.length === 0 && !item?.attack && !item?.defense) return '-';
-
-      const parts = [];
-      if (item?.attack) parts.push(`<span class="stat-positive">+${item.attack} ATK</span>`);
-      if (item?.defense) parts.push(`<span class="stat-positive">+${item.defense} DEF</span>`);
-      entries.slice(0, 2).forEach(([k, v]) => {
-        parts.push(`<span class="stat-positive">+${v} ${formatStatAbbrev(k)}</span>`);
-      });
-      return parts.slice(0, 3).join(', ');
+      const entries = statEntries(item, true);
+      if (entries.length === 0) return '-';
+      return entries.slice(0, 3)
+        .map(([k, v]) => `<span class="${typeof v === 'number' && v < 0 ? 'stat-negative' : 'stat-positive'}">${escapeHtml(formatStatAbbrev(k, v))}</span>`)
+        .join(', ');
     }
 
-    // Calculate differences
+    // Calculate differences, attack/defense first
     const diffs = [];
-
-    // Check attack/defense first
-    const attackDiff = (item?.attack || 0) - (current?.attack || 0);
-    const defenseDiff = (item?.defense || 0) - (current?.defense || 0);
-
-    if (attackDiff !== 0) {
-      const sign = attackDiff > 0 ? '+' : '';
-      const cls = attackDiff > 0 ? 'stat-positive' : 'stat-negative';
-      diffs.push(`<span class="${cls}">${sign}${attackDiff} ATK</span>`);
-    }
-
-    if (defenseDiff !== 0) {
-      const sign = defenseDiff > 0 ? '+' : '';
-      const cls = defenseDiff > 0 ? 'stat-positive' : 'stat-negative';
-      diffs.push(`<span class="${cls}">${sign}${defenseDiff} DEF</span>`);
-    }
-
-    // Check other stats
-    const allStatKeys = new Set([...Object.keys(itemStats), ...Object.keys(currentStats)]);
-    for (const key of allStatKeys) {
+    const keys = new Set([...Object.keys(itemStats), ...Object.keys(currentStats)]);
+    const ordered = ['attack', 'defense', ...[...keys].filter(k => k !== 'attack' && k !== 'defense')];
+    for (const key of ordered) {
       if (diffs.length >= 3) break;
-      const diff = (itemStats[key] || 0) - (currentStats[key] || 0);
+      const a = itemStats[key];
+      const b = currentStats[key];
+      if (typeof a === 'boolean' || typeof b === 'boolean') continue;
+      const diff = (a || 0) - (b || 0);
       if (diff !== 0) {
-        const sign = diff > 0 ? '+' : '';
         const cls = diff > 0 ? 'stat-positive' : 'stat-negative';
-        diffs.push(`<span class="${cls}">${sign}${diff} ${formatStatAbbrev(key)}</span>`);
+        diffs.push(`<span class="${cls}">${escapeHtml(formatStatAbbrev(key, diff))}</span>`);
       }
     }
 
@@ -442,7 +444,7 @@ export const COLUMN_CONFIGS = {
   augments: {
     key: 'augments',
     label: 'Augments',
-    width: '80px',
+    width: '104px',
     sortable: false,
     render: COLUMN_RENDERERS.augments
   },

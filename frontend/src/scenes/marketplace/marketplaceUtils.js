@@ -2,6 +2,14 @@
  * Marketplace Utilities - Shared helper functions
  */
 
+import {
+  normalizeRarity,
+  formatStatName as formatSharedStatName,
+  formatStatAmount,
+  sumItemStats
+} from '../../utils/statDisplay.js';
+import { escapeHtml } from '../../utils/escapeHtml.js';
+
 /**
  * Format a date/time for display
  * @param {string|Date} dateStr - Date to format
@@ -37,11 +45,8 @@ export function capitalize(str) {
  * @returns {string} Rarity name
  */
 export function getRarityName(rarity) {
-  const rarityMap = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
-  if (typeof rarity === 'number') {
-    return rarityMap[rarity - 1] || 'common';
-  }
-  return rarity || 'common';
+  // Handles 1-5 numbers, numeric strings ("4") and names in any case
+  return normalizeRarity(rarity);
 }
 
 /**
@@ -50,7 +55,7 @@ export function getRarityName(rarity) {
  * @returns {string} Formatted stat name
  */
 export function formatStatName(stat) {
-  return stat.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase());
+  return formatSharedStatName(stat, true);
 }
 
 /**
@@ -59,22 +64,17 @@ export function formatStatName(stat) {
  * @returns {string} HTML string of stats
  */
 export function formatListingStats(listing) {
-  const stats = { ...(listing.baseStats || {}), ...(listing.bonusStats || {}) };
-  const entries = Object.entries(stats).filter(([, v]) => v && v !== 0);
+  // Sum base and bonus stats per key (a bonus adds to the base value)
+  const stats = sumItemStats(listing);
+  const entries = Object.entries(stats);
 
   if (entries.length === 0) return '';
 
-  const statNames = {
-    strength: 'STR', intelligence: 'INT', agility: 'AGI', vitality: 'VIT',
-    defense: 'DEF', magicDefense: 'MDEF', attack: 'ATK', magicAttack: 'MATK'
-  };
-
   return entries.map(([k, v]) => {
-    const name = statNames[k] || k.toUpperCase();
-    const sign = v > 0 ? '+' : '';
+    const color = typeof v === 'number' && v < 0 ? '#8b2a2a' : '#3d6b35';
     return `<div style="display: flex; justify-content: space-between; padding: 2px 0;">
-      <span style="color: #5a4a3a;">${name}</span>
-      <span style="color: #3d6b35; font-family: Consolas, monospace;">${sign}${v}</span>
+      <span style="color: #5a4a3a;">${escapeHtml(formatSharedStatName(k, true))}</span>
+      <span style="color: ${color}; font-family: Consolas, monospace;">${escapeHtml(formatStatAmount(k, v))}</span>
     </div>`;
   }).join('');
 }

@@ -18,6 +18,7 @@
  */
 
 import { getAssetPath, SIZE_PRESETS } from '../../../shared/assetPaths.js';
+import { resolveAugmentIconName } from '../utils/statDisplay.js';
 
 /** Available PNG sizes from the generation script */
 const AVAILABLE_SIZES = SIZE_PRESETS.icons;
@@ -58,10 +59,16 @@ export class IconLoader {
    * Normalize icon name for file lookup
    * Icon files use snake_case (e.g., magic_dark.webp), so names are passed through unchanged.
    * @param {string} name - Icon name
-   * @returns {string} Normalized name (unchanged)
+   * @param {string} [category] - Icon category; 'augments' names are aliased
+   * @returns {string} Normalized name
    */
-  normalizeName(name) {
-    // Icon files use snake_case, so pass through unchanged
+  normalizeName(name, category) {
+    // Augment categories (e.g. dragon_slayer, potency, hot_minor) do not all
+    // have their own file; map them to an existing augment icon.
+    if (category === 'augments') {
+      return resolveAugmentIconName(name);
+    }
+    // Other icon files use snake_case, so pass through unchanged
     return name;
   }
 
@@ -73,7 +80,7 @@ export class IconLoader {
    * @returns {string} Cache key
    */
   getCacheKey(category, name, size) {
-    const normalizedName = this.normalizeName(name);
+    const normalizedName = this.normalizeName(name, category);
     return `${category}-${normalizedName}@${size}`;
   }
 
@@ -87,7 +94,7 @@ export class IconLoader {
    * @returns {string} URL path
    */
   getIconPath(category, name, size) {
-    const normalizedName = this.normalizeName(name);
+    const normalizedName = this.normalizeName(name, category);
     const optimalSize = this.getOptimalSize(size);
 
     return getAssetPath('icons', normalizedName, {

@@ -199,6 +199,22 @@ export function injectItemDataTableStyles() {
       display: flex;
       align-items: center;
       gap: ${PARCHMENT_SPACING.sm};
+      min-width: 0; /* lets the name ellipsize instead of being hard-clipped */
+    }
+
+    .item-data-table-icon-name > span:first-child {
+      flex-shrink: 0;
+    }
+
+    .item-data-table-aug-count {
+      flex-shrink: 0;
+      padding: 0 5px;
+      font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
+      font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+      color: ${PARCHMENT_COLORS.accent.burgundy};
+      border: 1px solid currentColor;
+      border-radius: 8px;
+      line-height: 1.4;
     }
 
     .item-data-table-icon-name img {
@@ -209,8 +225,10 @@ export function injectItemDataTableStyles() {
 
     .item-data-table-item-name {
       font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+      min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .item-data-table-item-name.rarity-common { color: #5a4a3a; }
@@ -241,6 +259,21 @@ export function injectItemDataTableStyles() {
 
     .item-data-table-stat-bonus {
       color: ${PARCHMENT_COLORS.state.success};
+    }
+
+    .item-data-table-stats {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .item-data-table-cell .stat-negative {
+      color: ${PARCHMENT_COLORS.state.error};
+    }
+
+    .item-data-table-quantity--unlimited {
+      font-size: ${PARCHMENT_TYPOGRAPHY.sizes.base};
+      font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
     }
 
     /* Augments cell */
