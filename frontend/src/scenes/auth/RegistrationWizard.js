@@ -24,30 +24,22 @@ import {
 } from '../../ui/parchment/index.js';
 import { escapeHtml } from '../../utils/escapeHtml.js';
 import { getPasswordError, PASSWORD_HINT } from './passwordRules.js';
+import {
+  RACES,
+  CLASSES,
+  GENDERS,
+  renderOptionArt,
+  refreshOptionArt,
+  bindOptionArtFallback,
+  getOptionArtCSS
+} from './characterOptions.js';
 
 const P = PARCHMENT_COLORS;
 const STYLE_ID = 'registration-wizard-styles';
+/** Display face used by the login card (preloaded by AuthScene), with the parchment serif as fallback. */
+const DISPLAY_FONT = `'Cinzel Decorative', ${PARCHMENT_TYPOGRAPHY.fontFamily}`;
+const DEFAULT_PREVIEW_NAME = 'Your Hero';
 
-const RACES = [
-  { id: 'human', name: 'Human', emoji: '&#x1F464;', desc: '+10% EXP gain, balanced stats' },
-  { id: 'elf', name: 'Elf', emoji: '&#x1F9DD;', desc: '+20% MP regen, high INT/AGI' },
-  { id: 'dwarf', name: 'Dwarf', emoji: '&#x1F9D4;', desc: '+15% gold find, high STR/VIT' },
-  { id: 'vampire', name: 'Vampire', emoji: '&#x1F9DB;', desc: '10% lifesteal, high AGI' },
-  { id: 'orc', name: 'Orc', emoji: '&#x1F479;', desc: '+25% crit damage, high STR' }
-];
-
-const CLASSES = [
-  { id: 'warrior', name: 'Warrior', emoji: '&#x2694;&#xFE0F;', desc: 'Tank/DPS, high HP and STR' },
-  { id: 'wizard', name: 'Wizard', emoji: '&#x1F9D9;', desc: 'Magic DPS, high MP and INT' },
-  { id: 'monk', name: 'Monk', emoji: '&#x1F94B;', desc: 'Mobile DPS, high AGI' },
-  { id: 'chemist', name: 'Chemist', emoji: '&#x2697;&#xFE0F;', desc: 'Support/Healer, balanced' }
-];
-
-const GENDERS = [
-  { id: 'male', name: 'Male', emoji: '&#x2642;&#xFE0F;' },
-  { id: 'female', name: 'Female', emoji: '&#x2640;&#xFE0F;' },
-  { id: 'other', name: 'Other', emoji: '&#x26A7;&#xFE0F;' }
-];
 
 export class RegistrationWizard {
   /**
@@ -86,10 +78,16 @@ export class RegistrationWizard {
     const style = document.createElement('style');
     style.id = STYLE_ID;
     style.textContent = `
+      /* The auth host sizes its wizard box to fit its content, so each step
+         asks for a definite width; max-width keeps it inside small screens. */
       .regwiz-container {
-        width: 100%;
-        max-width: 900px;
+        width: 420px;
+        max-width: 100%;
         margin: 0 auto;
+      }
+
+      .regwiz-container.regwiz-container--character {
+        width: 900px;
       }
 
       .regwiz-panel {
@@ -107,8 +105,9 @@ export class RegistrationWizard {
 
       .regwiz-title {
         color: ${P.text.primary};
-        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
-        font-size: 24px;
+        font-family: ${DISPLAY_FONT};
+        font-size: 22px;
+        letter-spacing: 2px;
         font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
         margin: 0 0 ${PARCHMENT_SPACING.sm};
       }
@@ -127,7 +126,7 @@ export class RegistrationWizard {
         display: flex;
         align-items: center;
         justify-content: center;
-        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-family: ${DISPLAY_FONT};
         font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
         font-size: 14px;
         transition: all 0.3s ease;
@@ -162,16 +161,26 @@ export class RegistrationWizard {
       .regwiz-label {
         display: block;
         color: ${P.text.primary};
-        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
-        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+        font-family: ${DISPLAY_FONT};
+        font-size: 13px;
         font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        letter-spacing: 1px;
         margin-bottom: ${PARCHMENT_SPACING.xs};
       }
 
+      /* Body font, like the login form: the display face renders as all
+         capitals, which made placeholders ('YOUR@EMAIL.COM') hard to read. */
       .regwiz-input {
         width: 100%;
         box-sizing: border-box;
         ${getParchmentInputCSS()}
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+      }
+
+      .regwiz-input::placeholder {
+        color: ${P.text.muted};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        text-transform: none;
       }
 
       .regwiz-input:focus {
@@ -205,13 +214,20 @@ export class RegistrationWizard {
       .regwiz-layout {
         display: grid;
         grid-template-columns: 1fr 1fr;
+        align-items: start;
         gap: 24px;
       }
 
+      /* Race / Class / Gender groups sit close together: the column's gap is
+         the only spacing between them (no extra form-group margin). */
       .regwiz-selection-panel {
         display: flex;
         flex-direction: column;
-        gap: 16px;
+        gap: ${PARCHMENT_SPACING.md};
+      }
+
+      .regwiz-selection-panel .regwiz-form-group {
+        margin-bottom: 0;
       }
 
       .regwiz-preview-panel {
@@ -230,12 +246,14 @@ export class RegistrationWizard {
         color: ${P.text.secondary};
         text-transform: uppercase;
         letter-spacing: 1px;
-        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-family: ${DISPLAY_FONT};
       }
 
+      /* One row per group: a fixed column count per group means the last
+         tile (e.g. the 5th race) never wraps onto its own stretched row. */
       .regwiz-option-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
+        grid-template-columns: repeat(var(--regwiz-cols, 4), minmax(0, 1fr));
         gap: ${PARCHMENT_SPACING.sm};
       }
 
@@ -248,7 +266,7 @@ export class RegistrationWizard {
         text-align: center;
         cursor: pointer;
         transition: all 0.2s ease;
-        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-family: ${DISPLAY_FONT};
       }
 
       .regwiz-option:hover {
@@ -263,9 +281,16 @@ export class RegistrationWizard {
         box-shadow: 0 0 0 2px ${P.accent.burgundy};
       }
 
-      .regwiz-option-emoji {
-        font-size: 20px;
-        line-height: 1.2;
+      ${getOptionArtCSS('regwiz', {
+    size: 44,
+    borderColor: P.border,
+    background: P.mid,
+    textColor: P.text.secondary,
+    fontFamily: DISPLAY_FONT
+  })}
+
+      .regwiz-option.selected .regwiz-option-art {
+        border-color: ${P.accent.burgundy};
       }
 
       .regwiz-option-name {
@@ -273,6 +298,9 @@ export class RegistrationWizard {
         color: ${P.text.primary};
         margin-top: ${PARCHMENT_SPACING.xs};
         font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       .regwiz-desc {
@@ -293,6 +321,8 @@ export class RegistrationWizard {
 
       .regwiz-btn {
         ${getParchmentButtonCSS('primary')}
+        font-family: ${DISPLAY_FONT};
+        letter-spacing: 1px;
         min-width: 120px;
       }
 
@@ -308,6 +338,8 @@ export class RegistrationWizard {
 
       .regwiz-btn-secondary {
         ${getParchmentButtonCSS('secondary')}
+        font-family: ${DISPLAY_FONT};
+        letter-spacing: 1px;
         min-width: 100px;
       }
 
@@ -327,7 +359,7 @@ export class RegistrationWizard {
       }
 
       .regwiz-success-title {
-        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-family: ${DISPLAY_FONT};
         font-size: 28px;
         font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
         color: ${P.text.primary};
@@ -352,7 +384,7 @@ export class RegistrationWizard {
         }
 
         .regwiz-option-grid {
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns: repeat(3, minmax(0, 1fr));
         }
       }
     `;
@@ -366,6 +398,7 @@ export class RegistrationWizard {
       this.element.className = 'regwiz-container';
       this.container.appendChild(this.element);
     }
+    this.element.classList.toggle('regwiz-container--character', this.step === 2);
 
     switch (this.step) {
       case 1:
@@ -455,11 +488,11 @@ export class RegistrationWizard {
             <div class="regwiz-selection-panel">
               <div class="regwiz-form-group">
                 <label class="regwiz-label">Race</label>
-                <div class="regwiz-option-grid" id="regwiz-race-select">
+                <div class="regwiz-option-grid" id="regwiz-race-select" style="--regwiz-cols: ${RACES.length}">
                   ${RACES.map(race => `
                     <div class="regwiz-option ${this.formData.race === race.id ? 'selected' : ''}" data-race="${race.id}">
-                      <div class="regwiz-option-emoji">${race.emoji}</div>
-                      <div class="regwiz-option-name">${race.name}</div>
+                      ${renderOptionArt('regwiz', 'race', race, this.formData)}
+                      <div class="regwiz-option-name">${escapeHtml(race.name)}</div>
                     </div>
                   `).join('')}
                 </div>
@@ -468,11 +501,11 @@ export class RegistrationWizard {
 
               <div class="regwiz-form-group">
                 <label class="regwiz-label">Class</label>
-                <div class="regwiz-option-grid" id="regwiz-class-select">
+                <div class="regwiz-option-grid" id="regwiz-class-select" style="--regwiz-cols: ${CLASSES.length}">
                   ${CLASSES.map(cls => `
                     <div class="regwiz-option ${this.formData.characterClass === cls.id ? 'selected' : ''}" data-class="${cls.id}">
-                      <div class="regwiz-option-emoji">${cls.emoji}</div>
-                      <div class="regwiz-option-name">${cls.name}</div>
+                      ${renderOptionArt('regwiz', 'class', cls, this.formData)}
+                      <div class="regwiz-option-name">${escapeHtml(cls.name)}</div>
                     </div>
                   `).join('')}
                 </div>
@@ -481,11 +514,11 @@ export class RegistrationWizard {
 
               <div class="regwiz-form-group">
                 <label class="regwiz-label">Gender</label>
-                <div class="regwiz-option-grid" id="regwiz-gender-select">
+                <div class="regwiz-option-grid" id="regwiz-gender-select" style="--regwiz-cols: ${GENDERS.length}">
                   ${GENDERS.map(g => `
                     <div class="regwiz-option ${this.formData.gender === g.id ? 'selected' : ''}" data-gender="${g.id}">
-                      <div class="regwiz-option-emoji">${g.emoji}</div>
-                      <div class="regwiz-option-name">${g.name}</div>
+                      ${renderOptionArt('regwiz', 'gender', g, this.formData)}
+                      <div class="regwiz-option-name">${escapeHtml(g.name)}</div>
                     </div>
                   `).join('')}
                 </div>
@@ -493,9 +526,8 @@ export class RegistrationWizard {
             </div>
 
             <div class="regwiz-preview-panel">
-              <div class="regwiz-preview-title">Character Preview</div>
-              <div id="regwiz-preview-card"></div>
-
+              <!-- Name first: the preview card grows once a race/class is
+                   picked, and a field below it used to jump down. -->
               <div class="regwiz-form-group">
                 <label class="regwiz-label" for="regwiz-charname">Character Name</label>
                 <input type="text" id="regwiz-charname" class="regwiz-input ${this.errors.characterName ? 'error' : ''}"
@@ -503,6 +535,9 @@ export class RegistrationWizard {
                        value="${escapeHtml(this.formData.characterName)}">
                 ${this.errors.characterName ? `<div class="regwiz-error">${escapeHtml(this.errors.characterName)}</div>` : ''}
               </div>
+
+              <div class="regwiz-preview-title">Character Preview</div>
+              <div id="regwiz-preview-card"></div>
             </div>
           </div>
 
@@ -616,6 +651,8 @@ export class RegistrationWizard {
   }
 
   bindCharacterStepEvents() {
+    bindOptionArtFallback(this.element);
+
     // Race selection
     this.element.querySelectorAll('[data-race]').forEach(option => {
       option.addEventListener('click', () => {
@@ -650,6 +687,7 @@ export class RegistrationWizard {
     const nameEl = this.element.querySelector('#regwiz-charname');
     nameEl.addEventListener('input', () => {
       this.formData.characterName = nameEl.value;
+      this.updatePreviewName();
     });
 
     // Back button
@@ -690,6 +728,9 @@ export class RegistrationWizard {
       opt.classList.toggle('selected', val === valueMap[type]);
     });
 
+    // Every tile previews its option with the other current choices
+    refreshOptionArt(this.element, this.formData);
+
     // Update description
     if (type === 'race') {
       const desc = RACES.find(r => r.id === this.formData.race)?.desc || '';
@@ -702,10 +743,26 @@ export class RegistrationWizard {
     }
   }
 
+  /** Display name for the preview card: the typed name, or a placeholder. */
+  getPreviewName() {
+    return this.formData.characterName.trim() || DEFAULT_PREVIEW_NAME;
+  }
+
+  /**
+   * Update only the preview card's name, on every keystroke, without
+   * refetching stats. No-op until a race or class has put a card on screen.
+   */
+  updatePreviewName() {
+    if (!this.previewCard?.character) return;
+    const name = this.getPreviewName();
+    if (this.previewCard.character.name === name) return;
+    this.previewCard.update({ name });
+  }
+
   async updatePreview() {
     if (!this.previewCard) return;
 
-    const { race, characterClass, gender, characterName } = this.formData;
+    const { race, characterClass, gender } = this.formData;
 
     if (!race && !characterClass) {
       this.previewCard.setCharacter(null);
@@ -714,7 +771,7 @@ export class RegistrationWizard {
 
     // Show placeholder while waiting for API
     const placeholderChar = {
-      name: characterName || 'Your Hero',
+      name: this.getPreviewName(),
       level: 1,
       race: race || 'unknown',
       class: characterClass || 'unknown',
@@ -759,7 +816,7 @@ export class RegistrationWizard {
       const { stats, traits } = response;
 
       const previewChar = {
-        name: this.formData.characterName || 'Your Hero',
+        name: this.getPreviewName(),
         level: 1,
         race: this.formData.race,
         class: this.formData.characterClass,
@@ -793,7 +850,7 @@ export class RegistrationWizard {
 
       // Fallback
       this.previewCard.setCharacter({
-        name: this.formData.characterName || 'Your Hero',
+        name: this.getPreviewName(),
         level: 1,
         race: this.formData.race,
         class: this.formData.characterClass,

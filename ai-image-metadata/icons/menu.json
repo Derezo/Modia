@@ -169,15 +169,30 @@
     {
       "id": "coliseum",
       "name": "Coliseum",
-      "prompt": "arena coliseum pvp battle swords crossed",
-      "seed": 32012,
+      "prompt": "The two attached images (ref_shop.png, ref_tavern.png) are existing menu icons from a fantasy game. Match their art style exactly: bold hand-inked black outlines of varying weight, mostly white/light grey fill with subtle grey shading, a very limited warm accent tint, tattoo-flash / woodcut illustration feel, a single chunky centred object, no text.\n\nSubject: a menu icon for the game's COLISEUM (PvP arena). Draw a single solid, compact, chunky object: a round stone Roman-style coliseum arena building seen from a slight three-quarter front view, with two tiers of arches, and a small pennant flag on top. The object must be solid and filled (not thin line art), occupying about 75% of the canvas, centred.\n\nBackground: flat pure white (#FFFFFF), no shadow on the ground, no border, no vignette, no frame. Square 1024x1024.",
+      "seed": null,
       "generated": true,
-      "loraModel": "v2",
+      "loraModel": null,
       "needsRegeneration": false,
-      "generatedAt": "2026-02-03T10:33:07.544Z",
+      "generatedAt": "2026-09-29T11:13:00.000Z",
       "regenerationQueuedAt": null,
       "generationFailureCount": null,
-      "lastError": null
+      "lastError": null,
+      "generationMethod": "codex-built-in-imagegen",
+      "generator": "codex-cli 0.158.0 (codex exec --enable image_generation), style references menu/shop.webp and menu/tavern.webp at 256px",
+      "postProcessing": "Border flood-fill of near-white pixels (min RGB >= 232) removed the white background, 1px grow + 1.2px Gaussian feather on alpha, cropped to the subject, centred on a square canvas with the subject at 76% of the side, LANCZOS downscale to 16/24/32/48/64/128/256 webp (q92). originals/menu/coliseum.png keeps the white-background 1024px render; originals/menu/coliseum.webp is the cropped cutout.",
+      "evaluation": {
+        "opaquePixelRatio": {
+          "16": 0.465,
+          "32": 0.447,
+          "256": 0.446
+        },
+        "siblingRatio": {
+          "shop": 0.399,
+          "tavern": 0.352
+        }
+      },
+      "replaces": "2026-02-03 LoRA v2 render whose background removal erased almost every pixel (finding 96)"
     },
     {
       "id": "fishing",

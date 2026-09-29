@@ -12,32 +12,24 @@ import {
   getParchmentInputCSS,
   getParchmentButtonCSS
 } from '../ui/parchment/index.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
+import {
+  RACES,
+  CLASSES,
+  GENDERS,
+  renderOptionArt,
+  refreshOptionArt,
+  bindOptionArtFallback,
+  getOptionArtCSS
+} from './auth/characterOptions.js';
 
 // Local alias for cleaner access
 const P = PARCHMENT_COLORS;
 
 const STYLE_ID = 'charcreate-scene-styles';
-
-const RACES = [
-  { id: 'human', name: 'Human', emoji: '&#x1F464;', desc: '+10% EXP gain, balanced stats' },
-  { id: 'elf', name: 'Elf', emoji: '&#x1F9DD;', desc: '+20% MP regen, high INT/AGI' },
-  { id: 'dwarf', name: 'Dwarf', emoji: '&#x1F9D4;', desc: '+15% gold find, high STR/VIT' },
-  { id: 'vampire', name: 'Vampire', emoji: '&#x1F9DB;', desc: '10% lifesteal, high AGI' },
-  { id: 'orc', name: 'Orc', emoji: '&#x1F479;', desc: '+25% crit damage, high STR' }
-];
-
-const CLASSES = [
-  { id: 'warrior', name: 'Warrior', emoji: '&#x2694;&#xFE0F;', desc: 'Tank/DPS, high HP and STR' },
-  { id: 'wizard', name: 'Wizard', emoji: '&#x1F9D9;', desc: 'Magic DPS, high MP and INT' },
-  { id: 'monk', name: 'Monk', emoji: '&#x1F94B;', desc: 'Mobile DPS, high AGI' },
-  { id: 'chemist', name: 'Chemist', emoji: '&#x2697;&#xFE0F;', desc: 'Support/Healer, balanced' }
-];
-
-const GENDERS = [
-  { id: 'male', name: 'Male', emoji: '&#x2642;&#xFE0F;' },
-  { id: 'female', name: 'Female', emoji: '&#x2640;&#xFE0F;' },
-  { id: 'other', name: 'Other', emoji: '&#x26A7;&#xFE0F;' }
-];
+/** Display face used by the login card (preloaded by AuthScene), with the parchment serif as fallback. */
+const DISPLAY_FONT = `'Cinzel Decorative', ${PARCHMENT_TYPOGRAPHY.fontFamily}`;
+const DEFAULT_PREVIEW_NAME = 'Your Hero';
 
 // Racial trait data for preview before API call
 const RACIAL_TRAITS = {
@@ -129,8 +121,8 @@ export class CharacterCreateScene extends Scene {
 
       .charcreate-title {
         color: ${P.text.primary};
-        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
-        font-size: 32px;
+        font-family: ${DISPLAY_FONT};
+        font-size: 30px;
         font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
         text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
         margin-bottom: ${PARCHMENT_SPACING.lg};
@@ -149,13 +141,14 @@ export class CharacterCreateScene extends Scene {
       .charcreate-layout {
         display: grid;
         grid-template-columns: 1fr 1fr;
+        align-items: start;
         gap: 24px;
       }
 
       .charcreate-selection-panel {
         display: flex;
         flex-direction: column;
-        gap: 20px;
+        gap: ${PARCHMENT_SPACING.md};
       }
 
       .charcreate-preview-panel {
@@ -175,7 +168,7 @@ export class CharacterCreateScene extends Scene {
         text-transform: uppercase;
         letter-spacing: 1px;
         margin-bottom: ${PARCHMENT_SPACING.xs};
-        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-family: ${DISPLAY_FONT};
       }
 
       .charcreate-preview-card-wrapper {
@@ -225,9 +218,10 @@ export class CharacterCreateScene extends Scene {
       .charcreate-label {
         display: block;
         color: ${P.text.primary};
-        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
-        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+        font-family: ${DISPLAY_FONT};
+        font-size: 13px;
         font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        letter-spacing: 1px;
         margin-bottom: ${PARCHMENT_SPACING.xs};
       }
 
@@ -235,6 +229,8 @@ export class CharacterCreateScene extends Scene {
         width: 100%;
         box-sizing: border-box;
         ${getParchmentInputCSS()}
+        font-family: ${DISPLAY_FONT};
+        letter-spacing: 0.5px;
       }
 
       .charcreate-input:focus {
@@ -246,15 +242,17 @@ export class CharacterCreateScene extends Scene {
         color: ${P.text.muted};
       }
 
-      .charcreate-option-grid {
-        display: flex;
+      /* One row per group: a fixed column count per group means the last
+         tile (e.g. the 5th race) never wraps onto its own stretched row. */
+      .charcreate-option-grid,
+      .charcreate-gender-grid {
+        display: grid;
+        grid-template-columns: repeat(var(--charcreate-cols, 4), minmax(0, 1fr));
         gap: ${PARCHMENT_SPACING.sm};
-        flex-wrap: wrap;
       }
 
       .charcreate-option {
-        flex: 1;
-        min-width: 80px;
+        min-width: 0;
         padding: ${PARCHMENT_SPACING.md} ${PARCHMENT_SPACING.sm};
         background: ${P.light};
         border: 2px solid ${P.border};
@@ -262,7 +260,7 @@ export class CharacterCreateScene extends Scene {
         text-align: center;
         cursor: pointer;
         transition: all 0.2s ease;
-        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-family: ${DISPLAY_FONT};
       }
 
       .charcreate-option:hover {
@@ -277,9 +275,17 @@ export class CharacterCreateScene extends Scene {
         box-shadow: 0 0 0 2px ${P.accent.burgundy}, ${getParchmentShadow()};
       }
 
-      .charcreate-option-emoji {
-        font-size: 24px;
-        line-height: 1.2;
+      ${getOptionArtCSS('charcreate', {
+    size: 48,
+    borderColor: P.border,
+    background: P.mid,
+    textColor: P.text.secondary,
+    fontFamily: DISPLAY_FONT
+  })}
+
+      .charcreate-option.selected .charcreate-option-art,
+      .charcreate-gender-option.selected .charcreate-option-art {
+        border-color: ${P.accent.burgundy};
       }
 
       .charcreate-option-name {
@@ -287,28 +293,22 @@ export class CharacterCreateScene extends Scene {
         color: ${P.text.primary};
         margin-top: ${PARCHMENT_SPACING.xs};
         font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
-      }
-
-      .charcreate-class-option {
-        min-width: 100px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       .charcreate-desc {
         font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
         color: ${P.text.muted};
         font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
-        margin-top: ${PARCHMENT_SPACING.sm};
-        min-height: 18px;
+        margin-top: ${PARCHMENT_SPACING.xs};
+        min-height: 16px;
         font-style: italic;
       }
 
-      .charcreate-gender-grid {
-        display: flex;
-        gap: ${PARCHMENT_SPACING.sm};
-      }
-
       .charcreate-gender-option {
-        flex: 1;
+        min-width: 0;
         padding: ${PARCHMENT_SPACING.md} ${PARCHMENT_SPACING.sm};
         background: ${P.light};
         border: 2px solid ${P.border};
@@ -316,7 +316,7 @@ export class CharacterCreateScene extends Scene {
         text-align: center;
         cursor: pointer;
         transition: all 0.2s ease;
-        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-family: ${DISPLAY_FONT};
       }
 
       .charcreate-gender-option:hover {
@@ -330,15 +330,11 @@ export class CharacterCreateScene extends Scene {
         box-shadow: 0 0 0 2px ${P.accent.burgundy};
       }
 
-      .charcreate-gender-emoji {
-        font-size: 20px;
-        line-height: 1.2;
-      }
-
       .charcreate-gender-name {
         font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
         color: ${P.text.primary};
         margin-top: ${PARCHMENT_SPACING.xs};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
       }
 
       .charcreate-button-row {
@@ -349,6 +345,8 @@ export class CharacterCreateScene extends Scene {
 
       .charcreate-btn {
         ${getParchmentButtonCSS('primary')}
+        font-family: ${DISPLAY_FONT};
+        letter-spacing: 1px;
       }
 
       .charcreate-btn:hover:not(:disabled) {
@@ -367,6 +365,8 @@ export class CharacterCreateScene extends Scene {
 
       .charcreate-btn-secondary {
         ${getParchmentButtonCSS('secondary')}
+        font-family: ${DISPLAY_FONT};
+        letter-spacing: 1px;
       }
 
       .charcreate-btn-secondary:hover:not(:disabled) {
@@ -411,20 +411,11 @@ export class CharacterCreateScene extends Scene {
         }
 
         .charcreate-option {
-          min-width: 60px;
           padding: ${PARCHMENT_SPACING.sm};
-        }
-
-        .charcreate-option-emoji {
-          font-size: 20px;
         }
 
         .charcreate-option-name {
           font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
-        }
-
-        .charcreate-class-option {
-          min-width: 70px;
         }
       }
 
@@ -451,18 +442,17 @@ export class CharacterCreateScene extends Scene {
           border-radius: 0;
         }
 
+        .charcreate-option-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
         .charcreate-option {
-          min-width: 56px;
           min-height: var(--touch-target, 44px);
           padding: ${PARCHMENT_SPACING.sm};
         }
 
         .charcreate-option-name {
           font-size: var(--font-size-sm, 12px);
-        }
-
-        .charcreate-class-option {
-          min-width: 64px;
         }
 
         .charcreate-gender-option {
@@ -520,11 +510,11 @@ export class CharacterCreateScene extends Scene {
           <div class="charcreate-selection-panel">
             <div class="charcreate-form-group">
               <label class="charcreate-label">Race</label>
-              <div id="race-select" class="charcreate-option-grid">
+              <div id="race-select" class="charcreate-option-grid" style="--charcreate-cols: ${RACES.length}">
                 ${RACES.map(race => `
                   <div class="charcreate-option" data-race="${race.id}">
-                    <div class="charcreate-option-emoji">${race.emoji}</div>
-                    <div class="charcreate-option-name">${race.name}</div>
+                    ${renderOptionArt('charcreate', 'race', race, this.getSelection())}
+                    <div class="charcreate-option-name">${escapeHtml(race.name)}</div>
                   </div>
                 `).join('')}
               </div>
@@ -533,11 +523,11 @@ export class CharacterCreateScene extends Scene {
 
             <div class="charcreate-form-group">
               <label class="charcreate-label">Class</label>
-              <div id="class-select" class="charcreate-option-grid">
+              <div id="class-select" class="charcreate-option-grid" style="--charcreate-cols: ${CLASSES.length}">
                 ${CLASSES.map(cls => `
-                  <div class="charcreate-option charcreate-class-option" data-class="${cls.id}">
-                    <div class="charcreate-option-emoji">${cls.emoji}</div>
-                    <div class="charcreate-option-name">${cls.name}</div>
+                  <div class="charcreate-option" data-class="${cls.id}">
+                    ${renderOptionArt('charcreate', 'class', cls, this.getSelection())}
+                    <div class="charcreate-option-name">${escapeHtml(cls.name)}</div>
                   </div>
                 `).join('')}
               </div>
@@ -546,11 +536,11 @@ export class CharacterCreateScene extends Scene {
 
             <div class="charcreate-form-group">
               <label class="charcreate-label">Gender</label>
-              <div id="gender-select" class="charcreate-gender-grid">
+              <div id="gender-select" class="charcreate-gender-grid" style="--charcreate-cols: ${GENDERS.length}">
                 ${GENDERS.map(gender => `
                   <div class="charcreate-gender-option" data-gender="${gender.id}">
-                    <div class="charcreate-gender-emoji">${gender.emoji}</div>
-                    <div class="charcreate-gender-name">${gender.name}</div>
+                    ${renderOptionArt('charcreate', 'gender', gender, this.getSelection())}
+                    <div class="charcreate-gender-name">${escapeHtml(gender.name)}</div>
                   </div>
                 `).join('')}
               </div>
@@ -598,6 +588,8 @@ export class CharacterCreateScene extends Scene {
     });
     const cardContainer = container.querySelector('#preview-card-container');
     cardContainer.appendChild(this.previewCard.element);
+
+    bindOptionArtFallback(container);
 
     // Race selection
     container.querySelectorAll('.charcreate-option[data-race]').forEach(option => {
@@ -647,10 +639,44 @@ export class CharacterCreateScene extends Scene {
     });
 
     // Name input validation
-    container.querySelector('#char-name').addEventListener('input', () => this.updateCreateButton());
+    container.querySelector('#char-name').addEventListener('input', () => {
+      this.updateCreateButton();
+      this.updatePreviewName();
+    });
 
     // Initialize with empty state
     this.updatePreview();
+  }
+
+  /** Current race/class/gender choices, in the shape characterOptions expects. */
+  getSelection() {
+    return {
+      race: this.selectedRace,
+      characterClass: this.selectedClass,
+      gender: this.selectedGender
+    };
+  }
+
+  /** Point every tile's portrait at its option combined with the other current choices. */
+  refreshOptionArt() {
+    refreshOptionArt(this.uiElement, this.getSelection());
+  }
+
+  /** Display name for the preview card: the typed name, or a placeholder. */
+  getPreviewName() {
+    const typed = this.uiElement?.querySelector('#char-name')?.value || '';
+    return typed.trim() || DEFAULT_PREVIEW_NAME;
+  }
+
+  /**
+   * Update only the preview card's name, on every keystroke, without
+   * refetching stats. No-op until a race or class has put a card on screen.
+   */
+  updatePreviewName() {
+    if (!this.previewCard?.character) return;
+    const name = this.getPreviewName();
+    if (this.previewCard.character.name === name) return;
+    this.previewCard.update({ name });
   }
 
   updateRaceSelection() {
@@ -664,6 +690,7 @@ export class CharacterCreateScene extends Scene {
 
     const race = RACES.find(r => r.id === this.selectedRace);
     document.getElementById('race-desc').textContent = race ? race.desc : '';
+    this.refreshOptionArt();
     this.updateCreateButton();
   }
 
@@ -678,6 +705,7 @@ export class CharacterCreateScene extends Scene {
 
     const cls = CLASSES.find(c => c.id === this.selectedClass);
     document.getElementById('class-desc').textContent = cls ? cls.desc : '';
+    this.refreshOptionArt();
     this.updateCreateButton();
   }
 
@@ -690,6 +718,7 @@ export class CharacterCreateScene extends Scene {
       }
     });
 
+    this.refreshOptionArt();
     this.updateCreateButton();
   }
 
@@ -714,7 +743,7 @@ export class CharacterCreateScene extends Scene {
 
       // Show placeholder character with just race info
       const placeholderChar = {
-        name: 'Your Hero',
+        name: this.getPreviewName(),
         level: 1,
         race: this.selectedRace,
         class: 'unknown',
@@ -743,7 +772,7 @@ export class CharacterCreateScene extends Scene {
     // Class only - show placeholder, no traits yet
     if (!this.selectedRace && this.selectedClass) {
       const placeholderChar = {
-        name: 'Your Hero',
+        name: this.getPreviewName(),
         level: 1,
         race: 'unknown',
         class: this.selectedClass,
@@ -799,7 +828,7 @@ export class CharacterCreateScene extends Scene {
 
       // Build preview character data
       const previewChar = {
-        name: 'Your Hero',
+        name: this.getPreviewName(),
         level: 1,
         race: this.selectedRace,
         class: this.selectedClass,
@@ -854,7 +883,7 @@ export class CharacterCreateScene extends Scene {
       const traits = racialTrait ? [racialTrait] : [];
 
       const fallbackChar = {
-        name: 'Your Hero',
+        name: this.getPreviewName(),
         level: 1,
         race: this.selectedRace,
         class: this.selectedClass,
