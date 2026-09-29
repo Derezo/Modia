@@ -426,54 +426,108 @@
       "race": "dwarf",
       "gender": "female",
       "class": "warrior",
-      "seed": 10205,
+      "seed": null,
       "generated": true,
-      "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T20:13:34.053Z"
+      "loraModel": null,
+      "generatedAt": "2026-09-29T14:26:00.000Z",
+      "prompt": "dwarf woman stout build braided hair sturdy, clean-shaven, no beard, no moustache, female feminine features warrior heavy armor sword shield battle-worn determined",
+      "codexSheetPrompt": "The three attached images are existing character portraits from a fantasy game (ref_a.png and ref_b.png are human women, ref_c.png is a male dwarf). Match their art style exactly: medieval fantasy ink-and-wash illustration, bold black outlines of medium weight, watercolor fills, warm storybook JRPG feel, head-and-shoulders bust, facing roughly forward, on a plain white background.\n\nGenerate ONE square 1024x1024 image laid out as a 2x2 grid of four SEPARATE portraits, each portrait centred in its own 512x512 quadrant, separated by wide plain white gutters. No borders, no frames, no text, no labels.\n\nAll four are FEMALE DWARVES (women). They must read clearly as women: feminine face, NO beard, NO moustache, NO stubble, smooth chin and cheeks. Dwarven traits: sturdy, broad-shouldered, rounded strong face, ruddy cheeks, thick braided hair (braids can be long and elaborate), slightly pointed small nose, earthy dwarven gear.\n- Top-left: dwarf woman WARRIOR: heavy plate and leather armour, round steel-rimmed shield, sword hilt, battle-worn determined look, auburn braids.\n- Top-right: dwarf woman WIZARD: blue hooded robes, staff with a crystal, arcane rune embroidery, scholarly, dark brown braids.\n- Bottom-left: dwarf woman MONK: cloth wrappings and a simple tunic, hand wraps, disciplined serene focused, copper-blonde braids wound into a bun.\n- Bottom-right: dwarf woman CHEMIST: apothecary apron, leather straps with glass vials and herb pouches, goggles pushed up on the forehead, practical and clever, chestnut braids.\n\nEach bust should fill most of its quadrant (head near the top third), the bust cut off at the bottom of the quadrant is fine, but keep at least 24px of white around the top and sides of each figure. Plain white (#FFFFFF) background everywhere, no ground shadow, no vignette.\n\nUse the image generation tool exactly ONCE. Do not retry or make variations. Save the generated image as candidate.png in the current directory.\n",
+      "needsRegeneration": false,
+      "generationMethod": "codex-built-in-imagegen",
+      "generator": "codex-cli 0.158.0 (codex exec --enable image_generation, thread 01a0ee69-3f44-7a31-8e47-b5357826895c), one generation producing a 2x2 (1024x1024) sheet; this portrait is cell 0 (row-major). Style references: portraits human_female_warrior, human_female_chemist, dwarf_male_warrior at 256px",
+      "postProcessing": "Sheet split into equal cells; border-connected near-white background removed (min RGB >= 212) plus near-white pockets within 6px of the silhouette, 2px grow + 1.2px Gaussian feather on alpha; cropped to the subject, scaled so its height is 96% of a 1024 canvas (width capped at 98%), bottom-aligned and centred like the existing portraits; LANCZOS downscale to 32/48/64/128/256 webp (q92). originals/<id>.png is the 1024 transparent master.",
+      "evaluation": {
+        "opaquePixelRatio": {
+          "32": 0.695,
+          "64": 0.671,
+          "256": 0.658
+        },
+        "visualCheck": "female dwarf, no facial hair, style matches the other portraits at 32/64/256 px on light and dark backgrounds"
+      },
+      "replaces": "2026-01-27T20:13:34.053Z LoRA retro-pixel render (seed 10205) that showed a bearded male face; the race prompt 'dwarf ... thick beard' overrode 'female'"
     },
     {
       "id": "dwarf_female_wizard",
       "race": "dwarf",
       "gender": "female",
       "class": "wizard",
-      "seed": 10208,
+      "seed": null,
       "generated": true,
-      "loraModel": "retro-pixel",
-      "generatedAt": "2026-02-03T08:15:01.341Z",
-      "prompt": "dwarf stout build thick beard braided hair sturdy female feminine features blue wizard robes with hood staff arcane symbols mystical scholarly",
-      "evaluation": 0,
+      "loraModel": null,
+      "generatedAt": "2026-09-29T14:26:00.000Z",
+      "prompt": "dwarf woman stout build braided hair sturdy, clean-shaven, no beard, no moustache, female feminine features wizard robes staff arcane symbols mystical scholarly",
+      "codexSheetPrompt": "The three attached images are existing character portraits from a fantasy game (ref_a.png and ref_b.png are human women, ref_c.png is a male dwarf). Match their art style exactly: medieval fantasy ink-and-wash illustration, bold black outlines of medium weight, watercolor fills, warm storybook JRPG feel, head-and-shoulders bust, facing roughly forward, on a plain white background.\n\nGenerate ONE square 1024x1024 image laid out as a 2x2 grid of four SEPARATE portraits, each portrait centred in its own 512x512 quadrant, separated by wide plain white gutters. No borders, no frames, no text, no labels.\n\nAll four are FEMALE DWARVES (women). They must read clearly as women: feminine face, NO beard, NO moustache, NO stubble, smooth chin and cheeks. Dwarven traits: sturdy, broad-shouldered, rounded strong face, ruddy cheeks, thick braided hair (braids can be long and elaborate), slightly pointed small nose, earthy dwarven gear.\n- Top-left: dwarf woman WARRIOR: heavy plate and leather armour, round steel-rimmed shield, sword hilt, battle-worn determined look, auburn braids.\n- Top-right: dwarf woman WIZARD: blue hooded robes, staff with a crystal, arcane rune embroidery, scholarly, dark brown braids.\n- Bottom-left: dwarf woman MONK: cloth wrappings and a simple tunic, hand wraps, disciplined serene focused, copper-blonde braids wound into a bun.\n- Bottom-right: dwarf woman CHEMIST: apothecary apron, leather straps with glass vials and herb pouches, goggles pushed up on the forehead, practical and clever, chestnut braids.\n\nEach bust should fill most of its quadrant (head near the top third), the bust cut off at the bottom of the quadrant is fine, but keep at least 24px of white around the top and sides of each figure. Plain white (#FFFFFF) background everywhere, no ground shadow, no vignette.\n\nUse the image generation tool exactly ONCE. Do not retry or make variations. Save the generated image as candidate.png in the current directory.\n",
+      "evaluation": {
+        "opaquePixelRatio": {
+          "32": 0.705,
+          "64": 0.675,
+          "256": 0.657
+        },
+        "visualCheck": "female dwarf, no facial hair, style matches the other portraits at 32/64/256 px on light and dark backgrounds"
+      },
       "issues": "",
       "notes": "",
       "priority": 0,
       "needsRegeneration": false,
-      "regenerationQueuedAt": null
+      "regenerationQueuedAt": null,
+      "generationMethod": "codex-built-in-imagegen",
+      "generator": "codex-cli 0.158.0 (codex exec --enable image_generation, thread 01a0ee69-3f44-7a31-8e47-b5357826895c), one generation producing a 2x2 (1024x1024) sheet; this portrait is cell 1 (row-major). Style references: portraits human_female_warrior, human_female_chemist, dwarf_male_warrior at 256px",
+      "postProcessing": "Sheet split into equal cells; border-connected near-white background removed (min RGB >= 212) plus near-white pockets within 6px of the silhouette, 2px grow + 1.2px Gaussian feather on alpha; cropped to the subject, scaled so its height is 96% of a 1024 canvas (width capped at 98%), bottom-aligned and centred like the existing portraits; LANCZOS downscale to 32/48/64/128/256 webp (q92). originals/<id>.png is the 1024 transparent master.",
+      "replaces": "2026-02-03T08:15:01.341Z LoRA retro-pixel render (seed 10208) that showed a bearded male face; the race prompt 'dwarf ... thick beard' overrode 'female'"
     },
     {
       "id": "dwarf_female_monk",
       "race": "dwarf",
       "gender": "female",
       "class": "monk",
-      "seed": 10207,
+      "seed": null,
       "generated": true,
-      "loraModel": "retro-pixel",
-      "generatedAt": "2026-02-03T08:45:13.911Z",
-      "prompt": "dwarf stout build thick beard braided hair sturdy female feminine features monk martial artist wrappings disciplined serene focused",
-      "evaluation": 0,
+      "loraModel": null,
+      "generatedAt": "2026-09-29T14:26:00.000Z",
+      "prompt": "dwarf woman stout build braided hair sturdy, clean-shaven, no beard, no moustache, female feminine features monk martial artist wrappings disciplined serene focused",
+      "codexSheetPrompt": "The three attached images are existing character portraits from a fantasy game (ref_a.png and ref_b.png are human women, ref_c.png is a male dwarf). Match their art style exactly: medieval fantasy ink-and-wash illustration, bold black outlines of medium weight, watercolor fills, warm storybook JRPG feel, head-and-shoulders bust, facing roughly forward, on a plain white background.\n\nGenerate ONE square 1024x1024 image laid out as a 2x2 grid of four SEPARATE portraits, each portrait centred in its own 512x512 quadrant, separated by wide plain white gutters. No borders, no frames, no text, no labels.\n\nAll four are FEMALE DWARVES (women). They must read clearly as women: feminine face, NO beard, NO moustache, NO stubble, smooth chin and cheeks. Dwarven traits: sturdy, broad-shouldered, rounded strong face, ruddy cheeks, thick braided hair (braids can be long and elaborate), slightly pointed small nose, earthy dwarven gear.\n- Top-left: dwarf woman WARRIOR: heavy plate and leather armour, round steel-rimmed shield, sword hilt, battle-worn determined look, auburn braids.\n- Top-right: dwarf woman WIZARD: blue hooded robes, staff with a crystal, arcane rune embroidery, scholarly, dark brown braids.\n- Bottom-left: dwarf woman MONK: cloth wrappings and a simple tunic, hand wraps, disciplined serene focused, copper-blonde braids wound into a bun.\n- Bottom-right: dwarf woman CHEMIST: apothecary apron, leather straps with glass vials and herb pouches, goggles pushed up on the forehead, practical and clever, chestnut braids.\n\nEach bust should fill most of its quadrant (head near the top third), the bust cut off at the bottom of the quadrant is fine, but keep at least 24px of white around the top and sides of each figure. Plain white (#FFFFFF) background everywhere, no ground shadow, no vignette.\n\nUse the image generation tool exactly ONCE. Do not retry or make variations. Save the generated image as candidate.png in the current directory.\n",
+      "evaluation": {
+        "opaquePixelRatio": {
+          "32": 0.579,
+          "64": 0.557,
+          "256": 0.543
+        },
+        "visualCheck": "female dwarf, no facial hair, style matches the other portraits at 32/64/256 px on light and dark backgrounds"
+      },
       "issues": "",
       "notes": "",
       "priority": 0,
       "needsRegeneration": false,
-      "regenerationQueuedAt": null
+      "regenerationQueuedAt": null,
+      "generationMethod": "codex-built-in-imagegen",
+      "generator": "codex-cli 0.158.0 (codex exec --enable image_generation, thread 01a0ee69-3f44-7a31-8e47-b5357826895c), one generation producing a 2x2 (1024x1024) sheet; this portrait is cell 2 (row-major). Style references: portraits human_female_warrior, human_female_chemist, dwarf_male_warrior at 256px",
+      "postProcessing": "Sheet split into equal cells; border-connected near-white background removed (min RGB >= 212) plus near-white pockets within 6px of the silhouette, 2px grow + 1.2px Gaussian feather on alpha; cropped to the subject, scaled so its height is 96% of a 1024 canvas (width capped at 98%), bottom-aligned and centred like the existing portraits; LANCZOS downscale to 32/48/64/128/256 webp (q92). originals/<id>.png is the 1024 transparent master.",
+      "replaces": "2026-02-03T08:45:13.911Z LoRA retro-pixel render (seed 10207) that showed a bearded male face; the race prompt 'dwarf ... thick beard' overrode 'female'"
     },
     {
       "id": "dwarf_female_chemist",
       "race": "dwarf",
       "gender": "female",
       "class": "chemist",
-      "seed": 10208,
+      "seed": null,
       "generated": true,
-      "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T20:15:49.569Z"
+      "loraModel": null,
+      "generatedAt": "2026-09-29T14:26:00.000Z",
+      "prompt": "dwarf woman stout build braided hair sturdy, clean-shaven, no beard, no moustache, female feminine features chemist apothecary vials pouches herbs practical clever",
+      "codexSheetPrompt": "The three attached images are existing character portraits from a fantasy game (ref_a.png and ref_b.png are human women, ref_c.png is a male dwarf). Match their art style exactly: medieval fantasy ink-and-wash illustration, bold black outlines of medium weight, watercolor fills, warm storybook JRPG feel, head-and-shoulders bust, facing roughly forward, on a plain white background.\n\nGenerate ONE square 1024x1024 image laid out as a 2x2 grid of four SEPARATE portraits, each portrait centred in its own 512x512 quadrant, separated by wide plain white gutters. No borders, no frames, no text, no labels.\n\nAll four are FEMALE DWARVES (women). They must read clearly as women: feminine face, NO beard, NO moustache, NO stubble, smooth chin and cheeks. Dwarven traits: sturdy, broad-shouldered, rounded strong face, ruddy cheeks, thick braided hair (braids can be long and elaborate), slightly pointed small nose, earthy dwarven gear.\n- Top-left: dwarf woman WARRIOR: heavy plate and leather armour, round steel-rimmed shield, sword hilt, battle-worn determined look, auburn braids.\n- Top-right: dwarf woman WIZARD: blue hooded robes, staff with a crystal, arcane rune embroidery, scholarly, dark brown braids.\n- Bottom-left: dwarf woman MONK: cloth wrappings and a simple tunic, hand wraps, disciplined serene focused, copper-blonde braids wound into a bun.\n- Bottom-right: dwarf woman CHEMIST: apothecary apron, leather straps with glass vials and herb pouches, goggles pushed up on the forehead, practical and clever, chestnut braids.\n\nEach bust should fill most of its quadrant (head near the top third), the bust cut off at the bottom of the quadrant is fine, but keep at least 24px of white around the top and sides of each figure. Plain white (#FFFFFF) background everywhere, no ground shadow, no vignette.\n\nUse the image generation tool exactly ONCE. Do not retry or make variations. Save the generated image as candidate.png in the current directory.\n",
+      "needsRegeneration": false,
+      "generationMethod": "codex-built-in-imagegen",
+      "generator": "codex-cli 0.158.0 (codex exec --enable image_generation, thread 01a0ee69-3f44-7a31-8e47-b5357826895c), one generation producing a 2x2 (1024x1024) sheet; this portrait is cell 3 (row-major). Style references: portraits human_female_warrior, human_female_chemist, dwarf_male_warrior at 256px",
+      "postProcessing": "Sheet split into equal cells; border-connected near-white background removed (min RGB >= 212) plus near-white pockets within 6px of the silhouette, 2px grow + 1.2px Gaussian feather on alpha; cropped to the subject, scaled so its height is 96% of a 1024 canvas (width capped at 98%), bottom-aligned and centred like the existing portraits; LANCZOS downscale to 32/48/64/128/256 webp (q92). originals/<id>.png is the 1024 transparent master.",
+      "evaluation": {
+        "opaquePixelRatio": {
+          "32": 0.652,
+          "64": 0.64,
+          "256": 0.623
+        },
+        "visualCheck": "female dwarf, no facial hair, style matches the other portraits at 32/64/256 px on light and dark backgrounds"
+      },
+      "replaces": "2026-01-27T20:15:49.569Z LoRA retro-pixel render (seed 10208) that showed a bearded male face; the race prompt 'dwarf ... thick beard' overrode 'female'"
     },
     {
       "id": "dwarf_other_warrior",
@@ -2106,10 +2160,25 @@
       "gender": "female",
       "class": "berserker",
       "isAdvanced": true,
-      "seed": 22017,
+      "seed": null,
       "generated": true,
-      "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T23:51:17.996Z"
+      "loraModel": null,
+      "generatedAt": "2026-09-29T14:35:42.000Z",
+      "prompt": "dwarf woman stout build braided hair sturdy, clean-shaven, no beard, no moustache, female feminine features berserker raging warrior spiked armor wild hair battle scars fury aura",
+      "codexSheetPrompt": "The attached images are existing portraits of FEMALE DWARVES from a fantasy game (same characters' style). Match their art style exactly: medieval fantasy ink-and-wash illustration, bold black outlines of medium weight, watercolor fills, warm storybook JRPG feel, head-and-shoulders bust, facing roughly forward, plain white background, same face proportions and rendering.\n\nGenerate ONE image laid out as a grid of SEPARATE portraits, 3 columns by 2 rows, landscape 1536x1024. Each portrait is centred in its own 512x512 cell, separated by wide plain white gutters; figures must not cross into neighbouring cells. No borders, no frames, no text, no labels.\n\nEvery portrait is a DWARF WOMAN. She must read clearly as a woman: feminine face, NO beard, NO moustache, NO stubble, smooth chin and cheeks. Dwarven traits: sturdy, broad-shouldered, rounded strong face, ruddy cheeks, thick braided hair. Give each a different hair colour and braid style.\n- Top-left: BERSERKER: raging warrior, spiked dark armour, wild untamed braids, battle scars, fierce snarl, faint red fury aura.\n- Top-middle: PALADIN: holy knight, white plate armour with golden trim, prayer beads, soft divine light behind her head, serene resolve.\n- Top-right: GUARDIAN: defensive warrior, huge tower shield raised at her side, fortified heavy armour, protective stance.\n- Bottom-left: WARLORD: commanding presence, ornate plate armour with a fur mantle, a battle standard banner pole over her shoulder, inspiring leader.\n- Bottom-middle: SORCERER: raw magical power, glowing violet arcane energy crackling from raised hands, arcane symbols, dark crimson robes.\n- Bottom-right: SUMMONER: conjuration robes with mystical circle embroidery, a small glowing spirit familiar (a wisp-like fox) at her shoulder, otherworldly calm.\n\nEach bust should fill most of its cell (head in the upper third); the bust may be cut off at the bottom of its cell, but keep at least 24px of white around the top and sides of each figure. Plain white (#FFFFFF) background everywhere, no ground shadow, no vignette.\n\nUse the image generation tool exactly ONCE. Do not retry or make variations. Save the generated image as candidate.png in the current directory.\n",
+      "needsRegeneration": false,
+      "generationMethod": "codex-built-in-imagegen",
+      "generator": "codex-cli 0.158.0 (codex exec --enable image_generation, thread 01a0ee71-b945-73f3-b546-8115330e455b), one generation producing a 3x2 (1536x1024) sheet; this portrait is cell 0 (row-major). Style references: the four regenerated base-class dwarf_female cells from generation 1",
+      "postProcessing": "Sheet split into equal cells; border-connected near-white background removed (min RGB >= 212) plus near-white pockets within 6px of the silhouette, 2px grow + 1.2px Gaussian feather on alpha; cropped to the subject, scaled so its height is 96% of a 1024 canvas (width capped at 98%), bottom-aligned and centred like the existing portraits; LANCZOS downscale to 32/48/64/128/256 webp (q92). originals/<id>.png is the 1024 transparent master.",
+      "evaluation": {
+        "opaquePixelRatio": {
+          "32": 0.778,
+          "64": 0.758,
+          "256": 0.739
+        },
+        "visualCheck": "female dwarf, no facial hair, style matches the other portraits at 32/64/256 px on light and dark backgrounds"
+      },
+      "replaces": "2026-01-27T23:51:17.996Z LoRA retro-pixel render (seed 22017) that showed a bearded male face; the race prompt 'dwarf ... thick beard' overrode 'female'"
     },
     {
       "id": "dwarf_female_paladin",
@@ -2117,10 +2186,25 @@
       "gender": "female",
       "class": "paladin",
       "isAdvanced": true,
-      "seed": 22018,
+      "seed": null,
       "generated": true,
-      "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T23:51:59.580Z"
+      "loraModel": null,
+      "generatedAt": "2026-09-29T14:35:42.000Z",
+      "prompt": "dwarf woman stout build braided hair sturdy, clean-shaven, no beard, no moustache, female feminine features paladin holy knight white armor golden trim divine light prayer beads",
+      "codexSheetPrompt": "The attached images are existing portraits of FEMALE DWARVES from a fantasy game (same characters' style). Match their art style exactly: medieval fantasy ink-and-wash illustration, bold black outlines of medium weight, watercolor fills, warm storybook JRPG feel, head-and-shoulders bust, facing roughly forward, plain white background, same face proportions and rendering.\n\nGenerate ONE image laid out as a grid of SEPARATE portraits, 3 columns by 2 rows, landscape 1536x1024. Each portrait is centred in its own 512x512 cell, separated by wide plain white gutters; figures must not cross into neighbouring cells. No borders, no frames, no text, no labels.\n\nEvery portrait is a DWARF WOMAN. She must read clearly as a woman: feminine face, NO beard, NO moustache, NO stubble, smooth chin and cheeks. Dwarven traits: sturdy, broad-shouldered, rounded strong face, ruddy cheeks, thick braided hair. Give each a different hair colour and braid style.\n- Top-left: BERSERKER: raging warrior, spiked dark armour, wild untamed braids, battle scars, fierce snarl, faint red fury aura.\n- Top-middle: PALADIN: holy knight, white plate armour with golden trim, prayer beads, soft divine light behind her head, serene resolve.\n- Top-right: GUARDIAN: defensive warrior, huge tower shield raised at her side, fortified heavy armour, protective stance.\n- Bottom-left: WARLORD: commanding presence, ornate plate armour with a fur mantle, a battle standard banner pole over her shoulder, inspiring leader.\n- Bottom-middle: SORCERER: raw magical power, glowing violet arcane energy crackling from raised hands, arcane symbols, dark crimson robes.\n- Bottom-right: SUMMONER: conjuration robes with mystical circle embroidery, a small glowing spirit familiar (a wisp-like fox) at her shoulder, otherworldly calm.\n\nEach bust should fill most of its cell (head in the upper third); the bust may be cut off at the bottom of its cell, but keep at least 24px of white around the top and sides of each figure. Plain white (#FFFFFF) background everywhere, no ground shadow, no vignette.\n\nUse the image generation tool exactly ONCE. Do not retry or make variations. Save the generated image as candidate.png in the current directory.\n",
+      "needsRegeneration": false,
+      "generationMethod": "codex-built-in-imagegen",
+      "generator": "codex-cli 0.158.0 (codex exec --enable image_generation, thread 01a0ee71-b945-73f3-b546-8115330e455b), one generation producing a 3x2 (1536x1024) sheet; this portrait is cell 1 (row-major). Style references: the four regenerated base-class dwarf_female cells from generation 1",
+      "postProcessing": "Sheet split into equal cells; border-connected near-white background removed (min RGB >= 212) plus near-white pockets within 6px of the silhouette, 2px grow + 1.2px Gaussian feather on alpha; cropped to the subject, scaled so its height is 96% of a 1024 canvas (width capped at 98%), bottom-aligned and centred like the existing portraits; LANCZOS downscale to 32/48/64/128/256 webp (q92). originals/<id>.png is the 1024 transparent master.",
+      "evaluation": {
+        "opaquePixelRatio": {
+          "32": 0.679,
+          "64": 0.652,
+          "256": 0.622
+        },
+        "visualCheck": "female dwarf, no facial hair, style matches the other portraits at 32/64/256 px on light and dark backgrounds"
+      },
+      "replaces": "2026-01-27T23:51:59.580Z LoRA retro-pixel render (seed 22018) that showed a bearded male face; the race prompt 'dwarf ... thick beard' overrode 'female'"
     },
     {
       "id": "dwarf_female_guardian",
@@ -2128,10 +2212,25 @@
       "gender": "female",
       "class": "guardian",
       "isAdvanced": true,
-      "seed": 22019,
+      "seed": null,
       "generated": true,
-      "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T23:52:41.486Z"
+      "loraModel": null,
+      "generatedAt": "2026-09-29T14:35:42.000Z",
+      "prompt": "dwarf woman stout build braided hair sturdy, clean-shaven, no beard, no moustache, female feminine features guardian defensive warrior tower shield fortified armor protective stance",
+      "codexSheetPrompt": "The attached images are existing portraits of FEMALE DWARVES from a fantasy game (same characters' style). Match their art style exactly: medieval fantasy ink-and-wash illustration, bold black outlines of medium weight, watercolor fills, warm storybook JRPG feel, head-and-shoulders bust, facing roughly forward, plain white background, same face proportions and rendering.\n\nGenerate ONE image laid out as a grid of SEPARATE portraits, 3 columns by 2 rows, landscape 1536x1024. Each portrait is centred in its own 512x512 cell, separated by wide plain white gutters; figures must not cross into neighbouring cells. No borders, no frames, no text, no labels.\n\nEvery portrait is a DWARF WOMAN. She must read clearly as a woman: feminine face, NO beard, NO moustache, NO stubble, smooth chin and cheeks. Dwarven traits: sturdy, broad-shouldered, rounded strong face, ruddy cheeks, thick braided hair. Give each a different hair colour and braid style.\n- Top-left: BERSERKER: raging warrior, spiked dark armour, wild untamed braids, battle scars, fierce snarl, faint red fury aura.\n- Top-middle: PALADIN: holy knight, white plate armour with golden trim, prayer beads, soft divine light behind her head, serene resolve.\n- Top-right: GUARDIAN: defensive warrior, huge tower shield raised at her side, fortified heavy armour, protective stance.\n- Bottom-left: WARLORD: commanding presence, ornate plate armour with a fur mantle, a battle standard banner pole over her shoulder, inspiring leader.\n- Bottom-middle: SORCERER: raw magical power, glowing violet arcane energy crackling from raised hands, arcane symbols, dark crimson robes.\n- Bottom-right: SUMMONER: conjuration robes with mystical circle embroidery, a small glowing spirit familiar (a wisp-like fox) at her shoulder, otherworldly calm.\n\nEach bust should fill most of its cell (head in the upper third); the bust may be cut off at the bottom of its cell, but keep at least 24px of white around the top and sides of each figure. Plain white (#FFFFFF) background everywhere, no ground shadow, no vignette.\n\nUse the image generation tool exactly ONCE. Do not retry or make variations. Save the generated image as candidate.png in the current directory.\n",
+      "needsRegeneration": false,
+      "generationMethod": "codex-built-in-imagegen",
+      "generator": "codex-cli 0.158.0 (codex exec --enable image_generation, thread 01a0ee71-b945-73f3-b546-8115330e455b), one generation producing a 3x2 (1536x1024) sheet; this portrait is cell 2 (row-major). Style references: the four regenerated base-class dwarf_female cells from generation 1",
+      "postProcessing": "Sheet split into equal cells; border-connected near-white background removed (min RGB >= 212) plus near-white pockets within 6px of the silhouette, 2px grow + 1.2px Gaussian feather on alpha; cropped to the subject, scaled so its height is 96% of a 1024 canvas (width capped at 98%), bottom-aligned and centred like the existing portraits; LANCZOS downscale to 32/48/64/128/256 webp (q92). originals/<id>.png is the 1024 transparent master.",
+      "evaluation": {
+        "opaquePixelRatio": {
+          "32": 0.763,
+          "64": 0.737,
+          "256": 0.727
+        },
+        "visualCheck": "female dwarf, no facial hair, style matches the other portraits at 32/64/256 px on light and dark backgrounds"
+      },
+      "replaces": "2026-01-27T23:52:41.486Z LoRA retro-pixel render (seed 22019) that showed a bearded male face; the race prompt 'dwarf ... thick beard' overrode 'female'"
     },
     {
       "id": "dwarf_female_warlord",
@@ -2139,10 +2238,25 @@
       "gender": "female",
       "class": "warlord",
       "isAdvanced": true,
-      "seed": 22020,
+      "seed": null,
       "generated": true,
-      "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T23:53:22.897Z"
+      "loraModel": null,
+      "generatedAt": "2026-09-29T14:35:42.000Z",
+      "prompt": "dwarf woman stout build braided hair sturdy, clean-shaven, no beard, no moustache, female feminine features warlord commanding presence battle standard ornate plate inspiring leader",
+      "codexSheetPrompt": "The attached images are existing portraits of FEMALE DWARVES from a fantasy game (same characters' style). Match their art style exactly: medieval fantasy ink-and-wash illustration, bold black outlines of medium weight, watercolor fills, warm storybook JRPG feel, head-and-shoulders bust, facing roughly forward, plain white background, same face proportions and rendering.\n\nGenerate ONE image laid out as a grid of SEPARATE portraits, 3 columns by 2 rows, landscape 1536x1024. Each portrait is centred in its own 512x512 cell, separated by wide plain white gutters; figures must not cross into neighbouring cells. No borders, no frames, no text, no labels.\n\nEvery portrait is a DWARF WOMAN. She must read clearly as a woman: feminine face, NO beard, NO moustache, NO stubble, smooth chin and cheeks. Dwarven traits: sturdy, broad-shouldered, rounded strong face, ruddy cheeks, thick braided hair. Give each a different hair colour and braid style.\n- Top-left: BERSERKER: raging warrior, spiked dark armour, wild untamed braids, battle scars, fierce snarl, faint red fury aura.\n- Top-middle: PALADIN: holy knight, white plate armour with golden trim, prayer beads, soft divine light behind her head, serene resolve.\n- Top-right: GUARDIAN: defensive warrior, huge tower shield raised at her side, fortified heavy armour, protective stance.\n- Bottom-left: WARLORD: commanding presence, ornate plate armour with a fur mantle, a battle standard banner pole over her shoulder, inspiring leader.\n- Bottom-middle: SORCERER: raw magical power, glowing violet arcane energy crackling from raised hands, arcane symbols, dark crimson robes.\n- Bottom-right: SUMMONER: conjuration robes with mystical circle embroidery, a small glowing spirit familiar (a wisp-like fox) at her shoulder, otherworldly calm.\n\nEach bust should fill most of its cell (head in the upper third); the bust may be cut off at the bottom of its cell, but keep at least 24px of white around the top and sides of each figure. Plain white (#FFFFFF) background everywhere, no ground shadow, no vignette.\n\nUse the image generation tool exactly ONCE. Do not retry or make variations. Save the generated image as candidate.png in the current directory.\n",
+      "needsRegeneration": false,
+      "generationMethod": "codex-built-in-imagegen",
+      "generator": "codex-cli 0.158.0 (codex exec --enable image_generation, thread 01a0ee71-b945-73f3-b546-8115330e455b), one generation producing a 3x2 (1536x1024) sheet; this portrait is cell 3 (row-major). Style references: the four regenerated base-class dwarf_female cells from generation 1",
+      "postProcessing": "Sheet split into equal cells; border-connected near-white background removed (min RGB >= 212) plus near-white pockets within 6px of the silhouette, 2px grow + 1.2px Gaussian feather on alpha; cropped to the subject, scaled so its height is 96% of a 1024 canvas (width capped at 98%), bottom-aligned and centred like the existing portraits; LANCZOS downscale to 32/48/64/128/256 webp (q92). originals/<id>.png is the 1024 transparent master.",
+      "evaluation": {
+        "opaquePixelRatio": {
+          "32": 0.78,
+          "64": 0.771,
+          "256": 0.755
+        },
+        "visualCheck": "female dwarf, no facial hair, style matches the other portraits at 32/64/256 px on light and dark backgrounds"
+      },
+      "replaces": "2026-01-27T23:53:22.897Z LoRA retro-pixel render (seed 22020) that showed a bearded male face; the race prompt 'dwarf ... thick beard' overrode 'female'"
     },
     {
       "id": "dwarf_female_sorcerer",
@@ -2150,10 +2264,25 @@
       "gender": "female",
       "class": "sorcerer",
       "isAdvanced": true,
-      "seed": 22021,
+      "seed": null,
       "generated": true,
-      "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T23:54:04.352Z"
+      "loraModel": null,
+      "generatedAt": "2026-09-29T14:35:42.000Z",
+      "prompt": "dwarf woman stout build braided hair sturdy, clean-shaven, no beard, no moustache, female feminine features sorcerer raw magical power arcane symbols glowing hands energy aura",
+      "codexSheetPrompt": "The attached images are existing portraits of FEMALE DWARVES from a fantasy game (same characters' style). Match their art style exactly: medieval fantasy ink-and-wash illustration, bold black outlines of medium weight, watercolor fills, warm storybook JRPG feel, head-and-shoulders bust, facing roughly forward, plain white background, same face proportions and rendering.\n\nGenerate ONE image laid out as a grid of SEPARATE portraits, 3 columns by 2 rows, landscape 1536x1024. Each portrait is centred in its own 512x512 cell, separated by wide plain white gutters; figures must not cross into neighbouring cells. No borders, no frames, no text, no labels.\n\nEvery portrait is a DWARF WOMAN. She must read clearly as a woman: feminine face, NO beard, NO moustache, NO stubble, smooth chin and cheeks. Dwarven traits: sturdy, broad-shouldered, rounded strong face, ruddy cheeks, thick braided hair. Give each a different hair colour and braid style.\n- Top-left: BERSERKER: raging warrior, spiked dark armour, wild untamed braids, battle scars, fierce snarl, faint red fury aura.\n- Top-middle: PALADIN: holy knight, white plate armour with golden trim, prayer beads, soft divine light behind her head, serene resolve.\n- Top-right: GUARDIAN: defensive warrior, huge tower shield raised at her side, fortified heavy armour, protective stance.\n- Bottom-left: WARLORD: commanding presence, ornate plate armour with a fur mantle, a battle standard banner pole over her shoulder, inspiring leader.\n- Bottom-middle: SORCERER: raw magical power, glowing violet arcane energy crackling from raised hands, arcane symbols, dark crimson robes.\n- Bottom-right: SUMMONER: conjuration robes with mystical circle embroidery, a small glowing spirit familiar (a wisp-like fox) at her shoulder, otherworldly calm.\n\nEach bust should fill most of its cell (head in the upper third); the bust may be cut off at the bottom of its cell, but keep at least 24px of white around the top and sides of each figure. Plain white (#FFFFFF) background everywhere, no ground shadow, no vignette.\n\nUse the image generation tool exactly ONCE. Do not retry or make variations. Save the generated image as candidate.png in the current directory.\n",
+      "needsRegeneration": false,
+      "generationMethod": "codex-built-in-imagegen",
+      "generator": "codex-cli 0.158.0 (codex exec --enable image_generation, thread 01a0ee71-b945-73f3-b546-8115330e455b), one generation producing a 3x2 (1536x1024) sheet; this portrait is cell 4 (row-major). Style references: the four regenerated base-class dwarf_female cells from generation 1",
+      "postProcessing": "Sheet split into equal cells; border-connected near-white background removed (min RGB >= 212) plus near-white pockets within 6px of the silhouette, 2px grow + 1.2px Gaussian feather on alpha; cropped to the subject, scaled so its height is 96% of a 1024 canvas (width capped at 98%), bottom-aligned and centred like the existing portraits; LANCZOS downscale to 32/48/64/128/256 webp (q92). originals/<id>.png is the 1024 transparent master.",
+      "evaluation": {
+        "opaquePixelRatio": {
+          "32": 0.79,
+          "64": 0.771,
+          "256": 0.751
+        },
+        "visualCheck": "female dwarf, no facial hair, style matches the other portraits at 32/64/256 px on light and dark backgrounds"
+      },
+      "replaces": "2026-01-27T23:54:04.352Z LoRA retro-pixel render (seed 22021) that showed a bearded male face; the race prompt 'dwarf ... thick beard' overrode 'female'"
     },
     {
       "id": "dwarf_female_summoner",
@@ -2161,10 +2290,25 @@
       "gender": "female",
       "class": "summoner",
       "isAdvanced": true,
-      "seed": 22022,
+      "seed": null,
       "generated": true,
-      "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T23:54:45.838Z"
+      "loraModel": null,
+      "generatedAt": "2026-09-29T14:35:42.000Z",
+      "prompt": "dwarf woman stout build braided hair sturdy, clean-shaven, no beard, no moustache, female feminine features summoner spirit familiar mystical circles conjuration robes otherworldly",
+      "codexSheetPrompt": "The attached images are existing portraits of FEMALE DWARVES from a fantasy game (same characters' style). Match their art style exactly: medieval fantasy ink-and-wash illustration, bold black outlines of medium weight, watercolor fills, warm storybook JRPG feel, head-and-shoulders bust, facing roughly forward, plain white background, same face proportions and rendering.\n\nGenerate ONE image laid out as a grid of SEPARATE portraits, 3 columns by 2 rows, landscape 1536x1024. Each portrait is centred in its own 512x512 cell, separated by wide plain white gutters; figures must not cross into neighbouring cells. No borders, no frames, no text, no labels.\n\nEvery portrait is a DWARF WOMAN. She must read clearly as a woman: feminine face, NO beard, NO moustache, NO stubble, smooth chin and cheeks. Dwarven traits: sturdy, broad-shouldered, rounded strong face, ruddy cheeks, thick braided hair. Give each a different hair colour and braid style.\n- Top-left: BERSERKER: raging warrior, spiked dark armour, wild untamed braids, battle scars, fierce snarl, faint red fury aura.\n- Top-middle: PALADIN: holy knight, white plate armour with golden trim, prayer beads, soft divine light behind her head, serene resolve.\n- Top-right: GUARDIAN: defensive warrior, huge tower shield raised at her side, fortified heavy armour, protective stance.\n- Bottom-left: WARLORD: commanding presence, ornate plate armour with a fur mantle, a battle standard banner pole over her shoulder, inspiring leader.\n- Bottom-middle: SORCERER: raw magical power, glowing violet arcane energy crackling from raised hands, arcane symbols, dark crimson robes.\n- Bottom-right: SUMMONER: conjuration robes with mystical circle embroidery, a small glowing spirit familiar (a wisp-like fox) at her shoulder, otherworldly calm.\n\nEach bust should fill most of its cell (head in the upper third); the bust may be cut off at the bottom of its cell, but keep at least 24px of white around the top and sides of each figure. Plain white (#FFFFFF) background everywhere, no ground shadow, no vignette.\n\nUse the image generation tool exactly ONCE. Do not retry or make variations. Save the generated image as candidate.png in the current directory.\n",
+      "needsRegeneration": false,
+      "generationMethod": "codex-built-in-imagegen",
+      "generator": "codex-cli 0.158.0 (codex exec --enable image_generation, thread 01a0ee71-b945-73f3-b546-8115330e455b), one generation producing a 3x2 (1536x1024) sheet; this portrait is cell 5 (row-major). Style references: the four regenerated base-class dwarf_female cells from generation 1",
+      "postProcessing": "Sheet split into equal cells; border-connected near-white background removed (min RGB >= 212) plus near-white pockets within 6px of the silhouette, 2px grow + 1.2px Gaussian feather on alpha; cropped to the subject, scaled so its height is 96% of a 1024 canvas (width capped at 98%), bottom-aligned and centred like the existing portraits; LANCZOS downscale to 32/48/64/128/256 webp (q92). originals/<id>.png is the 1024 transparent master.",
+      "evaluation": {
+        "opaquePixelRatio": {
+          "32": 0.725,
+          "64": 0.699,
+          "256": 0.671
+        },
+        "visualCheck": "female dwarf, no facial hair, style matches the other portraits at 32/64/256 px on light and dark backgrounds"
+      },
+      "replaces": "2026-01-27T23:54:45.838Z LoRA retro-pixel render (seed 22022) that showed a bearded male face; the race prompt 'dwarf ... thick beard' overrode 'female'"
     },
     {
       "id": "dwarf_female_conjurer",
@@ -2172,10 +2316,25 @@
       "gender": "female",
       "class": "conjurer",
       "isAdvanced": true,
-      "seed": 22023,
+      "seed": null,
       "generated": true,
-      "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T23:55:27.472Z"
+      "loraModel": null,
+      "generatedAt": "2026-09-29T14:35:25.000Z",
+      "prompt": "dwarf woman stout build braided hair sturdy, clean-shaven, no beard, no moustache, female feminine features conjurer elemental master swirling elements dual casting dynamic pose",
+      "codexSheetPrompt": "The attached images are existing portraits of FEMALE DWARVES from a fantasy game (same characters' style). Match their art style exactly: medieval fantasy ink-and-wash illustration, bold black outlines of medium weight, watercolor fills, warm storybook JRPG feel, head-and-shoulders bust, facing roughly forward, plain white background, same face proportions and rendering.\n\nGenerate ONE image laid out as a grid of SEPARATE portraits, 3 columns by 2 rows, landscape 1536x1024. Each portrait is centred in its own 512x512 cell, separated by wide plain white gutters; figures must not cross into neighbouring cells. No borders, no frames, no text, no labels.\n\nEvery portrait is a DWARF WOMAN. She must read clearly as a woman: feminine face, NO beard, NO moustache, NO stubble, smooth chin and cheeks. Dwarven traits: sturdy, broad-shouldered, rounded strong face, ruddy cheeks, thick braided hair. Give each a different hair colour and braid style.\n- Top-left: CONJURER: elemental master, a flame in one hand and swirling water in the other, dynamic pose, colourful scarf.\n- Top-middle: ORACLE: seer with a cloth blindfold over her eyes, a painted third-eye mark on her forehead, ethereal pale flowing clothing, mystical.\n- Top-right: NINJA: shadow warrior, dark cloth hood and a face mask covering her nose and mouth, throwing stars, stealthy; her braids show under the hood.\n- Bottom-left: MARTIAL ARTIST: disciplined fighter in a gi with a headband, fists raised in a fierce focused stance.\n- Bottom-middle: BRAWLER: street fighter, wrapped fists with scarred knuckles, sleeveless vest, tough and intimidating, confident smirk.\n- Bottom-right: ASCETIC: enlightened monk in minimal simple robes, prayer beads, eyes closed in meditation, soft spiritual glow, peaceful.\n\nEach bust should fill most of its cell (head in the upper third); the bust may be cut off at the bottom of its cell, but keep at least 24px of white around the top and sides of each figure. Plain white (#FFFFFF) background everywhere, no ground shadow, no vignette.\n\nUse the image generation tool exactly ONCE. Do not retry or make variations. Save the generated image as candidate.png in the current directory.\n",
+      "needsRegeneration": false,
+      "generationMethod": "codex-built-in-imagegen",
+      "generator": "codex-cli 0.158.0 (codex exec --enable image_generation, thread 01a0ee71-b958-73b2-aed8-6809c086c0e5), one generation producing a 3x2 (1536x1024) sheet; this portrait is cell 0 (row-major). Style references: the four regenerated base-class dwarf_female cells from generation 1",
+      "postProcessing": "Sheet split into equal cells; border-connected near-white background removed (min RGB >= 212) plus near-white pockets within 6px of the silhouette, 2px grow + 1.2px Gaussian feather on alpha; cropped to the subject, scaled so its height is 96% of a 1024 canvas (width capped at 98%), bottom-aligned and centred like the existing portraits; LANCZOS downscale to 32/48/64/128/256 webp (q92). originals/<id>.png is the 1024 transparent master.",
+      "evaluation": {
+        "opaquePixelRatio": {
+          "32": 0.711,
+          "64": 0.687,
+          "256": 0.668
+        },
+        "visualCheck": "female dwarf, no facial hair, style matches the other portraits at 32/64/256 px on light and dark backgrounds"
+      },
+      "replaces": "2026-01-27T23:55:27.472Z LoRA retro-pixel render (seed 22023) that showed a bearded male face; the race prompt 'dwarf ... thick beard' overrode 'female'"
     },
     {
       "id": "dwarf_female_oracle",
@@ -2183,10 +2342,25 @@
       "gender": "female",
       "class": "oracle",
       "isAdvanced": true,
-      "seed": 22024,
+      "seed": null,
       "generated": true,
-      "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T23:56:10.042Z"
+      "loraModel": null,
+      "generatedAt": "2026-09-29T14:35:25.000Z",
+      "prompt": "dwarf woman stout build braided hair sturdy, clean-shaven, no beard, no moustache, female feminine features oracle seer blindfolded third eye mystical visions ethereal clothing",
+      "codexSheetPrompt": "The attached images are existing portraits of FEMALE DWARVES from a fantasy game (same characters' style). Match their art style exactly: medieval fantasy ink-and-wash illustration, bold black outlines of medium weight, watercolor fills, warm storybook JRPG feel, head-and-shoulders bust, facing roughly forward, plain white background, same face proportions and rendering.\n\nGenerate ONE image laid out as a grid of SEPARATE portraits, 3 columns by 2 rows, landscape 1536x1024. Each portrait is centred in its own 512x512 cell, separated by wide plain white gutters; figures must not cross into neighbouring cells. No borders, no frames, no text, no labels.\n\nEvery portrait is a DWARF WOMAN. She must read clearly as a woman: feminine face, NO beard, NO moustache, NO stubble, smooth chin and cheeks. Dwarven traits: sturdy, broad-shouldered, rounded strong face, ruddy cheeks, thick braided hair. Give each a different hair colour and braid style.\n- Top-left: CONJURER: elemental master, a flame in one hand and swirling water in the other, dynamic pose, colourful scarf.\n- Top-middle: ORACLE: seer with a cloth blindfold over her eyes, a painted third-eye mark on her forehead, ethereal pale flowing clothing, mystical.\n- Top-right: NINJA: shadow warrior, dark cloth hood and a face mask covering her nose and mouth, throwing stars, stealthy; her braids show under the hood.\n- Bottom-left: MARTIAL ARTIST: disciplined fighter in a gi with a headband, fists raised in a fierce focused stance.\n- Bottom-middle: BRAWLER: street fighter, wrapped fists with scarred knuckles, sleeveless vest, tough and intimidating, confident smirk.\n- Bottom-right: ASCETIC: enlightened monk in minimal simple robes, prayer beads, eyes closed in meditation, soft spiritual glow, peaceful.\n\nEach bust should fill most of its cell (head in the upper third); the bust may be cut off at the bottom of its cell, but keep at least 24px of white around the top and sides of each figure. Plain white (#FFFFFF) background everywhere, no ground shadow, no vignette.\n\nUse the image generation tool exactly ONCE. Do not retry or make variations. Save the generated image as candidate.png in the current directory.\n",
+      "needsRegeneration": false,
+      "generationMethod": "codex-built-in-imagegen",
+      "generator": "codex-cli 0.158.0 (codex exec --enable image_generation, thread 01a0ee71-b958-73b2-aed8-6809c086c0e5), one generation producing a 3x2 (1536x1024) sheet; this portrait is cell 1 (row-major). Style references: the four regenerated base-class dwarf_female cells from generation 1",
+      "postProcessing": "Sheet split into equal cells; border-connected near-white background removed (min RGB >= 212) plus near-white pockets within 6px of the silhouette, 2px grow + 1.2px Gaussian feather on alpha; cropped to the subject, scaled so its height is 96% of a 1024 canvas (width capped at 98%), bottom-aligned and centred like the existing portraits; LANCZOS downscale to 32/48/64/128/256 webp (q92). originals/<id>.png is the 1024 transparent master.",
+      "evaluation": {
+        "opaquePixelRatio": {
+          "32": 0.575,
+          "64": 0.556,
+          "256": 0.545
+        },
+        "visualCheck": "female dwarf, no facial hair, style matches the other portraits at 32/64/256 px on light and dark backgrounds"
+      },
+      "replaces": "2026-01-27T23:56:10.042Z LoRA retro-pixel render (seed 22024) that showed a bearded male face; the race prompt 'dwarf ... thick beard' overrode 'female'"
     },
     {
       "id": "dwarf_female_ninja",
@@ -2194,10 +2368,25 @@
       "gender": "female",
       "class": "ninja",
       "isAdvanced": true,
-      "seed": 22025,
+      "seed": null,
       "generated": true,
-      "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T23:56:52.645Z"
+      "loraModel": null,
+      "generatedAt": "2026-09-29T14:35:25.000Z",
+      "prompt": "dwarf woman stout build braided hair sturdy, clean-shaven, no beard, no moustache, female feminine features ninja shadow warrior dark cloth face mask throwing stars stealthy",
+      "codexSheetPrompt": "The attached images are existing portraits of FEMALE DWARVES from a fantasy game (same characters' style). Match their art style exactly: medieval fantasy ink-and-wash illustration, bold black outlines of medium weight, watercolor fills, warm storybook JRPG feel, head-and-shoulders bust, facing roughly forward, plain white background, same face proportions and rendering.\n\nGenerate ONE image laid out as a grid of SEPARATE portraits, 3 columns by 2 rows, landscape 1536x1024. Each portrait is centred in its own 512x512 cell, separated by wide plain white gutters; figures must not cross into neighbouring cells. No borders, no frames, no text, no labels.\n\nEvery portrait is a DWARF WOMAN. She must read clearly as a woman: feminine face, NO beard, NO moustache, NO stubble, smooth chin and cheeks. Dwarven traits: sturdy, broad-shouldered, rounded strong face, ruddy cheeks, thick braided hair. Give each a different hair colour and braid style.\n- Top-left: CONJURER: elemental master, a flame in one hand and swirling water in the other, dynamic pose, colourful scarf.\n- Top-middle: ORACLE: seer with a cloth blindfold over her eyes, a painted third-eye mark on her forehead, ethereal pale flowing clothing, mystical.\n- Top-right: NINJA: shadow warrior, dark cloth hood and a face mask covering her nose and mouth, throwing stars, stealthy; her braids show under the hood.\n- Bottom-left: MARTIAL ARTIST: disciplined fighter in a gi with a headband, fists raised in a fierce focused stance.\n- Bottom-middle: BRAWLER: street fighter, wrapped fists with scarred knuckles, sleeveless vest, tough and intimidating, confident smirk.\n- Bottom-right: ASCETIC: enlightened monk in minimal simple robes, prayer beads, eyes closed in meditation, soft spiritual glow, peaceful.\n\nEach bust should fill most of its cell (head in the upper third); the bust may be cut off at the bottom of its cell, but keep at least 24px of white around the top and sides of each figure. Plain white (#FFFFFF) background everywhere, no ground shadow, no vignette.\n\nUse the image generation tool exactly ONCE. Do not retry or make variations. Save the generated image as candidate.png in the current directory.\n",
+      "needsRegeneration": false,
+      "generationMethod": "codex-built-in-imagegen",
+      "generator": "codex-cli 0.158.0 (codex exec --enable image_generation, thread 01a0ee71-b958-73b2-aed8-6809c086c0e5), one generation producing a 3x2 (1536x1024) sheet; this portrait is cell 2 (row-major). Style references: the four regenerated base-class dwarf_female cells from generation 1",
+      "postProcessing": "Sheet split into equal cells; border-connected near-white background removed (min RGB >= 212) plus near-white pockets within 6px of the silhouette, 2px grow + 1.2px Gaussian feather on alpha; cropped to the subject, scaled so its height is 96% of a 1024 canvas (width capped at 98%), bottom-aligned and centred like the existing portraits; LANCZOS downscale to 32/48/64/128/256 webp (q92). originals/<id>.png is the 1024 transparent master.",
+      "evaluation": {
+        "opaquePixelRatio": {
+          "32": 0.665,
+          "64": 0.649,
+          "256": 0.634
+        },
+        "visualCheck": "female dwarf, no facial hair, style matches the other portraits at 32/64/256 px on light and dark backgrounds"
+      },
+      "replaces": "2026-01-27T23:56:52.645Z LoRA retro-pixel render (seed 22025) that showed a bearded male face; the race prompt 'dwarf ... thick beard' overrode 'female'"
     },
     {
       "id": "dwarf_female_martial_artist",
@@ -2205,10 +2394,25 @@
       "gender": "female",
       "class": "martial_artist",
       "isAdvanced": true,
-      "seed": 22026,
+      "seed": null,
       "generated": true,
-      "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T23:57:35.091Z"
+      "loraModel": null,
+      "generatedAt": "2026-09-29T14:35:25.000Z",
+      "prompt": "dwarf woman stout build braided hair sturdy, clean-shaven, no beard, no moustache, female feminine features martial artist disciplined fighter gi headband fierce stance focused",
+      "codexSheetPrompt": "The attached images are existing portraits of FEMALE DWARVES from a fantasy game (same characters' style). Match their art style exactly: medieval fantasy ink-and-wash illustration, bold black outlines of medium weight, watercolor fills, warm storybook JRPG feel, head-and-shoulders bust, facing roughly forward, plain white background, same face proportions and rendering.\n\nGenerate ONE image laid out as a grid of SEPARATE portraits, 3 columns by 2 rows, landscape 1536x1024. Each portrait is centred in its own 512x512 cell, separated by wide plain white gutters; figures must not cross into neighbouring cells. No borders, no frames, no text, no labels.\n\nEvery portrait is a DWARF WOMAN. She must read clearly as a woman: feminine face, NO beard, NO moustache, NO stubble, smooth chin and cheeks. Dwarven traits: sturdy, broad-shouldered, rounded strong face, ruddy cheeks, thick braided hair. Give each a different hair colour and braid style.\n- Top-left: CONJURER: elemental master, a flame in one hand and swirling water in the other, dynamic pose, colourful scarf.\n- Top-middle: ORACLE: seer with a cloth blindfold over her eyes, a painted third-eye mark on her forehead, ethereal pale flowing clothing, mystical.\n- Top-right: NINJA: shadow warrior, dark cloth hood and a face mask covering her nose and mouth, throwing stars, stealthy; her braids show under the hood.\n- Bottom-left: MARTIAL ARTIST: disciplined fighter in a gi with a headband, fists raised in a fierce focused stance.\n- Bottom-middle: BRAWLER: street fighter, wrapped fists with scarred knuckles, sleeveless vest, tough and intimidating, confident smirk.\n- Bottom-right: ASCETIC: enlightened monk in minimal simple robes, prayer beads, eyes closed in meditation, soft spiritual glow, peaceful.\n\nEach bust should fill most of its cell (head in the upper third); the bust may be cut off at the bottom of its cell, but keep at least 24px of white around the top and sides of each figure. Plain white (#FFFFFF) background everywhere, no ground shadow, no vignette.\n\nUse the image generation tool exactly ONCE. Do not retry or make variations. Save the generated image as candidate.png in the current directory.\n",
+      "needsRegeneration": false,
+      "generationMethod": "codex-built-in-imagegen",
+      "generator": "codex-cli 0.158.0 (codex exec --enable image_generation, thread 01a0ee71-b958-73b2-aed8-6809c086c0e5), one generation producing a 3x2 (1536x1024) sheet; this portrait is cell 3 (row-major). Style references: the four regenerated base-class dwarf_female cells from generation 1",
+      "postProcessing": "Sheet split into equal cells; border-connected near-white background removed (min RGB >= 212) plus near-white pockets within 6px of the silhouette, 2px grow + 1.2px Gaussian feather on alpha; cropped to the subject, scaled so its height is 96% of a 1024 canvas (width capped at 98%), bottom-aligned and centred like the existing portraits; LANCZOS downscale to 32/48/64/128/256 webp (q92). originals/<id>.png is the 1024 transparent master.",
+      "evaluation": {
+        "opaquePixelRatio": {
+          "32": 0.687,
+          "64": 0.66,
+          "256": 0.642
+        },
+        "visualCheck": "female dwarf, no facial hair, style matches the other portraits at 32/64/256 px on light and dark backgrounds"
+      },
+      "replaces": "2026-01-27T23:57:35.091Z LoRA retro-pixel render (seed 22026) that showed a bearded male face; the race prompt 'dwarf ... thick beard' overrode 'female'"
     },
     {
       "id": "dwarf_female_brawler",
@@ -2216,10 +2420,25 @@
       "gender": "female",
       "class": "brawler",
       "isAdvanced": true,
-      "seed": 22027,
+      "seed": null,
       "generated": true,
-      "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T23:58:17.629Z"
+      "loraModel": null,
+      "generatedAt": "2026-09-29T14:35:25.000Z",
+      "prompt": "dwarf woman stout build braided hair sturdy, clean-shaven, no beard, no moustache, female feminine features brawler street fighter wrapped fists scarred knuckles tough intimidating",
+      "codexSheetPrompt": "The attached images are existing portraits of FEMALE DWARVES from a fantasy game (same characters' style). Match their art style exactly: medieval fantasy ink-and-wash illustration, bold black outlines of medium weight, watercolor fills, warm storybook JRPG feel, head-and-shoulders bust, facing roughly forward, plain white background, same face proportions and rendering.\n\nGenerate ONE image laid out as a grid of SEPARATE portraits, 3 columns by 2 rows, landscape 1536x1024. Each portrait is centred in its own 512x512 cell, separated by wide plain white gutters; figures must not cross into neighbouring cells. No borders, no frames, no text, no labels.\n\nEvery portrait is a DWARF WOMAN. She must read clearly as a woman: feminine face, NO beard, NO moustache, NO stubble, smooth chin and cheeks. Dwarven traits: sturdy, broad-shouldered, rounded strong face, ruddy cheeks, thick braided hair. Give each a different hair colour and braid style.\n- Top-left: CONJURER: elemental master, a flame in one hand and swirling water in the other, dynamic pose, colourful scarf.\n- Top-middle: ORACLE: seer with a cloth blindfold over her eyes, a painted third-eye mark on her forehead, ethereal pale flowing clothing, mystical.\n- Top-right: NINJA: shadow warrior, dark cloth hood and a face mask covering her nose and mouth, throwing stars, stealthy; her braids show under the hood.\n- Bottom-left: MARTIAL ARTIST: disciplined fighter in a gi with a headband, fists raised in a fierce focused stance.\n- Bottom-middle: BRAWLER: street fighter, wrapped fists with scarred knuckles, sleeveless vest, tough and intimidating, confident smirk.\n- Bottom-right: ASCETIC: enlightened monk in minimal simple robes, prayer beads, eyes closed in meditation, soft spiritual glow, peaceful.\n\nEach bust should fill most of its cell (head in the upper third); the bust may be cut off at the bottom of its cell, but keep at least 24px of white around the top and sides of each figure. Plain white (#FFFFFF) background everywhere, no ground shadow, no vignette.\n\nUse the image generation tool exactly ONCE. Do not retry or make variations. Save the generated image as candidate.png in the current directory.\n",
+      "needsRegeneration": false,
+      "generationMethod": "codex-built-in-imagegen",
+      "generator": "codex-cli 0.158.0 (codex exec --enable image_generation, thread 01a0ee71-b958-73b2-aed8-6809c086c0e5), one generation producing a 3x2 (1536x1024) sheet; this portrait is cell 4 (row-major). Style references: the four regenerated base-class dwarf_female cells from generation 1",
+      "postProcessing": "Sheet split into equal cells; border-connected near-white background removed (min RGB >= 212) plus near-white pockets within 6px of the silhouette, 2px grow + 1.2px Gaussian feather on alpha; cropped to the subject, scaled so its height is 96% of a 1024 canvas (width capped at 98%), bottom-aligned and centred like the existing portraits; LANCZOS downscale to 32/48/64/128/256 webp (q92). originals/<id>.png is the 1024 transparent master.",
+      "evaluation": {
+        "opaquePixelRatio": {
+          "32": 0.682,
+          "64": 0.662,
+          "256": 0.65
+        },
+        "visualCheck": "female dwarf, no facial hair, style matches the other portraits at 32/64/256 px on light and dark backgrounds"
+      },
+      "replaces": "2026-01-27T23:58:17.629Z LoRA retro-pixel render (seed 22027) that showed a bearded male face; the race prompt 'dwarf ... thick beard' overrode 'female'"
     },
     {
       "id": "dwarf_female_ascetic",
@@ -2227,10 +2446,25 @@
       "gender": "female",
       "class": "ascetic",
       "isAdvanced": true,
-      "seed": 22028,
+      "seed": null,
       "generated": true,
-      "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T23:59:00.124Z"
+      "loraModel": null,
+      "generatedAt": "2026-09-29T14:35:25.000Z",
+      "prompt": "dwarf woman stout build braided hair sturdy, clean-shaven, no beard, no moustache, female feminine features ascetic enlightened monk minimal robes spiritual aura meditation peaceful",
+      "codexSheetPrompt": "The attached images are existing portraits of FEMALE DWARVES from a fantasy game (same characters' style). Match their art style exactly: medieval fantasy ink-and-wash illustration, bold black outlines of medium weight, watercolor fills, warm storybook JRPG feel, head-and-shoulders bust, facing roughly forward, plain white background, same face proportions and rendering.\n\nGenerate ONE image laid out as a grid of SEPARATE portraits, 3 columns by 2 rows, landscape 1536x1024. Each portrait is centred in its own 512x512 cell, separated by wide plain white gutters; figures must not cross into neighbouring cells. No borders, no frames, no text, no labels.\n\nEvery portrait is a DWARF WOMAN. She must read clearly as a woman: feminine face, NO beard, NO moustache, NO stubble, smooth chin and cheeks. Dwarven traits: sturdy, broad-shouldered, rounded strong face, ruddy cheeks, thick braided hair. Give each a different hair colour and braid style.\n- Top-left: CONJURER: elemental master, a flame in one hand and swirling water in the other, dynamic pose, colourful scarf.\n- Top-middle: ORACLE: seer with a cloth blindfold over her eyes, a painted third-eye mark on her forehead, ethereal pale flowing clothing, mystical.\n- Top-right: NINJA: shadow warrior, dark cloth hood and a face mask covering her nose and mouth, throwing stars, stealthy; her braids show under the hood.\n- Bottom-left: MARTIAL ARTIST: disciplined fighter in a gi with a headband, fists raised in a fierce focused stance.\n- Bottom-middle: BRAWLER: street fighter, wrapped fists with scarred knuckles, sleeveless vest, tough and intimidating, confident smirk.\n- Bottom-right: ASCETIC: enlightened monk in minimal simple robes, prayer beads, eyes closed in meditation, soft spiritual glow, peaceful.\n\nEach bust should fill most of its cell (head in the upper third); the bust may be cut off at the bottom of its cell, but keep at least 24px of white around the top and sides of each figure. Plain white (#FFFFFF) background everywhere, no ground shadow, no vignette.\n\nUse the image generation tool exactly ONCE. Do not retry or make variations. Save the generated image as candidate.png in the current directory.\n",
+      "needsRegeneration": false,
+      "generationMethod": "codex-built-in-imagegen",
+      "generator": "codex-cli 0.158.0 (codex exec --enable image_generation, thread 01a0ee71-b958-73b2-aed8-6809c086c0e5), one generation producing a 3x2 (1536x1024) sheet; this portrait is cell 5 (row-major). Style references: the four regenerated base-class dwarf_female cells from generation 1",
+      "postProcessing": "Sheet split into equal cells; border-connected near-white background removed (min RGB >= 212) plus near-white pockets within 6px of the silhouette, 2px grow + 1.2px Gaussian feather on alpha; cropped to the subject, scaled so its height is 96% of a 1024 canvas (width capped at 98%), bottom-aligned and centred like the existing portraits; LANCZOS downscale to 32/48/64/128/256 webp (q92). originals/<id>.png is the 1024 transparent master.",
+      "evaluation": {
+        "opaquePixelRatio": {
+          "32": 0.598,
+          "64": 0.583,
+          "256": 0.568
+        },
+        "visualCheck": "female dwarf, no facial hair, style matches the other portraits at 32/64/256 px on light and dark backgrounds"
+      },
+      "replaces": "2026-01-27T23:59:00.124Z LoRA retro-pixel render (seed 22028) that showed a bearded male face; the race prompt 'dwarf ... thick beard' overrode 'female'"
     },
     {
       "id": "dwarf_female_alchemist",
@@ -2238,10 +2472,25 @@
       "gender": "female",
       "class": "alchemist",
       "isAdvanced": true,
-      "seed": 22029,
+      "seed": null,
       "generated": true,
-      "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T23:59:42.709Z"
+      "loraModel": null,
+      "generatedAt": "2026-09-29T14:35:45.000Z",
+      "prompt": "dwarf woman stout build braided hair sturdy, clean-shaven, no beard, no moustache, female feminine features alchemist master transmuter philosopher stone golden vials advanced equipment",
+      "codexSheetPrompt": "The attached images are existing portraits of FEMALE DWARVES from a fantasy game (same characters' style). Match their art style exactly: medieval fantasy ink-and-wash illustration, bold black outlines of medium weight, watercolor fills, warm storybook JRPG feel, head-and-shoulders bust, facing roughly forward, plain white background, same face proportions and rendering.\n\nGenerate ONE image laid out as a grid of SEPARATE portraits, 2 columns by 2 rows, square 1024x1024. Each portrait is centred in its own 512x512 cell, separated by wide plain white gutters; figures must not cross into neighbouring cells. No borders, no frames, no text, no labels.\n\nEvery portrait is a DWARF WOMAN. She must read clearly as a woman: feminine face, NO beard, NO moustache, NO stubble, smooth chin and cheeks. Dwarven traits: sturdy, broad-shouldered, rounded strong face, ruddy cheeks, thick braided hair. Give each a different hair colour and braid style.\n- Top-left: ALCHEMIST: master transmuter, holding a glowing red philosopher's stone, golden vials on a bandolier, advanced brass equipment.\n- Top-right: MEDIC: battlefield healer in white robes with a red cross on the chest and bag strap, bandage rolls, compassionate expression.\n- Bottom-left: PLAGUE DOCTOR: dark robes and wide-brimmed hat, a beaked plague mask pushed up onto her forehead so her feminine face is visible, holding a cure vial, mysterious.\n- Bottom-right: ARTIFICER: mechanical genius, brass goggles over her eyes pushed up, a wrench and small clockwork gadgets, steampunk inventor's leather apron.\n\nEach bust should fill most of its cell (head in the upper third); the bust may be cut off at the bottom of its cell, but keep at least 24px of white around the top and sides of each figure. Plain white (#FFFFFF) background everywhere, no ground shadow, no vignette.\n\nUse the image generation tool exactly ONCE. Do not retry or make variations. Save the generated image as candidate.png in the current directory.\n",
+      "needsRegeneration": false,
+      "generationMethod": "codex-built-in-imagegen",
+      "generator": "codex-cli 0.158.0 (codex exec --enable image_generation, thread 01a0ee71-b942-74a3-8824-6daac97f2310), one generation producing a 2x2 (1254x1254) sheet; this portrait is cell 0 (row-major). Style references: the four regenerated base-class dwarf_female cells from generation 1",
+      "postProcessing": "Sheet split into equal cells; border-connected near-white background removed (min RGB >= 212) plus near-white pockets within 6px of the silhouette, 2px grow + 1.2px Gaussian feather on alpha; cropped to the subject, scaled so its height is 96% of a 1024 canvas (width capped at 98%), bottom-aligned and centred like the existing portraits; LANCZOS downscale to 32/48/64/128/256 webp (q92). originals/<id>.png is the 1024 transparent master.",
+      "evaluation": {
+        "opaquePixelRatio": {
+          "32": 0.732,
+          "64": 0.709,
+          "256": 0.688
+        },
+        "visualCheck": "female dwarf, no facial hair, style matches the other portraits at 32/64/256 px on light and dark backgrounds"
+      },
+      "replaces": "2026-01-27T23:59:42.709Z LoRA retro-pixel render (seed 22029) that showed a bearded male face; the race prompt 'dwarf ... thick beard' overrode 'female'"
     },
     {
       "id": "dwarf_female_medic",
@@ -2249,10 +2498,25 @@
       "gender": "female",
       "class": "medic",
       "isAdvanced": true,
-      "seed": 22030,
+      "seed": null,
       "generated": true,
-      "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-28T00:00:25.264Z"
+      "loraModel": null,
+      "generatedAt": "2026-09-29T14:35:45.000Z",
+      "prompt": "dwarf woman stout build braided hair sturdy, clean-shaven, no beard, no moustache, female feminine features medic battlefield healer white robes red cross medical supplies compassionate",
+      "codexSheetPrompt": "The attached images are existing portraits of FEMALE DWARVES from a fantasy game (same characters' style). Match their art style exactly: medieval fantasy ink-and-wash illustration, bold black outlines of medium weight, watercolor fills, warm storybook JRPG feel, head-and-shoulders bust, facing roughly forward, plain white background, same face proportions and rendering.\n\nGenerate ONE image laid out as a grid of SEPARATE portraits, 2 columns by 2 rows, square 1024x1024. Each portrait is centred in its own 512x512 cell, separated by wide plain white gutters; figures must not cross into neighbouring cells. No borders, no frames, no text, no labels.\n\nEvery portrait is a DWARF WOMAN. She must read clearly as a woman: feminine face, NO beard, NO moustache, NO stubble, smooth chin and cheeks. Dwarven traits: sturdy, broad-shouldered, rounded strong face, ruddy cheeks, thick braided hair. Give each a different hair colour and braid style.\n- Top-left: ALCHEMIST: master transmuter, holding a glowing red philosopher's stone, golden vials on a bandolier, advanced brass equipment.\n- Top-right: MEDIC: battlefield healer in white robes with a red cross on the chest and bag strap, bandage rolls, compassionate expression.\n- Bottom-left: PLAGUE DOCTOR: dark robes and wide-brimmed hat, a beaked plague mask pushed up onto her forehead so her feminine face is visible, holding a cure vial, mysterious.\n- Bottom-right: ARTIFICER: mechanical genius, brass goggles over her eyes pushed up, a wrench and small clockwork gadgets, steampunk inventor's leather apron.\n\nEach bust should fill most of its cell (head in the upper third); the bust may be cut off at the bottom of its cell, but keep at least 24px of white around the top and sides of each figure. Plain white (#FFFFFF) background everywhere, no ground shadow, no vignette.\n\nUse the image generation tool exactly ONCE. Do not retry or make variations. Save the generated image as candidate.png in the current directory.\n",
+      "needsRegeneration": false,
+      "generationMethod": "codex-built-in-imagegen",
+      "generator": "codex-cli 0.158.0 (codex exec --enable image_generation, thread 01a0ee71-b942-74a3-8824-6daac97f2310), one generation producing a 2x2 (1254x1254) sheet; this portrait is cell 1 (row-major). Style references: the four regenerated base-class dwarf_female cells from generation 1",
+      "postProcessing": "Sheet split into equal cells; border-connected near-white background removed (min RGB >= 212) plus near-white pockets within 6px of the silhouette, 2px grow + 1.2px Gaussian feather on alpha; cropped to the subject, scaled so its height is 96% of a 1024 canvas (width capped at 98%), bottom-aligned and centred like the existing portraits; LANCZOS downscale to 32/48/64/128/256 webp (q92). originals/<id>.png is the 1024 transparent master.",
+      "evaluation": {
+        "opaquePixelRatio": {
+          "32": 0.698,
+          "64": 0.677,
+          "256": 0.659
+        },
+        "visualCheck": "female dwarf, no facial hair, style matches the other portraits at 32/64/256 px on light and dark backgrounds"
+      },
+      "replaces": "2026-01-28T00:00:25.264Z LoRA retro-pixel render (seed 22030) that showed a bearded male face; the race prompt 'dwarf ... thick beard' overrode 'female'"
     },
     {
       "id": "dwarf_female_plague_doctor",
@@ -2260,10 +2524,25 @@
       "gender": "female",
       "class": "plague_doctor",
       "isAdvanced": true,
-      "seed": 22031,
+      "seed": null,
       "generated": true,
-      "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-28T00:01:07.745Z"
+      "loraModel": null,
+      "generatedAt": "2026-09-29T14:35:45.000Z",
+      "prompt": "dwarf woman stout build braided hair sturdy, clean-shaven, no beard, no moustache, female feminine features plague doctor beaked mask dark robes mysterious cure vials sinister",
+      "codexSheetPrompt": "The attached images are existing portraits of FEMALE DWARVES from a fantasy game (same characters' style). Match their art style exactly: medieval fantasy ink-and-wash illustration, bold black outlines of medium weight, watercolor fills, warm storybook JRPG feel, head-and-shoulders bust, facing roughly forward, plain white background, same face proportions and rendering.\n\nGenerate ONE image laid out as a grid of SEPARATE portraits, 2 columns by 2 rows, square 1024x1024. Each portrait is centred in its own 512x512 cell, separated by wide plain white gutters; figures must not cross into neighbouring cells. No borders, no frames, no text, no labels.\n\nEvery portrait is a DWARF WOMAN. She must read clearly as a woman: feminine face, NO beard, NO moustache, NO stubble, smooth chin and cheeks. Dwarven traits: sturdy, broad-shouldered, rounded strong face, ruddy cheeks, thick braided hair. Give each a different hair colour and braid style.\n- Top-left: ALCHEMIST: master transmuter, holding a glowing red philosopher's stone, golden vials on a bandolier, advanced brass equipment.\n- Top-right: MEDIC: battlefield healer in white robes with a red cross on the chest and bag strap, bandage rolls, compassionate expression.\n- Bottom-left: PLAGUE DOCTOR: dark robes and wide-brimmed hat, a beaked plague mask pushed up onto her forehead so her feminine face is visible, holding a cure vial, mysterious.\n- Bottom-right: ARTIFICER: mechanical genius, brass goggles over her eyes pushed up, a wrench and small clockwork gadgets, steampunk inventor's leather apron.\n\nEach bust should fill most of its cell (head in the upper third); the bust may be cut off at the bottom of its cell, but keep at least 24px of white around the top and sides of each figure. Plain white (#FFFFFF) background everywhere, no ground shadow, no vignette.\n\nUse the image generation tool exactly ONCE. Do not retry or make variations. Save the generated image as candidate.png in the current directory.\n",
+      "needsRegeneration": false,
+      "generationMethod": "codex-built-in-imagegen",
+      "generator": "codex-cli 0.158.0 (codex exec --enable image_generation, thread 01a0ee71-b942-74a3-8824-6daac97f2310), one generation producing a 2x2 (1254x1254) sheet; this portrait is cell 2 (row-major). Style references: the four regenerated base-class dwarf_female cells from generation 1",
+      "postProcessing": "Sheet split into equal cells; border-connected near-white background removed (min RGB >= 212) plus near-white pockets within 6px of the silhouette, 2px grow + 1.2px Gaussian feather on alpha; cropped to the subject, scaled so its height is 96% of a 1024 canvas (width capped at 98%), bottom-aligned and centred like the existing portraits; LANCZOS downscale to 32/48/64/128/256 webp (q92). originals/<id>.png is the 1024 transparent master.",
+      "evaluation": {
+        "opaquePixelRatio": {
+          "32": 0.762,
+          "64": 0.746,
+          "256": 0.723
+        },
+        "visualCheck": "female dwarf, no facial hair, style matches the other portraits at 32/64/256 px on light and dark backgrounds"
+      },
+      "replaces": "2026-01-28T00:01:07.745Z LoRA retro-pixel render (seed 22031) that showed a bearded male face; the race prompt 'dwarf ... thick beard' overrode 'female'"
     },
     {
       "id": "dwarf_female_artificer",
@@ -2271,10 +2550,25 @@
       "gender": "female",
       "class": "artificer",
       "isAdvanced": true,
-      "seed": 22032,
+      "seed": null,
       "generated": true,
-      "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-28T00:01:50.492Z"
+      "loraModel": null,
+      "generatedAt": "2026-09-29T14:35:45.000Z",
+      "prompt": "dwarf woman stout build braided hair sturdy, clean-shaven, no beard, no moustache, female feminine features artificer mechanical genius goggles tools gadgets steampunk inventor",
+      "codexSheetPrompt": "The attached images are existing portraits of FEMALE DWARVES from a fantasy game (same characters' style). Match their art style exactly: medieval fantasy ink-and-wash illustration, bold black outlines of medium weight, watercolor fills, warm storybook JRPG feel, head-and-shoulders bust, facing roughly forward, plain white background, same face proportions and rendering.\n\nGenerate ONE image laid out as a grid of SEPARATE portraits, 2 columns by 2 rows, square 1024x1024. Each portrait is centred in its own 512x512 cell, separated by wide plain white gutters; figures must not cross into neighbouring cells. No borders, no frames, no text, no labels.\n\nEvery portrait is a DWARF WOMAN. She must read clearly as a woman: feminine face, NO beard, NO moustache, NO stubble, smooth chin and cheeks. Dwarven traits: sturdy, broad-shouldered, rounded strong face, ruddy cheeks, thick braided hair. Give each a different hair colour and braid style.\n- Top-left: ALCHEMIST: master transmuter, holding a glowing red philosopher's stone, golden vials on a bandolier, advanced brass equipment.\n- Top-right: MEDIC: battlefield healer in white robes with a red cross on the chest and bag strap, bandage rolls, compassionate expression.\n- Bottom-left: PLAGUE DOCTOR: dark robes and wide-brimmed hat, a beaked plague mask pushed up onto her forehead so her feminine face is visible, holding a cure vial, mysterious.\n- Bottom-right: ARTIFICER: mechanical genius, brass goggles over her eyes pushed up, a wrench and small clockwork gadgets, steampunk inventor's leather apron.\n\nEach bust should fill most of its cell (head in the upper third); the bust may be cut off at the bottom of its cell, but keep at least 24px of white around the top and sides of each figure. Plain white (#FFFFFF) background everywhere, no ground shadow, no vignette.\n\nUse the image generation tool exactly ONCE. Do not retry or make variations. Save the generated image as candidate.png in the current directory.\n",
+      "needsRegeneration": false,
+      "generationMethod": "codex-built-in-imagegen",
+      "generator": "codex-cli 0.158.0 (codex exec --enable image_generation, thread 01a0ee71-b942-74a3-8824-6daac97f2310), one generation producing a 2x2 (1254x1254) sheet; this portrait is cell 3 (row-major). Style references: the four regenerated base-class dwarf_female cells from generation 1",
+      "postProcessing": "Sheet split into equal cells; border-connected near-white background removed (min RGB >= 212) plus near-white pockets within 6px of the silhouette, 2px grow + 1.2px Gaussian feather on alpha; cropped to the subject, scaled so its height is 96% of a 1024 canvas (width capped at 98%), bottom-aligned and centred like the existing portraits; LANCZOS downscale to 32/48/64/128/256 webp (q92). originals/<id>.png is the 1024 transparent master.",
+      "evaluation": {
+        "opaquePixelRatio": {
+          "32": 0.695,
+          "64": 0.681,
+          "256": 0.666
+        },
+        "visualCheck": "female dwarf, no facial hair, style matches the other portraits at 32/64/256 px on light and dark backgrounds"
+      },
+      "replaces": "2026-01-28T00:01:50.492Z LoRA retro-pixel render (seed 22032) that showed a bearded male face; the race prompt 'dwarf ... thick beard' overrode 'female'"
     },
     {
       "id": "dwarf_other_berserker",

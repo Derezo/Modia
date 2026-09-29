@@ -212,15 +212,31 @@
     {
       "id": "elemental_lightning",
       "name": "Lightning Element",
-      "prompt": "lightning elemental electric infuse shock yellow",
-      "seed": 33015,
+      "prompt": "round crackling ball of electric energy, pale blue-white core, yellow and electric-blue forked arcs, heavy black ink outline",
+      "codexSheetPrompt": "The three attached images (ref_fire.png, ref_ice.png, ref_luck.png) are existing augment icons from a fantasy game. Match their art style exactly: hand-inked bold black outlines, watercolor/ink fills with saturated colour, a single chunky centred emblem, tattoo-flash illustration feel, no text.\n\nGenerate ONE square 1024x1024 image containing TWO separate icons side by side, each centred in its own half (left half 512px wide, right half 512px wide), with a wide plain white gap between them. They must not touch or overlap.\n\n- LEFT icon, \"Lightning augment\": one big, thick, solid zig-zag lightning bolt, filled bright yellow with an orange-gold shaded side and a heavy black ink outline, a few small chunky electric spark flecks around it. The bolt must be FAT and bold (at least as wide as the flame in ref_fire.png), not a thin line, filling about 80% of its half's height.\n- RIGHT icon, \"Lightning element\": a round crackling ball of electric energy, pale blue-white core with yellow and electric-blue forked arcs crackling out of it, heavy black ink outline, solid and chunky, filling about 75% of its half's width.\n\nBackground: flat pure white (#FFFFFF) everywhere, no shadow, no border, no frame, no vignette.\n\nUse the image generation tool exactly ONCE. Do not retry or make variations. Save the generated image as candidate.png in the current directory.\n",
+      "seed": null,
       "generated": true,
-      "loraModel": "v2",
+      "loraModel": null,
       "needsRegeneration": false,
-      "generatedAt": "2026-02-03T11:08:44.405Z",
+      "generatedAt": "2026-09-29T14:31:15.000Z",
       "regenerationQueuedAt": null,
       "generationFailureCount": null,
-      "lastError": null
+      "lastError": null,
+      "generationMethod": "codex-built-in-imagegen",
+      "generator": "codex-cli 0.158.0 (codex exec --enable image_generation, thread 01a0ee6e-662f-7261-b402-993589b7deb0), one generation producing both lightning icons side by side; this is the right icon. Style references augments/fire, augments/ice, augments/luck at 256px",
+      "postProcessing": "Half of the sheet cropped; border-connected near-white background removed (min RGB >= 225), 1px grow + 1.2px Gaussian feather on alpha, cropped to the subject, centred on a square canvas with the larger side at 82% of the canvas, LANCZOS downscale to 16/24/32/48/64/128/256 webp (q92). originals/augments/<id>.png is the 1024 white-background render like its siblings; originals/augments/<id>.webp is the cutout.",
+      "evaluation": {
+        "opaquePixelRatio": {
+          "16": 0.383,
+          "32": 0.348,
+          "256": 0.292
+        },
+        "siblingRatio": {
+          "fire": 0.16,
+          "ice": 0.23
+        }
+      },
+      "replaces": "2026-02-03T11:08:44.405Z LoRA v2 render (seed 33015): a thin bolt with opaque-pixel ratio 0.05 at 256px, nearly invisible at display size (the 'Shocking' augment icon)"
     },
     {
       "id": "healing_boost",
@@ -328,15 +344,31 @@
     {
       "id": "lightning",
       "name": "Lightning Augment",
-      "prompt": "lightning bolt icon electric shock yellow spark energy",
-      "seed": 33023,
+      "prompt": "one big thick solid zig-zag lightning bolt, bright yellow with orange-gold shading, heavy black ink outline, a few chunky spark flecks",
+      "codexSheetPrompt": "The three attached images (ref_fire.png, ref_ice.png, ref_luck.png) are existing augment icons from a fantasy game. Match their art style exactly: hand-inked bold black outlines, watercolor/ink fills with saturated colour, a single chunky centred emblem, tattoo-flash illustration feel, no text.\n\nGenerate ONE square 1024x1024 image containing TWO separate icons side by side, each centred in its own half (left half 512px wide, right half 512px wide), with a wide plain white gap between them. They must not touch or overlap.\n\n- LEFT icon, \"Lightning augment\": one big, thick, solid zig-zag lightning bolt, filled bright yellow with an orange-gold shaded side and a heavy black ink outline, a few small chunky electric spark flecks around it. The bolt must be FAT and bold (at least as wide as the flame in ref_fire.png), not a thin line, filling about 80% of its half's height.\n- RIGHT icon, \"Lightning element\": a round crackling ball of electric energy, pale blue-white core with yellow and electric-blue forked arcs crackling out of it, heavy black ink outline, solid and chunky, filling about 75% of its half's width.\n\nBackground: flat pure white (#FFFFFF) everywhere, no shadow, no border, no frame, no vignette.\n\nUse the image generation tool exactly ONCE. Do not retry or make variations. Save the generated image as candidate.png in the current directory.\n",
+      "seed": null,
       "generated": true,
-      "loraModel": "v2",
+      "loraModel": null,
       "needsRegeneration": false,
-      "generatedAt": "2026-02-03T11:18:58.939Z",
+      "generatedAt": "2026-09-29T14:31:15.000Z",
       "regenerationQueuedAt": null,
       "generationFailureCount": null,
-      "lastError": null
+      "lastError": null,
+      "generationMethod": "codex-built-in-imagegen",
+      "generator": "codex-cli 0.158.0 (codex exec --enable image_generation, thread 01a0ee6e-662f-7261-b402-993589b7deb0), one generation producing both lightning icons side by side; this is the left icon. Style references augments/fire, augments/ice, augments/luck at 256px",
+      "postProcessing": "Half of the sheet cropped; border-connected near-white background removed (min RGB >= 225), 1px grow + 1.2px Gaussian feather on alpha, cropped to the subject, centred on a square canvas with the larger side at 84% of the canvas, LANCZOS downscale to 16/24/32/48/64/128/256 webp (q92). originals/augments/<id>.png is the 1024 white-background render like its siblings; originals/augments/<id>.webp is the cutout.",
+      "evaluation": {
+        "opaquePixelRatio": {
+          "16": 0.227,
+          "32": 0.196,
+          "256": 0.158
+        },
+        "siblingRatio": {
+          "fire": 0.16,
+          "ice": 0.23
+        }
+      },
+      "replaces": "2026-02-03T11:18:58.939Z LoRA v2 render (seed 33023): a thin bolt with opaque-pixel ratio 0.10 at 256px, nearly invisible at display size (the 'Shocking' augment icon)"
     },
     {
       "id": "poison",

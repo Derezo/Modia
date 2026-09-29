@@ -379,6 +379,96 @@
       "regenerationQueuedAt": null,
       "generationFailureCount": null,
       "lastError": null
+    },
+    {
+      "id": "clan",
+      "name": "Clan",
+      "prompt": "heraldic kite shield with a stylised wolf-head emblem and a red swallow-tailed banner on a short pole behind it",
+      "codexSheetPrompt": "The three attached images (ref_shop.png, ref_tavern.png, ref_coliseum.png) are existing menu icons from a fantasy game. Match their art style exactly: bold hand-inked black outlines of varying weight, mostly white/light grey fill with subtle grey shading, a very limited warm accent tint (one small accent colour per icon), tattoo-flash / woodcut illustration feel, a single chunky centred object, no text, no letters.\n\nGenerate ONE landscape 1536x1024 image containing THREE separate icons in a row, each centred in its own 512px-wide column, with wide plain white gaps between them. They must not touch or overlap.\n\n- LEFT icon \"Clan\": a heraldic kite shield with a hanging swallow-tailed banner behind it on a short pole, the shield bearing a simple bold emblem (a stylised wolf head), red accent on the banner.\n- MIDDLE icon \"Looking for group\": a wooden quest-notice board on two posts with three pinned paper notices (blank, no writing) and a small hand-bell hanging from the side, warm wood accent.\n- RIGHT icon \"Requests\": a folded letter envelope with a large round red wax seal, a small curled scroll tucked behind it.\n\nEach object must be SOLID and chunky (not thin line art), filling about 75% of its column's width, vertically centred.\n\nBackground: flat pure white (#FFFFFF) everywhere, no shadow on the ground, no border, no vignette, no frame.\n\nUse the image generation tool exactly ONCE. Do not retry or make variations. Save the generated image as candidate.png in the current directory.\n",
+      "seed": null,
+      "generated": true,
+      "loraModel": null,
+      "needsRegeneration": false,
+      "generatedAt": "2026-09-29T14:40:00.000Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null,
+      "generationMethod": "codex-built-in-imagegen",
+      "generator": "codex-cli 0.158.0 (codex exec --enable image_generation, thread 01a0ee77-6de4-7ca1-b816-77a4476feaaf), one generation producing the three Social Hub tab icons in a row; this is the left icon. Style references menu/shop, menu/tavern, menu/coliseum at 256px",
+      "postProcessing": "Whole sheet cut out (border-connected near-white removed, min RGB >= 225, 1px grow + 1.2px Gaussian feather), connected components assigned to icons by centroid x, each icon cropped and centred on a square canvas with its larger side at 78%, LANCZOS downscale to 16/24/32/48/64/128/256 webp (q92). originals/menu/<id>.png is the 1024 white-background render; originals/menu/<id>.webp is the cutout.",
+      "evaluation": {
+        "opaquePixelRatio": {
+          "16": 0.32,
+          "32": 0.301,
+          "256": 0.272
+        },
+        "siblingRatio": {
+          "shop": 0.4,
+          "tavern": 0.37,
+          "friends": 0.47
+        }
+      },
+      "usedBy": "frontend/src/scenes/SocialHubScene.js tab bar"
+    },
+    {
+      "id": "lfg",
+      "name": "Looking For Group",
+      "prompt": "wooden quest-notice board on two posts with three blank pinned notices and a small brass hand-bell",
+      "codexSheetPrompt": "The three attached images (ref_shop.png, ref_tavern.png, ref_coliseum.png) are existing menu icons from a fantasy game. Match their art style exactly: bold hand-inked black outlines of varying weight, mostly white/light grey fill with subtle grey shading, a very limited warm accent tint (one small accent colour per icon), tattoo-flash / woodcut illustration feel, a single chunky centred object, no text, no letters.\n\nGenerate ONE landscape 1536x1024 image containing THREE separate icons in a row, each centred in its own 512px-wide column, with wide plain white gaps between them. They must not touch or overlap.\n\n- LEFT icon \"Clan\": a heraldic kite shield with a hanging swallow-tailed banner behind it on a short pole, the shield bearing a simple bold emblem (a stylised wolf head), red accent on the banner.\n- MIDDLE icon \"Looking for group\": a wooden quest-notice board on two posts with three pinned paper notices (blank, no writing) and a small hand-bell hanging from the side, warm wood accent.\n- RIGHT icon \"Requests\": a folded letter envelope with a large round red wax seal, a small curled scroll tucked behind it.\n\nEach object must be SOLID and chunky (not thin line art), filling about 75% of its column's width, vertically centred.\n\nBackground: flat pure white (#FFFFFF) everywhere, no shadow on the ground, no border, no vignette, no frame.\n\nUse the image generation tool exactly ONCE. Do not retry or make variations. Save the generated image as candidate.png in the current directory.\n",
+      "seed": null,
+      "generated": true,
+      "loraModel": null,
+      "needsRegeneration": false,
+      "generatedAt": "2026-09-29T14:40:00.000Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null,
+      "generationMethod": "codex-built-in-imagegen",
+      "generator": "codex-cli 0.158.0 (codex exec --enable image_generation, thread 01a0ee77-6de4-7ca1-b816-77a4476feaaf), one generation producing the three Social Hub tab icons in a row; this is the middle icon. Style references menu/shop, menu/tavern, menu/coliseum at 256px",
+      "postProcessing": "Whole sheet cut out (border-connected near-white removed, min RGB >= 225, 1px grow + 1.2px Gaussian feather), connected components assigned to icons by centroid x, each icon cropped and centred on a square canvas with its larger side at 78%, LANCZOS downscale to 16/24/32/48/64/128/256 webp (q92). originals/menu/<id>.png is the 1024 white-background render; originals/menu/<id>.webp is the cutout.",
+      "evaluation": {
+        "opaquePixelRatio": {
+          "16": 0.461,
+          "32": 0.412,
+          "256": 0.38
+        },
+        "siblingRatio": {
+          "shop": 0.4,
+          "tavern": 0.37,
+          "friends": 0.47
+        }
+      },
+      "usedBy": "frontend/src/scenes/SocialHubScene.js tab bar"
+    },
+    {
+      "id": "requests",
+      "name": "Requests",
+      "prompt": "folded letter envelope with a large red wax seal and a curled scroll tucked behind it",
+      "codexSheetPrompt": "The three attached images (ref_shop.png, ref_tavern.png, ref_coliseum.png) are existing menu icons from a fantasy game. Match their art style exactly: bold hand-inked black outlines of varying weight, mostly white/light grey fill with subtle grey shading, a very limited warm accent tint (one small accent colour per icon), tattoo-flash / woodcut illustration feel, a single chunky centred object, no text, no letters.\n\nGenerate ONE landscape 1536x1024 image containing THREE separate icons in a row, each centred in its own 512px-wide column, with wide plain white gaps between them. They must not touch or overlap.\n\n- LEFT icon \"Clan\": a heraldic kite shield with a hanging swallow-tailed banner behind it on a short pole, the shield bearing a simple bold emblem (a stylised wolf head), red accent on the banner.\n- MIDDLE icon \"Looking for group\": a wooden quest-notice board on two posts with three pinned paper notices (blank, no writing) and a small hand-bell hanging from the side, warm wood accent.\n- RIGHT icon \"Requests\": a folded letter envelope with a large round red wax seal, a small curled scroll tucked behind it.\n\nEach object must be SOLID and chunky (not thin line art), filling about 75% of its column's width, vertically centred.\n\nBackground: flat pure white (#FFFFFF) everywhere, no shadow on the ground, no border, no vignette, no frame.\n\nUse the image generation tool exactly ONCE. Do not retry or make variations. Save the generated image as candidate.png in the current directory.\n",
+      "seed": null,
+      "generated": true,
+      "loraModel": null,
+      "needsRegeneration": false,
+      "generatedAt": "2026-09-29T14:40:00.000Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null,
+      "generationMethod": "codex-built-in-imagegen",
+      "generator": "codex-cli 0.158.0 (codex exec --enable image_generation, thread 01a0ee77-6de4-7ca1-b816-77a4476feaaf), one generation producing the three Social Hub tab icons in a row; this is the right icon. Style references menu/shop, menu/tavern, menu/coliseum at 256px",
+      "postProcessing": "Whole sheet cut out (border-connected near-white removed, min RGB >= 225, 1px grow + 1.2px Gaussian feather), connected components assigned to icons by centroid x, each icon cropped and centred on a square canvas with its larger side at 78%, LANCZOS downscale to 16/24/32/48/64/128/256 webp (q92). originals/menu/<id>.png is the 1024 white-background render; originals/menu/<id>.webp is the cutout.",
+      "evaluation": {
+        "opaquePixelRatio": {
+          "16": 0.469,
+          "32": 0.43,
+          "256": 0.402
+        },
+        "siblingRatio": {
+          "shop": 0.4,
+          "tavern": 0.37,
+          "friends": 0.47
+        }
+      },
+      "usedBy": "frontend/src/scenes/SocialHubScene.js tab bar"
     }
   ]
 }

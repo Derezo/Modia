@@ -15,6 +15,7 @@ import { RequestsTab } from '../social/tabs/RequestsTab.js';
 import { PartyTab } from '../social/tabs/PartyTab.js';
 import { LFGTab } from '../social/tabs/LFGTab.js';
 import { ClanTab } from '../social/tabs/ClanTab.js';
+import { Icon } from '../components/Icon.js';
 
 // Alias for convenient access
 const P = PARCHMENT_COLORS;
@@ -37,12 +38,15 @@ export class SocialHubScene extends Scene {
 
     // Tab state
     this.activeTab = 'friends';
+    // Tab icons are painted menu icons (icons/png/{size}/menu/{icon}.webp).
+    // 'requests', 'lfg' and 'clan' were generated for this tab bar; see
+    // ai-image-metadata/icons/menu.json.
     this.tabs = {
-      friends: { label: 'Friends', icon: '👥' },
-      party: { label: 'Party', icon: '⚔️' },
-      requests: { label: 'Requests', icon: '📬' },
-      lfg: { label: 'LFG', icon: '🔍' },
-      clan: { label: 'Clan', icon: '🏰' }
+      friends: { label: 'Friends', icon: 'friends' },
+      party: { label: 'Party', icon: 'party' },
+      requests: { label: 'Requests', icon: 'requests' },
+      lfg: { label: 'LFG', icon: 'lfg' },
+      clan: { label: 'Clan', icon: 'clan' }
     };
 
     // Tab content containers
@@ -210,7 +214,14 @@ export class SocialHubScene extends Scene {
       }
 
       .social-hub-tab-icon {
-        font-size: 16px;
+        display: inline-flex;
+        align-items: center;
+        line-height: 0;
+      }
+
+      .social-hub-title-icon {
+        display: inline-flex;
+        align-items: center;
       }
 
       .social-hub-tab-badge {
@@ -429,13 +440,14 @@ export class SocialHubScene extends Scene {
 
   createUI() {
     this.abortController = new AbortController();
+    Icon.injectStyles();
 
     this.uiElement = document.createElement('div');
     this.uiElement.className = 'social-hub-container';
     this.uiElement.innerHTML = `
       <div class="social-hub-header">
         <div class="social-hub-title">
-          <span class="social-hub-title-icon">🏠</span>
+          <span class="social-hub-title-icon" aria-hidden="true">${Icon.html('menu', 'friends', { size: 'lg' })}</span>
           <h2>Social Hub</h2>
         </div>
         <button class="social-hub-back-btn" data-action="back">
@@ -447,7 +459,7 @@ export class SocialHubScene extends Scene {
         ${Object.entries(this.tabs).map(([key, tab]) => `
           <button class="social-hub-tab ${key === this.activeTab ? 'active' : ''}" data-tab="${key}"
                   aria-label="${tab.label}" title="${tab.label}">
-            <span class="social-hub-tab-icon" aria-hidden="true">${tab.icon}</span>
+            <span class="social-hub-tab-icon" aria-hidden="true">${Icon.html('menu', tab.icon, { size: 'lg' })}</span>
             <span class="social-hub-tab-label">${tab.label}</span>
             <span class="social-hub-tab-badge ${this.badges[key] > 0 ? '' : 'hidden'}" data-badge="${key}">
               ${this.badges[key]}
