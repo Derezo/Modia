@@ -124,33 +124,37 @@ export class ConnectionIndicatorDOM {
     const style = document.createElement('style');
     style.id = 'connection-indicator-dom-styles';
     style.textContent = `
+      /* Below modal overlays (z 1000+) so the dot never sits on top of a
+         dialog; it is a status hint, not an alert. */
       .connection-indicator-dom {
         position: fixed;
-        z-index: 9999;
+        z-index: 900;
         display: flex;
         align-items: center;
         gap: 6px;
         pointer-events: auto;
       }
 
+      /* Anchored to the visible game canvas (Game.publishCanvasAnchor), not
+         the viewport, so the dot stays on the letterboxed canvas. */
       .connection-indicator-top-right {
-        top: 12px;
-        right: 12px;
+        top: calc(var(--game-canvas-top, 0px) + 12px);
+        right: calc(var(--game-canvas-right, 0px) + 12px);
       }
 
       .connection-indicator-top-left {
-        top: 12px;
-        left: 12px;
+        top: calc(var(--game-canvas-top, 0px) + 12px);
+        left: calc(var(--game-canvas-left, 0px) + 12px);
       }
 
       .connection-indicator-bottom-right {
-        bottom: 12px;
-        right: 12px;
+        bottom: calc(var(--game-canvas-bottom, 0px) + 12px);
+        right: calc(var(--game-canvas-right, 0px) + 12px);
       }
 
       .connection-indicator-bottom-left {
-        bottom: 12px;
-        left: 12px;
+        bottom: calc(var(--game-canvas-bottom, 0px) + 12px);
+        left: calc(var(--game-canvas-left, 0px) + 12px);
       }
 
       .connection-indicator-dot {
@@ -292,7 +296,11 @@ export class ConnectionIndicatorDOM {
    * @param {number} pendingRetries - Number of pending message retries
    */
   updateTooltip(state, latencyMs, pendingRetries) {
-    const label = this.stateLabels[state] || 'Unknown';
+    // "Slow" is only true when latency is high; a degraded state caused by
+    // unacknowledged messages at low latency is labelled by its cause.
+    const label = state === ConnectionState.DEGRADED && latencyMs <= 200 && pendingRetries > 0
+      ? 'Retrying Messages'
+      : (this.stateLabels[state] || 'Unknown');
     let html = `<div class="connection-indicator-tooltip-label">${label}</div>`;
 
     if (this.options.showLatency || state !== ConnectionState.HEALTHY) {
@@ -301,7 +309,7 @@ export class ConnectionIndicatorDOM {
         details.push(`${latencyMs}ms`);
       }
       if (pendingRetries > 0) {
-        details.push(`${pendingRetries} retry${pendingRetries > 1 ? 's' : ''}`);
+        details.push(`${pendingRetries} ${pendingRetries === 1 ? 'retry' : 'retries'}`);
       }
       if (details.length > 0) {
         html += `<div class="connection-indicator-tooltip-details">${details.join(' | ')}</div>`;

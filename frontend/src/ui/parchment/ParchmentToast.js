@@ -14,6 +14,9 @@ class ParchmentToastManager {
     this.maxToasts = 5;
     this.defaultDuration = 4000;
     this.stylesInjected = false;
+    // 'top' (default, under the HUD) or 'bottom' (for screens whose top edge
+    // holds controls, e.g. the marketplace tab bar). See setPlacement().
+    this.placement = 'top';
 
     // Duplicate detection
     this.recentToasts = new Map(); // signature -> timestamp
@@ -34,8 +37,25 @@ class ParchmentToastManager {
       this.container.className = 'parchment-toast-container';
       document.body.appendChild(this.container);
     }
+    this.applyPlacement();
 
     return this.container;
+  }
+
+  /**
+   * Anchor the toast stack at the top or bottom centre of the viewport.
+   * Scenes whose top edge holds interactive chrome (tab bars) switch to
+   * 'bottom' on enter and restore 'top' on exit.
+   * @param {'top'|'bottom'} placement
+   */
+  setPlacement(placement) {
+    this.placement = placement === 'bottom' ? 'bottom' : 'top';
+    this.applyPlacement();
+  }
+
+  applyPlacement() {
+    if (!this.container) return;
+    this.container.classList.toggle('parchment-toast-container--bottom', this.placement === 'bottom');
   }
 
   /**
@@ -47,6 +67,10 @@ class ParchmentToastManager {
     const style = document.createElement('style');
     style.id = 'parchment-toast-styles';
     style.textContent = `
+      /* z-index 10000 sits above every modal layer: ParchmentModal overlays
+         stack from 1000 in steps of 10, NotificationCenter 9500-9600,
+         PartyInviteModal 9700, ConnectionIndicator 9999. Only the tooltip
+         (10001) is higher. */
       .parchment-toast-container {
         position: fixed;
         top: 60px;
@@ -81,6 +105,17 @@ class ParchmentToastManager {
       .parchment-toast.visible {
         opacity: 1;
         transform: translateY(0);
+      }
+
+      /* Bottom anchor: newest toast nearest the edge, sliding up into place */
+      .parchment-toast-container.parchment-toast-container--bottom {
+        top: auto;
+        bottom: 32px;
+        flex-direction: column-reverse;
+      }
+
+      .parchment-toast-container--bottom .parchment-toast:not(.visible):not(.removing) {
+        transform: translateY(20px);
       }
 
       .parchment-toast.removing {
@@ -197,6 +232,11 @@ class ParchmentToastManager {
         .parchment-toast-container {
           top: 20px;
           width: calc(100vw - 20px);
+        }
+
+        .parchment-toast-container.parchment-toast-container--bottom {
+          top: auto;
+          bottom: 16px;
         }
 
         .parchment-toast {

@@ -33,8 +33,9 @@ export class PartyStatusBar {
     this.element.id = 'party-status-bar';
     this.element.style.cssText = `
       position: fixed;
-      top: 74px;
-      right: 20px;
+      /* Anchored to the visible game canvas (Game.publishCanvasAnchor) */
+      top: calc(var(--game-canvas-top, 0px) + 74px);
+      right: calc(var(--game-canvas-right, 0px) + 20px);
       z-index: 8900;
       background: ${getParchmentGradient('135deg')};
       border: ${getParchmentBorder()};

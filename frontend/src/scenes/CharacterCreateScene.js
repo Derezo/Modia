@@ -229,7 +229,9 @@ export class CharacterCreateScene extends Scene {
         width: 100%;
         box-sizing: border-box;
         ${getParchmentInputCSS()}
-        font-family: ${DISPLAY_FONT};
+        /* Body font: the display face renders as capitals, so typed names
+           and placeholders were hard to read. */
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
         letter-spacing: 0.5px;
       }
 
@@ -240,6 +242,8 @@ export class CharacterCreateScene extends Scene {
 
       .charcreate-input::placeholder {
         color: ${P.text.muted};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        text-transform: none;
       }
 
       /* One row per group: a fixed column count per group means the last

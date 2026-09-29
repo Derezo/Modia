@@ -1093,12 +1093,14 @@ export class TavernScene extends Scene {
       return;
     }
 
+    // Show the in-world character name when the presence API provides one;
+    // the account username stays the DM address.
     container.innerHTML = this.onlinePlayers.map(player => `
       <div class="player-item ${player.userId === userId ? 'self' : ''}" data-user-id="${player.userId}">
         <div class="player-status status-${player.status || 'online'}"></div>
-        <span class="player-name ${player.userId === userId ? 'self' : ''}">${escapeHtml(player.username || '')}</span>
+        <span class="player-name ${player.userId === userId ? 'self' : ''}"${player.characterName ? ` title="${escapeHtml(player.username || '')}"` : ''}>${escapeHtml(player.characterName || player.username || '')}</span>
         ${player.userId !== userId ? `
-          <button class="btn btn-secondary dm-btn" data-user-id="${player.userId}" data-username="${escapeHtml(player.username || '')}"
+          <button class="btn btn-secondary dm-btn" data-user-id="${player.userId}" data-username="${escapeHtml(player.username || '')}">
             DM
           </button>
         ` : ''}

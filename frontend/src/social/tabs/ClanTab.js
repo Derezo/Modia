@@ -1226,8 +1226,7 @@ export class ClanTab {
     }
 
     try {
-      // Use direct post() call since transferClanLeadership isn't in client.js yet
-      const response = await this.game.api.post(`/clans/${this.myClan.id}/transfer`, { userId: targetUserId });
+      const response = await this.game.api.transferClanLeadership(this.myClan.id, targetUserId);
       if (response.success) {
         parchmentToast.success('Leadership Transferred', `${response.newLeaderUsername} is now the clan leader`);
         await this.loadData();

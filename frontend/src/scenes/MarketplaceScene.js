@@ -85,6 +85,12 @@ export class MarketplaceScene extends Scene {
       return;
     }
 
+    // A fresh visit always opens on Browse, whatever tab the last visit ended on
+    this.activeTab = 'search';
+
+    // The default top-centre toast anchor lands on the tab bar here
+    parchmentToast.setPlacement('bottom');
+
     this.addStyles();
     this.createUI();
     this.setupEventListeners();
@@ -182,6 +188,8 @@ export class MarketplaceScene extends Scene {
   }
 
   exit() {
+    parchmentToast.setPlacement('top');
+
     // Unsubscribe from responsive changes
     if (this._responsiveUnsubscribe) {
       this._responsiveUnsubscribe();
@@ -382,6 +390,8 @@ export class MarketplaceScene extends Scene {
       this.myListings = listingsData.listings || [];
       this.sellableItems = sellableData.items || [];
 
+      // The tab bar was rendered before these arrived; refresh its counts
+      this.updateTabs();
       this.renderContent();
     } catch (err) {
       console.error('Failed to load marketplace data:', err);
@@ -451,6 +461,7 @@ export class MarketplaceScene extends Scene {
   }
 
   updateTabs() {
+    if (!this.uiElement) return;
     this.uiElement.querySelectorAll('.marketplace-tab').forEach(tab => {
       tab.classList.toggle('active', tab.dataset.tab === this.activeTab);
     });
@@ -465,6 +476,26 @@ export class MarketplaceScene extends Scene {
     const listingsTab = this.uiElement.querySelector('[data-tab="listings"]');
     if (listingsTab) {
       listingsTab.textContent = `Equipment For Sale (${this.myListings.length})`;
+    }
+
+    // Phones scroll the tab row sideways: keep the active tab in view and
+    // show the edge fade only while more tabs are off to the right.
+    const activeTab = this.uiElement.querySelector('.marketplace-tab.active');
+    activeTab?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+    this.updateTabOverflowHint();
+  }
+
+  /**
+   * Toggle the "more tabs this way" fade on the horizontally scrolling tab row.
+   */
+  updateTabOverflowHint() {
+    const row = this.uiElement?.querySelector('.marketplace-tabs');
+    if (!row) return;
+    const moreRight = row.scrollWidth - row.clientWidth - row.scrollLeft > 4;
+    row.classList.toggle('marketplace-tabs--more', moreRight);
+    if (!row.dataset.overflowHintBound) {
+      row.dataset.overflowHintBound = '1';
+      row.addEventListener('scroll', () => this.updateTabOverflowHint(), { passive: true });
     }
   }
 

@@ -3,6 +3,9 @@ import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { getColiseumStyles } from './coliseum/coliseumStyles.js';
 import { renderQueueContent, renderLeaderboard, renderMatchHistory } from './coliseum/tabs/index.js';
 import { responsive } from '../core/Responsive.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
+
+const HEX_COLOR = /^#[0-9a-f]{3,8}$/i;
 
 /**
  * ColiseumScene - PvP Arena for matchmaking and battles
@@ -66,6 +69,9 @@ export class ColiseumScene extends Scene {
     // Reset match state from any previous battle
     this.resetMatchState();
 
+    // The default top-centre toast anchor lands on the header and tab bar here
+    parchmentToast.setPlacement('bottom');
+
     this.addStyles();
     this.createUI();
     this.setupEventListeners();
@@ -90,6 +96,8 @@ export class ColiseumScene extends Scene {
   }
 
   exit() {
+    parchmentToast.setPlacement('top');
+
     // Unsubscribe from responsive changes
     if (this._responsiveUnsubscribe) {
       this._responsiveUnsubscribe();
@@ -159,6 +167,9 @@ export class ColiseumScene extends Scene {
         <div class="coliseum-title">
           <span class="coliseum-title-icon">&#9876;</span>
           <h2>The Coliseum</h2>
+        </div>
+        <div class="coliseum-player-rating" id="coliseum-player-rating" aria-live="polite">
+          ${this.renderPlayerRating()}
         </div>
         <button class="coliseum-back-btn" id="coliseum-back-btn">Back to World</button>
       </div>
@@ -561,6 +572,39 @@ export class ColiseumScene extends Scene {
       this.playerStats = [];
       this.playerRating = null;
     }
+    this.updatePlayerRatingDisplay();
+  }
+
+  /**
+   * The player's rating and tier for the header, from GET /coliseum/stats
+   * (1v1 entry first). Players without a rated match read as Unranked.
+   * @returns {string} HTML
+   */
+  renderPlayerRating() {
+    if (!Array.isArray(this.playerStats)) return '';
+
+    const entry = this.playerStats.find(r => r.queueType === '1v1') || this.playerStats[0];
+    if (!entry || !Number.isFinite(Number(entry.rating))) {
+      return `
+        <span class="coliseum-rating-tier">Unranked</span>
+        <span class="coliseum-rating-label">Fight a ranked match to earn a rating</span>
+      `;
+    }
+
+    const color = HEX_COLOR.test(entry.tierColor || '') ? entry.tierColor : null;
+    const queueLabel = entry.queueType ? `${escapeHtml(entry.queueType)} rating` : 'Rating';
+    return `
+      <span class="coliseum-rating-tier"${color ? ` style="--tier-color: ${color};"` : ''}>
+        <span class="coliseum-rating-dot" aria-hidden="true"></span>${escapeHtml(entry.tier || 'Unranked')}
+      </span>
+      <span class="coliseum-rating-value">${Math.round(Number(entry.rating))}</span>
+      <span class="coliseum-rating-label">${queueLabel}</span>
+    `;
+  }
+
+  updatePlayerRatingDisplay() {
+    const el = this.uiElement?.querySelector('#coliseum-player-rating');
+    if (el) el.innerHTML = this.renderPlayerRating();
   }
 
   async loadQueuePlayers() {

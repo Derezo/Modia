@@ -43,6 +43,12 @@ export const ARENA_COLORS = {
   readyGreenDark: '#5a9678'
 };
 
+// Text on the slate arena backdrop (#1a2025-#2a3035): both pass WCAG AA
+const ARENA_TEXT = {
+  primary: '#efe6d2',
+  secondary: '#c9bda3'
+};
+
 /**
  * Generate the coliseum scene CSS
  * @returns {string} The complete CSS string
@@ -69,9 +75,59 @@ export function getColiseumStyles() {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: ${PARCHMENT_SPACING.lg};
       width: 100%;
       max-width: 900px;
       margin-bottom: ${PARCHMENT_SPACING.xl};
+      padding-bottom: ${PARCHMENT_SPACING.md};
+      border-bottom: 1px solid ${ARENA_COLORS.goldDark};
+    }
+
+    /* Player rating plaque: bronze-edged slate, tier coloured by --tier-color */
+    .coliseum-player-rating {
+      display: flex;
+      align-items: baseline;
+      gap: ${PARCHMENT_SPACING.sm};
+      margin-left: auto;
+      padding: ${PARCHMENT_SPACING.xs} ${PARCHMENT_SPACING.md};
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid ${ARENA_COLORS.goldDark};
+      border-radius: ${PARCHMENT_RADIUS.md};
+      font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+      color: ${ARENA_TEXT.primary};
+    }
+
+    .coliseum-player-rating:empty {
+      display: none;
+    }
+
+    .coliseum-rating-tier {
+      --tier-color: ${ARENA_COLORS.goldLight};
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--tier-color);
+      font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+      text-transform: capitalize;
+    }
+
+    .coliseum-rating-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--tier-color);
+      box-shadow: 0 0 6px var(--tier-color);
+    }
+
+    .coliseum-rating-value {
+      font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xl};
+      font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+      color: ${ARENA_TEXT.primary};
+    }
+
+    .coliseum-rating-label {
+      font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+      color: ${ARENA_TEXT.secondary};
     }
 
     .coliseum-title {
@@ -80,11 +136,14 @@ export function getColiseumStyles() {
       gap: ${PARCHMENT_SPACING.md};
     }
 
+    /* Near-white parchment on slate with a dark drop shadow; the old blue
+       glow softened the glyph edges and read as low contrast. */
     .coliseum-title h2 {
       margin: 0;
-      color: ${P.light};
+      color: ${ARENA_TEXT.primary};
       font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
-      text-shadow: 0 0 10px rgba(74, 107, 138, 0.5);
+      letter-spacing: 0.5px;
+      text-shadow: 0 2px 3px rgba(0, 0, 0, 0.6);
     }
 
     .coliseum-title-icon {
@@ -232,15 +291,17 @@ export function getColiseumStyles() {
       transition: all 0.2s;
     }
 
+    /* Same green as the Ready button: the slate blue read as a disabled grey
+       on the slate arena backdrop */
     .coliseum-queue-btn.join {
-      background: linear-gradient(180deg, ${ARENA_COLORS.primary}, ${ARENA_COLORS.primaryDark});
+      background: linear-gradient(180deg, ${ARENA_COLORS.victory}, ${ARENA_COLORS.victoryDark});
       color: white;
-      border: 1px solid ${ARENA_COLORS.primaryDark};
+      border: 1px solid ${ARENA_COLORS.victoryDark};
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     }
 
     .coliseum-queue-btn.join:hover:not(:disabled) {
-      background: linear-gradient(180deg, ${ARENA_COLORS.primaryLight}, ${ARENA_COLORS.primary});
+      background: linear-gradient(180deg, ${ARENA_COLORS.readyGreen}, ${ARENA_COLORS.victory});
       transform: scale(1.05);
     }
 
@@ -823,17 +884,44 @@ export function getColiseumStyles() {
       font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
     }
 
+    /* Empty state: a bronze-framed plaque so the message reads as a panel,
+       not stray text on the backdrop */
     .coliseum-no-data-message {
-      padding: 40px;
+      margin: ${PARCHMENT_SPACING.lg} auto;
+      max-width: 520px;
+      padding: ${PARCHMENT_SPACING.xl} ${PARCHMENT_SPACING.lg};
       text-align: center;
-      color: ${P.light};
-      font-style: italic;
+      color: ${ARENA_TEXT.primary};
       font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+      font-size: ${PARCHMENT_TYPOGRAPHY.sizes.lg};
+      background: rgba(0, 0, 0, 0.28);
+      border: 1px solid ${ARENA_COLORS.goldDark};
+      border-radius: ${PARCHMENT_RADIUS.md};
+      box-shadow: inset 0 0 0 3px rgba(184, 149, 106, 0.12);
+    }
+
+    .coliseum-no-data-message::before {
+      content: '\\2694';
+      display: block;
+      font-size: 28px;
+      line-height: 1;
+      margin-bottom: ${PARCHMENT_SPACING.sm};
+      color: ${ARENA_COLORS.goldLight};
     }
 
     /* ...except inside parchment team panels, where muted text reads fine */
     .coliseum-team-panel .coliseum-no-data-message {
       color: ${P.text.muted};
+      background: none;
+      border: none;
+      box-shadow: none;
+      font-size: inherit;
+      margin: 0;
+      padding: ${PARCHMENT_SPACING.lg};
+    }
+
+    .coliseum-team-panel .coliseum-no-data-message::before {
+      content: none;
     }
 
     /* Match History Styles - Parchment themed */
@@ -1634,6 +1722,12 @@ export function getColiseumStyles() {
       .coliseum-header button {
         min-height: var(--touch-target, 44px);
         width: 100%;
+      }
+
+      .coliseum-player-rating {
+        margin-left: 0;
+        justify-content: center;
+        flex-wrap: wrap;
       }
 
       .coliseum-tabs {

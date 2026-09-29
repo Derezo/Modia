@@ -353,9 +353,53 @@ export class RegistrationWizard {
         padding: ${PARCHMENT_SPACING.xl};
       }
 
+      /* The shared 300px minimum left an empty band under Enter World */
+      .regwiz-content.regwiz-success {
+        min-height: 0;
+      }
+
+      /* Wax seal with flanking rules: drawn in SVG so it takes the parchment
+         palette instead of an OS emoji glyph. */
       .regwiz-success-icon {
-        font-size: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: ${PARCHMENT_SPACING.sm};
         margin-bottom: ${PARCHMENT_SPACING.md};
+      }
+
+      .regwiz-success-rule {
+        width: 64px;
+        height: 12px;
+      }
+
+      .regwiz-success-rule line {
+        stroke: ${P.border};
+        stroke-width: 1.5;
+      }
+
+      .regwiz-success-rule circle {
+        fill: ${P.accent.copper};
+      }
+
+      .regwiz-success-seal {
+        width: 72px;
+        height: 72px;
+        filter: drop-shadow(0 2px 3px ${P.shadow});
+      }
+
+      .regwiz-seal-wax {
+        fill: ${P.accent.burgundy};
+      }
+
+      .regwiz-seal-ring {
+        fill: none;
+        stroke: ${P.accent.copper};
+        stroke-width: 2;
+      }
+
+      .regwiz-seal-star {
+        fill: ${P.light};
       }
 
       .regwiz-success-title {
@@ -573,7 +617,19 @@ export class RegistrationWizard {
         </div>
 
         <div class="regwiz-content regwiz-success">
-          <div class="regwiz-success-icon">&#x1F389;</div>
+          <div class="regwiz-success-icon" aria-hidden="true">
+            <svg class="regwiz-success-rule" viewBox="0 0 64 12">
+              <line x1="0" y1="6" x2="56" y2="6"></line><circle cx="60" cy="6" r="3"></circle>
+            </svg>
+            <svg class="regwiz-success-seal" viewBox="0 0 72 72">
+              <path class="regwiz-seal-wax" d="M36 3 L42 8 L50 5 L53 13 L61 14 L61 22 L68 27 L64 34 L68 42 L61 47 L61 55 L53 56 L50 64 L42 61 L36 67 L30 61 L22 64 L19 56 L11 55 L11 47 L4 42 L8 34 L4 27 L11 22 L11 14 L19 13 L22 5 L30 8 Z"></path>
+              <circle class="regwiz-seal-ring" cx="36" cy="35" r="20"></circle>
+              <path class="regwiz-seal-star" d="M36 22 L39.5 31 L49 31 L41.5 37 L44.5 46.5 L36 41 L27.5 46.5 L30.5 37 L23 31 L32.5 31 Z"></path>
+            </svg>
+            <svg class="regwiz-success-rule" viewBox="0 0 64 12">
+              <circle cx="4" cy="6" r="3"></circle><line x1="8" y1="6" x2="64" y2="6"></line>
+            </svg>
+          </div>
           <h2 class="regwiz-success-title">Hello, ${escapeHtml(this.formData.characterName)}!</h2>
           <p class="regwiz-success-message">
             Your hero has been created and is ready to begin their adventure.<br>
@@ -803,14 +859,19 @@ export class RegistrationWizard {
     if (this.previewFetchAbort) {
       this.previewFetchAbort.abort();
     }
-    this.previewFetchAbort = new AbortController();
+    const controller = new AbortController();
+    this.previewFetchAbort = controller;
 
     try {
       const response = await this.game.api.getCharacterPreview(
         this.formData.race,
-        this.formData.characterClass
+        this.formData.characterClass,
+        { signal: controller.signal }
       );
 
+      // A newer selection superseded this request; its response must not
+      // overwrite the newer preview even if it resolved before the abort landed.
+      if (controller.signal.aborted || this.previewFetchAbort !== controller) return;
       if (!this.previewCard) return;
 
       const { stats, traits } = response;
@@ -845,8 +906,9 @@ export class RegistrationWizard {
       this.previewCard.setTraits(traitList);
 
     } catch (err) {
-      if (err.name === 'AbortError') return;
+      if (err.name === 'AbortError' || controller.signal.aborted) return;
       console.error('Failed to fetch character preview:', err);
+      if (!this.previewCard) return;
 
       // Fallback
       this.previewCard.setCharacter({

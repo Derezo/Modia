@@ -113,15 +113,23 @@ export class AuthScene extends Scene {
         document.head.appendChild(link);
       }
 
-      // Wait for the font to be ready
-      await document.fonts.ready;
-
-      // Check if the font actually loaded
-      const fontLoaded = document.fonts.check('700 16px "Cinzel Decorative"');
-      if (!fontLoaded) {
-        // Give it a bit more time
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
+      // Explicitly request the face and wait for it (bounded). fonts.ready
+      // alone resolved before the stylesheet had even declared the face, so
+      // the canvas title flashed in the fallback serif after logout.
+      const faceLoad = (async () => {
+        const link = document.getElementById('cinzel-decorative-font');
+        if (link && !link.sheet) {
+          await new Promise(resolve => {
+            link.addEventListener('load', resolve, { once: true });
+            link.addEventListener('error', resolve, { once: true });
+          });
+        }
+        await document.fonts.load('700 48px "Cinzel Decorative"');
+      })();
+      await Promise.race([
+        faceLoad,
+        new Promise(resolve => setTimeout(resolve, 2500))
+      ]);
 
       this.fontLoaded = true;
 
@@ -173,6 +181,14 @@ export class AuthScene extends Scene {
       .auth-container.visible {
         opacity: 1;
         transform: translate(-50%, -50%) scale(1);
+      }
+
+      /* Pinned at its top edge (see pinAuthContainer); no transform
+         transition, so the switch from centring is not animated. */
+      .auth-container.auth-container--pinned,
+      .auth-container.auth-container--pinned.visible {
+        transform: translate(-50%, 0) scale(1);
+        transition: opacity 0.5s ease;
       }
 
       /* Registration wizard: the tall step-2 panel starts below the canvas
@@ -251,6 +267,12 @@ export class AuthScene extends Scene {
         border-color: ${P.borderDark};
         box-shadow: 0 0 0 2px rgba(139, 115, 85, 0.3);
         outline: none;
+      }
+
+      .auth-input,
+      .auth-input::placeholder {
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        text-transform: none;
       }
 
       .auth-input::placeholder {
@@ -595,6 +617,13 @@ export class AuthScene extends Scene {
     });
   }
 
+  /** Drop the valid/invalid border tint from every field, keeping their values. */
+  clearValidityStyling() {
+    ['username', 'email', 'password', 'confirm-password'].forEach(field => {
+      document.getElementById(field)?.classList.remove('input-valid', 'input-invalid');
+    });
+  }
+
   validateField(fieldName) {
     const input = document.getElementById(fieldName);
     const errorEl = document.getElementById(`${fieldName}-error`);
@@ -758,6 +787,9 @@ export class AuthScene extends Scene {
         }
       }
     } catch (err) {
+      // A rejected submit must not leave green "valid" borders behind; that
+      // read as "these credentials are right" next to the error banner.
+      this.clearValidityStyling();
       this.showError(this.formatErrorMessage(err.message));
     } finally {
       this.loading = false;
@@ -783,6 +815,10 @@ export class AuthScene extends Scene {
 
   showError(message) {
     const errorEl = document.getElementById('auth-error');
+    // The panel is vertically centred, so a banner appearing inside it moved
+    // the whole panel up by half its height. Pin its current top first so
+    // the banner pushes content down instead.
+    this.pinAuthContainer();
     if (errorEl) {
       errorEl.textContent = message;
       errorEl.style.display = 'block';
@@ -790,6 +826,19 @@ export class AuthScene extends Scene {
       errorEl.offsetHeight; // Trigger reflow
       errorEl.style.animation = null;
     }
+  }
+
+  /**
+   * Fix the centred login container at its current top edge (once).
+   */
+  pinAuthContainer() {
+    const container = this.formElement;
+    if (!container || container.classList.contains('auth-container--wizard') ||
+        container.classList.contains('auth-container--pinned')) return;
+    const top = container.offsetTop - container.offsetHeight / 2;
+    if (!Number.isFinite(top)) return;
+    container.classList.add('auth-container--pinned');
+    container.style.top = `${Math.max(0, top)}px`;
   }
 
   updateLoadingState() {

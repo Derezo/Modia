@@ -2,6 +2,7 @@ import { getAssetPath, getNpcPortraitId, getOptimalSize } from '@shared/assetPat
 import { getParchmentTooltip } from '../ui/parchment/index.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
 import { installImageFallbackHandler } from '../utils/imageFallback.js';
+import { renderTraitIcon } from '../data/traitIcons.js';
 
 /**
  * ParchmentCard - Unified character/enemy card with classic RPG parchment styling
@@ -499,9 +500,25 @@ export class ParchmentCard {
         filter: brightness(1.05);
       }
 
+      /* Every trait icon on the same dark disc and size, so pale or small
+         art (Lucky Find) reads as clearly as Heavy Hitter */
       .pc-trait-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: rgba(61, 41, 20, 0.6);
         font-size: 12px;
         line-height: 1;
+      }
+
+      .pc-trait-icon img,
+      .pc-trait-icon .modia-icon {
+        width: 18px !important;
+        height: 18px !important;
       }
 
       .pc-trait-name {
@@ -554,7 +571,6 @@ export class ParchmentCard {
     }
     this.character = character;
     this.render();
-    this.attachTooltipListeners();
 
     // Store current values for future comparison
     this.lastKnownValues.hp = character?.hp ?? 0;
@@ -719,7 +735,7 @@ export class ParchmentCard {
         <div class="pc-traits">
           ${this.traits.map(t => `
             <div class="pc-trait-badge pc-trait-${t.type || 'starting'}" data-tooltip="${escapeHtml(t.description || '')}">
-              <span class="pc-trait-icon">${t.type === 'racial' ? '&#x1F9EC;' : '&#x2B50;'}</span>
+              <span class="pc-trait-icon" aria-hidden="true">${renderTraitIcon(t)}</span>
               <span class="pc-trait-name">${escapeHtml(t.name || 'Unknown')}</span>
             </div>
           `).join('')}
@@ -728,6 +744,8 @@ export class ParchmentCard {
     }
 
     this.element.innerHTML = html;
+    // innerHTML replaced the trait badges, so every render re-binds their tooltips
+    this.attachTooltipListeners();
   }
 
   show() {

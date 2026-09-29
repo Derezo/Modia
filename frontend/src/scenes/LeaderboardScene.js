@@ -907,7 +907,11 @@ export class LeaderboardScene extends Scene {
   }
 
   renderPlayerCell(entry) {
-    const username = escapeHtml(entry.username);
+    // Prefer the character name when the leaderboard API returns one; the
+    // account username stays available on hover.
+    const username = entry.characterName
+      ? `<span title="${escapeHtml(entry.username || '')}">${escapeHtml(entry.characterName)}</span>`
+      : escapeHtml(entry.username);
     let badges = '';
 
     // Perfect Week badge (star)

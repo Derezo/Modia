@@ -24,8 +24,8 @@
 import { ParchmentModal } from '../../ui/parchment/ParchmentModal.js';
 import { CharacterPicker } from '../CharacterPicker.js';
 import { parchmentToast } from '../../ui/parchment/ParchmentToast.js';
-import { Icon } from '../Icon.js';
 import { ItemIcon } from '../ItemIcon.js';
+import { renderAugmentLine, injectAugmentListStyles } from '../AugmentList.js';
 import {
   PARCHMENT_COLORS,
   PARCHMENT_SPACING,
@@ -36,11 +36,10 @@ import {
   formatStatName,
   formatStatAmount,
   formatAugmentEffect as formatAugmentEffectUtil,
-  describeAugment,
-  resolveAugmentIconName,
   normalizeRarity,
   sumItemStats,
   getItemRequirements,
+  getDisplayMaterial,
   RARITY_TEXT_COLORS
 } from '../../utils/statDisplay.js';
 import { escapeHtml } from '../../utils/escapeHtml.js';
@@ -178,6 +177,13 @@ export class ItemDetailModal {
         font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
       }
 
+      ${Object.entries(RARITY_COLORS).map(([key, color]) => `
+      .item-detail-badge--rarity.rarity-${key} {
+        color: ${color};
+        border-color: ${color};
+        background: color-mix(in srgb, ${color} 14%, ${PARCHMENT_COLORS.light});
+      }`).join('')}
+
       .item-detail-description {
         margin-bottom: ${PARCHMENT_SPACING.md};
         color: ${PARCHMENT_COLORS.text.secondary};
@@ -252,59 +258,19 @@ export class ItemDetailModal {
         color: ${PARCHMENT_COLORS.state.success};
       }
 
+      .item-detail-requirement-note {
+        margin-top: ${PARCHMENT_SPACING.xs};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
+        font-style: italic;
+        color: ${PARCHMENT_COLORS.state.error};
+      }
+
       .item-detail-requirement--unmet {
         color: ${PARCHMENT_COLORS.state.error};
         border-color: ${PARCHMENT_COLORS.state.error};
       }
 
-      .item-detail-augments {
-        display: flex;
-        flex-direction: column;
-        gap: ${PARCHMENT_SPACING.xs};
-      }
-
-      .item-detail-augment {
-        display: flex;
-        align-items: center;
-        gap: ${PARCHMENT_SPACING.sm};
-        padding: ${PARCHMENT_SPACING.xs};
-        background: ${PARCHMENT_COLORS.dark};
-        border-radius: ${PARCHMENT_RADIUS.sm};
-      }
-
-      .item-detail-augment-icon {
-        width: 20px;
-        height: 20px;
-      }
-
-      .item-detail-augment-text {
-        flex: 1;
-        min-width: 0;
-        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
-        color: ${PARCHMENT_COLORS.text.primary};
-      }
-
-      .item-detail-augment-name {
-        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
-        color: ${PARCHMENT_COLORS.text.secondary};
-      }
-
-      /* Informational: the stat is already summed into the Stats grid */
-      .item-detail-augment-stat {
-        color: ${PARCHMENT_COLORS.text.secondary};
-        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
-      }
-
-      .item-detail-augment--inactive .item-detail-augment-effect {
-        color: ${PARCHMENT_COLORS.text.muted};
-      }
-
-      .item-detail-augment-tag {
-        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
-        font-style: italic;
-        color: ${PARCHMENT_COLORS.text.muted};
-        white-space: nowrap;
-      }
+      /* Augment lines: see components/AugmentList.js */
 
       .item-detail-actions {
         margin-top: ${PARCHMENT_SPACING.md};
@@ -407,8 +373,8 @@ export class ItemDetailModal {
             <h3 class="item-detail-name rarity-${rarity}">${escapeHtml(item.name)}</h3>
             <div class="item-detail-badges">
               <span class="item-detail-badge item-detail-badge--type">${escapeHtml(item.type || '')}</span>
-              <span class="item-detail-badge item-detail-badge--rarity" style="color: ${RARITY_COLORS[rarity]}; border-color: ${RARITY_COLORS[rarity]};">${escapeHtml(rarity)}</span>
-              ${item.material ? `<span class="item-detail-badge item-detail-badge--type">${escapeHtml(item.material)}</span>` : ''}
+              <span class="item-detail-badge item-detail-badge--rarity rarity-${rarity}">${escapeHtml(rarity)}</span>
+              ${getDisplayMaterial(item) ? `<span class="item-detail-badge item-detail-badge--type">${escapeHtml(getDisplayMaterial(item))}</span>` : ''}
             </div>
           </div>
         </div>
@@ -505,21 +471,30 @@ export class ItemDetailModal {
     };
 
     const chips = [];
+    const unmetNotes = [];
     if (level > 0) {
       const met = characters.some(c => Number(c.level || 0) >= level);
       chips.push(`<span class="item-detail-requirement${stateClass(met)}" title="${met ? 'A party member meets this level' : 'No party member is high enough level'}">Level ${level}+</span>`);
+      if (!met && characters.length > 0) unmetNotes.push(`reach level ${level}`);
     }
     if (classes.length > 0) {
       const lower = classes.map(c => String(c).toLowerCase());
       const met = characters.some(c => lower.includes(String(c.class || c.className || '').toLowerCase()));
       const label = classes.map(c => formatStatName(String(c))).join(', ');
       chips.push(`<span class="item-detail-requirement${stateClass(met)}" title="${met ? 'A party member can use this' : 'No party member has this class'}">${escapeHtml(label)} only</span>`);
+      if (!met && characters.length > 0) unmetNotes.push(`be a ${label}`);
     }
+
+    // Colour alone did not say the item is unusable; spell it out.
+    const note = unmetNotes.length > 0
+      ? `<div class="item-detail-requirement-note">No one in your party can equip this yet: a character must ${escapeHtml(unmetNotes.join(' and '))}.</div>`
+      : '';
 
     return `
       <div class="item-detail-section">
         <div class="item-detail-section-title">Requirements</div>
         <div class="item-detail-requirements">${chips.join('')}</div>
+        ${note}
       </div>
     `;
   }
@@ -530,23 +505,8 @@ export class ItemDetailModal {
    * @returns {string} HTML
    */
   renderAugment(aug) {
-    const iconName = resolveAugmentIconName(aug);
-    const { name, effect, statText, active } = describeAugment(aug);
-    const inactive = typeof aug === 'object' && !active;
-
-    return `
-      <div class="item-detail-augment${inactive ? ' item-detail-augment--inactive' : ''}">
-        <span class="item-detail-augment-icon">
-          ${Icon.html('augments', iconName, { size: 'sm', title: name || effect }) || ''}
-        </span>
-        <span class="item-detail-augment-text">
-          ${name ? `<span class="item-detail-augment-name">${escapeHtml(name)}</span>${effect ? ': ' : ''}` : ''}
-          ${effect ? `<span class="item-detail-augment-effect">${escapeHtml(effect)}</span>` : ''}
-          ${statText ? ` <span class="item-detail-augment-stat" title="Already counted in Stats above">(${escapeHtml(statText)}, in stats)</span>` : ''}
-        </span>
-        ${inactive && effect ? '<span class="item-detail-augment-tag" title="This effect is shown for reference and is not yet applied in combat">not yet active</span>' : ''}
-      </div>
-    `;
+    injectAugmentListStyles();
+    return renderAugmentLine(aug);
   }
 
   /**
@@ -686,15 +646,30 @@ export class ItemDetailModal {
    */
   getValidTargetsFilter() {
     const item = this.item;
+    const effectType = item.effectType || item.effect_type || item.effect || null;
+    const name = item.name?.toLowerCase() || '';
 
-    // Healing items - only damaged characters
-    if (item.effect === 'heal' || item.name?.toLowerCase().includes('potion')) {
-      return (char) => char.currentHp < char.maxHp;
+    // Characters arrive either as raw /api/characters rows (hp_current/hp_max)
+    // or already camelCased; read whichever is present.
+    const hp = (c) => ({ cur: Number(c.currentHp ?? c.hp_current ?? 0), max: Number(c.maxHp ?? c.hp_max ?? 0) });
+    const mp = (c) => ({ cur: Number(c.currentMp ?? c.mp_current ?? 0), max: Number(c.maxMp ?? c.mp_max ?? 0) });
+    const alive = (c) => hp(c).cur > 0;
+    const hurtHp = (c) => { const h = hp(c); return h.cur < h.max; };
+    const lowMp = (c) => { const m = mp(c); return m.cur < m.max; };
+
+    if (effectType === 'revive') {
+      return (char) => !alive(char);
     }
-
-    // MP restoration - only characters with less than max MP
-    if (item.effect === 'restore_mp' || item.name?.toLowerCase().includes('ether')) {
-      return (char) => char.currentMp < char.maxMp;
+    if (effectType === 'heal_both') {
+      return (char) => alive(char) && (hurtHp(char) || lowMp(char));
+    }
+    if (effectType === 'heal_mp' || effectType === 'restore_mp' ||
+        (!effectType && (name.includes('ether') || name.includes('mana')))) {
+      return (char) => alive(char) && lowMp(char);
+    }
+    if (effectType === 'heal_hp' || effectType === 'heal' ||
+        (!effectType && name.includes('potion'))) {
+      return (char) => alive(char) && hurtHp(char);
     }
 
     // Default - all characters valid
@@ -747,11 +722,20 @@ export class ItemDetailModal {
    * @returns {string} Effect message
    */
   getEffectMessage(result) {
-    if (result.hpRestored) {
-      return `Restored ${result.hpRestored} HP`;
+    const effects = result?.effects || {};
+    const hpRestored = result?.hpRestored ?? effects.hp_restored;
+    const mpRestored = result?.mpRestored ?? effects.mp_restored;
+    if (effects.revived) {
+      return `Revived with ${hpRestored} HP`;
     }
-    if (result.mpRestored) {
-      return `Restored ${result.mpRestored} MP`;
+    if (hpRestored && mpRestored) {
+      return `Restored ${hpRestored} HP and ${mpRestored} MP`;
+    }
+    if (hpRestored) {
+      return `Restored ${hpRestored} HP`;
+    }
+    if (mpRestored) {
+      return `Restored ${mpRestored} MP`;
     }
     return `Used ${this.item.name}`;
   }

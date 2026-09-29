@@ -378,8 +378,16 @@ export class ApiClient {
    * @param {string} characterClass - Character class
    * @returns {Promise<{stats: Object, traits: {racial: Object, starting: Object}}>}
    */
-  getCharacterPreview(race, characterClass) {
-    return this.get(`/characters/preview?race=${encodeURIComponent(race)}&characterClass=${encodeURIComponent(characterClass)}`);
+  /**
+   * @param {string} race
+   * @param {string} characterClass
+   * @param {{ signal?: AbortSignal }} [options] - abort a superseded preview request
+   */
+  getCharacterPreview(race, characterClass, options = {}) {
+    return this.get(
+      `/characters/preview?race=${encodeURIComponent(race)}&characterClass=${encodeURIComponent(characterClass)}`,
+      { signal: options.signal }
+    );
   }
 
   deleteCharacter(id) {
@@ -1301,6 +1309,17 @@ export class ApiClient {
    */
   sendClanMessage(clanId, message) {
     return this.post(`/clans/${clanId}/messages`, { message });
+  }
+
+  /**
+   * Transfer clan leadership to another member (leader only).
+   * The previous leader becomes an officer.
+   * @param {number} clanId - Clan ID
+   * @param {number} userId - User ID of the member who becomes leader
+   * @returns {Promise<{success: boolean, message: string, newLeaderUsername: string}>}
+   */
+  transferClanLeadership(clanId, userId) {
+    return this.post(`/clans/${clanId}/transfer`, { userId });
   }
 
   // Coliseum / PvP endpoints
