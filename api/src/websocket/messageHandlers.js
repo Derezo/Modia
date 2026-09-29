@@ -22,7 +22,13 @@ import presenceService from '../services/presenceService.js';
 import { isBlocked } from '../services/friendService.js';
 import coliseumService from '../services/coliseumService.js';
 import { submitFormation } from '../services/coliseum/matchLifecycle.js';
-import { handleSurrender as coliseumHandleSurrender } from '../services/coliseum/turnTimer.js';
+import {
+  handleSurrender as coliseumHandleSurrender,
+  handlePlayerReconnect as coliseumHandlePlayerReconnect
+} from '../services/coliseum/turnTimer.js';
+import { disconnectTracking } from '../services/coliseum/constants.js';
+import { recordReconnection } from '../services/ratingService.js';
+import { cancelDisconnect as cancelBattleDisconnect } from '../services/battleReconnection.js';
 // Note: partyWebsocket is no longer imported here - party invites are handled via REST API
 import adminGenerationService from '../services/adminGenerationService.js';
 import audioGenerationService from '../services/adminAudioGenerationService.js';
@@ -669,6 +675,25 @@ async function handleJoinBattle(ws, userId, payload) {
       type: 'battle_room_joined',
       payload: joinedPayload
     }));
+
+    // Cancel any pending disconnect abandon timeout for ALL battle types.
+    // This prevents the 30s abandon timer from firing after a WS blip/reconnect.
+    cancelBattleDisconnect(numericBattleId, userId);
+
+    // For pvp_coliseum battles, also handle coliseum-specific reconnect tracking
+    if (syncState.battle?.battleType === 'pvp_coliseum') {
+      const battleTracking = disconnectTracking.get(numericBattleId);
+      const playerTracking = battleTracking?.[userId];
+      if (playerTracking && !playerTracking.reconnected) {
+        coliseumHandlePlayerReconnect(numericBattleId, userId);
+        // Record reconnection in rating system
+        if (playerTracking.disconnectId) {
+          recordReconnection(playerTracking.disconnectId).catch(err => {
+            console.error('Failed to record reconnection:', err);
+          });
+        }
+      }
+    }
   } catch (err) {
     console.error('Join battle room error:', err);
     ws.send(JSON.stringify({

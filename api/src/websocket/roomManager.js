@@ -149,6 +149,11 @@ async function validateRoomAccess(userId, roomName) {
     return { authorized: true };
   }
 
+  // Tavern and SocialHub global rooms are allowed for all authenticated users
+  if (roomName === 'tavern' || roomName === 'socialHub') {
+    return { authorized: true };
+  }
+
   // Garrison rooms: verify user's character is at that node
   if (roomName.startsWith('garrison:')) {
     const nodeId = parseInt(roomName.split(':')[1], 10);
@@ -281,11 +286,25 @@ function getConnection(userId) {
 }
 
 /**
- * Remove a user's WebSocket connection
+ * Remove a user's WebSocket connection (compare-and-delete)
+ * Only removes if the stored connection matches the provided ws.
  * @param {number} userId - User ID
+ * @param {WebSocket|null} ws - Optional WebSocket to compare against
+ * @returns {boolean} True if connection was removed, false if it didn't match
  */
-function removeConnection(userId) {
-  connections.delete(userId);
+function removeConnection(userId, ws = null) {
+  if (ws === null) {
+    // Legacy unconditional delete (kept for backwards compatibility)
+    connections.delete(userId);
+    return true;
+  }
+  // Compare-and-delete: only remove if the stored connection is this socket
+  const stored = connections.get(userId);
+  if (stored === ws) {
+    connections.delete(userId);
+    return true;
+  }
+  return false;
 }
 
 /**
@@ -362,7 +381,7 @@ function broadcastPresenceChange(userId, username, status, customMessage = null)
     timestamp: Date.now()
   };
 
-  // Broadcast to tavern room (always, for the social hub)
+  // Broadcast to tavern room (for players in tavern)
   if (rooms.has('tavern')) {
     broadcastToRoom('tavern', {
       type: 'presence_changed',
@@ -370,8 +389,17 @@ function broadcastPresenceChange(userId, username, status, customMessage = null)
     }, userId);
   }
 
-  // Broadcast to global room if user is in it
-  if (rooms.has('global') && rooms.get('global').has(userId)) {
+  // Broadcast to socialHub room (for the SocialHub Friends tab)
+  if (rooms.has('socialHub')) {
+    broadcastToRoom('socialHub', {
+      type: 'presence_changed',
+      payload
+    }, userId);
+  }
+
+  // Broadcast to global room - unconditionally so connect/disconnect reaches all
+  // users in global chat, not just when the changing user happens to be in global
+  if (rooms.has('global')) {
     broadcastToRoom('global', {
       type: 'presence_changed',
       payload

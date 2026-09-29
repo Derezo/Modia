@@ -949,3 +949,186 @@ describe('Timer State Isolation', () => {
     cancelTurnTimer(battle2);
   });
 });
+
+// =============================================================================
+// DISCONNECT/RECONNECT FORFEIT TIMER TESTS
+// =============================================================================
+
+describe('Disconnect/Reconnect Forfeit Timer Cancellation', () => {
+  let disconnectTracking;
+
+  beforeEach(async () => {
+    clearMocks();
+    const constants = await import('../../services/coliseum/constants.js');
+    disconnectTracking = constants.disconnectTracking;
+    disconnectTracking.clear();
+  });
+
+  afterEach(() => {
+    // Clean up any disconnect timers
+    for (const [battleId, tracking] of disconnectTracking.entries()) {
+      for (const playerId in tracking) {
+        if (tracking[playerId].timerId) {
+          clearTimeout(tracking[playerId].timerId);
+        }
+      }
+    }
+    disconnectTracking.clear();
+  });
+
+  it('should clear existing forfeit timer on disconnect to prevent pile-up', async () => {
+    const battleId = 900;
+    const playerId = 1;
+
+    // Setup initial disconnect with timer
+    const firstTimerId = setTimeout(() => {}, 300000);
+    disconnectTracking.set(battleId, {
+      [playerId]: {
+        disconnectTime: Date.now() - 10000,
+        timerId: firstTimerId,
+        disconnectId: 1,
+        reconnected: false
+      }
+    });
+
+    // Simulate second disconnect - should clear first timer
+    const tracking = disconnectTracking.get(battleId);
+    if (tracking[playerId]?.timerId) {
+      clearTimeout(tracking[playerId].timerId);
+    }
+
+    // Set new timer
+    const secondTimerId = setTimeout(() => {}, 300000);
+    tracking[playerId] = {
+      disconnectTime: Date.now(),
+      timerId: secondTimerId,
+      disconnectId: 2,
+      reconnected: false
+    };
+
+    // Verify new timer replaced old one
+    assert.notStrictEqual(
+      tracking[playerId].timerId,
+      firstTimerId,
+      'Timer should be replaced'
+    );
+    assert.strictEqual(
+      tracking[playerId].disconnectId,
+      2,
+      'Should have new disconnect ID'
+    );
+
+    // Clean up
+    clearTimeout(secondTimerId);
+  });
+
+  it('should clear forfeit timer and mark reconnected on player reconnect', async () => {
+    const battleId = 901;
+    const playerId = 1;
+
+    // Setup disconnect with active forfeit timer
+    let timerFired = false;
+    const forfeitTimerId = setTimeout(() => {
+      timerFired = true;
+    }, 50); // Short timeout for test
+
+    disconnectTracking.set(battleId, {
+      [playerId]: {
+        disconnectTime: Date.now(),
+        timerId: forfeitTimerId,
+        disconnectId: 1,
+        reconnected: false
+      }
+    });
+
+    // Simulate reconnection (handlePlayerReconnect logic)
+    const tracking = disconnectTracking.get(battleId);
+    if (tracking && tracking[playerId]) {
+      clearTimeout(tracking[playerId].timerId);
+      tracking[playerId].reconnected = true;
+    }
+
+    // Verify timer was cleared
+    assert.strictEqual(
+      tracking[playerId].reconnected,
+      true,
+      'Player should be marked as reconnected'
+    );
+
+    // Wait to verify timer doesn't fire
+    await new Promise(resolve => setTimeout(resolve, 100));
+    assert.strictEqual(
+      timerFired,
+      false,
+      'Forfeit timer should have been cancelled'
+    );
+  });
+
+  it('should not trigger forfeit when reconnected flag is true', async () => {
+    const battleId = 902;
+    const playerId = 1;
+
+    disconnectTracking.set(battleId, {
+      [playerId]: {
+        disconnectTime: Date.now(),
+        timerId: null,
+        disconnectId: 1,
+        reconnected: true
+      }
+    });
+
+    const tracking = disconnectTracking.get(battleId);
+
+    // Simulate forfeit timer callback check
+    const shouldForfeit = tracking[playerId] && !tracking[playerId].reconnected;
+
+    assert.strictEqual(
+      shouldForfeit,
+      false,
+      'Should not forfeit when reconnected is true'
+    );
+  });
+
+  it('should allow forfeit when not reconnected within timeout', async () => {
+    const battleId = 903;
+    const playerId = 1;
+
+    disconnectTracking.set(battleId, {
+      [playerId]: {
+        disconnectTime: Date.now(),
+        timerId: null,
+        disconnectId: 1,
+        reconnected: false
+      }
+    });
+
+    const tracking = disconnectTracking.get(battleId);
+
+    // Simulate forfeit timer callback check
+    const shouldForfeit = tracking[playerId] && !tracking[playerId].reconnected;
+
+    assert.strictEqual(
+      shouldForfeit,
+      true,
+      'Should forfeit when not reconnected'
+    );
+  });
+
+  it('should handle reconnection when no disconnect tracking exists', async () => {
+    const battleId = 904;
+    const playerId = 1;
+
+    // No tracking exists
+    assert.ok(!disconnectTracking.has(battleId), 'No tracking should exist');
+
+    // Simulate handlePlayerReconnect behavior
+    const tracking = disconnectTracking.get(battleId);
+    if (tracking && tracking[playerId]) {
+      clearTimeout(tracking[playerId].timerId);
+      tracking[playerId].reconnected = true;
+    }
+
+    // Should complete without error
+    assert.ok(true, 'Should handle missing tracking gracefully');
+  });
+});

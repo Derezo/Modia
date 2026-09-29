@@ -400,15 +400,41 @@ export function handlePlayerDisconnect(battleId, playerId) {
 
     const tracking = disconnectTracking.get(battleId);
 
+    // Clear any existing timer for this player to prevent pile-up
+    if (tracking[playerId]?.timerId) {
+      clearTimeout(tracking[playerId].timerId);
+    }
+
     // Set forfeit timer
     const timerId = setTimeout(async () => {
-      if (tracking[playerId] && !tracking[playerId].reconnected) {
-        // Check if they can use weekly grace
-        const usedGrace = await checkAndUseWeeklyGrace(playerId);
-        if (usedGrace) {
-          await forgiveDisconnect(disconnect.id);
+      try {
+        if (tracking[playerId] && !tracking[playerId].reconnected) {
+          // Reload battle to verify it's still active before forfeiting
+          let battle;
+          try {
+            battle = await battleStateRepository.loadBattle(battleId, {
+              requireActive: true
+            });
+          } catch (error) {
+            if (error?.code === 'BATTLE_NOT_FOUND'
+              || error?.code === 'BATTLE_LIFECYCLE_CONFLICT'
+              || error?.code === 'COLISEUM_BATTLE_ALREADY_TERMINAL') {
+              // Battle already ended, nothing to do
+              return;
+            }
+            throw error;
+          }
+          if (!battle) return;
+
+          // Check if they can use weekly grace
+          const usedGrace = await checkAndUseWeeklyGrace(playerId);
+          if (usedGrace) {
+            await forgiveDisconnect(disconnect.id);
+          }
+          await endMatchByForfeit(battleId, playerId, 'disconnect_forfeit', !usedGrace);
         }
-        await endMatchByForfeit(battleId, playerId, 'disconnect_forfeit', !usedGrace);
+      } catch (err) {
+        console.error(`Failed to handle disconnect forfeit for battle ${battleId}:`, err);
       }
     }, DISCONNECT_FORFEIT_TIME);
 
@@ -430,7 +456,7 @@ export function handlePlayerDisconnect(battleId, playerId) {
         }
       });
     }).catch(err => console.error('Failed to notify disconnect:', err));
-  });
+  }).catch(err => console.error('Failed to record disconnect event:', err));
 }
 
 /**

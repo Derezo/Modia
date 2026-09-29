@@ -46,6 +46,36 @@ export function normalizeQueuedBattleMapCapabilities(capabilities) {
 }
 
 /**
+ * Re-queue a player at the front of the queue with their original queue entry.
+ * Removes any existing entry for the same user to prevent duplicates.
+ * @param {string} queueType - Queue type
+ * @param {Object} entry - Original queue entry with userId, username, partyLevel, ppr, partySize, queuedAt, battleMapCapabilities
+ */
+export function requeuePlayer(queueType, entry) {
+  if (!entry || !entry.userId) return;
+
+  // Get or create the queue
+  if (!matchmakingQueues.has(queueType)) {
+    matchmakingQueues.set(queueType, []);
+  }
+  const queue = matchmakingQueues.get(queueType);
+
+  // Remove any existing entry for this user to prevent duplicates
+  const existingIndex = queue.findIndex(p => p.userId === entry.userId);
+  if (existingIndex >= 0) {
+    queue.splice(existingIndex, 1);
+  }
+
+  // Re-queue at front with original entry data (preserves queuedAt, partySize, capabilities)
+  queue.unshift({ ...entry });
+
+  // Schedule matchmaking check (async, fire and forget)
+  Promise.resolve().then(() => tryMatchmaking(queueType)).catch(err => {
+    console.error('Failed to run matchmaking after requeue:', err);
+  });
+}
+
+/**
  * Check if two players are matchable based on PPR
  * @param {Object} player1 - First player queue entry
  * @param {Object} player2 - Second player queue entry
@@ -350,26 +380,24 @@ export async function cleanupPlayer(userId) {
         const opponentId = match.player1.userId === userId
           ? match.player2.userId
           : match.player1.userId;
+        const opponent = match.player1.userId === userId ? match.player2 : match.player1;
 
-        // Send match_cancelled directly
+        // Send match_cancelled with requeued flag
         const opponentWs = ws.connections?.get(opponentId);
         if (opponentWs && opponentWs.readyState === 1) {
           opponentWs.send(JSON.stringify({
             type: 'coliseum:match_cancelled',
-            payload: { matchId, reason: 'Opponent disconnected' }
+            payload: {
+              matchId,
+              reason: 'Opponent disconnected',
+              requeued: true,
+              queueType: match.queueType
+            }
           }));
         }
 
-        // Re-queue opponent (preserve PPR)
-        const queue = matchmakingQueues.get(match.queueType) || [];
-        const opponent = match.player1.userId === userId ? match.player2 : match.player1;
-        queue.unshift({
-          userId: opponent.userId,
-          username: opponent.username,
-          partyLevel: opponent.partyLevel,
-          ppr: opponent.ppr,
-          queuedAt: Date.now()
-        });
+        // Re-queue opponent using original queue entry (preserves queuedAt, partySize, capabilities)
+        requeuePlayer(match.queueType, opponent.queueEntry);
 
         activeMatches.delete(matchId);
       } else if (match.status === 'started' && match.battleId) {

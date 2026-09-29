@@ -71,6 +71,39 @@ import { buildEquipmentStatsLateral } from '../equipmentStats.js';
 setCompleteMatchFn(completeMatch);
 
 /**
+ * Re-queue a player at the front of the queue with their original queue entry.
+ * Uses dynamic import to avoid circular dependency with matchmaking.js.
+ * @param {string} queueType - Queue type
+ * @param {Object} entry - Original queue entry
+ */
+async function requeuePlayer(queueType, entry) {
+  if (!entry || !entry.userId) return;
+
+  // Get or create the queue
+  if (!matchmakingQueues.has(queueType)) {
+    matchmakingQueues.set(queueType, []);
+  }
+  const queue = matchmakingQueues.get(queueType);
+
+  // Remove any existing entry for this user to prevent duplicates
+  const existingIndex = queue.findIndex(p => p.userId === entry.userId);
+  if (existingIndex >= 0) {
+    queue.splice(existingIndex, 1);
+  }
+
+  // Re-queue at front with original entry data (preserves queuedAt, partySize, capabilities)
+  queue.unshift({ ...entry });
+
+  // Use dynamic import to avoid circular dependency
+  try {
+    const matchmaking = await import('./matchmaking.js');
+    await matchmaking.tryMatchmaking(queueType);
+  } catch (err) {
+    console.error('Failed to run matchmaking after requeue:', err);
+  }
+}
+
+/**
  * Create a match from two matched players
  * @param {string} queueType - Queue type
  * @param {Object} player1 - First player queue entry
@@ -90,7 +123,9 @@ export async function createMatch(queueType, player1, player2) {
       partyLevel: player1.partyLevel,
       ppr: player1.ppr,
       battleMapCapabilities: player1.battleMapCapabilities ?? null,
-      ready: false
+      ready: false,
+      // Store original queue entry for proper requeue on cancel
+      queueEntry: { ...player1 }
     },
     player2: {
       userId: player2.userId,
@@ -98,7 +133,9 @@ export async function createMatch(queueType, player1, player2) {
       partyLevel: player2.partyLevel,
       ppr: player2.ppr,
       battleMapCapabilities: player2.battleMapCapabilities ?? null,
-      ready: false
+      ready: false,
+      // Store original queue entry for proper requeue on cancel
+      queueEntry: { ...player2 }
     },
     status: 'pending',
     createdAt,
@@ -513,28 +550,23 @@ function checkMatchReady(matchId) {
   if (!match.player1.ready) notReadyUsers.push(match.player1);
   if (!match.player2.ready) notReadyUsers.push(match.player2);
 
-  getWebsocket().then(ws => {
+  getWebsocket().then(async (ws) => {
     // Notify and return ready player to queue
     if (match.player1.ready && !match.player2.ready) {
       const player1Ws = ws.connections?.get(match.player1.userId);
       if (player1Ws && player1Ws.readyState === 1) {
         player1Ws.send(JSON.stringify({
           type: 'coliseum:match_cancelled',
-          payload: { matchId, reason: 'Opponent did not ready' }
+          payload: {
+            matchId,
+            reason: 'Opponent did not ready',
+            requeued: true,
+            queueType: match.queueType
+          }
         }));
       }
-      // Re-queue ready player at front (preserve PPR)
-      const queue = matchmakingQueues.get(match.queueType) || [];
-      queue.unshift({
-        userId: match.player1.userId,
-        username: match.player1.username,
-        partyLevel: match.player1.partyLevel,
-        ppr: match.player1.ppr,
-        queuedAt: Date.now()
-      });
-      if (!matchmakingQueues.has(match.queueType)) {
-        matchmakingQueues.set(match.queueType, queue);
-      }
+      // Re-queue ready player at front using original queue entry
+      await requeuePlayer(match.queueType, match.player1.queueEntry);
     }
 
     if (match.player2.ready && !match.player1.ready) {
@@ -542,29 +574,29 @@ function checkMatchReady(matchId) {
       if (player2Ws && player2Ws.readyState === 1) {
         player2Ws.send(JSON.stringify({
           type: 'coliseum:match_cancelled',
-          payload: { matchId, reason: 'Opponent did not ready' }
+          payload: {
+            matchId,
+            reason: 'Opponent did not ready',
+            requeued: true,
+            queueType: match.queueType
+          }
         }));
       }
-      const queue = matchmakingQueues.get(match.queueType) || [];
-      queue.unshift({
-        userId: match.player2.userId,
-        username: match.player2.username,
-        partyLevel: match.player2.partyLevel,
-        ppr: match.player2.ppr,
-        queuedAt: Date.now()
-      });
-      if (!matchmakingQueues.has(match.queueType)) {
-        matchmakingQueues.set(match.queueType, queue);
-      }
+      // Re-queue ready player at front using original queue entry
+      await requeuePlayer(match.queueType, match.player2.queueEntry);
     }
 
-    // Notify non-ready players
+    // Notify non-ready players (not requeued)
     for (const user of notReadyUsers) {
       const userWs = ws.connections?.get(user.userId);
       if (userWs && userWs.readyState === 1) {
         userWs.send(JSON.stringify({
           type: 'coliseum:match_cancelled',
-          payload: { matchId, reason: 'Failed to ready in time' }
+          payload: {
+            matchId,
+            reason: 'Failed to ready in time',
+            requeued: false
+          }
         }));
       }
     }

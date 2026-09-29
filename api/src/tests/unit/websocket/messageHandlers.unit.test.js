@@ -19,7 +19,6 @@ import { MockWebSocketClient } from '../../testUtils/wsTestHelper.js';
 let mockCalls;
 let mockVerifyOwnership;
 let mockSaveMessage;
-let mockSendInvite;
 let mockIsUserInRoom;
 let mockBroadcastToRoom;
 
@@ -31,7 +30,6 @@ function resetMocks() {
   mockCalls = {
     verifyCharacterOwnership: [],
     saveMessage: [],
-    sendInvite: [],
     isUserInRoom: [],
     broadcastToRoom: []
   };
@@ -203,60 +201,6 @@ async function testHandlePrivateMessage(ws, userId, username, payload, options =
   }
 }
 
-/**
- * Simulated handlePartyInvite that tests the ownership verification logic
- */
-async function testHandlePartyInvite(ws, userId, username, payload, options = {}) {
-  const {
-    verifyOwnership = mockVerifyOwnership,
-    sendInvite = mockSendInvite
-  } = options;
-
-  if (!userId) return;
-
-  try {
-    const { targetUserId, characterId } = payload;
-    if (!targetUserId) {
-      ws.send(JSON.stringify({
-        type: 'error',
-        payload: { message: 'Target user required' }
-      }));
-      return;
-    }
-
-    // Verify the user owns this character
-    if (characterId) {
-      const ownsCharacter = await verifyOwnership(characterId, userId);
-      mockCalls.verifyCharacterOwnership.push({ characterId, userId });
-
-      if (!ownsCharacter) {
-        ws.send(JSON.stringify({
-          type: 'error',
-          payload: { message: 'Invalid character' }
-        }));
-        return;
-      }
-    }
-
-    const result = await sendInvite(userId, username, targetUserId, characterId);
-    mockCalls.sendInvite.push({ userId, username, targetUserId, characterId });
-
-    if (result.success) {
-      ws.send(JSON.stringify({
-        type: 'party:invite_sent',
-        payload: { inviteId: result.inviteId, targetUserId }
-      }));
-    } else {
-      ws.send(JSON.stringify({
-        type: 'error',
-        payload: { message: result.error }
-      }));
-    }
-  } catch (err) {
-    console.error('Party invite error:', err);
-  }
-}
-
 // =============================================================================
 // TESTS
 // =============================================================================
@@ -272,7 +216,6 @@ describe('messageHandlers - Character Ownership Verification', () => {
       ...data,
       created_at: new Date().toISOString()
     });
-    mockSendInvite = async () => ({ success: true, inviteId: 1 });
     mockIsUserInRoom = () => true;
     mockBroadcastToRoom = () => {};
   });
@@ -443,82 +386,9 @@ describe('messageHandlers - Character Ownership Verification', () => {
     });
   });
 
-  // =========================================================================
-  // handlePartyInvite tests
-  // =========================================================================
-
-  describe('handlePartyInvite', () => {
-    it('should allow party invite with owned character', async () => {
-      const ws = new MockWebSocketClient(1, 'testuser');
-      const userId = 1;
-      const username = 'testuser';
-      const payload = {
-        targetUserId: 2,
-        characterId: 100
-      };
-
-      mockVerifyOwnership = async () => true;
-
-      await testHandlePartyInvite(ws, userId, username, payload);
-
-      // Ownership checked
-      assert.strictEqual(mockCalls.verifyCharacterOwnership.length, 1);
-
-      // Invite sent
-      assert.strictEqual(mockCalls.sendInvite.length, 1);
-
-      // Success message
-      const sent = ws.getSentByType('party:invite_sent');
-      assert.strictEqual(sent.length, 1);
-    });
-
-    it('should reject party invite with unowned character', async () => {
-      const ws = new MockWebSocketClient(1, 'testuser');
-      const userId = 1;
-      const username = 'testuser';
-      const payload = {
-        targetUserId: 2,
-        characterId: 999 // Not owned
-      };
-
-      mockVerifyOwnership = async () => false;
-
-      await testHandlePartyInvite(ws, userId, username, payload);
-
-      // Ownership checked
-      assert.strictEqual(mockCalls.verifyCharacterOwnership.length, 1);
-
-      // Invite NOT sent
-      assert.strictEqual(mockCalls.sendInvite.length, 0);
-
-      // Error sent
-      const errors = ws.getSentByType('error');
-      assert.strictEqual(errors.length, 1);
-      assert.strictEqual(errors[0].payload.message, 'Invalid character');
-    });
-
-    it('should allow party invite without characterId', async () => {
-      const ws = new MockWebSocketClient(1, 'testuser');
-      const userId = 1;
-      const username = 'testuser';
-      const payload = {
-        targetUserId: 2
-        // No characterId
-      };
-
-      await testHandlePartyInvite(ws, userId, username, payload);
-
-      // Ownership NOT checked (no characterId)
-      assert.strictEqual(mockCalls.verifyCharacterOwnership.length, 0);
-
-      // Invite sent
-      assert.strictEqual(mockCalls.sendInvite.length, 1);
-
-      // Success message
-      const sent = ws.getSentByType('party:invite_sent');
-      assert.strictEqual(sent.length, 1);
-    });
-  });
+  // NOTE: handlePartyInvite tests removed - party invites are now handled via REST API
+  // (POST /api/party/multiplayer/:partyId/invite). See Module Structure tests for verification
+  // that the WebSocket handlers are no longer exported.
 });
 
 // =============================================================================

@@ -17,6 +17,21 @@ export class GameWebSocket {
     this.reconnecting = false;
     this.connectionId = null;
 
+    // Track joined rooms for replay after reconnect
+    this.rooms = new Set();
+
+    // Track node room separately (only one at a time, keyed by nodeId)
+    this.nodeRoom = null;
+
+    // Track marketplace item subscriptions for replay
+    this.itemSubscriptions = new Set();
+
+    // Session replacement flag - prevents reconnect loops
+    this.sessionReplaced = false;
+
+    // Track if we've successfully authenticated before (for reconnect detection)
+    this.hasAuthenticatedOnce = false;
+
     // Initialize reliability manager
     this.reliabilityManager = new MessageReliabilityManager((msg) => {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
@@ -65,7 +80,8 @@ export class GameWebSocket {
 
       this.ws.onopen = () => {
         console.log('WebSocket connected with connectionId:', this.connectionId);
-        this.reconnectAttempts = 0;
+        // Note: reconnectAttempts is reset only on auth_success, not here.
+        // This prevents infinite reconnect loops if the server accepts the socket but then drops it.
         this.connected = true;
         this.reconnecting = false;
 
@@ -99,6 +115,44 @@ export class GameWebSocket {
             return;
           }
 
+          // Handle session_replaced - mark session as replaced to prevent reconnect loop
+          if (message.type === 'session_replaced') {
+            console.warn('Session replaced by another connection');
+            this.sessionReplaced = true;
+            this.handleMessage('session_replaced', message.payload);
+            return;
+          }
+
+          // Handle STALE_CONNECTION error - also marks session as replaced
+          if (message.type === 'error' && message.payload?.code === 'STALE_CONNECTION') {
+            console.warn('Connection superseded by newer session');
+            this.sessionReplaced = true;
+            this.handleMessage('session_replaced', message.payload);
+            return;
+          }
+
+          // Handle auth_success - reset reconnect attempts and dispatch connect on reconnect
+          if (message.type === 'auth_success') {
+            this.reconnectAttempts = 0;
+            const isReconnect = this.hasAuthenticatedOnce;
+            this.hasAuthenticatedOnce = true;
+
+            // Route auth_success to handlers first
+            this.handleMessage('auth_success', message.payload);
+
+            // On reconnect, dispatch 'connect' event and replay rooms
+            if (isReconnect) {
+              console.log('Reconnected - dispatching connect event and replaying rooms');
+              this.handleMessage('connect', message.payload);
+
+              // Replay non-battle rooms after a short delay to let battle rejoin go first
+              setTimeout(() => {
+                this.replayRooms();
+              }, 100);
+            }
+            return;
+          }
+
           // Process through reliability manager for ACK handling and deduplication
           const processedMessage = this.reliabilityManager.handleMessage(message);
           if (!processedMessage) {
@@ -116,8 +170,8 @@ export class GameWebSocket {
         }
       };
 
-      this.ws.onclose = () => {
-        console.log('WebSocket disconnected');
+      this.ws.onclose = (event) => {
+        console.log('WebSocket disconnected', event.code, event.reason);
         this.connected = false;
 
         // Update connection quality state
@@ -125,6 +179,23 @@ export class GameWebSocket {
 
         // Stop heartbeat monitoring
         this.heartbeatManager.stop();
+
+        // Dispatch disconnect event so BattleWebSocketManager and others can react
+        this.handleMessage('disconnect', { code: event.code, reason: event.reason });
+
+        // Don't reconnect if session was replaced (prevents infinite loop with multiple tabs)
+        if (this.sessionReplaced) {
+          console.log('Session was replaced - not reconnecting');
+          return;
+        }
+
+        // Also check close reason for session replacement (fallback)
+        if (event.reason === 'Session replaced by new connection' ||
+            event.reason === 'Connection superseded') {
+          console.log('Session replaced by close reason - not reconnecting');
+          this.sessionReplaced = true;
+          return;
+        }
 
         this.attemptReconnect();
       };
@@ -258,6 +329,12 @@ export class GameWebSocket {
   }
 
   send(type, payload = {}) {
+    // Guard: type must be a string
+    if (typeof type !== 'string') {
+      console.warn('WebSocket send called with non-string type:', type);
+      return;
+    }
+
     const outgoingPayload = type === 'coliseum_queue_join'
       && !Object.hasOwn(payload ?? {}, 'battleMapCapabilities')
       ? {
@@ -295,6 +372,11 @@ export class GameWebSocket {
     this.reconnecting = false;
     this.token = null;
     this.connectionId = null;
+    this.rooms.clear();
+    this.nodeRoom = null;
+    this.itemSubscriptions.clear();
+    this.sessionReplaced = false;
+    this.hasAuthenticatedOnce = false;
   }
 
   /**
@@ -340,11 +422,38 @@ export class GameWebSocket {
 
   // Convenience methods
   joinRoom(room) {
+    this.rooms.add(room);
     this.send('join_room', { room });
   }
 
   leaveRoom(room) {
+    this.rooms.delete(room);
     this.send('leave_room', { room });
+  }
+
+  /**
+   * Replay tracked rooms after reconnection.
+   * Battle rooms are handled separately by BattleWebSocketManager.
+   */
+  replayRooms() {
+    for (const room of this.rooms) {
+      // Skip battle rooms - BattleWebSocketManager handles those
+      if (room.startsWith('battle:')) continue;
+      console.log('Replaying room join:', room);
+      this.send('join_room', { room });
+    }
+
+    // Replay node room if we were in one
+    if (this.nodeRoom !== null) {
+      console.log('Replaying node room join:', this.nodeRoom);
+      this.send('join_node', { nodeId: this.nodeRoom });
+    }
+
+    // Replay marketplace item subscriptions
+    for (const itemTemplateId of this.itemSubscriptions) {
+      console.log('Replaying marketplace item subscription:', itemTemplateId);
+      this.send('marketplace_subscribe', { itemTemplateId });
+    }
   }
 
   sendChatMessage(room, message, characterId = null) {
@@ -409,17 +518,8 @@ export class GameWebSocket {
   }
 
   // Party methods
-  sendPartyInvite(targetUserId, characterId) {
-    this.send('party_invite', { targetUserId, characterId });
-  }
-
-  acceptPartyInvite(inviteId) {
-    this.send('party_invite_accept', { inviteId });
-  }
-
-  declinePartyInvite(inviteId) {
-    this.send('party_invite_decline', { inviteId });
-  }
+  // Note: Party invites now use REST API (POST /api/party/multiplayer/:partyId/invite)
+  // sendPartyInvite, acceptPartyInvite, declinePartyInvite have been removed
 
   leaveParty() {
     this.send('party_leave', {});
@@ -430,11 +530,24 @@ export class GameWebSocket {
   }
 
   // Node presence methods
+
+  /**
+   * Join a node room for presence updates.
+   * Tracked for reconnection replay.
+   */
   joinNodeRoom(nodeId) {
+    this.nodeRoom = nodeId;
     this.send('join_node', { nodeId });
   }
 
+  /**
+   * Leave a node room.
+   * Clears reconnection tracking.
+   */
   leaveNodeRoom(nodeId) {
+    if (this.nodeRoom === nodeId) {
+      this.nodeRoom = null;
+    }
     this.send('leave_node', { nodeId });
   }
 
@@ -464,30 +577,36 @@ export class GameWebSocket {
   // Marketplace methods
 
   /**
-   * Join the marketplace room for general updates
+   * Join the marketplace room for general updates.
+   * Routes through joinRoom for reconnection replay tracking.
    */
   joinMarketplace() {
-    this.send('join_room', { room: 'marketplace' });
+    this.joinRoom('marketplace');
   }
 
   /**
-   * Leave the marketplace room
+   * Leave the marketplace room.
+   * Routes through leaveRoom for reconnection tracking.
    */
   leaveMarketplace() {
-    this.send('leave_room', { room: 'marketplace' });
+    this.leaveRoom('marketplace');
   }
 
   /**
-   * Subscribe to a specific item's order book updates
+   * Subscribe to a specific item's order book updates.
+   * Tracked for reconnection replay.
    */
   subscribeToItem(itemTemplateId) {
+    this.itemSubscriptions.add(itemTemplateId);
     this.send('marketplace_subscribe', { itemTemplateId });
   }
 
   /**
-   * Unsubscribe from item order book updates
+   * Unsubscribe from item order book updates.
+   * Removes from reconnection tracking.
    */
   unsubscribeFromItem(itemTemplateId) {
+    this.itemSubscriptions.delete(itemTemplateId);
     this.send('marketplace_unsubscribe', { itemTemplateId });
   }
 }

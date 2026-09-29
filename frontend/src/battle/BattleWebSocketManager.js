@@ -371,7 +371,7 @@ export class BattleWebSocketManager {
     }
 
     // Clean up reliability manager for this battle
-    const websocket = this.game?.websocket;
+    const websocket = this.game?.socket;
     if (websocket?.getReliabilityManager) {
       websocket.getReliabilityManager().cleanup(this.battleId);
     }
@@ -659,18 +659,14 @@ export class BattleWebSocketManager {
 
   /**
    * Handle WebSocket disconnect
+   * Shows a toast but does NOT attempt rejoin here. The rejoin is driven by the
+   * 'connect' event handler (handleReconnected) after successful re-authentication,
+   * which avoids premature rejoin attempts before the socket is ready.
    */
   handleSocketDisconnect() {
     console.log('[Battle] WebSocket disconnected during battle');
 
     parchmentToast.warning('Connection', 'Connection lost - attempting reconnect...');
-
-    // Attempt reconnect after a brief delay
-    setTimeout(() => {
-      if (this.battleId && this.game.currentScene === this.scene) {
-        this.attemptRejoin();
-      }
-    }, 1000);
   }
 
   // ===========================================================================

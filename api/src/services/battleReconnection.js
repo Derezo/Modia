@@ -9,7 +9,12 @@
  */
 
 import battleWebsocket from './battleWebsocket.js';
-import { startTurnTimerIfCurrent } from './coliseum/turnTimer.js';
+import {
+  startTurnTimerIfCurrent,
+  handlePlayerReconnect as coliseumHandlePlayerReconnect
+} from './coliseum/turnTimer.js';
+import { disconnectTracking } from './coliseum/constants.js';
+import { recordReconnection } from './ratingService.js';
 import {
   BattleStateLifecycleError,
   BattleStateNotFoundError,
@@ -54,7 +59,11 @@ async function handleDisconnect(battleId, playerId, playerName) {
 
   // Set timeout for abandonment
   disconnectInfo.timeout = setTimeout(async () => {
-    await handleAbandonTimeout(battleId, playerId);
+    try {
+      await handleAbandonTimeout(battleId, playerId);
+    } catch (err) {
+      console.error(`[Reconnection] Abandon timeout error for battle ${battleId}:`, err);
+    }
   }, DISCONNECT_TIMEOUT);
 
   battleDisconnects.set(playerId, disconnectInfo);
@@ -122,6 +131,21 @@ async function handleReconnect(battleId, playerId, playerName) {
 
     // Rejoin the battle room
     // Note: This should be called by the route handler with socket access
+
+    // For pvp_coliseum battles, handle coliseum-specific reconnect (cancel forfeit timer)
+    if (battleState.battleType === 'pvp_coliseum') {
+      const battleTracking = disconnectTracking.get(battleId);
+      const playerTracking = battleTracking?.[playerId];
+      if (playerTracking && !playerTracking.reconnected) {
+        coliseumHandlePlayerReconnect(battleId, playerId);
+        // Record reconnection in rating system
+        if (playerTracking.disconnectId) {
+          recordReconnection(playerTracking.disconnectId).catch(err => {
+            console.error('Failed to record reconnection:', err);
+          });
+        }
+      }
+    }
 
     // For PvP battles, restart turn timer if it's this player's turn
     const isPvP = battleState.battleType === 'pvp' || battleState.battleType === 'pvp_coliseum';
@@ -388,6 +412,40 @@ async function getBattleStateForReconnect(battleId, playerId) {
 }
 
 /**
+ * Cancel any pending disconnect timeout for a player without full reconnect flow.
+ * Call this when a player rejoins a battle via WebSocket or HTTP to prevent
+ * the abandon timer from firing after they have successfully rejoined.
+ *
+ * @param {number} battleId - Battle ID
+ * @param {number} playerId - Player ID
+ * @returns {boolean} True if a timeout was cancelled, false if no tracking existed
+ */
+function cancelDisconnect(battleId, playerId) {
+  const battleDisconnects = disconnectedPlayers.get(battleId);
+  if (!battleDisconnects?.has(playerId)) {
+    return false;
+  }
+
+  const disconnectInfo = battleDisconnects.get(playerId);
+
+  // Clear the abandonment timeout
+  if (disconnectInfo.timeout) {
+    clearTimeout(disconnectInfo.timeout);
+  }
+
+  // Remove from disconnected tracking
+  battleDisconnects.delete(playerId);
+
+  // Clean up empty battle maps
+  if (battleDisconnects.size === 0) {
+    disconnectedPlayers.delete(battleId);
+  }
+
+  console.log(`[Reconnection] Cancelled disconnect tracking for player ${playerId} in battle ${battleId}`);
+  return true;
+}
+
+/**
  * Check if a player is currently disconnected from a battle
  * @param {number} battleId - Battle ID
  * @param {number} playerId - Player ID
@@ -455,6 +513,7 @@ export {
   handleDisconnect,
   handleReconnect,
   handleAbandonTimeout,
+  cancelDisconnect,
   isPlayerDisconnected,
   getDisconnectedPlayers,
   cleanupBattle,

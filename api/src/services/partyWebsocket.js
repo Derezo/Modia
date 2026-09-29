@@ -60,7 +60,7 @@ async function sendInvite({ inviteId, expiresAt, fromUserId, fromUsername, toUse
  * @param {number} userId - Declining user ID
  * @returns {Object} Result
  */
-async function declineInvite(inviteId, userId) {
+async function declineInvite(_inviteId, _userId) {
   // Note: We can't get the inviter ID without a DB query here.
   // The REST route already handles the notification by updating the DB.
   // This function is kept for backwards compatibility but may not be needed.

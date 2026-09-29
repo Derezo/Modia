@@ -22,6 +22,8 @@ import * as marketplaceWebsocket from '../services/marketplaceWebsocket.js';
 import * as garrisonWebsocket from './garrisonWebsocket.js';
 import { cleanupConnection } from '../services/messageReliability.js';
 import { WEBSOCKET_PER_MESSAGE_DEFLATE_OPTIONS } from './compressionConfig.js';
+import * as battleReconnection from '../services/battleReconnection.js';
+import { battleStateRepository } from '../services/battle/BattleStateRepository.js';
 
 // Import extracted modules
 import { checkRateLimit, cleanupUserRateLimits, isInfrastructureMessage } from './rateLimiter.js';
@@ -415,7 +417,7 @@ function setupWebSocket(server) {
         });
       }
 
-      handleDisconnect(userId, username);
+      handleDisconnect(userId, username, ws, connectionId);
     });
 
     ws.on('error', (err) => {
@@ -640,19 +642,67 @@ function handleHeartbeat(ws, userId, payload) {
 // Disconnect Handler
 // ============================================================
 
-function handleDisconnect(userId, username) {
+function handleDisconnect(userId, username, ws = null, connectionId = null) {
   if (!userId) return;
+
+  // Session replacement guard: if this socket is no longer the active connection
+  // for this user, skip user-level cleanup. The newer session owns those resources.
+  const currentWs = connections.get(userId);
+  if (ws !== null && currentWs !== ws) {
+    wsLog(LogLevel.DEBUG, 'disconnect_stale_socket', {
+      userId,
+      connectionId,
+      reason: 'Socket replaced by newer session'
+    });
+    // Do NOT call cleanupConnection here - pendingAcks is keyed by userId and
+    // belongs to the NEW session, not this closing stale socket. Just log and return.
+    return;
+  }
+
+  // Guard connectionId delete - only delete if it matches a different registered ID.
+  // When currentConnId is undefined (e.g., zombie cleanup), allow full cleanup.
+  const currentConnId = activeConnectionIds.get(userId);
+  if (connectionId !== null && currentConnId !== undefined && currentConnId !== connectionId) {
+    wsLog(LogLevel.DEBUG, 'disconnect_stale_connection_id', {
+      userId,
+      connectionId,
+      currentConnId,
+      reason: 'ConnectionId replaced by newer session'
+    });
+    // Do NOT call cleanupConnection here - pendingAcks is keyed by userId and
+    // belongs to the NEW session, not this closing stale socket.
+    return;
+  }
 
   wsLog(LogLevel.DEBUG, 'disconnect_cleanup', {
     userId,
     username
   });
 
-  removeConnection(userId);
+  removeConnection(userId, ws);
   lastHeartbeat.delete(userId);
   activeConnectionIds.delete(userId);
   cleanupConnection(userId);
   cleanupUserRateLimits(userId);
+
+  // Handle battle disconnect for non-coliseum battles (fire-and-forget)
+  // Coliseum battles are handled by coliseumService.cleanupPlayer below
+  battleStateRepository.findActiveBattleForPlayer(userId)
+    .then(async (battle) => {
+      if (battle && battle.battleType !== 'pvp_coliseum') {
+        await battleReconnection.handleDisconnect(
+          battle.battleId ?? battle.id,
+          userId,
+          username
+        );
+      }
+    })
+    .catch(err => {
+      wsLog(LogLevel.ERROR, 'battle_disconnect_error', {
+        userId,
+        error: err.message
+      });
+    });
 
   presenceService.setOffline(userId).catch(err => {
     wsLog(LogLevel.ERROR, 'presence_offline_error', {

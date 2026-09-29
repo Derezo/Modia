@@ -106,9 +106,23 @@ export class TavernChatManager {
       if (this.activeTab === 'dm' && this.activeDMUser) {
         const result = await this.game.api.getDMHistory(this.activeDMUser.userId);
         messages = result.messages;
+      } else if (this.activeTab === 'party') {
+        // For party chat, we need to get the partyId first
+        const partyResponse = await this.game.api.getMultiplayerParty();
+        if (!partyResponse.party) {
+          // Player has no party, skip loading party chat
+          this.messages = [];
+          this.hasMoreMessages = false;
+          this.renderMessages();
+          return;
+        }
+        const result = await this.game.api.getChatHistory('party', {
+          partyId: partyResponse.party.id
+        });
+        messages = result.messages;
       } else {
-        const roomType = this.activeTab === 'party' ? 'party' : 'global';
-        const result = await this.game.api.getChatHistory(roomType);
+        // Global chat
+        const result = await this.game.api.getChatHistory('global');
         messages = result.messages;
       }
 
@@ -138,9 +152,21 @@ export class TavernChatManager {
         result = await this.game.api.getDMHistory(this.activeDMUser.userId, {
           before: oldestMessage.createdAt
         });
+      } else if (this.activeTab === 'party') {
+        // For party chat, we need to get the partyId first
+        const partyResponse = await this.game.api.getMultiplayerParty();
+        if (!partyResponse.party) {
+          // Player has no party, nothing more to load
+          this.hasMoreMessages = false;
+          return;
+        }
+        result = await this.game.api.getChatHistory('party', {
+          before: oldestMessage.createdAt,
+          partyId: partyResponse.party.id
+        });
       } else {
-        const roomType = this.activeTab === 'party' ? 'party' : 'global';
-        result = await this.game.api.getChatHistory(roomType, {
+        // Global chat
+        result = await this.game.api.getChatHistory('global', {
           before: oldestMessage.createdAt
         });
       }

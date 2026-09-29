@@ -500,8 +500,18 @@ export class ColiseumScene extends Scene {
           clearInterval(this.matchCountdown);
           this.matchCountdown = null;
         }
+        // If requeued, restore queue state; otherwise clear it
+        if (payload.requeued) {
+          this.isInQueue = true;
+          if (payload.queueType) {
+            this.selectedQueue = payload.queueType;
+          }
+          parchmentToast.info('Match Cancelled', 'Returned to queue: ' + (payload.reason || 'Match cancelled'));
+        } else {
+          this.isInQueue = false;
+          parchmentToast.warning('Match Cancelled', payload.reason || 'Match cancelled');
+        }
         this.updateContent();
-        parchmentToast.warning('Match Cancelled', payload.reason || 'Match cancelled');
       },
 
       'coliseum:queue_stats_update': (payload) => {

@@ -55,8 +55,9 @@ function calculateRatingChange(winnerRating, loserRating, winnerPPR, loserPPR) {
 
   // Calculate rating changes
   // Winner gains more if they were the underdog (power-wise)
+  // Loser loses based on their expected score (1 - expectedWinner), not winner's
   const winnerGain = Math.round(BASE_K_FACTOR * (1 - expectedWinner) * underdogBonus);
-  const loserLoss = Math.round(BASE_K_FACTOR * expectedWinner);
+  const loserLoss = Math.round(BASE_K_FACTOR * (1 - expectedWinner));
 
   return {
     winnerGain: Math.max(1, winnerGain), // Minimum 1 point gain
