@@ -26,6 +26,7 @@
 
 import { WebSocket } from 'ws';
 import { query } from '../config/database.js';
+import * as userSettingsService from '../services/userSettingsService.js';
 
 // ============================================================
 // State Management
@@ -367,44 +368,79 @@ function sendToUser(userId, message) {
 /**
  * Broadcast presence change to all users in rooms that this user is part of
  * Also broadcasts to the global 'tavern' room if it exists
+ *
+ * PRIVACY: Users with showOnlineStatus=false have their presence masked to 'offline'
+ * When options.showOnlineStatus is not provided, the setting is looked up from
+ * userSettingsService automatically.
+ *
  * @param {number} userId - User ID
  * @param {string} username - Username
  * @param {string} status - Presence status (online, away, busy, offline)
  * @param {string|null} customMessage - Optional custom status message
+ * @param {Object} options - Additional options
+ * @param {boolean|undefined} options.showOnlineStatus - Whether user shows online status (undefined = look up)
  */
-function broadcastPresenceChange(userId, username, status, customMessage = null) {
-  const payload = {
-    userId,
-    username,
-    status,
-    customMessage,
-    timestamp: Date.now()
-  };
+function broadcastPresenceChange(userId, username, status, customMessage = null, options = {}) {
+  // Wrap in async IIFE to handle privacy lookup without changing caller signature
+  // Existing callers don't await this function, so this pattern is safe
+  (async () => {
+    try {
+      // Look up privacy setting if not explicitly provided
+      let showOnlineStatus = options.showOnlineStatus;
+      if (showOnlineStatus === undefined) {
+        showOnlineStatus = await userSettingsService.showsOnlineStatus(userId);
+      }
 
-  // Broadcast to tavern room (for players in tavern)
-  if (rooms.has('tavern')) {
-    broadcastToRoom('tavern', {
-      type: 'presence_changed',
-      payload
-    }, userId);
-  }
+      // PRIVACY: Mask status to 'offline' if user has disabled showOnlineStatus
+      // This prevents revealing presence to other users in shared rooms
+      const maskedStatus = showOnlineStatus ? status : 'offline';
+      const maskedMessage = showOnlineStatus ? customMessage : null;
 
-  // Broadcast to socialHub room (for the SocialHub Friends tab)
-  if (rooms.has('socialHub')) {
-    broadcastToRoom('socialHub', {
-      type: 'presence_changed',
-      payload
-    }, userId);
-  }
+      // If the user is going offline anyway or is masked to offline, no need to broadcast
+      // unless this is an actual disconnect (status === 'offline')
+      if (!showOnlineStatus && status !== 'offline') {
+        // User has privacy enabled - don't broadcast presence changes
+        return;
+      }
 
-  // Broadcast to global room - unconditionally so connect/disconnect reaches all
-  // users in global chat, not just when the changing user happens to be in global
-  if (rooms.has('global')) {
-    broadcastToRoom('global', {
-      type: 'presence_changed',
-      payload
-    }, userId);
-  }
+      const payload = {
+        userId,
+        username,
+        status: maskedStatus,
+        customMessage: maskedMessage,
+        timestamp: Date.now()
+      };
+
+      // Broadcast to tavern room (for players in tavern)
+      if (rooms.has('tavern')) {
+        broadcastToRoom('tavern', {
+          type: 'presence_changed',
+          payload
+        }, userId);
+      }
+
+      // Broadcast to socialHub room (for the SocialHub Friends tab)
+      if (rooms.has('socialHub')) {
+        broadcastToRoom('socialHub', {
+          type: 'presence_changed',
+          payload
+        }, userId);
+      }
+
+      // Broadcast to global room - unconditionally so connect/disconnect reaches all
+      // users in global chat, not just when the changing user happens to be in global
+      if (rooms.has('global')) {
+        broadcastToRoom('global', {
+          type: 'presence_changed',
+          payload
+        }, userId);
+      }
+    } catch (err) {
+      // Fail closed: if we can't look up privacy settings, don't broadcast
+      // This is safer than accidentally revealing presence
+      console.error('[RoomManager] broadcastPresenceChange error:', err.message);
+    }
+  })();
 }
 
 // ============================================================

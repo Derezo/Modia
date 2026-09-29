@@ -26,6 +26,9 @@ const COMPLETION_BONUS_MULTIPLIER = 0.25; // 25% of total daily quest rewards
 
 /**
  * Check and refresh quests for a character on login
+ * Uses advisory lock to prevent race conditions when concurrent requests
+ * hit /daily, /weekly, and /markers endpoints simultaneously.
+ *
  * @param {number} characterId - Character ID
  * @returns {Object} Refresh result with new quests if any
  */
@@ -50,32 +53,46 @@ export async function refreshQuestsIfNeeded(characterId) {
 
   const { level, user_id: userId } = charResult.rows[0];
 
-  // Check if daily refresh needed
-  const needsDaily = await query(
-    'SELECT needs_daily_quest_refresh($1) as needs_refresh',
-    [characterId]
-  );
+  // Use advisory lock to prevent race conditions when concurrent requests
+  // try to create quests for the same character. The lock key is character-specific.
+  // pg_advisory_xact_lock BLOCKS until the lock is available, ensuring the waiting
+  // request sees the committed inserts from the winner transaction.
+  return withTransaction(async (client) => {
+    // Advisory lock key: 'quest_refresh' namespace (1) + characterId
+    // Using session lock that releases at end of transaction
+    // BLOCKS until lock is available - no early return needed
+    await client.query(
+      'SELECT pg_advisory_xact_lock(1, $1)',
+      [characterId]
+    );
 
-  if (needsDaily.rows[0].needs_refresh) {
-    // Finding 37: Update streak BEFORE assignQuests, because assignQuests
-    // sets last_login_date = CURRENT_DATE which makes updateStreak see daysDiff=0
-    await updateStreak(characterId);
-    result.dailyQuests = await assignQuests(characterId, userId, level, 'daily');
-    result.dailyRefreshed = true;
-  }
+    // Check if daily refresh needed (re-check inside lock after potentially waiting)
+    const needsDaily = await client.query(
+      'SELECT needs_daily_quest_refresh($1) as needs_refresh',
+      [characterId]
+    );
 
-  // Check if weekly refresh needed
-  const needsWeekly = await query(
-    'SELECT needs_weekly_quest_refresh($1) as needs_refresh',
-    [characterId]
-  );
+    if (needsDaily.rows[0].needs_refresh) {
+      // Finding 37: Update streak BEFORE assignQuests, because assignQuests
+      // sets last_login_date = CURRENT_DATE which makes updateStreak see daysDiff=0
+      await updateStreakWithClient(client, characterId);
+      result.dailyQuests = await assignQuestsWithClient(client, characterId, userId, level, 'daily');
+      result.dailyRefreshed = true;
+    }
 
-  if (needsWeekly.rows[0].needs_refresh) {
-    result.weeklyQuests = await assignQuests(characterId, userId, level, 'weekly');
-    result.weeklyRefreshed = true;
-  }
+    // Check if weekly refresh needed
+    const needsWeekly = await client.query(
+      'SELECT needs_weekly_quest_refresh($1) as needs_refresh',
+      [characterId]
+    );
 
-  return result;
+    if (needsWeekly.rows[0].needs_refresh) {
+      result.weeklyQuests = await assignQuestsWithClient(client, characterId, userId, level, 'weekly');
+      result.weeklyRefreshed = true;
+    }
+
+    return result;
+  });
 }
 
 /**
@@ -86,11 +103,24 @@ export async function refreshQuestsIfNeeded(characterId) {
  * @param {string} period - 'daily' or 'weekly'
  * @returns {Array} Assigned quests
  */
-async function assignQuests(characterId, userId, level, period) {
+async function _assignQuests(characterId, userId, level, period) {
+  return assignQuestsWithClient({ query }, characterId, userId, level, period);
+}
+
+/**
+ * Transaction-aware version of assignQuests
+ * @param {Object} client - Database client with query method
+ * @param {number} characterId - Character ID
+ * @param {number} userId - User ID
+ * @param {number} level - Character level
+ * @param {string} period - 'daily' or 'weekly'
+ * @returns {Array} Assigned quests
+ */
+async function assignQuestsWithClient(client, characterId, userId, level, period) {
   const count = period === 'daily' ? DAILY_QUEST_COUNT : WEEKLY_QUEST_COUNT;
 
   // Check if character has elite quest access (via Perfect Week)
-  const eliteAccessResult = await query(
+  const eliteAccessResult = await client.query(
     'SELECT has_elite_quest_access($1) as has_access',
     [characterId]
   );
@@ -98,7 +128,7 @@ async function assignQuests(characterId, userId, level, period) {
 
   // Get eligible quest templates (level appropriate, active, weighted random)
   // Gate elite quests based on Perfect Week achievement
-  const templatesResult = await query(
+  const templatesResult = await client.query(
     `SELECT id, quest_key, quest_name, quest_description, objective_type,
             objective_requirements, target_count, rewards, difficulty, selection_weight
      FROM daily_quest_templates
@@ -129,7 +159,7 @@ async function assignQuests(characterId, userId, level, period) {
   }
 
   // Get period boundaries
-  const periodResult = await query(
+  const periodResult = await client.query(
     `SELECT
       ${period === 'daily' ? 'get_daily_period_start()' : 'get_weekly_period_start()'} as period_start,
       get_period_end($1::quest_period, ${period === 'daily' ? 'get_daily_period_start()' : 'get_weekly_period_start()'}) as period_end`,
@@ -142,7 +172,7 @@ async function assignQuests(characterId, userId, level, period) {
   const assignedQuests = [];
 
   for (const template of selectedTemplates) {
-    const insertResult = await query(
+    const insertResult = await client.query(
       `INSERT INTO character_daily_quests
        (character_id, quest_template_id, period, target_progress, period_start, period_end)
        VALUES ($1, $2, $3, $4, $5, $6)
@@ -176,7 +206,7 @@ async function assignQuests(characterId, userId, level, period) {
   // Update last reset timestamp
   // Finding 37: Do NOT update last_login_date here - updateStreak is the only writer
   // to prevent daysDiff calculation from seeing today's date before the streak increments
-  await query(
+  await client.query(
     `INSERT INTO character_login_streaks (character_id, ${period === 'daily' ? 'last_daily_reset' : 'last_weekly_reset'})
      VALUES ($1, NOW())
      ON CONFLICT (character_id) DO UPDATE SET
@@ -847,10 +877,19 @@ export async function getStreakInfo(characterId) {
  * to avoid timezone drift between JS Date and Postgres DATE when the API
  * process TZ differs from the database timezone.
  */
-async function updateStreak(characterId) {
+async function _updateStreak(characterId) {
+  return updateStreakWithClient({ query }, characterId);
+}
+
+/**
+ * Transaction-aware version of updateStreak
+ * @param {Object} client - Database client with query method
+ * @param {number} characterId - Character ID
+ */
+async function updateStreakWithClient(client, characterId) {
   // Compute the day difference in SQL to avoid JS/DB timezone mismatch.
   // CURRENT_DATE and last_login_date are both DATE types in the DB timezone.
-  const result = await query(
+  const result = await client.query(
     `SELECT current_streak, longest_streak,
             (CURRENT_DATE - last_login_date) AS days_diff
      FROM character_login_streaks
@@ -860,9 +899,11 @@ async function updateStreak(characterId) {
 
   if (result.rows.length === 0) {
     // First login - create record with streak 1
-    await query(
+    // Use ON CONFLICT DO NOTHING as defense in depth against rare concurrent first-logins
+    await client.query(
       `INSERT INTO character_login_streaks (character_id, current_streak, longest_streak, last_login_date)
-       VALUES ($1, 1, 1, CURRENT_DATE)`,
+       VALUES ($1, 1, 1, CURRENT_DATE)
+       ON CONFLICT (character_id) DO NOTHING`,
       [characterId]
     );
     return;
@@ -885,7 +926,7 @@ async function updateStreak(characterId) {
 
   const newLongest = Math.max(newStreak, longest_streak);
 
-  await query(
+  await client.query(
     `UPDATE character_login_streaks
      SET current_streak = $1, longest_streak = $2, last_login_date = CURRENT_DATE, updated_at = NOW()
      WHERE character_id = $3`,

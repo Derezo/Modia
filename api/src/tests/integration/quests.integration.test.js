@@ -343,12 +343,14 @@ describe('Quests API Integration', () => {
       const testChar = await ctx.createCharacter(testUser.accessToken);
 
       // Set up streak with last_login_date = yesterday, current_streak = 3
+      // Use INSERT ON CONFLICT because character creation doesn't create a streak record
       await pool.query(
-        `UPDATE character_login_streaks
-         SET last_login_date = CURRENT_DATE - 1,
-             current_streak = 3,
-             longest_streak = 3
-         WHERE character_id = $1`,
+        `INSERT INTO character_login_streaks (character_id, last_login_date, current_streak, longest_streak)
+         VALUES ($1, CURRENT_DATE - 1, 3, 3)
+         ON CONFLICT (character_id) DO UPDATE SET
+           last_login_date = CURRENT_DATE - 1,
+           current_streak = 3,
+           longest_streak = 3`,
         [testChar.id]
       );
 
@@ -403,12 +405,14 @@ describe('Quests API Integration', () => {
       const testChar = await ctx.createCharacter(testUser.accessToken);
 
       // Set up streak with last_login_date = 3 days ago, current_streak = 5
+      // Use INSERT ON CONFLICT because character creation doesn't create a streak record
       await pool.query(
-        `UPDATE character_login_streaks
-         SET last_login_date = CURRENT_DATE - 3,
-             current_streak = 5,
-             longest_streak = 10
-         WHERE character_id = $1`,
+        `INSERT INTO character_login_streaks (character_id, last_login_date, current_streak, longest_streak)
+         VALUES ($1, CURRENT_DATE - 3, 5, 10)
+         ON CONFLICT (character_id) DO UPDATE SET
+           last_login_date = CURRENT_DATE - 3,
+           current_streak = 5,
+           longest_streak = 10`,
         [testChar.id]
       );
 
@@ -428,6 +432,73 @@ describe('Quests API Integration', () => {
       );
       assert.strictEqual(streakResult.rows[0].current_streak, 1, 'Streak should reset to 1');
       assert.strictEqual(streakResult.rows[0].longest_streak, 10, 'Longest streak should be preserved');
+    });
+  });
+
+  describe('Concurrent Quest Request Race Condition', () => {
+    // Tests that concurrent GET /daily, /weekly, /markers requests
+    // do not cause 409 "Resource already exists" errors due to
+    // race conditions in quest creation.
+
+    it('should handle concurrent daily/weekly/markers requests without 409 errors', async () => {
+      // Create a fresh user/character with no quests
+      const testUser = await ctx.createUser();
+      const testChar = await ctx.createCharacter(testUser.accessToken);
+
+      // Clear any existing quests and streaks to simulate first-time login
+      await pool.query(
+        'DELETE FROM character_daily_quests WHERE character_id = $1',
+        [testChar.id]
+      );
+      await pool.query(
+        'DELETE FROM character_login_streaks WHERE character_id = $1',
+        [testChar.id]
+      );
+
+      // Fire all three requests concurrently - this used to cause race condition
+      const [dailyResponse, weeklyResponse, markersResponse] = await Promise.all([
+        request('GET', `/api/quests/daily/${testChar.id}`, null, testUser.accessToken),
+        request('GET', `/api/quests/weekly/${testChar.id}`, null, testUser.accessToken),
+        request('GET', `/api/quests/markers/${testChar.id}`, null, testUser.accessToken)
+      ]);
+
+      // All requests should succeed - none should get 409
+      assert.strictEqual(dailyResponse.status, 200,
+        `Daily should return 200, got ${dailyResponse.status}: ${JSON.stringify(dailyResponse.body)}`);
+      assert.strictEqual(weeklyResponse.status, 200,
+        `Weekly should return 200, got ${weeklyResponse.status}: ${JSON.stringify(weeklyResponse.body)}`);
+      assert.strictEqual(markersResponse.status, 200,
+        `Markers should return 200, got ${markersResponse.status}: ${JSON.stringify(markersResponse.body)}`);
+
+      // Critical: Verify quests were actually returned (not empty due to race condition)
+      // The blocking advisory lock ensures the losing requests wait for commits
+      assert.ok(dailyResponse.body.quests.length > 0,
+        `Daily quests should not be empty, got ${JSON.stringify(dailyResponse.body.quests)}`);
+      assert.ok(weeklyResponse.body.quests.length > 0,
+        `Weekly quests should not be empty, got ${JSON.stringify(weeklyResponse.body.quests)}`);
+
+      // Verify quests were actually created (exactly once)
+      const questCount = await pool.query(
+        `SELECT COUNT(*) as count FROM character_daily_quests
+         WHERE character_id = $1 AND period_end > NOW()`,
+        [testChar.id]
+      );
+      const count = parseInt(questCount.rows[0].count);
+
+      // Should have 3 daily + 2 weekly = 5 quests (or fewer if templates not available)
+      assert.ok(count > 0, 'Should have created some quests');
+      assert.ok(count <= 5, `Should have at most 5 quests (3 daily + 2 weekly), got ${count}`);
+
+      // Run the same concurrent requests again - should still succeed
+      const [daily2, weekly2, markers2] = await Promise.all([
+        request('GET', `/api/quests/daily/${testChar.id}`, null, testUser.accessToken),
+        request('GET', `/api/quests/weekly/${testChar.id}`, null, testUser.accessToken),
+        request('GET', `/api/quests/markers/${testChar.id}`, null, testUser.accessToken)
+      ]);
+
+      assert.strictEqual(daily2.status, 200, 'Second daily request should succeed');
+      assert.strictEqual(weekly2.status, 200, 'Second weekly request should succeed');
+      assert.strictEqual(markers2.status, 200, 'Second markers request should succeed');
     });
   });
 

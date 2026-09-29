@@ -178,7 +178,9 @@ router.get('/:nodeId/:shopType', authenticate, asyncHandler(async (req, res) => 
        it.level_requirement,
        it.base_price,
        it.rarity,
-       it.sprite_id
+       it.sprite_id,
+       it.effect_type,
+       it.effect_value
      FROM npc_shop_inventory nsi
      JOIN item_templates it ON nsi.item_template_id = it.id
      WHERE nsi.node_id = $1 AND nsi.shop_type = $2
@@ -207,7 +209,9 @@ router.get('/:nodeId/:shopType', authenticate, asyncHandler(async (req, res) => 
       supplyLevel: supply.level,
       supplyLabel: supply.label,
       priceModifier: supply.modifier,
-      spriteId: item.sprite_id
+      spriteId: item.sprite_id,
+      effectType: item.effect_type,
+      effectValue: item.effect_value
     };
   });
 
@@ -588,7 +592,12 @@ router.get('/:nodeId/:shopType/sell-inventory', authenticate, asyncHandler(async
        it.rarity,
        it.stat_bonuses,
        it.is_tradeable,
-       it.sprite_id
+       it.sprite_id,
+       it.effect_type,
+       it.effect_value,
+       it.equipment_slot,
+       it.level_requirement,
+       it.class_restriction
      FROM character_items ci
      JOIN item_templates it ON ci.item_template_id = it.id
      WHERE ci.user_id = $1
@@ -629,7 +638,14 @@ router.get('/:nodeId/:shopType/sell-inventory', authenticate, asyncHandler(async
       augments: mods.augments || [],
       basePrice: item.base_price,
       sellPrice: calculateSellPrice(item.base_price, mods),
-      spriteId: item.sprite_id
+      spriteId: item.sprite_id,
+      effectType: item.effect_type,
+      effectValue: item.effect_value,
+      // Same slot/requirement fields the buy list carries, so the sell
+      // detail panel can show them too
+      equipmentSlot: item.equipment_slot || null,
+      levelRequirement: item.level_requirement || 0,
+      classRestriction: item.class_restriction || []
     };
   });
 

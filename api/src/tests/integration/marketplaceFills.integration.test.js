@@ -595,6 +595,126 @@ describe('Marketplace Complete Fills', () => {
     });
   });
 
+  describe('Item Listing to NPC Shop Flow (Migration 066 FK fix)', () => {
+    // This tests the fix for item_listing_sales.listing_id FK constraint.
+    // Before the fix, selling an item bought from the marketplace to an NPC shop
+    // would cause a 400 "Invalid reference" error because the cascade from
+    // character_items -> item_listings deletion violated the FK to item_listing_sales.
+
+    it('should allow selling a marketplace-bought equipment item to NPC shop', async () => {
+      // Find a non-stackable tradeable item (equipment)
+      const equipResult = await query(
+        `SELECT id, base_price FROM item_templates
+         WHERE is_tradeable IS NOT FALSE
+         AND is_stackable = FALSE
+         AND item_type IN ('weapon', 'armor')
+         LIMIT 1`
+      );
+
+      if (equipResult.rows.length === 0) {
+        console.log('Skipping test - no non-stackable tradeable equipment found');
+        return;
+      }
+
+      const equipmentId = equipResult.rows[0].id;
+      const equipmentBasePrice = parseInt(equipResult.rows[0].base_price, 10);
+
+      // Give seller the equipment item
+      const itemInsertResult = await query(
+        `INSERT INTO character_items (user_id, item_template_id, quantity)
+         VALUES ($1, $2, 1)
+         RETURNING id`,
+        [seller.userId, equipmentId]
+      );
+      const characterItemId = itemInsertResult.rows[0].id;
+
+      // Seller creates an item listing (unique item marketplace)
+      const listingRes = await request(
+        'POST',
+        '/api/marketplace/listings',
+        {
+          characterItemId: characterItemId,
+          price: equipmentBasePrice * 2,
+          characterId: sellerCharacter.id
+        },
+        seller.accessToken
+      );
+
+      assert.ok([200, 201].includes(listingRes.status), `Listing creation failed: ${JSON.stringify(listingRes.body)}`);
+      const listingId = listingRes.body.listing.listingId;
+
+      // Buyer purchases the listing
+      const buyRes = await request(
+        'POST',
+        `/api/marketplace/listings/${listingId}/buy`,
+        { characterId: buyerCharacter.id },
+        buyer.accessToken
+      );
+
+      assert.strictEqual(buyRes.status, 200, `Purchase failed: ${JSON.stringify(buyRes.body)}`);
+
+      // Find the item in buyer's inventory
+      const buyerItemResult = await query(
+        `SELECT id FROM character_items
+         WHERE user_id = $1 AND item_template_id = $2 AND equipped_slot IS NULL
+         LIMIT 1`,
+        [buyer.userId, equipmentId]
+      );
+
+      assert.ok(buyerItemResult.rows.length > 0, 'Buyer should have received the item');
+      const buyerItemId = buyerItemResult.rows[0].id;
+
+      // Move buyer's character to a castle node (where blacksmith exists)
+      const castleNodeResult = await query(
+        `SELECT id FROM world_nodes WHERE node_type = 'castle' LIMIT 1`
+      );
+
+      if (castleNodeResult.rows.length === 0) {
+        console.log('Skipping NPC sell part - no castle node found');
+        return;
+      }
+
+      const castleNodeId = castleNodeResult.rows[0].id;
+      await query(
+        `UPDATE characters SET current_node_id = $1, party_slot = 1 WHERE id = $2`,
+        [castleNodeId, buyerCharacter.id]
+      );
+
+      // Buyer sells the item to NPC shop (this used to cause FK violation)
+      const sellRes = await request(
+        'POST',
+        `/api/shops/${castleNodeId}/blacksmith/sell`,
+        { itemInstanceId: buyerItemId, quantity: 1 },
+        buyer.accessToken
+      );
+
+      assert.strictEqual(sellRes.status, 200,
+        `NPC shop sell should succeed after marketplace purchase: ${JSON.stringify(sellRes.body)}`);
+      assert.ok(sellRes.body.success, 'Sell should be successful');
+      assert.ok(sellRes.body.totalPrice > 0, 'Should receive gold for selling');
+
+      // Verify the item is gone from buyer's inventory
+      const itemGoneCheck = await query(
+        'SELECT COUNT(*) as count FROM character_items WHERE id = $1',
+        [buyerItemId]
+      );
+      assert.strictEqual(parseInt(itemGoneCheck.rows[0].count, 10), 0, 'Item should be deleted after selling to NPC');
+
+      // Verify the item_listing_sales record has listing_id = NULL (due to cascade)
+      const salesRecord = await query(
+        `SELECT listing_id FROM item_listing_sales
+         WHERE buyer_id = $1 AND item_template_id = $2
+         ORDER BY sold_at DESC LIMIT 1`,
+        [buyer.userId, equipmentId]
+      );
+
+      assert.ok(salesRecord.rows.length > 0, 'Sales record should exist');
+      // After the FK fix, listing_id should be NULL due to ON DELETE SET NULL
+      assert.strictEqual(salesRecord.rows[0].listing_id, null,
+        'listing_id should be NULL after character_item deletion cascades to item_listings');
+    });
+  });
+
   describe('Non-stackable item rejection', () => {
     it('should reject limit orders for non-stackable items', async () => {
       // Find a non-stackable item (weapon or armor)

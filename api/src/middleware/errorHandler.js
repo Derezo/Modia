@@ -68,22 +68,20 @@ const errorHandler = (err, req, res, _next) => {
   }
 
   // Default error response
-  // SECURITY: Never expose internal error messages for 500s
+  // SECURITY: Never expose internal error messages or stack traces for any error
   if (statusCode >= 500) {
     // Log the real error server-side (already done above)
     // but return a generic message to the client
     res.status(statusCode).json({
       error: 'Internal Server Error',
-      ...(requestId && { requestId }),
-      ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+      ...(requestId && { requestId })
     });
   } else {
     // For 4xx errors, it's safe to include the message (it's meant for the client)
     res.status(statusCode).json({
       error: err.message || 'Request failed',
       ...(requestId && { requestId }),
-      ...(err.data && { ...err.data }),
-      ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+      ...(err.data && { ...err.data })
     });
   }
 };
