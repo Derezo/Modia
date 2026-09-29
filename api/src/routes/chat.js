@@ -156,14 +156,15 @@ router.delete('/reaction', authenticate, chatReactionLimiter, asyncHandler(async
 
 /**
  * GET /api/chat/online
- * Get online players
+ * Get online players (excludes those with showOnlineStatus=false)
  */
 router.get('/online', authenticate, asyncHandler(async (req, res) => {
   const { nodeId, limit = 100 } = req.query;
 
-  const players = await presenceService.getOnlinePlayers({
+  const players = await presenceService.getOnlinePlayersWithPrivacy({
     nodeId: nodeId ? parseInt(nodeId, 10) : null,
-    limit: Math.min(parseInt(limit, 10) || 100, 200)
+    limit: Math.min(parseInt(limit, 10) || 100, 200),
+    requesterId: req.user.userId // Ensure requester always sees themselves
   });
 
   res.json({ players });
@@ -210,17 +211,28 @@ router.put('/presence', authenticate, presenceUpdateLimiter, asyncHandler(async 
 
 /**
  * GET /api/chat/presence/:userId
- * Get a specific user's presence
+ * Get a specific user's presence (respects showOnlineStatus privacy)
  */
 router.get('/presence/:userId', authenticate, asyncHandler(async (req, res) => {
-  const { userId } = req.params;
+  const targetUserId = parseInt(req.params.userId, 10);
 
-  const presence = await presenceService.getPresence(parseInt(userId, 10));
+  // Users can always see their own presence
+  if (targetUserId === req.user.userId) {
+    const presence = await presenceService.getPresence(targetUserId);
+    if (!presence) {
+      throw new AppError('User presence not found', 404);
+    }
+    return res.json({ presence });
+  }
 
-  if (!presence) {
+  // Check underlying presence first - 404 if no record exists
+  const rawPresence = await presenceService.getPresence(targetUserId);
+  if (!rawPresence) {
     throw new AppError('User presence not found', 404);
   }
 
+  // Return privacy-masked presence for other users
+  const presence = await presenceService.getPresenceWithPrivacy(targetUserId);
   res.json({ presence });
 }));
 

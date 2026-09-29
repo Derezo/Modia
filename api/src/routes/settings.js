@@ -2,6 +2,7 @@ import express from 'express';
 import { query } from '../config/database.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import { authenticate } from '../middleware/auth.js';
+import { clearSettingsCache } from '../services/userSettingsService.js';
 
 const router = express.Router();
 
@@ -39,9 +40,7 @@ const DEFAULT_SETTINGS = {
   display: {
     animationSpeed: 'normal',     // 'slow' | 'normal' | 'fast'
     cameraZoom: 1.0,              // 0.5 to 2.0
-    uiScale: 1.0,                 // 0.75 to 1.5
     showFloatingText: true,       // floating damage/healing text
-    particleQuality: 'high',      // 'low' | 'medium' | 'high'
     screenShake: true             // screen shake effects
   },
   accessibility: {
@@ -55,23 +54,13 @@ const DEFAULT_SETTINGS = {
     screenReaderHints: false      // enable screen reader hints
   },
   gameplay: {
-    autoSave: true,               // auto-save progress
-    confirmTravel: false,         // confirm before traveling
-    showTutorialHints: true,      // show tutorial/help hints
-    questMarkerStyle: 'icon'      // 'icon' | 'arrow' | 'both' | 'none'
-  },
-  controls: {
-    keybindScheme: 'wasd',        // 'wasd' | 'arrows' | 'vim' | 'custom'
-    touchGesturesEnabled: true,   // enable touch gestures on mobile
-    doubleTapConfirm: true,       // require double-tap to confirm actions
-    holdToCancel: true            // hold to cancel actions
+    confirmTravel: false          // confirm before traveling
   },
   social: {
     showOnlineStatus: true,       // show online status to others
     allowPartyInvites: true,      // allow party invitations
     allowFriendRequests: true,    // allow friend requests
-    chatTimestamps: true,         // show timestamps in chat
-    profanityFilter: true         // filter profanity in chat
+    chatTimestamps: true          // show timestamps in chat
   },
   developer: {
     enabled: false,               // master toggle for all debug features
@@ -254,25 +243,11 @@ function validateSettings(settings) {
       }
     }
 
-    if (settings.display.particleQuality !== undefined) {
-      const validQualities = ['low', 'medium', 'high'];
-      if (!validQualities.includes(settings.display.particleQuality)) {
-        return { valid: false, error: `particleQuality must be one of: ${validQualities.join(', ')}` };
-      }
-    }
-
-    // Validate zoom/scale ranges
+    // Validate zoom range
     if (settings.display.cameraZoom !== undefined) {
       const value = settings.display.cameraZoom;
       if (typeof value !== 'number' || value < 0.5 || value > 2.0) {
         return { valid: false, error: 'cameraZoom must be a number between 0.5 and 2.0' };
-      }
-    }
-
-    if (settings.display.uiScale !== undefined) {
-      const value = settings.display.uiScale;
-      if (typeof value !== 'number' || value < 0.75 || value > 1.5) {
-        return { valid: false, error: 'uiScale must be a number between 0.75 and 1.5' };
       }
     }
 
@@ -339,38 +314,10 @@ function validateSettings(settings) {
       return { valid: false, error: 'gameplay settings must be an object' };
     }
 
-    if (settings.gameplay.questMarkerStyle !== undefined) {
-      const validStyles = ['icon', 'arrow', 'both', 'none'];
-      if (!validStyles.includes(settings.gameplay.questMarkerStyle)) {
-        return { valid: false, error: `questMarkerStyle must be one of: ${validStyles.join(', ')}` };
-      }
-    }
-
-    const gameplayBooleanFields = ['autoSave', 'confirmTravel', 'showTutorialHints'];
+    const gameplayBooleanFields = ['confirmTravel'];
     for (const field of gameplayBooleanFields) {
       if (settings.gameplay[field] !== undefined && typeof settings.gameplay[field] !== 'boolean') {
         return { valid: false, error: `gameplay.${field} must be a boolean` };
-      }
-    }
-  }
-
-  // Validate controls settings if present
-  if (settings.controls) {
-    if (typeof settings.controls !== 'object') {
-      return { valid: false, error: 'controls settings must be an object' };
-    }
-
-    if (settings.controls.keybindScheme !== undefined) {
-      const validSchemes = ['wasd', 'arrows', 'vim', 'custom'];
-      if (!validSchemes.includes(settings.controls.keybindScheme)) {
-        return { valid: false, error: `keybindScheme must be one of: ${validSchemes.join(', ')}` };
-      }
-    }
-
-    const controlsBooleanFields = ['touchGesturesEnabled', 'doubleTapConfirm', 'holdToCancel'];
-    for (const field of controlsBooleanFields) {
-      if (settings.controls[field] !== undefined && typeof settings.controls[field] !== 'boolean') {
-        return { valid: false, error: `controls.${field} must be a boolean` };
       }
     }
   }
@@ -381,7 +328,7 @@ function validateSettings(settings) {
       return { valid: false, error: 'social settings must be an object' };
     }
 
-    const socialBooleanFields = ['showOnlineStatus', 'allowPartyInvites', 'allowFriendRequests', 'chatTimestamps', 'profanityFilter'];
+    const socialBooleanFields = ['showOnlineStatus', 'allowPartyInvites', 'allowFriendRequests', 'chatTimestamps'];
     for (const field of socialBooleanFields) {
       if (settings.social[field] !== undefined && typeof settings.social[field] !== 'boolean') {
         return { valid: false, error: `social.${field} must be a boolean` };
@@ -581,6 +528,9 @@ router.put('/', authenticate, asyncHandler(async (req, res) => {
      RETURNING settings`,
     [userId, JSON.stringify(mergedSettings)]
   );
+
+  // Clear userSettingsService cache so privacy settings take effect immediately
+  clearSettingsCache(userId);
 
   res.json({
     settings: sanitizeSettingsForProduction(result.rows[0].settings)

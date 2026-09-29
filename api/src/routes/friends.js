@@ -78,6 +78,10 @@ router.post('/request/:username', authenticate, friendRequestLimiter, asyncHandl
     if (error.message === 'User not found') {
       throw new AppError(error.message, 404);
     }
+    // Respect service-specified status codes (e.g., 403 for privacy settings)
+    if (error.statusCode) {
+      throw new AppError(error.message, error.statusCode);
+    }
     if (error.message.includes('Cannot') || error.message.includes('already')) {
       throw new AppError(error.message, 400);
     }

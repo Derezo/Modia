@@ -290,5 +290,68 @@ describe('Auth API', () => {
 
       assert.ok([400, 401, 403].includes(refreshRes.status));
     });
+
+    it('should logout one session while keeping another session valid', async () => {
+      // Create a new user for this test
+      const username = uniqueUsername();
+      const email = uniqueEmail();
+
+      const regRes = await request('POST', '/api/auth/register', {
+        username,
+        email,
+        password: 'TestPassword123!'
+      });
+
+      assert.strictEqual(regRes.status, 201);
+      if (regRes.body?.user?.id) createdUserIds.push(regRes.body.user.id);
+
+      // Session A
+      const sessionA = {
+        accessToken: regRes.body.accessToken,
+        refreshToken: regRes.body.refreshToken
+      };
+
+      // Create Session B by logging in again
+      const loginRes = await request('POST', '/api/auth/login', {
+        username,
+        password: 'TestPassword123!'
+      });
+
+      assert.strictEqual(loginRes.status, 200);
+      const sessionB = {
+        accessToken: loginRes.body.accessToken,
+        refreshToken: loginRes.body.refreshToken
+      };
+
+      // Both sessions should work initially
+      const meA = await request('GET', '/api/auth/me', null, sessionA.accessToken);
+      const meB = await request('GET', '/api/auth/me', null, sessionB.accessToken);
+      assert.strictEqual(meA.status, 200, 'Session A should be valid');
+      assert.strictEqual(meB.status, 200, 'Session B should be valid');
+
+      // Logout Session A only
+      const logoutRes = await request('POST', '/api/auth/logout', {
+        refreshToken: sessionA.refreshToken
+      }, sessionA.accessToken);
+      assert.strictEqual(logoutRes.status, 200);
+
+      // Session A's refresh token should no longer work
+      const refreshA = await request('POST', '/api/auth/refresh', {
+        refreshToken: sessionA.refreshToken
+      });
+      assert.ok(
+        [400, 401, 403].includes(refreshA.status),
+        'Session A refresh should fail after logout'
+      );
+
+      // Session B should still work (both access and refresh)
+      const meBAfter = await request('GET', '/api/auth/me', null, sessionB.accessToken);
+      assert.strictEqual(meBAfter.status, 200, 'Session B access token should still be valid');
+
+      const refreshB = await request('POST', '/api/auth/refresh', {
+        refreshToken: sessionB.refreshToken
+      });
+      assert.strictEqual(refreshB.status, 200, 'Session B refresh should still work');
+    });
   });
 });

@@ -1,4 +1,5 @@
 import { query } from '../config/database.js';
+import * as userSettingsService from './userSettingsService.js';
 
 /**
  * Presence Service - Handles player online status tracking and node presence
@@ -446,6 +447,77 @@ function getNodePresenceMap() {
   return nodePresence;
 }
 
+/**
+ * Get presence for a user, respecting their showOnlineStatus privacy setting
+ * @param {number} userId - User ID
+ * @returns {Object|null} Presence data with status masked if privacy is set
+ */
+async function getPresenceWithPrivacy(userId) {
+  const presence = await getPresence(userId);
+  const showsOnline = await userSettingsService.showsOnlineStatus(userId);
+
+  if (!showsOnline) {
+    return {
+      userId,
+      status: 'offline',
+      customMessage: null,
+      lastActivity: null,
+      currentNodeId: null
+    };
+  }
+
+  return presence;
+}
+
+/**
+ * Get all players at a node, filtered by privacy settings
+ * @param {number} nodeId - Node ID
+ * @returns {Promise<Array>} Array of player info, excluding those who hide online status
+ */
+async function getPlayersAtNodeWithPrivacy(nodeId) {
+  if (!nodePresence.has(nodeId)) {
+    return [];
+  }
+
+  const nodeUsers = nodePresence.get(nodeId);
+  const players = Array.from(nodeUsers.values());
+
+  // Filter out players who have showOnlineStatus disabled
+  const filteredPlayers = await Promise.all(
+    players.map(async (player) => {
+      const showsOnline = await userSettingsService.showsOnlineStatus(player.userId);
+      return showsOnline ? player : null;
+    })
+  );
+
+  return filteredPlayers.filter(p => p !== null);
+}
+
+/**
+ * Get online players filtered by privacy settings
+ * @param {Object} options - Filter options
+ * @param {number} options.requesterId - ID of the requesting user (always included)
+ * @returns {Promise<Array>} Online players (excluding those with hidden status, except requester)
+ */
+async function getOnlinePlayersWithPrivacy(options = {}) {
+  const { requesterId, ...queryOptions } = options;
+  const players = await getOnlinePlayers(queryOptions);
+
+  // Filter out players who have showOnlineStatus disabled, but always include requester
+  const filteredPlayers = await Promise.all(
+    players.map(async (player) => {
+      // Always include the requester themselves
+      if (requesterId && player.userId === requesterId) {
+        return player;
+      }
+      const showsOnline = await userSettingsService.showsOnlineStatus(player.userId);
+      return showsOnline ? player : null;
+    })
+  );
+
+  return filteredPlayers.filter(p => p !== null);
+}
+
 export {
   setPresence,
   getPresence,
@@ -465,7 +537,11 @@ export {
   getNodePlayerCount,
   getUserCurrentNode,
   clearUserFromAllNodes,
-  getNodePresenceMap
+  getNodePresenceMap,
+  // Privacy-respecting functions
+  getPresenceWithPrivacy,
+  getPlayersAtNodeWithPrivacy,
+  getOnlinePlayersWithPrivacy
 };
 
 export default {
@@ -486,5 +562,8 @@ export default {
   getNodePlayerCount,
   getUserCurrentNode,
   clearUserFromAllNodes,
-  getNodePresenceMap
+  getNodePresenceMap,
+  getPresenceWithPrivacy,
+  getPlayersAtNodeWithPrivacy,
+  getOnlinePlayersWithPrivacy
 };

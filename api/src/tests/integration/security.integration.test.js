@@ -453,10 +453,10 @@ describe('Security Integration Tests', () => {
         // The key security requirement is that:
         // 1. No data is exposed
         // 2. No tables are dropped
-        // Accept 400, 404, or 500 (500 indicates need for better input validation)
+        // Routes should validate input and return 400 or 404 (not 500)
         assert.ok(
-          [400, 404, 500].includes(res.status),
-          `Should return 400, 404, or 500, got ${res.status}`
+          [400, 404].includes(res.status),
+          `Should return 400 or 404, got ${res.status}`
         );
 
         // Critical: verify users table still exists (SQL injection did not succeed)
@@ -517,11 +517,12 @@ describe('Security Integration Tests', () => {
           userA.accessToken
         );
 
-        // Accept 400, 404, or 500 (500 indicates need for better input validation)
+        // Routes should validate input and return 400 (not 500)
         // Critical: verify no data was exposed in the response
+        // NOTE: If this test fails with 500, inventory.js needs input validation (handoff)
         assert.ok(
-          [400, 404, 500].includes(res.status),
-          `Should return 400, 404, or 500, got ${res.status}`
+          [400, 404].includes(res.status),
+          `Should return 400 or 404, got ${res.status}. If 500, inventory.js needs input validation.`
         );
 
         // Ensure response does not contain user data that would indicate SQL injection success
@@ -848,11 +849,11 @@ describe('Security Integration Tests', () => {
           userA.accessToken
         );
 
-        // Accept 400, 404, or 500 (500 indicates need for better input validation)
+        // Routes should validate input and return 400 (not 500)
         // Critical: ensure no data exposure
         assert.ok(
-          [400, 404, 500].includes(res.status),
-          `Should return 400, 404, or 500 for non-integer ID, got ${res.status}`
+          [400, 404].includes(res.status),
+          `Should return 400 or 404 for non-integer ID, got ${res.status}`
         );
 
         // Ensure no sensitive data in response
@@ -873,10 +874,10 @@ describe('Security Integration Tests', () => {
           userA.accessToken
         );
 
-        // Accept 400, 404, or 500 (server should not crash)
+        // Routes should validate input and return 400 or 404 (not 500)
         assert.ok(
-          [400, 404, 500].includes(res.status),
-          `Should return 400, 404, or 500, got ${res.status}`
+          [400, 404].includes(res.status),
+          `Should return 400 or 404, got ${res.status}`
         );
       });
     });
@@ -952,17 +953,15 @@ describe('Security Integration Tests', () => {
         userA.accessToken
       );
 
-      // Should either reject or sanitize control characters
-      // 500 indicates the server needs better input sanitization
+      // Should either reject control characters with 400 or sanitize and create (201)
       if (res.status === 201) {
         await query('DELETE FROM characters WHERE id = $1', [res.body.character.id]);
       }
 
-      // Accept any of these responses - critical check is server doesn't crash
-      // and no data exposure occurs
+      // Routes should validate input and return 400 or 201 (not 500)
       assert.ok(
-        [201, 400, 500].includes(res.status),
-        `Should return 201, 400, or 500, got ${res.status}`
+        [201, 400].includes(res.status),
+        `Should return 201 or 400, got ${res.status}`
       );
 
       // Verify no sensitive data exposed

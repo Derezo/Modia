@@ -10,6 +10,7 @@ import {
 } from '../../ui/parchment/index.js';
 import { parchmentToast } from '../../ui/parchment/ParchmentToast.js';
 import { escapeHtml } from '../../utils/escapeHtml.js';
+import { parchmentConfirm } from '../../ui/parchment/parchmentConfirm.js';
 
 const P = PARCHMENT_COLORS;
 
@@ -317,6 +318,13 @@ export class ClanTab {
       .clan-member-role-badge.officer {
         background: ${P.accent.burgundy}30;
         color: ${P.accent.burgundy};
+      }
+
+      .clan-member-transfer-btn {
+        ${getParchmentButtonCSS('secondary')}
+        font-size: 10px;
+        padding: 2px 6px;
+        margin-left: auto;
       }
 
       /* Chat panel */
@@ -727,13 +735,25 @@ export class ClanTab {
       return '<div class="clan-tab-empty"><span>No members</span></div>';
     }
 
-    return members.map(member => `
-      <div class="clan-member-item">
-        <span class="clan-member-role">${this.getRoleIcon(member.role)}</span>
-        <span class="clan-member-name">${escapeHtml(member.username)}</span>
-        <span class="clan-member-role-badge ${member.role}">${member.role}</span>
-      </div>
-    `).join('');
+    const isLeader = this.myClan?.myRole === 'leader';
+
+    return members.map(member => {
+      // Show transfer button only if current user is leader and member is not leader
+      const showTransfer = isLeader && member.role !== 'leader';
+
+      return `
+        <div class="clan-member-item">
+          <span class="clan-member-role">${this.getRoleIcon(member.role)}</span>
+          <span class="clan-member-name">${escapeHtml(member.username)}</span>
+          <span class="clan-member-role-badge ${member.role}">${member.role}</span>
+          ${showTransfer ? `
+            <button class="clan-member-transfer-btn" data-action="transfer" data-user-id="${member.userId}">
+              Make Leader
+            </button>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
   }
 
   /**
@@ -1011,6 +1031,10 @@ export class ClanTab {
         case 'send-message':
           await this.handleSendMessage();
           break;
+
+        case 'transfer':
+          await this.handleTransferLeadership(parseInt(e.target.dataset.userId, 10));
+          break;
       }
     }, { signal });
 
@@ -1171,7 +1195,7 @@ export class ClanTab {
    * Handle leave clan
    */
   async handleLeaveClan() {
-    if (!confirm('Are you sure you want to leave this clan?')) return;
+    if (!(await parchmentConfirm({ title: 'Leave Clan', message: 'Are you sure you want to leave this clan?', confirmLabel: 'Leave', confirmVariant: 'danger' }))) return;
 
     try {
       const response = await this.game.api.leaveClan(this.myClan.id);
@@ -1191,10 +1215,35 @@ export class ClanTab {
   }
 
   /**
+   * Handle transfer leadership
+   */
+  async handleTransferLeadership(targetUserId) {
+    const member = this.clanDetails?.members?.find(m => m.userId === targetUserId);
+    const memberName = member?.username || 'this member';
+
+    if (!(await parchmentConfirm({ title: 'Transfer Leadership', message: `Are you sure you want to transfer leadership to ${memberName}? You will become an officer.`, confirmLabel: 'Transfer' }))) {
+      return;
+    }
+
+    try {
+      // Use direct post() call since transferClanLeadership isn't in client.js yet
+      const response = await this.game.api.post(`/clans/${this.myClan.id}/transfer`, { userId: targetUserId });
+      if (response.success) {
+        parchmentToast.success('Leadership Transferred', `${response.newLeaderUsername} is now the clan leader`);
+        await this.loadData();
+        this.render();
+        this.setupEventListeners();
+      }
+    } catch (error) {
+      parchmentToast.error('Error', error.message || 'Failed to transfer leadership');
+    }
+  }
+
+  /**
    * Handle disband clan
    */
   async handleDisbandClan() {
-    if (!confirm('Are you sure you want to DISBAND this clan? This cannot be undone!')) return;
+    if (!(await parchmentConfirm({ title: 'Disband Clan', message: 'Are you sure you want to disband this clan? This cannot be undone.', confirmLabel: 'Disband', confirmVariant: 'danger' }))) return;
 
     try {
       const response = await this.game.api.disbandClan(this.myClan.id);

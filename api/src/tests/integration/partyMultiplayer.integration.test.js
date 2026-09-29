@@ -264,4 +264,60 @@ describe('Multiplayer Party API', () => {
       assert.strictEqual(res.body.isReady, true);
     });
   });
+
+  describe('Privacy settings - allowPartyInvites', () => {
+    let partyLeader, privateUser, partyId;
+
+    before(async () => {
+      partyLeader = await ctx.createUser();
+      privateUser = await ctx.createUser();
+    });
+
+    after(async () => {
+      // Clean up any party
+      if (partyId) {
+        await request('POST', `/api/party/multiplayer/${partyId}/leave`, {}, partyLeader.accessToken);
+      }
+    });
+
+    it('should reject party invite when allowPartyInvites=false with 403', async () => {
+      // Set privacy setting
+      const settingsRes = await request('PUT', '/api/settings', {
+        social: { allowPartyInvites: false }
+      }, privateUser.accessToken);
+      assert.strictEqual(settingsRes.status, 200, `Settings update failed: ${JSON.stringify(settingsRes.body)}`);
+      assert.strictEqual(settingsRes.body.settings.social.allowPartyInvites, false);
+
+      // Leader creates a party
+      const partyRes = await request('POST', '/api/party/multiplayer', {
+        name: 'Invite Test Party'
+      }, partyLeader.accessToken);
+      assert.strictEqual(partyRes.status, 201);
+      partyId = partyRes.body.party.id;
+
+      // Try to invite the private user - should get 403
+      const inviteRes = await request('POST', `/api/party/multiplayer/${partyId}/invite`, {
+        username: privateUser.username
+      }, partyLeader.accessToken);
+
+      assert.strictEqual(inviteRes.status, 403, `Expected 403 but got ${inviteRes.status}: ${JSON.stringify(inviteRes.body)}`);
+      assert.ok(inviteRes.body.error.includes('not accepting party invitations'), inviteRes.body.error);
+    });
+
+    it('should allow party invite when allowPartyInvites=true', async () => {
+      // Set privacy setting to allow
+      const settingsRes = await request('PUT', '/api/settings', {
+        social: { allowPartyInvites: true }
+      }, privateUser.accessToken);
+      assert.strictEqual(settingsRes.status, 200);
+
+      // Try to invite - should succeed
+      const inviteRes = await request('POST', `/api/party/multiplayer/${partyId}/invite`, {
+        username: privateUser.username
+      }, partyLeader.accessToken);
+
+      assert.strictEqual(inviteRes.status, 200, `Expected 200 but got ${inviteRes.status}: ${JSON.stringify(inviteRes.body)}`);
+      assert.ok(inviteRes.body.invite, 'Should have invite object');
+    });
+  });
 });

@@ -6,6 +6,7 @@
 import { query } from '../config/database.js';
 import * as notificationService from './notificationService.js';
 import * as presenceService from './presenceService.js';
+import * as userSettingsService from './userSettingsService.js';
 
 /**
  * Send a friend request to another user by username
@@ -30,6 +31,14 @@ export async function sendFriendRequest(fromUserId, toUsername) {
   // Cannot friend yourself
   if (fromUserId === toUserId) {
     throw new Error('Cannot send friend request to yourself');
+  }
+
+  // Check if target user allows friend requests
+  const allowsFriendRequests = await userSettingsService.allowsFriendRequests(toUserId);
+  if (!allowsFriendRequests) {
+    const error = new Error('This user is not accepting friend requests');
+    error.statusCode = 403;
+    throw error;
   }
 
   // Check if either user has blocked the other
@@ -356,6 +365,11 @@ export async function getFriends(userId) {
   const friends = await Promise.all(
     result.rows.map(async (friend) => {
       const presence = await presenceService.getPresence(friend.friend_id);
+
+      // Respect the friend's showOnlineStatus privacy setting
+      const showsOnline = await userSettingsService.showsOnlineStatus(friend.friend_id);
+      const effectiveStatus = showsOnline ? (presence?.status || 'offline') : 'offline';
+
       return {
         friendshipId: friend.friendship_id,
         friendId: friend.friend_id,
@@ -370,10 +384,10 @@ export async function getFriends(userId) {
           race: friend.race,
           class: friend.class
         } : null,
-        online: presence?.status === 'online',
-        status: presence?.status || 'offline',
-        customMessage: presence?.customMessage || null,
-        currentNodeId: presence?.currentNodeId || null
+        online: showsOnline && presence?.status === 'online',
+        status: effectiveStatus,
+        customMessage: showsOnline ? (presence?.customMessage || null) : null,
+        currentNodeId: showsOnline ? (presence?.currentNodeId || null) : null
       };
     })
   );
@@ -494,6 +508,11 @@ export async function searchPlayers(queryStr, excludeUserId, limit = 20) {
   const players = await Promise.all(
     result.rows.map(async (player) => {
       const presence = await presenceService.getPresence(player.id);
+
+      // Respect the player's showOnlineStatus privacy setting
+      const showsOnline = await userSettingsService.showsOnlineStatus(player.id);
+      const effectiveStatus = showsOnline ? (presence?.status || 'offline') : 'offline';
+
       return {
         id: player.id,
         username: player.username,
@@ -506,8 +525,8 @@ export async function searchPlayers(queryStr, excludeUserId, limit = 20) {
         isFriend: player.is_friend,
         requestSent: player.request_sent,
         requestReceived: player.request_received,
-        online: presence?.status === 'online',
-        status: presence?.status || 'offline'
+        online: showsOnline && presence?.status === 'online',
+        status: effectiveStatus
       };
     })
   );

@@ -7,6 +7,7 @@ import partyWebsocket from '../services/partyWebsocket.js';
 import { parseIdParam } from '../utils/parseParams.js';
 import { isBlocked } from '../services/friendService.js';
 import { validateDisplayName } from '../utils/nameValidation.js';
+import * as userSettingsService from '../services/userSettingsService.js';
 
 const router = express.Router();
 
@@ -467,6 +468,12 @@ router.post('/multiplayer/:partyId/invite', authenticate, asyncHandler(async (re
   const blocked = await isBlocked(req.user.userId, targetUser.id);
   if (blocked) {
     throw new AppError('Cannot invite this player', 400);
+  }
+
+  // Check if target user allows party invites
+  const allowsInvites = await userSettingsService.allowsPartyInvites(targetUser.id);
+  if (!allowsInvites) {
+    throw new AppError('This player is not accepting party invitations', 403);
   }
 
   // Check if target is already in a party

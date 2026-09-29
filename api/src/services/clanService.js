@@ -3,7 +3,7 @@
  * Handles clan creation, membership, invites, and messaging
  */
 
-import { query } from '../config/database.js';
+import { query, withTransaction } from '../config/database.js';
 import * as notificationService from './notificationService.js';
 import { isBlocked } from './friendService.js';
 import { AppError } from '../middleware/errorHandler.js';
@@ -227,7 +227,7 @@ export async function leaveClan(userId, clanId) {
   const role = memberResult.rows[0].role;
 
   if (role === 'leader') {
-    throw new Error('The leader cannot leave the clan. Disband the clan instead.');
+    throw new Error('The leader must transfer leadership before leaving, or disband the clan.');
   }
 
   // Remove member
@@ -235,6 +235,78 @@ export async function leaveClan(userId, clanId) {
     'DELETE FROM clan_members WHERE clan_id = $1 AND user_id = $2',
     [clanId, userId]
   );
+}
+
+/**
+ * Transfer leadership to another clan member
+ * @param {number} leaderId - Current leader's user ID
+ * @param {number} clanId - Clan ID
+ * @param {number} targetUserId - New leader's user ID
+ * @returns {Promise<object>} Updated clan info
+ */
+export async function transferLeadership(leaderId, clanId, targetUserId) {
+  return await withTransaction(async (client) => {
+    // Lock the clan row and verify the caller is the leader
+    const clanResult = await client.query(
+      'SELECT id, name, leader_id FROM clans WHERE id = $1 FOR UPDATE',
+      [clanId]
+    );
+
+    if (clanResult.rows.length === 0) {
+      throw new AppError('Clan not found', 404);
+    }
+
+    const clan = clanResult.rows[0];
+
+    if (clan.leader_id !== leaderId) {
+      throw new AppError('Only the clan leader can transfer leadership', 403);
+    }
+
+    if (targetUserId === leaderId) {
+      throw new AppError('You are already the leader', 400);
+    }
+
+    // Verify target is a member of the clan
+    const targetMember = await client.query(
+      'SELECT user_id, role FROM clan_members WHERE clan_id = $1 AND user_id = $2',
+      [clanId, targetUserId]
+    );
+
+    if (targetMember.rows.length === 0) {
+      throw new AppError('Target user is not a member of this clan', 404);
+    }
+
+    // Update the clan's leader_id
+    await client.query(
+      'UPDATE clans SET leader_id = $1 WHERE id = $2',
+      [targetUserId, clanId]
+    );
+
+    // Update the new leader's role to 'leader'
+    await client.query(
+      'UPDATE clan_members SET role = \'leader\' WHERE clan_id = $1 AND user_id = $2',
+      [clanId, targetUserId]
+    );
+
+    // Demote the old leader to 'officer'
+    await client.query(
+      'UPDATE clan_members SET role = \'officer\' WHERE clan_id = $1 AND user_id = $2',
+      [clanId, leaderId]
+    );
+
+    // Get new leader's username for response
+    const userResult = await client.query(
+      'SELECT username FROM users WHERE id = $1',
+      [targetUserId]
+    );
+
+    return {
+      clanId,
+      clanName: clan.name,
+      newLeaderId: targetUserId,
+      newLeaderUsername: userResult.rows[0]?.username
+    };
+  });
 }
 
 /**
@@ -413,88 +485,121 @@ export async function getPendingInvites(userId) {
  * @returns {Promise<object>} Membership details
  */
 export async function acceptInvite(userId, inviteId) {
-  // Get invite
-  const inviteResult = await query(
+  // Get invite first (outside transaction to validate basic access)
+  const inviteCheck = await query(
     `SELECT id, clan_id, invitee_id, status, expires_at
      FROM clan_invites
      WHERE id = $1`,
     [inviteId]
   );
 
-  if (inviteResult.rows.length === 0) {
-    throw new Error('Invite not found');
+  if (inviteCheck.rows.length === 0) {
+    throw new AppError('Invite not found', 404);
   }
 
-  const invite = inviteResult.rows[0];
+  const inviteBasic = inviteCheck.rows[0];
 
-  if (invite.invitee_id !== userId) {
-    throw new Error('Invite not found');
+  if (inviteBasic.invitee_id !== userId) {
+    throw new AppError('Invite not found', 404);
   }
 
-  if (invite.status !== 'pending') {
-    throw new Error('Invite is no longer pending');
+  if (inviteBasic.status !== 'pending') {
+    throw new AppError('Invite is no longer pending', 409);
   }
 
-  if (new Date(invite.expires_at) < new Date()) {
-    // Mark as expired
+  if (new Date(inviteBasic.expires_at) < new Date()) {
+    // Mark as expired outside transaction (we want this to persist even if we throw)
     await query(
       'UPDATE clan_invites SET status = \'expired\' WHERE id = $1',
       [inviteId]
     );
-    throw new Error('Invite has expired');
+    throw new AppError('Invite has expired', 404);
   }
 
-  // Check if user is already in a clan
+  // Check if user is already in a clan (before starting transaction)
   const existingMembership = await query(
     'SELECT clan_id FROM clan_members WHERE user_id = $1',
     [userId]
   );
 
   if (existingMembership.rows.length > 0) {
-    throw new Error('You are already in a clan. Leave your current clan first.');
+    throw new AppError('You are already in a clan. Leave your current clan first.', 409);
   }
 
-  // Check if clan is full
-  const clanResult = await query(
-    `SELECT c.max_members, (SELECT COUNT(*) FROM clan_members WHERE clan_id = c.id) as member_count
-     FROM clans c WHERE c.id = $1`,
-    [invite.clan_id]
-  );
+  // Run the acceptance in a transaction with FOR UPDATE to prevent race conditions
+  return await withTransaction(async (client) => {
+    // Lock the invite row
+    const inviteResult = await client.query(
+      `SELECT id, clan_id, status
+       FROM clan_invites
+       WHERE id = $1
+       FOR UPDATE`,
+      [inviteId]
+    );
 
-  if (clanResult.rows.length === 0) {
-    throw new Error('Clan no longer exists');
-  }
+    const invite = inviteResult.rows[0];
 
-  const { max_members, member_count } = clanResult.rows[0];
-  if (parseInt(member_count, 10) >= max_members) {
-    throw new Error('Clan is full');
-  }
+    // Re-check status under lock
+    if (invite.status !== 'pending') {
+      throw new AppError('Invite is no longer pending', 409);
+    }
 
-  // Accept invite and add member in transaction
-  await query('UPDATE clan_invites SET status = \'accepted\' WHERE id = $1', [inviteId]);
+    // Lock the clan row and get capacity info
+    const clanResult = await client.query(
+      `SELECT c.id, c.name, c.max_members,
+              (SELECT COUNT(*) FROM clan_members WHERE clan_id = c.id) as member_count
+       FROM clans c
+       WHERE c.id = $1
+       FOR UPDATE`,
+      [invite.clan_id]
+    );
 
-  await query(
-    `INSERT INTO clan_members (clan_id, user_id, role, joined_at)
-     VALUES ($1, $2, 'member', NOW())`,
-    [invite.clan_id, userId]
-  );
+    if (clanResult.rows.length === 0) {
+      throw new AppError('Clan no longer exists', 404);
+    }
 
-  // Decline any other pending invites for this user
-  await query(
-    `UPDATE clan_invites SET status = 'declined'
-     WHERE invitee_id = $1 AND status = 'pending' AND id != $2`,
-    [userId, inviteId]
-  );
+    const clan = clanResult.rows[0];
+    if (parseInt(clan.member_count, 10) >= clan.max_members) {
+      throw new AppError('Clan is full', 409);
+    }
 
-  // Get clan name for response
-  const clanNameResult = await query('SELECT name FROM clans WHERE id = $1', [invite.clan_id]);
+    // Re-check membership under transaction (in case of concurrent joins)
+    const memberCheck = await client.query(
+      'SELECT clan_id FROM clan_members WHERE user_id = $1',
+      [userId]
+    );
 
-  return {
-    clanId: invite.clan_id,
-    clanName: clanNameResult.rows[0]?.name,
-    userId,
-    role: 'member'
-  };
+    if (memberCheck.rows.length > 0) {
+      throw new AppError('You are already in a clan', 409);
+    }
+
+    // Accept the invite
+    await client.query(
+      'UPDATE clan_invites SET status = \'accepted\' WHERE id = $1',
+      [inviteId]
+    );
+
+    // Add the member
+    await client.query(
+      `INSERT INTO clan_members (clan_id, user_id, role, joined_at)
+       VALUES ($1, $2, 'member', NOW())`,
+      [invite.clan_id, userId]
+    );
+
+    // Decline any other pending invites for this user
+    await client.query(
+      `UPDATE clan_invites SET status = 'declined'
+       WHERE invitee_id = $1 AND status = 'pending' AND id != $2`,
+      [userId, inviteId]
+    );
+
+    return {
+      clanId: invite.clan_id,
+      clanName: clan.name,
+      userId,
+      role: 'member'
+    };
+  });
 }
 
 /**

@@ -252,11 +252,49 @@ router.post('/invite/:inviteId/accept', authenticate, clanManageLimiter, asyncHa
       membership
     });
   } catch (error) {
+    // Service now throws AppError with proper status codes
+    if (error.statusCode) {
+      throw error;
+    }
+    // Fallback for any legacy errors
     if (error.message.includes('not found') || error.message.includes('expired')) {
       throw new AppError(error.message, 404);
     }
     if (error.message.includes('already in a clan')) {
       throw new AppError(error.message, 400);
+    }
+    throw error;
+  }
+}));
+
+/**
+ * POST /api/clans/:id/transfer
+ * Transfer clan leadership to another member (leader only)
+ */
+router.post('/:id/transfer', authenticate, clanManageLimiter, asyncHandler(async (req, res) => {
+  const clanId = parseInt(req.params.id, 10);
+  const { userId: targetUserId } = req.body;
+
+  if (isNaN(clanId)) {
+    throw new AppError('Invalid clan ID', 400);
+  }
+
+  const parsedTargetUserId = parseInt(targetUserId, 10);
+  if (isNaN(parsedTargetUserId)) {
+    throw new AppError('Invalid target user ID', 400);
+  }
+
+  try {
+    const result = await clanService.transferLeadership(req.user.userId, clanId, parsedTargetUserId);
+
+    res.json({
+      success: true,
+      message: 'Leadership transferred',
+      ...result
+    });
+  } catch (error) {
+    if (error.statusCode) {
+      throw error; // Already an AppError
     }
     throw error;
   }
