@@ -212,6 +212,190 @@ function isSafePathComponent(value) {
   return typeof value === 'string' && /^[A-Za-z0-9_-]+$/.test(value);
 }
 
+export function auditCodexParentImagegenHandoffJsonl(stdout, {
+  canonicalSkillReadCommand,
+  validateHistoricalSkillReadCommand
+} = {}) {
+  if (
+    typeof canonicalSkillReadCommand !== 'string'
+    || canonicalSkillReadCommand.length === 0
+  ) {
+    throw new Error('parent imagegen handoff requires a canonical skill-read command');
+  }
+  if (
+    validateHistoricalSkillReadCommand !== undefined
+    && typeof validateHistoricalSkillReadCommand !== 'function'
+  ) {
+    throw new Error(
+      'parent imagegen handoff historical skill-read validator must be a function'
+    );
+  }
+  const source = Buffer.from(stdout ?? '').toString('utf8');
+  const invocationAliasStates = new Map();
+  const invocationLifecycles = new Set();
+  const invocationItemCallIds = new Map();
+  const commandText = new Map();
+  const terminalRecords = new Map();
+  const threadStartedRecords = [];
+  let successfulSkillReadLine = null;
+  let validatedSkillReadCommand = null;
+  let firstObservableImagegenLine = null;
+  const lines = source.split(/\r?\n/).filter(line => line.length > 0);
+  for (const [index, line] of lines.entries()) {
+    let event;
+    try {
+      event = JSON.parse(line);
+    } catch {
+      throw new Error(
+        `Codex parent handoff stdout line ${index + 1} is not valid JSONL`
+      );
+    }
+    if (!event || typeof event !== 'object' || Array.isArray(event)) {
+      throw new Error(
+        `Codex parent handoff stdout line ${index + 1} is not a JSON object`
+      );
+    }
+    if (event.type === 'thread.started') {
+      threadStartedRecords.push(event.thread_id);
+    }
+    const item = event.item
+      && typeof event.item === 'object'
+      && !Array.isArray(event.item)
+      ? event.item
+      : event;
+    const recordType = String(item.type ?? event.type ?? '').toLowerCase();
+    if (
+      ['file_change', 'file_write', 'apply_patch'].some(
+        type => recordType.includes(type)
+      )
+    ) {
+      throw new Error(
+        'Codex parent handoff worker must not perform file writes'
+      );
+    }
+    const isCommand = recordType === 'command_execution';
+    const isInvocation = isCommand
+      || recordType.includes('tool')
+      || recordType.includes('function')
+      || recordType.includes('web_search')
+      || recordType.includes('computer_action');
+    if (!isInvocation) continue;
+    const imagegen = isImagegenToolCall(item);
+    if (imagegen && firstObservableImagegenLine === null) {
+      firstObservableImagegenLine = index;
+    }
+    if (!isCommand && !imagegen) {
+      throw new Error(
+        `Codex parent handoff worker invoked prohibited tool ${toolIdentity(item, recordType)}`
+      );
+    }
+    if (isCommand && typeof item.command !== 'string') {
+      throw new Error(
+        'Codex parent handoff command execution must include a command'
+      );
+    }
+    const lifecycle = correlateToolLifecycle(
+      invocationAliasStates,
+      invocationLifecycles,
+      invocationItemCallIds,
+      {
+        event,
+        identity: isCommand ? 'command_execution' : toolIdentity(item, recordType),
+        imagegen,
+        fallbackId: `line:${index + 1}`
+      }
+    );
+    if (isCommand) {
+      const prior = commandText.get(lifecycle);
+      if (prior !== undefined && prior !== item.command) {
+        throw new Error(
+          `Codex parent handoff command invocation ${lifecycle.id} changed command text`
+        );
+      }
+      const unwrapped = unwrapSafeShellCommand(item.command);
+      if (
+        unwrapped !== canonicalSkillReadCommand
+        && !validateHistoricalSkillReadCommand?.(unwrapped)
+      ) {
+        throw new Error(
+          'Codex parent handoff worker may execute only the canonical imagegen skill read'
+        );
+      }
+      validatedSkillReadCommand = unwrapped;
+      commandText.set(lifecycle, item.command);
+    }
+    const outcome = toolLifecycleOutcome(event, item);
+    if (
+      isCommand
+      && outcome === 'success'
+      && item.exit_code !== 0
+    ) {
+      throw new Error(
+        'Codex parent handoff canonical skill-read command did not exit successfully'
+      );
+    }
+    if (isCommand && outcome === 'success') {
+      successfulSkillReadLine = index;
+    }
+    if (outcome !== null) {
+      terminalRecords.set(
+        lifecycle,
+        (terminalRecords.get(lifecycle) ?? 0) + 1
+      );
+    }
+  }
+  if (
+    threadStartedRecords.length !== 1
+    || !isSafePathComponent(threadStartedRecords[0])
+  ) {
+    throw new Error(
+      'Codex parent handoff requires exactly one safe thread.started record'
+    );
+  }
+  const commands = [...invocationLifecycles].filter(
+    lifecycle => lifecycle.tool === 'command_execution'
+  );
+  if (
+    commands.length !== 1
+    || commands[0].terminal !== 'success'
+    || terminalRecords.get(commands[0]) !== 1
+  ) {
+    throw new Error(
+      'Codex parent handoff requires exactly one successful canonical skill-read command'
+    );
+  }
+  const imagegenInvocations = [...invocationLifecycles].filter(
+    lifecycle => lifecycle.imagegen
+  );
+  if (
+    imagegenInvocations.length > 1
+    || imagegenInvocations.some(lifecycle => (
+      lifecycle.terminal !== 'success'
+      || terminalRecords.get(lifecycle) !== 1
+    ))
+  ) {
+    throw new Error(
+      'Codex parent handoff requires exactly one successful imagegen invocation when observable'
+    );
+  }
+  if (
+    firstObservableImagegenLine !== null
+    && successfulSkillReadLine >= firstObservableImagegenLine
+  ) {
+    throw new Error(
+      'Codex parent handoff skill read must complete before observable imagegen execution'
+    );
+  }
+  return {
+    threadId: threadStartedRecords[0],
+    commandCount: 1,
+    observableImagegenInvocationCount: imagegenInvocations.length,
+    ...(validateHistoricalSkillReadCommand === undefined
+      ? {}
+      : { skillReadCommand: validatedSkillReadCommand })
+  };
+}
+
 function isDirectChild(root, candidate) {
   return path.dirname(path.resolve(candidate)) === path.resolve(root);
 }
@@ -566,6 +750,27 @@ function codexHome(environmentSource) {
   throw new Error('Codex worker artifact verification requires CODEX_HOME or HOME');
 }
 
+function strictCodexHome(environmentSource) {
+  const configured = typeof environmentSource?.CODEX_HOME === 'string'
+    && environmentSource.CODEX_HOME.length > 0
+    ? environmentSource.CODEX_HOME
+    : typeof environmentSource?.HOME === 'string'
+      && environmentSource.HOME.length > 0
+      ? path.join(environmentSource.HOME, '.codex')
+      : null;
+  if (configured === null) {
+    throw new Error(
+      'Codex parent handoff artifact resolution requires CODEX_HOME or HOME'
+    );
+  }
+  if (!path.isAbsolute(configured) || path.normalize(configured) !== configured) {
+    throw new Error(
+      'Codex parent handoff CODEX_HOME must resolve from an absolute normalized environment path'
+    );
+  }
+  return configured;
+}
+
 function isWithin(root, candidate) {
   const relative = path.relative(root, candidate);
   return relative === '' || (
@@ -852,7 +1057,14 @@ export async function verifyCodexImagegenEvidence(audit, {
         verified.push({
           ...artifact,
           path: realArtifactPath,
-          bytes: Number(openedAfter.size)
+          bytes: Number(openedAfter.size),
+          identity: {
+            device: String(openedAfter.dev),
+            inode: String(openedAfter.ino),
+            size: String(openedAfter.size),
+            mtimeNs: String(openedAfter.mtimeNs),
+            ctimeNs: String(openedAfter.ctimeNs)
+          }
         });
       } finally {
         await artifactHandle.close();
@@ -888,5 +1100,160 @@ export async function verifyCodexImagegenEvidence(audit, {
     };
   } finally {
     await threadHandle.close();
+  }
+}
+
+export async function resolveCodexCurrentThreadImagegenArtifact({
+  threadId,
+  environmentSource = process.env,
+  filesystemSource = null
+} = {}) {
+  if (!isSafePathComponent(threadId)) {
+    throw new Error(
+      'Codex parent handoff thread ID must be a safe path component'
+    );
+  }
+  const filesystem = filesystemSource === null
+    ? DEFAULT_FILESYSTEM_SOURCE
+    : { ...DEFAULT_FILESYSTEM_SOURCE, ...filesystemSource };
+  const home = strictCodexHome(environmentSource);
+  const homeDetails = await filesystem.lstat(home, { bigint: true });
+  if (!homeDetails.isDirectory() || homeDetails.isSymbolicLink()) {
+    throw new Error('Codex parent handoff CODEX_HOME must be a real directory');
+  }
+  const generatedImagesRoot = path.join(home, 'generated_images');
+  const generatedImagesDetails = await filesystem.lstat(
+    generatedImagesRoot,
+    { bigint: true }
+  );
+  if (
+    !generatedImagesDetails.isDirectory()
+    || generatedImagesDetails.isSymbolicLink()
+  ) {
+    throw new Error(
+      'Codex parent handoff generated_images root must be a real directory'
+    );
+  }
+  const threadRoot = path.join(generatedImagesRoot, threadId);
+  if (!isDirectChild(generatedImagesRoot, threadRoot)) {
+    throw new Error(
+      'Codex parent handoff thread root must be a direct generated_images child'
+    );
+  }
+  const threadDetails = await filesystem.lstat(threadRoot, { bigint: true });
+  if (!threadDetails.isDirectory() || threadDetails.isSymbolicLink()) {
+    throw new Error(
+      'Codex parent handoff thread root must be a real directory'
+    );
+  }
+  const [realHome, realGeneratedImagesRoot, realThreadRoot] =
+    await Promise.all([
+      filesystem.realpath(home),
+      filesystem.realpath(generatedImagesRoot),
+      filesystem.realpath(threadRoot)
+    ]);
+  if (
+    !isDirectChild(realHome, realGeneratedImagesRoot)
+    || !isDirectChild(realGeneratedImagesRoot, realThreadRoot)
+  ) {
+    throw new Error(
+      'Codex parent handoff ancestor directories must retain canonical direct-child identities'
+    );
+  }
+  const handles = [];
+  try {
+    for (const directory of [home, generatedImagesRoot, threadRoot]) {
+      handles.push(await filesystem.open(directory, NOFOLLOW_DIRECTORY_FLAGS));
+    }
+    const openedDetails = await Promise.all(
+      handles.map(handle => handle.stat({ bigint: true }))
+    );
+    const initialDetails = [
+      homeDetails,
+      generatedImagesDetails,
+      threadDetails
+    ];
+    if (openedDetails.some((details, index) => (
+      !details.isDirectory()
+      || !sameFilesystemIdentity(details, initialDetails[index])
+    ))) {
+      throw new Error(
+        'Codex parent handoff ancestor directory changed before verification'
+      );
+    }
+
+    const entries = await filesystem.readdir(threadRoot, {
+      withFileTypes: true
+    });
+    const rasters = entries.filter(entry => (
+      GENERATED_RASTER_NAME_PATTERN.test(entry.name)
+    ));
+    for (const entry of rasters) {
+      if (!entry.isFile() || entry.isSymbolicLink()) {
+        throw new Error(
+          `Codex parent handoff raster must be a regular non-symlink file: ${entry.name}`
+        );
+      }
+    }
+    if (rasters.length !== 1) {
+      throw new Error(
+        'Codex parent handoff current thread must contain exactly one matching '
+        + `imagegen raster; found ${rasters.length}`
+      );
+    }
+    const artifactPath = path.join(threadRoot, rasters[0].name);
+    const artifact = parseGeneratedArtifactPath(artifactPath);
+    if (artifact === null || artifact.threadId !== threadId) {
+      throw new Error('Codex parent handoff resolved an unsafe raster identity');
+    }
+    const audit = {
+      imagegenEvidence: 'generated-artifact',
+      imagegenInvocationCount: 1,
+      imagegenArtifacts: [artifact]
+    };
+    const verification = await verifyCodexImagegenEvidence(audit, {
+      environmentSource,
+      returnGeneratedArtifactBytes: true,
+      filesystemSource: filesystem
+    });
+    const [pathDetailsAfter, openedDetailsAfter, realPathsAfter] =
+      await Promise.all([
+        Promise.all([
+          filesystem.lstat(home, { bigint: true }),
+          filesystem.lstat(generatedImagesRoot, { bigint: true }),
+          filesystem.lstat(threadRoot, { bigint: true })
+        ]),
+        Promise.all(handles.map(handle => handle.stat({ bigint: true }))),
+        Promise.all([
+          filesystem.realpath(home),
+          filesystem.realpath(generatedImagesRoot),
+          filesystem.realpath(threadRoot)
+        ])
+      ]);
+    const initialRealPaths = [
+      realHome,
+      realGeneratedImagesRoot,
+      realThreadRoot
+    ];
+    if (pathDetailsAfter.some((details, index) => (
+      !details.isDirectory()
+      || details.isSymbolicLink()
+      || !sameReadIdentity(initialDetails[index], details)
+      || !sameReadIdentity(openedDetails[index], openedDetailsAfter[index])
+      || !sameFilesystemIdentity(details, openedDetailsAfter[index])
+      || realPathsAfter[index] !== initialRealPaths[index]
+    ))) {
+      throw new Error(
+        'Codex parent handoff ancestor directory path changed during verification'
+      );
+    }
+    return {
+      threadId,
+      artifact: verification.artifacts[0],
+      bytes: verification.generatedArtifactBytes,
+      verificationAudit: audit
+    };
+  } finally {
+    await Promise.all(handles.reverse().map(handle => handle.close()));
   }
 }

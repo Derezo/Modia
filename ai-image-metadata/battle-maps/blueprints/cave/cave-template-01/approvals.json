@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "battle-map-blueprint-approval-index-v3",
+  "theme": "cave",
+  "templateId": "cave-template-01",
+  "entries": [
+    {
+      "id": "cave-template-01-a",
+      "blueprintPath": "ai-image-metadata/battle-maps/blueprints/cave/cave-template-01/cave-template-01-a.json",
+      "approvalPath": "ai-image-metadata/battle-maps/blueprints/cave/cave-template-01/cave-template-01-a.approval.json",
+      "blueprintFullHash": "sha256:bac3bd7902f40334f0f2fc26fc0ffd82ad8a0bed53b23f892c2c873061d1cb87",
+      "sourceImageSha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe",
+      "promptProfileSha256": "sha256:23e6e1c07490b84211c7fc67e42f396e150a315a0ee0ec92aaf524a147eca160",
+      "reviewer": "codex-cave-v3-mechanical-reviewer",
+      "decision": "approved",
+      "mechanicalReviewReportSha256": "sha256:95c868cff9cfb398cf41d9dd742a4f735657f97cebfb1b0b56a067438b2f1bac",
+      "reason": "The three primary routes remain internally vertex-disjoint with separate player and opponent entries. The offset central-sink route balances the longer eastern shelf and western terrace approaches without merging their tactical lanes. All five cave regions, three elevation levels, separate northern stair and ramp portals, and the exact 13-family cave asset closure are preserved, and the candidate, report, and mechanical preview pins agree.",
+      "approvalFullHash": "sha256:a92cd6c73e45070d36e5c2386545b2c7a8ded8b318f10736b87c4ecccbaab66e"
+    },
+    {
+      "id": "cave-template-01-b",
+      "blueprintPath": "ai-image-metadata/battle-maps/blueprints/cave/cave-template-01/cave-template-01-b.json",
+      "approvalPath": "ai-image-metadata/battle-maps/blueprints/cave/cave-template-01/cave-template-01-b.approval.json",
+      "blueprintFullHash": "sha256:6d77e81c518fccb815b60ba43b624bd780161ec2eb6a8dce5064c69931d12b37",
+      "sourceImageSha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe",
+      "promptProfileSha256": "sha256:23e6e1c07490b84211c7fc67e42f396e150a315a0ee0ec92aaf524a147eca160",
+      "reviewer": "codex-cave-v3-mechanical-reviewer",
+      "decision": "approved",
+      "mechanicalReviewReportSha256": "sha256:43893347de803be1f15605bddc7b5121301712b750f88884c21cc939b1c731cb",
+      "reason": "The three primary routes remain internally vertex-disjoint with distinct formation entries. The enlarged seven-cell western flowstone terrace creates the clearest elevated flank space while preserving independent western, central, and eastern approaches, correct mixed stair/ramp access to the northern grotto, all five exact cave regions, and exact 13-family cave asset closure. Candidate, report, and mechanical preview pins agree.",
+      "approvalFullHash": "sha256:451dbfee15836caf284d431acb6036359a5b48f3ae4c2d8e7dc9210314efa689"
+    },
+    {
+      "id": "cave-template-01-c",
+      "blueprintPath": "ai-image-metadata/battle-maps/blueprints/cave/cave-template-01/cave-template-01-c.json",
+      "approvalPath": "ai-image-metadata/battle-maps/blueprints/cave/cave-template-01/cave-template-01-c.approval.json",
+      "blueprintFullHash": "sha256:5ac632c67956c5b3f3db196f02173c45be11acfde229d21bbcc12eb980167922",
+      "sourceImageSha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe",
+      "promptProfileSha256": "sha256:23e6e1c07490b84211c7fc67e42f396e150a315a0ee0ec92aaf524a147eca160",
+      "reviewer": "codex-cave-v3-mechanical-reviewer",
+      "decision": "approved",
+      "mechanicalReviewReportSha256": "sha256:84207535e1641d6a77f9e8d27f13f782d8640070ab6e1dc2e365efc43079300f",
+      "reason": "Its three ordered primary routes are internally vertex-disjoint with distinct formation entries; the wider eastern bend gives the shelf route the clearest tactical identity. The exact five required areas are preserved: a walkable level-0 central sink, level-2 western terrace, predominantly level-0 eastern shelf with an explicit natural-ramp transition, level-1 southern formation, and level-2 northern grotto. Northern access uses separate central carved-stair and western/eastern natural-ramp portals on independent routes, while the western terrace likewise has distinct stair and ramp access. The blueprint closes over exactly the reviewed 13 cave asset families with no cross-theme substitution, and its pinned result, report, and SVG evidence agree.",
+      "approvalFullHash": "sha256:a090d128a4890b782604e2e0e6069a4d3eff84cd9a672f02d03c0a453a1fd5e3"
+    }
+  ],
+  "fullHash": "sha256:9e88b54ac735c8d43ec3e386ac7f6a88a6ff4cb6c883592a31c846a4c9c2fa20"
+}

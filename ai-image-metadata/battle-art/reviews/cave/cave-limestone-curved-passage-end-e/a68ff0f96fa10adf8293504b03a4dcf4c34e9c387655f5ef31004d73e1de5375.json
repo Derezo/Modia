@@ -1,0 +1,85 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v3",
+  "theme": "cave",
+  "familyId": "cave-limestone-curved-passage-end-e",
+  "decision": "approved",
+  "reviewer": "codex-end-e-recovery-owner-review",
+  "reason": "Exact candidate sha256:a68ff0f96fa10adf8293504b03a4dcf4c34e9c387655f5ef31004d73e1de5375 is a single flat pale-limestone end-E route overlay with a broad rounded anchor terminus and one correctly oriented lower-right arm. It preserves cave material/category semantics, has no wall, platform, slab, vertical face, detached fragment, or forbidden N/S/W continuation, and remains readable at runtime scale. Its immutable failed-attempt origin replays byte-exactly under the current descriptor's bounded 1150‰ anchor scale: E spans are 28/27/22 pixels, coverage is 161‰, alpha bounds are 147x81, and all raster/route validators pass.",
+  "reviewedAt": "2026-08-12T02:33:30.577Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/cave/cave-limestone-curved-passage-end-e.json",
+    "sha256": "sha256:8c837e749b68fd03ec0c769f74f53e1aadddd5cda39c10bcf5fb9a8f9ed5c1f1",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-curved-passage-end-e/result.json",
+      "bytes": 3093,
+      "sha256": "sha256:28a22beaf7100aa555315c037abb7158d8da1922c0c2b6a55a9895447672330f"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-curved-passage-end-e/candidate.png",
+      "bytes": 16366,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:a68ff0f96fa10adf8293504b03a4dcf4c34e9c387655f5ef31004d73e1de5375"
+    },
+    "derivation": {
+      "schemaVersion": "battle-art-route-finishing-v1",
+      "strategy": "anchor-scale-v1",
+      "source": {
+        "path": "ai-image-metadata/battle-art/generated-artifacts/cave/cave-limestone-curved-passage-end-e/9a461b3b221cecfe01bea7cb96b84b150992225dc6c7bc4e6b1c63b92a8f8bd4.png",
+        "bytes": 1170290,
+        "width": 1774,
+        "height": 887,
+        "format": "png",
+        "sha256": "sha256:9a461b3b221cecfe01bea7cb96b84b150992225dc6c7bc4e6b1c63b92a8f8bd4"
+      },
+      "scalePermille": 1150,
+      "anchor": {
+        "x": 128,
+        "y": 64
+      },
+      "borderClearPixels": 4,
+      "forbiddenBandClearPixels": 0,
+      "kernel": "lanczos3",
+      "finalSha256": "sha256:a68ff0f96fa10adf8293504b03a4dcf4c34e9c387655f5ef31004d73e1de5375"
+    },
+    "origin": {
+      "kind": "failed-attempt-revalidation-v1",
+      "failureRecord": {
+        "path": "ai-image-metadata/battle-art/generated-artifacts/cave/cave-limestone-curved-passage-end-e/failures/2adf19d488183e613297203f7859642b3095b1ae6059616bf820132f3b366074.json",
+        "sha256": "sha256:aa914f53dcb88c9c04323d139b8c9f019a1de6af7ffde3f2d3d465107a6616cb",
+        "fullHash": "sha256:2adf19d488183e613297203f7859642b3095b1ae6059616bf820132f3b366074"
+      },
+      "raw": {
+        "path": "ai-image-metadata/battle-art/generated-artifacts/cave/cave-limestone-curved-passage-end-e/9a461b3b221cecfe01bea7cb96b84b150992225dc6c7bc4e6b1c63b92a8f8bd4.png",
+        "bytes": 1170290,
+        "width": 1774,
+        "height": 887,
+        "format": "png",
+        "sha256": "sha256:9a461b3b221cecfe01bea7cb96b84b150992225dc6c7bc4e6b1c63b92a8f8bd4"
+      },
+      "originalDescriptor": {
+        "path": "ai-image-metadata/battle-art/descriptors/cave/cave-limestone-curved-passage-end-e.json",
+        "sha256": "sha256:d104f1bcb751e605db5e67634bdc3e2377d68e1578762763f86efa1ff398fc5f",
+        "contentVersion": 1
+      },
+      "validationDescriptorSha256": "sha256:8c837e749b68fd03ec0c769f74f53e1aadddd5cda39c10bcf5fb9a8f9ed5c1f1"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "cave-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/cave/cave-template-01/reference.png",
+        "sha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe"
+      }
+    ]
+  },
+  "fullHash": "sha256:b1f198dc7b8cd5c4786f6d8d513acf7ef952397e502fd0215d420e2ce597d1e7"
+}

@@ -1,0 +1,140 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v3",
+  "theme": "cave",
+  "familyId": "cave-limestone-curved-passage-straight-ns",
+  "decision": "approved",
+  "reviewer": "codex-independent-reviewer",
+  "reason": "Exact pinned candidate renders as a readable cave-limestone straight N/S surface route: descriptor, profile, failed-attempt origin, and deterministic derivation replay are current; all six alpha-240 arm samples are 34–35 px, forbidden E/W bands and the canvas border remain clear, and native, floor, and three-tile seam composites show continuous aligned joins without gaps or topology ambiguity.",
+  "reviewedAt": "2026-08-12T00:18:19.421Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/cave/cave-limestone-curved-passage-straight-ns.json",
+    "sha256": "sha256:9da24886f267ef8a23931143d712dd879521c59e23c0f63e4da485280a4a8af9",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-curved-passage-straight-ns/result.json",
+      "bytes": 4674,
+      "sha256": "sha256:2834ef9073702db800c448adf5e66d71e654a936e2d562616ecf856a5ecb1923"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-curved-passage-straight-ns/candidate.png",
+      "bytes": 19329,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:015fbffd4035ae510d7f32456096e593fed364b385dd81fd13b6a390fe208f58"
+    },
+    "derivation": {
+      "schemaVersion": "battle-art-route-finishing-v1",
+      "strategy": "straight-route-basis-v1",
+      "source": {
+        "path": "ai-image-metadata/battle-art/generated-artifacts/cave/cave-limestone-curved-passage-straight-ns/3c4b780878920ec14e10e912039d8c83f019a9e93f054123afd4dbe71adb153f.png",
+        "bytes": 1305535,
+        "width": 1774,
+        "height": 887,
+        "format": "png",
+        "sha256": "sha256:3c4b780878920ec14e10e912039d8c83f019a9e93f054123afd4dbe71adb153f"
+      },
+      "sourceTopologySha256": "sha256:51833ffb1becd9abfd1fb9ea9ddd84c623eb046fa140c1e77fc335d4ee585c58",
+      "sourceBounds": {
+        "x": 171,
+        "y": 102,
+        "width": 1444,
+        "height": 688
+      },
+      "componentCount": 4,
+      "coveredPixels": 193769,
+      "selectedCoveredPixels": 193726,
+      "detachedCoveredPixels": 43,
+      "detachedCoveredPermille": 1,
+      "maximumDetachedCoveredPermille": 1,
+      "basis": {
+        "longitudinal": {
+          "x": 2,
+          "y": -1
+        },
+        "perpendicular": {
+          "x": 1,
+          "y": 2
+        },
+        "lengthSquared": 5,
+        "terminalProjectionNumerator": 160
+      },
+      "sourceProjectionBounds": {
+        "longitudinal": {
+          "minimumNumerator": -398,
+          "maximumNumerator": 3080
+        },
+        "perpendicular": {
+          "minimumNumerator": 1601,
+          "maximumNumerator": 1956
+        }
+      },
+      "sourceTerminalInsetPixels": 240,
+      "sourceTerminalInsetProjectionNumerator": 537,
+      "trimmedLongitudinalBounds": {
+        "minimumNumerator": 139,
+        "maximumNumerator": 2543
+      },
+      "trimmedCoveredPixels": 50333,
+      "trimmedCoveredPermille": 260,
+      "maximumTrimmedCoveredPermille": 270,
+      "anchor": {
+        "x": 128,
+        "y": 64
+      },
+      "outputTerminalOverflowPixels": 7,
+      "outputTerminalOverflowProjectionNumerator": 15,
+      "outputPerpendicularSpanPixels": 44,
+      "outputPerpendicularProjectionNumerator": 98,
+      "scaleLongitudinal": {
+        "numerator": 350,
+        "denominator": 2404
+      },
+      "scalePerpendicular": {
+        "numerator": 98,
+        "denominator": 355
+      },
+      "scaleAnisotropyPermille": 1897,
+      "maximumScaleAnisotropyPermille": 2000,
+      "kernel": "bilinear-premultiplied-alpha-v1",
+      "finalSha256": "sha256:015fbffd4035ae510d7f32456096e593fed364b385dd81fd13b6a390fe208f58"
+    },
+    "origin": {
+      "kind": "failed-attempt-revalidation-v1",
+      "failureRecord": {
+        "path": "ai-image-metadata/battle-art/generated-artifacts/cave/cave-limestone-curved-passage-straight-ns/failures/f2866d8d1c9cba2d510006814035cfb58609c4b176759abf7c4f128a5ccea5e5.json",
+        "sha256": "sha256:f2f19998ad76184fe5c0a6572c0b4700f13f6c9fb4803aff8a3f42694e67bd9b",
+        "fullHash": "sha256:f2866d8d1c9cba2d510006814035cfb58609c4b176759abf7c4f128a5ccea5e5"
+      },
+      "raw": {
+        "path": "ai-image-metadata/battle-art/generated-artifacts/cave/cave-limestone-curved-passage-straight-ns/3c4b780878920ec14e10e912039d8c83f019a9e93f054123afd4dbe71adb153f.png",
+        "bytes": 1305535,
+        "width": 1774,
+        "height": 887,
+        "format": "png",
+        "sha256": "sha256:3c4b780878920ec14e10e912039d8c83f019a9e93f054123afd4dbe71adb153f"
+      },
+      "originalDescriptor": {
+        "path": "ai-image-metadata/battle-art/descriptors/cave/cave-limestone-curved-passage-straight-ns.json",
+        "sha256": "sha256:10b6e49f37a638f9c3b69152fed77c8b1428b275d9ca14113ab4d450a5b98c1a",
+        "contentVersion": 1
+      },
+      "validationDescriptorSha256": "sha256:9da24886f267ef8a23931143d712dd879521c59e23c0f63e4da485280a4a8af9"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "cave-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/cave/cave-template-01/reference.png",
+        "sha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe"
+      }
+    ]
+  },
+  "fullHash": "sha256:b1886549b5744d3e5cd552510eaf4136c3dcde0c0482ed288af5dcc0e147742f"
+}

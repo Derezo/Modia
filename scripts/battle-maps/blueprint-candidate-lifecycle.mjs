@@ -66,10 +66,14 @@ export const BLUEPRINT_PROMPT_PATH =
   'ai-image-metadata/battle-maps/prompts/map-blueprint-v1.json';
 export const BLUEPRINT_PROMPT_PATH_V2 =
   'ai-image-metadata/battle-maps/prompts/map-blueprint-v2.json';
+export const BLUEPRINT_PROMPT_PATH_V3 =
+  'ai-image-metadata/battle-maps/prompts/map-blueprint-v3.json';
 export const BLUEPRINT_PROMPT_SCHEMA =
   'battle-map-blueprint-prompt-profile-v1';
 export const BLUEPRINT_PROMPT_SCHEMA_V2 =
   'battle-map-blueprint-prompt-profile-v2';
+export const BLUEPRINT_PROMPT_SCHEMA_V3 =
+  'battle-map-blueprint-prompt-profile-v3';
 export const BLUEPRINT_CANDIDATE_SCHEMA =
   'battle-map-blueprint-candidate-record-v1';
 export const BLUEPRINT_ATTEMPT_EVIDENCE_SCHEMA =
@@ -111,8 +115,29 @@ const SCRIPT_PROJECT_ROOT = path.resolve(
 );
 const ID_PATTERN = /^[a-z0-9]+(?:[-_:][a-z0-9]+)*$/;
 const HASH_PATTERN = /^sha256:[0-9a-f]{64}$/;
-const LEGACY_BLUEPRINT_APPROVAL_TEMPLATE_PATTERN = /-template-(?:01|02)$/;
-const BLUEPRINT_APPROVAL_V3_TEMPLATE_PATTERN = /-template-(\d+)$/;
+const LEGACY_BLUEPRINT_APPROVAL_TEMPLATE_IDS = new Set([
+  'forest-template-01',
+  'forest-template-02'
+]);
+const BLUEPRINT_APPROVAL_V2_TEMPLATE_IDS = new Set([
+  'forest-template-03',
+  'forest-template-04',
+  'forest-template-05',
+  'forest-template-06'
+]);
+const REPLAY_ONLY_BLUEPRINT_TEMPLATE_IDS = new Set([
+  ...LEGACY_BLUEPRINT_APPROVAL_TEMPLATE_IDS,
+  ...BLUEPRINT_APPROVAL_V2_TEMPLATE_IDS
+]);
+const CAVE_TEMPLATE_01_ID = 'cave-template-01';
+const HISTORICAL_BLUEPRINT_PROMPT_PROFILES_BY_TEMPLATE = new Map([
+  ['forest-template-07', [{
+    id: 'map-blueprint-v2',
+    path: BLUEPRINT_PROMPT_PATH_V2,
+    schema: BLUEPRINT_PROMPT_SCHEMA_V2,
+    sha256: 'sha256:d9fd841812bcc9a4713d3ac8b1c81715f359e55d55098589f8970650fed7cdae'
+  }]]
+]);
 const CONTROL_CHARACTER_PATTERN = /[\u0000-\u001f\u007f-\u009f]/;
 const ALLOWED_OUTPUTS = new Set(['candidate.json', 'last-message.txt']);
 const INPUT_PATHS = new Set([
@@ -494,12 +519,26 @@ function safeId(value, label) {
 }
 
 function usesLegacyBlueprintApprovalSchema(templateId) {
-  return LEGACY_BLUEPRINT_APPROVAL_TEMPLATE_PATTERN.test(templateId);
+  return LEGACY_BLUEPRINT_APPROVAL_TEMPLATE_IDS.has(templateId);
 }
 
 function usesBlueprintApprovalSchemaV3(templateId) {
-  const match = BLUEPRINT_APPROVAL_V3_TEMPLATE_PATTERN.exec(templateId);
-  return match !== null && Number(match[1]) >= 7;
+  return !usesLegacyBlueprintApprovalSchema(templateId)
+    && !BLUEPRINT_APPROVAL_V2_TEMPLATE_IDS.has(templateId);
+}
+
+function assertV3BlueprintAuthoringIdentity(templateId) {
+  if (!REPLAY_ONLY_BLUEPRINT_TEMPLATE_IDS.has(templateId)) return;
+  const historicalVersion = usesLegacyBlueprintApprovalSchema(templateId)
+    ? 'V1'
+    : 'V2';
+  fail(
+    `${templateId} is a deprecated ${historicalVersion} compatibility identity. `
+      + 'Its tracked blueprint evidence is replay-only and remains available to '
+      + 'verification and release checks; new candidate generation, review-preview '
+      + 'creation, and approval are prohibited. Create a new template identity and '
+      + 'author it through the V3 lifecycle.'
+  );
 }
 
 function blueprintApprovalSchemas(templateId) {
@@ -528,17 +567,46 @@ function blueprintApprovalSchemas(templateId) {
 }
 
 function blueprintPromptProfile(templateId) {
-  return usesLegacyBlueprintApprovalSchema(templateId)
-    ? {
-        id: 'map-blueprint-v1',
-        path: BLUEPRINT_PROMPT_PATH,
-        schema: BLUEPRINT_PROMPT_SCHEMA
-      }
-    : {
-        id: 'map-blueprint-v2',
-        path: BLUEPRINT_PROMPT_PATH_V2,
-        schema: BLUEPRINT_PROMPT_SCHEMA_V2
-      };
+  if (usesLegacyBlueprintApprovalSchema(templateId)) {
+    return {
+      id: 'map-blueprint-v1',
+      path: BLUEPRINT_PROMPT_PATH,
+      schema: BLUEPRINT_PROMPT_SCHEMA
+    };
+  }
+  if (!usesBlueprintApprovalSchemaV3(templateId)) {
+    return {
+      id: 'map-blueprint-v2',
+      path: BLUEPRINT_PROMPT_PATH_V2,
+      schema: BLUEPRINT_PROMPT_SCHEMA_V2
+    };
+  }
+  return {
+    id: 'map-blueprint-v3',
+    path: BLUEPRINT_PROMPT_PATH_V3,
+    schema: BLUEPRINT_PROMPT_SCHEMA_V3
+  };
+}
+
+function exactPromptProfileMatch(left, right) {
+  return left.id === right.id
+    && left.path === right.path
+    && left.sha256 === right.sha256;
+}
+
+function supportedPromptProfileReference(
+  candidate,
+  current,
+  {
+    allowHistorical = false,
+    historicalReferences = []
+  } = {}
+) {
+  if (exactPromptProfileMatch(candidate, current)) return true;
+  return allowHistorical
+    && historicalReferences.some(historical =>
+      exactPromptProfileMatch(candidate, historical)
+    );
 }
 
 function approvalReason(value, label = 'approval reason') {
@@ -856,7 +924,8 @@ export function parseBlueprintActionArgs(argv = process.argv.slice(2), {
   allowForce = false,
   allowUpdatePins = false,
   allowReason = false,
-  requireReasonForNewApproval = false
+  requireReasonForNewApproval = false,
+  requireV3AuthoringIdentity = false
 } = {}) {
   const options = {
     all: false,
@@ -903,6 +972,9 @@ export function parseBlueprintActionArgs(argv = process.argv.slice(2), {
   if (options.help) return options;
   safeId(options.theme, '--theme');
   safeId(options.template, '--template');
+  if (requireV3AuthoringIdentity) {
+    assertV3BlueprintAuthoringIdentity(options.template);
+  }
   if (!options.all) safeId(options.mapId, '--map');
   if (options.all && options.mapId) fail('--all and --map are mutually exclusive');
   if (requireReviewer) safeId(options.reviewer, '--reviewer');
@@ -993,15 +1065,14 @@ async function restoreOptionalFile(projectRoot, filePath, bytes) {
   }
 }
 
-async function loadBlueprintPrompt(projectRoot, template) {
-  const expected = blueprintPromptProfile(template);
+async function loadBlueprintPromptProfile(projectRoot, expected, label) {
   const absolutePath = resolveWithinProject(
     projectRoot,
     expected.path,
-    'blueprint prompt path'
+    `${label} path`
   );
-  await assertSafeWritePath(projectRoot, absolutePath, 'blueprint prompt read path');
-  const { value, source } = await readJson(absolutePath, 'blueprint prompt profile');
+  await assertSafeWritePath(projectRoot, absolutePath, `${label} read path`);
+  const { value, source } = await readJson(absolutePath, label);
   exactKeys(value, [
     'schemaVersion',
     'id',
@@ -1030,13 +1101,41 @@ async function loadBlueprintPrompt(projectRoot, template) {
     !Array.isArray(value.negativeConstraints)
     || value.negativeConstraints.some(item => typeof item !== 'string' || item.length === 0)
   ) fail('blueprint prompt profile.negativeConstraints must contain strings');
-  return {
+  const loaded = {
     profile: value,
     reference: {
       id: value.id,
       path: expected.path,
       sha256: sha256Bytes(Buffer.from(source))
     }
+  };
+  if (
+    expected.sha256 !== undefined
+    && loaded.reference.sha256 !== expected.sha256
+  ) {
+    fail(`${label} no longer matches its exact historical hash pin`);
+  }
+  return loaded;
+}
+
+async function loadBlueprintPrompt(projectRoot, template) {
+  const current = await loadBlueprintPromptProfile(
+    projectRoot,
+    blueprintPromptProfile(template),
+    'blueprint prompt profile'
+  );
+  const historical = await Promise.all(
+    (HISTORICAL_BLUEPRINT_PROMPT_PROFILES_BY_TEMPLATE.get(template) ?? [])
+      .map(expected => loadBlueprintPromptProfile(
+        projectRoot,
+        expected,
+        'historical blueprint prompt profile'
+      ))
+  );
+  return {
+    ...current,
+    historicalPromptProfiles: historical,
+    historicalReferences: historical.map(loaded => loaded.reference)
   };
 }
 
@@ -1360,7 +1459,14 @@ function template07OrganicSurfaceFeature(x, y, variant, regionIds) {
  * It is a shape/scale example, not approved content. The worker must still
  * author a distinct interpretation of the reviewed sidecar and image.
  */
-export function createBlueprintContractExample(sidecar, mapId) {
+export function createBlueprintContractExample(
+  sidecar,
+  mapId,
+  { skipCaveSpecialization = false } = {}
+) {
+  if (sidecar.id === CAVE_TEMPLATE_01_ID && !skipCaveSpecialization) {
+    return createCaveTemplate01ContractExample(sidecar, mapId);
+  }
   const width = sidecar.mapProfile.width;
   const height = sidecar.mapProfile.height;
   const v2 = usesBlueprintV2SemanticContract(sidecar.id);
@@ -2269,6 +2375,319 @@ export function createBlueprintContractExample(sidecar, mapId) {
   };
 }
 
+function createCaveTemplate01ContractExample(sidecar, mapId) {
+  const blueprint = createBlueprintContractExample(sidecar, mapId, {
+    skipCaveSpecialization: true
+  });
+  const originalRegionIds = new Map(
+    blueprint.regions.map(region => [region.id, region])
+  );
+  const playerRegion = blueprint.regions.find(region =>
+    region.kind === 'formation-clearing'
+    && region.annotations.includes('player-formation')
+  );
+  const opponentRegion = blueprint.regions.find(region =>
+    region.kind === 'formation-clearing'
+    && region.annotations.includes('opponent-formation')
+  );
+  const elevatedRegion = blueprint.regions.find(
+    region => region.kind === 'elevated-clearing'
+  );
+  const flankRegion = blueprint.regions.find(
+    region => region.kind === 'flank-clearing'
+  );
+  const centralRegion = blueprint.regions.find(
+    region => region.kind === 'route-junction'
+  );
+  const renamedRegionIds = new Map([
+    [playerRegion.id, 'southern-formation-cavern'],
+    [opponentRegion.id, 'northern-crystal-grotto'],
+    [elevatedRegion.id, 'western-flowstone-terrace'],
+    [flankRegion.id, 'eastern-stalagmite-shelf'],
+    [centralRegion.id, 'central-limestone-sink']
+  ]);
+  const renameRegionReference = id => renamedRegionIds.get(id) ?? id;
+
+  playerRegion.id = 'southern-formation-cavern';
+  opponentRegion.id = 'northern-crystal-grotto';
+  elevatedRegion.id = 'western-flowstone-terrace';
+  flankRegion.id = 'eastern-stalagmite-shelf';
+  centralRegion.id = 'central-limestone-sink';
+  playerRegion.annotations = ['player-formation', 'southern-cavern'];
+  opponentRegion.annotations = ['opponent-formation', 'crystal-grotto'];
+  elevatedRegion.annotations = ['raised-flowstone', 'mixed-access'];
+  flankRegion.annotations = ['stalagmite-shelf', 'eastern-route'];
+  centralRegion.annotations = ['shallow-sink', 'central-route'];
+
+  for (const row of blueprint.surfaceGrid) {
+    for (const surface of row) {
+      if (!surface) continue;
+      surface.material = 'worn-floor';
+      surface.featureId = renameRegionReference(surface.featureId);
+    }
+  }
+  for (const feature of blueprint.features) {
+    feature.ownerFeatureId = renameRegionReference(feature.ownerFeatureId);
+  }
+  const elevationFeature = blueprint.features.find(
+    feature => feature.id === 'feature:terraces'
+  );
+  elevationFeature.id = 'feature:elevation';
+  elevationFeature.kind = 'cave-elevation';
+  elevationFeature.ownerFeatureId = 'central-limestone-sink';
+  elevationFeature.annotations = ['sink', 'terrace', 'shelf'];
+  const routeFeature = blueprint.features.find(
+    feature => feature.id === 'feature:routes'
+  );
+  routeFeature.kind = 'curved-cave-passages';
+  routeFeature.ownerFeatureId = 'central-limestone-sink';
+  routeFeature.annotations = ['central', 'west', 'east'];
+  const boundaryFeature = blueprint.features.find(
+    feature => feature.id === 'feature:boundary'
+  );
+  boundaryFeature.kind = 'cavern-boundary';
+  boundaryFeature.annotations = ['irregular-limestone'];
+
+  const playerCells = [
+    point(12, 27), point(14, 27), point(16, 27), point(18, 27), point(15, 26)
+  ];
+  blueprint.spawn.playerSlots.forEach((slot, index) => {
+    slot.cell = { ...playerCells[index] };
+  });
+  playerRegion.cells = playerCells.map(cell => ({ ...cell }));
+  const opponentCells = [
+    ...[11, 16, 21].map(x => point(x, 6)),
+    ...[10, 14, 18, 22].map(x => point(x, 7)),
+    ...[9, 12, 15, 18, 21].map(x => point(x, 8)),
+    ...[10, 14, 18, 22].map(x => point(x, 9)),
+    ...[9, 12, 15, 18, 21].map(x => point(x, 10)),
+    ...[11, 15, 21].map(x => point(x, 11))
+  ];
+  blueprint.spawn.opponentCandidates.forEach((candidate, index) => {
+    candidate.cell = { ...opponentCells[index] };
+  });
+  blueprint.spawn.opponentZones[0].cells = opponentCells.map(cell => ({ ...cell }));
+  opponentRegion.cells = blueprint.spawn.opponentCandidates.map(candidate => ({
+    ...candidate.cell
+  }));
+
+  const verticalCells = (x, fromY, toY) => {
+    const cells = [];
+    for (
+      let y = fromY;
+      y !== toY + Math.sign(toY - fromY);
+      y += Math.sign(toY - fromY)
+    ) cells.push(point(x, y));
+    return cells;
+  };
+  blueprint.routes = [
+    {
+      id: 'route:central-sink',
+      kind: 'primary',
+      material: 'worn-floor',
+      cells: verticalCells(15, 25, 8),
+      required: true,
+      width: 2,
+      featureId: 'feature:routes',
+      assetFamily: 'curved-passage'
+    },
+    {
+      id: 'route:western-terrace',
+      kind: 'primary',
+      material: 'worn-floor',
+      cells: [
+        ...verticalCells(12, 26, 20),
+        point(13, 20), point(13, 19), point(13, 18), point(14, 18),
+        point(14, 17), point(13, 17), point(12, 17), point(11, 17),
+        ...verticalCells(11, 16, 8)
+      ],
+      required: true,
+      width: 2,
+      featureId: 'feature:routes',
+      assetFamily: 'curved-passage'
+    },
+    {
+      id: 'route:eastern-shelf',
+      kind: 'primary',
+      material: 'worn-floor',
+      cells: [
+        ...verticalCells(18, 26, 21),
+        point(19, 21), point(19, 20), point(19, 19), point(18, 19),
+        point(17, 19), point(16, 19), point(16, 18), point(16, 17),
+        point(17, 17), point(18, 17), point(19, 17), point(20, 17),
+        point(21, 17), ...verticalCells(21, 16, 8)
+      ],
+      required: true,
+      width: 2,
+      featureId: 'feature:routes',
+      assetFamily: 'curved-passage'
+    }
+  ];
+  routeFeature.cells = blueprint.routes.flatMap(route => route.cells).filter(
+    (cell, index, cells) => cells.findIndex(candidate => (
+      candidate.x === cell.x && candidate.y === cell.y
+    )) === index
+  );
+
+  elevatedRegion.cells = [11, 12, 13, 14, 15].map(x => point(x, 17));
+  flankRegion.cells = [
+    point(16, 19), point(17, 19), point(18, 19),
+    point(19, 19), point(19, 20)
+  ];
+  centralRegion.cells = [
+    point(14, 14), point(15, 14), point(15, 15), point(16, 15)
+  ];
+  elevationFeature.cells = [
+    ...elevatedRegion.cells,
+    ...flankRegion.cells,
+    ...centralRegion.cells
+  ].map(cell => ({ ...cell }));
+  for (let y = 0; y < blueprint.dimensions.height; y += 1) {
+    for (let x = 0; x < blueprint.dimensions.width; x += 1) {
+      if (blueprint.renderMask[y][x]) blueprint.elevation[y][x] = 1;
+    }
+  }
+  for (let y = 3; y <= 11; y += 1) {
+    for (let x = 8; x <= 23; x += 1) {
+      if (blueprint.renderMask[y][x]) blueprint.elevation[y][x] = 2;
+    }
+  }
+  for (const cell of opponentRegion.cells) blueprint.elevation[cell.y][cell.x] = 2;
+  for (const cell of elevatedRegion.cells) blueprint.elevation[cell.y][cell.x] = 2;
+  for (const cell of [...flankRegion.cells, ...centralRegion.cells]) {
+    blueprint.elevation[cell.y][cell.x] = 0;
+  }
+
+  const cellKeyForCave = cell => `${cell.x},${cell.y}`;
+  const westernKeys = new Set(elevatedRegion.cells.map(cellKeyForCave));
+  const northernKeys = new Set(opponentRegion.cells.map(cellKeyForCave));
+  blueprint.connections = [];
+  for (const route of blueprint.routes) {
+    for (let index = 1; index < route.cells.length; index += 1) {
+      const from = route.cells[index - 1];
+      const to = route.cells[index];
+      if (blueprint.elevation[from.y][from.x] === blueprint.elevation[to.y][to.x]) {
+        continue;
+      }
+      const westernPortal = westernKeys.has(cellKeyForCave(from))
+        !== westernKeys.has(cellKeyForCave(to));
+      const northernPortal = northernKeys.has(cellKeyForCave(from))
+        !== northernKeys.has(cellKeyForCave(to));
+      const kind = (
+        (westernPortal || northernPortal)
+        && route.id === 'route:central-sink'
+      )
+        ? 'stairs'
+        : 'slope';
+      blueprint.connections.push({
+        id: `connection:${route.id.slice(6)}:${index}`,
+        from: { ...from },
+        to: { ...to },
+        kind,
+        traversable: true,
+        bidirectional: true,
+        featureId: 'feature:elevation',
+        assetFamily: kind === 'stairs' ? 'carved-stairs' : 'natural-ramp'
+      });
+    }
+  }
+
+  const obstacleFamilies = [
+    'stalagmite-cluster', 'broken-column', 'flowstone-curtain', 'fallen-rock'
+  ];
+  const obstacleCells = [
+    point(4, 15), point(27, 15), point(6, 9), point(25, 9),
+    point(5, 19), point(26, 20), point(9, 13), point(23, 13)
+  ];
+  blueprint.obstacles = obstacleCells.map((cell, index) => ({
+    id: `obstacle:cave-${index + 1}`,
+    kind: obstacleFamilies[index % obstacleFamilies.length],
+    cells: [{ ...cell }],
+    featureId: index < 2 ? 'feature:boundary' : 'central-limestone-sink',
+    anchor: { ...cell },
+    occlusionBounds: {
+      minX: cell.x - 1,
+      minY: cell.y - 1,
+      maxX: cell.x + 1,
+      maxY: cell.y + 1
+    },
+    assetFamily: obstacleFamilies[index % obstacleFamilies.length]
+  }));
+  const decorationFamilies = [
+    'calcite-crystals', 'mineral-staining', 'scattered-rubble'
+  ];
+  const decorationCells = [
+    point(6, 11), point(25, 11), point(8, 14), point(23, 14),
+    point(7, 20), point(24, 20), point(10, 23), point(21, 23), point(16, 22)
+  ];
+  blueprint.decorations = decorationCells.map((cell, index) => ({
+    id: `decoration:cave-${index + 1}`,
+    kind: decorationFamilies[index % decorationFamilies.length],
+    cell: { ...cell },
+    featureId: index < 3
+      ? 'western-flowstone-terrace'
+      : index < 6
+        ? 'eastern-stalagmite-shelf'
+        : 'southern-formation-cavern',
+    anchor: 'tile',
+    assetFamily: decorationFamilies[index % decorationFamilies.length]
+  }));
+  blueprint.boundaries.forEach((boundary, index) => {
+    boundary.kind = 'cavern-edge';
+    boundary.featureId = 'feature:boundary';
+    boundary.assetFamily = index % 2 === 0 ? 'flowstone-edge' : 'layered-face';
+  });
+
+  const exitCells = {
+    player: [point(11, 23), point(15, 23), point(19, 23)],
+    opponent: [point(11, 12), point(16, 12), point(21, 12)]
+  };
+  for (const side of ['player', 'opponent']) {
+    const exits = blueprint.spawn.exits.filter(exit => exit.side === side);
+    exits.forEach((exit, index) => {
+      exit.cell = { ...exitCells[side][index] };
+      const approach = blueprint.spawn.approachRegions.find(
+        region => region.id === exit.approachRegionId
+      );
+      approach.cells = [-1, 0, 1].map(dx => point(exit.cell.x + dx, exit.cell.y));
+    });
+  }
+  blueprint.spawn.formationFacing = { player: 'n', opponent: 's' };
+  blueprint.spawn.tacticalAnnotations[0] = {
+    id: 'annotation:northern-crystal-cover',
+    kind: 'high-ground',
+    cells: blueprint.spawn.opponentCandidates
+      .filter(candidate => candidate.cell.y <= 10)
+      .map(candidate => ({ ...candidate.cell })),
+    tags: ['ranged']
+  };
+  for (const candidate of blueprint.spawn.opponentCandidates) {
+    candidate.tacticalAnnotationIds = [];
+  }
+  blueprint.expectedAssetFamilies = [
+    { category: 'surface', symbol: 'worn-floor' },
+    { category: 'route', symbol: 'curved-passage' },
+    { category: 'connection', symbol: 'natural-ramp' },
+    { category: 'connection', symbol: 'carved-stairs' },
+    { category: 'boundary', symbol: 'flowstone-edge' },
+    { category: 'boundary', symbol: 'layered-face' },
+    { category: 'obstacle', symbol: 'stalagmite-cluster' },
+    { category: 'obstacle', symbol: 'broken-column' },
+    { category: 'obstacle', symbol: 'flowstone-curtain' },
+    { category: 'obstacle', symbol: 'fallen-rock' },
+    { category: 'decoration', symbol: 'calcite-crystals' },
+    { category: 'decoration', symbol: 'mineral-staining' },
+    { category: 'decoration', symbol: 'scattered-rubble' }
+  ];
+  blueprint.generationNotes = [
+    'Cave contract example only; author a distinct sidecar-driven composition.'
+  ];
+  if (originalRegionIds.size !== 5) {
+    fail('cave-template-01 contract example requires exactly five semantic regions');
+  }
+  return blueprint;
+}
+
 function blueprintContract(sidecar, mapId) {
   const usesFallenOakComposition = sidecar.id === TEMPLATE_07_ID;
   return {
@@ -2359,6 +2778,30 @@ export function createBlueprintAuthoredStarter(sidecar, mapId) {
     createBlueprintContractExample(sidecar, mapId)
   );
   if (!usesBlueprintV2SemanticContract(sidecar.id)) return starter;
+
+  if (sidecar.id === CAVE_TEMPLATE_01_ID) {
+    const variant = variantKey(mapId);
+    const playerSlot = starter.spawn.playerSlots[1];
+    const previousPlayerCell = { ...playerSlot.cell };
+    playerSlot.cell = {
+      a: point(13, 27),
+      b: point(14, 26),
+      c: point(13, 26)
+    }[variant];
+    const playerRegion = starter.regions.find(
+      region => region.id === 'southern-formation-cavern'
+    );
+    const regionCell = playerRegion.cells.find(cell => (
+      cell.x === previousPlayerCell.x && cell.y === previousPlayerCell.y
+    ));
+    Object.assign(regionCell, playerSlot.cell);
+    starter.decorations[0].cell = {
+      a: point(5, 11),
+      b: point(6, 12),
+      c: point(7, 11)
+    }[variant];
+    return starter;
+  }
 
   const variant = variantKey(mapId);
   if (sidecar.id !== TEMPLATE_07_ID) {
@@ -2573,6 +3016,26 @@ export function buildBlueprintPrompt({
   const variant = variantKey(mapId);
   const v2 = usesBlueprintV2SemanticContract(sidecar.id);
   const usesFallenOakComposition = sidecar.id === TEMPLATE_07_ID;
+  const usesCaveComposition = sidecar.id === CAVE_TEMPLATE_01_ID;
+  const currentLifecycle = usesBlueprintApprovalSchemaV3(sidecar.id);
+  const caveVariantSafeguard = {
+    a: `Cave Variant A bounded-authoring safeguard: retain the three required
+primary route identities and their distinct semantics: central through
+central-limestone-sink, west through western-flowstone-terrace, and east through
+eastern-stalagmite-shelf. Author a bounded route-geometry variation without merging
+their internal vertices. Preserve southern player formation and northern opponent
+formation placement, then coordinate one safe cave-decoration move.`,
+    b: `Cave Variant B bounded-authoring safeguard: keep all three internally
+vertex-disjoint southern-to-northern primary passage identities and preserve the
+separate natural-ramp and carved-stairs portals into western-flowstone-terrace.
+Author a bounded terrace/elevation variation, coordinate every changed route edge,
+and make one safe mineral or crystal decoration move.`,
+    c: `Cave Variant C bounded-authoring safeguard: do not mirror or transpose a
+sibling composition. Preserve the central sink, western flowstone terrace, eastern
+stalagmite shelf, all three distinct primary passages, and the separate ramp/stair
+elevation semantics. Author a bounded eastern-route or obstacle/boundary variation
+and coordinate every affected region, connection, and cave-decoration record.`
+  }[variant];
   const expectedAssetFamilyCount =
     createBlueprintContractExample(sidecar, mapId).expectedAssetFamilies.length;
   const sourceInstruction = textTemplateFallback
@@ -2583,7 +3046,7 @@ inputs/sidecar.json as the complete authoring authority.`
     : `The exact approved source image is attached and available beneath inputs/. Treat it
 as composition-only inspiration and obey inputs/sidecar.json as gameplay authority.`;
   const variantSafeguard = v2
-    ? {
+    ? (usesCaveComposition ? caveVariantSafeguard : {
         a: usesFallenOakComposition
           ? `Template-07 Variant A bounded-authoring safeguard: preserve every required
 route record's ordered centerline cells exactly as staged in
@@ -2652,7 +3115,7 @@ formation-clearing region cell to preserve exact membership. Make the second
 authoritative change by moving one other decoration cell one cardinal step
 while preserving its feature ownership and avoiding spawn, route, obstacle,
 and boundary cells. The candidate must retain three required route segments.`
-      }[variant]
+      }[variant])
     : '';
   const requiredTopologyAreaIds = v2
     ? sidecar.topologyIntent.areas
@@ -2660,7 +3123,7 @@ and boundary cells. The candidate must retain three required route segments.`
       .map(area => area.id)
     : [];
   const v2SemanticSafeguard = v2
-    ? `Shared V2 composition safeguards: every non-formation tactical region must
+    ? `Shared ${currentLifecycle ? 'V3' : 'V2'} composition safeguards: every non-formation tactical region must
 intersect or cardinally touch a required route, and every such region with multiple
 cells must form one cardinally connected set. Required routes may meet at compact
 figure-eight or interlocking junctions, but must not form a long side-by-side parallel
@@ -2716,7 +3179,7 @@ fieldstone-terrace material has its distinct elevation-face family.`
     : '';
   const candidateAuthoringInstruction = v2
     ? `The closed contract summary is available at inputs/contract.json. A
-standalone schema-valid, V2-semantic-valid 32 by 32 authoring starter is
+standalone schema-valid, ${currentLifecycle ? 'V3-lifecycle-semantic-valid' : 'V2-semantic-valid'} 32 by 32 authoring starter is
 available separately at inputs/starter.json. First run
 \`cp inputs/starter.json candidate.json\`, then make targeted, bounded edits to
 candidate.json. The finished candidate must change at least two authoritative
@@ -2781,7 +3244,12 @@ diagonal footprint at offsets (0,0), (1,0), (2,0), (2,1), (3,1), (4,1),
 fallen-oak-root-mass must contain exactly one cell, use that cell as its anchor,
 and cardinally touch the landmark. Every other obstacle record must contain
 exactly one cell and use that same cell as its anchor.`
-    : `The fixed obstacle:landmark renderer has exactly a one-tile collision footprint.
+    : usesCaveComposition
+      ? `Cave obstacle families stalagmite-cluster, broken-column,
+flowstone-curtain, and fallen-rock each use exactly one collision cell per record,
+with the anchor on that same cell. Build larger cave formations from separate,
+uniquely identified one-cell records.`
+      : `The fixed obstacle:landmark renderer has exactly a one-tile collision footprint.
 Every obstacle record must therefore contain exactly one cell and use that same
 cell as its anchor. Build larger clusters from separate uniquely identified
 one-cell obstacle records; never make one record span multiple cells.`}
@@ -3439,6 +3907,8 @@ async function readCandidateRecord(projectRoot, theme, template, mapId, {
   sidecar = null,
   promptReference = null,
   promptProfile = null,
+  historicalPromptProfiles = [],
+  historicalPromptReferences = [],
   allowHistoricalPromptProfileForRejection = false
 } = {}) {
   const paths = candidatePaths(theme, template, mapId);
@@ -3504,13 +3974,13 @@ async function readCandidateRecord(projectRoot, theme, template, mapId, {
   sha256(metadata.promptProfile.sha256, 'candidate prompt profile sha256');
   if (
     promptReference
-    && (
-      metadata.promptProfile.id !== promptReference.id
-      || metadata.promptProfile.path !== promptReference.path
-      || (
-        !allowHistoricalPromptProfileForRejection
-        && metadata.promptProfile.sha256 !== promptReference.sha256
-      )
+    && !supportedPromptProfileReference(
+      metadata.promptProfile,
+      promptReference,
+      {
+        allowHistorical: allowHistoricalPromptProfileForRejection,
+        historicalReferences: historicalPromptReferences
+      }
     )
   ) fail('candidate prompt-profile pin is stale');
   if (
@@ -3536,25 +4006,38 @@ async function readCandidateRecord(projectRoot, theme, template, mapId, {
       && typeof metadata.worker.textTemplateFallback !== 'boolean'
     )
   ) fail('candidate worker provenance is invalid');
-  if (
-    sidecar
-    && promptProfile
-    && !allowHistoricalPromptProfileForRejection
-  ) {
+  if (sidecar && promptProfile) {
+    const selectedPromptProfile = (
+      promptReference
+      && exactPromptProfileMatch(metadata.promptProfile, promptReference)
+    )
+      ? promptProfile
+      : historicalPromptProfiles.find(loaded =>
+        exactPromptProfileMatch(metadata.promptProfile, loaded.reference)
+      )?.profile;
+    if (!selectedPromptProfile) {
+      fail('candidate prompt transcript has no exact loaded prompt profile');
+    }
     const promptPath = resolveWithinProject(
       projectRoot,
       paths.prompt,
       'candidate prompt path'
     );
     await assertSafeWritePath(projectRoot, promptPath, 'candidate prompt read path');
-    const actualPrompt = await readFile(promptPath);
+    let actualPrompt;
+    try {
+      actualPrompt = await readFile(promptPath);
+    } catch (error) {
+      if (error.code === 'ENOENT') fail('candidate prompt transcript does not exist');
+      throw error;
+    }
     const fallbackModes = hasExplicitTextTemplateFallback
       ? [metadata.worker.textTemplateFallback]
       : [false, true];
     const matchingModes = fallbackModes.filter(textTemplateFallback => {
       const expectedPrompt = Buffer.from(
         `${buildBlueprintPrompt({
-          profile: promptProfile,
+          profile: selectedPromptProfile,
           sidecar,
           mapId,
           textTemplateFallback
@@ -6275,6 +6758,7 @@ export async function generateBlueprintCandidates(options, {
   beforeCapturedFileQuarantine = async () => {},
   treeCaptureHook = async () => {}
 } = {}) {
+  assertV3BlueprintAuthoringIdentity(options.template);
   const projectRoot = path.resolve(options.projectRoot ?? SCRIPT_PROJECT_ROOT);
   const [{ sidecar }, promptLoaded] = await Promise.all([
     loadTemplateSidecar({
@@ -6980,6 +7464,7 @@ async function assertMechanicalPreviewReview(
 }
 
 export async function previewBlueprintCandidates(options) {
+  assertV3BlueprintAuthoringIdentity(options.template);
   const projectRoot = path.resolve(options.projectRoot ?? SCRIPT_PROJECT_ROOT);
   const [{ sidecar }, promptLoaded] = await Promise.all([
     loadTemplateSidecar({
@@ -7208,6 +7693,7 @@ function validateApprovalRecord(value, {
   paths,
   entry,
   promptReference,
+  historicalPromptReferences,
   sourceImageSha256,
   blueprintFileSha256
 }) {
@@ -7290,9 +7776,14 @@ function validateApprovalRecord(value, {
     || value.sourceImageSha256 !== sourceImageSha256
     || value.sourceImageSha256 !== entry.sourceImageSha256
     || value.reviewer !== entry.reviewer
-    || value.promptProfile.id !== promptReference.id
-    || value.promptProfile.path !== promptReference.path
-    || value.promptProfile.sha256 !== promptReference.sha256
+    || !supportedPromptProfileReference(
+      value.promptProfile,
+      promptReference,
+      {
+        allowHistorical: true,
+        historicalReferences: historicalPromptReferences
+      }
+    )
     || value.promptProfile.sha256 !== entry.promptProfileSha256
     || (
       schemas.v2
@@ -7445,6 +7936,8 @@ async function approveBlueprintCandidateUnlocked(options, projectRoot) {
       sidecar,
       promptReference: promptLoaded.reference,
       promptProfile: promptLoaded.profile,
+      historicalPromptProfiles: promptLoaded.historicalPromptProfiles,
+      historicalPromptReferences: promptLoaded.historicalReferences,
       allowHistoricalPromptProfileForRejection:
         options.decision === 'rejected'
     }
@@ -7783,6 +8276,7 @@ async function approveBlueprintCandidateUnlocked(options, projectRoot) {
 }
 
 export async function approveBlueprintCandidate(options) {
+  assertV3BlueprintAuthoringIdentity(options.template);
   const projectRoot = path.resolve(options.projectRoot ?? SCRIPT_PROJECT_ROOT);
   return withSourceTemplateLifecycleLock({
     projectRoot,
@@ -7892,6 +8386,7 @@ export async function verifyApprovedBlueprints({
         paths,
         entry,
         promptReference: promptLoaded.reference,
+        historicalPromptReferences: promptLoaded.historicalReferences,
         sourceImageSha256: sidecar.sourceImage.sha256,
         blueprintFileSha256
       });
@@ -7993,6 +8488,7 @@ export const BlueprintLifecycleInternals = Object.freeze({
   finalizeApprovalRecord,
   blueprintApprovalSchemas,
   blueprintPromptProfile,
+  assertV3BlueprintAuthoringIdentity,
   passableTraversalComponents,
   validateV2BlueprintSemanticContract,
   assertTemplate07OrganicSurfaceGeometry,

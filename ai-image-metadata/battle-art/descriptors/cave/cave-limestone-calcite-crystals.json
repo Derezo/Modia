@@ -1,0 +1,97 @@
+{
+  "schemaVersion": "battle-art-family-descriptor-v2",
+  "id": "cave-limestone-calcite-crystals",
+  "theme": "cave",
+  "category": "nonblocking-decoration",
+  "familyGroup": "cave-limestone-calcite-crystals",
+  "variantId": "small",
+  "capabilities": {
+    "direction": null,
+    "routeTopology": null,
+    "surfaceVariant": null,
+    "ecologyProfile": "cave-limestone",
+    "tierBands": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "heightDeltas": [
+      0
+    ]
+  },
+  "status": "approved",
+  "promptProfile": {
+    "id": "battle-art-family-v2",
+    "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+    "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+  },
+  "styleReferences": [
+    {
+      "id": "cave-source-template-01",
+      "path": "ai-image-metadata/battle-maps/sources/cave/cave-template-01/reference.png",
+      "sha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe"
+    }
+  ],
+  "generationPrompt": "Create exactly one seam-safe orthographic isometric cave nonblocking-decoration asset named cave-limestone-calcite-crystals for ecology profile cave-limestone; tier bands 1, 2, 3, 4, 5. Author the declared orientation directly, preserve continuous neighboring materials and edge alignment, and include only the declared family content. Regional visual vocabulary: Limestone Cave uses a coherent natural cavern of pale worn limestone floors, warm calcite shelves, cool mineral-stained stone, layered limestone walls, amber flowstone, stalagmites, broken columns, angular fallen rock, sparse calcite crystals, and scattered pale rubble under cool subterranean light. Keep this geology, mineral palette, scale, and lighting consistent across every directional edge and transition. Depict the literal regional subject cave limestone calcite crystals as a restrained, grounded isometric detail that adds ecological variety without reading as a wall or blocking object. Do not add a baked backdrop, black void, unrelated terrain wall, or presentation frame.",
+  "rasterContract": {
+    "schemaVersion": "battle-art-raster-contract-v1",
+    "kind": "transparent-cutout",
+    "minimumCoveredPermille": 10,
+    "maximumCoveredPermille": 850
+  },
+  "canvas": {
+    "width": 128,
+    "height": 192
+  },
+  "placement": {
+    "pivot": {
+      "x": 64,
+      "y": 160
+    },
+    "anchor": {
+      "x": 64,
+      "y": 160
+    },
+    "footprint": {
+      "x": 0,
+      "y": 0,
+      "width": 1,
+      "height": 1
+    },
+    "collision": {
+      "kind": "none",
+      "cells": []
+    },
+    "drawBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 128,
+      "height": 192
+    },
+    "occlusionBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
+    },
+    "stratum": "decoration"
+  },
+  "content": {
+    "version": 1,
+    "sourceSha256": "sha256:fc0284cd87175eef0332959606f031e23b31188b3c6b230d01e3c642c5586849",
+    "runtimeSha256": null,
+    "immutableUrl": null
+  },
+  "source": {
+    "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-calcite-crystals/result.json",
+    "imagePath": "ai-image-metadata/battle-art/sources/cave/cave-limestone-calcite-crystals/v1/fc0284cd87175eef0332959606f031e23b31188b3c6b230d01e3c642c5586849.png",
+    "imageSha256": "sha256:fc0284cd87175eef0332959606f031e23b31188b3c6b230d01e3c642c5586849",
+    "width": 128,
+    "height": 192,
+    "format": "png",
+    "reviewer": "codex-independent-reviewer",
+    "approvedAt": "2026-08-11T10:40:20.613Z"
+  }
+}

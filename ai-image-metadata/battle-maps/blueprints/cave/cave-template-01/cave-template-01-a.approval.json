@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "battle-map-blueprint-approval-v3",
+  "id": "cave-template-01-a",
+  "theme": "cave",
+  "templateId": "cave-template-01",
+  "decision": "approved",
+  "reviewer": "codex-cave-v3-mechanical-reviewer",
+  "blueprintPath": "ai-image-metadata/battle-maps/blueprints/cave/cave-template-01/cave-template-01-a.json",
+  "blueprintFileSha256": "sha256:5ad845dbd1ff5e72183ce5b10de464ee9bee54a6cf951f264b5744846c30f3f5",
+  "blueprintFullHash": "sha256:bac3bd7902f40334f0f2fc26fc0ffd82ad8a0bed53b23f892c2c873061d1cb87",
+  "sourceImageSha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe",
+  "promptProfile": {
+    "id": "map-blueprint-v3",
+    "path": "ai-image-metadata/battle-maps/prompts/map-blueprint-v3.json",
+    "sha256": "sha256:23e6e1c07490b84211c7fc67e42f396e150a315a0ee0ec92aaf524a147eca160"
+  },
+  "reason": "The three primary routes remain internally vertex-disjoint with separate player and opponent entries. The offset central-sink route balances the longer eastern shelf and western terrace approaches without merging their tactical lanes. All five cave regions, three elevation levels, separate northern stair and ramp portals, and the exact 13-family cave asset closure are preserved, and the candidate, report, and mechanical preview pins agree.",
+  "mechanicalReview": {
+    "schemaVersion": "battle-map-blueprint-mechanical-review-v1",
+    "reportPath": "ai-image-metadata/battle-maps/review/cave/cave-template-01/cave-template-01-a/previews/bac3bd7902f40334f0f2fc26fc0ffd82ad8a0bed53b23f892c2c873061d1cb87/mechanical-report.json",
+    "reportFileSha256": "sha256:95c868cff9cfb398cf41d9dd742a4f735657f97cebfb1b0b56a067438b2f1bac",
+    "previewPath": "ai-image-metadata/battle-maps/review/cave/cave-template-01/cave-template-01-a/previews/bac3bd7902f40334f0f2fc26fc0ffd82ad8a0bed53b23f892c2c873061d1cb87/mechanical-preview.svg",
+    "previewFileSha256": "sha256:70fb426d7feb6ea49988432d66024aa5b6173d3a6e300eb72b5a442db2aaf660"
+  },
+  "fullHash": "sha256:a92cd6c73e45070d36e5c2386545b2c7a8ded8b318f10736b87c4ecccbaab66e"
+}

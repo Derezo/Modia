@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v2",
+  "theme": "cave",
+  "familyId": "cave-limestone-natural-ramp-e",
+  "decision": "rejected",
+  "reviewer": "codex-independent-reviewer",
+  "reason": "Although the cutout is connected and reaches only the declared E endpoint, its broad flat top is carried by a sustained exposed lower-left rock face, and the low anchor terminates in that vertical cap. It reads as a raised platform or cliff ledge rather than a natural ramp blending into the low cell. Exact pins, current effective prompt, normalization, one connected 6,434-pixel component, anchor contact, and E-only endpoint geometry pass; this rejection is specifically for concrete connection-slope category semantics.",
+  "reviewedAt": "2026-08-11T13:01:01.144Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/cave/cave-limestone-natural-ramp-e.json",
+    "sha256": "sha256:57dbcf55c0b393e32e37b824163753831a143a35ad5f136582a92dc2c05e71cc",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-natural-ramp-e/result.json",
+      "bytes": 2670,
+      "sha256": "sha256:db874419c2e676a524803fa43c778b988fda103ec1886d7a199426a3ed988769"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-natural-ramp-e/candidate.png",
+      "bytes": 20601,
+      "width": 256,
+      "height": 192,
+      "format": "png",
+      "sha256": "sha256:b92e555621a2344453f72ed8465118511376bbca71f4c60337d73beb641b4d76"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "cave-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/cave/cave-template-01/reference.png",
+        "sha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe"
+      }
+    ],
+    "styleReferenceMode": "attachments",
+    "styleReferenceProvenance": [
+      {
+        "id": "cave-source-template-01",
+        "sha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe",
+        "stagedBasename": "style-reference-01.png"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "imageArguments": [
+        "style-reference-01.png"
+      ],
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-natural-ramp-e/prompt.txt",
+        "bytes": 12101,
+        "sha256": "sha256:3c49037e424b520ffa78e0ceb12253a11524f022ec173ee0721ade32d51daff2"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-natural-ramp-e/worker.jsonl",
+        "bytes": 35981,
+        "sha256": "sha256:6570d04c239c0696d61b33c1f346a7890b06265f8ab8f2078569996a85374997"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-natural-ramp-e/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-natural-ramp-e/last-message.txt",
+        "bytes": 399,
+        "sha256": "sha256:4fff83579b030db3fcebec94286e205324683628917ccbe3f93e742f4c1c734f"
+      }
+    }
+  },
+  "fullHash": "sha256:3f3b9100c0c29c5e5ac43d6268b1ee0ffe5f2cc6cf54cc2849d75e417557afc7"
+}

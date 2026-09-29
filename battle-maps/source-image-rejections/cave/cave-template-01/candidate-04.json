@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "battle-map-source-image-candidate-rejection-v1",
+  "theme": "cave",
+  "template": "cave-template-01",
+  "candidate": "candidate-04",
+  "decision": "rejected",
+  "reviewer": "codex-reviewer-remaining-catalog-audit",
+  "reason": "Reject exact candidate 949a41d8089b6645faf1f5508afd49767759ed77a91e93faa9dc69227b13b0b5: its irregular cave boundary and asymmetric material treatment are promising, but it renders numerous dark constructed-looking arches rather than exactly three organic, rock-separated passage mouths at each identifiable formation cavern. The intended southern and northern formation spaces are not legible as compact bounded caverns, and the three route families cannot be traced independently before reconnection. The small central low area lacks a clearly open-banked, shallow sink reading with two broad unstepped ramp cuts on both north and south sides; stairs and ambiguous paths dominate. The resulting disconnected portals and oversized lower floor leave movement and elevation topology too ambiguous for source promotion.",
+  "evidence": {
+    "result": {
+      "path": "ai-image-metadata/battle-maps/candidates/cave/cave-template-01/candidate-04/result.json",
+      "bytes": 1810,
+      "sha256": "sha256:f8f2ee76aac1db96257a669dcfa16b558623453270fa58fe37632ce5d2340e78"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-maps/candidates/cave/cave-template-01/candidate-04/candidate.png",
+      "bytes": 3030328,
+      "width": 1254,
+      "height": 1254,
+      "format": "png",
+      "sha256": "sha256:949a41d8089b6645faf1f5508afd49767759ed77a91e93faa9dc69227b13b0b5"
+    },
+    "promptProfile": {
+      "id": "source-template-image-cave-v4",
+      "path": "ai-image-metadata/battle-maps/prompts/source-template-image-cave-v4.json",
+      "sha256": "sha256:4bb318be9080a594428ddeb80080e869748456dcc1d74f9df2d888a5df533661"
+    },
+    "prompt": {
+      "path": "ai-image-metadata/battle-maps/candidates/cave/cave-template-01/candidate-04/prompt.txt",
+      "bytes": 11471,
+      "sha256": "sha256:926c0ddb98536e53fefb317865461aa097fc00c035f9d9dea87dd2c894057766"
+    },
+    "workerLogs": {
+      "stdout": {
+        "path": "ai-image-metadata/battle-maps/candidates/cave/cave-template-01/candidate-04/worker.jsonl",
+        "bytes": 20758,
+        "sha256": "sha256:302b3385bd108282fd4e76545fae1eb53fcb0efae49ea9d72419d0d2c184e803"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-maps/candidates/cave/cave-template-01/candidate-04/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-maps/candidates/cave/cave-template-01/candidate-04/last-message.txt",
+        "bytes": 195,
+        "sha256": "sha256:b706d7f93eddb6f7afb2e2450d44f3c263cdbab0424b24b8b51db3f594f87384"
+      }
+    },
+    "imagegenInvocationCount": 1
+  }
+}

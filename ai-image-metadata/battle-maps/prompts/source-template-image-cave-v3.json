@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "battle-map-source-prompt-profile-v1",
+  "id": "source-template-image-cave-v3",
+  "purpose": "Frozen cave-composition prompt with visually separated formation portals and a clearly depressed, multiply crossable central sink.",
+  "frozen": true,
+  "prompt": "Use case: stylized-concept. Asset type: square compositional reference for later 32 by 32 isometric tactical-map authoring. Scene: a natural limestone cave viewed from a high, readable isometric angle. Organize the image as five visibly distinct spaces: a medium-sized irregular southern formation cavern, a smaller northern crystal grotto, a shallow central limestone sink, a raised western flowstone terrace, and a lower eastern stalagmite shelf. Show exactly three independent route corridors between the two formation caverns: one through the central sink, one across the western terrace, and one around the eastern shelf. At the edge of each formation cavern, show three distinct passage mouths as exactly three widely spaced portals separated from one another by substantial, unmistakable limestone buttresses; keep all three portals visible at once. Each portal must continue as its own readable corridor for meaningful distance before any mid-map interconnection, with no broad shared upper-center funnel. Make the central sink unmistakably lower than its surroundings: a compact oval or kidney-shaped walkable basin occupying less than one quarter of the scene, with a clearly visible lower floor, interrupted rather than continuous rim segments, and at least two wide sloped ramp cuts on its southern edge plus at least two wide sloped ramp cuts on its northern edge. The central route must visibly enter, cross the lower sink floor, and leave it. Keep the southern formation cavern compact enough that its three exits read as separate mouths rather than an oversized open arena. Keep the northern grotto enclosed enough that its three separate entries are obvious. Use broad natural ramps and a few spatially separated short carved-stone stairs, layered limestone ledges, stalagmite clusters, broken columns, and dark cavern walls that own an irregular outer boundary. Keep walkable floors, portal mouths, ramps, stairs, and elevation breaks visually unambiguous. Do not draw units, spawn markers, a tactical grid, labels, text, or UI. This image is composition-only inspiration, not a literal tile map.",
+  "negativeConstraints": [
+    "oversized open central arena or featureless basin",
+    "one broad shared funnel into either formation cavern",
+    "fewer than three clearly separated passage portals at either formation cavern",
+    "routes that merge immediately after leaving a formation",
+    "central sink rendered as level floor or as a pit enclosed by a continuous rim",
+    "ambiguous sink elevation without visible lower floor and broad ramp cuts",
+    "symmetric arena geometry",
+    "straight mine corridors or a rectangular dungeon room",
+    "random freestanding walls",
+    "checkerboard materials",
+    "isolated height spikes or detached rock platforms",
+    "single-choke formations",
+    "text, labels, or UI",
+    "units, spawn markers, or a tactical grid",
+    "perspective that hides walkable surfaces",
+    "flat full-height cleared edge strips"
+  ]
+}

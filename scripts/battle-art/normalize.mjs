@@ -6,8 +6,11 @@ import path from 'node:path';
 
 import {
   CANDIDATE_SCHEMA,
+  REVALIDATED_CANDIDATE_SCHEMA,
+  assertFailedAttemptRevalidationOrigin,
   assertStyleReferenceProvenance,
   atomicWrite,
+  candidateValidationDescriptorSha256,
   candidatePaths,
   exactKeys,
   inspectImageContents,
@@ -16,7 +19,6 @@ import {
   readPinnedRegularFile,
   resolveTracked,
   selectFamilies,
-  sha256,
   stableJson,
   verifyCandidateRouteDerivation
 } from './lifecycle.mjs';
@@ -188,14 +190,31 @@ async function recoverNormalizationTransaction({
 }
 
 function assertCurrentCandidate(entry, candidate, paths) {
-  exactKeys(candidate, [
+  const regular = candidate?.schemaVersion === CANDIDATE_SCHEMA;
+  const revalidated =
+    candidate?.schemaVersion === REVALIDATED_CANDIDATE_SCHEMA;
+  if (!regular && !revalidated) {
+    throw new Error(
+      `${entry.descriptor.id} candidate schema is unsupported`
+    );
+  }
+  const commonKeys = [
     'schemaVersion',
     'familyId',
     'theme',
     'descriptorPath',
     'descriptorSha256',
     'promptProfile',
-    'styleReferences',
+    'styleReferences'
+  ];
+  exactKeys(candidate, revalidated ? [
+    ...commonKeys,
+    'origin',
+    'derivation',
+    'image',
+    'status'
+  ] : [
+    ...commonKeys,
     'styleReferenceMode',
     'styleReferenceProvenance',
     ...(candidate.derivation !== undefined ? ['derivation'] : []),
@@ -203,14 +222,13 @@ function assertCurrentCandidate(entry, candidate, paths) {
     'worker',
     'status'
   ], 'candidate metadata');
-  if (candidate.schemaVersion !== CANDIDATE_SCHEMA
-    || candidate.familyId !== entry.descriptor.id
+  if (candidate.familyId !== entry.descriptor.id
     || candidate.theme !== entry.descriptor.theme
     || candidate.descriptorPath !== entry.path
     || candidate.status !== 'candidate-awaiting-review') {
     throw new Error(`${entry.descriptor.id} candidate does not belong to the selected family`);
   }
-  const descriptorPin = sha256(Buffer.from(stableJson(entry.descriptor)));
+  const descriptorPin = candidateValidationDescriptorSha256(entry.descriptor);
   if (candidate.descriptorSha256 !== descriptorPin) {
     throw new Error(`${entry.descriptor.id} candidate descriptor pin is stale`);
   }
@@ -219,13 +237,22 @@ function assertCurrentCandidate(entry, candidate, paths) {
       !== stableJson(entry.descriptor.styleReferences)) {
     throw new Error(`${entry.descriptor.id} candidate frozen input pins are stale`);
   }
-  assertStyleReferenceProvenance({
-    styleReferences: candidate.styleReferences,
-    provenance: candidate.styleReferenceProvenance,
-    mode: candidate.styleReferenceMode,
-    args: candidate.worker?.args,
-    label: `${entry.descriptor.id} candidate metadata`
-  });
+  if (regular) {
+    assertStyleReferenceProvenance({
+      styleReferences: candidate.styleReferences,
+      provenance: candidate.styleReferenceProvenance,
+      mode: candidate.styleReferenceMode,
+      args: candidate.worker?.args,
+      label: `${entry.descriptor.id} candidate metadata`
+    });
+  } else {
+    assertFailedAttemptRevalidationOrigin(candidate.origin, {
+      theme: entry.descriptor.theme,
+      familyId: entry.descriptor.id,
+      validationDescriptorSha256: descriptorPin,
+      derivationSource: candidate.derivation.source
+    }, `${entry.descriptor.id} candidate metadata.origin`);
+  }
   if (![paths.imagePng, paths.imageWebp].includes(candidate.image?.path)) {
     throw new Error(`${entry.descriptor.id} candidate image path is not canonical`);
   }
@@ -379,24 +406,29 @@ export async function normalizeCandidates({
   const selected = selectFamilies(loaded, selection);
   const results = [];
   for (const entry of selected) {
-    results.push(await withBattleArtCandidateLock({
-      root: loaded.root,
-      theme: entry.descriptor.theme,
-      family: entry.descriptor.id
-    }, async () => {
-      const locked = await loadBattleArt(loaded.root);
-      const [lockedEntry] = selectFamilies(locked, {
+    const run = async () => {
+      const current = await loadBattleArt(loaded.root);
+      const [currentEntry] = selectFamilies(current, {
         ...selection,
         family: entry.descriptor.id,
         families: null
       });
       return normalizeOne({
-        loaded: locked,
-        entry: lockedEntry,
+        loaded: current,
+        entry: currentEntry,
         check,
         afterImageWrite
       });
-    }));
+    };
+    if (check) {
+      results.push(await run());
+    } else {
+      results.push(await withBattleArtCandidateLock({
+        root: loaded.root,
+        theme: entry.descriptor.theme,
+        family: entry.descriptor.id
+      }, run));
+    }
   }
   return {
     ok: !check || results.every(result => result.status === 'current'),

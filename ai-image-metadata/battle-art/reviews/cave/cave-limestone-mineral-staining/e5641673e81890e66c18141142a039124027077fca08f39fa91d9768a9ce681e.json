@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v2",
+  "theme": "cave",
+  "familyId": "cave-limestone-mineral-staining",
+  "decision": "approved",
+  "reviewer": "codex-independent-reviewer",
+  "reason": "The exact pinned candidate presents a low, irregular limestone patch with clearly visible cool blue-green mineral staining, warm amber veins, and restrained pale-rock texture matching the cave reference. At runtime scale the colored stain remains legible while the carrier stays flat and visually nonblocking. Its localized transparent footprint and distinctive mineral color separate it from the full worn-floor surface family without reading as a wall, obstacle, or presentation tile.",
+  "reviewedAt": "2026-08-11T10:44:15.320Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/cave/cave-limestone-mineral-staining.json",
+    "sha256": "sha256:9ffbc7c40c17e44914e5c5f016c68015d92b8c29186c2eb56806ee69fd8012b5",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-mineral-staining/result.json",
+      "bytes": 2690,
+      "sha256": "sha256:0cc98ab61b217f4a34d98cfffc308ab3a79e936e7e4cf6f83cb72d64c5767677"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-mineral-staining/candidate.png",
+      "bytes": 17354,
+      "width": 128,
+      "height": 192,
+      "format": "png",
+      "sha256": "sha256:e5641673e81890e66c18141142a039124027077fca08f39fa91d9768a9ce681e"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "cave-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/cave/cave-template-01/reference.png",
+        "sha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe"
+      }
+    ],
+    "styleReferenceMode": "attachments",
+    "styleReferenceProvenance": [
+      {
+        "id": "cave-source-template-01",
+        "sha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe",
+        "stagedBasename": "style-reference-01.png"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "imageArguments": [
+        "style-reference-01.png"
+      ],
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-mineral-staining/prompt.txt",
+        "bytes": 10204,
+        "sha256": "sha256:11cff5f4d68ba594688e0e5b890fdcdf7537ef7dc6dfdc6c1f8792e73c4b621d"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-mineral-staining/worker.jsonl",
+        "bytes": 27574,
+        "sha256": "sha256:34a58bddbd64cf26943b6eefbfd1e1f0113c04de7e12ff5d05971f2741450558"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-mineral-staining/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-mineral-staining/last-message.txt",
+        "bytes": 428,
+        "sha256": "sha256:9d7ca3a69bdbd7a308a435da8ced2a9840af03ac0d0fae8376e214a3829284ed"
+      }
+    }
+  },
+  "fullHash": "sha256:8450eb3fcc50b062509cef461bb8d70d42d768b31cb804f16756114dfb5a8f81"
+}

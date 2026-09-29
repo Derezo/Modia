@@ -14,11 +14,16 @@ function usage() {
 Usage:
   node scripts/battle-maps/preview-map-candidates.mjs --theme <theme> --template <id> (--map <id>|--all)
 
-The output is local review data only. Raw candidate JSON never enters the game.`;
+The output is local review data only. Raw candidate JSON never enters the game.
+Historical forest-template-01 through forest-template-06 identities are
+replay-only and cannot receive new approval-bound preview evidence.`;
 }
 
 export async function main(argv = process.argv.slice(2)) {
-  const options = parseBlueprintActionArgs(argv, { allowAll: true });
+  const options = parseBlueprintActionArgs(argv, {
+    allowAll: true,
+    requireV3AuthoringIdentity: true
+  });
   if (options.help) {
     console.log(usage());
     return { ok: true, help: true };

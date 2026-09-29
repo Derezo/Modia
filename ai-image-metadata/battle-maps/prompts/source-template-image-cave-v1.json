@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "battle-map-source-prompt-profile-v1",
+  "id": "source-template-image-cave-v1",
+  "purpose": "Frozen cave-composition prompt for source-template image generation through the isolated battle-map image runner.",
+  "frozen": true,
+  "prompt": "Create a square compositional reference for a limestone-cave tactical battle scene viewed from a high, readable isometric angle. Show an irregular network of a broad southern cavern, a smaller northern grotto, western and eastern shelves, and a central shallow sink connected by three curved, reconnecting passages. Integrate broad natural ramps, a small number of carved stone stairs, layered limestone ledges, stalagmite clusters, broken columns, and dark cavern walls that naturally own the outer boundary. Leave two opposing formation opportunities inside the cave, each connected by at least three approaches, without drawing units, spawn markers, a tactical grid, text, or a flat cleared edge strip. Keep walkable floors, elevation changes, and passage mouths visibly distinct. The image is visual inspiration for later 32 by 32 isometric map authoring, not a literal tile map.",
+  "negativeConstraints": [
+    "symmetric arena geometry",
+    "straight mine corridors or a rectangular dungeon room",
+    "random freestanding walls",
+    "checkerboard materials",
+    "isolated height spikes or detached rock platforms",
+    "single-choke formations",
+    "text, labels, or UI",
+    "units, spawn markers, or a tactical grid",
+    "perspective that hides walkable surfaces",
+    "flat full-height cleared edge strips"
+  ]
+}

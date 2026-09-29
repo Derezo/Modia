@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "battle-art-runtime-inventory-registry-v1",
+  "entries": [
+    {
+      "releaseId": "battle-art-descriptors-2026-07-30",
+      "releaseVersion": 10,
+      "bundleManifestFullHash": "sha256:1f456f81c986327cc2615a7450590a0f3a1aea46e727c18ca3ed3cd0e8baca29",
+      "inventoryBytes": 109787,
+      "inventorySha256": "sha256:97040b56b1a5eb1f3923721c264e770af79424dcece7f80615340154c95ecdae"
+    }
+  ]
+}

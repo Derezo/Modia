@@ -21,6 +21,7 @@ import {
   FRONTEND_BUNDLE_PATH,
   FRONTEND_BUNDLE_REGISTRY_PATH,
   INVENTORY_PATH,
+  INVENTORY_REGISTRY_PATH,
   READINESS_PLAN_SCHEMA,
   THEMES,
   TIER_BANDS,
@@ -115,10 +116,16 @@ async function fixture() {
   );
   const bundle = await buildBundle(manifest, descriptors);
   const registry = buildBundleRegistry([], bundle);
+  const inventory = buildInventory(manifest, descriptors);
+  const inventoryRegistry = {
+    schemaVersion: 'battle-art-runtime-inventory-registry-v1',
+    entries: []
+  };
   for (const [relative, value] of [
     [BUNDLE_PATH, bundle],
     [BUNDLE_REGISTRY_PATH, registry],
-    [INVENTORY_PATH, buildInventory(manifest, descriptors)],
+    [INVENTORY_PATH, inventory],
+    [INVENTORY_REGISTRY_PATH, inventoryRegistry],
     [FRONTEND_BUNDLE_PATH, bundle],
     [FRONTEND_BUNDLE_REGISTRY_PATH, registry]
   ]) {
@@ -340,6 +347,82 @@ describe('battle-art descriptor v2 variants', () => {
       }),
       /20–1200/
     );
+  });
+
+  it('keeps deterministic Cave Limestone geometry prompts regionally appropriate', async () => {
+    const loaded = await loadBattleArt(REPOSITORY_ROOT);
+    const artDirection =
+      'Limestone cave uses pale worn limestone, warm calcite, layered flowstone, '
+      + 'mineral staining, scattered rubble, and cool subterranean light.';
+    const forbiddenForestVocabulary = new RegExp(
+      '\\b(?:forest[- ]floor|moss|lea(?:f|ves)|roots?|grass|packed[- ]earth'
+        + '|canopy|foliage)\\b',
+      'iu'
+    );
+    const cases = [
+      {
+        category: 'surface',
+        id: 'cave-limestone-worn-floor-2',
+        options: { surfaceVariant: 2 },
+        geometry: [/source-raster center is \(128,64\)/, /surface variant 2/]
+      },
+      {
+        category: 'route-transition',
+        id: 'cave-limestone-curved-passage-corner-ne',
+        options: { routeTopology: 'corner-ne' },
+        geometry: [/exact route topology corner-ne/, /28–36 pixel worn core/]
+      },
+      {
+        category: 'connection-stairs',
+        id: 'cave-limestone-carved-stairs-n',
+        options: { direction: 'n', heightDeltas: [1] },
+        geometry: [
+          /low endpoint is \(128,128\)/,
+          /high-end canvas target is \(255,64\)/
+        ]
+      },
+      {
+        category: 'connection-slope',
+        id: 'cave-limestone-natural-ramp-e',
+        options: { direction: 'e', heightDeltas: [1] },
+        geometry: [
+          /low endpoint is \(128,128\)/,
+          /high-end canvas target is \(255,191\)/
+        ]
+      },
+      {
+        category: 'exposed-face-boundary',
+        id: 'cave-limestone-layered-face-s',
+        options: { direction: 's', heightDeltas: [1] },
+        geometry: [
+          /declared edge from \(128,255\) to \(0,192\)/,
+          /centered at \(64,223\)/
+        ]
+      }
+    ];
+    for (const testCase of cases) {
+      const descriptor = draftDescriptor({
+        manifest: loaded.manifest,
+        theme: 'cave',
+        category: testCase.category,
+        id: testCase.id,
+        ecologyProfile: 'cave-limestone',
+        regionalArtDirection: artDirection,
+        tierBands: [1, 2, 3, 4, 5],
+        ...testCase.options
+      });
+      assert.match(descriptor.generationPrompt, /orthographic isometric cave/);
+      assert.match(descriptor.generationPrompt, /Limestone cave uses pale worn limestone/);
+      assert.match(descriptor.generationPrompt, new RegExp(testCase.id));
+      assert.doesNotMatch(
+        descriptor.generationPrompt,
+        forbiddenForestVocabulary,
+        `${testCase.category} leaked forest-specific vocabulary`
+      );
+      for (const geometry of testCase.geometry) {
+        assert.match(descriptor.generationPrompt, geometry);
+      }
+    }
   });
 
   it('reports complete directional slopes and every route topology', async () => {
@@ -649,6 +732,99 @@ describe('battle-art readiness plan commands', () => {
       'tee-nsw',
       'tee-wne'
     ]);
+  });
+
+  it('keeps Cave Limestone readiness complete across every encounter tier', async () => {
+    const readiness = JSON.parse(await readFile(
+      path.join(
+        REPOSITORY_ROOT,
+        'ai-image-metadata/battle-art/readiness-plan.json'
+      ),
+      'utf8'
+    ));
+    assertReadinessPlan(readiness);
+    const plans = readiness.plans
+      .filter(entry => (
+        entry.theme === 'cave'
+        && entry.ecologyProfile === 'cave-limestone'
+      ))
+      .sort((left, right) => left.tierBand - right.tierBand);
+    assert.deepEqual(plans.map(entry => entry.tierBand), TIER_BANDS);
+    assert.equal(new Set(plans.map(entry => entry.artDirection)).size, 1);
+    assert.match(plans[0].artDirection, /pale worn limestone floors/);
+    const directions = ['n', 'e', 's', 'w'];
+    const routeTopologies = [
+      'end-n',
+      'end-e',
+      'end-s',
+      'end-w',
+      'straight-ns',
+      'straight-ew',
+      'corner-ne',
+      'corner-es',
+      'corner-sw',
+      'corner-wn',
+      'tee-nes',
+      'tee-esw',
+      'tee-nsw',
+      'tee-wne',
+      'cross',
+      'isolated'
+    ];
+    const expected = [
+      ...[0, 1, 2, 3].map(surfaceVariant => requirement({
+        descriptorId: `cave-limestone-worn-floor-${surfaceVariant}`,
+        familyGroup: 'cave-limestone-worn-floor',
+        variantId: `surface-${surfaceVariant}`,
+        category: 'surface',
+        surfaceVariant
+      })),
+      ...routeTopologies.map(routeTopology => requirement({
+        descriptorId: `cave-limestone-curved-passage-${routeTopology}`,
+        familyGroup: 'cave-limestone-curved-passage',
+        variantId: routeTopology,
+        category: 'route-transition',
+        routeTopology
+      })),
+      ...[
+        ['cave-limestone-carved-stairs', 'connection-stairs', 'grade-1'],
+        ['cave-limestone-natural-ramp', 'connection-slope', 'grade-1'],
+        ['cave-limestone-flowstone-edge', 'exposed-face-boundary', 'edge'],
+        ['cave-limestone-layered-face', 'exposed-face-boundary', 'face']
+      ].flatMap(([familyGroup, category, variant]) => (
+        directions.map(direction => requirement({
+          descriptorId: `${familyGroup}-${direction}`,
+          familyGroup,
+          variantId: `${variant}-${direction}`,
+          category,
+          direction,
+          heightDelta: 1
+        }))
+      )),
+      ...[
+        ['cave-limestone-stalagmite-cluster', 'clustered', 'blocking-obstacle'],
+        ['cave-limestone-broken-column', 'broken', 'blocking-obstacle'],
+        ['cave-limestone-flowstone-curtain', 'layered', 'blocking-obstacle'],
+        ['cave-limestone-fallen-rock', 'angular', 'blocking-obstacle'],
+        ['cave-limestone-calcite-crystals', 'small', 'nonblocking-decoration'],
+        ['cave-limestone-mineral-staining', 'veined', 'nonblocking-decoration'],
+        ['cave-limestone-scattered-rubble', 'scattered', 'nonblocking-decoration']
+      ].map(([descriptorId, variantId, category]) => requirement({
+        descriptorId,
+        familyGroup: descriptorId,
+        variantId,
+        category
+      }))
+    ].sort((left, right) => left.descriptorId.localeCompare(right.descriptorId));
+    assert.equal(expected.length, 43);
+    for (const plan of plans) {
+      assert.deepEqual(
+        [...plan.requirements].sort((left, right) => (
+          left.descriptorId.localeCompare(right.descriptorId)
+        )),
+        expected
+      );
+    }
   });
 
   it('supports metadata-only reporting and deterministic no-overwrite scaffold', async () => {

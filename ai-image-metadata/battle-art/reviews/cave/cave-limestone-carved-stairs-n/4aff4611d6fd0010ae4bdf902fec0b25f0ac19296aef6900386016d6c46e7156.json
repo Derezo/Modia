@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v2",
+  "theme": "cave",
+  "familyId": "cave-limestone-carved-stairs-n",
+  "decision": "approved",
+  "reviewer": "codex-independent-reviewer",
+  "reason": "Exact pinned N-only connection is one connected cutout with five broad crosswise carved-limestone treads and shallow readable risers. Both endpoints meet cleanly, the low anchor remains open and feathered, and no opposing band, ramp ambiguity, platform face, wall block, floating step, or concrete runtime defect is present. Normalization is current; the single component has 4,554 pixels, N endpoint coverage is 591 pixels, and E, S, and W endpoint coverage is zero.",
+  "reviewedAt": "2026-08-11T13:07:21.984Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/cave/cave-limestone-carved-stairs-n.json",
+    "sha256": "sha256:66eceea367cd0b1c2a2b420df17a49fba074a1a0207cd1d9affac47b04c284d1",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-carved-stairs-n/result.json",
+      "bytes": 2680,
+      "sha256": "sha256:9671b57366d4f0be947b65ebb07066c0ef721885aa045b92cc17ccd9456afcf6"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-carved-stairs-n/candidate.png",
+      "bytes": 16551,
+      "width": 256,
+      "height": 192,
+      "format": "png",
+      "sha256": "sha256:4aff4611d6fd0010ae4bdf902fec0b25f0ac19296aef6900386016d6c46e7156"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "cave-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/cave/cave-template-01/reference.png",
+        "sha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe"
+      }
+    ],
+    "styleReferenceMode": "attachments",
+    "styleReferenceProvenance": [
+      {
+        "id": "cave-source-template-01",
+        "sha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe",
+        "stagedBasename": "style-reference-01.png"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "imageArguments": [
+        "style-reference-01.png"
+      ],
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-carved-stairs-n/prompt.txt",
+        "bytes": 12370,
+        "sha256": "sha256:3daf40d90ab94d7444171d9ccb20f7932714129902d705f4704c434fdf313d36"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-carved-stairs-n/worker.jsonl",
+        "bytes": 32633,
+        "sha256": "sha256:c1ba0b9ae993eb78bcc8b2551bdfd92ea6b543abecfe30593ec392667c4d52e7"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-carved-stairs-n/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-carved-stairs-n/last-message.txt",
+        "bytes": 330,
+        "sha256": "sha256:9e9ca8e2eeab23ebb31d8d2d0f9206a60f162ca7fff54951e65549b4ee789ded"
+      }
+    }
+  },
+  "fullHash": "sha256:77b1e9bc70fd5826bd6ce19d2731f05a2d7356acbb5f965597ba775b41984073"
+}

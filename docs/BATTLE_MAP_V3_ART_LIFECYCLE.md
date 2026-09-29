@@ -18,8 +18,7 @@ uses `battle-art-family-descriptor-v2`, which adds:
 - `variantId`: the stable variant within that group, such as `grade-1-n`.
 - `capabilities`: a closed object containing `direction`, `routeTopology`,
   `surfaceVariant`, `ecologyProfile`, `tierBands`, and `heightDeltas`.
-- experimentally, `routeFinishing` on a route descriptor that explicitly opts
-  in: the fixed
+- `routeFinishing` on a route descriptor that explicitly opts in: the fixed
   `largest-component-box-v1` operation, descriptor-pinned target box,
   detached-coverage ceiling, and alpha threshold/minimum/maximum/spread
   measurements used by both publication and review replay.
@@ -229,12 +228,39 @@ npm run battle-art:scaffold -- \
   --json
 ```
 
+Before scaffolding a new theme, register its approved source-template image as
+that theme's exact hash-pinned baseline style reference. Deterministic drafting
+must select the baseline by theme and fail closed when it is absent; it must
+never silently reuse the first forest reference for cave or another region.
+Every unreleased descriptor should pin that one exact regional baseline unless
+an additional, narrowly authorized corrective reference is part of its own
+reviewed contract.
+
 Use repeatable `--family` arguments to scaffold a subset. Scaffold is
 no-overwrite by default. `--check` proves existing descriptors equal the
 deterministic draft. `--force` may replace only unreleased drafts; it cannot
 replace approved or compiled identity.
 
-For a one-off v2 draft, specify capabilities directly:
+Scaffolding opens a staged manifest version; it does not publish a runtime art
+release. During that one-version staging window, `battle-art:check` continues
+to verify the exact previous immutable bundle, archive, source pins, registry,
+frontend mirrors, inventory, and binaries while separately validating the new
+draft or approved descriptors and readiness rows. A same-version runtime
+bundle is valid only when every descriptor is compiled. Non-check compilation
+refuses to write a partial release while any draft remains, and a revised
+archived family must advance by exactly one content version. This keeps the
+deployed bundle usable while new regional art moves through review without
+mistaking metadata staging for publication.
+
+The active inventory is independently pinned in the tracked append-only
+`runtime-asset-inventory-registry.json` by release ID, version, bundle hash,
+byte count, and SHA-256. Audit and compile-check require canonical inventory
+bytes matching that exact pin. A full future compile appends its inventory pin
+idempotently; staged or already pinned inventory cannot be overwritten through
+the inventory command. This closes coordinated descriptor/manifest plus
+inventory drift without rewriting an immutable historical art release.
+
+For a one-off battle-art descriptor-v2 draft, specify capabilities directly:
 
 ```bash
 npm run battle-art:draft -- \
@@ -251,8 +277,9 @@ npm run battle-art:draft -- \
 
 A one-off draft is only a drafting convenience. Before generation or approval,
 add its exact descriptor ID and capabilities to a reviewed readiness-plan row.
-V2 generation, approval, compilation, and audit all reject unplanned regional
-assets or tier claims.
+Descriptor-v2 generation, approval, compilation, and audit all reject
+unplanned regional assets or tier claims. This descriptor schema version is
+independent of the map blueprint lifecycle; all newly authored maps use V3.
 
 Seam-safe open terrain uses an explicit deterministic variant:
 
@@ -269,6 +296,39 @@ npm run battle-art:draft -- \
 ```
 
 ## Generate, review, approve, compile, and archive
+
+### Authorization preflight
+
+Before a live Codex/Imagegen worker is started, run:
+
+```bash
+npm run battle-art:preflight
+npm run battle-art:matrix -- --metadata-only --json
+```
+
+The preflight verifies that the standardized `codex` executable is available
+and that its saved CLI session is logged in. It does not read or print auth
+files, forward an application API key, call Imagegen, or authorize a content
+decision. If it reports a logged-out session, run `codex login` interactively
+and repeat the preflight. Use `npm run battle-art:preflight -- --json` for a
+machine-readable orchestration gate.
+
+Authorization is deliberately split:
+
+1. The authenticated Codex session authorizes the one bounded worker start.
+2. The reviewed readiness plan authorizes the exact theme, ecology, tier, and
+   family scope.
+3. A reviewer distinct from the generation principal decides whether the exact
+   candidate is acceptable and supplies the concrete rationale.
+4. A tracked catalog definition and active-release pin authorize runtime
+   publication through a normal deployment.
+
+Codex may prepare the preview, mechanically verify pins, draft a review
+checklist, and execute the approval command after the independent decision. It
+must not turn its own generation result into an approval merely by inventing a
+different `--reviewer` label. Until authenticated reviewer attestations are
+enforced by tooling, the named reviewer and rationale are repository evidence,
+not proof of account identity.
 
 Selection flags are shared by generation, candidate normalization, preview,
 audit, inventory, and the matrix where applicable: `--theme`,
@@ -288,6 +348,37 @@ Live generation requires exactly one explicit family and concurrency `1`.
 There is exactly one imagegen invocation for that descriptor. Generation
 cannot approve, compile, publish, or fabricate readiness metadata. Dry runs and
 the narrowly audited recovery path retain their separate selection semantics.
+The default bounded worker timeout is 900 seconds because a valid built-in
+Imagegen call can take longer than five minutes. `--timeout <seconds>` may set
+an explicit value up to the enforced 1,800-second maximum; it does not enable a
+retry or change the one-call rule.
+
+The authorization preflight cannot prove that the live image-generation tool
+will return an artifact; doing so would itself be a billed generation call. If
+a worker returns no generated artifact or source path, the lifecycle must fail
+with no candidate publication. Treat this as a worker/tool-availability
+failure, not as an art rejection and not as evidence that login succeeded or
+failed. A timeout or nonzero worker exit preserves the exact effective
+`prompt.txt` plus the capped partial `worker.jsonl` and `worker.stderr.log`,
+while leaving candidate image and metadata absent. Inspect that evidence and
+any audited final message, then make any retry an explicit new operator action.
+`--recover` is
+not applicable unless a route worker successfully copied one exact generated
+artifact and the parent rejected later evidence. A repeated zero-artifact
+result must stop that family for tooling investigation; do not switch to an API
+key, another model, or a fallback generator implicitly.
+
+If Imagegen returns verified bytes but a non-route post-verification or
+publication validator rejects them, the lifecycle preserves those exact bytes
+and a content-addressed failure record under
+`ai-image-metadata/battle-art/generated-artifacts/<theme>/<family>/`. The
+record pins the descriptor, effective prompt, bounded worker evidence, ordered
+style references, failure stage, rejection, and artifact hash. It is diagnostic
+history only: it creates no candidate, cannot be reviewed or approved, cannot
+authorize resume, and cannot satisfy readiness or publication. An identical
+failure is idempotent; changed or missing evidence fails audit. This boundary
+lets operators inspect concrete orientation, alpha-component, placement, and
+other raster failures without weakening the candidate approval gate.
 
 The active Heartlands `straight-ns` canary uses direct whole-image generation:
 one ordinary forest template reference, exact-aspect whole-image resize when
@@ -311,11 +402,24 @@ preview, review, approval, and audit replay that preparation from the pinned
 raw and require byte-identical output. Re-hashing replacement candidate bytes
 does not satisfy this provenance.
 
-Route-transition workers have a deliberately smaller finishing surface: read
-the pinned image-generation skill, make the one imagegen call, copy that
-current-thread artifact once to `candidate.png`, and stop.
+Route-transition workers have a deliberately smaller finishing surface. For
+new non-forest work, the worker reads the pinned image-generation skill, makes
+the one imagegen call, executes no artifact-copy or discovery command, and
+stops. The parent parses the sole safe `thread.started` identity, securely
+opens the exact `CODEX_HOME/generated_images/<thread-id>/` directory, requires
+one regular generated raster, and materializes `candidate.png` itself with an
+exclusive write. It rejects zero or multiple rasters, unsafe or cross-thread
+identities, symlinks, changed files, worker-created candidates, and any extra
+worker command. This avoids depending on the model to transcribe an output
+path while retaining byte identity with the generated artifact. Review replays
+the same strict parent-handoff JSONL contract and the immutable raw-to-candidate
+derivation. A suppressed Imagegen event is accepted only for this non-forest
+route path, with one safe thread, one canonical skill read, no other worker
+action, and exactly one parent-resolved raw artifact. The older
+worker-copy protocol remains only on the forest compatibility path so its
+frozen prompt and review evidence stay byte-identical.
 
-For an experimental descriptor with `routeFinishing`, the parent first verifies the copied
+For a descriptor with `routeFinishing`, the parent first verifies the copied
 bytes and exact source aspect, then persists that raw image under its SHA-256
 identity in `ai-image-metadata/battle-art/generated-artifacts/`. That raw path
 is tracked, immutable, and survives failed validation, forced regeneration,
@@ -329,9 +433,24 @@ runs the descriptor-pinned border, arm-width/spread, topology, and coverage
 checks once before publishing a candidate. The metadata records the complete
 raw-to-final derivation and hashes.
 
+An `isolated` route has no arm samples. Its finished-artifact contract instead
+requires nonzero alpha, exactly one four-connected visible component, contact
+with the declared anchor neighborhood, complete containment in the pinned
+target box, a clear outer canvas border, and no route endpoint bands. For
+`cave-limestone-curved-passage-isolated`, that target is the centered 64x32 box
+at `(96,48)`. Do not reject an otherwise suitable generated subject solely
+because its raw component is larger: the pinned one-crop/one-resize transform
+is the sizing authority, and review/audit reproduce its exact output bytes.
+
 The arm-width range applies to the connected near-opaque route band at the
 descriptor's exact alpha threshold; it is not a measurement of the faintest
 visible fringe. Generation prompts must state that threshold explicitly.
+For direct-route `end-*` topology only, the final normalized alpha-240
+perpendicular minimum is 20 pixels at the 50% and 75% samples and 18 pixels at
+the 100% seam sample. Other direct corners, straights, tees, and crosses retain
+the 28-pixel minimum at every sample. A descriptor-authored
+`routeFinishing.armAlphaSpan` remains authoritative and keeps its authored
+minimum, maximum, and spread semantics.
 When arm validation fails, the rejection reports every direction/fraction
 sample in canonical order, every narrow or wide sample, the observed range,
 and any spread violation so one attempt does not reveal defects serially.
@@ -341,10 +460,27 @@ generated raw artifact. If validation then fails, generation also writes an
 immutable, content-addressed
 `battle-art-route-failed-attempt-v1` JSON record beside the family’s raw
 artifacts. It embeds and hashes the exact descriptor snapshot, prompt, bounded
-worker logs, style provenance, one-imagegen/current-thread copy audit, raw
-identity, and rejection. A later forced attempt may replace the ignored
+worker logs, style provenance, and the applicable one-imagegen current-thread
+copy or strict parent-handoff audit, plus the raw identity and rejection. A
+later forced attempt may replace the ignored
 working diagnostics, but it cannot overwrite or orphan the earlier failure
 evidence.
+
+If a deliberately reviewed validator change makes one exact archived route raw
+eligible, revalidate that immutable evidence without another image-generation
+call:
+
+```bash
+npm run battle-art:revalidate-failure -- \
+  --theme <theme> \
+  --family <exact-route-family-id> \
+  --failure <canonical-content-addressed-failure-record.json>
+```
+
+This command accepts only a draft route family and an audited canonical failure
+record for that exact family. It replays current preparation and validation,
+writes a review candidate with revalidation origin pins, and does not approve,
+compile, publish, or invoke Imagegen.
 
 Generated artifacts are not ordinary style-reference roots. The sole narrow
 exception is an immutable rejected route raw explicitly authorized by the
@@ -423,6 +559,13 @@ temporary-directory, locale, certificate, and proxy environment. Application,
 database, session, payment, parent-thread, and API-key secrets are not
 forwarded. Worker output, the final message, the disposable workspace, and the
 candidate image are byte-bounded and audited before anything is published.
+For non-forest families, code-owned prompt boilerplate is projected into the
+descriptor's regional material vocabulary without changing the frozen prompt
+profile pin. Non-route workspaces do not stage the contradictory raw profile
+text. Before a draft can be reviewed, approved, or resumed, the lifecycle
+rebuilds the current effective prompt and requires `prompt.txt` to match it
+byte-for-byte. This freshness gate does not rewrite or invalidate immutable
+reviews for content that was already human-approved.
 Operational accounting must distinguish actual worker starts and Imagegen
 invocations from deterministic normalization and validation checks. One failed
 validation is not another generation attempt. The lifecycle performs no
@@ -532,8 +675,10 @@ npm run battle-art:audit
 npm run battle-art:check
 ```
 
-The runtime bundle carries exact v2 variant metadata. After every descriptor
-in the release is compiled and all map/release checks pass, archive it:
+The runtime bundle carries exact descriptor-v2 variant metadata. After every
+descriptor in the release is compiled and the strict battle-art matrix, audit,
+and check pass, archive it. Then create the map compile recipe against that
+immutable archive and run the map/release checks:
 
 ```bash
 npm run battle-art:archive
@@ -564,8 +709,216 @@ from an environment variable or client capability. Minimap clipping uses the
 same silhouette contract as the full battlefield.
 
 Compile and visually review the map, approve it, build its catalog release,
-validate coverage, and deploy code, catalog, and immutable assets together.
+validate the release, and deploy code, catalog, and immutable assets together.
 The tracked active catalog release is the activation mechanism.
+
+### Choosing the next catalog gap
+
+The active catalog is publication state, not a lexicographic work queue. Never
+assume that a missing template number is eligible: `forest-template-03` pins a
+superseded compiler and `forest-template-06` is rejected lifecycle evidence.
+Do not regenerate or republish either identity.
+
+For a new theme wave, walk the tracked
+`BATTLE_MAP_V3_SUPPORTED_THEMES` order and select the first theme with no active
+catalog entry, then create a new frozen source-template definition and exact
+regional art-readiness plan. With the current forest-only r16 release, that
+planning rule selects `cave`; the first declared identity is
+`cave-template-01`. This rule chooses authoring work only. Runtime selection
+remains entirely catalog-driven, and a generated source-image candidate is not
+an approved blueprint, compiled map, coverage claim, or activation.
+
+All newly authored maps use the V3 blueprint, mechanical-review, approval, and
+release lifecycle regardless of their numeric suffix. V1 and V2 are deprecated
+compatibility formats only: `forest-template-01/-02` preserve V1 evidence and
+`forest-template-03/-04/-05/-06` preserve V2 evidence. Every other identity is
+V3 by default, including `cave-template-01`. Never infer a lifecycle version
+from `-01`, `-02`, or another suffix, and never create new V1/V2 approvals.
+Existing `forest-template-07` approvals remain readable as a narrow transition:
+their approval schema and mechanical evidence are V3, while their immutable
+candidate records pin the older V2 prompt bytes. That historical read path must
+never select the V2 prompt for newly generated or newly approved content.
+
+Before cave blueprint generation, prove this identity routing through the
+candidate, prompt-profile, approval, and release validators and provide the
+cave-specific V3 starter. Because those validators are pinned by the active
+catalog, ship the change with the coordinated recipe/map/approval/catalog
+repin—not as an isolated generation shortcut.
+
+### Source previews are not rendered-map review
+
+The review tree contains two different evidence phases. HTML files named
+`source-template-preview*.html` show source-image candidates and their tracked
+review history only. They do not prove that a symbolic blueprint compiles or
+that the production renderer can resolve its regional assets. A new theme such
+as cave is therefore expected to have only HTML review files while its source
+is still draft.
+
+Rendered map samples are a later, mandatory phase. Do not consider a cave map
+ready for approval or publication until all of these dependencies exist and
+are hash-valid: an approved source template, three approved symbolic
+blueprints, the cave render profile and tile catalog, the exact compiled cave
+battle-art bundle, and a deterministic compile recipe. Only then run
+`battle-maps:compile`, `battle-maps:validate`, and `battle-maps:screenshot` for
+each map. The screenshot command must create the production-harness PNG and its
+bound `.review.json` beneath
+`ai-image-metadata/battle-maps/review/cave/<template>/<map>/`. A distinct
+reviewer must inspect that exact PNG before `battle-maps:approve` records the
+visual decision. Catalog creation and activation re-verify the ignored PNG and
+runtime-asset hashes; an HTML source preview can never satisfy this gate.
+
+For `cave-template-01`, the source and three V3 blueprints may therefore be
+approved while production PNGs are still correctly absent. The three
+blueprints directly resolve 33 authored concrete cave-art variants (the
+synthetic preflight currently exercises one additional already-approved face
+variant), but the official v11 battle-art release is whole-manifest: all 43
+cave descriptors must be approved before non-check compilation will publish
+the bundle. Do not create a partial runtime bundle to obtain an early
+screenshot. Before compiling the maps, validate the tracked
+`battle-maps/render-profiles/cave-limestone-v1.json` profile (including its
+explicit `worn-floor` to `layered-face` elevation mapping) and
+`battle-maps/tile-catalogs/cave-limestone-v1.json` catalog. Create
+`battle-maps/compile-recipes/cave/cave-template-01.json` only after the complete
+cave art bundle is compiled and archived, so the recipe can pin that real
+immutable bundle hash together with the two regional inputs and all three
+blueprints. These are authored release inputs, not values to infer from the
+synthetic blueprint preflight.
+
+Source-image review is intentionally composition-level. Review regional
+material, cavern scale, lighting hierarchy, readable walkable-vs-solid areas,
+the irregular biome-owned silhouette, and gross forbidden patterns such as a
+rectangular dungeon room or opaque void over the battlefield. Do not reject a
+source reference merely because an exact route graph, spawn count, ramp count,
+or formation-to-formation connectivity cannot be proven from the pixels. The
+source contract is `semantic-only`, literal tracing is forbidden, and the
+sidecar—not the raster—is gameplay authority. Those exact requirements are
+proved by blueprint validation and then inspected again in the compiled
+production-harness screenshots.
+
+A Codex source review is advisory evidence, not a substitute for the recorded
+human decision. If a workspace reviewer accepts exact bytes that Codex
+previously rejected, preserve the immutable rejection record, stage those
+exact bytes, and record the human source approval normally. Never delete or
+rewrite the earlier evidence, and never describe a vague preference such as
+"too diffuse" as a mechanical failure.
+
+### V3 symbolic blueprint generation and review
+
+After source approval and the V3 identity-routing checks pass, validate the
+three declared jobs without starting Codex:
+
+```bash
+npm run battle-maps:candidates:generate -- \
+  --theme <theme> --template <template> \
+  --maps 3 --concurrency 2 --dry-run --json
+```
+
+Then generate the three isolated symbolic candidates. This is a Codex JSON
+authoring phase, not Imagegen and not map publication:
+
+```bash
+npm run battle-maps:candidates:generate -- \
+  --theme <theme> --template <template> \
+  --maps 3 --concurrency 2 --json
+```
+
+The same authenticated Codex CLI preflight applies. The workers receive the
+approved source and closed V3 contract, may write only their bounded ignored
+candidate evidence, and cannot approve, compile, catalog, or activate content.
+For every new identity, the result must pin `map-blueprint-v3`; a V1/V2 prompt
+pin is permitted only when replaying the explicitly documented immutable
+historical evidence.
+
+Create the deterministic mechanical report and SVG preview for every candidate:
+
+```bash
+npm run battle-maps:candidates:preview -- \
+  --theme <theme> --template <template> --all --json
+```
+
+A reviewer distinct from the generating principal must inspect each candidate
+and exact mechanical preview. The IDs in the template's tracked
+`candidateMaps` array are sibling release maps, not competing alternatives.
+Record one bounded rationale per accepted sibling, use `--update-pins` on the
+final sibling to pin the complete approval-index hash, then replay the full
+declared set:
+
+```bash
+npm run battle-maps:candidates:approve -- \
+  --theme <theme> --template <template> --map <map> \
+  --reviewer <reviewer-id> \
+  --reason "<routes, formations, elevation portals, closure, and readability>"
+
+# Repeat for every declared sibling; add this flag to the final approval only:
+#   --update-pins
+npm run battle-maps:candidates:check -- \
+  --theme <theme> --template <template> --all
+```
+
+The final pin update fails closed while any declared sibling lacks an approved
+entry. The `--all` replay likewise reports each missing sibling; it does not
+mean "check whichever candidate happened to be selected."
+
+V3 approval binds the exact candidate, V3 prompt, reviewer rationale,
+mechanical report, and preview hashes. It is still not visual map approval; the
+production-rendered PNG gate below remains mandatory after assets and recipes
+exist.
+
+### Executable map publication procedure
+
+For each approved source template and its reviewed blueprint set:
+
+```bash
+# 1. Deterministically compile, then replay without writes.
+npm run battle-maps:compile -- \
+  --theme <theme> --template <template> --all-approved
+npm run battle-maps:validate -- \
+  --theme <theme> --template <template> --all-approved
+
+# 2. Render one production-harness screenshot per compiled map.
+npm run battle-maps:screenshot -- \
+  --map battle-maps/compiled/<theme>/<map>.v<version>.json \
+  --output-dir ai-image-metadata/battle-maps/review/<theme>/<template>/<map>
+
+# 3. Only after a distinct reviewer inspects that exact PNG, record approval.
+npm run battle-maps:approve -- \
+  --theme <theme> --template <template> --map <map> \
+  --screenshot <local-review-png> \
+  --reviewer <reviewer-id> \
+  --reason "<composition, topology, seams, elevation, boundaries, and readability>"
+
+# 4. Strictly replay a prepared cumulative definition without changing files.
+npm run battle-maps:catalog -- --release <release-id> --check
+
+# 5. Write the immutable release, then update the tracked active pin.
+npm run battle-maps:catalog -- --release <release-id>
+npm run battle-maps:catalog -- --release <release-id> --activate
+```
+
+Repeat screenshot and approval for every map in the template. `--check` is the
+routine incremental-release preflight and requires the local binary evidence
+unless `--metadata-only` is supplied. Metadata-only mode is appropriate for
+clean CI pin/recompile checks, but it explicitly makes no binary-evidence claim
+and cannot activate. `battle-maps:coverage -- --release <release-id>` is the
+separate final acceptance gate for the complete 16-theme, 144-map corpus; a
+bounded pilot release is expected not to satisfy it.
+
+Publishing terminology in this lifecycle is exact:
+
+- **candidate publication** writes ignored local candidate data for review;
+- **source promotion** writes immutable tracked approved-source metadata;
+- **compilation/archive** creates deterministic runtime art or map content and
+  preserves the exact art release;
+- **catalog creation** writes an immutable tracked cumulative release;
+- **activation** updates the tracked active-release pin; and
+- **deployment** ships that verified code/catalog/art set.
+
+Candidate trees, review screenshots, and runtime binary assets may be ignored
+local evidence. Their tracked review, approval, archive, recipe, map, catalog,
+and active-pin records are immutable or versioned. Restore every ignored binary
+named by those records and verify its hash before activation. Never hand-edit
+`active-release.json`; roll back by deploying the previous verified
+code/catalog/art release and rerunning its strict catalog check.
 
 Coverage rows may repeat the same authoritative theme/tier case when each row
 has a different `ecologyProfile`; keep them ordered by authoritative ID and
@@ -586,8 +939,11 @@ to read their stored schema and provenance.
 
 Do not add `BATTLE_MAP_V3_*` environment reads, feature flags, rollout gates,
 client downgrade negotiation, or operator toggles. Missing approved catalog
-coverage may use the explicitly coded V2 compatibility path during migration;
-present approved coverage automatically selects V3. Rollback deploys the
+coverage may use the explicitly coded V2 compatibility path during migration,
+but no new V2 content may be authored. Present approved coverage automatically
+selects V3. After the complete V3 catalog is deployed, remove the V1/V2
+new-battle compatibility path in a separate verified cleanup; persisted older
+battles remain readable according to their stored schema. Rollback deploys the
 previous verified code/catalog/art release.
 
 ## Reference Borderwood asset set
@@ -617,7 +973,7 @@ separator can never show through.
 ## Future-session checklist
 
 1. Read this runbook and the live readiness plan.
-2. Run `battle-art:matrix --metadata-only --json`.
+2. Run `battle-art:preflight`, then `battle-art:matrix --metadata-only --json`.
 3. Add reviewed theme/ecology/tier requirements before drafting.
 4. Scaffold; do not hand-copy descriptors.
 5. Generate exactly one candidate per concrete family through npm scripts.
@@ -625,4 +981,5 @@ separator can never show through.
    approve direction/topology/ecology accurately.
 7. Compile, run the strict matrix/audit/check, and archive.
 8. Integrate exact assets into map profiles and compile maps.
-9. Approve maps and activate only via a tracked catalog deployment.
+9. Render and independently review every final screenshot.
+10. Check, create, and activate only via a tracked catalog deployment.

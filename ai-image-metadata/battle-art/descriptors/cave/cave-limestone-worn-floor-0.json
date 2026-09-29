@@ -1,0 +1,98 @@
+{
+  "schemaVersion": "battle-art-family-descriptor-v2",
+  "id": "cave-limestone-worn-floor-0",
+  "theme": "cave",
+  "category": "surface",
+  "familyGroup": "cave-limestone-worn-floor",
+  "variantId": "surface-0",
+  "capabilities": {
+    "direction": null,
+    "routeTopology": null,
+    "surfaceVariant": 0,
+    "ecologyProfile": "cave-limestone",
+    "tierBands": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "heightDeltas": [
+      0
+    ]
+  },
+  "status": "approved",
+  "promptProfile": {
+    "id": "battle-art-family-v2",
+    "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+    "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+  },
+  "styleReferences": [
+    {
+      "id": "cave-source-template-01",
+      "path": "ai-image-metadata/battle-maps/sources/cave/cave-template-01/reference.png",
+      "sha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe"
+    }
+  ],
+  "generationPrompt": "Create exactly one seam-safe orthographic isometric cave surface asset named cave-limestone-worn-floor-0 for ecology profile cave-limestone; tier bands 1, 2, 3, 4, 5; surface variant 0. Author the declared orientation directly, preserve continuous neighboring materials and edge alignment, and include only the declared family content. Regional visual vocabulary: Limestone Cave uses a coherent natural cavern of pale worn limestone floors, warm calcite shelves, cool mineral-stained stone, layered limestone walls, amber flowstone, stalagmites, broken columns, angular fallen rock, sparse calcite crystals, and scattered pale rubble under cool subterranean light. Keep this geology, mineral palette, scale, and lighting consistent across every directional edge and transition. Depict cave limestone worn floor 0 as a complete ground diamond with a quiet, shared seam perimeter and one continuous regional surface-material plane. Use large, irregular material fields that cross the diamond, then sparse unique small-detail clusters concentrated away from the rim. Draw all literal materials from the subject name and regional visual vocabulary. Its source-raster center is (128,64). Never depict internal tile boundaries, square subcells, checkerboards, mosaics, quilts, paving, contour grids, repeated stamps, evenly spaced clusters, stripes, or uniform noise; keep the field quiet enough for characters and route overlays. Do not add a baked backdrop, black void, unrelated terrain wall, or presentation frame.",
+  "rasterContract": {
+    "schemaVersion": "battle-art-raster-contract-v1",
+    "kind": "opaque-tile-diamond",
+    "alphaThreshold": 240,
+    "minimumCoveredPermille": 1000,
+    "maximumExteriorCoveredPermille": 5
+  },
+  "canvas": {
+    "width": 256,
+    "height": 128
+  },
+  "placement": {
+    "pivot": {
+      "x": 128,
+      "y": 64
+    },
+    "anchor": {
+      "x": 128,
+      "y": 64
+    },
+    "footprint": {
+      "x": 0,
+      "y": 0,
+      "width": 1,
+      "height": 1
+    },
+    "collision": {
+      "kind": "none",
+      "cells": []
+    },
+    "drawBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 128
+    },
+    "occlusionBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
+    },
+    "stratum": "surface"
+  },
+  "content": {
+    "version": 1,
+    "sourceSha256": "sha256:bfd3ae23a3b58443fb5c820674c8695a21a7c982603d775dbd579a32f7b9ad4d",
+    "runtimeSha256": null,
+    "immutableUrl": null
+  },
+  "source": {
+    "candidateMetadataPath": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-worn-floor-0/result.json",
+    "imagePath": "ai-image-metadata/battle-art/sources/cave/cave-limestone-worn-floor-0/v1/bfd3ae23a3b58443fb5c820674c8695a21a7c982603d775dbd579a32f7b9ad4d.png",
+    "imageSha256": "sha256:bfd3ae23a3b58443fb5c820674c8695a21a7c982603d775dbd579a32f7b9ad4d",
+    "width": 256,
+    "height": 128,
+    "format": "png",
+    "reviewer": "codex-cave-v3-visual-assets",
+    "approvedAt": "2026-08-11T08:31:09.472Z"
+  }
+}

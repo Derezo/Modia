@@ -37,7 +37,14 @@ stages, approves, promotes, compiles, catalogs, or activates content.
 
 ## Approving a symbolic blueprint candidate
 
-Generate template-03-or-newer candidates from the staged standalone starter.
+Generate every newly authored candidate through the V3 blueprint lifecycle
+from the staged standalone starter. V1 and V2 are closed compatibility formats:
+they may be replayed for their exact historical identities, but must never be
+selected for a new theme or template merely because its numeric suffix is low.
+The compatibility identities are explicit: `forest-template-01/-02` are V1,
+`forest-template-03/-04/-05/-06` are V2, and every other identity is V3 by
+default. In particular, `cave-template-01` is V3.
+
 The isolated worker copies that valid starter and makes bounded edits; accepted
 output must change at least two authoritative geometry groups, including a
 mask/surface, required-route, or spawn composition group. Reordering records or
@@ -45,37 +52,87 @@ cells does not count, and connection-kind plus decoration-only edits are
 rejected. Map-specific retry safeguards may freeze geometry already proven by
 the semantic validator and direct the worker to a safer bounded edit.
 
-Approve a reviewed template-03-or-newer blueprint with a bounded rationale:
+Run the no-write plan, live isolated authoring, and deterministic mechanical
+preview in separate phases:
+
+```bash
+npm run battle-maps:candidates:generate -- \
+  --theme cave --template cave-template-01 \
+  --maps 3 --concurrency 2 --dry-run --json
+npm run battle-maps:candidates:generate -- \
+  --theme cave --template cave-template-01 \
+  --maps 3 --concurrency 2 --json
+npm run battle-maps:candidates:preview -- \
+  --theme cave --template cave-template-01 --all --json
+```
+
+The live command writes only bounded ignored candidate evidence. Preview is
+deterministic and must produce the exact V3 mechanical report/SVG evidence
+required by approval; neither command approves or compiles a map. Run the
+Codex authorization preflight before the live worker and keep the reviewer
+distinct from the generating principal.
+
+Every ID in the template's tracked `candidateMaps` array is a sibling release
+map, not an alternative from which to choose only one. Approve each reviewed
+V3 blueprint with its own bounded rationale. On the final sibling only, pass
+`--update-pins` to pin the complete approval-index hash into the source
+sidecar, then replay the full declared set:
 
 ```bash
 npm run battle-maps:candidates:approve -- \
-  --theme forest \
-  --template forest-template-03 \
-  --map forest-template-03-a \
+  --theme cave \
+  --template cave-template-01 \
+  --map cave-template-01-a \
   --reviewer <reviewer-id> \
   --reason "<specific acceptance rationale>"
+
+# Repeat for cave-template-01-b, then pin the complete set on the final map.
+npm run battle-maps:candidates:approve -- \
+  --theme cave \
+  --template cave-template-01 \
+  --map cave-template-01-c \
+  --reviewer <reviewer-id> \
+  --reason "<specific acceptance rationale>" \
+  --update-pins
+
+npm run battle-maps:candidates:check -- \
+  --theme cave --template cave-template-01 --all
 ```
+
+`--update-pins` fails unless every declared sibling already has an approved
+entry. Conversely, `candidates:check --all` reports an unapproved sibling as
+missing even when another map in the template is valid; this is intentional
+release-closure behavior.
 
 `--reason` must be non-empty, trimmed, free of control characters, and at most
 1000 UTF-8 bytes. The command validates this structure; reviewers remain
 responsible for the rationale's substance.
-For template-03 and newer identities, the rationale is stored in the v2
-approval record and approval-index entry. The record `fullHash` covers the
-complete record including its rationale, and the index `fullHash` covers every
-entry including the rationale and record hash. Compile recipes and content
-releases pin that index hash, so a new release transitively hashes the reviewed
-rationale.
+For V3 identities, the rationale and exact mechanical-review provenance are
+stored in the V3 approval record and approval-index entry. The record
+`fullHash` covers the complete record, including rationale and review evidence,
+and the index `fullHash` covers every entry, record hash, and evidence pin.
+Compile recipes and content releases pin that index hash, so a new release
+transitively hashes the reviewed decision.
 
-Existing template-01 and template-02 approvals remain in their frozen v1
-record and index formats. Their command omits `--reason`, and release
-validation continues to accept their existing byte-valid records and hashes.
-Do not rewrite those legacy approvals to v2.
+Existing `forest-template-01/-02` approvals remain in their frozen V1 record
+and index formats. Existing `forest-template-03/-04/-05/-06` approvals remain
+in their frozen V2 formats. Release validation may replay those exact
+byte-valid compatibility records and hashes; do not rewrite them and do not
+create another V1 or V2 approval.
 
 Blueprint prompt profiles follow the same explicit compatibility boundary.
-Template-01 and template-02 candidates and approvals continue to pin the frozen
-`map-blueprint-v1.json` bytes. Template-03 and newer candidates use the tracked
-`map-blueprint-v2.json` profile, whose fixed-family contract must not be copied
-back into v1. Verify legacy approval compatibility without rewriting evidence:
+The exact historical forest identities continue to pin their frozen
+`map-blueprint-v1.json` or `map-blueprint-v2.json` bytes. New candidates pin
+`map-blueprint-v3.json`; its mechanical-review requirements must not be copied
+back into compatibility evidence. Verify legacy approval compatibility without
+rewriting evidence:
+
+The already tracked `forest-template-07` V3 approval records are transitional:
+they carry V3 mechanical-review provenance but pin the exact earlier V2 prompt
+bytes under which their candidates were authored. Release replay may read that
+exact historical prompt pin. It must not make V2 selectable for a new or
+replacement candidate; every new approval, including another template-07
+revision, pins the V3 prompt.
 
 ```bash
 npm run battle-maps:candidates:check -- \
@@ -326,6 +383,99 @@ map or ecology therefore requires a new tracked release; it never mutates an
 existing battle. Catalog content activates automatically, with V2 compatibility
 only when eligible V3 content is absent. Do not add an environment flag,
 client downgrade, enabled-profile list, or runtime rollout gate.
+
+## Executable release procedure
+
+Run the following only after source-template and symbolic-blueprint approval.
+Codex may orchestrate these commands and assemble the evidence, but the
+reviewer recorded at each visual gate must actually inspect the exact candidate
+or screenshot and must be distinct from the generation principal.
+
+The active release is not a work queue. Missing numeric IDs can be immutable
+superseded or rejected evidence and must not be revived. For a new content
+wave, use the tracked supported-theme order to select the first theme with no
+active catalog entry, then declare a new frozen template identity and its
+regional art readiness. In the current forest-only r16 state this authoring
+rule selects cave and `cave-template-01`; it does not change runtime selection
+or claim catalog eligibility.
+
+Before generating any cave blueprint, verify that compatibility selection is
+identity-based rather than suffix-based: only the explicitly frozen forest
+identities may select V1/V2, while `cave-template-01` must select the V3 prompt,
+V3 approval schema, and mandatory mechanical-review evidence through candidate
+generation, approval, and release validation. Ship this validator change with
+the coordinated recipe/map/approval/catalog repin; changing pinned validator
+source in isolation invalidates strict replay of the active catalog.
+
+HTML `source-template-preview*.html` files under a theme review directory are
+source-candidate evidence only. They are not rendered-map samples. After the
+source, blueprints, regional render profile/tile catalog, compiled battle-art
+bundle, and compile recipe are all approved and pinned, every compiled cave map
+must be rendered through `battle-maps:screenshot`. The resulting PNG and bound
+`.review.json` belong under
+`ai-image-metadata/battle-maps/review/cave/<template>/<map>/` and must be
+inspected before map approval. Catalog activation requires those exact local
+binary hashes and cannot substitute an HTML preview or metadata-only check.
+
+For `cave-template-01`, absent production PNGs are expected until those release
+inputs exist. The three approved V3 blueprints directly consume 33 authored
+concrete cave-art variants, but the official staged v11 art bundle is
+whole-manifest and non-check compilation refuses publication while any of the
+43 cave descriptors remains draft. Do not construct a partial bundle merely to
+render a sample. Validate the tracked
+`battle-maps/render-profiles/cave-limestone-v1.json` profile (including its
+explicit `worn-floor` to `layered-face` elevation mapping) and
+`battle-maps/tile-catalogs/cave-limestone-v1.json` catalog. Create
+`battle-maps/compile-recipes/cave/cave-template-01.json` only after the complete
+cave art bundle is compiled and archived, so its bundle pin is real and
+immutable; the synthetic blueprint preflight fallback is not production render
+authority.
+
+Source review is limited to composition, regional materials, lighting,
+walkable-vs-solid readability, silhouette, and gross forbidden visual
+patterns. Exact routes, spawns, crossings, and elevation connectivity come
+from the semantic sidecar and are enforced in blueprint/mechanical validation;
+they must not be invented by tracing or demanded as pixel-perfect source-image
+proof. Preserve Codex rejection history when a human reviewer accepts the same
+exact source bytes later; the explicit human source approval is authoritative.
+
+```bash
+npm run battle-maps:compile -- \
+  --theme <theme> --template <template> --all-approved
+npm run battle-maps:validate -- \
+  --theme <theme> --template <template> --all-approved
+
+npm run battle-maps:screenshot -- \
+  --map battle-maps/compiled/<theme>/<map>.v<version>.json \
+  --output-dir ai-image-metadata/battle-maps/review/<theme>/<template>/<map>
+npm run battle-maps:approve -- \
+  --theme <theme> --template <template> --map <map> \
+  --screenshot <local-review-png> --reviewer <reviewer-id> \
+  --reason "<specific composition, topology, seams, elevation, boundaries, and readability rationale>"
+
+npm run battle-maps:catalog -- --release <release-id> --check
+npm run battle-maps:catalog -- --release <release-id>
+npm run battle-maps:catalog -- --release <release-id> --activate
+```
+
+Repeat rendering and approval for every map in the template. The strict
+catalog `--check` is the non-writing gate for normal incremental publication;
+it replays the definition, exact maps, approval records, art pins, local binary
+evidence, and all declared selection cases. The build without `--check` writes
+the immutable release. `--activate` alone changes the tracked application pin,
+and it is refused with `--metadata-only`.
+
+Use `npm run battle-maps:coverage -- --release <release-id>` only to claim the
+complete authoritative matrix and exactly 144 maps. It is expected to reject a
+bounded pilot release and never activates anything.
+
+In this document, candidate publication means ignored local review material;
+source promotion means tracked approved-source evidence; catalog creation means
+an immutable release; activation means the tracked active-release pin change;
+and deployment means shipping the verified code/catalog/art set. Restore and
+hash-verify ignored screenshots and runtime assets before activation. Rollback
+is a deployment of the previous verified set, followed by its strict catalog
+check, never an environment change or a manual active-pin edit.
 
 ## Current cumulative forest reference release
 

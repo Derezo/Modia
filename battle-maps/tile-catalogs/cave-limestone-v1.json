@@ -1,0 +1,14 @@
+{
+  "id": "cave-limestone-v1-tiles",
+  "version": 1,
+  "fullHash": "sha256:110368099f3f911057dcb0a3f58cb07808fbbb4278f70f0fc69b625845de3fd1",
+  "renderProfileId": "cave-limestone-v1",
+  "materials": [
+    {
+      "symbol": "worn-floor",
+      "material": "limestone-floor",
+      "passable": true,
+      "movementCost": 1
+    }
+  ]
+}

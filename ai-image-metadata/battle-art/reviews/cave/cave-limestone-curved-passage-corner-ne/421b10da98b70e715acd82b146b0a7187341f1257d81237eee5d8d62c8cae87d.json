@@ -1,0 +1,125 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v3",
+  "theme": "cave",
+  "familyId": "cave-limestone-curved-passage-corner-ne",
+  "decision": "rejected",
+  "reviewer": "codex-live-candidate-visual-review",
+  "reason": "The inside of the N/E turn terminates in a visibly sharp acute V-shaped notch rather than a continuous generous-radius worn bend; the chevron cusp remains obvious at 4:1 runtime scale and repeats as a rigid zigzag in seam composites.",
+  "reviewedAt": "2026-08-12T01:47:54.619Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/cave/cave-limestone-curved-passage-corner-ne.json",
+    "sha256": "sha256:393d6e6a55eb63f1c5182e36312b6355c576cf3b145a5039b0448aced6d0eaaa",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-curved-passage-corner-ne/result.json",
+      "bytes": 4238,
+      "sha256": "sha256:97d8aef1d08fe8a7f23c0a617e4c1c4efca67d3009849951e31ae49f8226e837"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-curved-passage-corner-ne/candidate.png",
+      "bytes": 17635,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:421b10da98b70e715acd82b146b0a7187341f1257d81237eee5d8d62c8cae87d"
+    },
+    "derivation": {
+      "schemaVersion": "battle-art-route-finishing-v1",
+      "strategy": "corner-arm-local-warp-v1",
+      "source": {
+        "path": "ai-image-metadata/battle-art/generated-artifacts/cave/cave-limestone-curved-passage-corner-ne/396a6795ed15d72952919d48843bfb3064d6d243cced98dbca504954ac55bb42.png",
+        "bytes": 1335883,
+        "width": 1774,
+        "height": 887,
+        "format": "png",
+        "sha256": "sha256:396a6795ed15d72952919d48843bfb3064d6d243cced98dbca504954ac55bb42"
+      },
+      "sourceTopologySha256": "sha256:ca57f398eb3f9a48bcc5d5044c8390e8e708a17da914be912795ff947cc0a624",
+      "sourceBounds": {
+        "x": 768,
+        "y": 52,
+        "width": 824,
+        "height": 809
+      },
+      "componentCount": 133,
+      "coveredPixels": 204154,
+      "selectedCoveredPixels": 202021,
+      "detachedCoveredPixels": 2133,
+      "detachedCoveredPermille": 11,
+      "maximumDetachedCoveredPermille": 11,
+      "anchor": {
+        "x": 128,
+        "y": 64
+      },
+      "terminals": {
+        "n": {
+          "x": 192,
+          "y": 32
+        },
+        "e": {
+          "x": 192,
+          "y": 96
+        }
+      },
+      "arms": {
+        "n": {
+          "perpendicularScalePermille": 1400,
+          "perpendicularOffsetPixels": -16,
+          "transitionStartPermille": 200,
+          "transitionEndPermille": 650
+        },
+        "e": {
+          "perpendicularScalePermille": 1500,
+          "perpendicularOffsetPixels": 3,
+          "transitionStartPermille": 150,
+          "transitionEndPermille": 500
+        }
+      },
+      "maximumCoveragePermille": 230,
+      "maximumScaleAnisotropyPermille": 1500,
+      "maximumAppliedScalePermille": 1500,
+      "borderClearPixels": 4,
+      "armSelector": "greatest-longitudinal-projection-v1",
+      "transition": "smoothstep-v1",
+      "kernel": "bilinear-premultiplied-alpha-v1",
+      "finalSha256": "sha256:421b10da98b70e715acd82b146b0a7187341f1257d81237eee5d8d62c8cae87d"
+    },
+    "origin": {
+      "kind": "failed-attempt-revalidation-v1",
+      "failureRecord": {
+        "path": "ai-image-metadata/battle-art/generated-artifacts/cave/cave-limestone-curved-passage-corner-ne/failures/b78514fab329be31a6e3fdacb31f98ea273fda9a27327fbaae50ac2189b4bd15.json",
+        "sha256": "sha256:852e2aafc75dabcea65055d07f38dcb035a3e4a7d9d0520d396fd15292cc1871",
+        "fullHash": "sha256:b78514fab329be31a6e3fdacb31f98ea273fda9a27327fbaae50ac2189b4bd15"
+      },
+      "raw": {
+        "path": "ai-image-metadata/battle-art/generated-artifacts/cave/cave-limestone-curved-passage-corner-ne/396a6795ed15d72952919d48843bfb3064d6d243cced98dbca504954ac55bb42.png",
+        "bytes": 1335883,
+        "width": 1774,
+        "height": 887,
+        "format": "png",
+        "sha256": "sha256:396a6795ed15d72952919d48843bfb3064d6d243cced98dbca504954ac55bb42"
+      },
+      "originalDescriptor": {
+        "path": "ai-image-metadata/battle-art/descriptors/cave/cave-limestone-curved-passage-corner-ne.json",
+        "sha256": "sha256:f3aa509ef6b46ad598b7b8078854568a8103fa410382824a6681dd6f01035407",
+        "contentVersion": 1
+      },
+      "validationDescriptorSha256": "sha256:393d6e6a55eb63f1c5182e36312b6355c576cf3b145a5039b0448aced6d0eaaa"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "cave-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/cave/cave-template-01/reference.png",
+        "sha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe"
+      }
+    ]
+  },
+  "fullHash": "sha256:d4a8b2b5654f4c996a7ee69da71834655706a7b95e93df41dc5b5aa841052cc9"
+}

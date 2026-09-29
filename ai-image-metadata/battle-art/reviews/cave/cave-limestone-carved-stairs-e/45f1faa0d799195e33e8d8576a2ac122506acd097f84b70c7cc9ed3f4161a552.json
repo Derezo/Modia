@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v2",
+  "theme": "cave",
+  "familyId": "cave-limestone-carved-stairs-e",
+  "decision": "approved",
+  "reviewer": "codex-live-candidate-visual-review",
+  "reason": "The exact SHA-pinned candidate matches the current frozen descriptor, prompt profile, cave style reference, effective prompt, and one-call worker provenance. Mechanical validation confirms a 256x192 transparent cutout with one connected 3,703-pixel alpha component (75‰ within the required 10–850‰), 76 anchor-contact pixels, E endpoint-band contact only (E=568; N/S/W=0), transparent corners, and zero residual chroma. Native and true 64x48 runtime-scale inspection show one coherent E-oriented climb from the low upper-left anchor toward the high lower-right endpoint, with six broad crosswise limestone treads, a readable top landing, shallow risers facing back toward the low anchor, and cave-consistent material, palette, texture scale, and lighting. It contains no full terrain tile, wall, stalagmite, platform, raised slab, mirrored or alternate-direction connection, detached fragment, backdrop, text, or watermark.",
+  "reviewedAt": "2026-08-12T02:21:02.444Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/cave/cave-limestone-carved-stairs-e.json",
+    "sha256": "sha256:e541322b3ec6559e8674c345d7f4e08b4b37704b4ab95061e8f4d0863f79c7a0",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-carved-stairs-e/result.json",
+      "bytes": 2680,
+      "sha256": "sha256:f6f8069578267ac915f4e441082cdc42636b34dfa32062662a70ac4eb2502f57"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-carved-stairs-e/candidate.png",
+      "bytes": 13178,
+      "width": 256,
+      "height": 192,
+      "format": "png",
+      "sha256": "sha256:45f1faa0d799195e33e8d8576a2ac122506acd097f84b70c7cc9ed3f4161a552"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "cave-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/cave/cave-template-01/reference.png",
+        "sha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe"
+      }
+    ],
+    "styleReferenceMode": "attachments",
+    "styleReferenceProvenance": [
+      {
+        "id": "cave-source-template-01",
+        "sha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe",
+        "stagedBasename": "style-reference-01.png"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "imageArguments": [
+        "style-reference-01.png"
+      ],
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-carved-stairs-e/prompt.txt",
+        "bytes": 14714,
+        "sha256": "sha256:be3ac47d139234923f21211a4f9e7ce34a55bbfcf9b3b12250214aec300d4a73"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-carved-stairs-e/worker.jsonl",
+        "bytes": 47070,
+        "sha256": "sha256:6efeaf2b561714c0e3cda617b41ef99663d96b75e147b54393e5502f1eed9592"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-carved-stairs-e/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-carved-stairs-e/last-message.txt",
+        "bytes": 379,
+        "sha256": "sha256:c0db8fa3ddba98f32a8c21391c97a0c4b04085ab0efbd6da1ff11a58ab9e0f01"
+      }
+    }
+  },
+  "fullHash": "sha256:11e5c78705087b9270ac5f447318e4f26c9ac7776c7a34a1788f8a8657cfe36a"
+}

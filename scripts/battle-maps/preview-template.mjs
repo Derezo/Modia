@@ -11,6 +11,7 @@ import {
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { parseJsonRejectDuplicateKeys } from '../../shared/battleMap/canonicalJson.js';
 import {
   assertSafeWritePath,
   defaultProjectRoot,
@@ -25,10 +26,14 @@ const ID_PATTERN = /^[a-z0-9]+(?:[-_][a-z0-9]+)*$/;
 const SHA256_PATTERN = /^sha256:[0-9a-f]{64}$/;
 const REVIEW_ROOT = 'ai-image-metadata/battle-maps/review';
 const CANDIDATE_ROOT = 'ai-image-metadata/battle-maps/candidates';
+const REJECTION_ROOT = 'battle-maps/source-image-rejections';
 const CANDIDATE_SCHEMA_VERSION = 'battle-map-source-image-candidate-v1';
+const REJECTION_SCHEMA_VERSION = 'battle-map-source-image-candidate-rejection-v1';
 const MAX_CANDIDATE_BYTES = 32 * 1024 * 1024;
 const MAX_IMAGE_DIMENSION = 8192;
 const MAX_RESULT_BYTES = 256 * 1024;
+const MAX_REJECTION_BYTES = 256 * 1024;
+const MAX_REASON_LENGTH = 2000;
 
 function validateReviewOutput(output) {
   validateProjectRelativePath(output, '--output', { extension: '.html' });
@@ -131,6 +136,196 @@ function sameImagePin(actual, expected) {
     && actual.format === expected.format
     && actual.sha256 === expected.sha256
   );
+}
+
+function samePromptProfile(actual, expected) {
+  return (
+    actual.id === expected.id
+    && actual.path === expected.path
+    && actual.sha256 === expected.sha256
+  );
+}
+
+function validateFilePin(value, expectedPath, location, minimumBytes = 0) {
+  exactObject(value, ['path', 'bytes', 'sha256'], location);
+  if (
+    value.path !== expectedPath
+    || !Number.isSafeInteger(value.bytes)
+    || value.bytes < minimumBytes
+    || !SHA256_PATTERN.test(value.sha256)
+  ) {
+    throw new Error(`${location} pin is invalid`);
+  }
+}
+
+function validateRejectionRecord(value, expected) {
+  const directory = `${CANDIDATE_ROOT}/${expected.theme}/${expected.template}/${expected.variant}`;
+  exactObject(value, [
+    'schemaVersion',
+    'theme',
+    'template',
+    'candidate',
+    'decision',
+    'reviewer',
+    'reason',
+    'evidence'
+  ], `candidate ${expected.variant} rejection`);
+  exactObject(value.evidence, [
+    'result',
+    'image',
+    'promptProfile',
+    'prompt',
+    'workerLogs',
+    'imagegenInvocationCount'
+  ], `candidate ${expected.variant} rejection evidence`);
+  exactObject(
+    value.evidence.image,
+    ['path', 'bytes', 'width', 'height', 'format', 'sha256'],
+    `candidate ${expected.variant} rejection image`
+  );
+  exactObject(
+    value.evidence.promptProfile,
+    ['id', 'path', 'sha256'],
+    `candidate ${expected.variant} rejection promptProfile`
+  );
+  exactObject(
+    value.evidence.workerLogs,
+    ['stdout', 'stderr', 'lastMessage'],
+    `candidate ${expected.variant} rejection workerLogs`
+  );
+  if (
+    value.schemaVersion !== REJECTION_SCHEMA_VERSION
+    || value.theme !== expected.theme
+    || value.template !== expected.template
+    || value.candidate !== expected.variant
+    || value.decision !== 'rejected'
+  ) {
+    throw new Error(`candidate ${expected.variant} rejection identity is invalid`);
+  }
+  if (typeof value.reviewer !== 'string' || !ID_PATTERN.test(value.reviewer)) {
+    throw new Error(`candidate ${expected.variant} rejection reviewer is invalid`);
+  }
+  if (
+    typeof value.reason !== 'string'
+    || value.reason.length < 1
+    || value.reason.length > MAX_REASON_LENGTH
+    || value.reason.trim() !== value.reason
+    || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(value.reason)
+  ) {
+    throw new Error(`candidate ${expected.variant} rejection reason is invalid`);
+  }
+  validateFilePin(
+    value.evidence.result,
+    `${directory}/result.json`,
+    `candidate ${expected.variant} rejection result`,
+    2
+  );
+  validateFilePin(
+    value.evidence.prompt,
+    `${directory}/prompt.txt`,
+    `candidate ${expected.variant} rejection prompt`,
+    1
+  );
+  validateFilePin(
+    value.evidence.workerLogs.stdout,
+    `${directory}/worker.jsonl`,
+    `candidate ${expected.variant} rejection stdout`,
+    1
+  );
+  validateFilePin(
+    value.evidence.workerLogs.stderr,
+    `${directory}/worker.stderr.log`,
+    `candidate ${expected.variant} rejection stderr`
+  );
+  if (value.evidence.workerLogs.lastMessage !== null) {
+    validateFilePin(
+      value.evidence.workerLogs.lastMessage,
+      `${directory}/last-message.txt`,
+      `candidate ${expected.variant} rejection lastMessage`
+    );
+  }
+  const image = value.evidence.image;
+  if (
+    ![`${directory}/candidate.png`, `${directory}/candidate.webp`].includes(image.path)
+    || !Number.isSafeInteger(image.bytes)
+    || image.bytes < 1
+    || image.bytes > MAX_CANDIDATE_BYTES
+    || !Number.isSafeInteger(image.width)
+    || !Number.isSafeInteger(image.height)
+    || image.width < 1
+    || image.height < 1
+    || image.width > MAX_IMAGE_DIMENSION
+    || image.height > MAX_IMAGE_DIMENSION
+    || image.width !== image.height
+    || !['png', 'webp'].includes(image.format)
+    || path.posix.extname(image.path) !== `.${image.format}`
+    || !SHA256_PATTERN.test(image.sha256)
+  ) {
+    throw new Error(`candidate ${expected.variant} rejection image pin is invalid`);
+  }
+  const promptProfile = value.evidence.promptProfile;
+  if (
+    !ID_PATTERN.test(promptProfile.id)
+    || typeof promptProfile.path !== 'string'
+    || !promptProfile.path.startsWith('ai-image-metadata/battle-maps/prompts/')
+    || path.posix.extname(promptProfile.path) !== '.json'
+    || !SHA256_PATTERN.test(promptProfile.sha256)
+  ) {
+    throw new Error(`candidate ${expected.variant} rejection prompt-profile pin is invalid`);
+  }
+  validateProjectRelativePath(
+    promptProfile.path,
+    `candidate ${expected.variant} rejection promptProfile.path`,
+    { extension: '.json' }
+  );
+  if (value.evidence.imagegenInvocationCount !== 1) {
+    throw new Error(`candidate ${expected.variant} rejection imagegen count is invalid`);
+  }
+}
+
+async function loadRejections(projectRoot, sidecar) {
+  const relativeRoot = `${REJECTION_ROOT}/${sidecar.theme}/${sidecar.id}`;
+  const absoluteRoot = resolveWithinProject(projectRoot, relativeRoot, 'rejection directory');
+  try {
+    await assertSafeWritePath(projectRoot, absoluteRoot, 'rejection directory');
+    const details = await lstat(absoluteRoot);
+    if (!details.isDirectory()) throw new Error('rejection directory must be a directory');
+  } catch (error) {
+    if (error.code === 'ENOENT') return new Map();
+    throw error;
+  }
+  const entries = await readdir(absoluteRoot, { withFileTypes: true });
+  const rejections = new Map();
+  for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
+    const variant = path.posix.basename(entry.name, '.json');
+    if (!entry.isFile() || entry.name !== `${variant}.json` || !ID_PATTERN.test(variant)) {
+      throw new Error(`rejection directory has invalid entry "${entry.name}"`);
+    }
+    const relativePath = `${relativeRoot}/${entry.name}`;
+    const { absolute, details } = await assertRegularUnlinkedFile(
+      projectRoot,
+      relativePath,
+      `candidate ${variant} rejection`
+    );
+    if (details.size < 1 || details.size > MAX_REJECTION_BYTES) {
+      throw new Error(
+        `candidate ${variant} rejection must be 1..${MAX_REJECTION_BYTES} bytes`
+      );
+    }
+    let value;
+    try {
+      value = parseJsonRejectDuplicateKeys(await readFile(absolute, 'utf8'));
+    } catch (error) {
+      throw new Error(`candidate ${variant} rejection is not strict JSON: ${error.message}`);
+    }
+    validateRejectionRecord(value, {
+      theme: sidecar.theme,
+      template: sidecar.id,
+      variant
+    });
+    rejections.set(variant, value);
+  }
+  return rejections;
 }
 
 async function embeddedVerifiedImage(absolute, image, location) {
@@ -264,7 +459,7 @@ function validateCandidateResult(value, expected) {
   }
 }
 
-async function readCandidate(projectRoot, sidecar, variant) {
+async function readCandidate(projectRoot, sidecar, variant, rejection) {
   const directory = `${CANDIDATE_ROOT}/${sidecar.theme}/${sidecar.id}/${variant}`;
   const metadataPath = `${directory}/result.json`;
   const { absolute, details } = await assertRegularUnlinkedFile(
@@ -276,17 +471,37 @@ async function readCandidate(projectRoot, sidecar, variant) {
     throw new Error(`candidate ${variant} result must be 1..${MAX_RESULT_BYTES} bytes`);
   }
   let value;
+  let resultBytes;
   try {
-    value = JSON.parse(await readFile(absolute, 'utf8'));
+    resultBytes = await readFile(absolute);
+    value = JSON.parse(resultBytes.toString('utf8'));
   } catch (error) {
     throw new Error(`candidate ${variant} result is not valid JSON: ${error.message}`);
+  }
+  if (
+    rejection !== undefined
+    && (
+      rejection.evidence.result.bytes !== resultBytes.length
+      || rejection.evidence.result.sha256 !== sha256Bytes(resultBytes)
+    )
+  ) {
+    throw new Error(`candidate ${variant} result does not match rejection pin`);
   }
   validateCandidateResult(value, {
     variant,
     theme: sidecar.theme,
     template: sidecar.id,
-    promptProfile: sidecar.promptProfile
+    promptProfile: rejection?.evidence.promptProfile ?? sidecar.promptProfile
   });
+  if (
+    rejection !== undefined
+    && (
+      !sameImagePin(value.image, rejection.evidence.image)
+      || !samePromptProfile(value.promptProfile, rejection.evidence.promptProfile)
+    )
+  ) {
+    throw new Error(`candidate ${variant} metadata does not match rejection evidence`);
+  }
   const { absolute: imagePath } = await assertRegularUnlinkedFile(
     projectRoot,
     value.image.path,
@@ -307,11 +522,17 @@ async function readCandidate(projectRoot, sidecar, variant) {
   const selected = sidecar.sourceImage !== null && sameImagePin(actual, sidecar.sourceImage);
   return {
     id: variant,
-    status: value.status,
-    reviewStatus: selected
+    status: rejection === undefined ? value.status : 'rejected',
+    reviewStatus: rejection !== undefined
+      ? 'rejected'
+      : selected
       ? (sidecar.status === 'approved' ? 'selected-and-approved' : 'selected-and-staged')
       : 'awaiting-review',
     selected,
+    rejection: rejection === undefined
+      ? null
+      : { reviewer: rejection.reviewer, reason: rejection.reason },
+    promptProfile: value.promptProfile,
     image: {
       ...value.image,
       verified: true,
@@ -324,7 +545,22 @@ async function readCandidate(projectRoot, sidecar, variant) {
   };
 }
 
-async function loadCandidates(projectRoot, sidecar) {
+function rejectionHistoryCandidate(rejection) {
+  return {
+    id: rejection.candidate,
+    status: 'rejected',
+    reviewStatus: 'rejected',
+    selected: false,
+    rejection: { reviewer: rejection.reviewer, reason: rejection.reason },
+    promptProfile: rejection.evidence.promptProfile,
+    image: {
+      ...rejection.evidence.image,
+      verified: false
+    }
+  };
+}
+
+async function loadCandidates(projectRoot, sidecar, rejections) {
   const relativeRoot = `${CANDIDATE_ROOT}/${sidecar.theme}/${sidecar.id}`;
   const absoluteRoot = resolveWithinProject(projectRoot, relativeRoot, 'candidate directory');
   try {
@@ -332,7 +568,9 @@ async function loadCandidates(projectRoot, sidecar) {
     const rootDetails = await lstat(absoluteRoot);
     if (!rootDetails.isDirectory()) throw new Error('candidate directory must be a directory');
   } catch (error) {
-    if (error.code === 'ENOENT') return [];
+    if (error.code === 'ENOENT') {
+      return [...rejections.values()].map(rejectionHistoryCandidate);
+    }
     throw error;
   }
   const entries = await readdir(absoluteRoot, { withFileTypes: true });
@@ -368,8 +606,21 @@ async function loadCandidates(projectRoot, sidecar) {
       if (error.code === 'ENOENT') continue;
       throw error;
     }
-    candidates.push(await readCandidate(projectRoot, sidecar, entry.name));
+    const rejection = rejections.get(entry.name);
+    try {
+      candidates.push(await readCandidate(
+        projectRoot,
+        sidecar,
+        entry.name,
+        rejection
+      ));
+    } catch (error) {
+      if (rejection === undefined || error.code !== 'ENOENT') throw error;
+      candidates.push(rejectionHistoryCandidate(rejection));
+    }
+    rejections.delete(entry.name);
   }
+  candidates.push(...[...rejections.values()].map(rejectionHistoryCandidate));
   return candidates;
 }
 
@@ -403,13 +654,21 @@ export function renderPreviewHtml({ output, sidecar, sourceImage, candidates }) 
   const candidateCards = candidates.length === 0
     ? '<p class="empty">No complete generated candidates are present.</p>'
     : candidates.map(candidate => (
-      `<article class="candidate${candidate.selected ? ' selected' : ''}">`
+      `<article class="candidate${candidate.selected ? ' selected' : ''}`
+      + `${candidate.reviewStatus === 'rejected' ? ' rejected' : ''}">`
       + `<h3>${escapeHtml(candidate.id)}</h3>`
-      + `<img loading="lazy" src="${escapeHtml(
-        candidate.image.embeddedSrc ?? imageHref(output, candidate.image.path)
-      )}" `
-      + `alt="${escapeHtml(`${candidate.id} generated candidate`)}">`
-      + `<p>${escapeHtml(candidate.reviewStatus)} · verified pin</p>`
+      + (candidate.image.verified
+        ? `<img loading="lazy" src="${escapeHtml(
+          candidate.image.embeddedSrc ?? imageHref(output, candidate.image.path)
+        )}" alt="${escapeHtml(`${candidate.id} generated candidate`)}">`
+        : '<p class="empty">Exact local candidate evidence is unavailable in this checkout.</p>')
+      + `<p>${escapeHtml(candidate.reviewStatus)} · ${candidate.image.verified
+        ? 'verified candidate pin'
+        : 'recorded rejection pin'}</p>`
+      + (candidate.rejection === null
+        ? ''
+        : `<p>Rejected by ${escapeHtml(candidate.rejection.reviewer)}</p>`
+          + `<p>${escapeHtml(candidate.rejection.reason)}</p>`)
       + `<p class="hash">${escapeHtml(candidate.image.sha256)}</p></article>`
     )).join('');
   const review = sidecar.review === null
@@ -439,7 +698,8 @@ export function renderPreviewHtml({ output, sidecar, sourceImage, candidates }) 
     + 'solid #536159}.status{color:#b8d8c3}.source img,.candidate img{display:block;max-width:100%;max-height:'
     + '680px;object-fit:contain;background:#0c0f0d}.grid{display:grid;grid-template-columns:repeat(auto-fit,'
     + 'minmax(240px,1fr));gap:18px}.candidate,section{padding:16px;background:#202822;border:1px solid '
-    + '#465249;border-radius:8px}.candidate.selected{border-color:#9fd5af}.candidate img{width:100%;'
+    + '#465249;border-radius:8px}.candidate.selected{border-color:#9fd5af}.candidate.rejected{border-color:'
+    + '#c78383}.candidate img{width:100%;'
     + 'aspect-ratio:1}.hash,dd,pre{overflow-wrap:anywhere}dl{display:grid;grid-template-columns:max-content '
     + '1fr;gap:6px 16px}dt{font-weight:700}dd{margin:0}pre{white-space:pre-wrap;margin:0}.summary{display:grid;'
     + 'gap:16px}.empty{color:#c5cec8}</style></head><body>'
@@ -490,10 +750,11 @@ export async function previewTemplate(options) {
     theme: options.theme,
     template: options.template
   });
-  const [sourceImage, candidates] = await Promise.all([
+  const [sourceImage, rejections] = await Promise.all([
     verifySourceImage(projectRoot, loaded.sidecar),
-    loadCandidates(projectRoot, loaded.sidecar)
+    loadRejections(projectRoot, loaded.sidecar)
   ]);
+  const candidates = await loadCandidates(projectRoot, loaded.sidecar, rejections);
   const html = renderPreviewHtml({
     output,
     sidecar: loaded.sidecar,
@@ -530,9 +791,12 @@ export async function main(argv = process.argv.slice(2)) {
   if (options.json) console.log(JSON.stringify(result, null, 2));
   else {
     console.log(`Wrote verified source-template review: ${result.output}`);
+    const verifiedCandidates = result.candidates.filter(candidate => candidate.image.verified).length;
+    const rejectionHistory = result.candidates.length - verifiedCandidates;
     console.log(
       `${result.sourceImage === null ? 'No staged source' : 'Exact staged source verified'}; `
-      + `${result.candidates.length} complete generated candidate(s) verified.`
+      + `${verifiedCandidates} complete generated candidate(s) verified; `
+      + `${rejectionHistory} recorded rejection(s) shown without local candidate evidence.`
     );
   }
   return result;

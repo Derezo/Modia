@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "battle-map-source-image-candidate-rejection-v1",
+  "theme": "cave",
+  "template": "cave-template-01",
+  "candidate": "candidate-01",
+  "decision": "rejected",
+  "reviewer": "codex-reviewer-cave-scope-review",
+  "reason": "Reject exact candidate f56f57c13e8aa74642a0950a9a7f2677221775f3f055f0e994c30b0c2e3966f9: the northern grotto's western terrace merges into the central approach below a shared short stair, so three distinct formation entries are not visibly proven. The central sink rim also reads as a raised ledge without two unmistakable broad descents from the southern chamber. Limestone style, western/eastern shelves, elevation, irregular cave boundary, and prohibited-pattern avoidance are strong, but the required no-single-choke topology and multi-access crossable sink are not sufficiently legible for source promotion.",
+  "evidence": {
+    "result": {
+      "path": "ai-image-metadata/battle-maps/candidates/cave/cave-template-01/candidate-01/result.json",
+      "bytes": 1810,
+      "sha256": "sha256:59e44b0574fff5823537e59405fdd3e24add64e7001e7a4f19635be9d5448a1d"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-maps/candidates/cave/cave-template-01/candidate-01/candidate.png",
+      "bytes": 3070465,
+      "width": 1254,
+      "height": 1254,
+      "format": "png",
+      "sha256": "sha256:f56f57c13e8aa74642a0950a9a7f2677221775f3f055f0e994c30b0c2e3966f9"
+    },
+    "promptProfile": {
+      "id": "source-template-image-cave-v1",
+      "path": "ai-image-metadata/battle-maps/prompts/source-template-image-cave-v1.json",
+      "sha256": "sha256:9b3a354196fa7dd5d84ba00d75f9622be43280b07f4a7ff432f1c6b10aa03431"
+    },
+    "prompt": {
+      "path": "ai-image-metadata/battle-maps/candidates/cave/cave-template-01/candidate-01/prompt.txt",
+      "bytes": 9109,
+      "sha256": "sha256:6256bb4278db7b006ff19f659c50c8812b3181010ffef5f33bf8ef253148af2c"
+    },
+    "workerLogs": {
+      "stdout": {
+        "path": "ai-image-metadata/battle-maps/candidates/cave/cave-template-01/candidate-01/worker.jsonl",
+        "bytes": 20563,
+        "sha256": "sha256:bb8c2f8c7593e0012330b34560114a0c56eb6dbaed4ee4a19ca33c1292482bab"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-maps/candidates/cave/cave-template-01/candidate-01/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-maps/candidates/cave/cave-template-01/candidate-01/last-message.txt",
+        "bytes": 245,
+        "sha256": "sha256:3816198e2211b548699a4693befa1fce94cbb44fed490689b3e6642f7a3c10ed"
+      }
+    },
+    "imagegenInvocationCount": 1
+  }
+}

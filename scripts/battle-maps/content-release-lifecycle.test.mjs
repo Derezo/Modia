@@ -428,6 +428,51 @@ test('historical publication rejects future v2 witnesses and two-release cycles'
   });
 
 test('blueprint approval indexes preserve v1/v2 and bind v3 review provenance', () => {
+  assert.deepEqual(
+    ContentReleaseInternals.blueprintApprovalSchemas('forest-template-01'),
+    {
+      index: 'battle-map-blueprint-approval-index-v1',
+      record: 'battle-map-blueprint-approval-v1',
+      v2: false,
+      v3: false
+    }
+  );
+  assert.deepEqual(
+    ContentReleaseInternals.blueprintApprovalSchemas('forest-template-06'),
+    {
+      index: 'battle-map-blueprint-approval-index-v2',
+      record: 'battle-map-blueprint-approval-v2',
+      v2: true,
+      v3: false
+    }
+  );
+  for (const templateId of [
+    'cave-template-01',
+    'desert-template-01',
+    'forest-template-08'
+  ]) {
+    assert.deepEqual(
+      ContentReleaseInternals.blueprintApprovalSchemas(templateId),
+      {
+        index: 'battle-map-blueprint-approval-index-v3',
+        record: 'battle-map-blueprint-approval-v3',
+        v2: true,
+        v3: true
+      }
+    );
+  }
+  assert.deepEqual(
+    ContentReleaseInternals.blueprintPromptProfile('cave-template-01'),
+    {
+      id: 'map-blueprint-v3',
+      path: 'ai-image-metadata/battle-maps/prompts/map-blueprint-v3.json',
+      schema: 'battle-map-blueprint-prompt-profile-v3'
+    }
+  );
+  assert.deepEqual(
+    ContentReleaseInternals.blueprintPromptProfile('desert-template-01'),
+    ContentReleaseInternals.blueprintPromptProfile('forest-template-08')
+  );
   const makeEntries = (templateId, v2 = false) => ['a', 'b', 'c'].map(suffix => {
     const id = `${templateId}-${suffix}`;
     return {
@@ -617,9 +662,14 @@ test('blueprint approval indexes preserve v1/v2 and bind v3 review provenance', 
   );
 
   const v3Template = 'forest-template-07';
+  const v3BlueprintPrompt = {
+    id: 'map-blueprint-v3',
+    path: 'ai-image-metadata/battle-maps/prompts/map-blueprint-v3.json',
+    sha256: HASH_A
+  };
   const v3Entries = makeEntries(v3Template, true).map(entry => ({
     ...entry,
-    promptProfileSha256: v2BlueprintPrompt.sha256,
+    promptProfileSha256: v3BlueprintPrompt.sha256,
     mechanicalReviewReportSha256: HASH_A
   }));
   const v3Entry = v3Entries[0];
@@ -632,6 +682,7 @@ test('blueprint approval indexes preserve v1/v2 and bind v3 review provenance', 
     id: v3Entry.id,
     templateId: v3Template,
     blueprintPath: v3Entry.blueprintPath,
+    promptProfile: v3BlueprintPrompt,
     reason: v3Entry.reason,
     mechanicalReview: {
       schemaVersion: 'battle-map-blueprint-mechanical-review-v1',
@@ -666,7 +717,7 @@ test('blueprint approval indexes preserve v1/v2 and bind v3 review provenance', 
       {
         ...recordContext,
         templateId: v3Template,
-        blueprintPrompt: v2BlueprintPrompt
+        blueprintPrompt: v3BlueprintPrompt
       }
     ),
     v3Record
@@ -682,10 +733,116 @@ test('blueprint approval indexes preserve v1/v2 and bind v3 review provenance', 
       {
         ...recordContext,
         templateId: v3Template,
-        blueprintPrompt: v2BlueprintPrompt
+        blueprintPrompt: v3BlueprintPrompt
       }
     ),
     /mechanical review provenance is invalid/
+  );
+
+  const historicalPrompt = {
+    id: 'map-blueprint-v2',
+    path: 'ai-image-metadata/battle-maps/prompts/map-blueprint-v2.json',
+    sha256: 'sha256:d9fd841812bcc9a4713d3ac8b1c81715f359e55d55098589f8970650fed7cdae'
+  };
+  const historicalEntry = {
+    ...v3Entry,
+    promptProfileSha256: historicalPrompt.sha256
+  };
+  const historicalRecord = finalize({
+    ...v3RecordProjection,
+    promptProfile: historicalPrompt
+  });
+  historicalEntry.approvalFullHash = historicalRecord.fullHash;
+  const historicalBlueprintPrompts = [historicalPrompt];
+  assert.equal(
+    ContentReleaseInternals.validateBlueprintApprovalRecord(
+      historicalRecord,
+      historicalEntry,
+      {
+        ...recordContext,
+        templateId: v3Template,
+        blueprintPrompt: v3BlueprintPrompt,
+        historicalBlueprintPrompts
+      }
+    ),
+    historicalRecord
+  );
+  const unknownHistoricalPrompt = {
+    ...historicalPrompt,
+    sha256: `sha256:${'0'.repeat(64)}`
+  };
+  const unknownHistoricalEntry = {
+    ...historicalEntry,
+    promptProfileSha256: unknownHistoricalPrompt.sha256
+  };
+  const unknownHistoricalRecord = finalize({
+    ...v3RecordProjection,
+    promptProfile: unknownHistoricalPrompt
+  });
+  unknownHistoricalEntry.approvalFullHash = unknownHistoricalRecord.fullHash;
+  assert.throws(
+    () => ContentReleaseInternals.validateBlueprintApprovalRecord(
+      unknownHistoricalRecord,
+      unknownHistoricalEntry,
+      {
+        ...recordContext,
+        templateId: v3Template,
+        blueprintPrompt: v3BlueprintPrompt,
+        historicalBlueprintPrompts
+      }
+    ),
+    /stale or mismatched/
+  );
+});
+
+test('historical approval prompts require exact canonical tracked bytes', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'modia-historical-prompt-'));
+  const promptPath =
+    'ai-image-metadata/battle-maps/prompts/map-blueprint-v2.json';
+  const canonicalBytes = await readFile(path.join(PROJECT_ROOT, promptPath));
+  const fixturePath = path.join(root, ...promptPath.split('/'));
+  await mkdir(path.dirname(fixturePath), { recursive: true });
+
+  await assert.rejects(
+    ContentReleaseInternals.loadHistoricalBlueprintPromptProfiles(
+      root,
+      'forest-template-07'
+    ),
+    error => error.code === 'ENOENT'
+  );
+
+  await writeFile(fixturePath, canonicalBytes);
+  assert.deepEqual(
+    await ContentReleaseInternals.loadHistoricalBlueprintPromptProfiles(
+      root,
+      'forest-template-07'
+    ),
+    [{
+      id: 'map-blueprint-v2',
+      path: promptPath,
+      sha256:
+        'sha256:d9fd841812bcc9a4713d3ac8b1c81715f359e55d55098589f8970650fed7cdae'
+    }]
+  );
+
+  await writeFile(fixturePath, Buffer.concat([canonicalBytes, Buffer.from('\n')]));
+  await assert.rejects(
+    ContentReleaseInternals.loadHistoricalBlueprintPromptProfiles(
+      root,
+      'forest-template-07'
+    ),
+    /exact canonical byte hash/
+  );
+
+  const wrongSchema = JSON.parse(canonicalBytes);
+  wrongSchema.schemaVersion = 'battle-map-blueprint-prompt-profile-v3';
+  await writeFile(fixturePath, `${JSON.stringify(wrongSchema, null, 2)}\n`);
+  await assert.rejects(
+    ContentReleaseInternals.loadHistoricalBlueprintPromptProfiles(
+      root,
+      'forest-template-07'
+    ),
+    /not the exact frozen supported profile/
   );
 });
 

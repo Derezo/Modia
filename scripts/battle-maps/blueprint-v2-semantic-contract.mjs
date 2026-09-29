@@ -1,5 +1,25 @@
-const LEGACY_BLUEPRINT_TEMPLATE_PATTERN = /-template-(?:01|02)$/;
+const LEGACY_BLUEPRINT_TEMPLATE_IDS = new Set([
+  'forest-template-01',
+  'forest-template-02'
+]);
 const TEMPLATE_07_ID = 'forest-template-07';
+const CAVE_TEMPLATE_01_ID = 'cave-template-01';
+const CAVE_CROSS_THEME_SEMANTIC_TOKENS = new Set([
+  'forest',
+  'grove',
+  'oak',
+  'birch',
+  'pine',
+  'tree',
+  'shrub',
+  'hawthorn',
+  'clover',
+  'fern'
+]);
+const CAVE_CONNECTION_FAMILY_BY_KIND = new Map([
+  ['slope', 'natural-ramp'],
+  ['stairs', 'carved-stairs']
+]);
 // Eight consecutive adjacency rungs occupy one quarter of the fixed 32-cell
 // V2 canvas and read as a parallel ladder. Seven or fewer preserves room for
 // compact figure-eight crossings and interlocking junctions.
@@ -307,7 +327,20 @@ function mixedElevationApproachTargets(sidecar) {
   );
   return sidecar.topologyIntent.relationships.flatMap(relationship => {
     const kind = String(relationship.kind).toLowerCase();
-    if (!relationship.required || !kind.includes('slope') || !kind.includes('stair')) {
+    const tokens = new Set(kind.match(/[a-z]+/g) ?? []);
+    const hasGradualAccess = [...tokens].some(token =>
+      token === 'slope'
+      || token === 'slopes'
+      || token === 'ramp'
+      || token === 'ramps'
+    );
+    const hasStairAccess = [...tokens].some(token =>
+      token === 'stair'
+      || token === 'stairs'
+      || token === 'stairway'
+      || token === 'stairways'
+    );
+    if (!relationship.required || !hasGradualAccess || !hasStairAccess) {
       return [];
     }
     const elevated = [relationship.from, relationship.to].find(id => (
@@ -319,8 +352,109 @@ function mixedElevationApproachTargets(sidecar) {
   });
 }
 
+function caveSemanticStrings(blueprint) {
+  const values = [];
+  const add = (path, value) => {
+    if (typeof value === 'string') {
+      values.push({ path, value });
+      return;
+    }
+    if (!Array.isArray(value)) return;
+    value.forEach((item, index) => add(`${path}[${index}]`, item));
+  };
+  const addRecords = (root, records, fields) => {
+    records.forEach((record, index) => {
+      for (const field of fields) {
+        add(`${root}[${index}].${field}`, record[field]);
+      }
+    });
+  };
+
+  blueprint.surfaceGrid.forEach((row, y) => row.forEach((surface, x) => {
+    if (surface === null) return;
+    add(`surfaceGrid[${y}][${x}].material`, surface.material);
+    add(`surfaceGrid[${y}][${x}].featureId`, surface.featureId);
+  }));
+  addRecords('regions', blueprint.regions, ['id', 'kind', 'annotations']);
+  addRecords(
+    'features',
+    blueprint.features,
+    ['id', 'kind', 'ownerFeatureId', 'annotations']
+  );
+  addRecords(
+    'routes',
+    blueprint.routes,
+    ['id', 'kind', 'material', 'featureId', 'assetFamily']
+  );
+  addRecords(
+    'connections',
+    blueprint.connections,
+    ['id', 'kind', 'featureId', 'assetFamily']
+  );
+  addRecords(
+    'boundaries',
+    blueprint.boundaries,
+    ['id', 'kind', 'featureId', 'assetFamily']
+  );
+  addRecords(
+    'obstacles',
+    blueprint.obstacles,
+    ['id', 'kind', 'featureId', 'assetFamily']
+  );
+  addRecords(
+    'decorations',
+    blueprint.decorations,
+    ['id', 'kind', 'featureId', 'anchor', 'assetFamily']
+  );
+  add('spawn.formationFacing.player', blueprint.spawn.formationFacing.player);
+  add('spawn.formationFacing.opponent', blueprint.spawn.formationFacing.opponent);
+  addRecords(
+    'spawn.playerSlots',
+    blueprint.spawn.playerSlots,
+    ['id', 'role', 'tags']
+  );
+  addRecords(
+    'spawn.opponentCandidates',
+    blueprint.spawn.opponentCandidates,
+    ['id', 'tags', 'zoneId', 'tacticalAnnotationIds']
+  );
+  addRecords('spawn.opponentZones', blueprint.spawn.opponentZones, ['id', 'tags']);
+  addRecords(
+    'spawn.protectedClearances',
+    blueprint.spawn.protectedClearances,
+    ['id', 'side', 'anchorId']
+  );
+  addRecords(
+    'spawn.exits',
+    blueprint.spawn.exits,
+    ['id', 'side', 'approachRegionId']
+  );
+  addRecords(
+    'spawn.approachRegions',
+    blueprint.spawn.approachRegions,
+    ['id', 'side']
+  );
+  addRecords(
+    'spawn.tacticalAnnotations',
+    blueprint.spawn.tacticalAnnotations,
+    ['id', 'kind', 'tags']
+  );
+  addRecords(
+    'expectedAssetFamilies',
+    blueprint.expectedAssetFamilies,
+    ['category', 'symbol']
+  );
+  add('generationNotes', blueprint.generationNotes);
+  return values;
+}
+
+function containsCaveCrossThemeSemanticToken(value) {
+  const tokens = value.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
+  return tokens.some(token => CAVE_CROSS_THEME_SEMANTIC_TOKENS.has(token));
+}
+
 export function usesBlueprintV2SemanticContract(templateId) {
-  return !LEGACY_BLUEPRINT_TEMPLATE_PATTERN.test(templateId);
+  return !LEGACY_BLUEPRINT_TEMPLATE_IDS.has(templateId);
 }
 
 export function validateV2BlueprintSemanticContract(blueprint, sidecar) {
@@ -358,6 +492,37 @@ export function validateV2BlueprintSemanticContract(blueprint, sidecar) {
       'V2 blueprint requires region records for every required topology area; '
         + `missing ${missingRequiredAreaIds.join(', ')}`
     );
+  }
+  if (sidecar.id === CAVE_TEMPLATE_01_ID) {
+    const requiredAreaIds = sidecar.topologyIntent.areas
+      .filter(area => area.required === true)
+      .map(area => area.id);
+    const unexpectedRegionIds = blueprint.regions
+      .map(region => region.id)
+      .filter(id => !requiredAreaIds.includes(id));
+    if (
+      blueprint.regions.length !== requiredAreaIds.length
+      || unexpectedRegionIds.length > 0
+    ) {
+      fail(
+        'cave-template-01 region IDs must exactly equal the five reviewed '
+          + `topology areas; unexpected ${unexpectedRegionIds.join(', ') || 'count mismatch'}`
+      );
+    }
+    for (const semantic of caveSemanticStrings(blueprint)) {
+      if (!containsCaveCrossThemeSemanticToken(semantic.value)) continue;
+      fail(
+        `cave-template-01 ${semantic.path} contains a cross-theme semantic label`
+      );
+    }
+    blueprint.connections.forEach((connection, index) => {
+      const expectedFamily = CAVE_CONNECTION_FAMILY_BY_KIND.get(connection.kind);
+      if (expectedFamily === connection.assetFamily) return;
+      fail(
+        `cave-template-01 connections[${index}] kind ${connection.kind} must use `
+          + `assetFamily ${expectedFamily ?? 'from the reviewed cave connection set'}`
+      );
+    });
   }
   const traversableConnections =
     blueprint.connections.filter(connection => connection.traversable);

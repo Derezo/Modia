@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "battle-map-blueprint-prompt-profile-v3",
+  "id": "map-blueprint-v3",
+  "purpose": "Frozen symbolic Battle Map V3 blueprint authoring instructions for isolated Codex candidate workers with mandatory mechanical-review evidence.",
+  "frozen": true,
+  "variantBriefs": {
+    "a": "Emphasize a curved route network with the sidecar-required count of internally vertex-disjoint formation-to-formation crossings, asymmetric formation clearings, and independently routed natural-slope and stair approaches wherever both are required.",
+    "b": "Emphasize broad terrain shelves, readable elevation changes, distinct route and elevation semantics, and a secondary lateral connection without reducing formation access.",
+    "c": "Emphasize a theme-owned landmark, flanking route family, and irregular rendered silhouette without reducing spawn access or copying a sibling composition."
+  },
+  "prompt": "Author exactly one symbolic TemplateMapBlueprint JSON object for the current Battle Map V3 lifecycle. Treat the approved source image only as a compositional and style reference. The reviewed source sidecar is the gameplay authority. Use only the closed keys and symbolic values described by the attached contract; do not provide runtime URLs, hashes, movement costs, executable content, Markdown, validation claims, or prose outside the JSON document. The result must be 32 by 32, use an irregular render mask and a playable mask contained by it, preserve every required semantic area under its exact reviewed identity, include theme-owned routes, boundaries, features, obstacles, and decorations, provide five ordered player slots, exactly the approved opposing candidate-pool capacity with diverse tactical-role tags, and support the approved maximum simultaneous opponents. Every spawn must be playable, passable after compilation, locally clear, mutually reachable, and connected through the required number of independent approaches. Integer elevation levels must obey the sidecar range. Every traversable elevation change must be declared as a cardinal slope or stair; larger changes must be blocked cliffs. Expected asset families are a closed symbolic contract: every candidate reference must resolve to that exact set without cross-theme substitutions. The generated blueprint remains a candidate until the V3 lifecycle produces and binds its deterministic mechanical report and preview evidence; never author, claim, or fabricate approval or review evidence in candidate.json.",
+  "negativeConstraints": [
+    "literal image tracing or pixel-derived coordinates",
+    "full-width or full-height cleared spawn strips",
+    "rectangular arena walls or repeated straight boundaries",
+    "detached spawn pads or a formation with one choke point",
+    "player slots or opponent candidates placed on exits or inside any approach region",
+    "formation-clearing regions that contain cells beyond their exact side's spawn cells, omit a spawn cell, or serve both sides",
+    "a player or opponent formation whose inclusive bounding-box width or height exceeds half the map dimension rounded up",
+    "fewer internally vertex-disjoint primary route families than the reviewed sidecar requires",
+    "required primary routes that merge into a shared internal throat near either formation",
+    "an elevated approach that substitutes two stairs on one route for separately routed natural-slope and stair portals required by the reviewed topology",
+    "unexplained one-cell peaks or undeclared elevation edges",
+    "checkerboard materials or ambiguous movement surfaces",
+    "cross-theme symbolic asset families or labels",
+    "runtime asset paths, content hashes, movement costs, or database fields",
+    "filesystem traversal, symbolic links, or writes outside candidate.json and last-message.txt",
+    "approval records, mechanical-review claims, compiled maps, catalogs, runtime assets, or edits to tracked project content",
+    "Markdown fences, comments, executable code, or prose outside the JSON object"
+  ]
+}

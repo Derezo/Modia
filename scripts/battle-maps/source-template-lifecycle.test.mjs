@@ -18,6 +18,7 @@ import {
   draftTemplate,
   inspectImage,
   inventoryTemplates,
+  loadTemplatePrompt,
   loadTemplateSidecar,
   pinTemplateCompiler,
   stageTemplate,
@@ -34,6 +35,50 @@ import { parseTemplateArgs } from './template-cli.mjs';
 const PROJECT_ROOT = path.resolve(import.meta.dirname, '../..');
 const MANIFEST_RELATIVE = 'ai-image-metadata/battle-maps/manifest.json';
 const PROMPT_RELATIVE = 'ai-image-metadata/battle-maps/prompts/source-template-image-v1.json';
+
+test('tracked cave expansion contract is a deterministic approved cave-v6 source', async () => {
+  const [{ sidecar }, prompt, checked] = await Promise.all([
+    loadTemplateSidecar({
+      projectRoot: PROJECT_ROOT,
+      theme: 'cave',
+      template: 'cave-template-01'
+    }),
+    loadTemplatePrompt({
+      projectRoot: PROJECT_ROOT,
+      theme: 'cave',
+      template: 'cave-template-01'
+    }),
+    draftTemplate({
+      projectRoot: PROJECT_ROOT,
+      theme: 'cave',
+      template: 'cave-template-01',
+      check: true
+    })
+  ]);
+
+  assert.equal(checked.changed, false);
+  assert.equal(checked.status, 'approved');
+  assert.equal(sidecar.status, 'approved');
+  assert.equal(sidecar.review.decision, 'approved');
+  assert.equal(sidecar.review.reviewer, 'workspace-owner');
+  assert.equal(
+    sidecar.sourceImage.sha256,
+    'sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe'
+  );
+  assert.equal(sidecar.pins.sourceImageSha256, sidecar.sourceImage.sha256);
+  assert.equal(
+    sidecar.pins.compilerSha256,
+    'sha256:c8794c02d8978b56ea0ebcc1ea7947db94ae619c01c6feae3fe73efe8c8dfaa1'
+  );
+  assert.equal(sidecar.promptProfile.id, 'source-template-image-cave-v6');
+  assert.equal(sidecar.promptProfile.sha256, sidecar.pins.promptProfileSha256);
+  assert.equal(prompt.profile.id, 'source-template-image-cave-v6');
+  assert.equal(prompt.reference.sha256, sidecar.pins.promptProfileSha256);
+  assert.match(prompt.profile.prompt, /exactly three widely spaced open ground-level corridor gaps/);
+  assert.match(prompt.profile.prompt, /No internal tunnel holes, black openings, arches, doors, gates, or portals/);
+  assert.match(prompt.profile.prompt, /Absolutely no stones, boulders, columns, rubble line, wall, cliff, curb, parapet, or circular outline may trace the sink perimeter/);
+  assert.match(prompt.profile.prompt, /at least two entering from the northern side/);
+});
 
 async function temporaryDirectory(t) {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'modia-battle-map-template-'));

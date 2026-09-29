@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "battle-map-source-prompt-profile-v1",
+  "id": "source-template-image-cave-v4",
+  "purpose": "Frozen asymmetrical cave-composition prompt with organic formation mouths and an open-banked, ramp-crossed limestone sink.",
+  "frozen": true,
+  "prompt": "Use case: stylized-concept. Asset type: square compositional reference for later 32 by 32 isometric tactical-map authoring. Create a natural limestone cave from a high, readable isometric angle. Break bilateral symmetry by placing a compact irregular southern formation cavern slightly lower-right and a smaller northern crystal grotto slightly upper-left, with an off-center shallow sink between them, a western flowstone terrace, and an eastern stalagmite shelf. Surround each formation cavern with natural rock masses so that it has exactly three distinct, widely separated passage mouths. Make those mouths organic and visibly different in width, angle, height, and shape; do not align them in a row and do not render matching arches, doors, tunnels, or constructed portals. Separate each mouth from the others with a substantial rock buttress, and keep its corridor independently readable for meaningful distance before any mid-map reconnection. Show three route families: a curving central route that crosses the sink floor, a western route across the flowstone terrace, and an eastern route around the stalagmite shelf. Make the southern formation space modest and clearly bounded by rock rather than an open foreground floor. Make the northern grotto enclosed but naturally irregular. Render the sink as a compact, shallow, visibly lower limestone depression occupying less than one fifth of the scene. Its bank must be low and broken, never a wall: show at least two broad unstepped natural-rock ramp cuts on the southern bank and at least two broad unstepped natural-rock ramp cuts on the northern bank, each as a continuous sloping walkable floor into the lower basin. Keep most of the sink perimeter open or gently sloped; no continuous rim, parapet, cliff, stair ring, or arena wall. Put any short carved-stone stairs only on the outer western terrace or eastern shelf, away from the sink. Use layered limestone, flowstone, stalagmites, broken columns, sparse crystals, rubble, and shadowed cavern walls to own an irregular outer boundary while keeping every walkable floor, passage mouth, route, ramp, stair, and elevation break unambiguous. Do not draw units, spawn markers, a tactical grid, labels, text, or UI. This image is composition-only inspiration, not a literal tile map.",
+  "negativeConstraints": [
+    "bilateral or radial symmetry",
+    "three matching or aligned archways",
+    "constructed doors, gates, portal architecture, or dungeon entrances",
+    "oversized open foreground or central arena",
+    "southern formation area without a rock-owned boundary",
+    "one broad shared funnel into either formation cavern",
+    "fewer than three clearly separated organic passage mouths at either formation cavern",
+    "routes that merge immediately after leaving a formation",
+    "central sink enclosed by a continuous high rim, wall, cliff, or ring of stairs",
+    "stairs used as the primary sink crossings",
+    "central sink rendered as level floor, deep pit, water hazard, or constructed arena",
+    "straight mine corridors or a rectangular dungeon room",
+    "random freestanding walls",
+    "checkerboard materials",
+    "isolated height spikes or detached rock platforms",
+    "single-choke formations",
+    "text, labels, or UI",
+    "units, spawn markers, or a tactical grid",
+    "perspective that hides walkable surfaces",
+    "flat full-height cleared edge strips"
+  ]
+}

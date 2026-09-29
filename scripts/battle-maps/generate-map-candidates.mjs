@@ -30,7 +30,9 @@ Options:
   --help                Show this help
 
 Raw candidates and complete logs remain in the ignored candidate tree. This
-command never approves, compiles, or edits runtime content.`;
+command never approves, compiles, or edits runtime content. Historical
+forest-template-01 through forest-template-06 identities are replay-only;
+create a new template identity for all V3 authoring.`;
 }
 
 export async function main(argv = process.argv.slice(2), dependencies) {

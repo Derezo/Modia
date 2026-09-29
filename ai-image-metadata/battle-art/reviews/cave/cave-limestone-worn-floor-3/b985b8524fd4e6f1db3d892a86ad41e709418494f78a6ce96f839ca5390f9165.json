@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v2",
+  "theme": "cave",
+  "familyId": "cave-limestone-worn-floor-3",
+  "decision": "rejected",
+  "reviewer": "codex-cave-v3-visual-assets",
+  "reason": "The exact diamond alpha contract and cave limestone palette pass. The dark winding crack and gray shoulder, however, traverse most of the diamond and intrude into the quiet upper-left rim, reading at tile scale as a route or near-spanning seam rather than a restrained interior accent. The warm off-center feature is a dense raised pile of individually highlighted amber rubble, introducing obstacle semantics into a collision-none surface family and competing with overlays. The replacement must keep cracks lower-contrast and away from the rim and render the warm island as diffuse flat mineral material.",
+  "reviewedAt": "2026-08-11T08:50:03.062Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/cave/cave-limestone-worn-floor-3.json",
+    "sha256": "sha256:8a66e1978c8680dedbe67bd744fadeb7e29a6a455ab7ed24564021f7f2aded98",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-worn-floor-3/result.json",
+      "bytes": 2650,
+      "sha256": "sha256:8597041a42e5011d4158725d4a3dff626bda75bf5b44be54081e5c6327457b89"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-worn-floor-3/candidate.png",
+      "bytes": 42443,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:b985b8524fd4e6f1db3d892a86ad41e709418494f78a6ce96f839ca5390f9165"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "cave-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/cave/cave-template-01/reference.png",
+        "sha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe"
+      }
+    ],
+    "styleReferenceMode": "attachments",
+    "styleReferenceProvenance": [
+      {
+        "id": "cave-source-template-01",
+        "sha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe",
+        "stagedBasename": "style-reference-01.png"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 300000,
+      "imageArguments": [
+        "style-reference-01.png"
+      ],
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-worn-floor-3/prompt.txt",
+        "bytes": 10717,
+        "sha256": "sha256:2ba444307b6c2ea663dea88dda20c52d678797bb29b13c19428e39a5b1d1972a"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-worn-floor-3/worker.jsonl",
+        "bytes": 28752,
+        "sha256": "sha256:0d3a8f7d2f1ccf00d72e922796602f775e9029f067186727bcb5131dab50aa7f"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-worn-floor-3/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-worn-floor-3/last-message.txt",
+        "bytes": 337,
+        "sha256": "sha256:41115bcf7e5abe27eb80dbe40be01e80c6af10cfd884be223b9978aecd990b00"
+      }
+    }
+  },
+  "fullHash": "sha256:eef2b3a2ff744919cc6a805da42d4ce471462151242f0c8b6b032dcd49675fba"
+}

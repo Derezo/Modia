@@ -1,0 +1,149 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v3",
+  "theme": "cave",
+  "familyId": "cave-limestone-curved-passage-tee-nsw",
+  "decision": "approved",
+  "reviewer": "codex-live-candidate-visual-review",
+  "reason": "Exact failed-attempt replay and normalization reproduce sha256:4a3cd99671a9b01c16687592f3f03915671645d8ead772f559687c8ab35a561d, and all raster, topology, connectivity, centerline-local arm-width, coverage, and category checks pass. Native and true 4:1 runtime inspection show one broad, immediately readable flat N/S/W junction. All three terminal widths align cleanly in self-seam composites without visible joins. A shallow inner V and small native edge fringe do not create visible debris or impair the runtime silhouette; there is no elevation cue, wall, platform, or category drift.",
+  "reviewedAt": "2026-08-12T02:39:17.699Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/cave/cave-limestone-curved-passage-tee-nsw.json",
+    "sha256": "sha256:eea9001507544b858766476790906f8c40844769a0f177b3cee4b46bcce6248f",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-curved-passage-tee-nsw/result.json",
+      "bytes": 5159,
+      "sha256": "sha256:2b22e05e43db89a2380630ee9a2e2efb1a0bd8d0300e2495eb4e139b05d0aeac"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-curved-passage-tee-nsw/candidate.png",
+      "bytes": 31176,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:4a3cd99671a9b01c16687592f3f03915671645d8ead772f559687c8ab35a561d"
+    },
+    "derivation": {
+      "schemaVersion": "battle-art-route-finishing-v1",
+      "strategy": "multi-arm-local-warp-v1",
+      "source": {
+        "path": "ai-image-metadata/battle-art/generated-artifacts/cave/cave-limestone-curved-passage-tee-nsw/0b3f28519bc3bc23d4cde9b08320a7d9f292558a9196cb1d44ab861fa0ea45ef.png",
+        "bytes": 1467573,
+        "width": 1774,
+        "height": 887,
+        "format": "png",
+        "sha256": "sha256:0b3f28519bc3bc23d4cde9b08320a7d9f292558a9196cb1d44ab861fa0ea45ef"
+      },
+      "sourceTopologySha256": "sha256:fa03ad82634221b812ddefb154aeb9b1505b8a1a28f8dff8b659f15a01d0a9e1",
+      "sourceBounds": {
+        "x": 118,
+        "y": 34,
+        "width": 1514,
+        "height": 825
+      },
+      "componentCount": 222,
+      "coveredPixels": 251544,
+      "selectedCoveredPixels": 245928,
+      "sourceSampling": "all-visible-components-v1",
+      "detachedCoveredPixels": 5616,
+      "detachedCoveredPermille": 23,
+      "maximumDetachedCoveredPermille": 25,
+      "anchor": {
+        "x": 128,
+        "y": 64
+      },
+      "terminals": {
+        "n": {
+          "x": 192,
+          "y": 32
+        },
+        "s": {
+          "x": 64,
+          "y": 96
+        },
+        "w": {
+          "x": 64,
+          "y": 32
+        }
+      },
+      "arms": {
+        "n": {
+          "perpendicularStartScalePermille": 1000,
+          "perpendicularScalePermille": 2100,
+          "perpendicularOffsetPixels": -5,
+          "scaleTransitionStartPermille": 0,
+          "scaleTransitionEndPermille": 350,
+          "offsetTransitionStartPermille": 250,
+          "offsetTransitionEndPermille": 1000
+        },
+        "s": {
+          "perpendicularStartScalePermille": 1000,
+          "perpendicularScalePermille": 1950,
+          "perpendicularOffsetPixels": -11,
+          "scaleTransitionStartPermille": 0,
+          "scaleTransitionEndPermille": 350,
+          "offsetTransitionStartPermille": 250,
+          "offsetTransitionEndPermille": 1000
+        },
+        "w": {
+          "perpendicularStartScalePermille": 1000,
+          "perpendicularScalePermille": 2000,
+          "perpendicularOffsetPixels": -14,
+          "scaleTransitionStartPermille": 0,
+          "scaleTransitionEndPermille": 350,
+          "offsetTransitionStartPermille": 0,
+          "offsetTransitionEndPermille": 350
+        }
+      },
+      "maximumCoveragePermille": 330,
+      "maximumScaleAnisotropyPermille": 2100,
+      "maximumAppliedScalePermille": 2100,
+      "maximumFinishedDetachedCoveredPermille": 20,
+      "finishedDetachedCoveredPixels": 176,
+      "finishedDetachedCoveredPermille": 18,
+      "borderClearPixels": 4,
+      "armSelector": "greatest-longitudinal-projection-v1",
+      "transition": "independent-smoothstep-v1",
+      "armMeasurement": "centerline-intersecting-run-v1",
+      "kernel": "bilinear-premultiplied-alpha-v1",
+      "finalSha256": "sha256:4a3cd99671a9b01c16687592f3f03915671645d8ead772f559687c8ab35a561d"
+    },
+    "origin": {
+      "kind": "failed-attempt-revalidation-v1",
+      "failureRecord": {
+        "path": "ai-image-metadata/battle-art/generated-artifacts/cave/cave-limestone-curved-passage-tee-nsw/failures/f1acb480ad736728307a384d2d6d724f15907e8c197e6c5576d40615b352ab61.json",
+        "sha256": "sha256:9c179d6278dc7876f220c057a42a4d47604e28e504587660e66dc752ab119ca6",
+        "fullHash": "sha256:f1acb480ad736728307a384d2d6d724f15907e8c197e6c5576d40615b352ab61"
+      },
+      "raw": {
+        "path": "ai-image-metadata/battle-art/generated-artifacts/cave/cave-limestone-curved-passage-tee-nsw/0b3f28519bc3bc23d4cde9b08320a7d9f292558a9196cb1d44ab861fa0ea45ef.png",
+        "bytes": 1467573,
+        "width": 1774,
+        "height": 887,
+        "format": "png",
+        "sha256": "sha256:0b3f28519bc3bc23d4cde9b08320a7d9f292558a9196cb1d44ab861fa0ea45ef"
+      },
+      "originalDescriptor": {
+        "path": "ai-image-metadata/battle-art/descriptors/cave/cave-limestone-curved-passage-tee-nsw.json",
+        "sha256": "sha256:1b368d6c957f6a690daf64702da1ed0372fe57d19fde8739e636705ac9cb9f59",
+        "contentVersion": 1
+      },
+      "validationDescriptorSha256": "sha256:eea9001507544b858766476790906f8c40844769a0f177b3cee4b46bcce6248f"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "cave-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/cave/cave-template-01/reference.png",
+        "sha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe"
+      }
+    ]
+  },
+  "fullHash": "sha256:1eacacaed1b09c73ddb19c766c3f11d4a845bd2e585070cfdc07454d2a8f3330"
+}

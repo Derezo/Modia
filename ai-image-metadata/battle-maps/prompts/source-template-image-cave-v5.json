@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "battle-map-source-prompt-profile-v1",
+  "id": "source-template-image-cave-v5",
+  "purpose": "Frozen open-floor cave composition with ground-level route gaps, no tunnel portals, and a shallow multiply ramped sink.",
+  "frozen": true,
+  "prompt": "Use case: stylized-concept. Asset type: square composition reference for later 32 by 32 isometric tactical-map authoring. Show the exposed floor plan of one large connected natural limestone cavern from a very high three-quarter top-down isometric view. Do not show cave entrances, tunnel holes, black openings, arches, doors, gates, or portals anywhere inside the scene. The only dark rock belongs to the irregular outer boundary. Inside that boundary, arrange five asymmetrical walkable spaces: a compact southern formation clearing offset to the lower-right, a smaller northern crystal clearing offset to the upper-left, a compact shallow sink off-center between them, a western flowstone terrace, and an eastern stalagmite shelf. Bound each formation clearing with low natural boulder, stalagmite, broken-column, and flowstone masses. Leave exactly three distinct, widely separated ground-level route gaps through those masses at each formation. Every gap must be an open walkable floor opening visible from above, not a tunnel, arch, doorway, or black mouth. Make each gap different in angle and width, separate the gaps with substantial low rock masses, and continue each as an independently readable corridor for meaningful distance. Show three curved route families linking the two formations: a central route crossing the sink floor, a western route across the flowstone terrace, and an eastern route around the stalagmite shelf. Interconnect them only at several irregular mid-map junctions, never immediately beside either formation. Keep the southern clearing modest and fully rock-bounded except for its three ground-level gaps; do not let it become the whole foreground. Render the sink as a shallow dry limestone depression smaller than one fifth of the scene. The sink must have a visibly lower floor and a low discontinuous bank, with at least two broad smooth unstepped natural ramps cut through its southern bank and at least two broad smooth unstepped natural ramps cut through its northern bank. The ramps must read as sloping walkable floor, not stairs. Leave large portions of the bank open, broken, or gently sloped so the sink never resembles a pit, moat, arena, or walled ring. Place any short carved-stone stairs only on a distant outer terrace, never on a sink route. Use pale limestone, warm calcite, cool mineral staining, sparse crystals, rubble, flowstone, stalagmites, and broken natural columns. Keep all walkable floors, route gaps, corridors, ramps, stairs, and elevation breaks visible and unambiguous. No units, spawn markers, tactical grid, labels, text, or UI. Composition-only inspiration, not a literal tile map.",
+  "negativeConstraints": [
+    "dark tunnel openings, cave entrances, arches, doorways, gates, or portals inside the scene",
+    "bilateral or radial symmetry",
+    "aligned or matching formation gaps",
+    "oversized open foreground or central arena",
+    "unbounded southern formation floor",
+    "one broad shared route funnel beside a formation",
+    "fewer than three separated ground-level route gaps at either formation",
+    "routes that merge immediately after leaving a formation",
+    "central sink enclosed by a continuous rim, wall, cliff, parapet, or stairs",
+    "stairs on a central sink approach",
+    "central sink rendered as level floor, deep pit, water hazard, moat, or arena",
+    "straight mine corridors or rectangular dungeon geometry",
+    "random freestanding walls",
+    "checkerboard materials",
+    "isolated height spikes or detached platforms",
+    "single-choke formations",
+    "large visually ambiguous movement regions",
+    "text, labels, UI, units, spawn markers, or a tactical grid",
+    "perspective that hides walkable surfaces",
+    "flat full-height cleared edge strips"
+  ]
+}

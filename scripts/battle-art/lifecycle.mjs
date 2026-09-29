@@ -43,6 +43,9 @@ import {
   auditCodexWorkerJsonl,
   verifyCodexImagegenEvidence
 } from '../battle-maps/codex-worker-boundary.mjs';
+import {
+  auditCanonicalParentRouteHandoffJsonl
+} from './worker-contract.mjs';
 
 export const THEMES = Object.freeze([
   'forest',
@@ -82,6 +85,8 @@ export const BUNDLE_PATH = 'ai-image-metadata/battle-art/runtime-asset-bundle.js
 export const BUNDLE_REGISTRY_PATH =
   'ai-image-metadata/battle-art/runtime-asset-bundle-registry.json';
 export const INVENTORY_PATH = 'ai-image-metadata/battle-art/inventory.json';
+export const INVENTORY_REGISTRY_PATH =
+  'ai-image-metadata/battle-art/runtime-asset-inventory-registry.json';
 export const READINESS_PLAN_PATH =
   'ai-image-metadata/battle-art/readiness-plan.json';
 export const FRONTEND_BUNDLE_PATH =
@@ -112,6 +117,8 @@ export const BUNDLE_SCHEMA = 'battle-art-runtime-bundle-v1';
 export const BUNDLE_REGISTRY_SCHEMA = 'battle-art-runtime-bundle-registry-v1';
 export const RELEASE_SCHEMA = 'battle-art-release-v1';
 export const INVENTORY_SCHEMA = 'battle-art-inventory-v1';
+export const INVENTORY_REGISTRY_SCHEMA =
+  'battle-art-runtime-inventory-registry-v1';
 export const BATTLE_ART_RENDERER_MANIFEST_HASH_DOMAIN =
   'modia:battle-art:renderer-manifest:v1';
 export const RENDER_PROFILE = Object.freeze({
@@ -121,6 +128,58 @@ export const RENDER_PROFILE = Object.freeze({
   tileHeight: 32,
   elevationStep: 16
 });
+
+let effectivePromptBuilder = null;
+let failedGeneratedAttemptAuditor = null;
+
+export function registerEffectivePromptBuilder(builder) {
+  if (typeof builder !== 'function') {
+    throw new Error('battle-art effective prompt builder must be a function');
+  }
+  if (effectivePromptBuilder !== null && effectivePromptBuilder !== builder) {
+    throw new Error('battle-art effective prompt builder is already registered');
+  }
+  effectivePromptBuilder = builder;
+}
+
+export function registerFailedGeneratedAttemptAuditor(auditor) {
+  if (typeof auditor !== 'function') {
+    throw new Error('battle-art failed generated attempt auditor must be a function');
+  }
+  if (
+    failedGeneratedAttemptAuditor !== null
+    && failedGeneratedAttemptAuditor !== auditor
+  ) {
+    throw new Error(
+      'battle-art failed generated attempt auditor is already registered'
+    );
+  }
+  failedGeneratedAttemptAuditor = auditor;
+}
+
+function buildCurrentEffectivePrompt({
+  descriptor,
+  profile,
+  styleFiles,
+  textStyleFallback
+}) {
+  if (effectivePromptBuilder === null) {
+    throw new Error(
+      'battle-art effective prompt builder is unavailable; import generate.mjs '
+      + 'before reviewing or approving draft candidates'
+    );
+  }
+  const prompt = effectivePromptBuilder({
+    descriptor,
+    profile,
+    styleFiles,
+    textStyleFallback
+  });
+  if (typeof prompt !== 'string' || prompt.length === 0) {
+    throw new Error('battle-art effective prompt builder returned invalid output');
+  }
+  return prompt;
+}
 
 const SCRIPT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const ID_PATTERN = /^[a-z0-9]+(?:[-_][a-z0-9]+)*$/;
@@ -1085,12 +1144,13 @@ export function resolveTracked(root, relative, label = 'tracked path') {
 export async function readJson(root, relative, label = relative) {
   const filePath = resolveTracked(root, relative, label);
   let parsed;
+  let contents;
   try {
     const before = await lstat(filePath);
     if (before.isSymbolicLink() || !before.isFile()) {
       throw new Error('must be a regular non-symlink file');
     }
-    const contents = await readFile(filePath, 'utf8');
+    contents = await readFile(filePath, 'utf8');
     const after = await lstat(filePath);
     if (after.isSymbolicLink()
       || !after.isFile()
@@ -1104,7 +1164,7 @@ export async function readJson(root, relative, label = relative) {
   } catch (error) {
     throw new Error(`${label} is not valid readable JSON: ${error.message}`);
   }
-  return { value: parsed, filePath };
+  return { value: parsed, filePath, contents };
 }
 
 async function assertNoSymlink(filePath, root) {
@@ -1315,11 +1375,38 @@ export function assertDescriptor(descriptor, manifest, label = `descriptor ${des
       routeFinishingStrategy === 'anchor-scale-v1';
     const componentBoxFinishing =
       routeFinishingStrategy === 'largest-component-box-v1';
+    const straightRouteBasisFinishing =
+      routeFinishingStrategy === 'straight-route-basis-v1';
+    const cornerArmLocalWarpFinishing =
+      routeFinishingStrategy === 'corner-arm-local-warp-v1';
+    const multiArmLocalWarpFinishing =
+      routeFinishingStrategy === 'multi-arm-local-warp-v1';
+    const isolatedRouteFinishing =
+      descriptor.capabilities?.routeTopology === 'isolated';
     exactKeys(descriptor.routeFinishing, [
       'schemaVersion',
       'strategy',
       ...(componentBoxFinishing ? ['targetBox'] : []),
       ...(anchorScaleFinishing ? ['scalePermille'] : []),
+      ...(straightRouteBasisFinishing ? [
+        'sourceTerminalInsetPixels',
+        'outputTerminalOverflowPixels',
+        'outputPerpendicularSpanPixels',
+        'maximumTrimmedCoveredPermille',
+        'maximumScaleAnisotropyPermille'
+      ] : []),
+      ...(cornerArmLocalWarpFinishing ? [
+        'arms',
+        'maximumCoveragePermille',
+        'maximumScaleAnisotropyPermille'
+      ] : []),
+      ...(multiArmLocalWarpFinishing ? [
+        'arms',
+        'maximumFinishedDetachedCoveredPermille',
+        'maximumCoveragePermille',
+        'maximumScaleAnisotropyPermille',
+        'centerlineArmAlphaSpan'
+      ] : []),
       'maximumDetachedCoveredPermille',
       'armAlphaSpan',
       ...(componentBoxFinishing
@@ -1339,9 +1426,19 @@ export function assertDescriptor(descriptor, manifest, label = `descriptor ${des
     if (
       descriptor.routeFinishing.schemaVersion
         !== 'battle-art-route-finishing-v1'
-      || (!componentBoxFinishing && !anchorScaleFinishing)
+      || (!componentBoxFinishing
+        && !anchorScaleFinishing
+        && !straightRouteBasisFinishing
+        && !cornerArmLocalWarpFinishing
+        && !multiArmLocalWarpFinishing)
     ) {
       throw new Error(`${label}.routeFinishing is unsupported`);
+    }
+    if (isolatedRouteFinishing && !componentBoxFinishing) {
+      throw new Error(
+        `${label}.routeFinishing for isolated topology requires `
+        + 'largest-component-box-v1'
+      );
     }
     if (componentBoxFinishing) {
       assertRect(
@@ -1349,7 +1446,25 @@ export function assertDescriptor(descriptor, manifest, label = `descriptor ${des
         `${label}.routeFinishing.targetBox`,
         descriptor.canvas
       );
-    } else {
+      if (isolatedRouteFinishing) {
+        assertPoint(
+          descriptor.placement?.anchor,
+          `${label}.placement.anchor`,
+          descriptor.canvas
+        );
+        const { anchor } = descriptor.placement;
+        const { targetBox } = descriptor.routeFinishing;
+        if (anchor.x < targetBox.x
+          || anchor.x >= targetBox.x + targetBox.width
+          || anchor.y < targetBox.y
+          || anchor.y >= targetBox.y + targetBox.height) {
+          throw new Error(
+            `${label}.routeFinishing.targetBox must contain the declared `
+            + 'anchor for isolated topology'
+          );
+        }
+      }
+    } else if (anchorScaleFinishing) {
       assertInteger(
         descriptor.routeFinishing.scalePermille,
         `${label}.routeFinishing.scalePermille`,
@@ -1358,6 +1473,282 @@ export function assertDescriptor(descriptor, manifest, label = `descriptor ${des
       if (descriptor.routeFinishing.scalePermille > 1500) {
         throw new Error(
           `${label}.routeFinishing.scalePermille must be <= 1500`
+        );
+      }
+    } else if (straightRouteBasisFinishing) {
+      if (!['straight-ew', 'straight-ns'].includes(
+        descriptor.capabilities?.routeTopology
+      )) {
+        throw new Error(
+          `${label}.routeFinishing straight-route-basis-v1 requires `
+          + 'straight-ew or straight-ns'
+        );
+      }
+      assertPoint(
+        descriptor.placement?.anchor,
+        `${label}.placement.anchor`,
+        descriptor.canvas
+      );
+      for (const [key, minimum, maximum] of [
+        ['sourceTerminalInsetPixels', 1, 4096],
+        ['outputTerminalOverflowPixels', 0, 8],
+        [
+          'outputPerpendicularSpanPixels',
+          1,
+          Math.max(descriptor.canvas.width, descriptor.canvas.height)
+        ],
+        ['maximumTrimmedCoveredPermille', 0, 300],
+        ['maximumScaleAnisotropyPermille', 1000, 3250]
+      ]) {
+        assertInteger(
+          descriptor.routeFinishing[key],
+          `${label}.routeFinishing.${key}`,
+          minimum
+        );
+        if (descriptor.routeFinishing[key] > maximum) {
+          throw new Error(
+            `${label}.routeFinishing.${key} must be <= ${maximum}`
+          );
+        }
+      }
+    } else if (cornerArmLocalWarpFinishing) {
+      const topology = descriptor.capabilities?.routeTopology;
+      if (!/^corner-[nesw]{2}$/.test(topology)) {
+        throw new Error(
+          `${label}.routeFinishing corner-arm-local-warp-v1 requires a `
+          + 'corner topology'
+        );
+      }
+      assertPoint(
+        descriptor.placement?.anchor,
+        `${label}.placement.anchor`,
+        descriptor.canvas
+      );
+      if (descriptor.canvas.width % 4 !== 0
+        || descriptor.canvas.height % 4 !== 0) {
+        throw new Error(
+          `${label}.routeFinishing corner-arm-local-warp-v1 requires canvas `
+          + 'dimensions divisible by 4'
+        );
+      }
+      exactKeys(
+        descriptor.routeFinishing.arms,
+        [...topology.slice('corner-'.length)],
+        `${label}.routeFinishing.arms`
+      );
+      for (const direction of [...topology.slice('corner-'.length)]) {
+        const arm = descriptor.routeFinishing.arms[direction];
+        exactKeys(arm, [
+          'perpendicularScalePermille',
+          'perpendicularOffsetPixels',
+          'transitionStartPermille',
+          'transitionEndPermille'
+        ], `${label}.routeFinishing.arms.${direction}`);
+        assertInteger(
+          arm.perpendicularScalePermille,
+          `${label}.routeFinishing.arms.${direction}`
+            + '.perpendicularScalePermille',
+          1000
+        );
+        if (arm.perpendicularScalePermille
+          > descriptor.routeFinishing.maximumScaleAnisotropyPermille) {
+          throw new Error(
+            `${label}.routeFinishing.arms.${direction}`
+            + '.perpendicularScalePermille exceeds its hard anisotropy cap'
+          );
+        }
+        assertInteger(
+          arm.perpendicularOffsetPixels,
+          `${label}.routeFinishing.arms.${direction}`
+            + '.perpendicularOffsetPixels',
+          -32
+        );
+        if (arm.perpendicularOffsetPixels > 32) {
+          throw new Error(
+            `${label}.routeFinishing.arms.${direction}`
+            + '.perpendicularOffsetPixels must be <= 32'
+          );
+        }
+        for (const key of [
+          'transitionStartPermille',
+          'transitionEndPermille'
+        ]) {
+          assertInteger(
+            arm[key],
+            `${label}.routeFinishing.arms.${direction}.${key}`
+          );
+          if (arm[key] > 1000) {
+            throw new Error(
+              `${label}.routeFinishing.arms.${direction}.${key} must be <= 1000`
+            );
+          }
+        }
+        if (arm.transitionStartPermille >= arm.transitionEndPermille) {
+          throw new Error(
+            `${label}.routeFinishing.arms.${direction} transition must have `
+            + 'positive length'
+          );
+        }
+      }
+      assertInteger(
+        descriptor.routeFinishing.maximumCoveragePermille,
+        `${label}.routeFinishing.maximumCoveragePermille`,
+        1
+      );
+      if (descriptor.routeFinishing.maximumCoveragePermille > 230) {
+        throw new Error(
+          `${label}.routeFinishing.maximumCoveragePermille must be <= 230`
+        );
+      }
+      assertInteger(
+        descriptor.routeFinishing.maximumScaleAnisotropyPermille,
+        `${label}.routeFinishing.maximumScaleAnisotropyPermille`,
+        1000
+      );
+      if (descriptor.routeFinishing.maximumScaleAnisotropyPermille > 1500) {
+        throw new Error(
+          `${label}.routeFinishing.maximumScaleAnisotropyPermille must be <= 1500`
+        );
+      }
+    } else {
+      const topology = descriptor.capabilities?.routeTopology;
+      if (topology !== 'cross' && !/^tee-[nesw]{3}$/.test(topology)) {
+        throw new Error(
+          `${label}.routeFinishing multi-arm-local-warp-v1 requires a `
+          + 'cross or tee topology'
+        );
+      }
+      assertPoint(
+        descriptor.placement?.anchor,
+        `${label}.placement.anchor`,
+        descriptor.canvas
+      );
+      if (descriptor.canvas.width % 4 !== 0
+        || descriptor.canvas.height % 4 !== 0) {
+        throw new Error(
+          `${label}.routeFinishing multi-arm-local-warp-v1 requires canvas `
+          + 'dimensions divisible by 4'
+        );
+      }
+      const directions = topology === 'cross'
+        ? ['n', 'e', 's', 'w']
+        : [...topology.slice('tee-'.length)];
+      exactKeys(
+        descriptor.routeFinishing.arms,
+        directions,
+        `${label}.routeFinishing.arms`
+      );
+      for (const direction of directions) {
+        const arm = descriptor.routeFinishing.arms[direction];
+        exactKeys(arm, [
+          'perpendicularStartScalePermille',
+          'perpendicularScalePermille',
+          'perpendicularOffsetPixels',
+          'scaleTransitionStartPermille',
+          'scaleTransitionEndPermille',
+          'offsetTransitionStartPermille',
+          'offsetTransitionEndPermille'
+        ], `${label}.routeFinishing.arms.${direction}`);
+        assertInteger(
+          arm.perpendicularStartScalePermille,
+          `${label}.routeFinishing.arms.${direction}`
+            + '.perpendicularStartScalePermille',
+          1000
+        );
+        if (arm.perpendicularStartScalePermille
+          > descriptor.routeFinishing.maximumScaleAnisotropyPermille) {
+          throw new Error(
+            `${label}.routeFinishing.arms.${direction}`
+            + '.perpendicularStartScalePermille exceeds its hard anisotropy cap'
+          );
+        }
+        assertInteger(
+          arm.perpendicularScalePermille,
+          `${label}.routeFinishing.arms.${direction}`
+            + '.perpendicularScalePermille',
+          1000
+        );
+        if (arm.perpendicularScalePermille
+          > descriptor.routeFinishing.maximumScaleAnisotropyPermille) {
+          throw new Error(
+            `${label}.routeFinishing.arms.${direction}`
+            + '.perpendicularScalePermille exceeds its hard anisotropy cap'
+          );
+        }
+        assertInteger(
+          arm.perpendicularOffsetPixels,
+          `${label}.routeFinishing.arms.${direction}`
+            + '.perpendicularOffsetPixels',
+          -32
+        );
+        if (arm.perpendicularOffsetPixels > 32) {
+          throw new Error(
+            `${label}.routeFinishing.arms.${direction}`
+            + '.perpendicularOffsetPixels must be <= 32'
+          );
+        }
+        for (const prefix of ['scale', 'offset']) {
+          const startKey = `${prefix}TransitionStartPermille`;
+          const endKey = `${prefix}TransitionEndPermille`;
+          assertInteger(
+            arm[startKey],
+            `${label}.routeFinishing.arms.${direction}.${startKey}`
+          );
+          assertInteger(
+            arm[endKey],
+            `${label}.routeFinishing.arms.${direction}.${endKey}`
+          );
+          if (arm[endKey] > 1000 || arm[startKey] >= arm[endKey]) {
+            throw new Error(
+              `${label}.routeFinishing.arms.${direction} ${prefix} `
+              + 'transition must be an increasing range in 0..1000'
+            );
+          }
+        }
+      }
+      for (const [key, maximum] of [
+        ['maximumFinishedDetachedCoveredPermille', 150],
+        ['maximumCoveragePermille', 500],
+        ['maximumScaleAnisotropyPermille', 3500]
+      ]) {
+        assertInteger(
+          descriptor.routeFinishing[key],
+          `${label}.routeFinishing.${key}`,
+          key === 'maximumFinishedDetachedCoveredPermille' ? 0 : 1
+        );
+        if (descriptor.routeFinishing[key] > maximum) {
+          throw new Error(
+            `${label}.routeFinishing.${key} must be <= ${maximum}`
+          );
+        }
+      }
+      exactKeys(descriptor.routeFinishing.centerlineArmAlphaSpan, [
+        'alphaThreshold',
+        'minimumPixels',
+        'maximumPixels',
+        'maximumSpreadPixels'
+      ], `${label}.routeFinishing.centerlineArmAlphaSpan`);
+      for (const [key, minimum, maximum] of [
+        ['alphaThreshold', 1, 255],
+        ['minimumPixels', 28, Number.MAX_SAFE_INTEGER],
+        ['maximumPixels', 1, Number.MAX_SAFE_INTEGER],
+        ['maximumSpreadPixels', 0, Number.MAX_SAFE_INTEGER]
+      ]) {
+        assertInteger(
+          descriptor.routeFinishing.centerlineArmAlphaSpan[key],
+          `${label}.routeFinishing.centerlineArmAlphaSpan.${key}`,
+          minimum
+        );
+        if (descriptor.routeFinishing.centerlineArmAlphaSpan[key] > maximum) {
+          throw new Error(
+            `${label}.routeFinishing.centerlineArmAlphaSpan.${key} is invalid`
+          );
+        }
+      }
+      if (descriptor.routeFinishing.centerlineArmAlphaSpan.minimumPixels
+        > descriptor.routeFinishing.centerlineArmAlphaSpan.maximumPixels) {
+        throw new Error(
+          `${label}.routeFinishing.centerlineArmAlphaSpan range is invalid`
         );
       }
     }
@@ -1371,6 +1762,10 @@ export function assertDescriptor(descriptor, manifest, label = `descriptor ${des
       );
     }
     if (
+      !straightRouteBasisFinishing
+      && !cornerArmLocalWarpFinishing
+      && !multiArmLocalWarpFinishing
+      &&
       descriptor.routeFinishing.maximumScaleAnisotropyPermille !== undefined
     ) {
       assertInteger(
@@ -3002,22 +3397,129 @@ const CATEGORY_DEFAULTS = Object.freeze({
   }
 });
 
-function baselineStyleReference(manifest) {
+const BASELINE_TEMPLATE_ROOT =
+  'ai-image-metadata/battle-maps/sources/';
+
+function baselineStyleReference(manifest, theme) {
+  const baselineId = `${theme.replaceAll('_', '-')}-source-template-01`;
+  const themeRoot = `${BASELINE_TEMPLATE_ROOT}${theme}/`;
   const baseline = manifest.styleReferences.find(reference => (
     correctiveStyleReferenceEntry(reference) === null
-    && (
-      reference.path.startsWith(
-        'ai-image-metadata/battle-art/style-references/'
-      )
-      || reference.path.startsWith(
-        'ai-image-metadata/battle-maps/sources/'
-      )
-    )
+    && reference.id === baselineId
+    && reference.path.startsWith(themeRoot)
   ));
   if (!baseline) {
-    throw new Error('battle-art manifest has no baseline template style reference');
+    throw new Error(
+      `battle-art manifest has no baseline template style reference for theme ${theme}`
+    );
   }
   return [structuredClone(baseline)];
+}
+
+function existingDraftStyleReferences(manifest, theme, existing) {
+  const specialReferences = existing.filter(reference => (
+    !(
+      reference.path.startsWith(BASELINE_TEMPLATE_ROOT)
+      && reference.id.endsWith('-source-template-01')
+    )
+  ));
+  return [
+    ...baselineStyleReference(manifest, theme),
+    ...structuredClone(specialReferences)
+  ];
+}
+
+function deterministicRouteFinishing({
+  theme,
+  category,
+  id,
+  familyGroup,
+  variantId,
+  capabilities
+}) {
+  if (theme !== 'cave'
+    || category !== 'route-transition'
+    || familyGroup !== 'cave-limestone-curved-passage'
+    || capabilities.ecologyProfile !== 'cave-limestone') {
+    return null;
+  }
+  const cornerContracts = {
+    'cave-limestone-curved-passage-corner-sw': {
+      variantId: 'corner-sw',
+      topology: 'corner-sw',
+      maximumDetachedCoveredPermille: 1,
+      arms: {
+        s: {
+          perpendicularScalePermille: 1150,
+          perpendicularOffsetPixels: -6,
+          transitionStartPermille: 500,
+          transitionEndPermille: 1000
+        },
+        w: {
+          perpendicularScalePermille: 1450,
+          perpendicularOffsetPixels: 0,
+          transitionStartPermille: 350,
+          transitionEndPermille: 750
+        }
+      }
+    },
+    'cave-limestone-curved-passage-corner-ne': {
+      variantId: 'corner-ne',
+      topology: 'corner-ne',
+      maximumDetachedCoveredPermille: 11,
+      arms: {
+        n: {
+          perpendicularScalePermille: 1400,
+          perpendicularOffsetPixels: -16,
+          transitionStartPermille: 200,
+          transitionEndPermille: 650
+        },
+        e: {
+          perpendicularScalePermille: 1500,
+          perpendicularOffsetPixels: 3,
+          transitionStartPermille: 150,
+          transitionEndPermille: 500
+        }
+      }
+    }
+  };
+  const corner = cornerContracts[id];
+  if (corner !== undefined
+    && variantId === corner.variantId
+    && capabilities.routeTopology === corner.topology) {
+    return {
+      schemaVersion: 'battle-art-route-finishing-v1',
+      strategy: 'corner-arm-local-warp-v1',
+      arms: structuredClone(corner.arms),
+      maximumDetachedCoveredPermille:
+        corner.maximumDetachedCoveredPermille,
+      maximumCoveragePermille: 230,
+      maximumScaleAnisotropyPermille: 1500,
+      armAlphaSpan: {
+        alphaThreshold: 240,
+        minimumPixels: 28,
+        maximumPixels: 52,
+        maximumSpreadPixels: 24
+      }
+    };
+  }
+  if (id !== 'cave-limestone-curved-passage-isolated'
+    || variantId !== 'isolated'
+    || capabilities.routeTopology !== 'isolated') {
+    return null;
+  }
+  return {
+    schemaVersion: 'battle-art-route-finishing-v1',
+    strategy: 'largest-component-box-v1',
+    targetBox: { x: 96, y: 48, width: 64, height: 32 },
+    maximumDetachedCoveredPermille: 0,
+    armAlphaSpan: {
+      alphaThreshold: 240,
+      minimumPixels: 28,
+      maximumPixels: 52,
+      maximumSpreadPixels: 12
+    }
+  };
 }
 
 export function draftDescriptor({
@@ -3063,6 +3565,14 @@ export function draftDescriptor({
     heightDeltas: [...(heightDeltas ?? (directionalElevation ? [1] : [0]))]
       .sort((left, right) => left - right)
   };
+  const routeFinishing = deterministicRouteFinishing({
+    theme,
+    category,
+    id,
+    familyGroup,
+    variantId,
+    capabilities
+  });
   const footprint = connection
     ? {
         x: 0,
@@ -3179,57 +3689,67 @@ export function draftDescriptor({
     'In the 2:1 isometric diamond, N meets the upper-right edge, E the '
     + 'lower-right edge, S the lower-left edge, and W the upper-left edge.';
   const surfaceComposition = {
-    1: ' Give this variant one broad cool-olive moss sweep crossing the center '
-      + 'from upper-left toward lower-right, opposed by one offset muted-russet '
-      + 'clearing; keep both shapes unbroken and naturally meandering.',
-    2: ' Give this variant one large muted-russet loam pool across the left-center '
-      + 'that wraps into two broad moss peninsulas, plus one sparse pale-leaf fan; '
-      + 'use no small repeated patches.',
-    3: ' Give this variant a calm mostly-moss field with one winding exposed-root '
-      + 'seam and one off-center irregular russet island; leave generous quiet '
-      + 'ground around both features.'
+    1: ' Give this variant one broad primary regional material sweep crossing '
+      + 'the center from upper-left toward lower-right, opposed by one offset '
+      + 'secondary regional material field; keep both shapes unbroken and '
+      + 'naturally meandering.',
+    2: ' Give this variant one large primary regional material pool across the '
+      + 'left-center that wraps into two broad secondary-material peninsulas, '
+      + 'plus one sparse tertiary accent fan; use no small repeated patches.',
+    3: ' Give this variant a calm mostly-primary-material field with one short, '
+      + 'narrow, low-contrast winding accent vein contained entirely inside the '
+      + 'diamond. Taper both ends out well before the quiet rim; the vein must '
+      + 'not divide the tile, connect or approach two edges, keep a constant '
+      + 'width, gain a contrasting shoulder, or resemble a route. Add one '
+      + 'off-center irregular secondary-material island as a flat diffuse '
+      + 'material change, never raised rubble or discrete stones; leave '
+      + 'generous quiet ground around both features.'
   }[capabilities.surfaceVariant] ?? '';
   const categoryDirection = {
     surface:
       `Depict ${subjectName} as a complete ground diamond with a quiet, shared `
-      + 'seam perimeter and one continuous forest-floor material plane. Use '
-      + 'large, irregular moss and soil patches that cross the diamond, then '
-      + 'sparse unique leaf, pebble, and root clusters concentrated away from '
-      + `the rim. Its source-raster center is ${pixel(diamondCenter)}. Never `
+      + 'seam perimeter and one continuous regional surface-material plane. Use '
+      + 'large, irregular material fields that cross the diamond, then sparse '
+      + 'unique small-detail clusters concentrated away from the rim. Draw all '
+      + 'literal materials from the subject name and regional visual vocabulary. '
+      + `Its source-raster center is ${pixel(diamondCenter)}. Never `
       + 'depict internal tile boundaries, square subcells, checkerboards, '
       + 'mosaics, quilts, paving, contour grids, repeated stamps, evenly spaced '
       + 'clusters, stripes, or uniform noise; keep the field quiet enough for '
       + `characters and route overlays.${surfaceComposition}`,
     'route-transition':
-      'Depict only a naturally worn path overlay with loose soil, tiny stones, '
-      + 'leaf litter, and soft irregular grass feathering. Connect exactly the '
+      'Depict only a naturally worn route overlay made from the declared regional '
+      + 'surface materials with small attached edge details. Connect exactly the '
       + `sides named by ${capabilities.routeTopology}; ${isometricSideLegend} `
       + `Join the path at ${pixel(diamondCenter)}. The four precise edge-band `
       + `targets are N=${pixel(routeEdgeCenters.n)}, `
       + `E=${pixel(routeEdgeCenters.e)}, S=${pixel(routeEdgeCenters.s)}, and `
       + `W=${pixel(routeEdgeCenters.w)} on this ${canvas.width}x${canvas.height} `
       + 'source raster. Carry the path into a 20-pixel neighborhood of every '
-      + 'named target and keep every unnamed target neighborhood free of dirt. '
+      + 'named target and keep every unnamed target neighborhood free of route '
+      + 'material. '
       + 'Use a 28–36 pixel worn core with a further 6–10 pixel irregular '
-      + 'grass-and-leaf feather on each side. Join branches through one broad, '
+      + 'low transition band on each side. Join branches through one broad, '
       + 'rounded central wear area; corner roles need a continuous generous-radius '
       + 'bend with no pointed chevron, acute V, square elbow, or polygonal cusp. '
       + 'Keep every connection centered and equal width at the tile edge, with '
       + 'no opaque ground diamond and no hard polygonal border.',
     'connection-stairs':
       `Depict ${subjectName} as one coherent two-cell climb rising from the low `
-      + `cell toward ${capabilities.direction}. ${isometricSideLegend} Use roots, `
-      + 'embedded stones, and packed earth steps that meet both surfaces cleanly; '
+      + `cell toward ${capabilities.direction}. ${isometricSideLegend} Use the `
+      + 'literal subject and declared regional material vocabulary to form steps '
+      + 'that meet both surfaces cleanly; '
       + `the low endpoint is ${pixel(anchor)} and the required high-end canvas `
       + `target is ${pixel(connectionTarget)}. The connected climb must visibly `
       + 'reach both 16-pixel endpoint neighborhoods and no other directional '
       + 'canvas endpoint. Do not add a dark vertical block, floating steps, or '
       + 'a second direction.',
     'connection-slope':
-      `Depict ${subjectName} as one coherent walkable two-cell earthen grade `
+      `Depict ${subjectName} as one coherent walkable two-cell grade `
       + `rising from the low cell toward ${capabilities.direction}. `
-      + `${isometricSideLegend} Blend moss, roots, and compacted soil into both `
-      + `ends. The low endpoint is ${pixel(anchor)} and the required high-end `
+      + `${isometricSideLegend} Blend the literal subject materials and declared `
+      + 'regional surface vocabulary into both ends. The low endpoint is '
+      + `${pixel(anchor)} and the required high-end `
       + `canvas target is ${pixel(connectionTarget)}. The grade must visibly `
       + 'reach both 16-pixel endpoint neighborhoods and no other directional '
       + 'canvas endpoint; do not depict stairs, a cliff wall, a dark underlay, '
@@ -3237,30 +3757,29 @@ export function draftDescriptor({
     'exposed-face-boundary':
       capabilities.direction === null
         ? `Depict the literal subject ${subjectName} as a low, broad legacy `
-          + 'boundary face connected to the anchor, without a cuboid panel, dark '
-          + 'void, or flat chocolate-brown wall.'
+          + 'boundary face connected to the anchor, using only the declared '
+          + 'regional material vocabulary and no cuboid panel or dark void.'
         : `Depict the literal subject ${subjectName} along the declared `
-          + `${capabilities.direction} tile edge. ${isometricSideLegend} If this `
-          + 'is a canopy edge, use layered regional trunks, foliage, roots, and '
-          + 'understory to define a convincing forest exterior. If this is an '
-          + 'earth face, blend moss, roots, soil strata, and small stones without '
-          + `a flat chocolate-brown wall. The grounded root/soil base must follow `
-          + `the declared edge from `
+          + `${capabilities.direction} tile edge. ${isometricSideLegend} Use the `
+          + 'literal subject and declared regional visual vocabulary to form one '
+          + 'low, broad grounded boundary or exposed face. The grounded base must '
+          + `follow the declared edge from `
           + `${pixel(boundaryEdgeSegments[capabilities.direction][0])} to `
           + `${pixel(boundaryEdgeSegments[capabilities.direction][1])}, with `
           + `sustained contact centered at `
           + `${pixel(boundaryEdgeCenters[capabilities.direction])}, and connect `
           + 'naturally to the anchor. Do not ground the base on any other edge. '
-          + 'Tall trunks, branches, and crown foliage may overhang other edge '
-          + 'bands; overhang is not ground contact.',
+          + 'Upper subject details may overhang other edge bands; overhang is not '
+          + 'ground contact.',
     'blocking-obstacle':
-      `Depict the literal regional subject ${subjectName}, making its species, `
-      + 'silhouette, bark or stone, foliage, age, and scale clearly distinct from '
-      + 'other obstacle families. Use one grounded isometric cutout with a clean base.',
+      `Depict the literal regional subject ${subjectName}, making its material, `
+      + 'silhouette, surface character, age or formation, and scale clearly '
+      + 'distinct from other obstacle families. Use one grounded isometric '
+      + 'cutout with a clean base.',
     'nonblocking-decoration':
       `Depict the literal regional subject ${subjectName} as a restrained, `
       + 'grounded isometric detail that adds ecological variety without reading '
-      + 'as a wall, large tree, or blocking object.'
+      + 'as a wall or blocking object.'
   }[category];
   const descriptor = {
     schemaVersion: DESCRIPTOR_SCHEMA,
@@ -3270,9 +3789,10 @@ export function draftDescriptor({
     familyGroup,
     variantId,
     capabilities,
+    ...(routeFinishing === null ? {} : { routeFinishing }),
     status: 'draft',
     promptProfile: structuredClone(manifest.promptProfile),
-    styleReferences: baselineStyleReference(manifest),
+    styleReferences: baselineStyleReference(manifest, theme),
     generationPrompt:
       `Create exactly one seam-safe orthographic isometric ${theme} ${category} `
       + `asset named ${id} for ${capabilityFacts.join('; ')}. Author the declared `
@@ -3443,7 +3963,11 @@ async function writeExistingDraftUnlocked({
     regionalArtDirection
   });
   if (existing !== null) {
-    descriptor.styleReferences = structuredClone(existing.styleReferences);
+    descriptor.styleReferences = existingDraftStyleReferences(
+      loaded.manifest,
+      theme,
+      existing.styleReferences
+    );
     assertDescriptor(descriptor, loaded.manifest);
   }
   const expected = stableJson(descriptor);
@@ -3942,6 +4466,469 @@ function assertFinishedRouteDerivationShape(
       derivation.forbiddenBandClearPixels,
       `${label}.forbiddenBandClearPixels`
     );
+    assertHash(derivation.finalSha256, `${label}.finalSha256`);
+    return;
+  }
+  if (['corner-arm-local-warp-v1', 'multi-arm-local-warp-v1'].includes(
+    derivation?.strategy
+  )) {
+    const multiArm = derivation.strategy === 'multi-arm-local-warp-v1';
+    const routeFinishing = descriptor.routeFinishing;
+    exactKeys(derivation, [
+      'schemaVersion',
+      'strategy',
+      'source',
+      'sourceTopologySha256',
+      'sourceBounds',
+      'componentCount',
+      'coveredPixels',
+      'selectedCoveredPixels',
+      ...(multiArm ? ['sourceSampling'] : []),
+      'detachedCoveredPixels',
+      'detachedCoveredPermille',
+      'maximumDetachedCoveredPermille',
+      'anchor',
+      'terminals',
+      'arms',
+      'maximumCoveragePermille',
+      'maximumScaleAnisotropyPermille',
+      'maximumAppliedScalePermille',
+      ...(multiArm ? [
+        'maximumFinishedDetachedCoveredPermille',
+        'finishedDetachedCoveredPixels',
+        'finishedDetachedCoveredPermille'
+      ] : []),
+      'borderClearPixels',
+      'armSelector',
+      'transition',
+      ...(multiArm ? ['armMeasurement'] : []),
+      'kernel',
+      'finalSha256'
+    ], label);
+    if (
+      derivation.schemaVersion !== 'battle-art-route-finishing-v1'
+      || (routeFinishing !== undefined
+        && routeFinishing.strategy !== derivation.strategy)
+      || derivation.armSelector
+        !== 'greatest-longitudinal-projection-v1'
+      || derivation.transition !== (multiArm
+        ? 'independent-smoothstep-v1'
+        : 'smoothstep-v1')
+      || (multiArm
+        && derivation.armMeasurement
+          !== 'centerline-intersecting-run-v1')
+      || (multiArm
+        && derivation.sourceSampling !== 'all-visible-components-v1')
+      || derivation.kernel !== 'bilinear-premultiplied-alpha-v1'
+    ) {
+      throw new Error(`${label} uses an unsupported operation`);
+    }
+    assertGeneratedRouteSourceShape(
+      derivation.source,
+      descriptor,
+      `${label}.source`
+    );
+    assertHash(
+      derivation.sourceTopologySha256,
+      `${label}.sourceTopologySha256`
+    );
+    exactKeys(
+      derivation.sourceBounds,
+      ['x', 'y', 'width', 'height'],
+      `${label}.sourceBounds`
+    );
+    for (const key of ['x', 'y']) {
+      assertInteger(
+        derivation.sourceBounds[key],
+        `${label}.sourceBounds.${key}`
+      );
+    }
+    for (const key of ['width', 'height']) {
+      assertInteger(
+        derivation.sourceBounds[key],
+        `${label}.sourceBounds.${key}`,
+        1
+      );
+    }
+    for (const key of [
+      'componentCount',
+      'coveredPixels',
+      'selectedCoveredPixels',
+      'detachedCoveredPixels',
+      'detachedCoveredPermille',
+      'maximumDetachedCoveredPermille',
+      'maximumCoveragePermille',
+      'maximumScaleAnisotropyPermille',
+      'maximumAppliedScalePermille',
+      ...(multiArm ? [
+        'maximumFinishedDetachedCoveredPermille',
+        'finishedDetachedCoveredPixels',
+        'finishedDetachedCoveredPermille'
+      ] : []),
+      'borderClearPixels'
+    ]) {
+      assertInteger(
+        derivation[key],
+        `${label}.${key}`,
+        ['componentCount', 'coveredPixels', 'selectedCoveredPixels',
+          'maximumCoveragePermille', 'maximumScaleAnisotropyPermille',
+          'maximumAppliedScalePermille', 'borderClearPixels'].includes(key)
+          ? 1
+          : 0
+      );
+    }
+    if (derivation.borderClearPixels !== 4) {
+      throw new Error(`${label}.borderClearPixels must be 4`);
+    }
+    if (derivation.maximumAppliedScalePermille
+      > derivation.maximumScaleAnisotropyPermille) {
+      throw new Error(
+        `${label}.maximumAppliedScalePermille exceeds its anisotropy cap`
+      );
+    }
+    exactKeys(derivation.anchor, ['x', 'y'], `${label}.anchor`);
+    for (const key of ['x', 'y']) {
+      assertInteger(derivation.anchor[key], `${label}.anchor.${key}`);
+      if (descriptor.placement?.anchor !== undefined
+        && derivation.anchor[key] !== descriptor.placement.anchor[key]) {
+        throw new Error(`${label}.anchor does not match the descriptor`);
+      }
+    }
+    const directions = Object.keys(derivation.arms);
+    if ((!multiArm && directions.length !== 2)
+      || (multiArm && ![3, 4].includes(directions.length))
+      || directions.some(direction => !'nesw'.includes(direction))) {
+      throw new Error(`${label}.arms is not a closed local arm set`);
+    }
+    if (descriptor.capabilities?.routeTopology !== undefined) {
+      const topology = descriptor.capabilities.routeTopology;
+      const expectedDirections = multiArm
+        ? topology === 'cross'
+          ? ['n', 'e', 's', 'w']
+          : [...topology.slice('tee-'.length)]
+        : [...topology.slice('corner-'.length)];
+      if (stableJson([...directions].sort())
+        !== stableJson(expectedDirections.sort())) {
+        throw new Error(`${label}.arms does not match the descriptor topology`);
+      }
+    }
+    exactKeys(derivation.terminals, directions, `${label}.terminals`);
+    for (const direction of directions) {
+      const armLabel = `${label}.arms.${direction}`;
+      const armKeys = multiArm ? [
+        'perpendicularStartScalePermille',
+        'perpendicularScalePermille',
+        'perpendicularOffsetPixels',
+        'scaleTransitionStartPermille',
+        'scaleTransitionEndPermille',
+        'offsetTransitionStartPermille',
+        'offsetTransitionEndPermille'
+      ] : [
+        'perpendicularScalePermille',
+        'perpendicularOffsetPixels',
+        'transitionStartPermille',
+        'transitionEndPermille'
+      ];
+      exactKeys(derivation.arms[direction], armKeys, armLabel);
+      for (const key of armKeys) {
+        assertInteger(
+          derivation.arms[direction][key],
+          `${armLabel}.${key}`,
+          key === 'perpendicularOffsetPixels' ? -32 : 0
+        );
+      }
+      if (derivation.arms[direction].perpendicularOffsetPixels > 32
+        || (multiArm
+          && derivation.arms[direction].perpendicularStartScalePermille
+            > derivation.maximumScaleAnisotropyPermille)
+        || derivation.arms[direction].perpendicularScalePermille
+          > derivation.maximumScaleAnisotropyPermille
+        || (multiArm
+          ? ['scale', 'offset'].some(prefix => (
+              derivation.arms[direction][
+                `${prefix}TransitionStartPermille`
+              ] >= derivation.arms[direction][
+                `${prefix}TransitionEndPermille`
+              ]
+              || derivation.arms[direction][
+                `${prefix}TransitionEndPermille`
+              ] > 1000
+            ))
+          : derivation.arms[direction].transitionStartPermille
+              >= derivation.arms[direction].transitionEndPermille
+            || derivation.arms[direction].transitionEndPermille > 1000)) {
+        throw new Error(`${armLabel} exceeds its closed local warp bounds`);
+      }
+      exactKeys(
+        derivation.terminals[direction],
+        ['x', 'y'],
+        `${label}.terminals.${direction}`
+      );
+      for (const key of ['x', 'y']) {
+        assertInteger(
+          derivation.terminals[direction][key],
+          `${label}.terminals.${direction}.${key}`
+        );
+      }
+      if (descriptor.canvas !== undefined
+        && descriptor.placement?.anchor !== undefined) {
+        const vectors = {
+          n: { x: descriptor.canvas.width / 4, y: -descriptor.canvas.height / 4 },
+          e: { x: descriptor.canvas.width / 4, y: descriptor.canvas.height / 4 },
+          s: { x: -descriptor.canvas.width / 4, y: descriptor.canvas.height / 4 },
+          w: { x: -descriptor.canvas.width / 4, y: -descriptor.canvas.height / 4 }
+        };
+        if (derivation.terminals[direction].x
+            !== derivation.anchor.x + vectors[direction].x
+          || derivation.terminals[direction].y
+            !== derivation.anchor.y + vectors[direction].y) {
+          throw new Error(
+            `${label}.terminals.${direction} does not preserve its exact endpoint`
+          );
+        }
+      }
+    }
+    if (routeFinishing !== undefined) {
+      for (const [key, value] of [
+        ['maximumDetachedCoveredPermille',
+          routeFinishing.maximumDetachedCoveredPermille],
+        ['maximumCoveragePermille', routeFinishing.maximumCoveragePermille],
+        ['maximumScaleAnisotropyPermille',
+          routeFinishing.maximumScaleAnisotropyPermille],
+        ...(multiArm ? [[
+          'maximumFinishedDetachedCoveredPermille',
+          routeFinishing.maximumFinishedDetachedCoveredPermille
+        ]] : [])
+      ]) {
+        if (derivation[key] !== value) {
+          throw new Error(`${label}.${key} does not match the descriptor`);
+        }
+      }
+      if (stableJson(derivation.arms) !== stableJson(routeFinishing.arms)) {
+        throw new Error(`${label}.arms does not match the descriptor`);
+      }
+    }
+    assertHash(derivation.finalSha256, `${label}.finalSha256`);
+    return;
+  }
+  if (derivation?.strategy === 'straight-route-basis-v1') {
+    const routeFinishing = descriptor.routeFinishing;
+    exactKeys(derivation, [
+      'schemaVersion',
+      'strategy',
+      'source',
+      'sourceTopologySha256',
+      'sourceBounds',
+      'componentCount',
+      'coveredPixels',
+      'selectedCoveredPixels',
+      'detachedCoveredPixels',
+      'detachedCoveredPermille',
+      'maximumDetachedCoveredPermille',
+      'basis',
+      'sourceProjectionBounds',
+      'sourceTerminalInsetPixels',
+      'sourceTerminalInsetProjectionNumerator',
+      'trimmedLongitudinalBounds',
+      'trimmedCoveredPixels',
+      'trimmedCoveredPermille',
+      'maximumTrimmedCoveredPermille',
+      'anchor',
+      'outputTerminalOverflowPixels',
+      'outputTerminalOverflowProjectionNumerator',
+      'outputPerpendicularSpanPixels',
+      'outputPerpendicularProjectionNumerator',
+      'scaleLongitudinal',
+      'scalePerpendicular',
+      'scaleAnisotropyPermille',
+      'maximumScaleAnisotropyPermille',
+      'kernel',
+      'finalSha256'
+    ], label);
+    if (
+      derivation.schemaVersion !== 'battle-art-route-finishing-v1'
+      || (
+        routeFinishing !== undefined
+        && routeFinishing.strategy !== 'straight-route-basis-v1'
+      )
+      || derivation.kernel !== 'bilinear-premultiplied-alpha-v1'
+    ) {
+      throw new Error(`${label} uses an unsupported operation`);
+    }
+    assertGeneratedRouteSourceShape(
+      derivation.source,
+      descriptor,
+      `${label}.source`
+    );
+    assertHash(
+      derivation.sourceTopologySha256,
+      `${label}.sourceTopologySha256`
+    );
+    exactKeys(
+      derivation.sourceBounds,
+      ['x', 'y', 'width', 'height'],
+      `${label}.sourceBounds`
+    );
+    for (const key of ['x', 'y']) {
+      assertInteger(
+        derivation.sourceBounds[key],
+        `${label}.sourceBounds.${key}`
+      );
+    }
+    for (const key of ['width', 'height']) {
+      assertInteger(
+        derivation.sourceBounds[key],
+        `${label}.sourceBounds.${key}`,
+        1
+      );
+    }
+    for (const key of [
+      'componentCount',
+      'coveredPixels',
+      'selectedCoveredPixels',
+      'detachedCoveredPixels',
+      'detachedCoveredPermille',
+      'maximumDetachedCoveredPermille',
+      'sourceTerminalInsetPixels',
+      'sourceTerminalInsetProjectionNumerator',
+      'trimmedCoveredPixels',
+      'trimmedCoveredPermille',
+      'maximumTrimmedCoveredPermille',
+      'outputTerminalOverflowPixels',
+      'outputTerminalOverflowProjectionNumerator',
+      'outputPerpendicularSpanPixels',
+      'outputPerpendicularProjectionNumerator',
+      'scaleAnisotropyPermille',
+      'maximumScaleAnisotropyPermille'
+    ]) {
+      assertInteger(
+        derivation[key],
+        `${label}.${key}`,
+        ['componentCount', 'coveredPixels', 'selectedCoveredPixels',
+          'sourceTerminalInsetPixels',
+          'sourceTerminalInsetProjectionNumerator',
+          'outputPerpendicularSpanPixels',
+          'outputPerpendicularProjectionNumerator',
+          'scaleAnisotropyPermille',
+          'maximumScaleAnisotropyPermille'].includes(key) ? 1 : 0
+      );
+    }
+    if (routeFinishing !== undefined) {
+      for (const [key, value] of [
+        ['maximumDetachedCoveredPermille',
+          routeFinishing.maximumDetachedCoveredPermille],
+        ['sourceTerminalInsetPixels',
+          routeFinishing.sourceTerminalInsetPixels],
+        ['maximumTrimmedCoveredPermille',
+          routeFinishing.maximumTrimmedCoveredPermille],
+        ['outputTerminalOverflowPixels',
+          routeFinishing.outputTerminalOverflowPixels],
+        ['outputPerpendicularSpanPixels',
+          routeFinishing.outputPerpendicularSpanPixels],
+        ['maximumScaleAnisotropyPermille',
+          routeFinishing.maximumScaleAnisotropyPermille]
+      ]) {
+        if (derivation[key] !== value) {
+          throw new Error(`${label}.${key} does not match the descriptor`);
+        }
+      }
+    }
+    exactKeys(
+      derivation.anchor,
+      ['x', 'y'],
+      `${label}.anchor`
+    );
+    for (const key of ['x', 'y']) {
+      assertInteger(derivation.anchor[key], `${label}.anchor.${key}`);
+      if (
+        descriptor.placement?.anchor !== undefined
+        && derivation.anchor[key] !== descriptor.placement.anchor[key]
+      ) {
+        throw new Error(`${label}.anchor does not match the descriptor`);
+      }
+    }
+    exactKeys(derivation.basis, [
+      'longitudinal',
+      'perpendicular',
+      'lengthSquared',
+      'terminalProjectionNumerator'
+    ], `${label}.basis`);
+    for (const vector of ['longitudinal', 'perpendicular']) {
+      exactKeys(
+        derivation.basis[vector],
+        ['x', 'y'],
+        `${label}.basis.${vector}`
+      );
+      for (const key of ['x', 'y']) {
+        assertInteger(
+          derivation.basis[vector][key],
+          `${label}.basis.${vector}.${key}`,
+          -4096
+        );
+      }
+    }
+    assertInteger(
+      derivation.basis.lengthSquared,
+      `${label}.basis.lengthSquared`,
+      1
+    );
+    assertInteger(
+      derivation.basis.terminalProjectionNumerator,
+      `${label}.basis.terminalProjectionNumerator`,
+      1
+    );
+    for (const [parent, childKeys] of [
+      ['sourceProjectionBounds', ['longitudinal', 'perpendicular']],
+      ['trimmedLongitudinalBounds', null]
+    ]) {
+      if (childKeys === null) {
+        exactKeys(
+          derivation[parent],
+          ['minimumNumerator', 'maximumNumerator'],
+          `${label}.${parent}`
+        );
+        for (const key of ['minimumNumerator', 'maximumNumerator']) {
+          assertInteger(
+            derivation[parent][key],
+            `${label}.${parent}.${key}`,
+            -Number.MAX_SAFE_INTEGER
+          );
+        }
+        continue;
+      }
+      exactKeys(derivation[parent], childKeys, `${label}.${parent}`);
+      for (const child of childKeys) {
+        exactKeys(
+          derivation[parent][child],
+          ['minimumNumerator', 'maximumNumerator'],
+          `${label}.${parent}.${child}`
+        );
+        for (const key of ['minimumNumerator', 'maximumNumerator']) {
+          assertInteger(
+            derivation[parent][child][key],
+            `${label}.${parent}.${child}.${key}`,
+            -Number.MAX_SAFE_INTEGER
+          );
+        }
+      }
+    }
+    for (const scale of ['scaleLongitudinal', 'scalePerpendicular']) {
+      exactKeys(
+        derivation[scale],
+        ['numerator', 'denominator'],
+        `${label}.${scale}`
+      );
+      assertInteger(
+        derivation[scale].numerator,
+        `${label}.${scale}.numerator`,
+        1
+      );
+      assertInteger(
+        derivation[scale].denominator,
+        `${label}.${scale}.denominator`,
+        1
+      );
+    }
     assertHash(derivation.finalSha256, `${label}.finalSha256`);
     return;
   }
@@ -4756,13 +5743,22 @@ async function assertCompiledCurrentSourceCandidate(loaded, entry, evidence) {
 async function loadReviewCandidate(loaded, entry, {
   reviewFullHash = null,
   allowCompiledCurrentSource = false,
-  verifyGeneratedArtifact = false
+  verifyGeneratedArtifact = false,
+  allowHistoricalRejectedEffectivePrompt = false
 } = {}) {
   if (typeof allowCompiledCurrentSource !== 'boolean') {
     throw new Error('compiled-current-source review policy must be boolean');
   }
   if (typeof verifyGeneratedArtifact !== 'boolean') {
     throw new Error('generated-artifact verification policy must be boolean');
+  }
+  if (typeof allowHistoricalRejectedEffectivePrompt !== 'boolean') {
+    throw new Error('historical rejected effective-prompt policy must be boolean');
+  }
+  if (allowHistoricalRejectedEffectivePrompt && reviewFullHash === null) {
+    throw new Error(
+      'historical rejected effective-prompt replay requires an immutable review pin'
+    );
   }
   const compiledCurrentSource =
     allowCompiledCurrentSource && entry.descriptor.status === 'compiled';
@@ -4950,6 +5946,26 @@ async function loadReviewCandidate(loaded, entry, {
           'candidate worker last message'
         )
   ]);
+  if (!legacy
+    && entry.descriptor.status === 'draft'
+    && !allowHistoricalRejectedEffectivePrompt) {
+    const styleFiles = styleReferenceProvenance(
+      entry.descriptor.styleReferences
+    ).map(value => value.stagedBasename);
+    const expectedPrompt = buildCurrentEffectivePrompt({
+      descriptor: entry.descriptor,
+      profile: loaded.promptProfile,
+      styleFiles,
+      textStyleFallback: candidate.styleReferenceMode === 'text-fallback'
+    });
+    const expectedPromptContents = Buffer.from(`${expectedPrompt}\n`);
+    if (!prompt.contents.equals(expectedPromptContents)) {
+      throw new Error(
+        `${entry.descriptor.id} candidate effective prompt is stale; `
+        + 'generate a fresh candidate under the current prompt contract'
+      );
+    }
+  }
   const allowExactDuplicateArtifactEvidence = legacy
     && LEGACY_DUPLICATE_ARTIFACT_TUPLES.some(tuple => (
       tuple.metadataSha256 === metadataSnapshot.pin.sha256
@@ -4966,22 +5982,48 @@ async function loadReviewCandidate(loaded, entry, {
       imageSha256: actual.sha256,
       sourceSha256: entry.descriptor.source.imageSha256
     });
+  const eligibleParentOwnedRouteHandoff =
+    !legacy
+    && !revalidated
+    && entry.descriptor.category === 'route-transition'
+    && entry.descriptor.theme !== 'forest';
   const workerAudit = auditCodexWorkerJsonl(stdout.contents, {
     allowExactDuplicateArtifactEvidence,
     allowPostprocessedArtifactEvidence,
     allowMixedExplicitArtifactEvidence:
       !legacy && entry.descriptor.category === 'route-transition'
   });
+  const genericWorkerEvidence =
+    workerAudit.imagegenInvocationCount === 1
+    && workerAudit.imagegenInvocationCount === candidate.worker.invocationCount;
+  let parentOwnedRouteHandoff = false;
   if (
-    workerAudit.imagegenInvocationCount !== 1
-    || workerAudit.imagegenInvocationCount !== candidate.worker.invocationCount
+    !genericWorkerEvidence
+    && workerAudit.imagegenInvocationCount === 0
+    && eligibleParentOwnedRouteHandoff
   ) {
+    if (
+      candidate.worker.invocationCount !== 1
+      || derivationEvidence?.source === undefined
+    ) {
+      throw new Error(
+        `${entry.descriptor.id} parent-owned route candidate requires one `
+        + 'worker invocation and replayed raw derivation evidence'
+      );
+    }
+    auditCanonicalParentRouteHandoffJsonl(stdout.contents);
+    parentOwnedRouteHandoff = true;
+  } else if (!genericWorkerEvidence) {
     throw new Error(
       `${entry.descriptor.id} candidate worker evidence must prove exactly `
       + 'one imagegen invocation'
     );
   }
-  if (compiledCurrentSource && verifyGeneratedArtifact) {
+  if (
+    compiledCurrentSource
+    && verifyGeneratedArtifact
+    && !parentOwnedRouteHandoff
+  ) {
     await verifyCodexImagegenEvidence(workerAudit);
   }
   await readPinnedRegularFile(
@@ -5640,6 +6682,155 @@ export function buildInventory(manifest, descriptors) {
   };
 }
 
+function inventoryRegistryEntry(bundle, inventoryContents) {
+  const bytes = Buffer.from(inventoryContents);
+  return {
+    releaseId: bundle.id,
+    releaseVersion: bundle.version,
+    bundleManifestFullHash: bundle.manifestFullHash,
+    inventoryBytes: bytes.length,
+    inventorySha256: sha256(bytes)
+  };
+}
+
+export function assertInventoryRegistry(registry) {
+  exactKeys(
+    registry,
+    ['schemaVersion', 'entries'],
+    'battle-art runtime inventory registry'
+  );
+  if (registry.schemaVersion !== INVENTORY_REGISTRY_SCHEMA
+    || !Array.isArray(registry.entries)) {
+    throw new Error('battle-art runtime inventory registry is invalid');
+  }
+  const releases = new Set();
+  for (const [index, entry] of registry.entries.entries()) {
+    const label = `battle-art runtime inventory registry.entries[${index}]`;
+    exactKeys(entry, [
+      'releaseId',
+      'releaseVersion',
+      'bundleManifestFullHash',
+      'inventoryBytes',
+      'inventorySha256'
+    ], label);
+    assertSafeId(entry.releaseId, `${label}.releaseId`);
+    assertInteger(entry.releaseVersion, `${label}.releaseVersion`, 1);
+    assertHash(entry.bundleManifestFullHash, `${label}.bundleManifestFullHash`);
+    assertInteger(entry.inventoryBytes, `${label}.inventoryBytes`, 1);
+    assertHash(entry.inventorySha256, `${label}.inventorySha256`);
+    const releaseIdentity = `${entry.releaseId}:v${entry.releaseVersion}`;
+    if (releases.has(releaseIdentity)) {
+      throw new Error(
+        `battle-art runtime inventory registry has duplicate or conflicting `
+        + `release ${releaseIdentity}`
+      );
+    }
+    releases.add(releaseIdentity);
+  }
+  const sorted = registry.entries.toSorted((left, right) => (
+    left.releaseId.localeCompare(right.releaseId)
+    || left.releaseVersion - right.releaseVersion
+    || left.bundleManifestFullHash.localeCompare(right.bundleManifestFullHash)
+  ));
+  if (stableJson(registry.entries) !== stableJson(sorted)) {
+    throw new Error('battle-art runtime inventory registry entries are not sorted');
+  }
+  return registry;
+}
+
+export function appendInventoryRegistryEntry(
+  registry,
+  bundle,
+  inventoryContents
+) {
+  assertInventoryRegistry(registry);
+  const entry = inventoryRegistryEntry(bundle, inventoryContents);
+  const existing = registry.entries.find(candidate => (
+    candidate.releaseId === entry.releaseId
+    && candidate.releaseVersion === entry.releaseVersion
+  ));
+  if (existing !== undefined) {
+    if (stableJson(existing) !== stableJson(entry)) {
+      throw new Error(
+        `battle-art runtime inventory registry conflicts for `
+        + `${entry.releaseId}:v${entry.releaseVersion}`
+      );
+    }
+    return structuredClone(registry);
+  }
+  const revised = {
+    schemaVersion: INVENTORY_REGISTRY_SCHEMA,
+    entries: [...registry.entries, entry].sort((left, right) => (
+      left.releaseId.localeCompare(right.releaseId)
+      || left.releaseVersion - right.releaseVersion
+      || left.bundleManifestFullHash.localeCompare(right.bundleManifestFullHash)
+    ))
+  };
+  assertInventoryRegistry(revised);
+  return revised;
+}
+
+function assertInventoryRegistryPin(registry, bundle, inventoryContents) {
+  assertInventoryRegistry(registry);
+  const expected = inventoryRegistryEntry(bundle, inventoryContents);
+  const matching = registry.entries.filter(entry => (
+    entry.releaseId === bundle.id
+    && entry.releaseVersion === bundle.version
+  ));
+  if (matching.length !== 1) {
+    throw new Error(
+      `battle-art runtime inventory registry pin for ${bundle.id}:v`
+      + `${bundle.version} is missing or ambiguous`
+    );
+  }
+  if (stableJson(matching[0]) !== stableJson(expected)) {
+    throw new Error(
+      `battle-art runtime inventory registry pin for ${bundle.id}:v`
+      + `${bundle.version} conflicts with the active inventory`
+    );
+  }
+}
+
+function assertInventoryRegistryLedger(
+  inventoryRegistry,
+  bundleRegistry,
+  historicalReleases,
+  activeBundle
+) {
+  assertInventoryRegistry(inventoryRegistry);
+  for (const entry of inventoryRegistry.entries) {
+    const matches = bundleRegistry?.bundles?.filter(bundle => (
+      bundle.id === entry.releaseId
+      && bundle.version === entry.releaseVersion
+      && bundle.manifestFullHash === entry.bundleManifestFullHash
+    )) ?? [];
+    if (matches.length !== 1) {
+      throw new Error(
+        `battle-art runtime inventory registry release ${entry.releaseId}:v`
+        + `${entry.releaseVersion} has no exact runtime bundle registry identity`
+      );
+    }
+    const [registeredBundle] = matches;
+    const active = activeBundle.id === registeredBundle.id
+      && activeBundle.version === registeredBundle.version
+      && activeBundle.manifestFullHash === registeredBundle.manifestFullHash
+      && stableJson(activeBundle) === stableJson(registeredBundle);
+    const archived = historicalReleases.some(candidate => (
+      candidate.release.bundle.id === registeredBundle.id
+      && candidate.release.bundle.version === registeredBundle.version
+      && candidate.release.bundle.manifestFullHash
+        === registeredBundle.manifestFullHash
+      && stableJson(candidate.release.bundle) === stableJson(registeredBundle)
+    ));
+    if (!active && !archived) {
+      throw new Error(
+        `battle-art runtime inventory registry release ${entry.releaseId}:v`
+        + `${entry.releaseVersion} is not backed by the active bundle or an archive`
+      );
+    }
+  }
+}
+
 export function buildBundleRegistry(historicalReleases, currentBundle) {
   const byIdentity = new Map();
   for (const bundle of historicalReleases.map(entry => entry.release.bundle)) {
@@ -5722,6 +6913,324 @@ export function resolveArchivedRuntimeBundle(
   };
 }
 
+function archivedSourceProjection(descriptors) {
+  return descriptors.map(entry => ({
+    familyId: entry.descriptor.id,
+    contentVersion: entry.descriptor.content.version,
+    path: entry.descriptor.source.imagePath,
+    sha256: entry.descriptor.source.imageSha256,
+    width: entry.descriptor.source.width,
+    height: entry.descriptor.source.height,
+    format: entry.descriptor.source.format
+  })).sort((left, right) => left.familyId.localeCompare(right.familyId));
+}
+
+function archivedSourceForDescriptor(descriptor) {
+  return archivedSourceProjection([{
+    descriptor,
+    path: descriptorPath(descriptor.theme, descriptor.id)
+  }])[0];
+}
+
+async function readRuntimeArtifacts(loaded) {
+  const [
+    { value: bundle },
+    { value: registry },
+    { value: inventory, contents: inventoryContents },
+    { value: inventoryRegistry },
+    { value: frontendBundle },
+    { value: frontendRegistry }
+  ] = await Promise.all([
+    readJson(loaded.root, BUNDLE_PATH, 'runtime asset bundle'),
+    readJson(loaded.root, BUNDLE_REGISTRY_PATH, 'runtime asset bundle registry'),
+    readJson(loaded.root, INVENTORY_PATH, 'battle-art inventory'),
+    readJson(
+      loaded.root,
+      INVENTORY_REGISTRY_PATH,
+      'runtime asset inventory registry'
+    ),
+    readJson(loaded.root, FRONTEND_BUNDLE_PATH, 'frontend runtime asset bundle'),
+    readJson(
+      loaded.root,
+      FRONTEND_BUNDLE_REGISTRY_PATH,
+      'frontend runtime asset bundle registry'
+    )
+  ]);
+  if (inventoryContents !== stableJson(inventory)) {
+    throw new Error('battle-art inventory is not canonical JSON');
+  }
+  return {
+    bundle,
+    registry,
+    inventory,
+    inventoryContents,
+    inventoryRegistry,
+    frontendBundle,
+    frontendRegistry
+  };
+}
+
+export async function assertRuntimeArtifactState(loaded, artifacts) {
+  const {
+    bundle,
+    registry,
+    inventory,
+    inventoryContents = stableJson(inventory),
+    inventoryRegistry,
+    frontendBundle,
+    frontendRegistry
+  } = artifacts;
+  assertInventoryRegistryLedger(
+    inventoryRegistry,
+    registry,
+    loaded.historicalReleases,
+    bundle
+  );
+  assertInventoryRegistryPin(
+    inventoryRegistry,
+    bundle,
+    inventoryContents
+  );
+  const compiledDescriptors = loaded.descriptors.filter(entry => (
+    entry.descriptor.status === 'compiled'
+  ));
+  const draftDescriptors = loaded.descriptors.filter(entry => (
+    entry.descriptor.status === 'draft'
+  ));
+  const noncompiledDescriptors = loaded.descriptors.filter(entry => (
+    entry.descriptor.status !== 'compiled'
+  ));
+  const currentProjection = (
+    bundle?.version === loaded.manifest.version
+    && noncompiledDescriptors.length === 0
+  );
+  const stagedDraftProjection = (
+    bundle?.version === loaded.manifest.version - 1
+    && noncompiledDescriptors.length > 0
+    && loaded.descriptors.every(entry => (
+      entry.descriptor.status === 'compiled'
+      || entry.descriptor.status === 'draft'
+      || entry.descriptor.status === 'approved'
+    ))
+  );
+  if (!currentProjection && !stagedDraftProjection) {
+    throw new Error(
+      'runtime asset bundle version does not match the current release or '
+      + 'one-version draft staging'
+    );
+  }
+
+  let expectedBundle;
+  let expectedInventory;
+  if (currentProjection) {
+    expectedBundle = await buildBundle(loaded.manifest, loaded.descriptors);
+    const currentReleasePath =
+      `ai-image-metadata/battle-art/releases/${bundle.id}.v${bundle.version}.json`;
+    const inventoryCandidates = [
+      buildInventory(loaded.manifest, loaded.descriptors),
+      buildInventory({
+        ...loaded.manifest,
+        historicalReleases: loaded.manifest.historicalReleases.filter(
+          relative => relative !== currentReleasePath
+        )
+      }, loaded.descriptors)
+    ];
+    if (!inventoryCandidates.some(candidate => (
+      stableJson(candidate) === inventoryContents
+    ))) {
+      throw new Error('battle-art inventory is incomplete or stale');
+    }
+    expectedInventory = structuredClone(inventory);
+  } else {
+    const archived = resolveArchivedRuntimeBundle(
+      loaded.historicalReleases,
+      registry,
+      {
+        id: bundle.id,
+        version: bundle.version,
+        manifestFullHash: bundle.manifestFullHash
+      }
+    );
+    const activeRelease = loaded.historicalReleases.find(entry => (
+      entry.path === archived.path
+    ));
+    expectedBundle = archived.bundle;
+    const rendererById = new Map(expectedBundle.renderers.map(renderer => (
+      [renderer.id, renderer]
+    )));
+    const sourceById = new Map(activeRelease.release.sources.map(source => (
+      [source.familyId, source]
+    )));
+    if (rendererById.size !== expectedBundle.renderers.length
+      || sourceById.size !== activeRelease.release.sources.length
+      || rendererById.size !== sourceById.size
+      || [...rendererById.keys()].some(id => !sourceById.has(id))) {
+      throw new Error('active archive renderer and source membership differs');
+    }
+    const currentById = new Map(loaded.descriptors.map(entry => (
+      [entry.descriptor.id, entry]
+    )));
+    exactKeys(inventory, [
+      'schemaVersion',
+      'releaseId',
+      'releaseVersion',
+      'historicalReleases',
+      'themes',
+      'categories',
+      'families'
+    ], 'battle-art active inventory');
+    const inventoryHistoricalMatches = (
+      stableJson(inventory.historicalReleases)
+        === stableJson(loaded.manifest.historicalReleases)
+      || stableJson(inventory.historicalReleases) === stableJson(
+        loaded.manifest.historicalReleases.filter(relative => (
+          relative !== archived.path
+        ))
+      )
+    );
+    if (inventory.schemaVersion !== INVENTORY_SCHEMA
+      || inventory.releaseId !== expectedBundle.id
+      || inventory.releaseVersion !== expectedBundle.version
+      || !inventoryHistoricalMatches
+      || stableJson(inventory.themes) !== stableJson(loaded.manifest.themes)
+      || stableJson(inventory.categories)
+        !== stableJson(loaded.manifest.categories)
+      || !Array.isArray(inventory.families)) {
+      throw new Error('battle-art active inventory release metadata is stale');
+    }
+    const inventoryById = new Map(inventory.families.map(family => (
+      [family.id, family]
+    )));
+    if (inventoryById.size !== inventory.families.length
+      || inventoryById.size !== rendererById.size
+      || [...rendererById.keys()].some(id => !inventoryById.has(id))) {
+      throw new Error('battle-art active inventory family membership is stale');
+    }
+    for (const [id, renderer] of rendererById) {
+      const entry = currentById.get(id);
+      const source = sourceById.get(id);
+      const activeFamily = inventoryById.get(id);
+      if (!entry) {
+        throw new Error(`${id} active archived family is absent from the current manifest`);
+      }
+      const descriptor = entry.descriptor;
+      const variantFamily = renderer.variant !== undefined;
+      exactKeys(activeFamily, [
+        'id',
+        'theme',
+        'category',
+        ...(variantFamily
+          ? ['familyGroup', 'variantId', 'capabilities']
+          : []),
+        'status',
+        'descriptorPath',
+        'contentVersion',
+        'sourceSha256',
+        'runtimeSha256',
+        'immutableUrl'
+      ], `${id} active inventory family`);
+      const canonicalSourcePath =
+        `ai-image-metadata/battle-art/sources/${renderer.theme}/${id}/`
+        + `v${source.contentVersion}/`
+        + `${source.sha256.slice('sha256:'.length)}.${source.format}`;
+      if (source.path !== canonicalSourcePath
+        || source.contentVersion !== renderer.contentVersion
+        || source.width !== renderer.width
+        || source.height !== renderer.height) {
+        throw new Error(`${id} active archive source record is stale`);
+      }
+      if (activeFamily.id !== renderer.id
+        || activeFamily.theme !== renderer.theme
+        || activeFamily.category !== renderer.category
+        || activeFamily.status !== 'compiled'
+        || activeFamily.descriptorPath
+          !== descriptorPath(renderer.theme, renderer.id)
+        || activeFamily.contentVersion !== renderer.contentVersion
+        || activeFamily.sourceSha256 !== source.sha256
+        || activeFamily.runtimeSha256 !== renderer.sha256
+        || activeFamily.immutableUrl !== renderer.immutableUrl) {
+        throw new Error(`${id} active inventory runtime pins are stale`);
+      }
+      if (descriptor.theme !== activeFamily.theme
+        || descriptor.category !== activeFamily.category
+        || entry.path !== activeFamily.descriptorPath
+        || (variantFamily && (
+          descriptor.familyGroup !== activeFamily.familyGroup
+          || descriptor.variantId !== activeFamily.variantId
+          || stableJson(descriptor.capabilities)
+            !== stableJson(activeFamily.capabilities)
+        ))) {
+        throw new Error(`${id} staged descriptor identity or capabilities drifted`);
+      }
+      const archivedDescriptorProjection = {
+        ...descriptor,
+        status: 'compiled',
+        content: {
+          version: renderer.contentVersion,
+          sourceSha256: source.sha256,
+          runtimeSha256: renderer.sha256,
+          immutableUrl: renderer.immutableUrl
+        }
+      };
+      if (stableJson(runtimeRecord(archivedDescriptorProjection))
+        !== stableJson(renderer)) {
+        throw new Error(`${id} staged descriptor runtime geometry drifted`);
+      }
+      if (descriptor.status === 'compiled') {
+        if (stableJson(archivedSourceForDescriptor(descriptor))
+          !== stableJson(source)) {
+          throw new Error(`${id} compiled descriptor source pins drifted`);
+        }
+        continue;
+      }
+      if (descriptor.content.version !== renderer.contentVersion + 1) {
+        throw new Error(
+          `${id} staged replacement content version must be exactly one after `
+          + 'the active archive'
+        );
+      }
+    }
+    for (const entry of compiledDescriptors) {
+      if (!rendererById.has(entry.descriptor.id)) {
+        throw new Error(
+          `${entry.descriptor.id} compiled family is absent from the active archive`
+        );
+      }
+    }
+    expectedInventory = structuredClone(inventory);
+  }
+  if (stableJson(bundle) !== stableJson(expectedBundle)) {
+    throw new Error('runtime asset bundle is incomplete or stale');
+  }
+
+  const expectedRegistry = buildBundleRegistry(
+    loaded.historicalReleases,
+    expectedBundle
+  );
+  if (stableJson(registry) !== stableJson(expectedRegistry)) {
+    throw new Error('runtime asset bundle registry is incomplete or stale');
+  }
+  if (stableJson(frontendBundle) !== stableJson(expectedBundle)) {
+    throw new Error('frontend runtime asset bundle mirror is incomplete or stale');
+  }
+  if (stableJson(frontendRegistry) !== stableJson(expectedRegistry)) {
+    throw new Error('frontend runtime asset bundle registry mirror is incomplete or stale');
+  }
+  if (stableJson(inventory) !== stableJson(expectedInventory)) {
+    throw new Error('battle-art inventory is incomplete or stale');
+  }
+  return {
+    activeVersion: bundle.version,
+    manifestVersion: loaded.manifest.version,
+    staged: stagedDraftProjection,
+    compiled: compiledDescriptors.length,
+    drafts: draftDescriptors.length,
+    approved: loaded.descriptors.filter(entry => (
+      entry.descriptor.status === 'approved'
+    )).length
+  };
+}
+
 async function archiveCurrentReleaseUnlocked({ root: rootValue } = {}) {
   const loaded = await loadBattleArt(rootValue);
   if (loaded.descriptors.some(entry => entry.descriptor.status !== 'compiled')) {
@@ -5736,6 +7245,10 @@ async function archiveCurrentReleaseUnlocked({ root: rootValue } = {}) {
   if (stableJson(trackedBundle) !== stableJson(bundle)) {
     throw new Error('runtime asset bundle is stale; compile before archiving');
   }
+  await assertRuntimeArtifactState(
+    loaded,
+    await readRuntimeArtifacts(loaded)
+  );
   const releasePath =
     `ai-image-metadata/battle-art/releases/${bundle.id}.v${bundle.version}.json`;
   if (loaded.manifest.historicalReleases.includes(releasePath)) {
@@ -5768,11 +7281,6 @@ async function archiveCurrentReleaseUnlocked({ root: rootValue } = {}) {
     historicalReleases: [...loaded.manifest.historicalReleases, releasePath].sort()
   };
   await atomicWrite(loaded.root, MANIFEST_PATH, stableJson(manifest));
-  await atomicWrite(
-    loaded.root,
-    INVENTORY_PATH,
-    stableJson(buildInventory(manifest, loaded.descriptors))
-  );
   const historicalReleases = [
     ...loaded.historicalReleases,
     { path: releasePath, release }
@@ -5910,11 +7418,59 @@ export async function compileApproved({ root: rootValue, check = false } = {}) {
     const readiness = await loadReadinessPlan(loaded.root);
     assertV2DescriptorsPlanned(loaded.descriptors, readiness.plan);
   }
+  if (!check && loaded.descriptors.some(entry => (
+    entry.descriptor.status === 'draft'
+  ))) {
+    throw new Error(
+      'battle-art compilation refuses a partial release while draft descriptors remain'
+    );
+  }
+  const publicationArtifacts = check
+    ? null
+    : await readRuntimeArtifacts(loaded);
+  if (publicationArtifacts !== null) {
+    const expectedPublicationRegistry = buildBundleRegistry(
+      loaded.historicalReleases,
+      publicationArtifacts.bundle
+    );
+    if (stableJson(publicationArtifacts.registry)
+      !== stableJson(expectedPublicationRegistry)) {
+      throw new Error(
+        'runtime asset bundle registry is incomplete or stale before publication'
+      );
+    }
+    if (stableJson(publicationArtifacts.frontendBundle)
+      !== stableJson(publicationArtifacts.bundle)
+      || stableJson(publicationArtifacts.frontendRegistry)
+        !== stableJson(publicationArtifacts.registry)) {
+      throw new Error(
+        'frontend runtime asset bundle registry mirrors are stale before publication'
+      );
+    }
+    assertInventoryRegistryLedger(
+      publicationArtifacts.inventoryRegistry,
+      publicationArtifacts.registry,
+      loaded.historicalReleases,
+      publicationArtifacts.bundle
+    );
+  }
+  const checkArtifacts = check
+    ? await readRuntimeArtifacts(loaded)
+    : null;
+  const checkRuntimeState = check
+    ? await assertRuntimeArtifactState(loaded, checkArtifacts)
+    : null;
   const profile = loaded.promptProfile;
   const nextEntries = [];
   const outputs = [];
+  const pendingRuntimeWrites = [];
+  const pendingDescriptorWrites = [];
   for (const entry of loaded.descriptors) {
     const descriptor = structuredClone(entry.descriptor);
+    if (checkRuntimeState?.staged && descriptor.status === 'approved') {
+      nextEntries.push(entry);
+      continue;
+    }
     if (descriptor.status === 'approved' || descriptor.status === 'compiled') {
       const buffer = await compileSource(loaded.root, descriptor, profile);
       const sourceBytes = await readFile(resolveTracked(
@@ -5931,11 +7487,14 @@ export async function compileApproved({ root: rootValue, check = false } = {}) {
       });
       const outputHash = sha256(buffer);
       const hashToken = outputHash.slice('sha256:'.length);
-      const outputRelative =
-        `${RUNTIME_ROOT}/${loaded.manifest.releaseId}/v${loaded.manifest.version}/`
-        + `${descriptor.theme}/${descriptor.category}/`
-        + `${descriptor.id}/v${descriptor.content.version}/${hashToken}.webp`;
-      const immutableUrl = `/${outputRelative.slice('frontend/public/'.length)}`;
+      const outputRelative = checkRuntimeState?.staged
+        ? `frontend/public${descriptor.content.immutableUrl}`
+        : `${RUNTIME_ROOT}/${loaded.manifest.releaseId}/v${loaded.manifest.version}/`
+          + `${descriptor.theme}/${descriptor.category}/`
+          + `${descriptor.id}/v${descriptor.content.version}/${hashToken}.webp`;
+      const immutableUrl = checkRuntimeState?.staged
+        ? descriptor.content.immutableUrl
+        : `/${outputRelative.slice('frontend/public/'.length)}`;
       const compiled = {
         ...descriptor,
         status: 'compiled',
@@ -5959,8 +7518,14 @@ export async function compileApproved({ root: rootValue, check = false } = {}) {
           throw new Error(`${descriptor.id} runtime output dimensions or format mismatch`);
         }
       } else {
-        await atomicWrite(loaded.root, outputRelative, buffer);
-        await atomicWrite(loaded.root, entry.path, stableJson(compiled));
+        pendingRuntimeWrites.push({
+          relative: outputRelative,
+          contents: buffer
+        });
+        pendingDescriptorWrites.push({
+          relative: entry.path,
+          contents: stableJson(compiled)
+        });
       }
       nextEntries.push({ path: entry.path, descriptor: compiled });
       outputs.push(outputRelative);
@@ -5971,45 +7536,83 @@ export async function compileApproved({ root: rootValue, check = false } = {}) {
   const bundle = await buildBundle(loaded.manifest, nextEntries);
   const registry = buildBundleRegistry(loaded.historicalReleases, bundle);
   const inventory = buildInventory(loaded.manifest, nextEntries);
+  const inventoryContents = stableJson(inventory);
   if (check) {
-    const [
-      { value: existingBundle },
-      { value: existingRegistry },
-      { value: existingInventory },
-      { value: frontendBundle },
-      { value: frontendRegistry }
-    ] = await Promise.all([
-      readJson(loaded.root, BUNDLE_PATH, 'runtime asset bundle'),
-      readJson(loaded.root, BUNDLE_REGISTRY_PATH, 'runtime asset bundle registry'),
-      readJson(loaded.root, INVENTORY_PATH, 'battle-art inventory'),
-      readJson(loaded.root, FRONTEND_BUNDLE_PATH, 'frontend runtime asset bundle'),
-      readJson(
+    await assertRuntimeArtifactState(loaded, checkArtifacts);
+  } else {
+    const inventoryRegistry = appendInventoryRegistryEntry(
+      publicationArtifacts.inventoryRegistry,
+      bundle,
+      inventoryContents
+    );
+    const existingTargetPin = publicationArtifacts.inventoryRegistry.entries.find(
+      entry => entry.releaseId === bundle.id
+        && entry.releaseVersion === bundle.version
+    );
+    if (existingTargetPin !== undefined) {
+      const byteIdenticalPublication = (
+        stableJson(publicationArtifacts.bundle) === stableJson(bundle)
+        && stableJson(publicationArtifacts.registry) === stableJson(registry)
+        && stableJson(publicationArtifacts.frontendBundle) === stableJson(bundle)
+        && stableJson(publicationArtifacts.frontendRegistry) === stableJson(registry)
+        && publicationArtifacts.inventoryContents === inventoryContents
+        && stableJson(publicationArtifacts.inventoryRegistry)
+          === stableJson(inventoryRegistry)
+      );
+      if (!byteIdenticalPublication) {
+        throw new Error(
+          `battle-art publication retry for ${bundle.id}:v${bundle.version} `
+          + 'is not byte-identical'
+        );
+      }
+      for (const pending of pendingRuntimeWrites) {
+        const current = await readFile(resolveTracked(
+          loaded.root,
+          pending.relative,
+          'runtime publication retry output'
+        ));
+        if (!current.equals(pending.contents)) {
+          throw new Error(
+            `battle-art publication retry runtime ${pending.relative} `
+            + 'is not byte-identical'
+          );
+        }
+      }
+      for (const pending of pendingDescriptorWrites) {
+        const current = await readFile(resolveTracked(
+          loaded.root,
+          pending.relative,
+          'descriptor publication retry output'
+        ), 'utf8');
+        if (current !== pending.contents) {
+          throw new Error(
+            `battle-art publication retry descriptor ${pending.relative} `
+            + 'is not byte-identical'
+          );
+        }
+      }
+    } else {
+      for (const pending of pendingRuntimeWrites) {
+        await atomicWrite(loaded.root, pending.relative, pending.contents);
+      }
+      for (const pending of pendingDescriptorWrites) {
+        await atomicWrite(loaded.root, pending.relative, pending.contents);
+      }
+      await atomicWrite(loaded.root, BUNDLE_PATH, stableJson(bundle));
+      await atomicWrite(loaded.root, BUNDLE_REGISTRY_PATH, stableJson(registry));
+      await atomicWrite(loaded.root, FRONTEND_BUNDLE_PATH, stableJson(bundle));
+      await atomicWrite(
         loaded.root,
         FRONTEND_BUNDLE_REGISTRY_PATH,
-        'frontend runtime asset bundle registry'
-      )
-    ]);
-    if (stableJson(existingBundle) !== stableJson(bundle)) throw new Error('runtime asset bundle is stale');
-    if (stableJson(existingRegistry) !== stableJson(registry)) {
-      throw new Error('runtime asset bundle registry is stale');
+        stableJson(registry)
+      );
+      await atomicWrite(loaded.root, INVENTORY_PATH, inventoryContents);
+      await atomicWrite(
+        loaded.root,
+        INVENTORY_REGISTRY_PATH,
+        stableJson(inventoryRegistry)
+      );
     }
-    if (stableJson(frontendBundle) !== stableJson(bundle)) {
-      throw new Error('frontend runtime asset bundle mirror is stale');
-    }
-    if (stableJson(frontendRegistry) !== stableJson(registry)) {
-      throw new Error('frontend runtime asset bundle registry mirror is stale');
-    }
-    if (stableJson(existingInventory) !== stableJson(inventory)) throw new Error('battle-art inventory is stale');
-  } else {
-    await atomicWrite(loaded.root, BUNDLE_PATH, stableJson(bundle));
-    await atomicWrite(loaded.root, BUNDLE_REGISTRY_PATH, stableJson(registry));
-    await atomicWrite(loaded.root, FRONTEND_BUNDLE_PATH, stableJson(bundle));
-    await atomicWrite(
-      loaded.root,
-      FRONTEND_BUNDLE_REGISTRY_PATH,
-      stableJson(registry)
-    );
-    await atomicWrite(loaded.root, INVENTORY_PATH, stableJson(inventory));
   }
   return {
     ok: true,
@@ -6020,7 +7623,8 @@ export async function compileApproved({ root: rootValue, check = false } = {}) {
     bundleRegistry: BUNDLE_REGISTRY_PATH,
     frontendBundle: FRONTEND_BUNDLE_PATH,
     frontendBundleRegistry: FRONTEND_BUNDLE_REGISTRY_PATH,
-    inventory: INVENTORY_PATH
+    inventory: INVENTORY_PATH,
+    inventoryRegistry: INVENTORY_REGISTRY_PATH
   };
 }
 
@@ -6035,13 +7639,21 @@ export async function writeInventory({
   surfaceVariant = null
 } = {}) {
   const loaded = await loadBattleArt(rootValue);
-  const inventory = buildInventory(loaded.manifest, loaded.descriptors);
   const hasSelection = theme !== null
     || families.length > 0
     || category !== null
     || ecologyProfile !== null
     || tier !== null
     || surfaceVariant !== null;
+  if (!check && !hasSelection && loaded.descriptors.some(entry => (
+    entry.descriptor.status !== 'compiled'
+  ))) {
+    throw new Error(
+      'battle-art inventory write refuses to replace the active release '
+      + 'while staged descriptors remain'
+    );
+  }
+  const inventory = buildInventory(loaded.manifest, loaded.descriptors);
   const selected = hasSelection
     ? selectFamilies(loaded, {
         theme,
@@ -6053,10 +7665,20 @@ export async function writeInventory({
       })
     : loaded.descriptors;
   if (check) {
-    const { value: current } = await readJson(loaded.root, INVENTORY_PATH, 'battle-art inventory');
-    if (stableJson(current) !== stableJson(inventory)) throw new Error('battle-art inventory is stale');
+    await assertRuntimeArtifactState(
+      loaded,
+      await readRuntimeArtifacts(loaded)
+    );
   } else if (!hasSelection) {
-    await atomicWrite(loaded.root, INVENTORY_PATH, stableJson(inventory));
+    const artifacts = await readRuntimeArtifacts(loaded);
+    await assertRuntimeArtifactState(loaded, artifacts);
+    const inventoryContents = stableJson(inventory);
+    if (inventoryContents !== artifacts.inventoryContents) {
+      throw new Error(
+        'battle-art inventory write refuses to replace a pinned active inventory'
+      );
+    }
+    await atomicWrite(loaded.root, INVENTORY_PATH, inventoryContents);
   }
   return {
     ok: true,
@@ -6068,6 +7690,136 @@ export async function writeInventory({
       ? buildInventory(loaded.manifest, selected).families
       : undefined
   };
+}
+
+const FAILED_GENERATED_ATTEMPT_SCHEMA =
+  'battle-art-generated-failed-attempt-v1';
+
+async function auditTrackedGeneratedFailures(loaded) {
+  const generatedRoot = resolveTracked(
+    loaded.root,
+    GENERATED_ARTIFACT_ROOT,
+    'battle-art generated artifact root'
+  );
+  let rootDetails;
+  try {
+    rootDetails = await lstat(generatedRoot);
+  } catch (error) {
+    if (error.code === 'ENOENT') return { records: 0 };
+    throw error;
+  }
+  if (rootDetails.isSymbolicLink() || !rootDetails.isDirectory()) {
+    throw new Error('battle-art generated artifact root must be a directory');
+  }
+  if (await realpath(generatedRoot) !== generatedRoot) {
+    throw new Error('battle-art generated artifact root is not canonical');
+  }
+
+  const descriptorByConsumer = new Map(loaded.descriptors.map(entry => [
+    `${entry.descriptor.theme}/${entry.descriptor.id}`,
+    entry.descriptor
+  ]));
+  const genericPaths = [];
+  const nonRouteArtifacts = new Set();
+  async function visit(directory) {
+    const entries = (await readdir(directory, { withFileTypes: true }))
+      .sort((left, right) => left.name.localeCompare(right.name));
+    for (const entry of entries) {
+      const absolute = path.join(directory, entry.name);
+      const details = await lstat(absolute);
+      if (details.isSymbolicLink()) {
+        throw new Error(
+          `battle-art generated artifact tree contains symlink ${absolute}`
+        );
+      }
+      if (entry.isDirectory()) {
+        await visit(absolute);
+        continue;
+      }
+      if (!entry.isFile()) {
+        throw new Error(
+          `battle-art generated artifact tree contains unsupported entry ${absolute}`
+        );
+      }
+      const relative = path.relative(loaded.root, absolute)
+        .split(path.sep)
+        .join('/');
+      const location = relative.match(
+        /^ai-image-metadata\/battle-art\/generated-artifacts\/([^/]+)\/([^/]+)\//
+      );
+      const locatedDescriptor = location === null
+        ? null
+        : descriptorByConsumer.get(`${location[1]}/${location[2]}`) ?? null;
+      const locatedNonRoute = locatedDescriptor !== null
+        && locatedDescriptor.category !== 'route-transition';
+      if (!entry.name.endsWith('.json')) {
+        if (!locatedNonRoute) continue;
+        if (!new RegExp(
+          `^${GENERATED_ARTIFACT_ROOT.replaceAll('/', '\\/')}/`
+          + `${locatedDescriptor.theme}/${locatedDescriptor.id}/`
+          + '[0-9a-f]{64}\\.(?:png|webp)$'
+        ).test(relative)) {
+          throw new Error(
+            `battle-art generated artifact is misplaced or unsupported: ${relative}`
+          );
+        }
+        nonRouteArtifacts.add(relative);
+        continue;
+      }
+
+      let record;
+      try {
+        record = JSON.parse(await readFile(absolute, 'utf8'));
+      } catch (error) {
+        if (locatedDescriptor?.category === 'route-transition') continue;
+        throw new Error(
+          `battle-art generated failure record ${relative} is invalid JSON: `
+          + error.message
+        );
+      }
+      const appearsGeneric = locatedNonRoute
+        || record?.schemaVersion === FAILED_GENERATED_ATTEMPT_SCHEMA
+        || Object.hasOwn(record ?? {}, 'artifact')
+        || Object.hasOwn(record ?? {}, 'failureStage');
+      if (appearsGeneric) genericPaths.push(relative);
+    }
+  }
+  await visit(generatedRoot);
+
+  if (genericPaths.length > 0 && failedGeneratedAttemptAuditor === null) {
+    // lifecycle.mjs cannot statically import generate.mjs because generation
+    // already imports lifecycle. The bounded registration keeps normal audit
+    // self-contained without creating a circular static dependency.
+    await import('./generate.mjs');
+  }
+  if (genericPaths.length > 0 && failedGeneratedAttemptAuditor === null) {
+    throw new Error('battle-art failed generated attempt auditor is unavailable');
+  }
+
+  const referencedArtifacts = new Set();
+  for (const relativePath of genericPaths.sort()) {
+    const audited = await failedGeneratedAttemptAuditor({
+      root: loaded.root,
+      relativePath
+    });
+    const descriptor = descriptorByConsumer.get(
+      `${audited.record.theme}/${audited.record.familyId}`
+    );
+    if (descriptor === undefined || descriptor.category === 'route-transition') {
+      throw new Error(
+        `failed generated attempt ${relativePath} has no canonical non-route family`
+      );
+    }
+    referencedArtifacts.add(audited.record.artifact.path);
+  }
+  for (const artifactPath of nonRouteArtifacts) {
+    if (!referencedArtifacts.has(artifactPath)) {
+      throw new Error(
+        `battle-art generated artifact ${artifactPath} has no failed-attempt record`
+      );
+    }
+  }
+  return { records: genericPaths.length };
 }
 
 export async function auditBattleArt({
@@ -6155,41 +7907,11 @@ export async function auditBattleArt({
       });
     }
   }
-  const [
-    { value: bundle },
-    { value: registry },
-    { value: inventory },
-    { value: frontendBundle },
-    { value: frontendRegistry }
-  ] = await Promise.all([
-    readJson(loaded.root, BUNDLE_PATH, 'runtime asset bundle'),
-    readJson(loaded.root, BUNDLE_REGISTRY_PATH, 'runtime asset bundle registry'),
-    readJson(loaded.root, INVENTORY_PATH, 'battle-art inventory'),
-    readJson(loaded.root, FRONTEND_BUNDLE_PATH, 'frontend runtime asset bundle'),
-    readJson(
-      loaded.root,
-      FRONTEND_BUNDLE_REGISTRY_PATH,
-      'frontend runtime asset bundle registry'
-    )
-  ]);
-  const expectedBundle = await buildBundle(loaded.manifest, loaded.descriptors);
-  const expectedRegistry =
-    buildBundleRegistry(loaded.historicalReleases, expectedBundle);
-  if (stableJson(bundle) !== stableJson(expectedBundle)) {
-    throw new Error('runtime asset bundle is incomplete or stale');
-  }
-  if (stableJson(registry) !== stableJson(expectedRegistry)) {
-    throw new Error('runtime asset bundle registry is incomplete or stale');
-  }
-  if (stableJson(frontendBundle) !== stableJson(expectedBundle)) {
-    throw new Error('frontend runtime asset bundle mirror is incomplete or stale');
-  }
-  if (stableJson(frontendRegistry) !== stableJson(expectedRegistry)) {
-    throw new Error('frontend runtime asset bundle registry mirror is incomplete or stale');
-  }
-  if (stableJson(inventory) !== stableJson(buildInventory(loaded.manifest, loaded.descriptors))) {
-    throw new Error('battle-art inventory is incomplete or stale');
-  }
+  const generatedFailures = await auditTrackedGeneratedFailures(loaded);
+  await assertRuntimeArtifactState(
+    loaded,
+    await readRuntimeArtifacts(loaded)
+  );
   return {
     ok: true,
     themes: loaded.manifest.themes.length,
@@ -6197,6 +7919,7 @@ export async function auditBattleArt({
     families: loaded.descriptors.length,
     approved: loaded.descriptors.filter(entry => entry.descriptor.status !== 'draft').length,
     compiled: loaded.descriptors.filter(entry => entry.descriptor.status === 'compiled').length,
+    generatedFailures: generatedFailures.records,
     ...(matrix === null
       ? {}
       : { readiness: {
@@ -6495,6 +8218,11 @@ export async function auditBattleArtReviews({
     }
     const currentVersion =
       record.descriptor.contentVersion === descriptor.content.version;
+    if (record.descriptor.contentVersion > descriptor.content.version) {
+      throw new Error(
+        `battle-art review ${relative} descriptor version is newer than the current family`
+      );
+    }
     const expectedDescriptorPin = sha256(Buffer.from(stableJson(
       draftDescriptorProjection(descriptor)
     )));
@@ -6606,7 +8334,15 @@ export async function auditBattleArtReviews({
         + 'archived reviewed source'
       );
     }
-    if (currentVersion && !matchesCurrentInputs) {
+    // A rejection is historical evidence about one exact candidate, not an
+    // authorization for the current draft. Keep that content-addressed record
+    // auditable when an operator refines the descriptor and generates a new
+    // candidate, including after that replacement is approved. Approved
+    // evidence remains bound to current inputs or an exact archived source
+    // below.
+    const historicalRejection =
+      record.decision === 'rejected' && currentVersion;
+    if (currentVersion && !matchesCurrentInputs && !historicalRejection) {
       if (record.schemaVersion !== LEGACY_REVIEW_SCHEMA) {
         throw new Error(
           `battle-art review ${relative} does not match its reviewed descriptor inputs`
@@ -6699,7 +8435,9 @@ export async function auditBattleArtReviews({
         );
         if (candidate?.image?.sha256 === record.candidate.image.sha256) {
           currentCandidate = await loadReviewCandidate(loaded, entry, {
-            reviewFullHash: record.fullHash
+            reviewFullHash: record.fullHash,
+            allowHistoricalRejectedEffectivePrompt:
+              record.decision === 'rejected'
           });
         }
       } catch (error) {

@@ -5,6 +5,7 @@ import {
   readFile,
   rm,
   symlink,
+  unlink,
   writeFile
 } from 'node:fs/promises';
 import os from 'node:os';
@@ -132,6 +133,48 @@ async function createCandidate(root, variant = 'candidate-01') {
     `${JSON.stringify(result, null, 2)}\n`
   );
   return { imagePath, result };
+}
+
+async function createRejection(root, result, {
+  reviewer = 'content-reviewer',
+  reason = 'The candidate does not preserve the required encounter topology.'
+} = {}) {
+  const directory =
+    `ai-image-metadata/battle-maps/candidates/${THEME}/${TEMPLATE}/${result.id}`;
+  const resultPath = `${directory}/result.json`;
+  const resultBytes = await readFile(path.join(root, resultPath));
+  const emptySha = sha256Bytes(Buffer.alloc(0));
+  const nonemptySha = sha256Bytes(Buffer.from('x'));
+  const record = {
+    schemaVersion: 'battle-map-source-image-candidate-rejection-v1',
+    theme: THEME,
+    template: TEMPLATE,
+    candidate: result.id,
+    decision: 'rejected',
+    reviewer,
+    reason,
+    evidence: {
+      result: {
+        path: resultPath,
+        bytes: resultBytes.length,
+        sha256: sha256Bytes(resultBytes)
+      },
+      image: result.image,
+      promptProfile: result.promptProfile,
+      prompt: { path: `${directory}/prompt.txt`, bytes: 1, sha256: nonemptySha },
+      workerLogs: {
+        stdout: { path: `${directory}/worker.jsonl`, bytes: 1, sha256: nonemptySha },
+        stderr: { path: `${directory}/worker.stderr.log`, bytes: 0, sha256: emptySha },
+        lastMessage: null
+      },
+      imagegenInvocationCount: 1
+    }
+  };
+  const rejectionPath =
+    `battle-maps/source-image-rejections/${THEME}/${TEMPLATE}/${result.id}.json`;
+  await mkdir(path.dirname(path.join(root, rejectionPath)), { recursive: true });
+  await writeFile(path.join(root, rejectionPath), `${JSON.stringify(record, null, 2)}\n`);
+  return { record, rejectionPath };
 }
 
 function previewOptions(root, overrides = {}) {
@@ -360,6 +403,64 @@ test('synthetic candidate pins are verified and preview HTML is byte-determinist
   assert.match(outputs[0].html, /Topology/);
   assert.match(outputs[0].html, /Forbidden patterns/);
   assert.match(outputs[0].html, /sha256:[0-9a-f]{64}/);
+});
+
+test('tracked rejection permits its exact historical prompt pin and is safely labelled', async t => {
+  const root = await createFixture(t);
+  const { result } = await createCandidate(root);
+  result.promptProfile = {
+    id: 'source-template-image-historical-v1',
+    path: 'ai-image-metadata/battle-maps/prompts/source-template-image-historical-v1.json',
+    sha256: `sha256:${'1'.repeat(64)}`
+  };
+  const resultPath = path.join(
+    root,
+    `ai-image-metadata/battle-maps/candidates/${THEME}/${TEMPLATE}/candidate-01/result.json`
+  );
+  await writeFile(resultPath, `${JSON.stringify(result, null, 2)}\n`);
+  const { record, rejectionPath } = await createRejection(root, result, {
+    reason: 'Reject <script>alert("unsafe")</script> while keeping the historical pin.'
+  });
+
+  const preview = await previewTemplate(previewOptions(root));
+  const html = await readFile(path.join(root, DEFAULT_OUTPUT), 'utf8');
+  assert.equal(preview.candidates[0].status, 'rejected');
+  assert.equal(preview.candidates[0].reviewStatus, 'rejected');
+  assert.equal(preview.candidates[0].rejection.reviewer, 'content-reviewer');
+  assert.equal(preview.candidates[0].promptProfile.id, result.promptProfile.id);
+  assert.equal(preview.candidates[0].image.verified, true);
+  assert.match(html, /rejected · verified candidate pin/);
+  assert.match(html, /Rejected by content-reviewer/);
+  assert.doesNotMatch(html, /<script>/);
+  assert.match(html, /&lt;script&gt;alert\(&quot;unsafe&quot;\)&lt;\/script&gt;/);
+
+  await unlink(path.join(root, DEFAULT_OUTPUT));
+  record.evidence.result.sha256 = `sha256:${'2'.repeat(64)}`;
+  await writeFile(
+    path.join(root, rejectionPath),
+    `${JSON.stringify(record, null, 2)}\n`
+  );
+  await assert.rejects(
+    previewTemplate(previewOptions(root)),
+    /result does not match rejection pin/
+  );
+});
+
+test('tracked rejection history renders without ignored candidate evidence', async t => {
+  const root = await createFixture(t);
+  const { result } = await createCandidate(root);
+  await createRejection(root, result);
+  await unlink(path.join(root, result.image.path));
+
+  const preview = await previewTemplate(previewOptions(root));
+  const html = await readFile(path.join(root, DEFAULT_OUTPUT), 'utf8');
+  assert.equal(preview.candidates.length, 1);
+  assert.equal(preview.candidates[0].status, 'rejected');
+  assert.equal(preview.candidates[0].image.verified, false);
+  assert.match(html, /recorded rejection pin/);
+  assert.match(html, /Exact local candidate evidence is unavailable in this checkout/);
+  assert.doesNotMatch(html, /rejected · verified pin/);
+  assert.doesNotMatch(html, /<img[^>]+candidate-01 generated candidate/);
 });
 
 test('preview rejects a non-directory candidate lock boundary', async t => {

@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "battle-map-blueprint-approval-v3",
+  "id": "cave-template-01-b",
+  "theme": "cave",
+  "templateId": "cave-template-01",
+  "decision": "approved",
+  "reviewer": "codex-cave-v3-mechanical-reviewer",
+  "blueprintPath": "ai-image-metadata/battle-maps/blueprints/cave/cave-template-01/cave-template-01-b.json",
+  "blueprintFileSha256": "sha256:34a0c27e2f010ef64eee899cb0aaf190c630159f8c81ff6b4239954340ac0de8",
+  "blueprintFullHash": "sha256:6d77e81c518fccb815b60ba43b624bd780161ec2eb6a8dce5064c69931d12b37",
+  "sourceImageSha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe",
+  "promptProfile": {
+    "id": "map-blueprint-v3",
+    "path": "ai-image-metadata/battle-maps/prompts/map-blueprint-v3.json",
+    "sha256": "sha256:23e6e1c07490b84211c7fc67e42f396e150a315a0ee0ec92aaf524a147eca160"
+  },
+  "reason": "The three primary routes remain internally vertex-disjoint with distinct formation entries. The enlarged seven-cell western flowstone terrace creates the clearest elevated flank space while preserving independent western, central, and eastern approaches, correct mixed stair/ramp access to the northern grotto, all five exact cave regions, and exact 13-family cave asset closure. Candidate, report, and mechanical preview pins agree.",
+  "mechanicalReview": {
+    "schemaVersion": "battle-map-blueprint-mechanical-review-v1",
+    "reportPath": "ai-image-metadata/battle-maps/review/cave/cave-template-01/cave-template-01-b/previews/6d77e81c518fccb815b60ba43b624bd780161ec2eb6a8dce5064c69931d12b37/mechanical-report.json",
+    "reportFileSha256": "sha256:43893347de803be1f15605bddc7b5121301712b750f88884c21cc939b1c731cb",
+    "previewPath": "ai-image-metadata/battle-maps/review/cave/cave-template-01/cave-template-01-b/previews/6d77e81c518fccb815b60ba43b624bd780161ec2eb6a8dce5064c69931d12b37/mechanical-preview.svg",
+    "previewFileSha256": "sha256:10731b451e5ae15aec9c8cbe9c8526902ad94128ba6aeff9f8bf86060bd46c32"
+  },
+  "fullHash": "sha256:451dbfee15836caf284d431acb6036359a5b48f3ae4c2d8e7dc9210314efa689"
+}

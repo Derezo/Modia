@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v2",
+  "theme": "cave",
+  "familyId": "cave-limestone-layered-face-e",
+  "decision": "approved",
+  "reviewer": "codex-independent-reviewer",
+  "reason": "Approve this exact replacement: it forms one continuous grounded layered-limestone face along the declared E seam, with complete endpoint and all-third contact, no forbidden grounded orientation, and a single connected alpha silhouette with no detached fragments. Its low broad rock and calcite relief remains readable as a height-1 exposed face at runtime scale and matches the pinned cave reference vocabulary without concrete rendering defects. Normalization is current; the single component has 3,184 pixels with bounds x=128..255 and y=182..255, endpoint distances 2.24 and 2 pixels, and no seam gap over 6 pixels.",
+  "reviewedAt": "2026-08-11T12:15:44.949Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/cave/cave-limestone-layered-face-e.json",
+    "sha256": "sha256:d482567b0ed9ac9c71bfa4299ccdca60e3bb2de0514975a43189815eae95d3da",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-layered-face-e/result.json",
+      "bytes": 2670,
+      "sha256": "sha256:7d30a7d5f2795dc347a160f94a52695c69c2dc3bc8fcdad1d94f9046d1723e86"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-layered-face-e/candidate.png",
+      "bytes": 12247,
+      "width": 256,
+      "height": 256,
+      "format": "png",
+      "sha256": "sha256:dc82e244419e60e6758f4672137f9088e6d49e101584f701d61fc3dd2430e8c3"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "cave-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/cave/cave-template-01/reference.png",
+        "sha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe"
+      }
+    ],
+    "styleReferenceMode": "attachments",
+    "styleReferenceProvenance": [
+      {
+        "id": "cave-source-template-01",
+        "sha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe",
+        "stagedBasename": "style-reference-01.png"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "imageArguments": [
+        "style-reference-01.png"
+      ],
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-layered-face-e/prompt.txt",
+        "bytes": 12490,
+        "sha256": "sha256:5f5f8c2e538963e3ee3000aa53e9eff6c82a388d8d5c4bfe29dce4ad24c4e1cf"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-layered-face-e/worker.jsonl",
+        "bytes": 37550,
+        "sha256": "sha256:d09cc995d238e09ed33b1b79ac9fe94b003e41a6c4518167de851ca8f7ef70eb"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-layered-face-e/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-layered-face-e/last-message.txt",
+        "bytes": 349,
+        "sha256": "sha256:b318eb6ca67684731778bb34c761cbd5aaab800b610b5c9859f3980a343f2702"
+      }
+    }
+  },
+  "fullHash": "sha256:b9d72d1f81e075cc1ddc59caba537f57d33f0737d3dab14f8082e0cee05ead4e"
+}

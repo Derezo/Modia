@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v2",
+  "theme": "cave",
+  "familyId": "cave-limestone-broken-column",
+  "decision": "approved",
+  "reviewer": "codex-independent-reviewer",
+  "reason": "The exact pinned candidate clearly reads as a naturally fractured limestone/calcite column, with layered break planes, flowstone grooves, mineral crystals, and grounded pale rubble matching the cave reference without architectural ornament. Its compact silhouette remains distinct at runtime downscale and appropriately communicates a one-cell solid blocker. The transparent cutout is clean, border-clear, correctly scaled, and free of backdrop, frame, or obvious generation defects.",
+  "reviewedAt": "2026-08-11T10:22:19.727Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/cave/cave-limestone-broken-column.json",
+    "sha256": "sha256:d15ab1fe48bfe421b2af37f78cba5750e048d70b836bbe84612294e2d4f66361",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-broken-column/result.json",
+      "bytes": 2660,
+      "sha256": "sha256:926e8082cc2e450b3dd8dca6d5e8a434ba926519d395803284b9aec1c38d5998"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-broken-column/candidate.png",
+      "bytes": 42071,
+      "width": 192,
+      "height": 256,
+      "format": "png",
+      "sha256": "sha256:c41625b471e17d7a55217e3c6e31b7567f3457d3e32bdf221e15e6ed32e71473"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "cave-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/cave/cave-template-01/reference.png",
+        "sha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe"
+      }
+    ],
+    "styleReferenceMode": "attachments",
+    "styleReferenceProvenance": [
+      {
+        "id": "cave-source-template-01",
+        "sha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe",
+        "stagedBasename": "style-reference-01.png"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "imageArguments": [
+        "style-reference-01.png"
+      ],
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-broken-column/prompt.txt",
+        "bytes": 10505,
+        "sha256": "sha256:80f0213ad09a334a5f86631e431d327318821f747b328ca3c499e332a7686524"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-broken-column/worker.jsonl",
+        "bytes": 26779,
+        "sha256": "sha256:4205013b423353ea9295f4fe949dab2fdc751ba1fbc2f27713316bc076a69b0b"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-broken-column/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-broken-column/last-message.txt",
+        "bytes": 415,
+        "sha256": "sha256:ae2af8676341457b97274aaa8aaa463d967961344c9caf9dae61e27585de7134"
+      }
+    }
+  },
+  "fullHash": "sha256:002f92902f7d376035c4ed725a859fda915f046cae3cc9d2ddf9ce385687771d"
+}

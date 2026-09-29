@@ -149,10 +149,12 @@ npm run tiles:check                      # Compiler tests plus strict live valid
 ### Battle Map V3 Regional Art
 
 ```bash
+npm run battle-art:preflight             # Codex CLI/version/login check; no generation
 npm run battle-art:matrix                # Reviewed biome/ecology/tier readiness
 npm run battle-art:scaffold -- --theme forest --ecology-profile forest-heartlands-woodland --tier 1 --category surface
-npm run battle-art:generate -- --theme forest --ecology-profile forest-heartlands-woodland --tier 1 --resume --keep-going
+npm run battle-art:generate -- --theme forest --family <exact-family-id> --concurrency 1
 npm run battle-art:generate -- --theme forest --family <failed-route-id> --recover --timeout <original-seconds>
+npm run battle-art:revalidate-failure -- --theme <theme> --family <route-id> --failure <canonical-failure-record.json>
 npm run battle-art:preview -- --theme forest --ecology-profile forest-heartlands-woodland --tier 1
 npm run battle-art:review -- --theme forest --family <id> --reviewer <name> --decision rejected --reason "<specific issue>"
 npm run battle-art:approve -- --theme forest --family <id> --reviewer <name> --decision approved --reason "<specific acceptance rationale>"
@@ -165,6 +167,47 @@ Candidate generation is available only through these npm commands. See
 [BATTLE_MAP_V3_ART_LIFECYCLE.md](BATTLE_MAP_V3_ART_LIFECYCLE.md) for regional
 species/geology direction, topology and slope contracts, manual review, and
 catalog activation.
+
+Live generation accepts exactly one explicit family, concurrency `1`, and no
+`--keep-going`. Codex can run the preview and approval commands, but final
+acceptance must name a reviewer who inspected the exact candidate and is
+distinct from the generation principal.
+
+The worker timeout defaults to 900 seconds; use `--timeout <seconds>` only for
+an explicit bounded override (maximum 1,800 seconds). A timeout never retries
+and never publishes candidate image or metadata.
+
+`battle-art:preflight` checks CLI availability and login only; it deliberately
+does not spend an Imagegen call. A live zero-artifact result publishes no
+candidate and is not recoverable unless a route artifact was actually copied.
+Timeout and nonzero-exit failures retain the effective prompt and capped
+stdout/stderr evidence for inspection. Make any retry explicit, and stop for
+tooling investigation if the zero-artifact result repeats. Draft approval and
+resume also require the saved effective prompt to match the current composer
+exactly; stale pre-change candidate evidence cannot be promoted.
+
+### Battle Map V3 Content Release
+
+```bash
+# Compile and validate one reviewed template.
+npm run battle-maps:compile -- --theme <theme> --template <template> --all-approved
+npm run battle-maps:validate -- --theme <theme> --template <template> --all-approved
+
+# Render and inspect each final map before recording visual approval.
+npm run battle-maps:screenshot -- --map battle-maps/compiled/<theme>/<map>.v<version>.json --output-dir ai-image-metadata/battle-maps/review/<theme>/<template>/<map>
+npm run battle-maps:approve -- --theme <theme> --template <template> --map <map> --screenshot <local-review-png> --reviewer <reviewer-id> --reason "<specific visual rationale>"
+
+# Check, create, and activate an immutable cumulative catalog release.
+npm run battle-maps:catalog -- --release <release-id> --check
+npm run battle-maps:catalog -- --release <release-id>
+npm run battle-maps:catalog -- --release <release-id> --activate
+```
+
+`battle-maps:catalog -- --check` is the non-writing preflight for an
+incremental release. Run `battle-maps:coverage -- --release <release-id>` only
+when claiming the complete 16-theme, 144-map corpus; it is not the routine
+pilot-release check. Activation changes the tracked catalog pin, so deployment
+and rollback use normal code/content releases rather than environment flags.
 
 ### AI Image Generation
 

@@ -1,0 +1,288 @@
+{
+  "schemaVersion": "battle-map-source-template-v1",
+  "id": "cave-template-01",
+  "theme": "cave",
+  "status": "approved",
+  "tierEligibility": [
+    "tier-1",
+    "tier-2",
+    "tier-3",
+    "tier-4",
+    "tier-5"
+  ],
+  "supportedModes": [
+    "pve"
+  ],
+  "mapProfile": {
+    "width": 32,
+    "height": 32,
+    "orientation": "isometric-diamond",
+    "cameraFraming": "Keep both formation caverns, the central limestone sink, the western and eastern shelves, and all three reconnecting passages readable in the production isometric camera.",
+    "playerCapacity": {
+      "minimum": 1,
+      "maximum": 5
+    },
+    "candidatePoolSize": 24,
+    "maxAssignableOpponents": 7
+  },
+  "sourceImage": {
+    "path": "ai-image-metadata/battle-maps/sources/cave/cave-template-01/reference.png",
+    "bytes": 2963470,
+    "width": 1254,
+    "height": 1254,
+    "format": "png",
+    "sha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe"
+  },
+  "styleAuthority": {
+    "kind": "generated-composition-reference",
+    "usage": "Use the image for limestone material, cavern scale, light hierarchy, and spatial motifs; derive gameplay topology from this semantic contract.",
+    "literalTraceAllowed": false
+  },
+  "composition": {
+    "summary": "An irregular limestone cavern organized around a shallow central sink, a broad southern formation chamber, a smaller northern grotto, and western and eastern shelves joined by three reconnecting natural passages.",
+    "visualHierarchy": [
+      "A broad southern limestone chamber anchors the scene and provides the principal open formation ground without touching a flat map edge.",
+      "A smaller northern crystal-lit grotto provides a distinct opposing formation ground.",
+      "A shallow central sink with broken limestone columns divides sightlines without becoming an impassable moat.",
+      "Western flowstone terraces and an eastern stalagmite shelf frame two outer approaches that reconnect beyond the sink.",
+      "Layered cavern walls, stalagmites, rubble, and shadowed fissures own the irregular outer boundary."
+    ],
+    "focalAreas": [
+      "broad southern limestone formation chamber",
+      "smaller northern crystal-lit grotto",
+      "shallow central sink and broken limestone columns",
+      "western flowstone terrace",
+      "eastern stalagmite shelf"
+    ],
+    "negativeSpace": [
+      "Keep irregular open floor inside both formation caverns for readable tactical groupings.",
+      "Preserve broad navigable gaps around both sides of the central sink and broken columns.",
+      "Keep passage mouths and elevation transitions visually separate from solid cavern walls.",
+      "Avoid large featureless black voids that obscure the playable silhouette."
+    ],
+    "density": [
+      "Open pale limestone floor in the southern chamber.",
+      "Moderate crystal, calcite, and rubble detail around the northern grotto and route junctions.",
+      "Dense stalagmites, broken columns, flowstone, and dark rock along the irregular boundary.",
+      "Sparse floor accents inside movement lanes and formation clearings."
+    ]
+  },
+  "topologyIntent": {
+    "coordinateAuthority": "semantic-only",
+    "areas": [
+      {
+        "id": "southern-formation-cavern",
+        "description": "A broad irregular limestone chamber with maneuvering room and three distinct exits.",
+        "required": true
+      },
+      {
+        "id": "northern-crystal-grotto",
+        "description": "A smaller elevated grotto with local cover and three distinct entries.",
+        "required": true
+      },
+      {
+        "id": "central-limestone-sink",
+        "description": "A shallow crossable depression with broken columns and multiple passages around its edges.",
+        "required": true
+      },
+      {
+        "id": "western-flowstone-terrace",
+        "description": "A broad connected limestone shelf reached by natural ramps and a short carved stair.",
+        "required": true
+      },
+      {
+        "id": "eastern-stalagmite-shelf",
+        "description": "A lower curving shelf whose stalagmite clusters shape cover without closing the route.",
+        "required": true
+      }
+    ],
+    "relationships": [
+      {
+        "from": "southern-formation-cavern",
+        "to": "central-limestone-sink",
+        "kind": "two broad curved descents around broken limestone columns",
+        "required": true
+      },
+      {
+        "from": "central-limestone-sink",
+        "to": "northern-crystal-grotto",
+        "kind": "reconnecting natural ramps and a short carved stair",
+        "required": true
+      },
+      {
+        "from": "southern-formation-cavern",
+        "to": "western-flowstone-terrace",
+        "kind": "wide ascending passage with a natural slope and a readable stair branch",
+        "required": true
+      },
+      {
+        "from": "western-flowstone-terrace",
+        "to": "northern-crystal-grotto",
+        "kind": "curved upper passage reconnecting beyond the central sink",
+        "required": true
+      },
+      {
+        "from": "southern-formation-cavern",
+        "to": "eastern-stalagmite-shelf",
+        "kind": "broad low passage bending between sparse stalagmite clusters",
+        "required": true
+      },
+      {
+        "from": "eastern-stalagmite-shelf",
+        "to": "northern-crystal-grotto",
+        "kind": "reconnecting eastern ramp beyond the central sink",
+        "required": true
+      },
+      {
+        "from": "central-limestone-sink",
+        "to": "western-flowstone-terrace",
+        "kind": "secondary rock-cut branch",
+        "required": true
+      },
+      {
+        "from": "central-limestone-sink",
+        "to": "eastern-stalagmite-shelf",
+        "kind": "secondary rubble-edged branch",
+        "required": true
+      }
+    ]
+  },
+  "heightIntent": {
+    "levelCount": {
+      "minimum": 3,
+      "maximum": 4
+    },
+    "landforms": [
+      "broad southern cavern floor",
+      "shallow central limestone sink",
+      "raised western flowstone terrace",
+      "lower eastern stalagmite shelf",
+      "gently raised northern crystal grotto"
+    ],
+    "maxGradualSlope": 1,
+    "connections": [
+      "Use broad natural limestone ramps for most level changes.",
+      "Use a small number of short carved stone stairs where terraces meet main routes.",
+      "Keep the central sink shallow and walkable, with at least two broad visibly sloped descents on both its southern and northern sides and no continuous raised rim.",
+      "Keep every shelf connected; do not create isolated rock pillars or detached platforms."
+    ]
+  },
+  "routeIntent": {
+    "primaryApproaches": [
+      "Provide three tactically distinct route families between the formation caverns: through the central sink, across the western terrace, and around the eastern shelf.",
+      "Keep three independent passage mouths at both formation caverns; interconnect the route families only at multiple mid-map junctions without merging them into a shared throat near either formation.",
+      "Bend routes around limestone columns, stalagmites, shelves, and rubble rather than drawing straight mine corridors."
+    ],
+    "secondaryApproaches": [
+      "Branch both outer shelves back toward the central sink to prevent corridor play.",
+      "Use a mixture of broad ramps and short stairs so elevation changes remain readable.",
+      "Preserve multiple passage mouths around every major landmark."
+    ],
+    "minimumApproachesPerFormation": 3
+  },
+  "boundaryIntent": {
+    "owners": [
+      "layered limestone cavern walls",
+      "flowstone curtains",
+      "stalagmite clusters",
+      "broken natural columns",
+      "shadowed fissures and rubble banks"
+    ],
+    "irregularPlayableSilhouette": true,
+    "description": "Natural limestone walls, flowstone, stalagmites, rubble, and shadowed fissures own an uneven cave edge; never resolve the playable or rendered perimeter into a rectangular room or continuous constructed wall."
+  },
+  "spawnIntent": {
+    "sides": [
+      "players",
+      "opponents"
+    ],
+    "formationCharacter": "Opposing formations occupy the broad southern cavern and smaller northern grotto, each with local cover, irregular maneuvering room, and access to all three reconnecting passage families.",
+    "minimumApproaches": 3,
+    "localClearanceTiles": 2,
+    "candidateRoles": [
+      "frontline",
+      "ranged",
+      "support",
+      "mobile",
+      "ambush",
+      "boss"
+    ],
+    "forbiddenBehavior": [
+      "Do not place candidates on detached shelves or pillars.",
+      "Do not reserve a full-height or full-width cleared spawn strip.",
+      "Do not mirror or regularize the two formation caverns.",
+      "Do not make either formation depend on one choke, ramp, stair, or sink crossing.",
+      "Do not infer exact spawn coordinates by literally tracing the source image."
+    ]
+  },
+  "requiredLandmarks": [
+    "broad southern limestone formation cavern",
+    "smaller northern crystal-lit grotto",
+    "shallow central limestone sink",
+    "broken natural limestone columns",
+    "western flowstone terrace",
+    "eastern stalagmite shelf",
+    "three reconnecting curved passage families",
+    "broad natural ramps and a few short carved stairs",
+    "irregular cave-owned boundary"
+  ],
+  "forbiddenPatterns": [
+    "rectangular dungeon room or arena perimeter",
+    "straight mine-corridor topology",
+    "grid-aligned walls or checkerboard materials",
+    "mirrored formation caverns",
+    "full-height or full-width cleared strips",
+    "detached spawn pads, shelves, or pillars",
+    "isolated height spikes",
+    "single-choke formations, routes, ramps, stairs, or sink crossings",
+    "large opaque black voids over playable space",
+    "literal pixel, coordinate, or contour tracing",
+    "large visually ambiguous movement regions"
+  ],
+  "assetHints": {
+    "surfaces": [
+      "pale worn limestone floor",
+      "warm calcite shelves",
+      "cool mineral-stained stone",
+      "rubble-edged natural ramps"
+    ],
+    "connections": [
+      "curved limestone passages",
+      "broad natural rock ramps",
+      "short worn carved-stone stairs",
+      "shallow sink crossings"
+    ],
+    "obstacles": [
+      "stalagmite clusters",
+      "broken limestone columns",
+      "flowstone curtains",
+      "angular fallen rock"
+    ],
+    "decorations": [
+      "small calcite crystals",
+      "mineral staining",
+      "scattered pale rubble",
+      "subtle cave moss near light shafts"
+    ]
+  },
+  "promptProfile": {
+    "id": "source-template-image-cave-v6",
+    "path": "ai-image-metadata/battle-maps/prompts/source-template-image-cave-v6.json",
+    "sha256": "sha256:490f80a7d4026d0991655b1316a2bf4ff4849127f478daab1f833f45ba55173a"
+  },
+  "candidateMaps": [
+    "cave-template-01-a",
+    "cave-template-01-b",
+    "cave-template-01-c"
+  ],
+  "pins": {
+    "sourceImageSha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe",
+    "promptProfileSha256": "sha256:490f80a7d4026d0991655b1316a2bf4ff4849127f478daab1f833f45ba55173a",
+    "approvedBlueprintSha256": "sha256:9e88b54ac735c8d43ec3e386ac7f6a88a6ff4cb6c883592a31c846a4c9c2fa20",
+    "compilerSha256": "sha256:c8794c02d8978b56ea0ebcc1ea7947db94ae619c01c6feae3fe73efe8c8dfaa1"
+  },
+  "review": {
+    "decision": "approved",
+    "reviewer": "workspace-owner"
+  }
+}

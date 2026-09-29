@@ -3,10 +3,14 @@ import {
   lstat,
   mkdir,
   mkdtemp,
+  open,
   readFile,
   readdir,
+  realpath,
+  rename,
   rm
 } from 'node:fs/promises';
+import { constants as fsConstants } from 'node:fs';
 import path from 'node:path';
 
 import {
@@ -35,6 +39,8 @@ import {
   readPinnedRegularFile,
   readJson,
   readRegularFileSnapshot,
+  registerEffectivePromptBuilder,
+  registerFailedGeneratedAttemptAuditor,
   resolveTracked,
   selectFamilies,
   sha256,
@@ -54,14 +60,19 @@ import {
   withBattleArtCandidateLock
 } from './candidate-lock.mjs';
 import {
+  CANONICAL_ROUTE_SKILL_READ_COMMAND,
+  auditCanonicalParentRouteHandoffJsonl
+} from './worker-contract.mjs';
+import {
   auditCodexWorkerJsonl,
   parseGeneratedArtifactCopyCommand,
+  resolveCodexCurrentThreadImagegenArtifact,
   verifyCodexImagegenEvidence
 } from '../battle-maps/codex-worker-boundary.mjs';
 
 export const DEFAULT_CONCURRENCY = 1;
 export const MAX_CONCURRENCY = 4;
-export const DEFAULT_TIMEOUT_MS = 300_000;
+export const DEFAULT_TIMEOUT_MS = 900_000;
 export const MAX_TIMEOUT_MS = 1_800_000;
 export const MAX_WORKER_OUTPUT_BYTES = 4 * 1024 * 1024;
 export const MAX_CANDIDATE_BYTES = 32 * 1024 * 1024;
@@ -69,6 +80,8 @@ export const MAX_WORKSPACE_BYTES = 48 * 1024 * 1024;
 export const MAX_IMAGE_DIMENSION = 8192;
 export const FAILED_ROUTE_ATTEMPT_SCHEMA =
   'battle-art-route-failed-attempt-v1';
+export const FAILED_GENERATED_ATTEMPT_SCHEMA =
+  'battle-art-generated-failed-attempt-v1';
 const FROZEN_V6_FAILED_ROUTE_BACKFILL = Object.freeze({
   theme: 'forest',
   family: 'forest-heartlands-loam-path-straight-ns',
@@ -96,14 +109,6 @@ const FROZEN_V6_FAILED_ROUTE_BACKFILL = Object.freeze({
   })
 });
 const SCRIPT_ROOT = path.resolve(import.meta.dirname, '../..');
-const CODEX_WORKER_HOME = path.resolve(
-  process.env.CODEX_HOME
-    ?? path.join(process.env.HOME ?? SCRIPT_ROOT, '.codex')
-);
-const IMAGEGEN_SKILL_PATH = path.join(
-  CODEX_WORKER_HOME,
-  'skills/.system/imagegen/SKILL.md'
-);
 const ROUTE_TRANSITION_CLEAR_BORDER_WIDTH = 4;
 const ROUTE_CORNER_MINIMUM_CORE_WIDTH = 28;
 const ROUTE_CORNER_OPAQUE_ALPHA_THRESHOLD = 240;
@@ -118,6 +123,11 @@ const ROUTE_CORNER_AXIS_BY_TOPOLOGY = Object.freeze({
 const ROUTE_CORNER_MAXIMUM_COVERAGE_PERMILLE_V2 = 230;
 const ROUTE_ARM_SAMPLE_FRACTIONS = Object.freeze([0.5, 0.75, 1]);
 const ROUTE_ARM_MINIMUM_CORE_WIDTH = 28;
+const ROUTE_END_ARM_MINIMUM_CORE_WIDTH_BY_SAMPLE_PERCENT = Object.freeze({
+  50: 20,
+  75: 20,
+  100: 18
+});
 const CORNER_ES_ARM_MINIMUM_CORE_WIDTH_V2 = 30;
 const CORNER_ES_ARM_MAXIMUM_CORE_WIDTH_V2 = 41;
 const CORNER_ES_MAXIMUM_ARM_CORE_SPREAD_V2 = 11;
@@ -184,6 +194,19 @@ export function routeArmAlphaSpanContract(descriptor) {
     return Object.freeze({
       alphaThreshold: ROUTE_CORNER_OPAQUE_ALPHA_THRESHOLD,
       ...authored
+    });
+  }
+  if (
+    descriptor.category === 'route-transition'
+    && descriptor.routeFinishing === undefined
+    && /^end-[nesw]$/.test(descriptor.capabilities?.routeTopology)
+  ) {
+    return Object.freeze({
+      alphaThreshold: ROUTE_CORNER_OPAQUE_ALPHA_THRESHOLD,
+      minimumPixelsBySamplePercent:
+        ROUTE_END_ARM_MINIMUM_CORE_WIDTH_BY_SAMPLE_PERCENT,
+      maximumPixels: null,
+      maximumSpreadPixels: null
     });
   }
   return Object.freeze({
@@ -419,12 +442,15 @@ export async function assertRouteArmMinimumCoreWidth({
         alphaThreshold: armContract.alphaThreshold
       });
       const percent = Math.round(fraction * 100);
+      const minimumPixels =
+        armContract.minimumPixelsBySamplePercent?.[percent]
+        ?? armContract.minimumPixels;
       if (!usesAuthoredSpreadContract
-        && span < armContract.minimumPixels) {
+        && span < minimumPixels) {
         throw new Error(
           `${label} route ${topology} ${direction} arm opaque perpendicular `
           + `span at ${percent}% is ${span} pixels; expected at least `
-          + `${armContract.minimumPixels}`
+          + `${minimumPixels}`
         );
       }
       if (
@@ -865,6 +891,114 @@ const TEXT_STYLE_SUMMARIES = Object.freeze({
     'Crisp 16-bit orthographic isometric ruin art with broken regional masonry, '
     + 'weathering, reclaiming vegetation, readable debris, and soft upper-left light.'
 });
+
+function descriptorRegionalVocabulary(descriptor) {
+  const generationPrompt = descriptor.generationPrompt ?? '';
+  const match = generationPrompt.match(
+    /Regional visual vocabulary:\s*(.+?)(?=\s+Keep this |\s+Depict |$)/su
+  );
+  return match?.[1]?.trim()
+    ?? `Use only the regional materials declared for ${descriptor.theme}.`;
+}
+
+function regionalizeNonForestProfilePrompt(prompt, descriptor) {
+  if (descriptor.theme === 'forest') return prompt;
+  const regionalAuthority = `Use only descriptor-declared regional materials. `
+    + `Regional material authority: ${descriptorRegionalVocabulary(descriptor)}`;
+  const legacyForestInstruction = 'Green forest materials belong only to the subject.';
+  return prompt.includes(legacyForestInstruction)
+    ? prompt.replace(legacyForestInstruction, regionalAuthority)
+    : `${prompt} ${regionalAuthority}`;
+}
+
+function regionalizeNonForestBoilerplate(prompt, descriptor) {
+  if (descriptor.theme === 'forest') return prompt;
+  const anchor = descriptor.placement?.anchor;
+  const phraseReplacements = [
+    [
+      'matching the approved Borderwood corner-es topology',
+      'matching the descriptor-pinned approved corner-es topology'
+    ],
+    [
+      'Use two or three large uninterrupted grass, moss, or soil shapes',
+      'Use two or three large uninterrupted descriptor-declared regional material fields'
+    ],
+    [
+      'with sparse unique leaves, flowers, pebbles, or roots',
+      'with sparse unique descriptor-declared small-detail clusters'
+    ],
+    ['all-over leaf noise', 'all-over small-detail noise'],
+    [
+      'organic root, soil, or stone footprint with transparency between outward roots and tufts',
+      'organic descriptor-declared footprint with transparency between outward projections and small details'
+    ],
+    ['Ground the root/soil base', 'Ground the regional-material base'],
+    [
+      'Trunks, branches, and crown foliage may overhang other edge bands',
+      'Elevated projections may overhang other edge bands'
+    ],
+    [
+      'do not crop or flatten tall canopy merely to keep its overhead alpha',
+      'do not crop or flatten a tall subject silhouette merely to keep its overhead alpha'
+    ],
+    ['cream-gray fieldstone tread caps', 'descriptor-declared stone tread caps'],
+    ['Use only a short low-end soil feather', 'Use only a short low-end regional-material feather'],
+    ['root track, log', 'raised braided track, beam'],
+    [
+      'Vegetation must remain a low, sparse fringe: add no shrub or tree clump',
+      'Edge detail must remain a low, sparse fringe: add no raised obstacle clump'
+    ]
+  ];
+  let regionalized = prompt;
+  for (const [legacy, replacement] of phraseReplacements) {
+    regionalized = regionalized.replaceAll(legacy, replacement);
+  }
+  if (Number.isSafeInteger(anchor?.x) && Number.isSafeInteger(anchor?.y)) {
+    regionalized = regionalized.replaceAll(
+      `visible pixels contact the ${anchor.x},${anchor.y} anchor neighborhood`,
+      `at least one visible alpha pixel lies inside the inclusive 12-pixel `
+      + `anchor-contact square x=${anchor.x - 12}..${anchor.x + 12}, `
+      + `y=${anchor.y - 12}..${anchor.y + 12} centered on `
+      + `${anchor.x},${anchor.y}`
+    );
+  }
+  const tokenReplacements = [
+    [/\bwarm-loam\b/giu, 'regional-material'],
+    [/\bloam-and-grass\b/giu, 'regional-material'],
+    [/\bgrass-and-leaf\b/giu, 'regional-material'],
+    [/\bforest\b/giu, 'regional'],
+    [/\bloam\b/giu, 'regional material'],
+    [/\bgrass\b/giu, 'edge detail'],
+    [/\bleaves\b/giu, 'surface details'],
+    [/\bleaf\b/giu, 'surface detail'],
+    [/\bfoliage\b/giu, 'overhead detail'],
+    [/\btrees\b/giu, 'raised obstacles'],
+    [/\btree\b/giu, 'raised obstacle'],
+    [/\bdirt\b/giu, 'route material'],
+    [/\bmoss\b/giu, 'secondary material'],
+    [/\bsoil\b/giu, 'surface material'],
+    [/\broots\b/giu, 'projections'],
+    [/\broot\b/giu, 'projection'],
+    [/\bflowers\b/giu, 'accent details'],
+    [/\bshrubs\b/giu, 'raised details'],
+    [/\bshrub\b/giu, 'raised detail'],
+    [/\bvegetation\b/giu, 'edge detail'],
+    [/\bunderstory\b/giu, 'low detail'],
+    [/\btrunks\b/giu, 'supports'],
+    [/\btrunk\b/giu, 'support'],
+    [/\bcanopy\b/giu, 'overhead silhouette']
+  ];
+  for (const [legacy, replacement] of tokenReplacements) {
+    regionalized = regionalized.replace(legacy, replacement);
+  }
+  return regionalized;
+}
+
+function shouldStageRawPromptProfile(descriptor) {
+  return descriptor.theme === 'forest'
+    || descriptor.category === 'route-transition';
+}
+
 const ROUTE_DIRECTION_LABELS = Object.freeze({
   n: 'N upper-right',
   e: 'E lower-right',
@@ -909,6 +1043,17 @@ const CORNER_PHYSICAL_SHAPES = Object.freeze({
   'corner-wn':
     'a rounded top-side hairpin between the upper-left and upper-right targets'
 });
+
+const NON_FOREST_CORNER_ES_PHYSICAL_SHAPE =
+  'a flat rounded anchor arch between the lower-right and lower-left targets. '
+  + 'Keep a low shallow crown and modest center rise instead of a tall deep '
+  + 'semicircle or broad hollow half-ring. Put both seam-arm tips at 25% and '
+  + '75% canvas width and 75% canvas height, then rise inward through one '
+  + 'continuous rounded band at 50% width and 50% canvas height. Keep the apex '
+  + 'core x=120..135 below alpha 240 through y=32. Compose this geometry in '
+  + 'the raw imagegen subject itself, with no center flare or seam-tip taper. '
+  + 'The parent lifecycle cannot repair an incorrect arch, add missing '
+  + 'geometry, or remove internal route content';
 
 function routeDirectionsForTopology(topology) {
   if (topology === 'isolated') return [];
@@ -1076,6 +1221,14 @@ export function runCommand({
     let timedOut = false;
     let forcedError = null;
     let killTimer = null;
+    const withCapturedOutput = error => {
+      const enriched = error instanceof Error
+        ? error
+        : new Error(String(error));
+      enriched.stdout = Buffer.concat(stdout);
+      enriched.stderr = Buffer.concat(stderr);
+      return enriched;
+    };
     const finish = (callback, value) => {
       if (settled) return;
       settled = true;
@@ -1106,27 +1259,35 @@ export function runCommand({
       stopWorker(new Error(`${stream} exceeded ${maxOutputBytes} bytes`));
     };
     child.stdout.on('data', chunk => {
+      const remaining = Math.max(0, maxOutputBytes - stdoutBytes);
+      if (remaining > 0 && forcedError === null) {
+        stdout.push(chunk.subarray(0, remaining));
+      }
       stdoutBytes += chunk.length;
       if (stdoutBytes > maxOutputBytes) overLimit('worker stdout');
-      else if (forcedError === null) stdout.push(chunk);
     });
     child.stderr.on('data', chunk => {
+      const remaining = Math.max(0, maxOutputBytes - stderrBytes);
+      if (remaining > 0 && forcedError === null) {
+        stderr.push(chunk.subarray(0, remaining));
+      }
       stderrBytes += chunk.length;
       if (stderrBytes > maxOutputBytes) overLimit('worker stderr');
-      else if (forcedError === null) stderr.push(chunk);
     });
     child.once('error', error => {
-      if (forcedError === null) finish(reject, error);
+      if (forcedError === null) finish(reject, withCapturedOutput(error));
     });
     child.once('close', (code, signal) => {
       if (forcedError !== null) {
-        finish(reject, forcedError);
+        finish(reject, withCapturedOutput(forcedError));
       } else if (timedOut) {
-        finish(reject, new Error(`Codex worker timed out after ${timeoutMs}ms`));
-      } else if (code !== 0) {
-        finish(reject, new Error(
-          `Codex worker ${signal ? `terminated by ${signal}` : `exited with code ${code}`}`
+        finish(reject, withCapturedOutput(
+          new Error(`Codex worker timed out after ${timeoutMs}ms`)
         ));
+      } else if (code !== 0) {
+        finish(reject, withCapturedOutput(new Error(
+          `Codex worker ${signal ? `terminated by ${signal}` : `exited with code ${code}`}`
+        )));
       } else {
         finish(resolve, {
           code,
@@ -1141,7 +1302,9 @@ export function runCommand({
       stopWorker(new Error(`Codex worker timed out after ${timeoutMs}ms`));
     }, timeoutMs);
     child.stdin.once('error', error => {
-      if (error.code !== 'EPIPE') finish(reject, error);
+      if (error.code !== 'EPIPE') {
+        finish(reject, withCapturedOutput(error));
+      }
     });
     child.stdin.end(`${input}\n`);
   });
@@ -1151,7 +1314,8 @@ export async function spawnCodexWorker({
   workspace,
   prompt,
   timeoutMs,
-  styleFiles = []
+  styleFiles = [],
+  environmentSource = process.env
 }) {
   const lastMessagePath = path.join(workspace, 'last-message.txt');
   const args = buildCodexArgs(
@@ -1164,7 +1328,8 @@ export async function spawnCodexWorker({
     args,
     cwd: workspace,
     input: prompt,
-    timeoutMs
+    timeoutMs,
+    environmentSource
   });
   return { ...result, command: 'codex', args };
 }
@@ -1177,6 +1342,9 @@ export function buildGenerationPrompt({
 }) {
   const routeGeneration = descriptor.category === 'route-transition';
   const routeTopology = descriptor.capabilities?.routeTopology;
+  const nonForestIsolatedRoute = routeGeneration
+    && descriptor.theme !== 'forest'
+    && routeTopology === 'isolated';
   const routeSubjectBoxFinishing = routeGeneration
     && descriptor.routeFinishing?.strategy === 'largest-component-box-v1';
   const routeAnchorScaleFinishing = routeGeneration
@@ -1200,8 +1368,15 @@ export function buildGenerationPrompt({
       + 'of each other.'
     : '';
   const routeGeometryPrime = descriptor.routeFinishing?.geometryPrime;
+  const routeGeometryPrimeReferenceAttached = routeGeometryPrime !== undefined
+    && descriptor.styleReferences.some(reference => (
+      reference.id === routeGeometryPrime.sourceReferenceId
+      && reference.sha256 === routeGeometryPrime.sourceSha256
+    ));
   const routeGeometryPrimeInstruction = routeGeometryPrime
-    ? ` The descriptor carries JSON geometry measured from attached reference `
+    ? ` The descriptor carries ${routeGeometryPrimeReferenceAttached
+      ? 'JSON geometry measured from attached reference'
+      : 'pinned numeric geometry evidence for source reference'} `
       + `${routeGeometryPrime.sourceReferenceId}: on its `
       + `${routeGeometryPrime.canvas.width}x${routeGeometryPrime.canvas.height} `
       + `canvas the connected subject occupied `
@@ -1216,30 +1391,34 @@ export function buildGenerationPrompt({
       + 'terminal cuts as the prime construction target while widening the '
       + `near-opaque band to the current ${routeArmTargetRange}-pixel contract.`
     : '';
-  const routeArmCompositionInstruction = usesAuthoredArmSpanContract
-    ? `Generate every declared arm so its connected near-opaque route band at `
-      + `finished alpha >= ${routeArmContract.alphaThreshold} is `
-      + `${routeArmTargetRange} pixels wide. Build that measured band from the `
-      + 'solid warm-loam core and firmly attached near-opaque verge pixels. '
-      + (routeSubjectBoxFinishing
-        ? 'Keep any softer visible fringe and low verge decoration sparse, '
-          + 'broken, and attached outside that measured band. Never surround '
-          + 'the route with a continuous rhythm of upright grass teeth. Do not '
-          + 'rely on partial transparency to satisfy the measured width: '
-          + 'express softness through a low irregular silhouette and blended '
-          + 'materials.'
-        : `The complete visible silhouette is ${routeArmTargetRange} pixels `
-          + 'wide, including the warm-loam core and all grass or leaf verge '
-          + 'pixels. Keep low verge decoration sparse, broken, and attached '
-          + 'inside that total band; never surround the route with a continuous '
-          + 'rhythm of upright grass teeth. Do not rely on partial transparency '
-          + 'for shape or softness: express softness through a low irregular '
-          + 'silhouette and blended materials.')
-    : 'Generate every declared arm with a continuous 28–36 pixel warm-loam '
-      + 'core. Add a low 6–10 pixel irregular visible grass-and-leaf verge '
-      + 'along each long side, attached to and blended into that core. Do not '
-      + 'rely on partial transparency for shape or softness: a flat chroma '
-      + 'source may normalize to a binary-alpha cutout.';
+  const routeArmCompositionInstruction = nonForestIsolatedRoute
+    ? `Generate exactly one connected compact irregular wear patch centered at `
+      + `${descriptor.placement.anchor.x},${descriptor.placement.anchor.y}, with `
+      + `no directional arm, corridor, trail, or endpoint-band contact.`
+    : usesAuthoredArmSpanContract
+      ? `Generate every declared arm so its connected near-opaque route band at `
+        + `finished alpha >= ${routeArmContract.alphaThreshold} is `
+        + `${routeArmTargetRange} pixels wide. Build that measured band from the `
+        + 'solid warm-loam core and firmly attached near-opaque verge pixels. '
+        + (routeSubjectBoxFinishing
+          ? 'Keep any softer visible fringe and low verge decoration sparse, '
+            + 'broken, and attached outside that measured band. Never surround '
+            + 'the route with a continuous rhythm of upright grass teeth. Do not '
+            + 'rely on partial transparency to satisfy the measured width: '
+            + 'express softness through a low irregular silhouette and blended '
+            + 'materials.'
+          : `The complete visible silhouette is ${routeArmTargetRange} pixels `
+            + 'wide, including the warm-loam core and all grass or leaf verge '
+            + 'pixels. Keep low verge decoration sparse, broken, and attached '
+            + 'inside that total band; never surround the route with a continuous '
+            + 'rhythm of upright grass teeth. Do not rely on partial transparency '
+            + 'for shape or softness: express softness through a low irregular '
+            + 'silhouette and blended materials.')
+      : 'Generate every declared arm with a continuous 28–36 pixel warm-loam '
+        + 'core. Add a low 6–10 pixel irregular visible grass-and-leaf verge '
+        + 'along each long side, attached to and blended into that core. Do not '
+        + 'rely on partial transparency for shape or softness: a flat chroma '
+        + 'source may normalize to a binary-alpha cutout.';
   const cornerEsApexContinuityInstruction = usesAuthoredArmSpanContract
     ? ' Across x=120..135, make the visible apex core column-convex across one '
       + 'shared 29-row band beginning at the lowest first-visible loam pixel '
@@ -1295,6 +1474,29 @@ export function buildGenerationPrompt({
       referenceTopology === routeTopology ? [index] : []
     )
   );
+  const matchingDirectGeometryPrimeReferenceIndexes =
+    descriptor.directGeometryPrime === undefined
+      ? []
+      : descriptor.styleReferences.flatMap((reference, index) => (
+          reference.id === descriptor.directGeometryPrime.sourceReferenceId
+          && reference.sha256 === descriptor.directGeometryPrime.sourceSha256
+          && descriptor.directGeometryPrime.topology === routeTopology
+            ? [index]
+            : []
+        ));
+  if (
+    descriptor.directGeometryPrime !== undefined
+    && matchingDirectGeometryPrimeReferenceIndexes.length !== 1
+  ) {
+    throw new Error(
+      `${descriptor.id} directGeometryPrime requires exactly one matching `
+      + 'pinned style reference'
+    );
+  }
+  const matchingDirectGeometryPrimeReferenceIndex =
+    matchingDirectGeometryPrimeReferenceIndexes[0] ?? -1;
+  const hasMatchingDirectGeometryPrime =
+    matchingDirectGeometryPrimeReferenceIndex !== -1;
   const transformEquivalentReferenceIndexes = routeReferenceTopologies.flatMap(
     (referenceTopology, index) => (
       referenceTopology !== null
@@ -1418,10 +1620,16 @@ ${styleFiles.map((file, index) => (
         + 'finishing explanation, or other geometry terms. The remaining '
         + 'route-contract prose in this worker task governs deterministic '
         + 'acceptance only and must not be forwarded into the imagegen prompt.'
-      : exactTopologyReferenceIndexes.includes(index)
+      : (
+        exactTopologyReferenceIndexes.includes(index)
+        || index === matchingDirectGeometryPrimeReferenceIndex
+      )
       ? routeTopology === 'corner-es'
-        ? `- Image ${index + 1} (${file}) is the approved legacy corner-es `
-          + 'edit target and sole visual authority. In the one imagegen call, '
+        ? `- Image ${index + 1} (${file}) is ${
+          exactTopologyReferenceIndexes.includes(index)
+            ? 'the approved legacy corner-es edit target and sole visual authority'
+            : 'the exact directGeometryPrime source, corner-es edit target, and sole visual geometry authority'
+        }. In the one imagegen call, `
           + 'perform a precise material/style edit of this image instead of '
           + 'redrawing the route from scratch. '
           + (index === styleFiles.length - 1
@@ -1602,6 +1810,68 @@ ${styleFiles.map((file, index) => (
   };
   const boundarySegment =
     boundarySegments[descriptor.capabilities?.direction] ?? null;
+  const boundaryGroundAuditInstruction = boundarySegment
+    && descriptor.theme !== 'forest'
+    ? (() => {
+        const { width, height } = descriptor.canvas;
+        // Mirror visibleBoundaryGroundBands' capability-diamond geometry and
+        // thresholds so non-forest workers can audit the pixels the parent
+        // lifecycle actually accepts, rather than a weaker any-alpha proxy.
+        const verticalRadius = Math.min(
+          width / 4,
+          anchor.x / 2,
+          (width - 1 - anchor.x) / 2,
+          anchor.y,
+          height - 1 - anchor.y
+        );
+        const horizontalRadius = verticalRadius * 2;
+        const detectorVertices = {
+          top: { x: anchor.x, y: anchor.y - verticalRadius },
+          right: { x: anchor.x + horizontalRadius, y: anchor.y },
+          bottom: { x: anchor.x, y: anchor.y + verticalRadius },
+          left: { x: anchor.x - horizontalRadius, y: anchor.y }
+        };
+        const detectorSegments = {
+          n: [detectorVertices.top, detectorVertices.right],
+          e: [detectorVertices.right, detectorVertices.bottom],
+          s: [detectorVertices.bottom, detectorVertices.left],
+          w: [detectorVertices.left, detectorVertices.top]
+        };
+        const detectorSegment = detectorSegments[
+          descriptor.capabilities.direction
+        ];
+        const envelopeDepth = Math.max(
+          6,
+          Math.ceil(verticalRadius * 0.125)
+        );
+        const bandWidth = Math.max(
+          8,
+          Math.ceil(verticalRadius * 0.15)
+        );
+        const minimumBandPixels = Math.max(
+          16,
+          Math.ceil(verticalRadius * 0.35)
+        );
+        return ` The parent grounded-band audit uses a canonical capability `
+          + `diamond of vertical radius ${verticalRadius}; its exact detector `
+          + `segment for ${descriptor.capabilities.direction} runs from `
+          + `${detectorSegment[0].x},${detectorSegment[0].y} to `
+          + `${detectorSegment[1].x},${detectorSegment[1].y}. On the final saved `
+          + `RGBA raster, first keep only alpha >= 64 in the single largest `
+          + `8-connected component. In every occupied x column, find that `
+          + `component's bottommost pixel and retain as its ground envelope only `
+          + `component pixels from there through ${envelopeDepth} pixels above. `
+          + `Within the middle 15%–85% projection of the exact detector segment, `
+          + `at least ${minimumBandPixels} ground-envelope pixels must lie within `
+          + `${bandWidth} pixels of the segment and must occupy at least three of `
+          + `four equal projection bins. Detached fragments, alpha below 64, `
+          + `upper-face pixels, endpoint-neighborhood checks, or one arbitrary `
+          + `alpha hit per coordinate third do not count. Run this exact `
+          + `bottom-envelope audit after every translation or cleanup; if it `
+          + `fails, reposition or reshape the connected base instead of adding `
+          + `padding pixels or detached endpoint marks.`;
+      })()
+    : '';
   const routeBandInstruction = routeDirections
     ? (
         routeDirections.length === 0
@@ -1677,7 +1947,11 @@ ${styleFiles.map((file, index) => (
       )
     : '';
   const routeForbiddenSegmentInstruction = routeDirections
-    ? `Image generation must leave a 12-pixel interior band empty along the `
+    ? nonForestIsolatedRoute
+      ? `Image generation must leave the 12-pixel interior bands along all four `
+        + `capability-diamond edge segments empty. No route material may touch `
+        + `any endpoint band.`
+      : `Image generation must leave a 12-pixel interior band empty along the `
       + `15%–85% span of every forbidden diamond edge segment, with no dirt, `
       + `grass, leaf, pebble, or antialias fringe `
       + `there: ${Object.keys(ROUTE_DIRECTION_LABELS)
@@ -1686,6 +1960,204 @@ ${styleFiles.map((file, index) => (
           const [start, end] = boundarySegments[direction];
           return `${direction}=(${start.x},${start.y})–(${end.x},${end.y})`;
         }).join(', ')}. Only declared route arms may touch an edge band.`
+    : '';
+  const compactRouteCoordinateInstruction = ({
+    'end-n': 'Screen coordinates: anchor (128,64) → N upper-right target (192,32), signed vector (+64,-32). Draw the sole arm upper-right through (160,48) and (176,40) to (192,32), never horizontal-right or screen-down. N is an engine seam label, not a literal screen-cardinal direction.',
+    'end-e': 'Screen coordinates: anchor (128,64) → E lower-right target (192,96), signed vector (+64,+32). Draw the sole arm lower-right through (160,80) and (176,88) to (192,96), never horizontal-right or screen-up. E is an engine seam label, not a literal screen-cardinal direction.',
+    'end-s': 'Screen coordinates: anchor (128,64) → S lower-left target (64,96), signed vector (-64,+32). Draw the sole arm down-left through (96,80) and (80,88) to (64,96), never horizontal-left or screen-up. S is an engine seam label, not a literal screen-cardinal direction.',
+    'end-w': 'Screen coordinates: anchor (128,64) → W upper-left target (64,32), signed vector (-64,-32). Draw the sole arm upper-left through (96,48) and (80,40) to (64,32), never horizontal-left or screen-down. W is an engine seam label, not a literal screen-cardinal direction.',
+    'straight-ns': 'Screen coordinates: connect screen upper-right target '
+      + '(192,32) to screen lower-left target (64,96) through anchor (128,64). '
+      + 'N/S are engine seam labels, not literal screen directions. Draw only '
+      + 'that upper-right-to-lower-left diagonal route; never draw a '
+      + 'screen-vertical or top-to-bottom strip, rectangular ribbon, or '
+      + 'rectangular panel.',
+    'straight-ew': 'Screen coordinates: connect screen upper-left target '
+      + '(64,32) to screen lower-right target (192,96) through anchor (128,64). '
+      + 'E/W are engine seam labels, not literal screen directions. Draw only '
+      + 'that upper-left-to-lower-right diagonal route; never draw a literal '
+      + 'screen-horizontal left-to-right strip, rectangular ribbon, or '
+      + 'rectangular panel.',
+    'corner-ne': 'Screen coordinates: N upper-right (192,32) → (160,48) → '
+      + 'anchor (128,64), screen vector (-64,+32); anchor → (160,80) → E '
+      + 'lower-right (192,96), screen vector (+64,+32). N/E are engine seam '
+      + 'labels, not screen directions. Every arm segment is diagonal; '
+      + 'never draw any literal horizontal or vertical segment, letter L, or '
+      + 'screen-cardinal L.',
+    'corner-es': 'Screen coordinates: E lower-right (192,96) → (160,80) → '
+      + 'anchor (128,64), screen vector (-64,-32); anchor → (96,80) → S '
+      + 'lower-left (64,96), screen vector (-64,+32). E/S are engine seam '
+      + 'labels, not screen directions. Every arm segment is diagonal; '
+      + 'never draw any literal horizontal or vertical segment, letter L, or '
+      + 'screen-cardinal L.',
+    'corner-sw': 'Screen coordinates: W upper-left (64,32) → (96,48) → '
+      + 'anchor (128,64), screen vector (+64,+32); anchor → (96,80) → S '
+      + 'lower-left (64,96), screen vector (-64,+32). W/S are engine seam '
+      + 'labels, not screen directions. Every arm segment is diagonal; '
+      + 'never draw any literal horizontal or vertical segment, letter L, or '
+      + 'screen-cardinal L.',
+    'corner-wn': 'Screen coordinates: W upper-left (64,32) → (96,48) → '
+      + 'anchor (128,64), screen vector (+64,+32); anchor → (160,48) → N '
+      + 'upper-right (192,32), screen vector (+64,-32). W/N are engine seam '
+      + 'labels, not screen directions. Every arm segment is diagonal; '
+      + 'never draw any literal horizontal or vertical segment, letter L, or '
+      + 'screen-cardinal L.',
+    'tee-esw': 'Screen coordinates: join E lower-right target (192,96), S '
+      + 'lower-left target (64,96), and W upper-left target (64,32) at anchor '
+      + '(128,64). E/S/W are engine seam labels, not literal screen directions. '
+      + 'Draw only those three diagonal arms; never draw a literal '
+      + 'screen-cardinal T.',
+    'tee-nes': 'Screen coordinates: join N upper-right target (192,32), E '
+      + 'lower-right target (192,96), and S lower-left target (64,96) at anchor '
+      + '(128,64). N/E/S are engine seam labels, not literal screen directions. '
+      + 'Draw only those three diagonal arms; never draw a literal '
+      + 'screen-cardinal T.',
+    'tee-nsw': 'Screen coordinates: join N upper-right target (192,32), S '
+      + 'lower-left target (64,96), and W upper-left target (64,32) at anchor '
+      + '(128,64). N/S/W are engine seam labels, not literal screen directions. '
+      + 'Draw only those three diagonal arms; never draw a literal '
+      + 'screen-cardinal T.',
+    'tee-wne': 'Screen coordinates: join W upper-left target (64,32), N '
+      + 'upper-right target (192,32), and E lower-right target (192,96) at anchor '
+      + '(128,64). W/N/E are engine seam labels, not literal screen directions. '
+      + 'Draw only those three diagonal arms; never draw a literal '
+      + 'screen-cardinal T.',
+    cross: 'Screen coordinates: connect screen upper-right N=(192,32) ↔ '
+      + 'screen lower-left S=(64,96), and screen upper-left W=(64,32) ↔ '
+      + 'screen lower-right E=(192,96), both through anchor '
+      + '(128,64). N/E/S/W are engine seam labels, not literal screen '
+      + 'directions. Draw only those two isometric diagonals; never draw a '
+      + 'screen plus or literal +.'
+  })[routeTopology] ?? '';
+  const compactRouteShapeInstruction = nonForestIsolatedRoute
+    ? `Create one connected compact irregular wear patch centered at `
+      + `${anchor.x},${anchor.y}. Keep every occupied pixel fully inside the `
+      + `inclusive envelope x=${anchor.x - 32}..${anchor.x + 32}, `
+      + `y=${anchor.y - 20}..${anchor.y + 20}, with an irregular occupied size `
+      + `about 48–64 pixels wide and 24–40 pixels tall. Every pixel outside the `
+      + `single patch must remain exact chroma magenta background. Draw no U, V, `
+      + `line, tail, branch, directional arm, corridor, or trail, and make no `
+      + `endpoint-band contact.`
+    : routeTopology === 'corner-es'
+      ? 'Keep apex x=120..135 below alpha '
+        + '240 through y=32; adjacent apex top-contour columns may step at most 4 '
+        + 'pixels and no equal-height run may exceed 8 pixels. No tall '
+        + 'semicircle, flat-topped mask, plaza, point, chevron, square elbow, or '
+        + 'central flare.'
+      : routeTopology?.startsWith('corner-')
+        ? 'Join the two arms through one compact, flat, rounded bend with no plaza, '
+          + 'point, chevron, square elbow, or central flare.'
+        : routeTopology?.startsWith('straight-')
+          ? 'Draw one narrow, near-uniform straight band through the two named '
+            + 'targets and end it within 8 pixels beyond each target.'
+          : routeTopology?.startsWith('tee-')
+            ? 'Join the three narrow arms in one compact rounded merge; keep every '
+              + 'arm distinct outside the center and leave the forbidden side clear.'
+            : routeTopology?.startsWith('end-')
+              ? 'Join the single broad arm '
+                + 'to one compact 48–64 pixel rounded wear '
+                + 'terminus. Center that terminus on anchor (128,64), not beyond it; '
+                + 'every terminus/bulb pixel must stay inside x=96..160, y=40..88. '
+                + 'The centered bulb may straddle the anchor only inside that box. '
+                + 'Only the single arm may leave the box, toward its declared target; '
+                + 'no bulb or route continuation may leave the box beyond the anchor '
+                + 'toward the opposite or any forbidden side.'
+              : routeTopology === 'cross'
+                ? 'Join four narrow, near-uniform arms through one compact rounded center.'
+                : 'Keep a compact flat wear patch at the anchor and all four endpoint '
+                  + 'bands clear.';
+  const compactRouteCoverageInstruction = routeTopology?.startsWith('corner-')
+    ? 'Total nonzero-alpha coverage must be at most 230‰ of the canvas.'
+    : ROUTE_STRAIGHT_TOPOLOGIES.has(routeTopology)
+      ? 'Total nonzero-alpha coverage must be at most 300‰ of the canvas.'
+      : `Total nonzero-alpha coverage must remain within the descriptor's `
+        + `${descriptor.rasterContract.minimumCoveredPermille}–`
+        + `${descriptor.rasterContract.maximumCoveredPermille}‰ range.`;
+  const compactNonForestRouteImagegenPrompt = routeGeneration
+    && descriptor.theme !== 'forest'
+    && exactTopologyReferenceIndexes.length === 0
+    && transformEquivalentReferenceIndexes.length === 0
+    && correctiveReferenceIndexes.length === 0
+    && descriptor.routeFinishing?.geometryPrime === undefined
+    && descriptor.directGeometryPrime === undefined
+    ? [
+        compactRouteCoordinateInstruction,
+        routeTopology === 'corner-es' ? compactRouteShapeInstruction : '',
+        `Create exactly one ${descriptor.theme} route-transition cutout for `
+          + `${descriptor.id}, topology ${routeTopology}, on a perfectly flat `
+          + `${profile.background.chroma} background in an exact 2:1 composition.`,
+        `The attached ${styleFiles.join(' and ')} ${styleFiles.length === 1
+          ? 'is'
+          : 'are'} material, palette, and lighting authority `
+          + 'only. Do not copy any map composition, terrain layout, elevation, '
+          + 'boundary, or route topology from the reference.',
+        nonForestIsolatedRoute
+          ? `Depict only the compact naturally worn regional-floor patch for `
+            + `ecology ${descriptor.capabilities.ecologyProfile}. Use regional `
+            + `material only as surface color and texture. Add no walls, `
+            + `stalagmites, columns, rock curbs, raised rims, platforms, slabs, `
+            + `terrain tiles, side faces, drop shadows, or broad cavern-floor `
+            + `masses.`
+          : routeTopology?.startsWith('end-')
+            ? `Depict only a flat, broad, naturally worn regional-floor route overlay `
+              + `for ecology ${descriptor.capabilities.ecologyProfile}. Use regional `
+              + 'material only as surface color and texture. Add no walls, stalagmites, '
+              + 'columns, rock curbs, raised rims, platforms, slabs, terrain tiles, '
+              + 'side faces, drop shadows, or broad cavern-floor masses.'
+            : `Depict only a flat, narrow, naturally worn regional-floor route overlay `
+              + `for ecology ${descriptor.capabilities.ecologyProfile}. Use regional `
+              + 'material only as surface color and texture. Add no walls, stalagmites, '
+              + 'columns, rock curbs, raised rims, platforms, slabs, terrain tiles, '
+              + 'side faces, drop shadows, or broad cavern-floor masses.',
+        `On the final normalized ${descriptor.canvas.width}x`
+          + `${descriptor.canvas.height} canvas, join at anchor `
+          + `${anchor.x},${anchor.y}. The only named endpoint targets are `
+          + `${routeDirections.length === 0
+            ? 'none'
+            : routeDirections.map(direction => (
+                `${direction.toUpperCase()}=${routeTargets[direction].x},`
+                + `${routeTargets[direction].y}`
+              )).join(', ')}. Keep forbidden targets `
+          + `${Object.keys(ROUTE_DIRECTION_LABELS)
+            .filter(direction => !routeDirections.includes(direction))
+            .map(direction => (
+              `${direction.toUpperCase()}=${routeTargets[direction].x},`
+              + `${routeTargets[direction].y}`
+            )).join(', ') || 'none'} completely clear.`,
+        routeDirections.length === 0
+          ? 'No route material may enter any capability-diamond endpoint band.'
+          : `Every named arm must reach within 6 pixels of the middle 15%–85% `
+            + `of its exact capability-diamond segment and contribute at least `
+            + `12 opaque pixels there: ${routeDirections.map(direction => {
+              const [start, end] = boundarySegments[direction];
+              return `${direction}=(${start.x},${start.y})–(${end.x},${end.y})`;
+            }).join(', ')}. Leave a 12-pixel interior band clear along every `
+            + 'forbidden segment.',
+        routeDirections.length === 0
+          ? ''
+          : routeTopology?.startsWith('end-')
+            ? 'At the final 50%, 75%, and 100% samples, the sole arm needs a '
+              + 'continuous alpha-240 perpendicular core span 46–52 pixels wide '
+              + 'at each sample; do not taper at the seam.'
+            : ROUTE_STRAIGHT_TOPOLOGIES.has(routeTopology)
+              ? 'At the final 50%, 75%, and 100% samples, every named arm needs '
+                + 'one continuous alpha-240 perpendicular span at least 28 pixels '
+                + 'wide after normalization. At raw imagegen resolution, make the '
+                + 'core width perpendicular to the route about 13–14% of total '
+                + 'canvas width at all three samples. This is the '
+                + 'resolution-independent equivalent of a target 34–36 pixels '
+                + 'after whole-image normalization to 256x128; never interpret '
+                + '34–36 as raw high-resolution pixels, and do not taper at a seam.'
+            : 'At the final 50%, 75%, and 100% samples, every named arm needs one '
+              + 'continuous alpha-240 perpendicular span at least 28 pixels wide; '
+              + 'target 34–36 pixels for fitting margin and do not taper at a seam.',
+        routeTopology === 'corner-es' ? '' : compactRouteShapeInstruction,
+        nonForestIsolatedRoute
+          ? `${compactRouteCoverageInstruction} Keep exactly one connected `
+            + `silhouette and keep every exterior pixel exact chroma magenta.`
+          : `${compactRouteCoverageInstruction} Keep one connected silhouette, and `
+            + 'leave the outermost 4-pixel rectangular canvas border fully transparent.'
+      ].filter(Boolean).join(' ')
     : '';
   const forbiddenBoundarySegments = boundarySegment
     ? Object.keys(ROUTE_DIRECTION_LABELS)
@@ -1748,19 +2220,274 @@ ${styleFiles.map((file, index) => (
         + 'single hairline fringe. Use only muted russet soil, olive moss, natural '
         + 'brown roots, and slate-gray stone; use no magenta, purple, or pink pixels.'
       : '';
+  const connectionEndpointBandInstruction = connectionTarget
+    && descriptor.theme !== 'forest'
+    ? (() => {
+        const direction = descriptor.capabilities.direction;
+        const opposite = { n: 's', e: 'w', s: 'n', w: 'e' }[direction];
+        const forbidden = ['n', 'e', 's', 'w'].filter(
+          value => value !== direction
+        );
+        const bandWidth = Math.max(
+          8,
+          Math.ceil(Math.min(
+            descriptor.canvas.width,
+            descriptor.canvas.height
+          ) * 0.05)
+        );
+        return ` For lifecycle validation, each directional endpoint band `
+          + `begins at the outer 28% of its straight anchor-to-target segment `
+          + `and spans 72% through 105% projection within ${bandWidth} pixels `
+          + 'of the segment centerline; it is not merely a small neighborhood at '
+          + 'the canvas corner. The anchor is the terminating low endpoint, '
+          + 'not the midpoint of an opposing-edge span. Do not continue the '
+          + `stair or slope through the anchor toward ${opposite}. Keep every `
+          + 'subject-alpha pixel, including the bed, low-end feather, rubble, '
+          + `and decoration, out of the forbidden ${forbidden.join(',')} `
+          + 'endpoint bands.';
+      })()
+    : '';
+  const nonForestSlopeGradeInstruction = descriptor.theme !== 'forest'
+    && descriptor.category === 'connection-slope'
+    ? ' Depict one visibly continuous open incline from the low anchor to the '
+      + 'high endpoint. The walkable surface plane itself must continuously '
+      + 'change height along the direction of travel; it must not read as one '
+      + 'broad level top translated upward. At the low anchor, taper the surface '
+      + 'flush into the low cell as a thin irregular feather with no vertical '
+      + 'end cap, blunt cut, drop, or raised lip. Keep both sides as shallow '
+      + 'sloped shoulders that follow the same rising grade. A flat raised deck, '
+      + 'slab, causeway, cliff ledge, or sustained retaining side plane is '
+      + 'invalid even when the endpoint bands and anchor contact pass.'
+    : '';
+  const compactConnectionGeometry = connectionTarget
+    && descriptor.theme !== 'forest'
+    && ['connection-stairs', 'connection-slope'].includes(descriptor.category)
+    ? (() => {
+        const direction = descriptor.capabilities.direction;
+        const screenDirection = {
+          n: {
+            motion: 'right and up',
+            landing: 'upper-right',
+            riserFacing: 'lower-left'
+          },
+          e: {
+            motion: 'right and down',
+            landing: 'lower-right',
+            riserFacing: 'upper-left'
+          },
+          s: {
+            motion: 'left and down',
+            landing: 'lower-left',
+            riserFacing: 'upper-right'
+          },
+          w: {
+            motion: 'left and up',
+            landing: 'upper-left',
+            riserFacing: 'lower-right'
+          }
+        }[direction];
+        if (screenDirection === undefined) return null;
+        const vector = {
+          x: connectionTarget.x - anchor.x,
+          y: connectionTarget.y - anchor.y
+        };
+        const bandWidth = Math.max(
+          8,
+          Math.ceil(Math.min(
+            descriptor.canvas.width,
+            descriptor.canvas.height
+          ) * 0.05)
+        );
+        const alternateDirections = ['n', 'e', 's', 'w'].filter(
+          value => value !== direction
+        );
+        const oppositeDirection = { n: 's', e: 'w', s: 'n', w: 'e' }[direction];
+        const signed = value => value >= 0 ? `+${value}` : String(value);
+        return {
+          alternateDirections,
+          bandWidth,
+          direction,
+          oppositeDirection,
+          screenDirection,
+          vectorText: `(${signed(vector.x)},${signed(vector.y)})`
+        };
+      })()
+    : null;
+  const compactConnectionReferenceInstruction = compactConnectionGeometry
+    ? `The attached ${descriptor.theme} reference ${styleFiles.length === 1
+      ? 'image is'
+      : 'images are'} material, palette, texture scale, crisp pixel finish, and `
+      + 'upper-left lighting authority only. Do not copy any map composition, '
+      + 'terrain layout, elevation, boundary, connection geometry, or other object '
+      + 'from the reference.'
+    : '';
+  const compactConnectionCoordinateInstruction = compactConnectionGeometry
+    ? `Screen coordinates: x increases right and y increases down. The low anchor `
+      + `is exactly (${anchor.x},${anchor.y}); the elevation-high `
+      + `${compactConnectionGeometry.direction.toUpperCase()} endpoint is exactly `
+      + `(${connectionTarget.x},${connectionTarget.y}), signed vector `
+      + `${compactConnectionGeometry.vectorText}. Elevation-high lies screen `
+      + `${compactConnectionGeometry.screenDirection.landing}; the engine direction `
+      + 'label is not a literal screen-cardinal instruction.'
+    : '';
+  const compactConnectionBandInstruction = compactConnectionGeometry
+    ? `Carry the complete 36–48 pixel full-width ${
+        descriptor.category === 'connection-stairs'
+          ? 'stair bed'
+          : 'walkable incline'
+      }, centered on the `
+      + `anchor-to-endpoint line, through the declared endpoint's full outer `
+      + `72%–105% projection corridor. In that corridor, at least `
+      + `${compactConnectionGeometry.bandWidth} subject-alpha pixels must lie within `
+      + `${compactConnectionGeometry.bandWidth} pixels of the centerline; the `
+      + 'full-width shoulders extend beyond that detector band and must not be '
+      + `narrowed to fit inside it. The low anchor is the terminating low endpoint: `
+      + `do not continue `
+      + `through it toward ${compactConnectionGeometry.oppositeDirection}. Put no `
+      + `subject or antialias alpha in the alternate `
+      + `${compactConnectionGeometry.alternateDirections.join(',')} endpoint bands.`
+    : '';
+  const compactSouthStairsOrientationInstruction = compactConnectionGeometry
+    && descriptor.category === 'connection-stairs'
+    && compactConnectionGeometry.direction === 's'
+    ? `Critical S screen/elevation geometry: x increases right and y increases down. `
+      + `LOW is the center anchor exactly (${anchor.x},${anchor.y}); HIGH is only `
+      + `the lower-left S endpoint exactly (${connectionTarget.x},${connectionTarget.y}), `
+      + `signed vector ${compactConnectionGeometry.vectorText}. From LOW to HIGH, `
+      + 'every successive higher tread center must move left and down; put the top '
+      + 'landing at the lower-left endpoint, and make every riser front face '
+      + 'upper-right toward LOW. Never put the '
+      + 'high landing upper-right or reverse the climb.'
+    : '';
+  const compactStairsBuildInstruction = compactConnectionGeometry
+    && descriptor.category === 'connection-stairs'
+    && compactConnectionGeometry.direction === 's'
+    ? 'Build four to six broad stone treads running crosswise, perpendicular to '
+      + 'travel. Keep one connected compact 36–48 pixel full-width low-profile bed '
+      + 'with shallow individual risers only and a short flush feather at LOW. Add '
+      + 'no sustained side face, retaining wall, raised platform, platform block, '
+      + 'or tall slab support; never merge the shallow risers into one '
+      + 'continuous wall mass.'
+    : 'Build four to six broad stone treads running crosswise, perpendicular to '
+      + 'travel, each with a readable top plane and shallow riser. Keep one '
+      + 'connected staircase silhouette with only a short flush material feather '
+      + 'at the low anchor.';
+  const compactNonForestStairsImagegenPrompt = compactConnectionGeometry
+    && descriptor.category === 'connection-stairs'
+    ? [
+        `Create exactly one orthographic isometric ${descriptor.theme} carved-stair `
+          + `transparent cutout for ${descriptor.id} on one perfectly flat `
+          + `${profile.background.chroma} chroma background, in an exact `
+          + `${descriptor.canvas.width}x${descriptor.canvas.height} composition.`,
+        ...(compactSouthStairsOrientationInstruction
+          ? [
+              compactSouthStairsOrientationInstruction,
+              compactConnectionReferenceInstruction
+            ]
+          : [
+              compactConnectionReferenceInstruction,
+              compactConnectionCoordinateInstruction,
+              `Author the final ${compactConnectionGeometry.direction.toUpperCase()} `
+                + 'orientation directly. Every successive higher tread center must move '
+                + `${compactConnectionGeometry.screenDirection.motion}; put the top landing `
+                + `at the ${compactConnectionGeometry.screenDirection.landing} endpoint and `
+                + `make every riser front face ${compactConnectionGeometry.screenDirection.riserFacing} `
+                + 'back toward the low anchor.'
+            ]),
+        compactConnectionBandInstruction,
+        compactStairsBuildInstruction,
+        'Depict only the staircase cutout. Add no full terrain tile, cavern-floor '
+          + 'mass, wall, stalagmite, column, platform, raised slab, retaining face, '
+          + 'dark-sided ledge, rubble outside the bed, mirrored or rotated staircase, '
+          + 'alternate-direction connection, backdrop, frame, text, or watermark. '
+          + 'Keep every canvas corner pure chroma for transparent removal.'
+      ].join(' ')
+    : '';
+  const compactEastSlopeOrientationInstruction = compactConnectionGeometry
+    && descriptor.category === 'connection-slope'
+    && compactConnectionGeometry.direction === 'e'
+    ? `Critical E screen/elevation geometry: x increases right and y increases down. `
+      + `LOW is the center anchor exactly (${anchor.x},${anchor.y}); HIGH is only `
+      + `the lower-right E endpoint exactly (${connectionTarget.x},${connectionTarget.y}), `
+      + `signed vector ${compactConnectionGeometry.vectorText}. The walkable surface `
+      + 'must rise continuously screen right and down from LOW to its top endpoint '
+      + 'at the lower-right target. E is only an engine direction label, not '
+      + 'screen-up or screen-right shorthand. Do not author an N/S diagonal between '
+      + 'the upper-right and lower-left endpoint bands.'
+    : '';
+  const compactNonForestSlopeImagegenPrompt = compactConnectionGeometry
+    && descriptor.category === 'connection-slope'
+    ? [
+        `Create exactly one orthographic isometric ${descriptor.theme} natural-slope `
+          + `transparent cutout for ${descriptor.id} on one perfectly flat `
+          + `${profile.background.chroma} chroma background, in an exact `
+          + `${descriptor.canvas.width}x${descriptor.canvas.height} composition.`,
+        ...(compactEastSlopeOrientationInstruction
+          ? [
+              compactEastSlopeOrientationInstruction,
+              compactConnectionReferenceInstruction
+            ]
+          : [
+              compactConnectionReferenceInstruction,
+              compactConnectionCoordinateInstruction,
+              `Author the final ${compactConnectionGeometry.direction.toUpperCase()} `
+                + 'orientation directly. The walkable surface must rise continuously '
+                + `screen ${compactConnectionGeometry.screenDirection.motion} from the low `
+                + `anchor to its top endpoint at the ${compactConnectionGeometry.screenDirection.landing} `
+                + 'target; elevation-high is not always screen-up.'
+            ]),
+        compactConnectionBandInstruction,
+        'Make one visibly continuous open incline whose walkable plane changes '
+          + 'height along travel. Feather the low end thin and flush into the low '
+          + 'anchor with no blunt cut, lip, drop, or vertical end cap. Finish at the '
+          + 'exact high endpoint with both sides kept as shallow sloped shoulders '
+          + 'following the same rising grade.',
+        'Depict only the connected slope cutout. Add no full terrain tile, broad '
+          + 'cavern-floor mass, wall, stalagmite, column, flat deck, raised platform, '
+          + 'slab, causeway, cliff ledge, sustained retaining face, raised side rim, '
+          + 'alternate-direction connection, backdrop, frame, text, or watermark. Keep every canvas '
+          + 'corner pure chroma for transparent removal.'
+      ].join(' ')
+    : '';
   const directionalConnectionInstruction = connectionTarget
     ? `After chroma removal, keep the low end in contact with anchor `
       + `${anchor.x},${anchor.y} and extend one connected walkable subject toward `
       + `the declared ${descriptor.capabilities.direction} ${connectionVector.edge} `
       + `high endpoint at ${connectionTarget.x},${connectionTarget.y}. Make the alpha `
       + 'silhouette reach that terminal endpoint band and none of the other three '
-      + 'directional endpoint bands.'
+      + `directional endpoint bands.${connectionEndpointBandInstruction}`
     : '';
+  const nonForestCornerEsReferenceInstruction =
+    exactTopologyReferenceIndexes.length > 0
+      ? ` Match Image ${exactTopologyReferenceIndexes[0] + 1}'s exact `
+        + 'descriptor-pinned approved corner-es silhouette as macro-geometry '
+        + 'authority while applying this descriptor\'s regional materials.'
+      : '';
+  const nonForestCornerEsPrimeInstruction = hasMatchingDirectGeometryPrime
+    ? ' Preserve the descriptor-pinned JSON-prime occupied bounds, coverage, '
+      + 'arm sample centers, and apex-top profile.'
+    : '';
+  const nonForestCornerEsApexContinuityInstruction =
+    hasMatchingDirectGeometryPrime && usesAuthoredArmSpanContract
+      ? cornerEsApexContinuityInstruction
+      : '';
+  const cornerEsPhysicalShapeInstruction = descriptor.theme === 'forest'
+    ? CORNER_PHYSICAL_SHAPES[routeTopology]
+    : NON_FOREST_CORNER_ES_PHYSICAL_SHAPE
+      + nonForestCornerEsReferenceInstruction
+      + nonForestCornerEsPrimeInstruction;
+  const cornerEsArchProportionsInstruction = descriptor.theme === 'forest'
+    ? 'Match the compact shallow arch proportions of the exact same-topology '
+      + 'approved reference'
+    : exactTopologyReferenceIndexes.length > 0
+      ? 'Match the compact shallow arch proportions of the exact '
+        + 'descriptor-pinned same-topology reference'
+      : 'Keep compact shallow arch proportions';
   const routeShapeInstruction = descriptor.capabilities?.routeTopology?.startsWith(
     'corner-'
   )
     ? routeTopology === 'corner-es'
-      ? ` Physically draw ${CORNER_PHYSICAL_SHAPES[routeTopology]}. Keep the `
+      ? ` Physically draw ${cornerEsPhysicalShapeInstruction}. Keep the `
         + `opaque warm-loam core a nearly constant ${routeArmTargetRange} `
         + 'pixels wide through '
         + `both arms and the entire rounded apex.${routeArmSpreadInstruction} `
@@ -1772,12 +2499,13 @@ ${styleFiles.map((file, index) => (
         + 'chevron, acute cusp, or ruler-clean angle. The full nonzero-alpha '
         + 'silhouette must cover at most 230 permille of the canvas. Generate no '
         + 'side panel, underside, hanging tooth, or terrain slab outside the '
-        + 'narrow core and feathered verge. Match the compact shallow arch '
-        + 'proportions of the exact same-topology approved reference: after '
+        + `narrow core and feathered verge. ${cornerEsArchProportionsInstruction}: after `
         + 'resizing to 256x128, target an overall nonzero-alpha bounding box '
         + 'about 180–200 pixels wide and 56–68 pixels tall, never a near-full-'
         + 'canvas semicircle or broad half-ring. Keep the apex top contour '
-        + `organically stepped.${cornerEsApexContinuityInstruction} Across `
+        + `organically stepped.${descriptor.theme === 'forest'
+          ? cornerEsApexContinuityInstruction
+          : nonForestCornerEsApexContinuityInstruction} Across `
         + 'x=120..135, adjacent columns\' top-contour y values may step by at '
         + 'most 4 pixels, and no equal-height plateau may span '
         + 'more than 8 pixels. Do not generate a rectangular notch or a long '
@@ -1882,7 +2610,7 @@ ${styleFiles.map((file, index) => (
         + 'opposite outer contour must be a 24–40 pixel broad rounded arc, never '
         + 'a single pointed pixel, spur, or teardrop.'
       : '';
-  const finishingInstruction = {
+  const finishingInstruction = regionalizeNonForestBoilerplate({
     surface:
       'Preserve broad low-frequency material fields during deterministic '
       + 'finishing. Keep the outer 16-pixel diamond rim quiet and seam-safe. '
@@ -1925,7 +2653,7 @@ ${styleFiles.map((file, index) => (
           + 'clear alpha from a 12-pixel band along the interior of every '
           + `forbidden edge segment: ${forbiddenBoundarySegments}. The bottommost `
           + 'connected alpha envelope in each column may contact only the declared '
-          + 'edge. '
+          + `edge.${boundaryGroundAuditInstruction} `
           + 'Trunks, branches, and crown foliage may overhang other edge bands; '
           + 'do not crop or flatten tall canopy merely to keep its overhead alpha '
           + 'inside the grounded edge. Keep one unbroken natural silhouette with '
@@ -1948,22 +2676,41 @@ ${styleFiles.map((file, index) => (
       + 'unobstructed from endpoint to endpoint. Vegetation must remain a low, '
       + 'sparse fringe: add no shrub or tree clump on the grade. Use no sustained '
       + 'dark lower side, vertical side plane, rock-lined causeway, retaining '
-      + 'wall, or raised platform silhouette.',
+      + `wall, or raised platform silhouette.${nonForestSlopeGradeInstruction}`,
     'route-transition':
       `${routeEndpointInstruction}${routeGeometryPrimeInstruction} `
-      + `${routeArmCompositionInstruction} Never `
-      + 'generate a hairline, narrow '
-      + 'ruler-straight streak, or threadlike track. '
-      + 'Keep one connected path silhouette with no detached alpha component; each '
-      + 'leaf, '
-      + 'grass tuft, pebble, and loam pixel must touch the main path silhouette. '
-      + `The connected silhouette must reach the `
-      + `declared diamond edge bands and contacts the ${anchor.x},${anchor.y} `
-      + `anchor neighborhood.${routeShapeInstruction} ${routeBandInstruction} `
+      + `${routeArmCompositionInstruction}`
+      + (nonForestIsolatedRoute
+        ? ` Keep every non-background pixel in that single central patch and `
+          + `away from all four endpoint bands.`
+        : ` Never generate a hairline, narrow ruler-straight streak, or `
+          + `threadlike track. Keep one connected path silhouette with no `
+          + `detached alpha component; each leaf, grass tuft, pebble, and loam `
+          + `pixel must touch the main path silhouette. The connected silhouette `
+          + `must reach the declared diamond edge bands and contacts the `
+          + `${anchor.x},${anchor.y} anchor neighborhood.`)
+      + `${routeShapeInstruction} ${routeBandInstruction} `
       + `${routeForbiddenSegmentInstruction}`
-  }[descriptor.category] ?? '';
+  }[descriptor.category] ?? '', descriptor);
   const sourcePreparationInstruction = routeGeneration
-    ? routeSubjectBoxFinishing
+    ? descriptor.theme !== 'forest'
+      ? routeSubjectBoxFinishing
+        ? `After the worker exits, the parent accepts only an exact declared 2:1 `
+          + `source aspect, then isolates the largest connected generated subject `
+          + `and performs exactly one descriptor-pinned crop/resize/place operation `
+          + `before normalization and contract checks. It does not enumerate, `
+          + `score, or retry placements.`
+        : routeAnchorScaleFinishing
+          ? `After the worker exits, the parent accepts only the exact declared `
+            + `2:1 source aspect, normalizes the whole image, and performs one `
+            + `descriptor-pinned uniform scale about the declared anchor before `
+            + `contract checks. It does not enumerate, score, or retry scales.`
+          : `After the worker exits, when the source has the exact declared 2:1 `
+            + `aspect ratio, the parent deterministically resizes the entire raster `
+            + `to the exact declared width and height with one whole-image resampling `
+            + `operation when needed, before normalization and contract checks. A `
+            + `different-aspect source is rejected.`
+      : routeSubjectBoxFinishing
       ? `The worker must not inspect or modify candidate.png after the one source `
         + `copy. The parent lifecycle accepts only an exact declared 2:1 source `
         + `aspect, then isolates the largest connected generated subject and `
@@ -2016,7 +2763,24 @@ ${styleFiles.map((file, index) => (
 chroma removal, crop/scale, alpha masking, and canvas placement after the single imagegen
 call as needed to satisfy it exactly; do not invent or repaint content during finishing.`;
   const outputWorkflowInstruction = routeGeneration
-    ? `Use the imagegen skill and call the imagegen tool exactly once for this family. `
+    ? descriptor.theme !== 'forest'
+      ? `Use the imagegen skill and call the imagegen tool exactly once for this family. `
+        + `Execute exactly one successful shell command, before imagegen, to read `
+        + `the mandatory skill instructions with exactly:\n`
+        + `0. ${CANONICAL_ROUTE_SKILL_READ_COMMAND}\n`
+        + `Execute no other shell command before, during, or after imagegen. Do not `
+        + `copy, move, inspect, discover, search for, glob, name, or create an `
+        + `artifact or candidate file. Do not create candidate.png or candidate.webp, `
+        + `and do not use a direct file-change or any other tool. Do not use a path `
+        + `placeholder or invent, report, or act on a generated_images path. The parent `
+        + `lifecycle securely retrieves the sole raster from the canonical current-thread `
+        + `CODEX_HOME/generated_images directory and exclusively materializes `
+        + `candidate.png after this worker exits. ${sourcePreparationInstruction} `
+        + `Do not approve, pin, compile, publish, or alter descriptor/style inputs. `
+        + `The generated artifact must depict only family "${descriptor.id}" for theme `
+        + `"${descriptor.theme}" and category "${descriptor.category}". Report that `
+        + `generation completed and end immediately.`
+      : `Use the imagegen skill and call the imagegen tool exactly once for this family. `
       + `Execute exactly two successful shell commands in this order around that `
       + `call. First, before imagegen, read the mandatory skill instructions with `
       + `exactly:\n0. ${CANONICAL_ROUTE_SKILL_READ_COMMAND}\n`
@@ -2057,7 +2821,7 @@ inputs. The one candidate must depict only family
 After the file is saved and deterministic metadata/raster checks pass, report the result and
 end immediately. Do not reopen, visually inspect, revise, reprocess, or continue analyzing
 the accepted candidate.`;
-  return `${profile.prompt}
+  return `${regionalizeNonForestProfilePrompt(profile.prompt, descriptor)}
 
 Frozen descriptor:
 ${stableJson(descriptor).trim()}
@@ -2075,13 +2839,38 @@ ${profile.negativeConstraints.map(value => `- ${value}`).join('\n')}
 The descriptor and hash-verified style references are staged read-only by contract in this
 disposable workspace:
 - descriptor.json
-- prompt-profile.json
-${styleFiles.map(file => `- ${file}`).join('\n')}
+${shouldStageRawPromptProfile(descriptor) ? '- prompt-profile.json\n' : ''}${styleFiles.map(file => `- ${file}`).join('\n')}
 
-${styleInstruction}
+${styleInstruction}${compactNonForestStairsImagegenPrompt
+  ? `
+
+For the imagegen prompt argument, copy only the text between the following markers verbatim
+as the complete prompt. Add no descriptor JSON, acceptance prose, preface, or suffix.
+BEGIN FROZEN CONNECTION-STAIRS IMAGEGEN PROMPT
+${compactNonForestStairsImagegenPrompt}
+END FROZEN CONNECTION-STAIRS IMAGEGEN PROMPT`
+  : ''}${compactNonForestSlopeImagegenPrompt
+  ? `
+
+For the imagegen prompt argument, copy only the text between the following markers verbatim
+as the complete prompt. Add no descriptor JSON, acceptance prose, preface, or suffix.
+BEGIN FROZEN CONNECTION-SLOPE IMAGEGEN PROMPT
+${compactNonForestSlopeImagegenPrompt}
+END FROZEN CONNECTION-SLOPE IMAGEGEN PROMPT`
+  : ''}${compactNonForestRouteImagegenPrompt
+  ? `
+
+For the imagegen prompt argument, copy only the text between the following markers verbatim
+as the complete prompt. Add no descriptor JSON, acceptance prose, preface, or suffix.
+BEGIN FROZEN ROUTE IMAGEGEN PROMPT
+${compactNonForestRouteImagegenPrompt}
+END FROZEN ROUTE IMAGEGEN PROMPT`
+  : ''}
 
 ${outputWorkflowInstruction}`.trim();
 }
+
+registerEffectivePromptBuilder(buildGenerationPrompt);
 
 export function countImagegenInvocations(stdout) {
   return auditCodexWorkerJsonl(stdout).imagegenInvocationCount;
@@ -2089,8 +2878,7 @@ export function countImagegenInvocations(stdout) {
 
 const GENERATED_ROUTE_ARTIFACT_PATTERN =
   /[/\\]generated_images[/\\]([A-Za-z0-9_-]+)[/\\](?:call_[A-Za-z0-9_-]+\.(?:png|webp|jpe?g)|exec-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\.png)$/i;
-export const CANONICAL_ROUTE_SKILL_READ_COMMAND =
-  `/bin/cat ${JSON.stringify(IMAGEGEN_SKILL_PATH)}`;
+export { CANONICAL_ROUTE_SKILL_READ_COMMAND } from './worker-contract.mjs';
 
 function unwrapCanonicalRouteShellCommand(command) {
   const payload = command.trim();
@@ -2402,6 +3190,250 @@ function auditWorkspace(before, after, inputFiles) {
   return candidates[0];
 }
 
+function auditWorkspaceBeforeParentRouteHandoff(before, after, inputFiles) {
+  let totalBytes = 0;
+  for (const [name, record] of after) {
+    totalBytes += record.bytes;
+    const original = before.get(name);
+    if (original) {
+      if (original.bytes !== record.bytes || original.sha256 !== record.sha256) {
+        throw new Error(`worker modified frozen input ${name}`);
+      }
+    } else if (name !== 'last-message.txt') {
+      if (['candidate.png', 'candidate.webp'].includes(name)) {
+        throw new Error(
+          'non-forest route worker must not create a workspace candidate; '
+          + 'the parent lifecycle owns candidate.png materialization'
+        );
+      }
+      throw new Error(`worker created undeclared output ${name}`);
+    }
+  }
+  for (const input of inputFiles) {
+    if (!after.has(input)) throw new Error(`worker removed frozen input ${input}`);
+  }
+  if (totalBytes > MAX_WORKSPACE_BYTES) {
+    throw new Error('worker workspace exceeded byte limit');
+  }
+}
+
+const PINNED_WORKSPACE_DIRECTORY_FLAGS = fsConstants.O_RDONLY
+  | (fsConstants.O_DIRECTORY ?? 0)
+  | (fsConstants.O_NOFOLLOW ?? 0);
+
+function sameWorkspaceDirectoryIdentity(left, right) {
+  return left.dev === right.dev && left.ino === right.ino;
+}
+
+async function pinParentRouteWorkspace(workspace, workspaceHandle) {
+  const [pathDetails, openedDetails, realPath] = await Promise.all([
+    lstat(workspace, { bigint: true }),
+    workspaceHandle.stat({ bigint: true }),
+    realpath(workspace)
+  ]);
+  if (
+    !pathDetails.isDirectory()
+    || pathDetails.isSymbolicLink()
+    || !openedDetails.isDirectory()
+    || !sameWorkspaceDirectoryIdentity(pathDetails, openedDetails)
+  ) {
+    throw new Error(
+      'parent route handoff workspace must be a pinned real directory'
+    );
+  }
+  return {
+    device: pathDetails.dev,
+    inode: pathDetails.ino,
+    realPath
+  };
+}
+
+async function assertPinnedParentRouteWorkspace(
+  workspace,
+  workspaceHandle,
+  pin
+) {
+  const [pathDetails, openedDetails, realPath] = await Promise.all([
+    lstat(workspace, { bigint: true }),
+    workspaceHandle.stat({ bigint: true }),
+    realpath(workspace)
+  ]);
+  const expected = { dev: pin.device, ino: pin.inode };
+  if (
+    !pathDetails.isDirectory()
+    || pathDetails.isSymbolicLink()
+    || !openedDetails.isDirectory()
+    || !sameWorkspaceDirectoryIdentity(pathDetails, expected)
+    || !sameWorkspaceDirectoryIdentity(openedDetails, expected)
+    || realPath !== pin.realPath
+  ) {
+    throw new Error(
+      'parent route handoff workspace path changed during worker execution or materialization'
+    );
+  }
+}
+
+async function reserveParentRouteCandidate(workspace, workspaceHandle, pin) {
+  await assertPinnedParentRouteWorkspace(workspace, workspaceHandle, pin);
+  const candidatePath = path.join(workspace, 'candidate.png');
+  const handle = await open(
+    candidatePath,
+    fsConstants.O_RDWR
+      | fsConstants.O_CREAT
+      | fsConstants.O_EXCL
+      | (fsConstants.O_NOFOLLOW ?? 0),
+    0o600
+  );
+  try {
+    const [pathDetails, openedDetails] = await Promise.all([
+      lstat(candidatePath, { bigint: true }),
+      handle.stat({ bigint: true })
+    ]);
+    if (
+      !pathDetails.isFile()
+      || pathDetails.isSymbolicLink()
+      || !openedDetails.isFile()
+      || openedDetails.size !== 0n
+      || !sameWorkspaceDirectoryIdentity(pathDetails, openedDetails)
+    ) {
+      throw new Error(
+        'parent route handoff reserved candidate must be a pinned empty regular file'
+      );
+    }
+    await assertPinnedParentRouteWorkspace(workspace, workspaceHandle, pin);
+    return {
+      handle,
+      path: candidatePath,
+      device: openedDetails.dev,
+      inode: openedDetails.ino
+    };
+  } catch (error) {
+    await handle.close();
+    throw error;
+  }
+}
+
+async function assertPinnedParentRouteCandidate(
+  workspace,
+  workspaceHandle,
+  workspacePin,
+  candidate,
+  expectedBytes
+) {
+  await assertPinnedParentRouteWorkspace(
+    workspace,
+    workspaceHandle,
+    workspacePin
+  );
+  const [pathDetails, openedDetails] = await Promise.all([
+    lstat(candidate.path, { bigint: true }),
+    candidate.handle.stat({ bigint: true })
+  ]);
+  const expected = { dev: candidate.device, ino: candidate.inode };
+  if (
+    !pathDetails.isFile()
+    || pathDetails.isSymbolicLink()
+    || !openedDetails.isFile()
+    || pathDetails.size !== BigInt(expectedBytes)
+    || openedDetails.size !== BigInt(expectedBytes)
+    || !sameWorkspaceDirectoryIdentity(pathDetails, expected)
+    || !sameWorkspaceDirectoryIdentity(openedDetails, expected)
+  ) {
+    throw new Error(
+      'parent route handoff reserved candidate path changed or was modified'
+    );
+  }
+}
+
+async function materializeParentRouteCandidate(
+  workspace,
+  bytes,
+  {
+    workspaceHandle,
+    workspacePin,
+    reservedCandidate,
+    beforeWrite = async () => {}
+  }
+) {
+  if (!Buffer.isBuffer(bytes) || bytes.length === 0) {
+    throw new Error('parent route handoff requires nonempty verified raster bytes');
+  }
+  await assertPinnedParentRouteCandidate(
+    workspace,
+    workspaceHandle,
+    workspacePin,
+    reservedCandidate,
+    0
+  );
+  await beforeWrite({
+    workspace,
+    candidatePath: reservedCandidate.path
+  });
+  const { bytesWritten } = await reservedCandidate.handle.write(
+    bytes,
+    0,
+    bytes.length,
+    0
+  );
+  if (bytesWritten !== bytes.length) {
+    throw new Error('parent route handoff candidate write was incomplete');
+  }
+  await reservedCandidate.handle.truncate(bytes.length);
+  await reservedCandidate.handle.sync();
+  await assertPinnedParentRouteCandidate(
+    workspace,
+    workspaceHandle,
+    workspacePin,
+    reservedCandidate,
+    bytes.length
+  );
+  return reservedCandidate.path;
+}
+
+async function quarantinePinnedParentRouteWorkspace(
+  workspace,
+  workspaceHandle,
+  workspacePin
+) {
+  try {
+    await assertPinnedParentRouteWorkspace(
+      workspace,
+      workspaceHandle,
+      workspacePin
+    );
+  } catch {
+    return null;
+  }
+  const quarantinePath = `${workspace}.cleanup`;
+  try {
+    await rename(workspace, quarantinePath);
+  } catch {
+    return null;
+  }
+  try {
+    const [pathDetails, openedDetails] = await Promise.all([
+      lstat(quarantinePath, { bigint: true }),
+      workspaceHandle.stat({ bigint: true })
+    ]);
+    const expected = {
+      dev: workspacePin.device,
+      ino: workspacePin.inode
+    };
+    if (
+      !pathDetails.isDirectory()
+      || pathDetails.isSymbolicLink()
+      || !openedDetails.isDirectory()
+      || !sameWorkspaceDirectoryIdentity(pathDetails, expected)
+      || !sameWorkspaceDirectoryIdentity(openedDetails, expected)
+    ) {
+      return null;
+    }
+    return quarantinePath;
+  } catch {
+    return null;
+  }
+}
+
 async function readAuditedWorkerFile(workspace, after, name) {
   const record = after.get(name);
   if (!record) return null;
@@ -2488,6 +3520,23 @@ async function loadCandidate(root, descriptor, descriptorPath, paths, profile) {
         !== stableJson(expectedBasenames)
       || new Set(imagePaths).size !== imagePaths.length) {
       throw new Error(`${descriptor.id} candidate style attachment provenance is stale`);
+    }
+    const expectedPrompt = buildGenerationPrompt({
+      descriptor,
+      profile,
+      styleFiles: expectedProvenance.map(value => value.stagedBasename),
+      textStyleFallback: candidate.styleReferenceMode === 'text-fallback'
+    });
+    const promptSnapshot = await readRegularFileSnapshot(
+      root,
+      paths.prompt,
+      `${descriptor.id} candidate prompt`
+    );
+    if (!promptSnapshot.contents.equals(Buffer.from(`${expectedPrompt}\n`))) {
+      throw new Error(
+        `${descriptor.id} candidate effective prompt is stale; `
+        + 'generate a fresh candidate under the current prompt contract'
+      );
     }
   }
   if (revalidated) {
@@ -2633,9 +3682,12 @@ export async function auditCorrectiveStyleReferenceForGeneration({
 }
 
 async function stageInputs(root, workspace, descriptor, profile) {
-  const inputs = ['descriptor.json', 'prompt-profile.json'];
+  const inputs = ['descriptor.json'];
   await atomicWrite(workspace, 'descriptor.json', stableJson(descriptor));
-  await atomicWrite(workspace, 'prompt-profile.json', stableJson(profile));
+  if (shouldStageRawPromptProfile(descriptor)) {
+    await atomicWrite(workspace, 'prompt-profile.json', stableJson(profile));
+    inputs.push('prompt-profile.json');
+  }
   const styleFiles = [];
   for (let index = 0; index < descriptor.styleReferences.length; index += 1) {
     const pin = descriptor.styleReferences[index];
@@ -2782,6 +3834,32 @@ export async function validatePreparedRouteGeometry({
   await assertRouteStraightMaximumLongitudinalExtent({ bytes, descriptor });
 }
 
+async function persistImmutableGeneratedArtifact({
+  root,
+  descriptor,
+  bytes,
+  label = `${descriptor.id} immutable generated artifact`
+}) {
+  const identity = await inspectImageContents(label, bytes);
+  const relativePath = generatedArtifactPath(descriptor, identity);
+  const artifact = { ...identity, path: relativePath };
+  try {
+    await atomicWrite(root, relativePath, bytes, { immutable: true });
+  } catch (error) {
+    if (error.code !== 'EEXIST') throw error;
+    const existingBytes = await readPinnedRegularFile(
+      root,
+      relativePath,
+      artifact.sha256,
+      label
+    );
+    if (!existingBytes.equals(bytes)) {
+      throw new Error(`${descriptor.id} immutable generated artifact mismatch`);
+    }
+  }
+  return artifact;
+}
+
 async function publishVerifiedGeneratedCandidateUnchecked({
   loaded,
   entry,
@@ -2799,39 +3877,12 @@ async function publishVerifiedGeneratedCandidateUnchecked({
   const descriptor = entry.descriptor;
   let generatedArtifact = null;
   if (descriptor.category === 'route-transition') {
-    const generatedArtifactIdentity = await inspectImageContents(
-      'generated route artifact',
-      generatedBytes
-    );
-    const generatedArtifactRelative = generatedArtifactPath(
+    generatedArtifact = await persistImmutableGeneratedArtifact({
+      root: loaded.root,
       descriptor,
-      generatedArtifactIdentity
-    );
-    generatedArtifact = {
-      ...generatedArtifactIdentity,
-      path: generatedArtifactRelative
-    };
-    try {
-      await atomicWrite(
-        loaded.root,
-        generatedArtifactRelative,
-        generatedBytes,
-        { immutable: true }
-      );
-    } catch (error) {
-      if (error.code !== 'EEXIST') throw error;
-      const existingBytes = await readPinnedRegularFile(
-        loaded.root,
-        generatedArtifactRelative,
-        generatedArtifact.sha256,
-        `${descriptor.id} immutable generated artifact`
-      );
-      if (!existingBytes.equals(generatedBytes)) {
-        throw new Error(
-          `${descriptor.id} immutable generated artifact content mismatch`
-        );
-      }
-    }
+      bytes: generatedBytes,
+      label: `${descriptor.id} immutable generated route artifact`
+    });
   }
   const {
     candidateBytes,
@@ -2909,47 +3960,11 @@ async function publishVerifiedGeneratedCandidate(options) {
   try {
     return await publishVerifiedGeneratedCandidateUnchecked(options);
   } catch (error) {
-    const { descriptor } = options.entry;
-    if (descriptor.category !== 'route-transition') throw error;
-    let raw;
-    try {
-      const rawIdentity = await inspectImageContents(
-        'failed generated route artifact',
-        options.generatedBytes
-      );
-      raw = {
-        ...rawIdentity,
-        path: generatedArtifactPath(descriptor, rawIdentity)
-      };
-      await readPinnedRegularFile(
-        options.loaded.root,
-        raw.path,
-        raw.sha256,
-        `${descriptor.id} failed generated route artifact`
-      );
-    } catch {
-      // Failures before the verified raw becomes durable are outside the
-      // failed-attempt evidence boundary.
-      throw error;
-    }
-    const evidence = await archiveFailedRouteAttempt({
-      root: options.loaded.root,
-      descriptor,
-      descriptorPath: options.entry.path,
-      raw,
-      paths: options.paths,
-      workerArgs: options.workerArgs,
-      invocationCount: options.invocationCount,
-      timeoutMs: options.timeoutMs,
-      styleReferenceMode: options.styleReferenceMode,
-      styleReferenceProvenance: options.styleReferenceProvenance,
-      hasLastMessage: options.hasLastMessage,
+    await archiveVerifiedGeneratedFailure({
+      ...options,
+      failureStage: 'candidate-publication',
       rejection: error
     });
-    if (error !== null
-      && (typeof error === 'object' || typeof error === 'function')) {
-      error.failedAttemptEvidencePath = evidence.path;
-    }
     throw error;
   }
 }
@@ -3016,6 +4031,16 @@ export function failedRouteAttemptPath(descriptor, fullHash) {
     + `${fullHash.slice('sha256:'.length)}.json`;
 }
 
+export function failedGeneratedAttemptPath(descriptor, fullHash) {
+  assertFailedAttemptHash(fullHash, 'failed generated attempt fullHash');
+  const validatedArtifactPath = generatedArtifactPath(descriptor, {
+    sha256: fullHash,
+    format: 'png'
+  });
+  return `${path.posix.dirname(validatedArtifactPath)}/failures/`
+    + `${fullHash.slice('sha256:'.length)}.json`;
+}
+
 export function parseFrozenDescriptorFromGenerationPrompt(promptText) {
   if (typeof promptText !== 'string') {
     throw new Error('generation prompt must be text');
@@ -3046,7 +4071,33 @@ function failedAttemptText(pin, contents, label) {
   };
 }
 
-function failedAttemptAuditSummary(stdout) {
+function failedAttemptAuditSummary(stdout, {
+  parentHandoff = false
+} = {}) {
+  if (parentHandoff) {
+    const handoff = auditCanonicalParentRouteHandoffJsonl(
+      stdout,
+      { allowHistoricalSkillRead: true }
+    );
+    return {
+      imagegen: {
+        invocationCount: 1,
+        evidence: handoff.observableImagegenInvocationCount === 1
+          ? 'explicit-tool-call'
+          : 'canonical-current-thread-artifact'
+      },
+      currentThread: {
+        id: handoff.threadId
+      },
+      parentArtifactHandoff: {
+        mode: 'canonical-current-thread-generated-images'
+      },
+      skillRead: {
+        command: handoff.skillReadCommand
+      },
+      commandCount: handoff.commandCount
+    };
+  }
   const copy = assertSingleGeneratedArtifactCopyEvidence(stdout);
   const worker = auditCodexWorkerJsonl(stdout, {
     allowMixedExplicitArtifactEvidence: true
@@ -3075,6 +4126,23 @@ function failedAttemptAuditSummary(stdout) {
   };
 }
 
+function failedGeneratedAttemptAuditSummary(stdout) {
+  const worker = auditCodexWorkerJsonl(stdout);
+  if (worker.imagegenInvocationCount !== 1) {
+    throw new Error(
+      'failed generated evidence must prove exactly one imagegen invocation'
+    );
+  }
+  const raster = assertNoProceduralRasterSynthesis(stdout);
+  return {
+    imagegen: {
+      invocationCount: worker.imagegenInvocationCount,
+      evidence: worker.imagegenEvidence
+    },
+    commandCount: raster.commandCount
+  };
+}
+
 function normalizeRejection(rejection) {
   const name = typeof rejection?.name === 'string' && rejection.name.length > 0
     ? rejection.name
@@ -3083,7 +4151,7 @@ function normalizeRejection(rejection) {
     ? rejection.message
     : String(rejection);
   if (message.length === 0) {
-    throw new Error('failed route rejection message must be nonempty');
+    throw new Error('failed generated rejection message must be nonempty');
   }
   return { name, message };
 }
@@ -3266,10 +4334,14 @@ export async function auditFailedRouteAttempt({
     );
   }
 
+  const parentHandoff = Object.hasOwn(
+    record.audit,
+    'parentArtifactHandoff'
+  );
   exactKeys(record.audit, [
     'imagegen',
     'currentThread',
-    'artifactCopy',
+    parentHandoff ? 'parentArtifactHandoff' : 'artifactCopy',
     'skillRead',
     'commandCount'
   ], `${label}.audit`);
@@ -3283,18 +4355,33 @@ export async function auditFailedRouteAttempt({
     ['id'],
     `${label}.audit.currentThread`
   );
-  exactKeys(
-    record.audit.artifactCopy,
-    ['sourcePath'],
-    `${label}.audit.artifactCopy`
-  );
+  if (parentHandoff) {
+    exactKeys(
+      record.audit.parentArtifactHandoff,
+      ['mode'],
+      `${label}.audit.parentArtifactHandoff`
+    );
+    if (
+      record.audit.parentArtifactHandoff.mode
+        !== 'canonical-current-thread-generated-images'
+    ) {
+      throw new Error(`${label}.audit.parentArtifactHandoff.mode is invalid`);
+    }
+  } else {
+    exactKeys(
+      record.audit.artifactCopy,
+      ['sourcePath'],
+      `${label}.audit.artifactCopy`
+    );
+  }
   exactKeys(
     record.audit.skillRead,
     ['command'],
     `${label}.audit.skillRead`
   );
   const rerunAudit = failedAttemptAuditSummary(
-    Buffer.from(record.worker.stdout.text)
+    Buffer.from(record.worker.stdout.text),
+    { parentHandoff }
   );
   if (stableJson(rerunAudit) !== stableJson(record.audit)) {
     throw new Error(`${label}.audit does not reproduce from worker stdout`);
@@ -3341,6 +4428,242 @@ export async function auditFailedRouteAttempt({
     rawBytes
   };
 }
+
+export async function auditFailedGeneratedAttempt({
+  root = SCRIPT_ROOT,
+  relativePath
+} = {}) {
+  const evidence = await readRegularFileSnapshot(
+    root,
+    relativePath,
+    'failed generated attempt'
+  );
+  let record;
+  try {
+    record = JSON.parse(exactUtf8(
+      evidence.contents,
+      'failed generated attempt'
+    ));
+  } catch (error) {
+    throw new Error(`failed generated attempt is invalid JSON: ${error.message}`);
+  }
+  const label = `failed generated attempt ${relativePath}`;
+  exactKeys(record, [
+    'schemaVersion',
+    'theme',
+    'familyId',
+    'artifact',
+    'failureStage',
+    'descriptor',
+    'prompt',
+    'worker',
+    'audit',
+    'rejection',
+    'fullHash'
+  ], label);
+  if (record.schemaVersion !== FAILED_GENERATED_ATTEMPT_SCHEMA) {
+    throw new Error(`${label}.schemaVersion is unsupported`);
+  }
+  if (!['after-candidate-verification', 'candidate-publication'].includes(
+    record.failureStage
+  )) {
+    throw new Error(`${label}.failureStage is unsupported`);
+  }
+  exactKeys(record.artifact, [
+    'path',
+    'bytes',
+    'width',
+    'height',
+    'format',
+    'sha256'
+  ], `${label}.artifact`);
+  for (const key of ['bytes', 'width', 'height']) {
+    assertFailedAttemptInteger(
+      record.artifact[key],
+      `${label}.artifact.${key}`,
+      1
+    );
+  }
+  if (!['png', 'webp'].includes(record.artifact.format)) {
+    throw new Error(`${label}.artifact.format is unsupported`);
+  }
+  assertFailedAttemptHash(
+    record.artifact.sha256,
+    `${label}.artifact.sha256`
+  );
+
+  exactKeys(record.descriptor, [
+    'path',
+    'sha256',
+    'contentVersion',
+    'snapshot'
+  ], `${label}.descriptor`);
+  assertFailedAttemptHash(
+    record.descriptor.sha256,
+    `${label}.descriptor.sha256`
+  );
+  assertFailedAttemptInteger(
+    record.descriptor.contentVersion,
+    `${label}.descriptor.contentVersion`,
+    1
+  );
+  const snapshot = record.descriptor.snapshot;
+  assertDescriptor(
+    snapshot,
+    { promptProfile: snapshot?.promptProfile },
+    `${label}.descriptor.snapshot`
+  );
+  if (
+    snapshot?.category === 'route-transition'
+    || snapshot?.theme !== record.theme
+    || snapshot?.id !== record.familyId
+    || snapshot?.content?.version !== record.descriptor.contentVersion
+  ) {
+    throw new Error(`${label}.descriptor snapshot identity is inconsistent`);
+  }
+  const descriptorPath =
+    `ai-image-metadata/battle-art/descriptors/${record.theme}/`
+    + `${record.familyId}.json`;
+  if (record.descriptor.path !== descriptorPath) {
+    throw new Error(`${label}.descriptor.path is not canonical`);
+  }
+  if (sha256(Buffer.from(stableJson(snapshot))) !== record.descriptor.sha256) {
+    throw new Error(`${label}.descriptor snapshot hash does not match`);
+  }
+
+  const paths = candidatePaths(snapshot);
+  assertFailedAttemptTextEvidence(
+    record.prompt,
+    paths.prompt,
+    `${label}.prompt`
+  );
+  if (
+    stableJson(parseFrozenDescriptorFromGenerationPrompt(record.prompt.text))
+      !== stableJson(snapshot)
+  ) {
+    throw new Error(`${label}.prompt frozen descriptor does not match`);
+  }
+
+  exactKeys(record.worker, [
+    'command',
+    'ephemeral',
+    'invocationCount',
+    'timeoutMs',
+    'styleReferenceMode',
+    'styleReferenceProvenance',
+    'imageArguments',
+    'stdout',
+    'stderr',
+    'lastMessage'
+  ], `${label}.worker`);
+  if (
+    record.worker.command !== 'codex'
+    || record.worker.ephemeral !== true
+    || record.worker.invocationCount !== 1
+  ) {
+    throw new Error(`${label}.worker identity is invalid`);
+  }
+  assertFailedAttemptInteger(
+    record.worker.timeoutMs,
+    `${label}.worker.timeoutMs`,
+    1
+  );
+  if (!Array.isArray(record.worker.imageArguments)
+    || record.worker.imageArguments.some(value => (
+      typeof value !== 'string' || value !== path.basename(value)
+    ))) {
+    throw new Error(`${label}.worker.imageArguments must be basenames`);
+  }
+  assertStyleReferenceProvenance({
+    styleReferences: snapshot.styleReferences,
+    provenance: record.worker.styleReferenceProvenance,
+    mode: record.worker.styleReferenceMode,
+    args: record.worker.imageArguments.flatMap(
+      value => ['--image', value]
+    ),
+    imageBasenames: record.worker.imageArguments,
+    label: `${label}.worker`
+  });
+  assertFailedAttemptTextEvidence(
+    record.worker.stdout,
+    paths.stdout,
+    `${label}.worker.stdout`
+  );
+  assertFailedAttemptTextEvidence(
+    record.worker.stderr,
+    paths.stderr,
+    `${label}.worker.stderr`
+  );
+  if (record.worker.lastMessage !== null) {
+    assertFailedAttemptTextEvidence(
+      record.worker.lastMessage,
+      paths.lastMessage,
+      `${label}.worker.lastMessage`
+    );
+  }
+
+  exactKeys(record.audit, [
+    'imagegen',
+    'commandCount'
+  ], `${label}.audit`);
+  exactKeys(
+    record.audit.imagegen,
+    ['invocationCount', 'evidence'],
+    `${label}.audit.imagegen`
+  );
+  const rerunAudit = failedGeneratedAttemptAuditSummary(
+    Buffer.from(record.worker.stdout.text)
+  );
+  if (stableJson(rerunAudit) !== stableJson(record.audit)) {
+    throw new Error(`${label}.audit does not reproduce from worker stdout`);
+  }
+
+  exactKeys(record.rejection, ['name', 'message'], `${label}.rejection`);
+  if (
+    typeof record.rejection.name !== 'string'
+    || record.rejection.name.length === 0
+    || typeof record.rejection.message !== 'string'
+    || record.rejection.message.length === 0
+  ) {
+    throw new Error(`${label}.rejection is invalid`);
+  }
+  assertFailedAttemptHash(record.fullHash, `${label}.fullHash`);
+  const expectedFullHash = sha256(Buffer.from(stableJson(
+    failedAttemptProjection(record)
+  )));
+  if (record.fullHash !== expectedFullHash) {
+    throw new Error(`${label}.fullHash does not match its content`);
+  }
+  const expectedPath = failedGeneratedAttemptPath(snapshot, record.fullHash);
+  if (relativePath !== expectedPath) {
+    throw new Error(`${label} path is not content-addressed`);
+  }
+  const expectedArtifactPath = generatedArtifactPath(snapshot, record.artifact);
+  if (record.artifact.path !== expectedArtifactPath) {
+    throw new Error(`${label}.artifact.path is not content-addressed`);
+  }
+  const artifactBytes = await readPinnedRegularFile(
+    root,
+    record.artifact.path,
+    record.artifact.sha256,
+    `${label}.artifact`
+  );
+  const inspectedArtifact = await inspectImageContents(
+    record.artifact.path,
+    artifactBytes
+  );
+  if (stableJson(inspectedArtifact) !== stableJson(record.artifact)) {
+    throw new Error(`${label}.artifact image identity does not match`);
+  }
+  return {
+    path: relativePath,
+    file: structuredClone(evidence.pin),
+    record,
+    artifactBytes
+  };
+}
+
+registerFailedGeneratedAttemptAuditor(auditFailedGeneratedAttempt);
 
 export async function auditRevalidatedCandidateOrigin({
   root = SCRIPT_ROOT,
@@ -3449,7 +4772,9 @@ async function archiveFailedRouteAttempt({
             `${descriptor.id} last message`
           )
     },
-    audit: failedAttemptAuditSummary(stdout.contents),
+    audit: failedAttemptAuditSummary(stdout.contents, {
+      parentHandoff: descriptor.theme !== 'forest'
+    }),
     rejection: normalizeRejection(rejection)
   };
   const record = {
@@ -3475,6 +4800,184 @@ async function archiveFailedRouteAttempt({
     }
     return { path: relativePath, record: existing.record, adopted: true };
   }
+}
+
+async function archiveFailedGeneratedAttempt({
+  root,
+  descriptor,
+  descriptorPath,
+  artifactBytes,
+  failureStage,
+  paths = candidatePaths(descriptor),
+  workerArgs,
+  invocationCount,
+  timeoutMs,
+  styleReferenceMode,
+  styleReferenceProvenance: provenance,
+  hasLastMessage,
+  rejection
+}) {
+  if (descriptor.category === 'route-transition') {
+    throw new Error('generic generated failure evidence cannot archive a route');
+  }
+  const artifact = await persistImmutableGeneratedArtifact({
+    root,
+    descriptor,
+    bytes: artifactBytes,
+    label: `${descriptor.id} rejected verified generated artifact`
+  });
+  const [prompt, stdout, stderr, lastMessage] = await Promise.all([
+    readRegularFileSnapshot(root, paths.prompt, `${descriptor.id} prompt`),
+    readRegularFileSnapshot(root, paths.stdout, `${descriptor.id} stdout`),
+    readRegularFileSnapshot(root, paths.stderr, `${descriptor.id} stderr`),
+    hasLastMessage
+      ? readRegularFileSnapshot(
+          root,
+          paths.lastMessage,
+          `${descriptor.id} last message`
+        )
+      : null
+  ]);
+  const imageArguments = assertStyleReferenceProvenance({
+    styleReferences: descriptor.styleReferences,
+    provenance,
+    mode: styleReferenceMode,
+    args: workerArgs,
+    label: `${descriptor.id} failed generated worker`
+  });
+  const projection = {
+    schemaVersion: FAILED_GENERATED_ATTEMPT_SCHEMA,
+    theme: descriptor.theme,
+    familyId: descriptor.id,
+    artifact,
+    failureStage,
+    descriptor: {
+      path: descriptorPath,
+      sha256: sha256(Buffer.from(stableJson(descriptor))),
+      contentVersion: descriptor.content.version,
+      snapshot: structuredClone(descriptor)
+    },
+    prompt: failedAttemptText(
+      prompt.pin,
+      prompt.contents,
+      `${descriptor.id} prompt`
+    ),
+    worker: {
+      command: 'codex',
+      ephemeral: true,
+      invocationCount,
+      timeoutMs,
+      styleReferenceMode,
+      styleReferenceProvenance: structuredClone(provenance),
+      imageArguments,
+      stdout: failedAttemptText(
+        stdout.pin,
+        stdout.contents,
+        `${descriptor.id} stdout`
+      ),
+      stderr: failedAttemptText(
+        stderr.pin,
+        stderr.contents,
+        `${descriptor.id} stderr`
+      ),
+      lastMessage: lastMessage === null
+        ? null
+        : failedAttemptText(
+            lastMessage.pin,
+            lastMessage.contents,
+            `${descriptor.id} last message`
+          )
+    },
+    audit: failedGeneratedAttemptAuditSummary(stdout.contents),
+    rejection: normalizeRejection(rejection)
+  };
+  const record = {
+    ...projection,
+    fullHash: sha256(Buffer.from(stableJson(projection)))
+  };
+  const relativePath = failedGeneratedAttemptPath(
+    descriptor,
+    record.fullHash
+  );
+  try {
+    await atomicWrite(root, relativePath, stableJson(record), {
+      immutable: true
+    });
+    return { path: relativePath, record, adopted: false };
+  } catch (error) {
+    if (error.code !== 'EEXIST') throw error;
+    const existing = await auditFailedGeneratedAttempt({
+      root,
+      relativePath
+    });
+    if (stableJson(existing.record) !== stableJson(record)) {
+      throw new Error(
+        `${descriptor.id} failed generated evidence hash collision`
+      );
+    }
+    return { path: relativePath, record: existing.record, adopted: true };
+  }
+}
+
+async function archiveVerifiedGeneratedFailure({
+  loaded,
+  entry,
+  paths,
+  generatedBytes,
+  styleReferenceMode,
+  styleReferenceProvenance: provenance,
+  workerArgs,
+  invocationCount,
+  timeoutMs,
+  hasLastMessage,
+  failureStage,
+  rejection
+}) {
+  const { descriptor } = entry;
+  let evidence;
+  if (descriptor.category === 'route-transition') {
+    const raw = await persistImmutableGeneratedArtifact({
+      root: loaded.root,
+      descriptor,
+      bytes: generatedBytes,
+      label: `${descriptor.id} failed generated route artifact`
+    });
+    evidence = await archiveFailedRouteAttempt({
+      root: loaded.root,
+      descriptor,
+      descriptorPath: entry.path,
+      raw,
+      paths,
+      workerArgs,
+      invocationCount,
+      timeoutMs,
+      styleReferenceMode,
+      styleReferenceProvenance: provenance,
+      hasLastMessage,
+      rejection
+    });
+  } else {
+    evidence = await archiveFailedGeneratedAttempt({
+      root: loaded.root,
+      descriptor,
+      descriptorPath: entry.path,
+      artifactBytes: generatedBytes,
+      failureStage,
+      paths,
+      workerArgs,
+      invocationCount,
+      timeoutMs,
+      styleReferenceMode,
+      styleReferenceProvenance: provenance,
+      hasLastMessage,
+      rejection
+    });
+  }
+  if (rejection !== null
+    && (typeof rejection === 'object' || typeof rejection === 'function')) {
+    rejection.failedAttemptEvidencePath = evidence.path;
+  }
+  return evidence;
 }
 
 function backfillWorkspaceFromLastMessage(descriptor, text) {
@@ -3906,14 +5409,41 @@ async function generateOne({
   profile,
   options,
   worker,
-  afterCandidateVerified
+  afterCandidateVerified,
+  beforeParentCandidateWrite,
+  beforeParentWorkspaceOpen,
+  beforeParentWorkspacePin,
+  environmentSource
 }) {
   const descriptor = entry.descriptor;
   const paths = candidatePaths(descriptor);
   const candidateDirectory = resolveTracked(loaded.root, paths.directory, 'candidate directory');
   await mkdir(candidateDirectory, { recursive: true });
   const workspace = await mkdtemp(path.join(candidateDirectory, '.workspace-'));
+  const nonForestParentRouteHandoff =
+    descriptor.category === 'route-transition'
+    && descriptor.theme !== 'forest';
+  let parentRouteWorkspaceHandle = null;
+  let parentRouteWorkspacePin = null;
+  let reservedParentRouteCandidate = null;
   try {
+    if (nonForestParentRouteHandoff) {
+      await beforeParentWorkspaceOpen({ workspace });
+      parentRouteWorkspaceHandle = await open(
+        workspace,
+        PINNED_WORKSPACE_DIRECTORY_FLAGS
+      );
+      await beforeParentWorkspacePin({ workspace });
+      parentRouteWorkspacePin = await pinParentRouteWorkspace(
+        workspace,
+        parentRouteWorkspaceHandle
+      );
+      reservedParentRouteCandidate = await reserveParentRouteCandidate(
+        workspace,
+        parentRouteWorkspaceHandle,
+        parentRouteWorkspacePin
+      );
+    }
     const staged = await stageInputs(loaded.root, workspace, descriptor, profile);
     const before = await workspaceSnapshot(workspace);
     const prompt = buildGenerationPrompt({
@@ -3922,13 +5452,45 @@ async function generateOne({
       styleFiles: staged.styleFiles,
       textStyleFallback: options.textStyleFallback
     });
-    const result = await worker({
-      workspace,
-      prompt,
-      timeoutMs: options.timeoutMs,
-      descriptor,
-      styleFiles: options.textStyleFallback ? [] : staged.styleFiles
+    // A prior attempt can have persisted a final message before failing a later
+    // evidence check. It is not evidence for this worker invocation.
+    await rm(resolveTracked(loaded.root, paths.lastMessage), {
+      force: true,
+      recursive: false
     });
+    let result;
+    try {
+      result = await worker({
+        workspace,
+        prompt,
+        timeoutMs: options.timeoutMs,
+        descriptor,
+        styleFiles: options.textStyleFallback ? [] : staged.styleFiles,
+        ...(descriptor.category === 'route-transition'
+          && descriptor.theme !== 'forest'
+          ? { environmentSource }
+          : {})
+      });
+    } catch (error) {
+      const cappedFailureOutput = key => {
+        const value = error?.[key];
+        if (Buffer.isBuffer(value)) {
+          return value.subarray(0, MAX_WORKER_OUTPUT_BYTES);
+        }
+        if (typeof value === 'string' || value instanceof Uint8Array) {
+          return Buffer.from(value).subarray(0, MAX_WORKER_OUTPUT_BYTES);
+        }
+        return Buffer.alloc(0);
+      };
+      for (const [relative, contents] of [
+        [paths.prompt, `${prompt}\n`],
+        [paths.stdout, cappedFailureOutput('stdout')],
+        [paths.stderr, cappedFailureOutput('stderr')]
+      ]) {
+        await atomicWrite(loaded.root, relative, contents);
+      }
+      throw error;
+    }
     const expectedImagePaths = options.textStyleFallback
       ? []
       : staged.styleFiles.map(file => path.join(workspace, file));
@@ -3955,8 +5517,44 @@ async function generateOne({
       }
       await atomicWrite(loaded.root, relative, contents);
     }
+    let parentHandoff = null;
+    if (nonForestParentRouteHandoff) {
+      const workerAfter = await workspaceSnapshot(workspace);
+      auditWorkspaceBeforeParentRouteHandoff(
+        before,
+        workerAfter,
+        staged.inputs
+      );
+      const handoffAudit = auditCanonicalParentRouteHandoffJsonl(
+        result.stdout
+      );
+      parentHandoff = await resolveCodexCurrentThreadImagegenArtifact({
+        threadId: handoffAudit.threadId,
+        environmentSource
+      });
+      await materializeParentRouteCandidate(
+        workspace,
+        parentHandoff.bytes,
+        {
+          workspaceHandle: parentRouteWorkspaceHandle,
+          workspacePin: parentRouteWorkspacePin,
+          reservedCandidate: reservedParentRouteCandidate,
+          beforeWrite: beforeParentCandidateWrite
+        }
+      );
+    }
     const after = await workspaceSnapshot(workspace);
-    const candidateName = auditWorkspace(before, after, staged.inputs);
+    const finalAuditBefore = nonForestParentRouteHandoff
+      ? new Map(before)
+      : before;
+    if (nonForestParentRouteHandoff) {
+      finalAuditBefore.delete('candidate.png');
+    }
+    const candidateName = auditWorkspace(
+      finalAuditBefore,
+      after,
+      staged.inputs
+    );
     const lastMessage = await readAuditedWorkerFile(
       workspace,
       after,
@@ -3976,18 +5574,22 @@ async function generateOne({
       await atomicWrite(loaded.root, relative, contents);
     }
     const routeGeneration = descriptor.category === 'route-transition';
-    if (routeGeneration) {
+    if (routeGeneration && !nonForestParentRouteHandoff) {
       assertSingleGeneratedArtifactCopyEvidence(result.stdout);
     }
-    const toolAudit = auditCodexWorkerJsonl(result.stdout, {
-      allowMixedExplicitArtifactEvidence: routeGeneration
-    });
-    const invocationCount = toolAudit.imagegenInvocationCount;
+    const toolAudit = nonForestParentRouteHandoff
+      ? parentHandoff.verificationAudit
+      : auditCodexWorkerJsonl(result.stdout, {
+          allowMixedExplicitArtifactEvidence: routeGeneration
+        });
+    const invocationCount = nonForestParentRouteHandoff
+      ? 1
+      : toolAudit.imagegenInvocationCount;
     if (invocationCount !== 1) {
       throw new Error(`worker must call imagegen exactly once; observed ${invocationCount}`);
     }
     const workspaceCandidate = path.join(workspace, candidateName);
-    const verificationAudit = routeGeneration
+    const verificationAudit = routeGeneration && !nonForestParentRouteHandoff
       ? {
           ...toolAudit,
           imagegenEvidence: 'generated-artifact',
@@ -3998,16 +5600,49 @@ async function generateOne({
       verificationAudit,
       {
         candidatePath: workspaceCandidate,
-        environmentSource: result.environmentSource ?? process.env,
+        environmentSource: nonForestParentRouteHandoff
+          ? environmentSource
+          : result.environmentSource ?? process.env,
         requireCandidateByteIdentity: routeGeneration
       }
     );
-    const generatedBytes = verification.candidateBytes;
-    await afterCandidateVerified({
-      workspaceCandidate,
-      verifiedCandidateBytes: generatedBytes,
-      descriptor
-    });
+    if (nonForestParentRouteHandoff) {
+      await assertPinnedParentRouteCandidate(
+        workspace,
+        parentRouteWorkspaceHandle,
+        parentRouteWorkspacePin,
+        reservedParentRouteCandidate,
+        verification.candidateBytes.length
+      );
+    }
+    const generatedBytes = Buffer.from(verification.candidateBytes);
+    try {
+      await afterCandidateVerified({
+        workspaceCandidate,
+        verifiedCandidateBytes: Buffer.from(generatedBytes),
+        descriptor
+      });
+    } catch (error) {
+      await archiveVerifiedGeneratedFailure({
+        loaded,
+        entry,
+        paths,
+        generatedBytes,
+        styleReferenceMode: options.textStyleFallback
+          ? 'text-fallback'
+          : 'attachments',
+        styleReferenceProvenance: staged.styleReferenceProvenance,
+        workerArgs: result.args ?? [],
+        invocationCount,
+        timeoutMs: options.timeoutMs,
+        hasLastMessage: logEntries.some(
+          ([relative]) => relative === paths.lastMessage
+        ),
+        failureStage: 'after-candidate-verification',
+        rejection: error
+      });
+      throw error;
+    }
     assertNoProceduralRasterSynthesis(result.stdout);
     return await publishVerifiedGeneratedCandidate({
       loaded,
@@ -4027,7 +5662,32 @@ async function generateOne({
       )
     });
   } finally {
-    await rm(workspace, { recursive: true, force: true });
+    let cleanupPath = nonForestParentRouteHandoff ? null : workspace;
+    if (
+      parentRouteWorkspaceHandle !== null
+      && parentRouteWorkspacePin !== null
+    ) {
+      cleanupPath = await quarantinePinnedParentRouteWorkspace(
+        workspace,
+        parentRouteWorkspaceHandle,
+        parentRouteWorkspacePin
+      );
+    }
+    try {
+      if (reservedParentRouteCandidate !== null) {
+        await reservedParentRouteCandidate.handle.close();
+      }
+    } finally {
+      try {
+        if (parentRouteWorkspaceHandle !== null) {
+          await parentRouteWorkspaceHandle.close();
+        }
+      } finally {
+        if (cleanupPath !== null) {
+          await rm(cleanupPath, { recursive: true, force: true });
+        }
+      }
+    }
   }
 }
 
@@ -4288,6 +5948,9 @@ export async function revalidateFailedRouteAttempt(options = {}) {
 export async function generateBattleArt(options, {
   worker = spawnCodexWorker,
   afterCandidateVerified = async () => {},
+  beforeParentCandidateWrite = async () => {},
+  beforeParentWorkspaceOpen = async () => {},
+  beforeParentWorkspacePin = async () => {},
   environmentSource = process.env
 } = {}) {
   if (!options.dryRun && !options.recover) {
@@ -4396,7 +6059,11 @@ export async function generateBattleArt(options, {
               profile: lockedLoaded.promptProfile,
               options,
               worker,
-              afterCandidateVerified
+              afterCandidateVerified,
+              beforeParentCandidateWrite,
+              beforeParentWorkspaceOpen,
+              beforeParentWorkspacePin,
+              environmentSource
             });
           } catch (error) {
             await cleanCandidatePublication(lockedLoaded.root, lockedPaths);

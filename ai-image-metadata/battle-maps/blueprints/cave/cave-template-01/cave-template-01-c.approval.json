@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "battle-map-blueprint-approval-v3",
+  "id": "cave-template-01-c",
+  "theme": "cave",
+  "templateId": "cave-template-01",
+  "decision": "approved",
+  "reviewer": "codex-cave-v3-mechanical-reviewer",
+  "blueprintPath": "ai-image-metadata/battle-maps/blueprints/cave/cave-template-01/cave-template-01-c.json",
+  "blueprintFileSha256": "sha256:d12825e7c705ae2907888ffc6cdea272f07bc850e49874c7666329664f7f4dc1",
+  "blueprintFullHash": "sha256:5ac632c67956c5b3f3db196f02173c45be11acfde229d21bbcc12eb980167922",
+  "sourceImageSha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe",
+  "promptProfile": {
+    "id": "map-blueprint-v3",
+    "path": "ai-image-metadata/battle-maps/prompts/map-blueprint-v3.json",
+    "sha256": "sha256:23e6e1c07490b84211c7fc67e42f396e150a315a0ee0ec92aaf524a147eca160"
+  },
+  "reason": "Its three ordered primary routes are internally vertex-disjoint with distinct formation entries; the wider eastern bend gives the shelf route the clearest tactical identity. The exact five required areas are preserved: a walkable level-0 central sink, level-2 western terrace, predominantly level-0 eastern shelf with an explicit natural-ramp transition, level-1 southern formation, and level-2 northern grotto. Northern access uses separate central carved-stair and western/eastern natural-ramp portals on independent routes, while the western terrace likewise has distinct stair and ramp access. The blueprint closes over exactly the reviewed 13 cave asset families with no cross-theme substitution, and its pinned result, report, and SVG evidence agree.",
+  "mechanicalReview": {
+    "schemaVersion": "battle-map-blueprint-mechanical-review-v1",
+    "reportPath": "ai-image-metadata/battle-maps/review/cave/cave-template-01/cave-template-01-c/previews/5ac632c67956c5b3f3db196f02173c45be11acfde229d21bbcc12eb980167922/mechanical-report.json",
+    "reportFileSha256": "sha256:84207535e1641d6a77f9e8d27f13f782d8640070ab6e1dc2e365efc43079300f",
+    "previewPath": "ai-image-metadata/battle-maps/review/cave/cave-template-01/cave-template-01-c/previews/5ac632c67956c5b3f3db196f02173c45be11acfde229d21bbcc12eb980167922/mechanical-preview.svg",
+    "previewFileSha256": "sha256:7c181871a5324d0e4a050e942281995bfa5f1d125f7f4857b3429e47211ccdf9"
+  },
+  "fullHash": "sha256:a090d128a4890b782604e2e0e6069a4d3eff84cd9a672f02d03c0a453a1fd5e3"
+}

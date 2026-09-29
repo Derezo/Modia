@@ -1,0 +1,162 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v3",
+  "theme": "cave",
+  "familyId": "cave-limestone-curved-passage-cross",
+  "decision": "approved",
+  "reviewer": "codex-live-candidate-visual-review",
+  "reason": "The exact candidate sha256:89f634333fc8e602efe9b0c9f89363e2042da78b23a1c587b3660ab23d4379ba is byte-identical to the descriptor-pinned failed-attempt replay. Origin pins and all raster, topology, anchor/terminal, connectivity, border, width, and coverage checks pass: arms span 28–32 pixels, coverage is 12,518 pixels/382‰, detached coverage 10‰, with no residual exterior chroma. Native and true 4:1 inspection show four arms merging into one broad rounded readable junction without the rejected bow-tie pinch. Self-seams remain centered and continuous with no gaps, width jumps, waves, or terminal blocks. The faint inherited warm edge fringe is unobtrusive at runtime. Historical 42c2 remains immutable rejected evidence.",
+  "reviewedAt": "2026-08-12T02:57:11.739Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/cave/cave-limestone-curved-passage-cross.json",
+    "sha256": "sha256:be4e69811da3f8b5f4c7069f102e74583e1c0451c321ca639a2325fa6dc57b7c",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-curved-passage-cross/result.json",
+      "bytes": 5517,
+      "sha256": "sha256:2e0f431b49e7bdd4e285fd9879349b7b22260a5f469bc690f8be5288d2c2ab0e"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-curved-passage-cross/candidate.png",
+      "bytes": 38988,
+      "width": 256,
+      "height": 128,
+      "format": "png",
+      "sha256": "sha256:89f634333fc8e602efe9b0c9f89363e2042da78b23a1c587b3660ab23d4379ba"
+    },
+    "derivation": {
+      "schemaVersion": "battle-art-route-finishing-v1",
+      "strategy": "multi-arm-local-warp-v1",
+      "source": {
+        "path": "ai-image-metadata/battle-art/generated-artifacts/cave/cave-limestone-curved-passage-cross/fb2af90ff35d6ac4a143083bddcb81353056cefb477abc9cccd44d690365d3a3.png",
+        "bytes": 1400418,
+        "width": 1774,
+        "height": 887,
+        "format": "png",
+        "sha256": "sha256:fb2af90ff35d6ac4a143083bddcb81353056cefb477abc9cccd44d690365d3a3"
+      },
+      "sourceTopologySha256": "sha256:b3ff424c10fe170facebd9af275e60075c83577d0c9edb3fa44f35ee0a238d6f",
+      "sourceBounds": {
+        "x": 226,
+        "y": 99,
+        "width": 1323,
+        "height": 690
+      },
+      "componentCount": 61,
+      "coveredPixels": 216534,
+      "selectedCoveredPixels": 214402,
+      "sourceSampling": "all-visible-components-v1",
+      "detachedCoveredPixels": 2132,
+      "detachedCoveredPermille": 10,
+      "maximumDetachedCoveredPermille": 12,
+      "anchor": {
+        "x": 128,
+        "y": 64
+      },
+      "terminals": {
+        "n": {
+          "x": 192,
+          "y": 32
+        },
+        "e": {
+          "x": 192,
+          "y": 96
+        },
+        "s": {
+          "x": 64,
+          "y": 96
+        },
+        "w": {
+          "x": 64,
+          "y": 32
+        }
+      },
+      "arms": {
+        "n": {
+          "perpendicularStartScalePermille": 2300,
+          "perpendicularScalePermille": 3000,
+          "perpendicularOffsetPixels": 0,
+          "scaleTransitionStartPermille": 0,
+          "scaleTransitionEndPermille": 500,
+          "offsetTransitionStartPermille": 0,
+          "offsetTransitionEndPermille": 500
+        },
+        "e": {
+          "perpendicularStartScalePermille": 2300,
+          "perpendicularScalePermille": 3000,
+          "perpendicularOffsetPixels": 0,
+          "scaleTransitionStartPermille": 0,
+          "scaleTransitionEndPermille": 500,
+          "offsetTransitionStartPermille": 0,
+          "offsetTransitionEndPermille": 500
+        },
+        "s": {
+          "perpendicularStartScalePermille": 2300,
+          "perpendicularScalePermille": 3000,
+          "perpendicularOffsetPixels": 0,
+          "scaleTransitionStartPermille": 0,
+          "scaleTransitionEndPermille": 500,
+          "offsetTransitionStartPermille": 0,
+          "offsetTransitionEndPermille": 500
+        },
+        "w": {
+          "perpendicularStartScalePermille": 2300,
+          "perpendicularScalePermille": 3000,
+          "perpendicularOffsetPixels": 0,
+          "scaleTransitionStartPermille": 0,
+          "scaleTransitionEndPermille": 500,
+          "offsetTransitionStartPermille": 0,
+          "offsetTransitionEndPermille": 500
+        }
+      },
+      "maximumCoveragePermille": 420,
+      "maximumScaleAnisotropyPermille": 3000,
+      "maximumAppliedScalePermille": 3000,
+      "maximumFinishedDetachedCoveredPermille": 12,
+      "finishedDetachedCoveredPixels": 114,
+      "finishedDetachedCoveredPermille": 10,
+      "borderClearPixels": 4,
+      "armSelector": "greatest-longitudinal-projection-v1",
+      "transition": "independent-smoothstep-v1",
+      "armMeasurement": "centerline-intersecting-run-v1",
+      "kernel": "bilinear-premultiplied-alpha-v1",
+      "finalSha256": "sha256:89f634333fc8e602efe9b0c9f89363e2042da78b23a1c587b3660ab23d4379ba"
+    },
+    "origin": {
+      "kind": "failed-attempt-revalidation-v1",
+      "failureRecord": {
+        "path": "ai-image-metadata/battle-art/generated-artifacts/cave/cave-limestone-curved-passage-cross/failures/7e20a22acb5cde38544cefd2c76d7631bd7fbcbd6532f3f055210637f3373e7f.json",
+        "sha256": "sha256:4c95c3c2029f0e1f308d9602bb95820e5b6799b834bf441620f707452ff6ba6c",
+        "fullHash": "sha256:7e20a22acb5cde38544cefd2c76d7631bd7fbcbd6532f3f055210637f3373e7f"
+      },
+      "raw": {
+        "path": "ai-image-metadata/battle-art/generated-artifacts/cave/cave-limestone-curved-passage-cross/fb2af90ff35d6ac4a143083bddcb81353056cefb477abc9cccd44d690365d3a3.png",
+        "bytes": 1400418,
+        "width": 1774,
+        "height": 887,
+        "format": "png",
+        "sha256": "sha256:fb2af90ff35d6ac4a143083bddcb81353056cefb477abc9cccd44d690365d3a3"
+      },
+      "originalDescriptor": {
+        "path": "ai-image-metadata/battle-art/descriptors/cave/cave-limestone-curved-passage-cross.json",
+        "sha256": "sha256:e2da4e956967eed0f257f45e0a6516b7081203a32acb58e00a0d0bb5e3e62954",
+        "contentVersion": 1
+      },
+      "validationDescriptorSha256": "sha256:be4e69811da3f8b5f4c7069f102e74583e1c0451c321ca639a2325fa6dc57b7c"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "cave-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/cave/cave-template-01/reference.png",
+        "sha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe"
+      }
+    ]
+  },
+  "fullHash": "sha256:6652a3237f8481e8db56be3379d678247f55ff818c310c37c5e1770316e5f49d"
+}

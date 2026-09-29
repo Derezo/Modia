@@ -1,12 +1,15 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { EventEmitter } from 'node:events';
+import { constants as fsConstants } from 'node:fs';
 import {
   cp,
   copyFile,
   link,
+  lstat,
   mkdir,
   mkdtemp,
+  open as openFile,
   readFile,
   readdir,
   rename,
@@ -35,6 +38,7 @@ import {
   FRONTEND_BUNDLE_PATH,
   FRONTEND_BUNDLE_REGISTRY_PATH,
   INVENTORY_PATH,
+  INVENTORY_REGISTRY_PATH,
   LEGACY_EVIDENCE_REGISTRY_PATH,
   READINESS_PLAN_PATH,
   RENDER_PROFILE,
@@ -43,9 +47,11 @@ import {
   REVIEW_SCHEMA,
   THEMES,
   approveCandidate,
+  appendInventoryRegistryEntry,
   archiveCurrentRelease,
   assertAllowlistedLegacyCandidate,
   assertDescriptor,
+  assertRuntimeArtifactState,
   assertReviewRecord,
   auditBattleArt,
   auditBattleArtReviews,
@@ -66,12 +72,14 @@ import {
   recordCandidateReview,
   resolveArchivedRuntimeBundle,
   reviseFamily,
+  scaffoldReadinessDescriptors,
   sha256,
   stableJson,
   styleReferenceProvenance,
   toCompilerAssetBundle,
   verifyCandidateRouteDerivation,
   writeDraft,
+  writeInventory,
   writePreview
 } from './lifecycle.mjs';
 import {
@@ -88,6 +96,7 @@ import {
   assertRouteTransitionCanvasBorderClear,
   assertSingleGeneratedArtifactCopyEvidence,
   auditCorrectiveStyleReferenceForGeneration,
+  auditFailedGeneratedAttempt,
   auditFailedRouteAttempt,
   backfillFailedRouteAttempt,
   buildCodexArgs,
@@ -97,21 +106,50 @@ import {
   generateBattleArt,
   parseGenerateArgs,
   revalidateFailedRouteAttempt,
-  runCommand
+  runCommand,
+  validatePreparedRouteGeometry
 } from './generate.mjs';
 import {
-  finishRouteArtifact
+  finishRouteArtifact,
+  validateFinishedRouteArtifact
 } from './finish-route-artifact.mjs';
 import {
   normalizeCandidates
 } from './normalize.mjs';
 import {
+  normalizeGeneratedRasterBytes,
+  validateRasterBytes
+} from './raster-contract.mjs';
+import {
   withBattleArtManifestAndCandidateLock
 } from './candidate-lock.mjs';
+import {
+  auditCodexParentImagegenHandoffJsonl,
+  resolveCodexCurrentThreadImagegenArtifact,
+  parseGeneratedArtifactCopyCommand
+} from '../battle-maps/codex-worker-boundary.mjs';
 import { parseCommand } from './cli.mjs';
 
 const REPOSITORY_ROOT = path.resolve(import.meta.dirname, '../..');
 const temporaryRoots = [];
+
+async function snapshotTree(root) {
+  const snapshot = {};
+  async function visit(directory, relativeDirectory = '') {
+    const entries = await readdir(directory, { withFileTypes: true });
+    for (const entry of entries) {
+      const relative = path.join(relativeDirectory, entry.name);
+      const absolute = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        await visit(absolute, relative);
+      } else {
+        snapshot[relative] = sha256(await readFile(absolute));
+      }
+    }
+  }
+  await visit(root);
+  return snapshot;
+}
 
 function distanceToSegment(x, y, start, end) {
   const dx = end.x - start.x;
@@ -133,9 +171,113 @@ function topologyDirections(topology) {
   return [...topology.slice(topology.indexOf('-') + 1)];
 }
 
+async function normalizeTrackedFailedRoute(root, failurePath, profile) {
+  const failure = (await readJson(root, failurePath)).value;
+  const descriptor = failure.descriptor.snapshot;
+  const raw = await readFile(path.join(root, failure.raw.path));
+  assert.equal(raw.length, failure.raw.bytes);
+  assert.equal(sha256(raw), failure.raw.sha256);
+  const metadata = await sharp(raw).metadata();
+  assert.equal(metadata.width, failure.raw.width);
+  assert.equal(metadata.height, failure.raw.height);
+  const resized = await sharp(raw, { failOn: 'error' })
+    .resize(descriptor.canvas.width, descriptor.canvas.height, {
+      fit: 'fill',
+      kernel: sharp.kernel.lanczos3
+    })
+    .png({ compressionLevel: 9, palette: false })
+    .toBuffer();
+  const bytes = await normalizeGeneratedRasterBytes({
+    bytes: resized,
+    descriptor,
+    profile,
+    format: 'png',
+    label: `${descriptor.id} tracked failed raw`
+  });
+  return { bytes, descriptor, failure };
+}
+
+async function collectRouteValidationFailures({ bytes, descriptor, profile }) {
+  const checks = [
+    ['raster', () => validateRasterBytes({
+      bytes,
+      descriptor,
+      profile,
+      label: `${descriptor.id} tracked failed raw`
+    })],
+    ['border', () => assertRouteTransitionCanvasBorderClear({
+      bytes,
+      descriptor,
+      label: `${descriptor.id} tracked failed raw`
+    })],
+    ['arm-width', () => assertRouteArmMinimumCoreWidth({
+      bytes,
+      descriptor,
+      label: `${descriptor.id} tracked failed raw`
+    })],
+    ['corner-core', () => assertRouteCornerMinimumCoreWidth({
+      bytes,
+      descriptor,
+      label: `${descriptor.id} tracked failed raw`
+    })],
+    ['corner-es-arch', () => assertCornerEsAnchorArchPlacement({
+      bytes,
+      descriptor,
+      label: `${descriptor.id} tracked failed raw`
+    })],
+    ['corner-coverage', () => assertRouteCornerMaximumCoverage({
+      bytes,
+      descriptor,
+      label: `${descriptor.id} tracked failed raw`
+    })],
+    ['straight-coverage', () => assertRouteStraightMaximumCoverage({
+      bytes,
+      descriptor,
+      label: `${descriptor.id} tracked failed raw`
+    })],
+    ['straight-extent', () => assertRouteStraightMaximumLongitudinalExtent({
+      bytes,
+      descriptor,
+      label: `${descriptor.id} tracked failed raw`
+    })]
+  ];
+  const failures = {};
+  for (const [name, check] of checks) {
+    try {
+      await check();
+    } catch (error) {
+      failures[name] = error.message;
+    }
+  }
+  return failures;
+}
+
+async function trackedGeneratedFailureCount(root) {
+  const generatedRoot = path.join(
+    root,
+    'ai-image-metadata/battle-art/generated-artifacts'
+  );
+  let relatives;
+  try {
+    relatives = await readdir(generatedRoot, { recursive: true });
+  } catch (error) {
+    if (error.code === 'ENOENT') return 0;
+    throw error;
+  }
+  let count = 0;
+  for (const relative of relatives.filter(value => value.endsWith('.json'))) {
+    const record = JSON.parse(await readFile(path.join(generatedRoot, relative)));
+    if (record.schemaVersion === 'battle-art-generated-failed-attempt-v1') {
+      count += 1;
+    }
+  }
+  return count;
+}
+
 async function fixture({
   plannedDrafts = [],
   excludedFamilies = [],
+  includedFamilies = null,
   preserveDirectStyleProvenance = false
 } = {}) {
   const root = await mkdtemp(path.join(tmpdir(), 'modia-battle-art-'));
@@ -168,6 +310,11 @@ async function fixture({
     root,
     'ai-image-metadata/battle-art/manifest.json'
   )).value;
+  const trackedRuntimeBundle = (await readJson(
+    REPOSITORY_ROOT,
+    BUNDLE_PATH
+  )).value;
+  manifest.version = trackedRuntimeBundle.version;
   const directReferences = manifest.styleReferences.filter(reference => (
     reference.path.startsWith('ai-image-metadata/battle-art/sources/')
   ));
@@ -292,10 +439,16 @@ async function fixture({
       );
     }
   }
+  const effectiveIncludedFamilies = includedFamilies === null
+    ? null
+    : new Set([...includedFamilies, ...provenanceOwnerIds]);
   const excludedDescriptorPaths = manifest.descriptors.filter(
-    descriptorRelative => excludedFamilies.includes(
-      path.basename(descriptorRelative, '.json')
-    )
+    descriptorRelative => {
+      const familyId = path.basename(descriptorRelative, '.json');
+      return excludedFamilies.includes(familyId)
+        || (effectiveIncludedFamilies !== null
+          && !effectiveIncludedFamilies.has(familyId));
+    }
   );
   manifest.descriptors = manifest.descriptors.filter(
     descriptorRelative => !excludedDescriptorPaths.includes(descriptorRelative)
@@ -303,6 +456,24 @@ async function fixture({
   await Promise.all(excludedDescriptorPaths.map(
     descriptorRelative => rm(path.join(root, descriptorRelative))
   ));
+  if (includedFamilies !== null) {
+    const includedDescriptorIds = new Set(manifest.descriptors.map(relative => (
+      path.basename(relative, '.json')
+    )));
+    const readiness = (await readJson(root, READINESS_PLAN_PATH)).value;
+    readiness.plans = readiness.plans
+      .map(plan => ({
+        ...plan,
+        requirements: plan.requirements.filter(requirement => (
+          includedDescriptorIds.has(requirement.descriptorId)
+        ))
+      }))
+      .filter(plan => plan.requirements.length > 0);
+    await writeFile(
+      path.join(root, READINESS_PLAN_PATH),
+      stableJson(readiness)
+    );
+  }
   if (plannedDrafts.length > 0) {
     const readiness = (await readJson(root, READINESS_PLAN_PATH)).value;
     for (const options of plannedDrafts) {
@@ -392,11 +563,18 @@ async function fixture({
 
   const bundle = await buildBundle(manifest, descriptors);
   const registry = buildBundleRegistry([], bundle);
+  const inventory = buildInventory(manifest, descriptors);
+  const inventoryContents = stableJson(inventory);
+  const inventoryRegistry = {
+    schemaVersion: 'battle-art-runtime-inventory-registry-v1',
+    entries: []
+  };
   await writeFile(path.join(root, BUNDLE_PATH), stableJson(bundle));
   await writeFile(path.join(root, BUNDLE_REGISTRY_PATH), stableJson(registry));
+  await writeFile(path.join(root, INVENTORY_PATH), inventoryContents);
   await writeFile(
-    path.join(root, INVENTORY_PATH),
-    stableJson(buildInventory(manifest, descriptors))
+    path.join(root, INVENTORY_REGISTRY_PATH),
+    stableJson(inventoryRegistry)
   );
   await mkdir(path.join(root, 'frontend/src/generated'), { recursive: true });
   await writeFile(path.join(root, FRONTEND_BUNDLE_PATH), stableJson(bundle));
@@ -638,11 +816,19 @@ async function candidateWorker({ workspace, descriptor, styleFiles = [] }) {
       data[index + 3] = 255;
     }
   }
-  await sharp(data, {
+  const generatedCandidateBytes = await sharp(data, {
     raw: { width, height, channels: 4 }
   })
     .png()
-    .toFile(path.join(workspace, 'candidate.png'));
+    .toBuffer();
+  const parentOwnedRoute = descriptor.category === 'route-transition'
+    && descriptor.theme !== 'forest';
+  if (!parentOwnedRoute) {
+    await writeFile(
+      path.join(workspace, 'candidate.png'),
+      generatedCandidateBytes
+    );
+  }
   await writeFile(path.join(workspace, 'last-message.txt'), 'generated one candidate\n');
   let environmentSource;
   const stdout = descriptor.category === 'route-transition'
@@ -663,10 +849,7 @@ async function candidateWorker({ workspace, descriptor, styleFiles = [] }) {
           artifactRoot,
           'call_RouteFixture.png'
         );
-        await copyFile(
-          path.join(workspace, 'candidate.png'),
-          artifactPath
-        );
+        await writeFile(artifactPath, generatedCandidateBytes);
         environmentSource = { CODEX_HOME: codexHome };
         return Buffer.from([
           JSON.stringify({
@@ -694,16 +877,18 @@ async function candidateWorker({ workspace, descriptor, styleFiles = [] }) {
               status: 'completed'
             }
           }),
-          JSON.stringify({
-            type: 'item.completed',
-            item: {
-              id: 'route-artifact-copy',
-              type: 'command_execution',
-              command: `/bin/cp ${artifactPath} candidate.png`,
-              status: 'completed',
-              exit_code: 0
-            }
-          })
+          ...(!parentOwnedRoute
+            ? [JSON.stringify({
+                type: 'item.completed',
+                item: {
+                  id: 'route-artifact-copy',
+                  type: 'command_execution',
+                  command: `/bin/cp ${artifactPath} candidate.png`,
+                  status: 'completed',
+                  exit_code: 0
+                }
+              })]
+            : [])
         ].join('\n') + '\n');
       })()
     : Buffer.from(
@@ -1113,6 +1298,30 @@ describe('battle-art tracked contracts', () => {
         drafted.styleReferences.map(reference => reference.id),
         ['forest-source-template-01']
       );
+      const caveDrafted = draftDescriptor({
+        manifest: reorderedManifest,
+        theme: 'cave',
+        category: 'surface',
+        id: 'cave-baseline-regression'
+      });
+      assert.deepEqual(
+        caveDrafted.styleReferences.map(reference => reference.id),
+        ['cave-source-template-01']
+      );
+      assert.throws(
+        () => draftDescriptor({
+          manifest: {
+            ...reorderedManifest,
+            styleReferences: reorderedManifest.styleReferences.filter(
+              reference => reference.id !== 'cave-source-template-01'
+            )
+          },
+          theme: 'cave',
+          category: 'surface',
+          id: 'cave-cross-theme-baseline-regression'
+        }),
+        /no baseline template style reference for theme cave/
+      );
       assert.throws(
         () => draftDescriptor({
           manifest: {
@@ -1127,11 +1336,14 @@ describe('battle-art tracked contracts', () => {
       );
     });
 
-  it('audits all themes, required categories, frozen pins, and forest coverage', async () => {
+  it('audits v11 draft staging against the immutable active v10 runtime release', async () => {
     const loaded = await loadBattleArt(REPOSITORY_ROOT);
     const result = await auditBattleArt({ root: REPOSITORY_ROOT });
-    assert.equal(loaded.manifest.version, 10);
-    assert.equal(loaded.descriptors.length, 102);
+    const generatedFailures = await trackedGeneratedFailureCount(
+      REPOSITORY_ROOT
+    );
+    assert.equal(loaded.manifest.version, 11);
+    assert.equal(loaded.descriptors.length, 145);
     assert.equal(new Set(
       loaded.descriptors.map(entry => entry.descriptor.category)
     ).size, 7);
@@ -1146,31 +1358,146 @@ describe('battle-art tracked contracts', () => {
       compiled: loaded.descriptors.filter(
         entry => entry.descriptor.status === 'compiled'
       ).length,
+      generatedFailures,
       readiness: {
         plan: READINESS_PLAN_PATH,
-        plans: 6,
-        required: 298,
-        present: 298
+        plans: 11,
+        required: 513,
+        present: 513
       }
     });
   });
 
-  it('drafts every required category for every supported theme', async () => {
+  it('lazy-loads generic failure auditing from lifecycle-only audit and check processes',
+    async () => {
+      const lifecycleUrl = new URL('./lifecycle.mjs', import.meta.url).href;
+      const expectedGeneratedFailures = await trackedGeneratedFailureCount(
+        REPOSITORY_ROOT
+      );
+      const source = [
+        `const lifecycle = await import(${JSON.stringify(lifecycleUrl)});`,
+        `const root = ${JSON.stringify(REPOSITORY_ROOT)};`,
+        'const audit = await lifecycle.auditBattleArt({ root });',
+        'const check = await lifecycle.checkBattleArt({ root });',
+        'console.log(JSON.stringify({',
+        '  audit: audit.generatedFailures,',
+        '  check: check.audit.generatedFailures',
+        '}));'
+      ].join('');
+      const child = spawn(process.execPath, [
+        '--input-type=module',
+        '-e',
+        source
+      ], {
+        cwd: REPOSITORY_ROOT,
+        stdio: ['ignore', 'pipe', 'pipe']
+      });
+      const stdout = [];
+      const stderr = [];
+      child.stdout.on('data', chunk => stdout.push(chunk));
+      child.stderr.on('data', chunk => stderr.push(chunk));
+      const result = await new Promise(resolve => child.once(
+        'close',
+        (code, signal) => resolve({ code, signal })
+      ));
+      assert.deepEqual(result, { code: 0, signal: null }, Buffer.concat(
+        stderr
+      ).toString('utf8'));
+      assert.deepEqual(
+        JSON.parse(Buffer.concat(stdout).toString('utf8')),
+        {
+          audit: expectedGeneratedFailures,
+          check: expectedGeneratedFailures
+        }
+      );
+    });
+
+  it('drafts every category only for themes with an exact baseline pin', async () => {
     const loaded = await loadBattleArt(REPOSITORY_ROOT);
     for (const theme of THEMES) {
       for (const category of CATEGORIES) {
-        const descriptor = draftDescriptor({
+        const options = {
           manifest: loaded.manifest,
           theme,
           category,
           id: `${theme.replaceAll('_', '-')}-${category}`
-        });
+        };
+        if (!['forest', 'cave'].includes(theme)) {
+          assert.throws(
+            () => draftDescriptor(options),
+            new RegExp(
+              `no baseline template style reference for theme ${theme}`
+            )
+          );
+          continue;
+        }
+        const descriptor = draftDescriptor(options);
         assert.equal(descriptor.theme, theme);
         assert.equal(descriptor.category, category);
+        assert.deepEqual(
+          descriptor.styleReferences.map(reference => reference.id),
+          [`${theme}-source-template-01`]
+        );
         assert.ok(descriptor.canvas.width > 0);
         assert.ok(descriptor.canvas.height > 0);
         assert.equal(descriptor.content.version, 1);
       }
+    }
+  });
+
+  it('scaffolds only the pinned cave isolated finishing contract', async () => {
+    const root = await fixture();
+    const forestIsolatedPaths = [
+      'ai-image-metadata/battle-art/descriptors/forest/'
+        + 'forest-borderwood-dirt-path-isolated.json',
+      'ai-image-metadata/battle-art/descriptors/forest/'
+        + 'forest-heartlands-loam-path-isolated.json'
+    ];
+    const forestBefore = await Promise.all(forestIsolatedPaths.map(relative => (
+      readFile(path.join(root, relative))
+    )));
+
+    const selection = {
+      root,
+      theme: 'cave',
+      ecologyProfile: 'cave-limestone',
+      tier: 1,
+      category: 'route-transition'
+    };
+    await scaffoldReadinessDescriptors({
+      ...selection,
+      force: true
+    });
+    const loaded = await loadBattleArt(root);
+    const isolated = loaded.descriptors.find(entry => (
+      entry.descriptor.id === 'cave-limestone-curved-passage-isolated'
+    )).descriptor;
+    assert.deepEqual(isolated.routeFinishing, {
+      schemaVersion: 'battle-art-route-finishing-v1',
+      strategy: 'largest-component-box-v1',
+      targetBox: { x: 96, y: 48, width: 64, height: 32 },
+      maximumDetachedCoveredPermille: 0,
+      armAlphaSpan: {
+        alphaThreshold: 240,
+        minimumPixels: 28,
+        maximumPixels: 52,
+        maximumSpreadPixels: 12
+      }
+    });
+    assert.equal((await scaffoldReadinessDescriptors({
+      ...selection,
+      check: true
+    })).ok, true);
+
+    const forestAfter = await Promise.all(forestIsolatedPaths.map(relative => (
+      readFile(path.join(root, relative))
+    )));
+    assert.deepEqual(forestAfter, forestBefore);
+    for (const relative of forestIsolatedPaths) {
+      assert.equal(
+        Object.hasOwn((await readJson(root, relative)).value, 'routeFinishing'),
+        false
+      );
     }
   });
 
@@ -1224,7 +1551,9 @@ describe('battle-art tracked contracts', () => {
     )).descriptor;
     assert.deepEqual(
       unrelated.styleReferences,
-      [loaded.manifest.styleReferences[0]]
+      [loaded.manifest.styleReferences.find(reference => (
+        reference.id === 'cave-source-template-01'
+      ))]
     );
     await writeDraft({
       root,
@@ -1270,9 +1599,9 @@ describe('battle-art tracked contracts', () => {
     let secondEntered = false;
     const second = writeDraft({
       root,
-      theme: 'swamp',
+      theme: 'forest',
       category: 'surface',
-      id: 'swamp-serialized-surface'
+      id: 'forest-serialized-surface'
     }, {
       beforeDescriptorWrite: async () => {
         secondEntered = true;
@@ -1479,7 +1808,17 @@ describe('battle-art tracked contracts', () => {
 
   it('exposes the compiler projection and renderer descriptors at the tracked bundle path', async () => {
     const loaded = await loadBattleArt(REPOSITORY_ROOT);
-    const bundle = await buildBundle(loaded.manifest, loaded.descriptors);
+    const bundle = (await readJson(REPOSITORY_ROOT, BUNDLE_PATH)).value;
+    const compiledDescriptors = loaded.descriptors.filter(entry => (
+      entry.descriptor.status === 'compiled'
+    ));
+    assert.deepEqual(
+      bundle,
+      await buildBundle(
+        { ...loaded.manifest, version: bundle.version },
+        compiledDescriptors
+      )
+    );
     assert.equal(BUNDLE_PATH, 'ai-image-metadata/battle-art/runtime-asset-bundle.json');
     assert.deepEqual(Object.keys(bundle), [
       'schemaVersion',
@@ -1492,9 +1831,9 @@ describe('battle-art tracked contracts', () => {
       'renderers'
     ]);
     assert.deepEqual(bundle.renderProfile, RENDER_PROFILE);
-    assert.equal(bundle.version, loaded.manifest.version);
-    const compiledFamilyIds = loaded.descriptors
-      .filter(entry => entry.descriptor.status === 'compiled')
+    assert.equal(bundle.version, 10);
+    assert.equal(loaded.manifest.version, bundle.version + 1);
+    const compiledFamilyIds = compiledDescriptors
       .map(entry => entry.descriptor.id)
       .sort();
     assert.equal(compiledFamilyIds.length, 102);
@@ -1532,6 +1871,381 @@ describe('battle-art tracked contracts', () => {
     assert.deepEqual(
       (await readJson(REPOSITORY_ROOT, FRONTEND_BUNDLE_PATH)).value,
       bundle
+    );
+  });
+
+  it('accepts only exact active-release artifacts during one-version draft staging', async () => {
+    const loaded = await loadBattleArt(REPOSITORY_ROOT);
+    const artifacts = {
+      bundle: (await readJson(REPOSITORY_ROOT, BUNDLE_PATH)).value,
+      registry: (await readJson(REPOSITORY_ROOT, BUNDLE_REGISTRY_PATH)).value,
+      inventory: (await readJson(REPOSITORY_ROOT, INVENTORY_PATH)).value,
+      inventoryRegistry:
+        (await readJson(REPOSITORY_ROOT, INVENTORY_REGISTRY_PATH)).value,
+      frontendBundle:
+        (await readJson(REPOSITORY_ROOT, FRONTEND_BUNDLE_PATH)).value,
+      frontendRegistry:
+        (await readJson(REPOSITORY_ROOT, FRONTEND_BUNDLE_REGISTRY_PATH)).value
+    };
+    const statusCounts = loaded.descriptors.reduce((counts, entry) => {
+      counts[entry.descriptor.status] += 1;
+      return counts;
+    }, { compiled: 0, draft: 0, approved: 0 });
+    assert.deepEqual(await assertRuntimeArtifactState(loaded, artifacts), {
+      activeVersion: 10,
+      manifestVersion: 11,
+      staged: true,
+      compiled: statusCounts.compiled,
+      drafts: statusCounts.draft,
+      approved: statusCounts.approved
+    });
+
+    const descriptorDrift = structuredClone(loaded);
+    descriptorDrift.descriptors.find(entry => (
+      entry.descriptor.status === 'compiled'
+    )).descriptor.placement.pivot.x += 1;
+    await assert.rejects(
+      assertRuntimeArtifactState(descriptorDrift, artifacts),
+      /staged descriptor runtime geometry drifted/
+    );
+
+    const sourcePinDrift = structuredClone(loaded);
+    sourcePinDrift.descriptors.find(entry => (
+      entry.descriptor.status === 'compiled'
+    )).descriptor.source.imageSha256 = sha256(
+      Buffer.from('not the archived approved source')
+    );
+    await assert.rejects(
+      assertRuntimeArtifactState(sourcePinDrift, artifacts),
+      /compiled descriptor source pins drifted/
+    );
+
+    const partiallyApproved = structuredClone(loaded);
+    const approvedEntry = partiallyApproved.descriptors.find(entry => (
+      entry.descriptor.status === 'draft'
+    ));
+    const approvedSourceSha256 = sha256(
+      Buffer.from('structurally valid staged approved source')
+    );
+    approvedEntry.descriptor.status = 'approved';
+    approvedEntry.descriptor.content = {
+      ...approvedEntry.descriptor.content,
+      sourceSha256: approvedSourceSha256
+    };
+    approvedEntry.descriptor.source = {
+      candidateMetadataPath:
+        `ai-image-metadata/battle-art/candidates/`
+        + `${approvedEntry.descriptor.theme}/${approvedEntry.descriptor.id}/result.json`,
+      imagePath:
+        `ai-image-metadata/battle-art/sources/${approvedEntry.descriptor.theme}/`
+        + `${approvedEntry.descriptor.id}/v${approvedEntry.descriptor.content.version}/`
+        + `${approvedSourceSha256.slice('sha256:'.length)}.png`,
+      imageSha256: approvedSourceSha256,
+      width: approvedEntry.descriptor.canvas.width,
+      height: approvedEntry.descriptor.canvas.height,
+      format: 'png',
+      reviewer: 'staging-invariant-reviewer@example.test',
+      approvedAt: '2026-08-11T12:00:00.000Z'
+    };
+    assert.doesNotThrow(() => assertDescriptor(
+      approvedEntry.descriptor,
+      partiallyApproved.manifest
+    ));
+    assert.deepEqual(
+      await assertRuntimeArtifactState(partiallyApproved, artifacts),
+      {
+        activeVersion: 10,
+        manifestVersion: 11,
+        staged: true,
+        compiled: statusCounts.compiled,
+        drafts: statusCounts.draft - 1,
+        approved: statusCounts.approved + 1
+      }
+    );
+
+    const revisedArchivedFamily = structuredClone(loaded);
+    const revisedDescriptor = revisedArchivedFamily.descriptors.find(entry => (
+      entry.descriptor.status === 'compiled'
+    )).descriptor;
+    revisedDescriptor.status = 'draft';
+    revisedDescriptor.content = {
+      version: revisedDescriptor.content.version + 1,
+      sourceSha256: null,
+      runtimeSha256: null,
+      immutableUrl: null
+    };
+    revisedDescriptor.source = null;
+    assert.equal(
+      (await assertRuntimeArtifactState(revisedArchivedFamily, artifacts)).staged,
+      true
+    );
+
+    const canvasChangingRevision = structuredClone(revisedArchivedFamily);
+    const canvasChangingDescriptor = canvasChangingRevision.descriptors.find(
+      entry => entry.descriptor.status === 'draft'
+        && artifacts.bundle.renderers.some(renderer => (
+          renderer.id === entry.descriptor.id
+        ))
+    ).descriptor;
+    canvasChangingDescriptor.canvas.width += 4;
+    canvasChangingDescriptor.placement.drawBounds.width += 4;
+    assert.doesNotThrow(() => assertDescriptor(
+      canvasChangingDescriptor,
+      canvasChangingRevision.manifest
+    ));
+    await assert.rejects(
+      assertRuntimeArtifactState(canvasChangingRevision, artifacts),
+      /staged descriptor runtime geometry drifted/
+    );
+
+    const stagedMetadataMutations = [
+      descriptor => { descriptor.theme = 'cave'; },
+      descriptor => {
+        descriptor.category = descriptor.category === 'surface'
+          ? 'blocking-obstacle'
+          : 'surface';
+      },
+      descriptor => { descriptor.familyGroup += '-drift'; },
+      descriptor => { descriptor.variantId += '-drift'; },
+      descriptor => { descriptor.capabilities.ecologyProfile = 'drifted-profile'; }
+    ];
+    for (const mutate of stagedMetadataMutations) {
+      const metadataDrift = structuredClone(loaded);
+      const descriptor = metadataDrift.descriptors.find(entry => (
+        entry.descriptor.status === 'compiled'
+        && entry.descriptor.schemaVersion === 'battle-art-family-descriptor-v2'
+      )).descriptor;
+      descriptor.status = 'draft';
+      descriptor.content = {
+        version: descriptor.content.version + 1,
+        sourceSha256: null,
+        runtimeSha256: null,
+        immutableUrl: null
+      };
+      descriptor.source = null;
+      mutate(descriptor);
+      await assert.rejects(
+        assertRuntimeArtifactState(metadataDrift, artifacts),
+        /staged descriptor identity or capabilities drifted/
+      );
+    }
+
+    const skippedRevision = structuredClone(revisedArchivedFamily);
+    skippedRevision.descriptors.find(entry => (
+      entry.descriptor.status === 'draft'
+      && artifacts.bundle.renderers.some(renderer => (
+        renderer.id === entry.descriptor.id
+      ))
+    )).descriptor.content.version += 1;
+    await assert.rejects(
+      assertRuntimeArtifactState(skippedRevision, artifacts),
+      /content version must be exactly one after the active archive/
+    );
+
+    const sameVersionPartial = structuredClone(loaded);
+    sameVersionPartial.manifest.version = artifacts.bundle.version;
+    await assert.rejects(
+      assertRuntimeArtifactState(sameVersionPartial, artifacts),
+      /does not match the current release or one-version draft staging/
+    );
+
+    const laggedStaging = structuredClone(loaded);
+    laggedStaging.manifest.version = artifacts.bundle.version + 2;
+    await assert.rejects(
+      assertRuntimeArtifactState(laggedStaging, artifacts),
+      /does not match the current release or one-version draft staging/
+    );
+
+    const bundleDrift = structuredClone(artifacts);
+    bundleDrift.bundle.assets[0].contentHash = sha256(
+      Buffer.from('not the archived runtime binary')
+    );
+    await assert.rejects(
+      assertRuntimeArtifactState(loaded, bundleDrift),
+      /runtime asset bundle is incomplete or stale/
+    );
+
+    const registryDrift = structuredClone(artifacts);
+    registryDrift.registry.bundles.at(-1).assets[0].contentHash = sha256(
+      Buffer.from('not the archived registry binary pin')
+    );
+    await assert.rejects(
+      assertRuntimeArtifactState(loaded, registryDrift),
+      /not backed by the active bundle or an archive/
+    );
+
+    const archiveDrift = structuredClone(loaded);
+    archiveDrift.historicalReleases.find(entry => (
+      entry.release.version === artifacts.bundle.version
+    )).release.bundle.assets[0].contentHash = sha256(
+      Buffer.from('not the immutable archive binary pin')
+    );
+    await assert.rejects(
+      assertRuntimeArtifactState(archiveDrift, artifacts),
+      /differs between its registry and immutable release archive/
+    );
+
+    const archiveSourceDrift = structuredClone(loaded);
+    archiveSourceDrift.historicalReleases.find(entry => (
+      entry.release.version === artifacts.bundle.version
+    )).release.sources[0].path =
+      'ai-image-metadata/battle-art/sources/forest/drifted/source.png';
+    await assert.rejects(
+      assertRuntimeArtifactState(archiveSourceDrift, artifacts),
+      /active archive source record is stale/
+    );
+
+    const frontendBundleDrift = structuredClone(artifacts);
+    frontendBundleDrift.frontendBundle.assets[0].contentHash = sha256(
+      Buffer.from('not the frontend bundle binary pin')
+    );
+    await assert.rejects(
+      assertRuntimeArtifactState(loaded, frontendBundleDrift),
+      /frontend runtime asset bundle mirror is incomplete or stale/
+    );
+
+    const frontendRegistryDrift = structuredClone(artifacts);
+    frontendRegistryDrift.frontendRegistry.bundles.at(-1)
+      .assets[0].contentHash = sha256(
+        Buffer.from('not the frontend registry binary pin')
+      );
+    await assert.rejects(
+      assertRuntimeArtifactState(loaded, frontendRegistryDrift),
+      /frontend runtime asset bundle registry mirror is incomplete or stale/
+    );
+
+    const inventoryDrift = structuredClone(artifacts);
+    inventoryDrift.inventory.families[0].contentVersion += 1;
+    await assert.rejects(
+      assertRuntimeArtifactState(loaded, inventoryDrift),
+      /runtime inventory registry pin .* conflicts with the active inventory/
+    );
+
+    const coordinatedFamilyDrift = structuredClone(loaded);
+    const coordinatedArtifacts = structuredClone(artifacts);
+    const coordinatedDescriptor = coordinatedFamilyDrift.descriptors.find(
+      entry => entry.descriptor.status === 'compiled'
+        && entry.descriptor.schemaVersion === 'battle-art-family-descriptor-v2'
+    ).descriptor;
+    coordinatedDescriptor.status = 'draft';
+    coordinatedDescriptor.content = {
+      version: coordinatedDescriptor.content.version + 1,
+      sourceSha256: null,
+      runtimeSha256: null,
+      immutableUrl: null
+    };
+    coordinatedDescriptor.source = null;
+    coordinatedDescriptor.familyGroup += '-coordinated-drift';
+    coordinatedArtifacts.inventory.families.find(family => (
+      family.id === coordinatedDescriptor.id
+    )).familyGroup = coordinatedDescriptor.familyGroup;
+    await assert.rejects(
+      assertRuntimeArtifactState(coordinatedFamilyDrift, coordinatedArtifacts),
+      /runtime inventory registry pin .* conflicts with the active inventory/
+    );
+
+    const coordinatedManifestDrift = structuredClone(loaded);
+    const coordinatedManifestArtifacts = structuredClone(artifacts);
+    [
+      coordinatedManifestDrift.manifest.themes[0],
+      coordinatedManifestDrift.manifest.themes[1]
+    ] = [
+      coordinatedManifestDrift.manifest.themes[1],
+      coordinatedManifestDrift.manifest.themes[0]
+    ];
+    coordinatedManifestArtifacts.inventory.themes =
+      [...coordinatedManifestDrift.manifest.themes];
+    await assert.rejects(
+      assertRuntimeArtifactState(
+        coordinatedManifestDrift,
+        coordinatedManifestArtifacts
+      ),
+      /runtime inventory registry pin .* conflicts with the active inventory/
+    );
+
+    const unbackedFuturePin = structuredClone(artifacts);
+    const fakeFutureBundle = {
+      ...structuredClone(artifacts.bundle),
+      version: artifacts.bundle.version + 1,
+      manifestFullHash: sha256(Buffer.from('unbacked future bundle manifest'))
+    };
+    unbackedFuturePin.registry.bundles.push(fakeFutureBundle);
+    unbackedFuturePin.inventoryRegistry.entries.push({
+      releaseId: fakeFutureBundle.id,
+      releaseVersion: fakeFutureBundle.version,
+      bundleManifestFullHash: fakeFutureBundle.manifestFullHash,
+      inventoryBytes: 123,
+      inventorySha256: sha256(Buffer.from('unbacked future inventory'))
+    });
+    await assert.rejects(
+      assertRuntimeArtifactState(loaded, unbackedFuturePin),
+      /is not backed by the active bundle or an archive/
+    );
+
+    const missingInventoryPin = structuredClone(artifacts);
+    missingInventoryPin.inventoryRegistry.entries = [];
+    await assert.rejects(
+      assertRuntimeArtifactState(loaded, missingInventoryPin),
+      /inventory registry pin .* is missing or ambiguous/
+    );
+
+    const duplicateInventoryPin = structuredClone(artifacts);
+    duplicateInventoryPin.inventoryRegistry.entries.push(structuredClone(
+      duplicateInventoryPin.inventoryRegistry.entries[0]
+    ));
+    await assert.rejects(
+      assertRuntimeArtifactState(loaded, duplicateInventoryPin),
+      /inventory registry has duplicate or conflicting release/
+    );
+
+    const conflictingInventoryPin = structuredClone(artifacts);
+    conflictingInventoryPin.inventoryRegistry.entries[0]
+      .bundleManifestFullHash = sha256(Buffer.from('conflicting bundle pin'));
+    await assert.rejects(
+      assertRuntimeArtifactState(loaded, conflictingInventoryPin),
+      /has no exact runtime bundle registry identity/
+    );
+
+    const inventoryHashDrift = structuredClone(artifacts);
+    inventoryHashDrift.inventoryRegistry.entries[0].inventorySha256 = sha256(
+      Buffer.from('drifted inventory hash')
+    );
+    await assert.rejects(
+      assertRuntimeArtifactState(loaded, inventoryHashDrift),
+      /inventory registry pin .* conflicts with the active inventory/
+    );
+  });
+
+  it('integrates staged runtime validation across strict read-only commands', async () => {
+    const bundleBefore = await readFile(path.join(REPOSITORY_ROOT, BUNDLE_PATH));
+    const inventoryBefore = await readFile(path.join(
+      REPOSITORY_ROOT,
+      INVENTORY_PATH
+    ));
+    assert.equal((await auditBattleArt({ root: REPOSITORY_ROOT })).ok, true);
+    assert.equal((await writeInventory({
+      root: REPOSITORY_ROOT,
+      check: true
+    })).ok, true);
+    assert.equal((await compileApproved({
+      root: REPOSITORY_ROOT,
+      check: true
+    })).ok, true);
+    await assert.rejects(
+      compileApproved({ root: REPOSITORY_ROOT }),
+      /refuses a partial release while draft descriptors remain/
+    );
+    await assert.rejects(
+      writeInventory({ root: REPOSITORY_ROOT }),
+      /inventory write refuses to replace the active release while staged descriptors remain/
+    );
+    assert.deepEqual(
+      await readFile(path.join(REPOSITORY_ROOT, BUNDLE_PATH)),
+      bundleBefore
+    );
+    assert.deepEqual(
+      await readFile(path.join(REPOSITORY_ROOT, INVENTORY_PATH)),
+      inventoryBefore
     );
   });
 
@@ -1815,6 +2529,258 @@ describe('battle-art tracked contracts', () => {
     );
   });
 
+  it('pins isolated route finishing to a component box containing its anchor',
+    async () => {
+      const loaded = await loadBattleArt(REPOSITORY_ROOT);
+      const isolated = structuredClone(
+        loaded.descriptors.find(entry => (
+          entry.descriptor.id
+            === 'cave-limestone-curved-passage-isolated'
+        )).descriptor
+      );
+
+      assert.deepEqual(isolated.routeFinishing, {
+        schemaVersion: 'battle-art-route-finishing-v1',
+        strategy: 'largest-component-box-v1',
+        targetBox: { x: 96, y: 48, width: 64, height: 32 },
+        maximumDetachedCoveredPermille: 0,
+        armAlphaSpan: {
+          alphaThreshold: 240,
+          minimumPixels: 28,
+          maximumPixels: 52,
+          maximumSpreadPixels: 12
+        }
+      });
+      assert.doesNotThrow(() => assertDescriptor(
+        isolated,
+        loaded.manifest
+      ));
+
+      const foreignStrategy = structuredClone(isolated);
+      foreignStrategy.routeFinishing = {
+        schemaVersion: 'battle-art-route-finishing-v1',
+        strategy: 'anchor-scale-v1',
+        scalePermille: 1250,
+        maximumDetachedCoveredPermille: 0,
+        armAlphaSpan: {
+          ...isolated.routeFinishing.armAlphaSpan
+        }
+      };
+      assert.throws(
+        () => assertDescriptor(foreignStrategy, loaded.manifest),
+        /isolated topology requires largest-component-box-v1/
+      );
+
+      const excludedAnchor = structuredClone(isolated);
+      excludedAnchor.placement.anchor.x = 95;
+      assert.throws(
+        () => assertDescriptor(excludedAnchor, loaded.manifest),
+        /targetBox must contain the declared anchor for isolated topology/
+      );
+    });
+
+  it('pins cave straight route-basis finishing to a closed conservative contract',
+    async () => {
+      const loaded = await loadBattleArt(REPOSITORY_ROOT);
+      const straight = structuredClone(
+        loaded.descriptors.find(entry => (
+          entry.descriptor.id
+            === 'cave-limestone-curved-passage-straight-ns'
+        )).descriptor
+      );
+      assert.deepEqual(straight.routeFinishing, {
+        schemaVersion: 'battle-art-route-finishing-v1',
+        strategy: 'straight-route-basis-v1',
+        sourceTerminalInsetPixels: 240,
+        outputTerminalOverflowPixels: 7,
+        outputPerpendicularSpanPixels: 44,
+        maximumDetachedCoveredPermille: 1,
+        maximumTrimmedCoveredPermille: 270,
+        maximumScaleAnisotropyPermille: 2000,
+        armAlphaSpan: {
+          alphaThreshold: 240,
+          minimumPixels: 34,
+          maximumPixels: 36,
+          maximumSpreadPixels: 2
+        }
+      });
+      assert.equal(straight.status, 'approved');
+      assert.equal(straight.content.version, 1);
+      assert.doesNotThrow(() => assertDescriptor(straight, loaded.manifest));
+
+      const straightEw = structuredClone(
+        loaded.descriptors.find(entry => (
+          entry.descriptor.id
+            === 'cave-limestone-curved-passage-straight-ew'
+        )).descriptor
+      );
+      assert.deepEqual(straightEw.routeFinishing, {
+        schemaVersion: 'battle-art-route-finishing-v1',
+        strategy: 'straight-route-basis-v1',
+        sourceTerminalInsetPixels: 195,
+        outputTerminalOverflowPixels: 7,
+        outputPerpendicularSpanPixels: 76,
+        maximumDetachedCoveredPermille: 18,
+        maximumTrimmedCoveredPermille: 230,
+        maximumScaleAnisotropyPermille: 3150,
+        armAlphaSpan: {
+          alphaThreshold: 240,
+          minimumPixels: 34,
+          maximumPixels: 36,
+          maximumSpreadPixels: 2
+        }
+      });
+      assert.equal(straightEw.status, 'approved');
+      assert.deepEqual(straightEw.content, {
+        version: 1,
+        sourceSha256:
+          'sha256:b5e01a3f10679e09f058e878c58aaf89fe18b3abc6cf6265251be5490ea1f316',
+        runtimeSha256: null,
+        immutableUrl: null
+      });
+      assert.deepEqual(straightEw.source, {
+        candidateMetadataPath:
+          'ai-image-metadata/battle-art/candidates/cave/'
+          + 'cave-limestone-curved-passage-straight-ew/result.json',
+        imagePath:
+          'ai-image-metadata/battle-art/sources/cave/'
+          + 'cave-limestone-curved-passage-straight-ew/v1/'
+          + 'b5e01a3f10679e09f058e878c58aaf89fe18b3abc6cf6265251be5490ea1f316.png',
+        imageSha256:
+          'sha256:b5e01a3f10679e09f058e878c58aaf89fe18b3abc6cf6265251be5490ea1f316',
+        width: 256,
+        height: 128,
+        format: 'png',
+        reviewer: 'codex-straight-ew-reviewer@example.test',
+        approvedAt: '2026-08-12T00:42:38.849Z'
+      });
+      assert.doesNotThrow(() => assertDescriptor(straightEw, loaded.manifest));
+
+      const wrongTopology = structuredClone(straight);
+      wrongTopology.capabilities.routeTopology = 'corner-es';
+      assert.throws(
+        () => assertDescriptor(wrongTopology, loaded.manifest),
+        /straight-route-basis-v1 requires straight-ew or straight-ns/
+      );
+      const excessiveAnisotropy = structuredClone(straight);
+      excessiveAnisotropy.routeFinishing.maximumScaleAnisotropyPermille = 3251;
+      assert.throws(
+        () => assertDescriptor(excessiveAnisotropy, loaded.manifest),
+        /maximumScaleAnisotropyPermille must be <= 3250/
+      );
+      const foreignOption = structuredClone(straight);
+      foreignOption.routeFinishing.terminalClip = {
+        schemaVersion: 'battle-art-route-terminal-clip-v1',
+        maximumOverflowPixels: 8
+      };
+      assert.throws(
+        () => assertDescriptor(foreignOption, loaded.manifest),
+        /routeFinishing\.terminalClip is not allowed/
+      );
+    });
+
+  it('pins the two cave corner arm-local finishers to closed fixed contracts',
+    async () => {
+      const loaded = await loadBattleArt(REPOSITORY_ROOT);
+      const contracts = {
+        'cave-limestone-curved-passage-corner-sw': {
+          schemaVersion: 'battle-art-route-finishing-v1',
+          strategy: 'corner-arm-local-warp-v1',
+          arms: {
+            s: {
+              perpendicularScalePermille: 1150,
+              perpendicularOffsetPixels: -6,
+              transitionStartPermille: 500,
+              transitionEndPermille: 1000
+            },
+            w: {
+              perpendicularScalePermille: 1450,
+              perpendicularOffsetPixels: 0,
+              transitionStartPermille: 350,
+              transitionEndPermille: 750
+            }
+          },
+          maximumDetachedCoveredPermille: 1,
+          maximumCoveragePermille: 230,
+          maximumScaleAnisotropyPermille: 1500,
+          armAlphaSpan: {
+            alphaThreshold: 240,
+            minimumPixels: 28,
+            maximumPixels: 52,
+            maximumSpreadPixels: 24
+          }
+        },
+        'cave-limestone-curved-passage-corner-ne': {
+          schemaVersion: 'battle-art-route-finishing-v1',
+          strategy: 'corner-arm-local-warp-v1',
+          arms: {
+            n: {
+              perpendicularScalePermille: 1400,
+              perpendicularOffsetPixels: -16,
+              transitionStartPermille: 200,
+              transitionEndPermille: 650
+            },
+            e: {
+              perpendicularScalePermille: 1500,
+              perpendicularOffsetPixels: 3,
+              transitionStartPermille: 150,
+              transitionEndPermille: 500
+            }
+          },
+          maximumDetachedCoveredPermille: 11,
+          maximumCoveragePermille: 230,
+          maximumScaleAnisotropyPermille: 1500,
+          armAlphaSpan: {
+            alphaThreshold: 240,
+            minimumPixels: 28,
+            maximumPixels: 52,
+            maximumSpreadPixels: 24
+          }
+        }
+      };
+      for (const [family, contract] of Object.entries(contracts)) {
+        const descriptor = structuredClone(loaded.descriptors.find(
+          entry => entry.descriptor.id === family
+        ).descriptor);
+        assert.deepEqual(descriptor.routeFinishing, contract);
+        assert.doesNotThrow(() => assertDescriptor(
+          descriptor,
+          loaded.manifest
+        ));
+      }
+
+      const base = structuredClone(loaded.descriptors.find(entry => (
+        entry.descriptor.id
+          === 'cave-limestone-curved-passage-corner-ne'
+      )).descriptor);
+      const wrongTopology = structuredClone(base);
+      wrongTopology.capabilities.routeTopology = 'straight-ns';
+      assert.throws(
+        () => assertDescriptor(wrongTopology, loaded.manifest),
+        /corner-arm-local-warp-v1 requires a corner topology/
+      );
+      const excessiveCoverage = structuredClone(base);
+      excessiveCoverage.routeFinishing.maximumCoveragePermille = 231;
+      assert.throws(
+        () => assertDescriptor(excessiveCoverage, loaded.manifest),
+        /maximumCoveragePermille must be <= 230/
+      );
+      const excessiveScale = structuredClone(base);
+      excessiveScale.routeFinishing.arms.n.perpendicularScalePermille = 1501;
+      assert.throws(
+        () => assertDescriptor(excessiveScale, loaded.manifest),
+        /perpendicularScalePermille exceeds its hard anisotropy cap/
+      );
+      const foreignArm = structuredClone(base);
+      foreignArm.routeFinishing.arms.s = {
+        ...foreignArm.routeFinishing.arms.n
+      };
+      assert.throws(
+        () => assertDescriptor(foreignArm, loaded.manifest),
+        /routeFinishing\.arms\.s is not allowed/
+      );
+    });
+
   it('allows only canonical empty occlusion for non-colliding categories', async () => {
     const loaded = await loadBattleArt(REPOSITORY_ROOT);
     const descriptorFor = category => structuredClone(
@@ -2076,7 +3042,7 @@ describe('battle-art isolated generation and review boundary', () => {
     }));
   });
 
-  it('requires 28-pixel opaque route arms at 50, 75, and 100 percent', async () => {
+  it('applies topology-specific opaque route arm spans at each final sample', async () => {
     const canvas = { width: 256, height: 128 };
     const anchor = { x: 128, y: 64 };
     const vectors = {
@@ -2120,9 +3086,13 @@ describe('battle-art isolated generation and review boundary', () => {
       { alpha = 255, detachedDirections = [] } = {}
     ) => {
       const pixels = Buffer.alloc(canvas.width * canvas.height * 4);
-      for (const [direction, span] of Object.entries(spans)) {
+      for (const [direction, configuredSpan] of Object.entries(spans)) {
         const vector = vectors[direction];
         for (const fraction of [0.5, 0.75, 1]) {
+          const percent = Math.round(fraction * 100);
+          const span = Number.isSafeInteger(configuredSpan)
+            ? configuredSpan
+            : configuredSpan[percent];
           const sample = {
             x: anchor.x + (vector.x * fraction),
             y: anchor.y + (vector.y * fraction)
@@ -2161,44 +3131,62 @@ describe('battle-art isolated generation and review boundary', () => {
       };
       await assert.rejects(
         assertRouteArmMinimumCoreWidth({
-          bytes: await encodeArms({ [direction]: 27 }),
+          bytes: await encodeArms({
+            [direction]: { 50: 19, 75: 20, 100: 18 }
+          }),
           descriptor
         }),
         new RegExp(
           `route end-${direction} ${direction} arm opaque perpendicular `
-          + 'span at 50% is 27 pixels; expected at least 28'
+          + 'span at 50% is 19 pixels; expected at least 20'
         )
       );
       assert.deepEqual(
         await assertRouteArmMinimumCoreWidth({
-          bytes: await encodeArms({ [direction]: 28 }),
+          bytes: await encodeArms({
+            [direction]: { 50: 20, 75: 20, 100: 18 }
+          }),
           descriptor
         }),
         {
-          samples: [50, 75, 100].map(percent => ({
-            direction,
-            percent,
-            span: 28
-          }))
+          samples: [
+            { direction, percent: 50, span: 20 },
+            { direction, percent: 75, span: 20 },
+            { direction, percent: 100, span: 18 }
+          ]
         }
       );
       await assert.rejects(
         assertRouteArmMinimumCoreWidth({
+          bytes: await encodeArms({
+            [direction]: { 50: 20, 75: 20, 100: 17 }
+          }),
+          descriptor
+        }),
+        /span at 100% is 17 pixels; expected at least 18/
+      );
+      await assert.rejects(
+        assertRouteArmMinimumCoreWidth({
+          bytes: await encodeArms({
+            [direction]: { 50: 20, 75: 19, 100: 18 }
+          }),
+          descriptor
+        }),
+        /span at 75% is 19 pixels; expected at least 20/
+      );
+      await assert.rejects(
+        assertRouteArmMinimumCoreWidth({
           bytes: await encodeArms(
-            { [direction]: 27 },
+            { [direction]: { 50: 19, 75: 20, 100: 18 } },
             { detachedDirections: [direction] }
           ),
           descriptor
         }),
-        /span at 50% is 27 pixels; expected at least 28/
+        /span at 50% is 19 pixels; expected at least 20/
       );
     }
 
     const topologies = [
-      ['end-n', ['n']],
-      ['end-e', ['e']],
-      ['end-s', ['s']],
-      ['end-w', ['w']],
       ['straight-ew', ['e', 'w']],
       ['straight-ns', ['n', 's']],
       ['corner-ne', ['n', 'e']],
@@ -2246,23 +3234,48 @@ describe('battle-art isolated generation and review boundary', () => {
     };
     await assert.rejects(
       assertRouteArmMinimumCoreWidth({
-        bytes: await encodeArms({ n: 28 }, { alpha: 239 }),
+        bytes: await encodeArms({
+          n: { 50: 20, 75: 20, 100: 18 }
+        }, { alpha: 239 }),
         descriptor: thresholdDescriptor
       }),
-      /span at 50% is 0 pixels; expected at least 28/
+      /span at 50% is 0 pixels; expected at least 20/
     );
     assert.deepEqual(
       await assertRouteArmMinimumCoreWidth({
-        bytes: await encodeArms({ n: 28 }, { alpha: 240 }),
+        bytes: await encodeArms({
+          n: { 50: 20, 75: 20, 100: 18 }
+        }, { alpha: 240 }),
         descriptor: thresholdDescriptor
       }),
       {
-        samples: [50, 75, 100].map(percent => ({
-          direction: 'n',
-          percent,
-          span: 28
-        }))
+        samples: [
+          { direction: 'n', percent: 50, span: 20 },
+          { direction: 'n', percent: 75, span: 20 },
+          { direction: 'n', percent: 100, span: 18 }
+        ]
       }
+    );
+
+    const authoredEndDescriptor = {
+      ...thresholdDescriptor,
+      schemaVersion: 'battle-art-family-descriptor-v2',
+      id: 'test-authored-end-arm',
+      routeFinishing: {
+        armAlphaSpan: {
+          alphaThreshold: 240,
+          minimumPixels: 28,
+          maximumPixels: 52,
+          maximumSpreadPixels: null
+        }
+      }
+    };
+    await assert.rejects(
+      assertRouteArmMinimumCoreWidth({
+        bytes: await encodeArms({ n: 27 }),
+        descriptor: authoredEndDescriptor
+      }),
+      /span at 50% is 27 pixels; expected at least 28/
     );
 
     const directV2Descriptor = {
@@ -3601,6 +4614,285 @@ describe('battle-art isolated generation and review boundary', () => {
       await writeFile(path.join(root, rawPath), raw);
     });
 
+  it('archives exact non-route validator failures without granting candidate authority',
+    async () => {
+    const theme = 'cave';
+    const family = 'cave-limestone-layered-face-w';
+    const root = await fixture();
+    const loaded = await loadBattleArt(root);
+    const descriptor = loaded.descriptors.find(
+      entry => entry.descriptor.id === family
+    ).descriptor;
+    const invalidBytes = await sharp({
+      create: {
+        width: descriptor.canvas.width,
+        height: descriptor.canvas.height,
+        channels: 4,
+        background: { r: 0, g: 0, b: 0, alpha: 0 }
+      }
+    }).png().toBuffer();
+    const worker = async input => {
+      const result = await candidateWorker(input);
+      await writeFile(path.join(input.workspace, 'candidate.png'), invalidBytes);
+      return result;
+    };
+    const options = {
+      projectRoot: root,
+      theme,
+      family,
+      concurrency: 1,
+      timeoutMs: 10_000,
+      dryRun: false,
+      force: false,
+      resume: false
+    };
+    const attempt = async () => {
+      let rejection;
+      await assert.rejects(
+        generateBattleArt(options, { worker }),
+        error => {
+          rejection = error;
+          return typeof error.failedAttemptEvidencePath === 'string';
+        }
+      );
+      return rejection;
+    };
+
+    const firstRejection = await attempt();
+    const firstAudit = await auditFailedGeneratedAttempt({
+      root,
+      relativePath: firstRejection.failedAttemptEvidencePath
+    });
+    assert.equal(
+      firstAudit.record.schemaVersion,
+      'battle-art-generated-failed-attempt-v1'
+    );
+    assert.equal(firstAudit.record.failureStage, 'candidate-publication');
+    assert.equal(firstAudit.record.artifact.sha256, sha256(invalidBytes));
+    assert.deepEqual(firstAudit.artifactBytes, invalidBytes);
+    assert.match(firstAudit.record.rejection.message, /has no visible pixels/);
+
+    const candidateRoot = path.join(
+      root,
+      `ai-image-metadata/battle-art/candidates/${theme}/${family}`
+    );
+    for (const unpublished of ['candidate.png', 'candidate.webp', 'result.json']) {
+      await assert.rejects(
+        readFile(path.join(candidateRoot, unpublished)),
+        error => error.code === 'ENOENT'
+      );
+    }
+
+    const secondRejection = await attempt();
+    assert.equal(
+      secondRejection.failedAttemptEvidencePath,
+      firstRejection.failedAttemptEvidencePath
+    );
+    const failureDirectory = path.dirname(path.join(
+      root,
+      firstRejection.failedAttemptEvidencePath
+    ));
+    assert.deepEqual(
+      (await readdir(failureDirectory)).filter(name => name.endsWith('.json')),
+      [path.basename(firstRejection.failedAttemptEvidencePath)]
+    );
+
+    const evidencePath = path.join(
+      root,
+      firstRejection.failedAttemptEvidencePath
+    );
+    const evidenceBytes = await readFile(evidencePath);
+    const tampered = structuredClone(firstAudit.record);
+    tampered.rejection.message = 'tampered non-route rejection';
+    await writeFile(evidencePath, stableJson(tampered));
+    await assert.rejects(
+      auditBattleArt({ root }),
+      /fullHash does not match its content/
+    );
+    await writeFile(evidencePath, evidenceBytes);
+
+    const artifactPath = path.join(root, firstAudit.record.artifact.path);
+    await writeFile(
+      artifactPath,
+      Buffer.concat([invalidBytes, Buffer.from([0])])
+    );
+    await assert.rejects(
+      checkBattleArt({ root }),
+      /hash pin mismatch/
+    );
+    await writeFile(artifactPath, invalidBytes);
+
+    await rm(artifactPath);
+    await assert.rejects(
+      auditBattleArt({ root }),
+      /ENOENT.*generated-artifacts/
+    );
+    await writeFile(artifactPath, invalidBytes);
+
+    await rm(evidencePath);
+    await assert.rejects(
+      auditBattleArt({ root }),
+      /generated artifact .* has no failed-attempt record/
+    );
+    await writeFile(evidencePath, evidenceBytes);
+
+    const misplacedEvidence = path.join(
+      path.dirname(evidencePath),
+      'not-content-addressed.json'
+    );
+    await writeFile(misplacedEvidence, evidenceBytes);
+    await assert.rejects(
+      auditBattleArt({ root }),
+      /path is not content-addressed/
+    );
+    await rm(misplacedEvidence);
+
+    const orphan = structuredClone(firstAudit.record);
+    orphan.familyId = 'cave-orphan-generated-obstacle';
+    orphan.descriptor.snapshot.id = orphan.familyId;
+    orphan.descriptor.path =
+      `ai-image-metadata/battle-art/descriptors/cave/${orphan.familyId}.json`;
+    orphan.descriptor.sha256 = sha256(Buffer.from(stableJson(
+      orphan.descriptor.snapshot
+    )));
+    const frozenPrefix = '\nFrozen descriptor:\n';
+    const frozenSuffix = '\n\nFrozen family art direction:\n';
+    const frozenStart = orphan.prompt.text.indexOf(frozenPrefix);
+    const frozenEnd = orphan.prompt.text.indexOf(
+      frozenSuffix,
+      frozenStart + frozenPrefix.length
+    );
+    orphan.prompt.text = orphan.prompt.text.slice(
+      0,
+      frozenStart + frozenPrefix.length
+    ) + JSON.stringify(orphan.descriptor.snapshot, null, 2)
+      + orphan.prompt.text.slice(frozenEnd);
+    orphan.prompt.bytes = Buffer.byteLength(orphan.prompt.text);
+    orphan.prompt.sha256 = sha256(Buffer.from(orphan.prompt.text));
+    const orphanCandidatePaths = candidatePaths(orphan.descriptor.snapshot);
+    orphan.prompt.path = orphanCandidatePaths.prompt;
+    orphan.worker.stdout.path = orphanCandidatePaths.stdout;
+    orphan.worker.stderr.path = orphanCandidatePaths.stderr;
+    if (orphan.worker.lastMessage !== null) {
+      orphan.worker.lastMessage.path = orphanCandidatePaths.lastMessage;
+    }
+    orphan.artifact.path = generatedArtifactPath(
+      orphan.descriptor.snapshot,
+      orphan.artifact
+    );
+    const { fullHash: _orphanHash, ...orphanProjection } = orphan;
+    orphan.fullHash = sha256(Buffer.from(stableJson(orphanProjection)));
+    const orphanEvidence =
+      `${path.posix.dirname(orphan.artifact.path)}/failures/`
+      + `${orphan.fullHash.slice('sha256:'.length)}.json`;
+    for (const [relative, contents] of [
+      [orphan.artifact.path, invalidBytes],
+      [orphanEvidence, Buffer.from(stableJson(orphan))]
+    ]) {
+      await mkdir(path.dirname(path.join(root, relative)), { recursive: true });
+      await writeFile(path.join(root, relative), contents);
+    }
+    await assert.rejects(
+      auditBattleArt({ root }),
+      /has no canonical non-route family/
+    );
+    await rm(path.join(root, orphanEvidence));
+    await rm(path.join(root, orphan.artifact.path));
+
+    const corruptOrphanEvidence =
+      'ai-image-metadata/battle-art/generated-artifacts/cave/'
+      + 'unknown-generated-family/failures/'
+      + `${'0'.repeat(64)}.json`;
+    await mkdir(path.dirname(path.join(root, corruptOrphanEvidence)), {
+      recursive: true
+    });
+    await writeFile(path.join(root, corruptOrphanEvidence), '{');
+    await assert.rejects(
+      auditBattleArt({ root }),
+      /unknown-generated-family.* is invalid JSON/
+    );
+    await rm(path.join(root, corruptOrphanEvidence));
+
+    const reviewRequest = {
+      root,
+      theme,
+      family,
+      reviewer: 'failure-evidence-reviewer@example.test',
+      reason: 'Failure evidence cannot authorize candidate review.'
+    };
+    await assert.rejects(
+      recordCandidateReview({
+        ...reviewRequest,
+        decision: 'rejected'
+      }),
+      /ENOENT/
+    );
+    await assert.rejects(
+      approveCandidate({
+        ...reviewRequest,
+        decision: 'approved'
+      }),
+      /ENOENT/
+    );
+    let resumeWorkerCalls = 0;
+    await assert.rejects(
+      generateBattleArt({ ...options, resume: true }, {
+        worker: async () => {
+          resumeWorkerCalls += 1;
+          throw new Error('resume requires a fresh worker attempt');
+        }
+      }),
+      /resume requires a fresh worker attempt/
+    );
+    assert.equal(resumeWorkerCalls, 1);
+  });
+
+  it('archives verified non-route bytes rejected by the post-verification hook',
+    async () => {
+    const theme = 'cave';
+    const family = 'cave-failed-hook-obstacle';
+    const root = await fixture({
+      plannedDrafts: [{ theme, category: 'blocking-obstacle', id: family }]
+    });
+    await writeDraft({ root, theme, category: 'blocking-obstacle', id: family });
+    let verifiedBytes;
+    let rejection;
+    await assert.rejects(
+      generateBattleArt({
+        projectRoot: root,
+        theme,
+        family,
+        concurrency: 1,
+        timeoutMs: 10_000,
+        dryRun: false,
+        force: false,
+        resume: false
+      }, {
+        worker: candidateWorker,
+        afterCandidateVerified: async ({ verifiedCandidateBytes }) => {
+          verifiedBytes = Buffer.from(verifiedCandidateBytes);
+          verifiedCandidateBytes.fill(0);
+          throw new Error('post-verification policy rejected exact bytes');
+        }
+      }),
+      error => {
+        rejection = error;
+        return /post-verification policy rejected exact bytes/.test(error.message)
+          && typeof error.failedAttemptEvidencePath === 'string';
+      }
+    );
+    const audit = await auditFailedGeneratedAttempt({
+      root,
+      relativePath: rejection.failedAttemptEvidencePath
+    });
+    assert.equal(
+      audit.record.failureStage,
+      'after-candidate-verification'
+    );
+    assert.equal(audit.record.artifact.sha256, sha256(verifiedBytes));
+    assert.deepEqual(audit.artifactBytes, verifiedBytes);
+  });
+
   it('revalidates an immutable failed route attempt with zero worker calls and reviews its explicit v3 origin',
     async () => {
       const root = await fixture();
@@ -3719,6 +5011,600 @@ describe('battle-art isolated generation and review boundary', () => {
         approved: 2,
         rejected: 0
       });
+    });
+
+  it('can revalidate the exact cave straight-ns raw through its pinned route basis',
+    async () => {
+    const theme = 'cave';
+    const family = 'cave-limestone-curved-passage-straight-ns';
+    const failurePath =
+      'ai-image-metadata/battle-art/generated-artifacts/cave/'
+      + `${family}/failures/`
+      + 'f2866d8d1c9cba2d510006814035cfb58609c4b176759abf7c4f128a5ccea5e5.json';
+    const root = await fixture({ includedFamilies: [family] });
+    const failure = await copyFailedAttemptEvidence(root, failurePath);
+    const failureBefore = await readFile(path.join(root, failurePath));
+    const rawBefore = await readFile(path.join(root, failure.raw.path));
+    let workerCalls = 0;
+
+    const result = await revalidateFailedRouteAttempt({
+      root,
+      theme,
+      family,
+      failure: failurePath
+    }, {
+      worker: async () => {
+        workerCalls += 1;
+        throw new Error('route-basis revalidation must not invoke a worker');
+      }
+    });
+    assert.equal(workerCalls, 0);
+    assert.equal(result.results[0].status, 'revalidated');
+
+    const loaded = await loadBattleArt(root);
+    const descriptor = loaded.descriptors.find(
+      entry => entry.descriptor.id === family
+    ).descriptor;
+    assert.equal(descriptor.status, 'draft');
+    assert.equal(descriptor.content.version, 1);
+    assert.equal(
+      descriptor.routeFinishing.strategy,
+      'straight-route-basis-v1'
+    );
+    const paths = candidatePaths(descriptor);
+    const candidate = (await readJson(root, paths.metadata)).value;
+    assert.equal(candidate.schemaVersion, REVALIDATED_CANDIDATE_SCHEMA);
+    assert.equal(candidate.derivation.strategy, 'straight-route-basis-v1');
+    assert.equal(
+      candidate.derivation.source.sha256,
+      'sha256:3c4b780878920ec14e10e912039d8c83f019a9e93f054123afd4dbe71adb153f'
+    );
+    assert.equal(candidate.derivation.trimmedCoveredPixels, 50333);
+    assert.equal(candidate.derivation.trimmedCoveredPermille, 260);
+    assert.equal(candidate.derivation.scaleAnisotropyPermille, 1897);
+    assert.deepEqual(candidate.derivation.scaleLongitudinal, {
+      numerator: 350,
+      denominator: 2404
+    });
+    assert.deepEqual(candidate.derivation.scalePerpendicular, {
+      numerator: 98,
+      denominator: 355
+    });
+    assert.equal(
+      candidate.image.sha256,
+      'sha256:015fbffd4035ae510d7f32456096e593fed364b385dd81fd13b6a390fe208f58'
+    );
+    const candidateBytes = await readFile(path.join(root, paths.imagePng));
+    await assert.doesNotReject(validatePreparedRouteGeometry({
+      bytes: candidateBytes,
+      descriptor,
+      finished: true
+    }));
+    assert.deepEqual(await readFile(path.join(root, failurePath)), failureBefore);
+    assert.deepEqual(
+      await readFile(path.join(root, failure.raw.path)),
+      rawBefore
+    );
+
+    const descriptorDrift = structuredClone(candidate);
+    descriptorDrift.derivation.maximumTrimmedCoveredPermille += 1;
+    await assert.rejects(
+      verifyCandidateRouteDerivation({
+        root,
+        descriptor,
+        candidate: descriptorDrift,
+        candidateBytes,
+        profile: loaded.promptProfile,
+        paths
+      }),
+      /maximumTrimmedCoveredPermille does not match the descriptor/
+    );
+
+    const tamperedCandidate = structuredClone(candidate);
+    tamperedCandidate.derivation.scaleLongitudinal.numerator += 1;
+    await writeFile(
+      path.join(root, paths.metadata),
+      stableJson(tamperedCandidate)
+    );
+    await assert.rejects(
+      verifyCandidateRouteDerivation({
+        root,
+        descriptor,
+        candidate: tamperedCandidate,
+        candidateBytes,
+        profile: loaded.promptProfile,
+        paths
+      }),
+      /route derivation does not reproduce|candidate bytes do not reproduce/
+    );
+    await writeFile(path.join(root, paths.metadata), stableJson(candidate));
+
+    const reviewOptions = {
+      root,
+      theme,
+      family,
+      reviewer: 'route-basis-reviewer@example.test',
+      decision: 'approved',
+      reason: 'The pinned route-basis replay satisfies every route contract.',
+      reviewedAt: '2026-08-11T15:00:00.000Z'
+    };
+    const review = await recordCandidateReview(reviewOptions);
+    assert.equal(review.record.schemaVersion, REVALIDATED_REVIEW_SCHEMA);
+    assert.equal(
+      review.record.candidate.derivation.strategy,
+      'straight-route-basis-v1'
+    );
+
+    const tamperedReview = structuredClone(review.record);
+    tamperedReview.candidate.derivation.finalSha256 =
+      `sha256:${'0'.repeat(64)}`;
+    assert.throws(
+      () => assertReviewRecord(tamperedReview, review.path),
+      /derivation final hash does not match its image/
+    );
+
+    const approval = await approveCandidate({
+      ...reviewOptions,
+      approvedAt: reviewOptions.reviewedAt
+    });
+    assert.equal(approval.ok, true);
+    assert.equal(approval.changed, true);
+    assert.equal(approval.sourceSha256, candidate.image.sha256);
+  });
+
+  it('revalidates, reviews, and fixture-approves the exact cave straight-ew raw',
+    async () => {
+    const theme = 'cave';
+    const family = 'cave-limestone-curved-passage-straight-ew';
+    const failurePath =
+      'ai-image-metadata/battle-art/generated-artifacts/cave/'
+      + `${family}/failures/`
+      + 'feef073be635e2c9b068f16235695232bd95d1aa2bbcc120155f888cc858ec67.json';
+    const root = await fixture({ includedFamilies: [family] });
+    const failure = await copyFailedAttemptEvidence(root, failurePath);
+    assert.equal(
+      failure.fullHash,
+      'sha256:feef073be635e2c9b068f16235695232bd95d1aa2bbcc120155f888cc858ec67'
+    );
+    assert.equal(
+      failure.raw.sha256,
+      'sha256:37c832f99d79b852919e494237c71726520623907c52c21a8faa59b19b2f07f8'
+    );
+    const failureBefore = await readFile(path.join(root, failurePath));
+    const rawBefore = await readFile(path.join(root, failure.raw.path));
+    let workerCalls = 0;
+
+    const result = await revalidateFailedRouteAttempt({
+      root,
+      theme,
+      family,
+      failure: failurePath
+    }, {
+      worker: async () => {
+        workerCalls += 1;
+        throw new Error('route-basis revalidation must not invoke a worker');
+      }
+    });
+    assert.equal(workerCalls, 0);
+    assert.equal(result.results[0].status, 'revalidated');
+
+    const loaded = await loadBattleArt(root);
+    const descriptor = loaded.descriptors.find(
+      entry => entry.descriptor.id === family
+    ).descriptor;
+    assert.equal(descriptor.status, 'draft');
+    assert.equal(descriptor.content.version, 1);
+    assert.equal(
+      descriptor.routeFinishing.strategy,
+      'straight-route-basis-v1'
+    );
+    const paths = candidatePaths(descriptor);
+    const candidate = (await readJson(root, paths.metadata)).value;
+    assert.equal(candidate.schemaVersion, REVALIDATED_CANDIDATE_SCHEMA);
+    assert.equal(candidate.derivation.strategy, 'straight-route-basis-v1');
+    assert.equal(
+      candidate.derivation.source.sha256,
+      'sha256:37c832f99d79b852919e494237c71726520623907c52c21a8faa59b19b2f07f8'
+    );
+    assert.deepEqual(candidate.derivation.sourceBounds, {
+      x: 170,
+      y: 129,
+      width: 1429,
+      height: 644
+    });
+    assert.equal(candidate.derivation.detachedCoveredPixels, 2252);
+    assert.equal(candidate.derivation.detachedCoveredPermille, 17);
+    assert.equal(candidate.derivation.trimmedCoveredPixels, 30222);
+    assert.equal(candidate.derivation.trimmedCoveredPermille, 225);
+    assert.equal(candidate.derivation.scaleAnisotropyPermille, 3122);
+    assert.deepEqual(candidate.derivation.scaleLongitudinal, {
+      numerator: 350,
+      denominator: 2560
+    });
+    assert.deepEqual(candidate.derivation.scalePerpendicular, {
+      numerator: 169,
+      denominator: 396
+    });
+    assert.equal(
+      candidate.image.sha256,
+      'sha256:b5e01a3f10679e09f058e878c58aaf89fe18b3abc6cf6265251be5490ea1f316'
+    );
+    const candidateBytes = await readFile(path.join(root, paths.imagePng));
+    await assert.doesNotReject(validatePreparedRouteGeometry({
+      bytes: candidateBytes,
+      descriptor,
+      finished: true
+    }));
+    assert.deepEqual(await readFile(path.join(root, failurePath)), failureBefore);
+    assert.deepEqual(
+      await readFile(path.join(root, failure.raw.path)),
+      rawBefore
+    );
+
+    const descriptorDrift = structuredClone(candidate);
+    descriptorDrift.derivation.maximumDetachedCoveredPermille += 1;
+    await assert.rejects(
+      verifyCandidateRouteDerivation({
+        root,
+        descriptor,
+        candidate: descriptorDrift,
+        candidateBytes,
+        profile: loaded.promptProfile,
+        paths
+      }),
+      /maximumDetachedCoveredPermille does not match the descriptor/
+    );
+
+    const tamperedCandidate = structuredClone(candidate);
+    tamperedCandidate.derivation.scalePerpendicular.numerator += 1;
+    await writeFile(
+      path.join(root, paths.metadata),
+      stableJson(tamperedCandidate)
+    );
+    await assert.rejects(
+      verifyCandidateRouteDerivation({
+        root,
+        descriptor,
+        candidate: tamperedCandidate,
+        candidateBytes,
+        profile: loaded.promptProfile,
+        paths
+      }),
+      /route derivation does not reproduce|candidate bytes do not reproduce/
+    );
+    await writeFile(path.join(root, paths.metadata), stableJson(candidate));
+
+    const reviewOptions = {
+      root,
+      theme,
+      family,
+      reviewer: 'straight-ew-route-basis-reviewer@example.test',
+      decision: 'approved',
+      reason: 'The pinned EW route-basis replay satisfies every route contract.',
+      reviewedAt: '2026-08-11T16:00:00.000Z'
+    };
+    const review = await recordCandidateReview(reviewOptions);
+    assert.equal(review.record.schemaVersion, REVALIDATED_REVIEW_SCHEMA);
+    assert.equal(
+      review.record.candidate.derivation.finalSha256,
+      candidate.image.sha256
+    );
+
+    const tamperedReview = structuredClone(review.record);
+    tamperedReview.candidate.derivation.finalSha256 =
+      `sha256:${'0'.repeat(64)}`;
+    assert.throws(
+      () => assertReviewRecord(tamperedReview, review.path),
+      /derivation final hash does not match its image/
+    );
+
+    const approval = await approveCandidate({
+      ...reviewOptions,
+      approvedAt: reviewOptions.reviewedAt
+    });
+    assert.equal(approval.ok, true);
+    assert.equal(approval.changed, true);
+    assert.equal(approval.sourceSha256, candidate.image.sha256);
+  });
+
+  it('revalidates, reviews, and fixture-approves both exact cave corner raws',
+    async () => {
+      const cases = [
+        {
+          family: 'cave-limestone-curved-passage-corner-sw',
+          failure:
+            'd2209da08cded8313527f68f783d2e043974d6453a5fe6c384a2a1bd91518afb',
+          raw:
+            'd6578f5f0c0d335aa30bdfe434d1e3c286938555f403863c54cecc2809c01ad2',
+          final:
+            '7545e6f6a11e47a6d08cbb587181031911ac0e0d2fe42b7558d9e5e6f9ccecd1',
+          spans: [45, 48, 30, 40, 32, 33],
+          coveragePermille: 200,
+          reviewedAt: '2026-08-11T17:00:00.000Z'
+        },
+        {
+          family: 'cave-limestone-curved-passage-corner-ne',
+          failure:
+            'b78514fab329be31a6e3fdacb31f98ea273fda9a27327fbaae50ac2189b4bd15',
+          raw:
+            '396a6795ed15d72952919d48843bfb3064d6d243cced98dbca504954ac55bb42',
+          final:
+            '421b10da98b70e715acd82b146b0a7187341f1257d81237eee5d8d62c8cae87d',
+          spans: [49, 36, 28, 44, 28, 28],
+          coveragePermille: 168,
+          reviewedAt: '2026-08-11T17:05:00.000Z'
+        }
+      ];
+      for (const routeCase of cases) {
+        const theme = 'cave';
+        const failurePath =
+          'ai-image-metadata/battle-art/generated-artifacts/cave/'
+          + `${routeCase.family}/failures/${routeCase.failure}.json`;
+        const root = await fixture({
+          includedFamilies: [routeCase.family]
+        });
+        const failure = await copyFailedAttemptEvidence(root, failurePath);
+        assert.equal(failure.fullHash, `sha256:${routeCase.failure}`);
+        assert.equal(failure.raw.sha256, `sha256:${routeCase.raw}`);
+        const failureBefore = await readFile(path.join(root, failurePath));
+        const rawBefore = await readFile(path.join(root, failure.raw.path));
+        let workerCalls = 0;
+
+        const result = await revalidateFailedRouteAttempt({
+          root,
+          theme,
+          family: routeCase.family,
+          failure: failurePath
+        }, {
+          worker: async () => {
+            workerCalls += 1;
+            throw new Error('corner revalidation must not invoke a worker');
+          }
+        });
+        assert.equal(workerCalls, 0);
+        assert.equal(result.results[0].status, 'revalidated');
+
+        const loaded = await loadBattleArt(root);
+        const descriptor = loaded.descriptors.find(
+          entry => entry.descriptor.id === routeCase.family
+        ).descriptor;
+        assert.equal(descriptor.status, 'draft');
+        assert.equal(
+          descriptor.routeFinishing.strategy,
+          'corner-arm-local-warp-v1'
+        );
+        const paths = candidatePaths(descriptor);
+        const candidate = (await readJson(root, paths.metadata)).value;
+        assert.equal(candidate.schemaVersion, REVALIDATED_CANDIDATE_SCHEMA);
+        assert.equal(
+          candidate.derivation.strategy,
+          'corner-arm-local-warp-v1'
+        );
+        assert.equal(candidate.derivation.source.sha256, `sha256:${routeCase.raw}`);
+        assert.equal(
+          candidate.derivation.finalSha256,
+          `sha256:${routeCase.final}`
+        );
+        assert.equal(candidate.image.sha256, `sha256:${routeCase.final}`);
+        assert.deepEqual(candidate.origin.raw, failure.raw);
+        assert.deepEqual(candidate.derivation.source, failure.raw);
+        assert.equal(
+          candidate.derivation.maximumAppliedScalePermille,
+          Math.max(...Object.values(descriptor.routeFinishing.arms).map(
+            arm => arm.perpendicularScalePermille
+          ))
+        );
+        const candidateBytes = await readFile(path.join(root, paths.imagePng));
+        const validation = await validateFinishedRouteArtifact({
+          bytes: candidateBytes,
+          descriptor
+        });
+        assert.deepEqual(
+          validation.samples.map(sample => sample.span),
+          routeCase.spans
+        );
+        assert.equal(validation.coveragePermille, routeCase.coveragePermille);
+        await assert.doesNotReject(validatePreparedRouteGeometry({
+          bytes: candidateBytes,
+          descriptor,
+          finished: true
+        }));
+        assert.deepEqual(
+          await readFile(path.join(root, failurePath)),
+          failureBefore
+        );
+        assert.deepEqual(
+          await readFile(path.join(root, failure.raw.path)),
+          rawBefore
+        );
+
+        const drifted = structuredClone(candidate);
+        const direction = Object.keys(drifted.derivation.arms)[0];
+        drifted.derivation.arms[direction].transitionStartPermille += 1;
+        await assert.rejects(
+          verifyCandidateRouteDerivation({
+            root,
+            descriptor,
+            candidate: drifted,
+            candidateBytes,
+            profile: loaded.promptProfile,
+            paths
+          }),
+          /arms does not match the descriptor/
+        );
+
+        const reviewOptions = {
+          root,
+          theme,
+          family: routeCase.family,
+          reviewer: 'corner-arm-local-reviewer@example.test',
+          decision: 'approved',
+          reason: 'The immutable raw passes the pinned corner arm-local replay contract.',
+          reviewedAt: routeCase.reviewedAt
+        };
+        const review = await recordCandidateReview(reviewOptions);
+        assert.equal(review.record.schemaVersion, REVALIDATED_REVIEW_SCHEMA);
+        assert.deepEqual(review.record.candidate.origin, candidate.origin);
+        assert.equal(
+          review.record.candidate.derivation.finalSha256,
+          candidate.image.sha256
+        );
+        const approval = await approveCandidate({
+          ...reviewOptions,
+          approvedAt: routeCase.reviewedAt
+        });
+        assert.equal(approval.ok, true);
+        assert.equal(approval.changed, true);
+        assert.equal(approval.sourceSha256, candidate.image.sha256);
+      }
+    });
+
+  it('zero-worker revalidates and fixture-reviews exact cave multi-arm raws',
+    async () => {
+      const cases = [
+        ['cave-limestone-curved-passage-cross',
+          '7e20a22acb5cde38544cefd2c76d7631bd7fbcbd6532f3f055210637f3373e7f',
+          '89f634333fc8e602efe9b0c9f89363e2042da78b23a1c587b3660ab23d4379ba',
+          [28, 30, 29, 29, 29, 30, 29, 29, 32, 28, 30, 30], 382],
+        ['cave-limestone-curved-passage-tee-esw',
+          'd45d3f819ee6e66aca7bb2263ac6288d72fb1802150109f1497289bd571ed5d9',
+          '5f86b76533cc83aa42be7fcfb2789694d9030fac19fa941daad5c98e7263c10e',
+          [32, 31, 30, 31, 32, 32, 33, 33, 34], 253],
+        ['cave-limestone-curved-passage-tee-nes',
+          '814be1295cfd4785c0ce0cb37e0ebeb7e99aa9d469f364dc1a76b766d0e8c98a',
+          'ad6d570462a7e1074ab2bf417ba6a12f50b4cdba37c0e15028b927ca93ca7465',
+          [31, 31, 31, 31, 32, 34, 31, 32, 32], 285],
+        ['cave-limestone-curved-passage-tee-nsw',
+          'f1acb480ad736728307a384d2d6d724f15907e8c197e6c5576d40615b352ab61',
+          '4a3cd99671a9b01c16687592f3f03915671645d8ead772f559687c8ab35a561d',
+          [32, 30, 32, 38, 32, 31, 32, 29, 29], 315],
+        ['cave-limestone-curved-passage-tee-wne',
+          '3edd76fd2a2062df3cc641fd959f13a91c57d930c126a63bf51841370635ae05',
+          'f9718b9dc96e9bb735e0e24a6fad6cb1f049705ffd9c071c8e1fe299e9629998',
+          [32, 32, 32, 33, 32, 33, 32, 32, 33], 326]
+      ];
+      for (const [family, failureHash, finalHash, spans, coverage] of cases) {
+        const theme = 'cave';
+        const failurePath =
+          'ai-image-metadata/battle-art/generated-artifacts/cave/'
+          + `${family}/failures/${failureHash}.json`;
+        const root = await fixture({ includedFamilies: [family] });
+        const failure = await copyFailedAttemptEvidence(root, failurePath);
+        const failureBefore = await readFile(path.join(root, failurePath));
+        const rawBefore = await readFile(path.join(root, failure.raw.path));
+        let workerCalls = 0;
+        const result = await revalidateFailedRouteAttempt({
+          root,
+          theme,
+          family,
+          failure: failurePath
+        }, {
+          worker: async () => {
+            workerCalls += 1;
+            throw new Error('multi-arm revalidation must not invoke a worker');
+          }
+        });
+        assert.equal(workerCalls, 0);
+        assert.equal(result.results[0].status, 'revalidated');
+
+        const loaded = await loadBattleArt(root);
+        const descriptor = loaded.descriptors.find(
+          entry => entry.descriptor.id === family
+        ).descriptor;
+        const paths = candidatePaths(descriptor);
+        const candidate = (await readJson(root, paths.metadata)).value;
+        assert.equal(candidate.schemaVersion, REVALIDATED_CANDIDATE_SCHEMA);
+        assert.equal(candidate.derivation.strategy, 'multi-arm-local-warp-v1');
+        assert.equal(candidate.derivation.finalSha256, `sha256:${finalHash}`);
+        assert.equal(candidate.image.sha256, `sha256:${finalHash}`);
+        assert.deepEqual(candidate.derivation.source, failure.raw);
+        assert.equal(Object.hasOwn(candidate, 'worker'), false);
+        const candidateBytes = await readFile(path.join(root, paths.imagePng));
+        const validation = await validateFinishedRouteArtifact({
+          bytes: candidateBytes,
+          descriptor
+        });
+        assert.deepEqual(validation.samples.map(sample => sample.span), spans);
+        assert.equal(validation.coveragePermille, coverage);
+        await assert.doesNotReject(verifyCandidateRouteDerivation({
+          root,
+          descriptor,
+          candidate,
+          candidateBytes,
+          profile: loaded.promptProfile,
+          paths
+        }));
+        assert.deepEqual(await readFile(path.join(root, failurePath)),
+          failureBefore);
+        assert.deepEqual(await readFile(path.join(root, failure.raw.path)),
+          rawBefore);
+
+        if (family.endsWith('-cross')) {
+          const historicalReviewPath =
+            `ai-image-metadata/battle-art/reviews/cave/${family}/`
+            + '42c2d003be18482fc41a4800d0dab50574e1af153ae2d1015eb96afce1d51fb3.json';
+          const historicalReview = await copyTrackedReview(
+            root,
+            historicalReviewPath
+          );
+          const historicalReviewBefore = await readFile(
+            path.join(root, historicalReviewPath)
+          );
+          assert.equal(historicalReview.decision, 'rejected');
+          assert.equal(
+            historicalReview.candidate.image.sha256,
+            'sha256:42c2d003be18482fc41a4800d0dab50574e1af153ae2d1015eb96afce1d51fb3'
+          );
+          assert.notEqual(
+            historicalReview.candidate.image.sha256,
+            candidate.image.sha256
+          );
+          assert.deepEqual(await auditBattleArtReviews({ root }), {
+            ok: true,
+            records: 2,
+            approved: 1,
+            rejected: 1
+          });
+          assert.deepEqual(
+            await readFile(path.join(root, historicalReviewPath)),
+            historicalReviewBefore
+          );
+        }
+
+        const drifted = structuredClone(candidate);
+        const direction = Object.keys(drifted.derivation.arms)[0];
+        drifted.derivation.arms[direction]
+          .scaleTransitionStartPermille += 1;
+        await assert.rejects(verifyCandidateRouteDerivation({
+          root,
+          descriptor,
+          candidate: drifted,
+          candidateBytes,
+          profile: loaded.promptProfile,
+          paths
+        }), /arms does not match the descriptor/);
+
+        const reviewOptions = {
+          root,
+          theme,
+          family,
+          reviewer: 'multi-arm-local-reviewer@example.test',
+          decision: 'approved',
+          reason: 'The immutable raw passes its pinned multi-arm replay contract.',
+          reviewedAt: '2026-08-11T19:00:00.000Z'
+        };
+        const review = await recordCandidateReview(reviewOptions);
+        assert.equal(review.record.schemaVersion, REVALIDATED_REVIEW_SCHEMA);
+        assert.equal(review.record.candidate.derivation.finalSha256,
+          candidate.image.sha256);
+        const approval = await approveCandidate({
+          ...reviewOptions,
+          approvedAt: reviewOptions.reviewedAt
+        });
+        assert.equal(approval.ok, true);
+        assert.equal(approval.changed, true);
+        assert.equal(approval.sourceSha256, candidate.image.sha256);
+      }
     });
 
   it('rejects tampered, wrong-family, noncanonical, duplicate, and still-failing replay attempts without publication',
@@ -4449,7 +6335,69 @@ describe('battle-art isolated generation and review boundary', () => {
     assert.equal(rejection, null);
     assert.deepEqual(kills, ['SIGTERM']);
     child.emit('close', null, 'SIGTERM');
-    await assert.rejects(pending, /worker stdout exceeded 4 bytes/);
+    await assert.rejects(pending, error => {
+      assert.match(error.message, /worker stdout exceeded 4 bytes/);
+      assert.deepEqual(error.stdout, Buffer.alloc(4));
+      assert.deepEqual(error.stderr, Buffer.alloc(0));
+      return true;
+    });
+  });
+
+  it('attaches bounded worker output to nonzero and timeout errors', async () => {
+    for (const testCase of [
+      {
+        label: 'nonzero',
+        timeoutMs: 10_000,
+        close(child) {
+          child.emit('close', 7, null);
+        },
+        message: /Codex worker exited with code 7/
+      },
+      {
+        label: 'timeout',
+        timeoutMs: 10,
+        close: null,
+        message: /Codex worker timed out after 10ms/
+      }
+    ]) {
+      let child;
+      const spawnImpl = () => {
+        child = new EventEmitter();
+        child.stdin = new PassThrough();
+        child.stdout = new PassThrough();
+        child.stderr = new PassThrough();
+        child.kill = () => queueMicrotask(
+          () => child.emit('close', null, 'SIGTERM')
+        );
+        return child;
+      };
+      const pending = runCommand({
+        command: 'codex',
+        args: ['exec'],
+        cwd: '/tmp/generated-image-worker',
+        input: 'generate',
+        timeoutMs: testCase.timeoutMs,
+        spawnImpl,
+        environmentSource: { PATH: '/usr/bin', HOME: '/home/reviewer' }
+      });
+      child.stdout.write(`partial ${testCase.label} stdout\n`);
+      child.stderr.write(`partial ${testCase.label} stderr\n`);
+      testCase.close?.(child);
+      await assert.rejects(pending, error => {
+        assert.match(error.message, testCase.message);
+        assert.equal(
+          error.stdout.toString(),
+          `partial ${testCase.label} stdout\n`
+        );
+        assert.equal(
+          error.stderr.toString(),
+          `partial ${testCase.label} stderr\n`
+        );
+        assert.ok(error.stdout.length <= MAX_WORKER_OUTPUT_BYTES);
+        assert.ok(error.stderr.length <= MAX_WORKER_OUTPUT_BYTES);
+        return true;
+      });
+    }
   });
 
   it('terminates detached worker groups when the generator parent receives SIGTERM', {
@@ -4517,9 +6465,10 @@ describe('battle-art isolated generation and review boundary', () => {
     assert.deepEqual(
       {
         concurrency: parseGenerateArgs([]).concurrency,
-        textStyleFallback: parseGenerateArgs([]).textStyleFallback
+        textStyleFallback: parseGenerateArgs([]).textStyleFallback,
+        timeoutMs: parseGenerateArgs([]).timeoutMs
       },
-      { concurrency: 1, textStyleFallback: false }
+      { concurrency: 1, textStyleFallback: false, timeoutMs: 900_000 }
     );
     assert.equal(parseGenerateArgs(['--concurrency', '4']).concurrency, 4);
     assert.equal(
@@ -4727,6 +6676,13 @@ describe('battle-art isolated generation and review boundary', () => {
     );
     assert.throws(
       () => assertSingleGeneratedArtifactCopyEvidence(evidence([
+        skillRead,
+        imagegen
+      ])),
+      /observed 1 skill reads, 0 artifact copies, and 1 commands/
+    );
+    assert.throws(
+      () => assertSingleGeneratedArtifactCopyEvidence(evidence([
         imagegen,
         skillRead,
         copy,
@@ -4813,6 +6769,833 @@ describe('battle-art isolated generation and review boundary', () => {
         `must reject unsafe route artifact copy: ${unsafeCopy}`
       );
     }
+  });
+
+  it('audits and securely resolves parent-owned non-forest route handoff',
+    async () => {
+      const threadId = 'parent-route-thread';
+      const thread = JSON.stringify({
+        type: 'thread.started',
+        thread_id: threadId
+      });
+      const command = (id, value, overrides = {}) => JSON.stringify({
+        type: 'item.completed',
+        item: {
+          id,
+          type: 'command_execution',
+          command: value,
+          status: 'completed',
+          exit_code: 0,
+          ...overrides
+        }
+      });
+      const skillRead = command(
+        'skill-read',
+        `/bin/bash -lc '${CANONICAL_ROUTE_SKILL_READ_COMMAND}'`
+      );
+      const imagegen = JSON.stringify({
+        type: 'item.completed',
+        item: {
+          id: 'imagegen',
+          type: 'mcp_tool_call',
+          server: 'image_gen',
+          tool: 'imagegen',
+          status: 'completed'
+        }
+      });
+      const imagegenStarted = JSON.stringify({
+        type: 'item.started',
+        item: {
+          id: 'imagegen',
+          type: 'mcp_tool_call',
+          server: 'image_gen',
+          tool: 'imagegen',
+          status: 'in_progress'
+        }
+      });
+      const evidence = (...events) => Buffer.from(
+        `${[thread, ...events].join('\n')}\n`
+      );
+      assert.deepEqual(
+        auditCodexParentImagegenHandoffJsonl(
+          evidence(skillRead, imagegen),
+          { canonicalSkillReadCommand: CANONICAL_ROUTE_SKILL_READ_COMMAND }
+        ),
+        {
+          threadId,
+          commandCount: 1,
+          observableImagegenInvocationCount: 1
+        }
+      );
+      assert.equal(
+        auditCodexParentImagegenHandoffJsonl(
+          evidence(skillRead),
+          { canonicalSkillReadCommand: CANONICAL_ROUTE_SKILL_READ_COMMAND }
+        ).observableImagegenInvocationCount,
+        0,
+        'built-in imagegen JSONL may be suppressed'
+      );
+      for (const outOfOrder of [
+        evidence(imagegen, skillRead),
+        evidence(imagegenStarted, skillRead, imagegen)
+      ]) {
+        assert.throws(
+          () => auditCodexParentImagegenHandoffJsonl(outOfOrder, {
+            canonicalSkillReadCommand: CANONICAL_ROUTE_SKILL_READ_COMMAND
+          }),
+          /skill read must complete before observable imagegen execution/
+        );
+      }
+      for (const invalid of [
+        Buffer.from(`${skillRead}\n`),
+        Buffer.from(`${thread}\n${thread}\n${skillRead}\n`),
+        evidence(command('failed', CANONICAL_ROUTE_SKILL_READ_COMMAND, {
+          status: 'failed',
+          exit_code: 1
+        })),
+        evidence(skillRead, command('extra', '/bin/true')),
+        evidence(skillRead, JSON.stringify({
+          type: 'item.completed',
+          item: { id: 'write', type: 'file_change', path: 'candidate.png' }
+        }))
+      ]) {
+        assert.throws(
+          () => auditCodexParentImagegenHandoffJsonl(invalid, {
+            canonicalSkillReadCommand: CANONICAL_ROUTE_SKILL_READ_COMMAND
+          }),
+          /parent handoff/
+        );
+      }
+
+      const root = await mkdtemp(path.join(tmpdir(), 'battle-art-handoff-'));
+      temporaryRoots.push(root);
+      const codexHome = path.join(root, '.codex');
+      const threadRoot = path.join(codexHome, 'generated_images', threadId);
+      await mkdir(threadRoot, { recursive: true });
+      const artifactPath = path.join(threadRoot, 'call_ParentRoute.png');
+      const artifactBytes = Buffer.from('one securely returned raster');
+      await writeFile(artifactPath, artifactBytes);
+      const resolved = await resolveCodexCurrentThreadImagegenArtifact({
+        threadId,
+        environmentSource: { CODEX_HOME: codexHome }
+      });
+      assert.deepEqual(resolved.bytes, artifactBytes);
+      assert.equal(resolved.artifact.path, artifactPath);
+      assert.match(resolved.artifact.identity.inode, /^\d+$/);
+
+      const emptyThread = path.join(
+        codexHome,
+        'generated_images',
+        'empty-thread'
+      );
+      await mkdir(emptyThread);
+      await assert.rejects(
+        resolveCodexCurrentThreadImagegenArtifact({
+          threadId: 'empty-thread',
+          environmentSource: { CODEX_HOME: codexHome }
+        }),
+        /exactly one matching imagegen raster; found 0/
+      );
+      await writeFile(
+        path.join(threadRoot, 'exec-98e50c0c-760c-42c3-8f18-e34ac3228802.png'),
+        Buffer.from('second raster')
+      );
+      await assert.rejects(
+        resolveCodexCurrentThreadImagegenArtifact({
+          threadId,
+          environmentSource: { CODEX_HOME: codexHome }
+        }),
+        /exactly one matching imagegen raster; found 2/
+      );
+      await rm(path.join(
+        threadRoot,
+        'exec-98e50c0c-760c-42c3-8f18-e34ac3228802.png'
+      ));
+      await assert.rejects(
+        resolveCodexCurrentThreadImagegenArtifact({
+          threadId: '../parent-route-thread',
+          environmentSource: { CODEX_HOME: codexHome }
+        }),
+        /safe path component/
+      );
+      await assert.rejects(
+        resolveCodexCurrentThreadImagegenArtifact({
+          threadId,
+          environmentSource: { CODEX_HOME: '.codex' }
+        }),
+        /absolute normalized environment path/
+      );
+
+      const outside = path.join(root, 'outside.png');
+      await writeFile(outside, artifactBytes);
+      await rm(artifactPath);
+      await symlink(outside, artifactPath);
+      await assert.rejects(
+        resolveCodexCurrentThreadImagegenArtifact({
+          threadId,
+          environmentSource: { CODEX_HOME: codexHome }
+        }),
+        /regular non-symlink file/
+      );
+      await rm(artifactPath);
+      await writeFile(artifactPath, artifactBytes);
+
+      let replaced = false;
+      let artifactOpenFlags = null;
+      await assert.rejects(
+        resolveCodexCurrentThreadImagegenArtifact({
+          threadId,
+          environmentSource: { CODEX_HOME: codexHome },
+          filesystemSource: {
+            open: async (target, flags, mode) => {
+              if (target === artifactPath && !replaced) {
+                artifactOpenFlags = flags;
+                replaced = true;
+                const original = `${artifactPath}.original`;
+                await rename(artifactPath, original);
+                await writeFile(artifactPath, await readFile(original));
+              }
+              return openFile(target, flags, mode);
+            }
+          }
+        }),
+        /changed before secure read/
+      );
+      assert.equal(replaced, true);
+      assert.equal(
+        artifactOpenFlags & fsConstants.O_NOFOLLOW,
+        fsConstants.O_NOFOLLOW
+      );
+    });
+
+  it('rejects parent-handoff ancestor swaps and symlinks', async () => {
+    const threadId = 'ancestor-race-thread';
+    const artifactName = 'call_AncestorRace.png';
+    async function populateThread(threadRoot, contents) {
+      await mkdir(threadRoot, { recursive: true });
+      await writeFile(path.join(threadRoot, artifactName), contents);
+    }
+
+    for (const swapKind of ['CODEX_HOME', 'generated_images', 'thread']) {
+      const root = await mkdtemp(path.join(tmpdir(), 'handoff-ancestor-race-'));
+      temporaryRoots.push(root);
+      const codexHome = path.join(root, '.codex');
+      const generatedRoot = path.join(codexHome, 'generated_images');
+      const threadRoot = path.join(generatedRoot, threadId);
+      await populateThread(threadRoot, Buffer.from('original artifact'));
+
+      let target;
+      let replacement;
+      let trigger;
+      if (swapKind === 'CODEX_HOME') {
+        target = codexHome;
+        replacement = path.join(root, '.replacement-codex');
+        trigger = generatedRoot;
+        await populateThread(
+          path.join(replacement, 'generated_images', threadId),
+          Buffer.from('substituted home artifact')
+        );
+      } else if (swapKind === 'generated_images') {
+        target = generatedRoot;
+        replacement = path.join(codexHome, 'generated_images.replacement');
+        trigger = generatedRoot;
+        await populateThread(
+          path.join(replacement, threadId),
+          Buffer.from('substituted generated root artifact')
+        );
+      } else {
+        target = threadRoot;
+        replacement = path.join(generatedRoot, `${threadId}.replacement`);
+        trigger = threadRoot;
+        await populateThread(
+          replacement,
+          Buffer.from('substituted thread artifact')
+        );
+      }
+      let triggerLstats = 0;
+      let swapped = false;
+      await assert.rejects(
+        resolveCodexCurrentThreadImagegenArtifact({
+          threadId,
+          environmentSource: { CODEX_HOME: codexHome },
+          filesystemSource: {
+            lstat: async (candidate, options) => {
+              if (candidate === trigger) {
+                triggerLstats += 1;
+                if (triggerLstats === 2 && !swapped) {
+                  swapped = true;
+                  await rename(target, `${target}.original`);
+                  await rename(replacement, target);
+                }
+              }
+              return lstat(candidate, options);
+            }
+          }
+        }),
+        /(?:ancestor directory path changed|generated-images thread path changed) during verification/,
+        swapKind
+      );
+      assert.equal(swapped, true, swapKind);
+    }
+
+    for (const symlinkKind of ['CODEX_HOME', 'generated_images', 'thread']) {
+      const root = await mkdtemp(path.join(tmpdir(), 'handoff-ancestor-link-'));
+      temporaryRoots.push(root);
+      const codexHome = path.join(root, '.codex');
+      const generatedRoot = path.join(codexHome, 'generated_images');
+      const threadRoot = path.join(generatedRoot, threadId);
+      const outside = path.join(root, 'outside');
+      if (symlinkKind === 'CODEX_HOME') {
+        await populateThread(
+          path.join(outside, 'generated_images', threadId),
+          Buffer.from('outside home artifact')
+        );
+        await symlink(outside, codexHome);
+      } else if (symlinkKind === 'generated_images') {
+        await mkdir(codexHome);
+        await populateThread(
+          path.join(outside, threadId),
+          Buffer.from('outside generated root artifact')
+        );
+        await symlink(outside, generatedRoot);
+      } else {
+        await mkdir(generatedRoot, { recursive: true });
+        await populateThread(outside, Buffer.from('outside thread artifact'));
+        await symlink(outside, threadRoot);
+      }
+      await assert.rejects(
+        resolveCodexCurrentThreadImagegenArtifact({
+          threadId,
+          environmentSource: { CODEX_HOME: codexHome }
+        }),
+        /must be a real directory/,
+        symlinkKind
+      );
+    }
+  });
+
+  it('parent exclusively materializes a non-forest route candidate', async () => {
+    const family = 'cave-limestone-curved-passage-isolated';
+    const makeWorker = ({
+      preserveWorkerCandidate = false,
+      workspaceAttack = null
+    } = {}) => {
+      const environmentSource = {};
+      const worker = async input => {
+        const result = await candidateWorker(input);
+        environmentSource.CODEX_HOME = result.environmentSource.CODEX_HOME;
+        const artifactPath = path.join(
+          result.environmentSource.CODEX_HOME,
+          'generated_images',
+          'route-fixture-thread',
+          'call_RouteFixture.png'
+        );
+        const candidatePath = path.join(input.workspace, 'candidate.png');
+        const routeBytes = await readFile(path.join(
+          REPOSITORY_ROOT,
+          'ai-image-metadata/battle-art/generated-artifacts/cave',
+          family,
+          '1953d511264feacc34d588bc285e84722361f6e13f9ee08a616462256da536a0.png'
+        ));
+        await writeFile(artifactPath, routeBytes);
+        const events = result.stdout.toString('utf8')
+          .trimEnd()
+          .split('\n')
+          .map(line => JSON.parse(line))
+          .filter(event => event?.item?.id !== 'route-artifact-copy');
+        if (preserveWorkerCandidate) {
+          await writeFile(candidatePath, routeBytes);
+        }
+        if (workspaceAttack === 'replacement') {
+          const replacement = `${input.workspace}.replacement`;
+          await cp(input.workspace, replacement, { recursive: true });
+          await rename(input.workspace, `${input.workspace}.original`);
+          await rename(replacement, input.workspace);
+        } else if (workspaceAttack === 'symlink') {
+          const original = `${input.workspace}.original`;
+          await rename(input.workspace, original);
+          await symlink(original, input.workspace);
+        }
+        return {
+          ...result,
+          environmentSource: { CODEX_HOME: '/untrusted/worker-override' },
+          stdout: Buffer.from(
+            `${events.map(event => JSON.stringify(event)).join('\n')}\n`
+          )
+        };
+      };
+      return { worker, environmentSource };
+    };
+
+    const root = await fixture();
+    const handoff = makeWorker();
+    let verifiedHandoffBytes = null;
+    const generated = await generateBattleArt({
+      projectRoot: root,
+      theme: 'cave',
+      family,
+      concurrency: 1,
+      timeoutMs: 10_000,
+      dryRun: false,
+      force: false,
+      resume: false
+    }, {
+      ...handoff,
+      afterCandidateVerified: async ({ verifiedCandidateBytes }) => {
+        verifiedHandoffBytes = Buffer.from(verifiedCandidateBytes);
+      }
+    });
+    assert.equal(generated.results[0].status, 'generated');
+    assert.deepEqual(
+      verifiedHandoffBytes,
+      await readFile(path.join(
+        REPOSITORY_ROOT,
+        'ai-image-metadata/battle-art/generated-artifacts/cave',
+        family,
+        '1953d511264feacc34d588bc285e84722361f6e13f9ee08a616462256da536a0.png'
+      ))
+    );
+    const candidateRoot = path.join(
+      root,
+      'ai-image-metadata/battle-art/candidates/cave',
+      family
+    );
+    assert.ok((await readFile(path.join(candidateRoot, 'candidate.png'))).length > 0);
+    assert.doesNotMatch(
+      await readFile(path.join(candidateRoot, 'worker.jsonl'), 'utf8'),
+      /route-artifact-copy|\/bin\/cp|candidate\.png/
+    );
+
+    const workerCandidateRoot = await fixture();
+    const workerCandidate = makeWorker({ preserveWorkerCandidate: true });
+    await assert.rejects(
+      generateBattleArt({
+        projectRoot: workerCandidateRoot,
+        theme: 'cave',
+        family,
+        concurrency: 1,
+        timeoutMs: 10_000,
+        dryRun: false,
+        force: false,
+        resume: false
+      }, workerCandidate),
+      /worker modified frozen input candidate\.png/
+    );
+
+    for (const workspaceAttack of ['replacement', 'symlink']) {
+      const attackRoot = await fixture();
+      await assert.rejects(
+        generateBattleArt({
+          projectRoot: attackRoot,
+          theme: 'cave',
+          family,
+          concurrency: 1,
+          timeoutMs: 10_000,
+          dryRun: false,
+          force: false,
+          resume: false
+        }, makeWorker({ workspaceAttack })),
+        /workspace path changed during worker execution or materialization/,
+        workspaceAttack
+      );
+    }
+
+    const gapRoot = await fixture();
+    const gapWorker = makeWorker();
+    let substitutedCandidatePath = null;
+    await assert.rejects(
+      generateBattleArt({
+        projectRoot: gapRoot,
+        theme: 'cave',
+        family,
+        concurrency: 1,
+        timeoutMs: 10_000,
+        dryRun: false,
+        force: false,
+        resume: false
+      }, {
+        ...gapWorker,
+        beforeParentCandidateWrite: async ({ workspace }) => {
+          const replacement = `${workspace}.write-gap-replacement`;
+          await cp(workspace, replacement, { recursive: true });
+          await rename(workspace, `${workspace}.write-gap-original`);
+          await rename(replacement, workspace);
+          substitutedCandidatePath = path.join(workspace, 'candidate.png');
+          assert.equal((await readFile(substitutedCandidatePath)).length, 0);
+        }
+      }),
+      /workspace path changed during worker execution or materialization/
+    );
+    assert.equal(
+      (await readFile(substitutedCandidatePath)).length,
+      0,
+      'verified bytes must be written only through the held original leaf handle'
+    );
+    await assert.rejects(
+      readFile(path.join(
+        gapRoot,
+        'ai-image-metadata/battle-art/candidates/cave',
+        family,
+        'candidate.png'
+      )),
+      error => error.code === 'ENOENT'
+    );
+
+    for (const setupAttack of ['before-open', 'during-pin']) {
+      const setupRoot = await fixture();
+      let workerCalls = 0;
+      let markerPath = null;
+      const setupHook = async ({ workspace }) => {
+        await rename(workspace, `${workspace}.setup-original`);
+        if (setupAttack === 'before-open') {
+          const substitute = path.join(
+            setupRoot,
+            'substituted-before-workspace-open'
+          );
+          await mkdir(substitute);
+          markerPath = path.join(substitute, 'must-survive.txt');
+          await writeFile(markerPath, 'substituted tree survives\n');
+          await symlink(substitute, workspace);
+        } else {
+          const substitute = path.join(
+            setupRoot,
+            'substituted-during-workspace-pin'
+          );
+          await mkdir(substitute);
+          markerPath = path.join(workspace, 'must-survive.txt');
+          await writeFile(
+            path.join(substitute, 'must-survive.txt'),
+            'substituted tree survives\n'
+          );
+          await rename(substitute, workspace);
+        }
+      };
+      await assert.rejects(
+        generateBattleArt({
+          projectRoot: setupRoot,
+          theme: 'cave',
+          family,
+          concurrency: 1,
+          timeoutMs: 10_000,
+          dryRun: false,
+          force: false,
+          resume: false
+        }, {
+          worker: async () => {
+            workerCalls += 1;
+            throw new Error('setup attack must fail before worker launch');
+          },
+          ...(setupAttack === 'before-open'
+            ? { beforeParentWorkspaceOpen: setupHook }
+            : { beforeParentWorkspacePin: setupHook })
+        }),
+        setupAttack === 'before-open'
+          ? /ELOOP|ENOTDIR/
+          : /workspace must be a pinned real directory/,
+        setupAttack
+      );
+      assert.equal(workerCalls, 0, setupAttack);
+      assert.equal(
+        await readFile(markerPath, 'utf8'),
+        'substituted tree survives\n',
+        setupAttack
+      );
+    }
+
+    const overrideRoot = await fixture();
+    const override = makeWorker();
+    const trustedEmptyHome = path.join(overrideRoot, 'trusted-empty-codex-home');
+    await mkdir(trustedEmptyHome);
+    await assert.rejects(
+      generateBattleArt({
+        projectRoot: overrideRoot,
+        theme: 'cave',
+        family,
+        concurrency: 1,
+        timeoutMs: 10_000,
+        dryRun: false,
+        force: false,
+        resume: false
+      }, {
+        worker: override.worker,
+        environmentSource: { CODEX_HOME: trustedEmptyHome }
+      }),
+      /generated_images/
+    );
+  });
+
+  it('reviews only valid regular non-forest parent route handoffs', async () => {
+    const caveRouteFamily = 'cave-limestone-curved-passage-isolated';
+    const caveRouteRaw =
+      'ai-image-metadata/battle-art/generated-artifacts/cave/'
+      + `${caveRouteFamily}/`
+      + '1953d511264feacc34d588bc285e84722361f6e13f9ee08a616462256da536a0.png';
+    const generateCaveRoute = async ({ suppressImagegen }) => {
+      const root = await fixture({ includedFamilies: [caveRouteFamily] });
+      const environmentSource = {};
+      const worker = async input => {
+        const result = await candidateWorker(input);
+        environmentSource.CODEX_HOME = result.environmentSource.CODEX_HOME;
+        const artifactPath = path.join(
+          result.environmentSource.CODEX_HOME,
+          'generated_images',
+          'route-fixture-thread',
+          'call_RouteFixture.png'
+        );
+        await copyFile(path.join(REPOSITORY_ROOT, caveRouteRaw), artifactPath);
+        const events = result.stdout.toString('utf8')
+          .trimEnd()
+          .split('\n')
+          .map(line => JSON.parse(line))
+          .filter(event => (
+            event?.item?.id !== 'route-artifact-copy'
+            && (!suppressImagegen
+              || event?.item?.server !== 'image_gen')
+          ));
+        return {
+          ...result,
+          stdout: Buffer.from(
+            `${events.map(event => JSON.stringify(event)).join('\n')}\n`
+          )
+        };
+      };
+      await generateBattleArt({
+        projectRoot: root,
+        theme: 'cave',
+        family: caveRouteFamily,
+        concurrency: 1,
+        timeoutMs: 10_000,
+        dryRun: false,
+        force: false,
+        resume: false
+      }, { worker, environmentSource });
+      const loaded = await loadBattleArt(root);
+      const descriptor = loaded.descriptors[0].descriptor;
+      return {
+        root,
+        paths: candidatePaths(descriptor),
+        review: {
+          root,
+          theme: 'cave',
+          family: caveRouteFamily,
+          reviewer: 'parent-handoff-reviewer@example.test',
+          decision: 'rejected',
+          reason:
+            'The parent-owned route evidence is valid but this fixture is '
+            + 'rejected to exercise immutable review recording.',
+          reviewedAt: suppressImagegen
+            ? '2026-08-11T16:00:00.000Z'
+            : '2026-08-11T16:01:00.000Z'
+        }
+      };
+    };
+
+    const suppressed = await generateCaveRoute({ suppressImagegen: true });
+    const suppressedStdoutPath = path.join(
+      suppressed.root,
+      suppressed.paths.stdout
+    );
+    const validSuppressedStdout = await readFile(suppressedStdoutPath);
+    assert.doesNotMatch(
+      validSuppressedStdout.toString('utf8'),
+      /"server":"image_gen"/
+    );
+    const validSuppressedEvents = validSuppressedStdout.toString('utf8')
+      .trimEnd()
+      .split('\n');
+    for (const type of [
+      'mcp_call',
+      'computer_use',
+      'shell_command',
+      'file_operation'
+    ]) {
+      await writeFile(
+        suppressedStdoutPath,
+        `${[
+          ...validSuppressedEvents,
+          JSON.stringify({
+            type: 'item.completed',
+            item: { id: `prohibited-${type}`, type }
+          })
+        ].join('\n')}\n`
+      );
+      await assert.rejects(
+        recordCandidateReview(suppressed.review),
+        /type is not allowed for a parent imagegen handoff/,
+        type
+      );
+    }
+    const tamperedEvents = [...validSuppressedEvents];
+    tamperedEvents.push(JSON.stringify({
+      type: 'item.completed',
+      item: {
+        id: 'prohibited-extra-command',
+        type: 'command_execution',
+        command: '/bin/true',
+        status: 'completed',
+        exit_code: 0
+      }
+    }));
+    await writeFile(
+      suppressedStdoutPath,
+      `${tamperedEvents.join('\n')}\n`
+    );
+    await assert.rejects(
+      recordCandidateReview(suppressed.review),
+      /parent handoff worker may execute only the canonical imagegen skill read/
+    );
+    await writeFile(suppressedStdoutPath, validSuppressedStdout);
+    const suppressedReview = await recordCandidateReview(suppressed.review);
+    assert.equal(suppressedReview.record.schemaVersion, REVIEW_SCHEMA);
+    assert.equal(suppressedReview.record.candidate.worker.invocationCount, 1);
+
+    const observable = await generateCaveRoute({ suppressImagegen: false });
+    assert.match(
+      await readFile(path.join(observable.root, observable.paths.stdout), 'utf8'),
+      /"server":"image_gen"/
+    );
+    const observableReview = await recordCandidateReview(observable.review);
+    assert.equal(observableReview.record.schemaVersion, REVIEW_SCHEMA);
+
+    const workerCopyRoot = await fixture({
+      includedFamilies: [caveRouteFamily]
+    });
+    const workerCopyDescriptorRelative =
+      `ai-image-metadata/battle-art/descriptors/cave/`
+      + `${caveRouteFamily}.json`;
+    const workerCopyDescriptor = (await readJson(
+      REPOSITORY_ROOT,
+      workerCopyDescriptorRelative
+    )).value;
+    await writeFile(
+      path.join(workerCopyRoot, workerCopyDescriptorRelative),
+      stableJson(workerCopyDescriptor)
+    );
+    const workerCopyPaths = candidatePaths(workerCopyDescriptor);
+    await cp(
+      path.join(REPOSITORY_ROOT, workerCopyPaths.directory),
+      path.join(workerCopyRoot, workerCopyPaths.directory),
+      { recursive: true }
+    );
+    const workerCopyCandidate = (await readJson(
+      workerCopyRoot,
+      workerCopyPaths.metadata
+    )).value;
+    for (const relative of [
+      workerCopyCandidate.derivation.source.path,
+      workerCopyDescriptor.source.imagePath
+    ]) {
+      await mkdir(path.dirname(path.join(workerCopyRoot, relative)), {
+        recursive: true
+      });
+      await copyFile(
+        path.join(REPOSITORY_ROOT, relative),
+        path.join(workerCopyRoot, relative)
+      );
+    }
+    const workerCopyReviewRelative =
+      `ai-image-metadata/battle-art/reviews/cave/${caveRouteFamily}/`
+      + `${workerCopyCandidate.image.sha256.slice('sha256:'.length)}.json`;
+    const workerCopyReview = await copyTrackedReview(
+      workerCopyRoot,
+      workerCopyReviewRelative
+    );
+    const replayedWorkerCopyReview = await recordCandidateReview({
+      root: workerCopyRoot,
+      theme: 'cave',
+      family: caveRouteFamily,
+      reviewer: workerCopyReview.reviewer,
+      decision: workerCopyReview.decision,
+      reason: workerCopyReview.reason,
+      reviewedAt: workerCopyReview.reviewedAt
+    });
+    assert.equal(replayedWorkerCopyReview.changed, false);
+    assert.equal(replayedWorkerCopyReview.path, workerCopyReviewRelative);
+
+    const caveSurfaceFamily = 'cave-limestone-worn-floor-0';
+    const caveSurfaceRoot = await fixture({
+      includedFamilies: [caveSurfaceFamily]
+    });
+    await generateBattleArt({
+      projectRoot: caveSurfaceRoot,
+      theme: 'cave',
+      family: caveSurfaceFamily,
+      concurrency: 1,
+      timeoutMs: 10_000,
+      dryRun: false,
+      force: false,
+      resume: false
+    }, { worker: candidateWorker });
+    const caveSurfaceLoaded = await loadBattleArt(caveSurfaceRoot);
+    const caveSurfacePaths = candidatePaths(
+      caveSurfaceLoaded.descriptors[0].descriptor
+    );
+    await writeFile(path.join(caveSurfaceRoot, caveSurfacePaths.stdout), '');
+    await assert.rejects(
+      recordCandidateReview({
+        root: caveSurfaceRoot,
+        theme: 'cave',
+        family: caveSurfaceFamily,
+        reviewer: 'generic-audit-reviewer@example.test',
+        decision: 'rejected',
+        reason: 'Suppressed non-route evidence must remain invalid.',
+        reviewedAt: '2026-08-11T16:02:00.000Z'
+      }),
+      /candidate worker evidence must prove exactly one imagegen invocation/
+    );
+
+    const forestRouteFamily = 'forest-heartlands-loam-path-straight-ns';
+    const forestRouteRoot = await fixture({
+      includedFamilies: [forestRouteFamily],
+      preserveDirectStyleProvenance: true
+    });
+    const { descriptor: forestDescriptor } =
+      await retainTrackedApprovedV1Evidence(
+        forestRouteRoot,
+        forestRouteFamily
+      );
+    const forestPaths = candidatePaths(forestDescriptor);
+    const forestCandidate = (await readJson(
+      forestRouteRoot,
+      forestPaths.metadata
+    )).value;
+    await mkdir(path.dirname(path.join(
+      forestRouteRoot,
+      forestCandidate.derivation.source.path
+    )), { recursive: true });
+    await copyFile(
+      path.join(
+        REPOSITORY_ROOT,
+        forestCandidate.derivation.source.path
+      ),
+      path.join(
+        forestRouteRoot,
+        forestCandidate.derivation.source.path
+      )
+    );
+    const forestEvents = (await readFile(
+      path.join(forestRouteRoot, forestPaths.stdout),
+      'utf8'
+    )).trimEnd().split('\n').map(line => JSON.parse(line)).filter(event => (
+      event?.item?.server !== 'image_gen'
+      && !event?.item?.command?.includes('/bin/cp ')
+    ));
+    await writeFile(
+      path.join(forestRouteRoot, forestPaths.stdout),
+      `${forestEvents.map(event => JSON.stringify(event)).join('\n')}\n`
+    );
+    await assert.rejects(
+      recordCandidateReview({
+        root: forestRouteRoot,
+        theme: 'forest',
+        family: forestRouteFamily,
+        reviewer: forestDescriptor.source.reviewer,
+        decision: 'approved',
+        reason: 'Suppressed forest route evidence must remain invalid.',
+        reviewedAt: forestDescriptor.source.approvedAt
+      }),
+      /imagegen/
+    );
   });
 
   it('freezes descriptor/style inputs and requires exactly one imagegen call per family prompt', async () => {
@@ -4904,7 +7687,34 @@ describe('battle-art isolated generation and review boundary', () => {
       assert.match(prompt, /low end in contact with anchor 128,128/);
       assert.ok(prompt.includes(`declared ${direction} ${endpoint}`));
       assert.match(prompt, /none of the other three directional endpoint bands/);
+      assert.doesNotMatch(prompt, /begins at the outer 28%/);
     }
+
+    const cave = loaded.descriptors.find(
+      entry => entry.descriptor.id === 'cave-limestone-carved-stairs-e'
+    ).descriptor;
+    const cavePrompt = buildGenerationPrompt({
+      descriptor: cave,
+      profile: loaded.promptProfile,
+      styleFiles: ['style-reference-01.png']
+    });
+    assert.match(
+      cavePrompt,
+      /begins at the outer 28% of its straight anchor-to-target segment and spans 72% through 105% projection within 10 pixels/
+    );
+    assert.match(
+      cavePrompt,
+      /not merely a small neighborhood at the canvas corner/
+    );
+    assert.match(
+      cavePrompt,
+      /anchor is the terminating low endpoint, not the midpoint of an opposing-edge span/
+    );
+    assert.match(cavePrompt, /Do not continue the stair or slope through the anchor toward w/);
+    assert.match(
+      cavePrompt,
+      /every subject-alpha pixel, including the bed, low-end feather, rubble, and decoration, out of the forbidden n,s,w endpoint bands/
+    );
   });
 
   it('keeps stairs transverse and slopes unobstructed during finishing', async () => {
@@ -4931,10 +7741,442 @@ describe('battle-art isolated generation and review boundary', () => {
     assert.match(stairsPrompt, /visible 6–10 pixel deep top plane above a shallow riser/);
     assert.match(stairsPrompt, /Never turn the stair into a thin lengthwise braid/);
     assert.match(stairsPrompt, /row of upright ribs, fence, palisade, retaining wall/);
+    assert.equal(
+      sha256(Buffer.from(stairsPrompt)),
+      'sha256:9319d026a446813292c5d48f20fe6bb9e4ab8e3074b9bcdb8f1b553da090ca86'
+    );
+    assert.doesNotMatch(stairsPrompt, /SCREEN-SPACE STAIR ORACLE/);
     assert.match(slopePrompt, /walkable center of the grade unobstructed/);
     assert.match(slopePrompt, /add no shrub or tree clump on the grade/);
     assert.match(slopePrompt, /rock-lined causeway, retaining wall/);
+    assert.equal(
+      sha256(Buffer.from(slopePrompt)),
+      'sha256:607eba8f39172770682621338e5069c64c4764311faf987bda683ba4c7e62a54'
+    );
+    assert.doesNotMatch(slopePrompt, /visibly continuous open incline/);
   });
+
+  it('passes compact material-only signed geometry for all four cave stairs',
+    async () => {
+      const loaded = await loadBattleArt(REPOSITORY_ROOT);
+      const expected = {
+        n: {
+          vector: '\\(\\+127,-64\\)',
+          motion: 'right and up',
+          landing: 'upper-right',
+          riserFacing: 'lower-left',
+          alternates: 'e,s,w',
+          promptHash:
+            'sha256:5386b0fe49a239e52c6050cf539c32dc692a24ff0f9669c50142c65d2479c8af'
+        },
+        e: {
+          vector: '\\(\\+127,\\+63\\)',
+          motion: 'right and down',
+          landing: 'lower-right',
+          riserFacing: 'upper-left',
+          alternates: 'n,s,w',
+          // Approval adds immutable source state to the effective prompt; the
+          // frozen compact Imagegen block bytes remain unchanged.
+          promptHash:
+            'sha256:90a71dc8ddf1aeaf85f2f1e5dd57649fb984fb2e9cd6d71a3833201bbc7822d4'
+        },
+        s: {
+          vector: '\\(-128,\\+63\\)',
+          motion: 'left and down',
+          landing: 'lower-left',
+          riserFacing: 'upper-right',
+          alternates: 'n,e,w',
+          promptHash:
+            'sha256:43d54f396d475ae62bb1205c2d942019c8f62f08e9caa3d8655fa6f2977afb66'
+        },
+        w: {
+          vector: '\\(-128,-64\\)',
+          motion: 'left and up',
+          landing: 'upper-left',
+          riserFacing: 'lower-right',
+          alternates: 'n,e,s',
+          promptHash:
+            'sha256:7eb43b86a2d0e1bf145dc39f23768c0ef97f610dd005e8496ae85749dcb851f4'
+        }
+      };
+      const promptFor = direction => {
+        const descriptor = loaded.descriptors.find(entry => (
+          entry.descriptor.id === `cave-limestone-carved-stairs-${direction}`
+        )).descriptor;
+        return {
+          descriptor,
+          prompt: buildGenerationPrompt({
+            descriptor,
+            profile: loaded.promptProfile,
+            styleFiles: ['style-reference-01.png']
+          })
+        };
+      };
+      for (const [direction, directionExpected] of Object.entries(expected)) {
+        const { descriptor, prompt } = promptFor(direction);
+        assert.equal(sha256(Buffer.from(prompt)), directionExpected.promptHash);
+        assert.match(prompt, /copy only the text between the following markers verbatim/);
+        assert.match(prompt, /BEGIN FROZEN CONNECTION-STAIRS IMAGEGEN PROMPT/);
+        assert.match(prompt, /END FROZEN CONNECTION-STAIRS IMAGEGEN PROMPT/);
+        const block = prompt.match(
+          /BEGIN FROZEN CONNECTION-STAIRS IMAGEGEN PROMPT\n([\s\S]+?)\nEND FROZEN CONNECTION-STAIRS IMAGEGEN PROMPT/
+        )[1];
+        assert.doesNotMatch(block, /Frozen descriptor|acceptance prose|Regional visual vocabulary/);
+        assert.doesNotMatch(block, new RegExp(descriptor.generationPrompt.slice(0, 80)));
+        assert.match(block, /transparent cutout/);
+        assert.match(block, /perfectly flat #ff00ff chroma background/);
+        assert.match(block, /attached cave reference image is material, palette, texture scale, crisp pixel finish, and upper-left lighting authority only/);
+        assert.match(block, /Do not copy any map composition, terrain layout, elevation, boundary, connection geometry, or other object/);
+        assert.match(block, new RegExp(`signed vector ${directionExpected.vector}`));
+        assert.match(block, new RegExp(`higher tread center must move ${directionExpected.motion}`));
+        assert.match(block, new RegExp(`top landing at the ${directionExpected.landing} endpoint`));
+        assert.match(block, new RegExp(`riser front face ${directionExpected.riserFacing}`));
+        if (direction === 's') {
+          assert.match(
+            block,
+            /Critical S screen\/elevation geometry: x increases right and y increases down\. LOW is the center anchor exactly \(128,128\); HIGH is only the lower-left S endpoint exactly \(0,191\)/
+          );
+          assert.match(
+            block,
+            /From LOW to HIGH, every successive higher tread center must move left and down/
+          );
+          assert.match(block, /put the top landing at the lower-left endpoint/);
+          assert.match(block, /make every riser front face upper-right toward LOW/);
+          assert.match(
+            block,
+            /Never put the high landing upper-right or reverse the climb/
+          );
+          assert.match(
+            block,
+            /one connected compact 36–48 pixel full-width low-profile bed with shallow individual risers only/
+          );
+          assert.match(
+            block,
+            /no sustained side face, retaining wall, raised platform, platform block, or tall slab support/
+          );
+          assert.match(block, /never merge the shallow risers into one continuous wall mass/);
+        }
+        assert.match(block, /complete 36–48 pixel full-width stair bed, centered on the anchor-to-endpoint line/);
+        assert.match(block, /full outer 72%–105% projection corridor/);
+        assert.match(block, /at least 10 subject-alpha pixels must lie within 10 pixels of the centerline/);
+        assert.match(block, /full-width shoulders extend beyond that detector band/);
+        assert.match(block, /must not be narrowed to fit inside it/);
+        assert.match(block, /four to six broad stone treads running crosswise, perpendicular to travel/);
+        assert.match(block, new RegExp(`alternate ${directionExpected.alternates} endpoint bands`));
+        assert.match(block, /no full terrain tile, cavern-floor mass, wall, stalagmite, column, platform, raised slab, retaining face/);
+        assert.match(block, /mirrored or rotated staircase/);
+        assert.match(block, /Keep every canvas corner pure chroma for transparent removal/);
+        assert.match(prompt, /begins at the outer 28% of its straight anchor-to-target segment/);
+        assert.doesNotMatch(prompt, /- prompt-profile\.json/);
+        assert.ok(
+          block.trim().split(/\s+/u).length <= 320,
+          `${descriptor.id} imagegen prompt must remain compact`
+        );
+      }
+    });
+
+  it('passes compact material-only signed geometry for all four cave ramps',
+    async () => {
+      const loaded = await loadBattleArt(REPOSITORY_ROOT);
+      const expected = {
+        n: {
+          vector: '\\(\\+127,-64\\)',
+          motion: 'right and up',
+          landing: 'upper-right',
+          alternates: 'e,s,w',
+          promptHash:
+            'sha256:ab2605aef622cd215e6f5a5ab6da43e01ba3b097460b98b9e7ff2beb4fcb100f'
+        },
+        e: {
+          vector: '\\(\\+127,\\+63\\)',
+          motion: 'right and down',
+          landing: 'lower-right',
+          alternates: 'n,s,w',
+          promptHash:
+            'sha256:02aa4da790920ce262b5bad75a3957512899e93e4395822d42e6541894d62351'
+        },
+        s: {
+          vector: '\\(-128,\\+63\\)',
+          motion: 'left and down',
+          landing: 'lower-left',
+          alternates: 'n,e,w',
+          promptHash:
+            'sha256:a9f1d273a6c51362dfb37208d92cb47c0bae30e13facbd5b712fc40b4232c5f1'
+        },
+        w: {
+          vector: '\\(-128,-64\\)',
+          motion: 'left and up',
+          landing: 'upper-left',
+          alternates: 'n,e,s',
+          promptHash:
+            'sha256:f59fe41e1a4f0927a998e53eed0c3f3ef2c8c3ed75e1565cee70402ad5b6dd53'
+        }
+      };
+      for (const [direction, directionExpected] of Object.entries(expected)) {
+        const id = `cave-limestone-natural-ramp-${direction}`;
+        const descriptor = loaded.descriptors.find(
+          entry => entry.descriptor.id === id
+        ).descriptor;
+        const prompt = buildGenerationPrompt({
+          descriptor,
+          profile: loaded.promptProfile,
+          styleFiles: ['style-reference-01.png']
+        });
+        assert.equal(sha256(Buffer.from(prompt)), directionExpected.promptHash);
+        assert.match(prompt, /copy only the text between the following markers verbatim/);
+        const block = prompt.match(
+          /BEGIN FROZEN CONNECTION-SLOPE IMAGEGEN PROMPT\n([\s\S]+?)\nEND FROZEN CONNECTION-SLOPE IMAGEGEN PROMPT/
+        )?.[1];
+        assert.ok(block, id);
+        assert.doesNotMatch(block, /Frozen descriptor|acceptance prose|Regional visual vocabulary/);
+        assert.doesNotMatch(block, new RegExp(descriptor.generationPrompt.slice(0, 80)));
+        assert.match(block, /transparent cutout/);
+        assert.match(block, /perfectly flat #ff00ff chroma background/);
+        assert.match(block, /attached cave reference image is material, palette, texture scale, crisp pixel finish, and upper-left lighting authority only/);
+        assert.match(block, /Do not copy any map composition, terrain layout, elevation, boundary, connection geometry, or other object/);
+        assert.match(block, new RegExp(`signed vector ${directionExpected.vector}`));
+        assert.match(block, new RegExp(`rise continuously screen ${directionExpected.motion}`));
+        assert.match(block, new RegExp(`top endpoint at the ${directionExpected.landing} target`));
+        if (direction === 'e') {
+          assert.match(
+            block,
+            /Critical E screen\/elevation geometry: x increases right and y increases down\. LOW is the center anchor exactly \(128,128\); HIGH is only the lower-right E endpoint exactly \(255,191\)/
+          );
+          assert.match(
+            block,
+            /E is only an engine direction label, not screen-up or screen-right shorthand/
+          );
+          assert.match(
+            block,
+            /Do not author an N\/S diagonal between the upper-right and lower-left endpoint bands/
+          );
+        }
+        assert.match(block, /complete 36–48 pixel full-width walkable incline/);
+        assert.match(block, /full outer 72%–105% projection corridor/);
+        assert.match(block, new RegExp(`alternate ${directionExpected.alternates} endpoint bands`));
+        assert.match(block, /one visibly continuous open incline whose walkable plane changes height along travel/);
+        assert.match(block, /Feather the low end thin and flush into the low anchor/);
+        assert.match(block, /exact high endpoint with both sides kept as shallow sloped shoulders/);
+        assert.match(block, /no full terrain tile, broad cavern-floor mass, wall, stalagmite, column, flat deck, raised platform, slab, causeway, cliff ledge, sustained retaining face, raised side rim/);
+        assert.match(block, /Keep every canvas corner pure chroma for transparent removal/);
+        assert.match(prompt, /begins at the outer 28% of its straight anchor-to-target segment/);
+        assert.doesNotMatch(prompt, /- prompt-profile\.json/);
+        assert.ok(
+          block.trim().split(/\s+/u).length <= 320,
+          `${id} imagegen prompt must remain compact`
+        );
+      }
+    });
+
+  it('preserves approved cave connection history across draft prompt refinement',
+    async () => {
+      const loaded = await loadBattleArt(REPOSITORY_ROOT);
+      const approvedPromptHistory = {
+        'cave-limestone-carved-stairs-n':
+          'sha256:3daf40d90ab94d7444171d9ccb20f7932714129902d705f4704c434fdf313d36',
+        'cave-limestone-carved-stairs-w':
+          'sha256:1b5ecc96264d9884a669c71926281b4b41927077d574fcdbf6701e2890deebd8',
+        'cave-limestone-natural-ramp-n':
+          'sha256:1588982d67cc016866a120dd4eb35e6e19bb5d71336ae72cc6ac4a4ade605506'
+      };
+      for (const [id, historicalPromptHash] of Object.entries(
+        approvedPromptHistory
+      )) {
+        const descriptor = loaded.descriptors.find(
+          entry => entry.descriptor.id === id
+        ).descriptor;
+        assert.equal(descriptor.status, 'approved', id);
+        const review = (await readJson(
+          REPOSITORY_ROOT,
+          `ai-image-metadata/battle-art/reviews/cave/${id}/`
+            + `${descriptor.source.imageSha256.slice('sha256:'.length)}.json`
+        )).value;
+        assert.equal(review.decision, 'approved', id);
+        assert.equal(review.candidate.worker.prompt.sha256, historicalPromptHash, id);
+        const currentPrompt = buildGenerationPrompt({
+          descriptor,
+          profile: loaded.promptProfile,
+          styleFiles: ['style-reference-01.png']
+        });
+        assert.notEqual(sha256(Buffer.from(`${currentPrompt}\n`)), historicalPromptHash, id);
+      }
+      assert.equal((await auditBattleArtReviews({
+        root: REPOSITORY_ROOT
+      })).ok, true);
+    });
+
+  it('pins the exact failed cave connection evidence behind the compact prompts',
+    async () => {
+      const failedGeneratedCases = [
+        {
+          family: 'cave-limestone-carved-stairs-e',
+          failure: 'a7404c17b361a7f6f4684c8b61a6d9209122a292024b85b70759e254dab2106d',
+          artifact:
+            'sha256:341709536be78a80fd65ecf89b0fba21162cd171f2481ace4cd92ff1e0a9bed4',
+          rejection: /must have transparent canvas corners/
+        },
+        {
+          family: 'cave-limestone-carved-stairs-e',
+          failure: 'ab883a2c68aa6661d5336e5dd26dc545df3478c9c66714c2fce0b38424489ca7',
+          artifact:
+            'sha256:c8dd73584a426101119cca518fbfa6e323f29e998d6065dd8ef77c40f5b7489d',
+          rejection: /endpoints n do not match declared connection e high endpoint e/
+        },
+        {
+          family: 'cave-limestone-natural-ramp-e',
+          failure: '2642ba190a4993bb259d4beafacc0476a8aef7ad30885b2861f1233abd3a634f',
+          artifact:
+            'sha256:b52e4af7867a85586412e58e89e5ee5d74da3d7862fcea1e909d210d646e91aa',
+          rejection: /endpoints n do not match declared connection e high endpoint e/
+        },
+        {
+          family: 'cave-limestone-natural-ramp-s',
+          failure: 'b5727619dc3ba7d4f570a476619f77221d8f4e0ad83a59bf83214fa03fe50d3c',
+          artifact:
+            'sha256:6fcc4c4393cdce0868f1858047c235d8a3ad42ffd8b6afff736b22db83b626d9',
+          rejection: /alpha coverage is 0‰; expected 10–850‰/
+        },
+        {
+          family: 'cave-limestone-natural-ramp-e',
+          failure: '4ecb8d377e8f9dfb3229837ca6d0c6bde3952e9fa7dc2e7e61b76b15ae88d753',
+          artifact:
+            'sha256:a8b4b825b1b4d4471249aa0fd25702510692c5f8594f1726cd5fb01a5d9c5986',
+          rejection:
+            /diamond edge-band endpoints n,s do not match declared connection e high endpoint e/
+        }
+      ];
+      for (const failedCase of failedGeneratedCases) {
+        const relativePath =
+          `ai-image-metadata/battle-art/generated-artifacts/cave/`
+          + `${failedCase.family}/failures/${failedCase.failure}.json`;
+        const audit = await auditFailedGeneratedAttempt({
+          root: REPOSITORY_ROOT,
+          relativePath
+        });
+        assert.equal(audit.record.familyId, failedCase.family);
+        assert.equal(audit.record.fullHash, `sha256:${failedCase.failure}`);
+        assert.equal(audit.record.artifact.sha256, failedCase.artifact);
+        assert.equal(sha256(audit.artifactBytes), failedCase.artifact);
+        assert.match(audit.record.rejection.message, failedCase.rejection);
+      }
+
+      const rejectedSouthStairs = {
+        image:
+          'sha256:2624200ab47f1441ff51fa1a9f4952e8b8593ae89b9031b3af5a0a5901f26b36',
+        prompt:
+          'sha256:9f87a7588fc3a23b6657f0c8f29c2812bd528625f13b851f39a9c68819d888a5',
+        reviewer: 'codex-live-candidate-visual-review',
+        reason:
+          /climbs toward a broad upper-right top landing.*S must climb left\/down to a lower-left high landing.*tall exposed side\/riser mass.*raised stair platform or retaining-wall block.*compact 36–48-pixel bed with shallow discrete risers/s
+      };
+      const southStairsFamily = 'cave-limestone-carved-stairs-s';
+      const southStairsReview = (await readJson(
+        REPOSITORY_ROOT,
+        `ai-image-metadata/battle-art/reviews/cave/${southStairsFamily}/`
+          + `${rejectedSouthStairs.image.slice('sha256:'.length)}.json`
+      )).value;
+      assert.equal(southStairsReview.familyId, southStairsFamily);
+      assert.equal(southStairsReview.decision, 'rejected');
+      assert.equal(southStairsReview.reviewer, rejectedSouthStairs.reviewer);
+      assert.equal(southStairsReview.candidate.image.sha256, rejectedSouthStairs.image);
+      assert.equal(
+        southStairsReview.candidate.worker.prompt.sha256,
+        rejectedSouthStairs.prompt
+      );
+      assert.match(southStairsReview.reason, rejectedSouthStairs.reason);
+
+      const approvedEastStairs = {
+        image:
+          'sha256:45f1faa0d799195e33e8d8576a2ac122506acd097f84b70c7cc9ed3f4161a552',
+        prompt:
+          'sha256:be3ac47d139234923f21211a4f9e7ce34a55bbfcf9b3b12250214aec300d4a73',
+        reviewer: 'codex-live-candidate-visual-review',
+        reviewFullHash:
+          'sha256:11e5c78705087b9270ac5f447318e4f26c9ac7776c7a34a1788f8a8657cfe36a',
+        reason:
+          /one coherent E-oriented climb.*six broad crosswise limestone treads.*shallow risers facing back toward the low anchor/s
+      };
+      const eastStairsFamily = 'cave-limestone-carved-stairs-e';
+      const eastStairsReview = (await readJson(
+        REPOSITORY_ROOT,
+        `ai-image-metadata/battle-art/reviews/cave/${eastStairsFamily}/`
+          + `${approvedEastStairs.image.slice('sha256:'.length)}.json`
+      )).value;
+      assert.equal(eastStairsReview.familyId, eastStairsFamily);
+      assert.equal(eastStairsReview.decision, 'approved');
+      assert.equal(eastStairsReview.reviewer, approvedEastStairs.reviewer);
+      assert.equal(eastStairsReview.fullHash, approvedEastStairs.reviewFullHash);
+      assert.equal(eastStairsReview.candidate.image.sha256, approvedEastStairs.image);
+      assert.equal(
+        eastStairsReview.candidate.worker.prompt.sha256,
+        approvedEastStairs.prompt
+      );
+      assert.match(eastStairsReview.reason, approvedEastStairs.reason);
+
+      const rejectedRampCases = {
+        e: {
+          image: 'sha256:b92e555621a2344453f72ed8465118511376bbca71f4c60337d73beb641b4d76',
+          prompt:
+            'sha256:3c49037e424b520ffa78e0ceb12253a11524f022ec173ee0721ade32d51daff2',
+          reason: /broad flat top.*sustained exposed lower-left rock face.*raised platform or cliff ledge/s
+        },
+        s: {
+          image: 'sha256:7e3cb72623555e36b22e48651df8aa914f47da5eaa83a40eb2705d01fff9d3b5',
+          prompt:
+            'sha256:024ee1d25b0a921493b1c5403d765ed3cdb66cd6a480f6fe01e987fb6139979a',
+          reason: /low anchor is visibly capped by a near-vertical limestone face.*cliff-edged platform or retaining wall/s
+        },
+        w: {
+          image: 'sha256:bdbf1b17599748d6228de627986d3539bdbaae496971bad5e2566cb26cc3358d',
+          prompt:
+            'sha256:e29d613dfd273a9fe87c0b77e74c5a0afb298ae99cae4b75b123d0f95e06648d',
+          reason: /broad flat surface terminates bluntly.*raised slab or causeway.*five tiny fully opaque detached islands/s
+        }
+      };
+      for (const [direction, rejectedCase] of Object.entries(
+        rejectedRampCases
+      )) {
+        const family = `cave-limestone-natural-ramp-${direction}`;
+        const review = (await readJson(
+          REPOSITORY_ROOT,
+          `ai-image-metadata/battle-art/reviews/cave/${family}/`
+            + `${rejectedCase.image.slice('sha256:'.length)}.json`
+        )).value;
+        assert.equal(review.familyId, family);
+        assert.equal(review.decision, 'rejected');
+        assert.equal(review.candidate.image.sha256, rejectedCase.image);
+        assert.equal(review.candidate.worker.prompt.sha256, rejectedCase.prompt);
+        assert.match(review.reason, rejectedCase.reason);
+      }
+    });
+
+  it('omits the raw prompt profile from a non-forest connection workspace',
+    async () => {
+      const family = 'cave-limestone-carved-stairs-e';
+      const root = await fixture({ includedFamilies: [family] });
+      let inspected = false;
+      await generateBattleArt({
+        projectRoot: root,
+        theme: 'cave',
+        family,
+        concurrency: 1,
+        timeoutMs: 10_000,
+        dryRun: false,
+        force: false,
+        resume: false
+      }, {
+        worker: async input => {
+          await assert.rejects(
+            readFile(path.join(input.workspace, 'prompt-profile.json')),
+            error => error.code === 'ENOENT'
+          );
+          assert.doesNotMatch(input.prompt, /- prompt-profile\.json/);
+          inspected = true;
+          return candidateWorker(input);
+        }
+      });
+      assert.equal(inspected, true);
+    });
 
   it('rejects ruler-clean V shapes in generated corner route instructions', async () => {
     const loaded = await loadBattleArt(REPOSITORY_ROOT);
@@ -5360,6 +8602,10 @@ describe('battle-art isolated generation and review boundary', () => {
     );
     assert.match(
       straightPrompt,
+      /pinned numeric geometry evidence for source reference forest-borderwood-approved-route-straight-ns-v1/
+    );
+    assert.doesNotMatch(
+      straightPrompt,
       /JSON geometry measured from attached reference forest-borderwood-approved-route-straight-ns-v1/
     );
     assert.match(
@@ -5426,7 +8672,10 @@ describe('battle-art isolated generation and review boundary', () => {
       );
       assert.match(
         teePrompt,
-        /declared loam core a uniform 11.7–13.3% of total canvas width/
+        new RegExp(
+          `declared ${tee.theme === 'forest' ? 'loam' : 'regional material'} `
+          + `core a uniform 11.7–13.3% of total canvas width`
+        )
       );
       assert.match(
         teePrompt,
@@ -5583,6 +8832,1224 @@ describe('battle-art isolated generation and review boundary', () => {
     assert.doesNotMatch(customPrompt, /final 256x128 alpha raster/);
   });
 
+  it('keeps forest worker prompts byte-stable while regionalizing cave categories', async () => {
+    const loaded = await loadBattleArt(REPOSITORY_ROOT);
+    const descriptor = id => loaded.descriptors.find(
+      entry => entry.descriptor.id === id
+    ).descriptor;
+    const buildPrompt = id => buildGenerationPrompt({
+      descriptor: descriptor(id),
+      profile: loaded.promptProfile,
+      styleFiles: ['style-reference-01.png']
+    });
+    const forestPrompt = buildPrompt('forest-borderwood-dirt-path-corner-es');
+    const normalizedForestPrompt = forestPrompt.replaceAll(
+      CANONICAL_ROUTE_SKILL_READ_COMMAND,
+      '<CANONICAL_ROUTE_SKILL_READ_COMMAND>'
+    );
+    assert.equal(
+      sha256(Buffer.from(normalizedForestPrompt)),
+      'sha256:6fa4dd6e744c655b418d6f6f8eaad2b5a40008f59c317c152111d804df0dec64'
+    );
+    assert.match(forestPrompt, /Green forest materials belong only to the subject/);
+    assert.match(forestPrompt, /continuous 28–36 pixel warm-loam core/);
+    assert.match(forestPrompt, /grass-and-leaf verge/);
+    assert.match(forestPrompt, /- prompt-profile\.json/);
+    assert.doesNotMatch(
+      forestPrompt,
+      /single generated artifact returned by that call|Codex was launched with -C set to this disposable workspace|output_hint/
+    );
+
+    const caveIds = [
+      'cave-limestone-worn-floor-0',
+      'cave-limestone-curved-passage-corner-es',
+      'cave-limestone-carved-stairs-n',
+      'cave-limestone-natural-ramp-n',
+      'cave-limestone-flowstone-edge-n',
+      'cave-limestone-stalagmite-cluster',
+      'cave-limestone-calcite-crystals'
+    ];
+    const forbiddenForestTokens = /\b(?:forest|loam|grass|leaf|tree|foliage)\b/iu;
+    for (const id of caveIds) {
+      const prompt = buildPrompt(id);
+      assert.doesNotMatch(prompt, forbiddenForestTokens, id);
+      assert.match(prompt, /Limestone Cave uses a coherent natural cavern/);
+      assert.match(prompt, /pale worn limestone floors/);
+      assert.match(prompt, /warm calcite shelves/);
+      assert.match(prompt, /cool mineral-stained stone/);
+      assert.match(prompt, /scattered pale rubble/);
+    }
+
+    const caveRouteDescriptors = loaded.descriptors.filter(entry => (
+      entry.descriptor.theme === 'cave'
+      && entry.descriptor.category === 'route-transition'
+    ));
+    assert.equal(caveRouteDescriptors.length, 16);
+    for (const { descriptor: caveRoute } of caveRouteDescriptors) {
+      const prompt = buildPrompt(caveRoute.id);
+      assert.doesNotMatch(
+        prompt,
+        /descriptor-pinned approved corner-es|JSON-prime|shared 29-row/,
+        caveRoute.id
+      );
+      assert.match(prompt, /BEGIN FROZEN ROUTE IMAGEGEN PROMPT/);
+      assert.match(
+        prompt,
+        /material, palette, and lighting authority only/
+      );
+      assert.match(
+        prompt,
+        /Add no walls, stalagmites, columns, rock curbs, raised rims, platforms, slabs, terrain tiles/
+      );
+      assert.match(prompt, /Execute exactly one successful shell command/);
+      assert.match(prompt, /parent lifecycle securely retrieves the sole raster/);
+      assert.doesNotMatch(prompt, /\/bin\/cp|\/tmp\/|canonical audited destination/);
+    }
+
+    const coordinateFirstClauses = {
+      'corner-ne': 'Screen coordinates: N upper-right (192,32) → (160,48) → '
+        + 'anchor (128,64), screen vector (-64,+32); anchor → (160,80) → E '
+        + 'lower-right (192,96), screen vector (+64,+32). N/E are engine seam '
+        + 'labels, not screen directions. Every arm segment is diagonal; '
+        + 'never draw any literal horizontal or vertical segment, letter L, or '
+        + 'screen-cardinal L.',
+      'corner-es': 'Screen coordinates: E lower-right (192,96) → (160,80) → '
+        + 'anchor (128,64), screen vector (-64,-32); anchor → (96,80) → S '
+        + 'lower-left (64,96), screen vector (-64,+32). E/S are engine seam '
+        + 'labels, not screen directions. Every arm segment is diagonal; '
+        + 'never draw any literal horizontal or vertical segment, letter L, or '
+        + 'screen-cardinal L.',
+      'corner-sw': 'Screen coordinates: W upper-left (64,32) → (96,48) → '
+        + 'anchor (128,64), screen vector (+64,+32); anchor → (96,80) → S '
+        + 'lower-left (64,96), screen vector (-64,+32). W/S are engine seam '
+        + 'labels, not screen directions. Every arm segment is diagonal; '
+        + 'never draw any literal horizontal or vertical segment, letter L, or '
+        + 'screen-cardinal L.',
+      'corner-wn': 'Screen coordinates: W upper-left (64,32) → (96,48) → '
+        + 'anchor (128,64), screen vector (+64,+32); anchor → (160,48) → N '
+        + 'upper-right (192,32), screen vector (+64,-32). W/N are engine seam '
+        + 'labels, not screen directions. Every arm segment is diagonal; '
+        + 'never draw any literal horizontal or vertical segment, letter L, or '
+        + 'screen-cardinal L.',
+      cross: 'Screen coordinates: connect screen upper-right N=(192,32) ↔ '
+        + 'screen lower-left S=(64,96), and screen upper-left W=(64,32) ↔ '
+        + 'screen lower-right E=(192,96), both through anchor '
+        + '(128,64). N/E/S/W are engine seam labels, not literal screen '
+        + 'directions. Draw only those two isometric diagonals; never draw a '
+        + 'screen plus or literal +.',
+      'end-e': 'Screen coordinates: anchor (128,64) → E lower-right target '
+        + '(192,96), signed vector (+64,+32). Draw the sole arm lower-right '
+        + 'through (160,80) and (176,88) to (192,96), never horizontal-right or '
+        + 'screen-up. E is an engine seam label, not a literal screen-cardinal '
+        + 'direction.',
+      'end-n': 'Screen coordinates: anchor (128,64) → N upper-right target '
+        + '(192,32), signed vector (+64,-32). Draw the sole arm upper-right '
+        + 'through (160,48) and (176,40) to (192,32), never horizontal-right or '
+        + 'screen-down. N is an engine seam label, not a literal screen-cardinal '
+        + 'direction.',
+      'end-s': 'Screen coordinates: anchor (128,64) → S lower-left target '
+        + '(64,96), signed vector (-64,+32). Draw the sole arm down-left through '
+        + '(96,80) and (80,88) to (64,96), never horizontal-left or screen-up. '
+        + 'S is an engine seam label, not a literal screen-cardinal direction.',
+      'end-w': 'Screen coordinates: anchor (128,64) → W upper-left target '
+        + '(64,32), signed vector (-64,-32). Draw the sole arm upper-left through '
+        + '(96,48) and (80,40) to (64,32), never horizontal-left or screen-down. '
+        + 'W is an engine seam label, not a literal screen-cardinal direction.',
+      'straight-ew': 'Screen coordinates: connect screen upper-left target '
+        + '(64,32) to screen lower-right target (192,96) through anchor (128,64). '
+        + 'E/W are engine seam labels, not literal screen directions. Draw only '
+        + 'that upper-left-to-lower-right diagonal route; never draw a literal '
+        + 'screen-horizontal left-to-right strip, rectangular ribbon, or '
+        + 'rectangular panel.',
+      'straight-ns': 'Screen coordinates: connect screen upper-right target '
+        + '(192,32) to screen lower-left target (64,96) through anchor (128,64). '
+        + 'N/S are engine seam labels, not literal screen directions. Draw only '
+        + 'that upper-right-to-lower-left diagonal route; never draw a '
+        + 'screen-vertical or top-to-bottom strip, rectangular ribbon, or '
+        + 'rectangular panel.',
+      'tee-esw': 'Screen coordinates: join E lower-right target (192,96), S '
+        + 'lower-left target (64,96), and W upper-left target (64,32) at anchor '
+        + '(128,64). E/S/W are engine seam labels, not literal screen directions. '
+        + 'Draw only those three diagonal arms; never draw a literal '
+        + 'screen-cardinal T.',
+      'tee-nes': 'Screen coordinates: join N upper-right target (192,32), E '
+        + 'lower-right target (192,96), and S lower-left target (64,96) at anchor '
+        + '(128,64). N/E/S are engine seam labels, not literal screen directions. '
+        + 'Draw only those three diagonal arms; never draw a literal '
+        + 'screen-cardinal T.',
+      'tee-nsw': 'Screen coordinates: join N upper-right target (192,32), S '
+        + 'lower-left target (64,96), and W upper-left target (64,32) at anchor '
+        + '(128,64). N/S/W are engine seam labels, not literal screen directions. '
+        + 'Draw only those three diagonal arms; never draw a literal '
+        + 'screen-cardinal T.',
+      'tee-wne': 'Screen coordinates: join W upper-left target (64,32), N '
+        + 'upper-right target (192,32), and E lower-right target (192,96) at anchor '
+        + '(128,64). W/N/E are engine seam labels, not literal screen directions. '
+        + 'Draw only those three diagonal arms; never draw a literal '
+        + 'screen-cardinal T.'
+    };
+    for (const { descriptor: caveRoute } of caveRouteDescriptors) {
+      const topology = caveRoute.capabilities.routeTopology;
+      const compact = buildPrompt(caveRoute.id).match(
+        /BEGIN FROZEN ROUTE IMAGEGEN PROMPT\n([\s\S]*?)\nEND FROZEN ROUTE IMAGEGEN PROMPT/
+      )?.[1];
+      assert.ok(compact, topology);
+      if (topology === 'isolated') {
+        assert.doesNotMatch(compact, /^Screen coordinates:/);
+      } else {
+        assert.ok(compact.startsWith(coordinateFirstClauses[topology]), topology);
+      }
+    }
+
+    const caveRoutePrompt = buildPrompt(
+      'cave-limestone-curved-passage-corner-es'
+    );
+    const normalizedCaveRoutePrompt = caveRoutePrompt.replaceAll(
+      CANONICAL_ROUTE_SKILL_READ_COMMAND,
+      '<CANONICAL_ROUTE_SKILL_READ_COMMAND>'
+    );
+    assert.equal(
+      sha256(Buffer.from(normalizedCaveRoutePrompt)),
+      'sha256:4435c7a78a071cc1c82f306342c8b7cca128ea4af63bbc065a661ac0afbfc36e'
+    );
+    assert.match(caveRoutePrompt, /- prompt-profile\.json/);
+    assert.match(
+      caveRoutePrompt,
+      /only allowed route endpoint bands for corner-es are E lower-right at 192,96 and S lower-left at 64,96/
+    );
+    assert.match(
+      caveRoutePrompt,
+      /e=\(255,64\)–\(128,127\), s=\(128,127\)–\(0,64\)/
+    );
+    assert.match(caveRoutePrompt, /continuous 28–36 pixel regional-material core/);
+    assert.match(caveRoutePrompt, /low 6–10 pixel irregular visible regional-material verge/);
+    assert.match(caveRoutePrompt, /leave the outermost 4-pixel rectangular border empty/);
+    assert.match(caveRoutePrompt, /rasterContract is a hard acceptance requirement/);
+    assert.match(caveRoutePrompt, /route geometry validation/);
+    assert.match(caveRoutePrompt, /Use the imagegen skill and call the imagegen tool exactly once/);
+    assert.match(caveRoutePrompt, /Execute exactly one successful shell command/);
+    assert.ok(caveRoutePrompt.includes(CANONICAL_ROUTE_SKILL_READ_COMMAND));
+    assert.match(
+      caveRoutePrompt,
+      /parent lifecycle securely retrieves the sole raster from the canonical current-thread CODEX_HOME\/generated_images directory and exclusively materializes candidate\.png/
+    );
+    assert.doesNotMatch(
+      caveRoutePrompt,
+      /\/tmp\/|\/bin\/cp|call_imagegen|current_thread|output_hint/
+    );
+    assert.match(caveRoutePrompt, /Do not create candidate\.png or candidate\.webp/);
+    assert.match(caveRoutePrompt, /Do not use a path placeholder/);
+    assert.match(caveRoutePrompt, /Execute no other shell command/);
+    assert.doesNotMatch(
+      caveRoutePrompt,
+      /descriptor-pinned approved corner-es|JSON-prime|shared 29-row/
+    );
+    const compactRoutePrompt = caveRoutePrompt.match(
+      /BEGIN FROZEN ROUTE IMAGEGEN PROMPT\n([\s\S]*?)\nEND FROZEN ROUTE IMAGEGEN PROMPT/
+    )?.[1];
+    assert.ok(compactRoutePrompt);
+    assert.match(
+      compactRoutePrompt,
+      /^Screen coordinates: E lower-right \(192,96\) → \(160,80\) → anchor \(128,64\), screen vector \(-64,-32\); anchor → \(96,80\) → S lower-left \(64,96\), screen vector \(-64,\+32\)\./
+    );
+    assert.match(
+      compactRoutePrompt,
+      /E\/S are engine seam labels, not screen directions/
+    );
+    assert.match(
+      compactRoutePrompt,
+      /Every arm segment is diagonal; never draw any literal horizontal or vertical segment, letter L, or screen-cardinal L/
+    );
+    assert.doesNotMatch(compactRoutePrompt, /low shallow E-to-S anchor arch/);
+    assert.ok(
+      compactRoutePrompt.trim().split(/\s+/u).length <= 300,
+      'cave route imagegen prompt must remain compact'
+    );
+    assert.match(
+      compactRoutePrompt,
+      /material, palette, and lighting authority only/
+    );
+    assert.match(
+      compactRoutePrompt,
+      /Do not copy any map composition, terrain layout, elevation, boundary, or route topology/
+    );
+    assert.match(
+      compactRoutePrompt,
+      /only a flat, narrow, naturally worn regional-floor route overlay/
+    );
+    assert.match(
+      compactRoutePrompt,
+      /Add no walls, stalagmites, columns, rock curbs, raised rims, platforms, slabs, terrain tiles/
+    );
+    assert.match(compactRoutePrompt, /topology corner-es/);
+    assert.match(
+      compactRoutePrompt,
+      /only named endpoint targets are E=192,96, S=64,96/
+    );
+    assert.match(
+      compactRoutePrompt,
+      /Keep forbidden targets N=192,32, W=64,32 completely clear/
+    );
+    assert.match(
+      compactRoutePrompt,
+      /at least 28 pixels wide; target 34–36 pixels/
+    );
+    assert.match(compactRoutePrompt, /at most 230‰ of the canvas/);
+    assert.match(
+      compactRoutePrompt,
+      /Keep apex x=120\.\.135 below alpha 240 through y=32/
+    );
+    assert.match(
+      compactRoutePrompt,
+      /adjacent apex top-contour columns may step at most 4 pixels/
+    );
+    assert.match(
+      compactRoutePrompt,
+      /no equal-height run may exceed 8 pixels/
+    );
+    assert.match(
+      compactRoutePrompt,
+      /outermost 4-pixel rectangular canvas border fully transparent/
+    );
+    assert.doesNotMatch(
+      compactRoutePrompt,
+      /output_hint|candidate\.png|\/bin\/cp|generated_images|canonical audited destination/
+    );
+
+    const endCoordinateInstructions = {
+      'end-n': 'Screen coordinates: anchor (128,64) → N upper-right target (192,32), signed vector (+64,-32). Draw the sole arm upper-right through (160,48) and (176,40) to (192,32), never horizontal-right or screen-down.',
+      'end-e': 'Screen coordinates: anchor (128,64) → E lower-right target (192,96), signed vector (+64,+32). Draw the sole arm lower-right through (160,80) and (176,88) to (192,96), never horizontal-right or screen-up.',
+      'end-s': 'Screen coordinates: anchor (128,64) → S lower-left target (64,96), signed vector (-64,+32). Draw the sole arm down-left through (96,80) and (80,88) to (64,96), never horizontal-left or screen-up.',
+      'end-w': 'Screen coordinates: anchor (128,64) → W upper-left target (64,32), signed vector (-64,-32). Draw the sole arm upper-left through (96,48) and (80,40) to (64,32), never horizontal-left or screen-down.'
+    };
+    const endPromptHashes = {
+      'end-n': 'sha256:bcf54b3bac86d31a06935a5ab26c010e54f17438b916aac3935ef7cf152734f3',
+      'end-e': 'sha256:30f7e0d7f1add9d2d25f4ba101672e7e9f1cd7d72ee46ca0ad84795e77d52258',
+      'end-s': 'sha256:d0c4d454b8978e625a7777eabe70fb47652ddb96bded259da02db52fb1526dfc',
+      'end-w': 'sha256:a2a3860d08e20aef39c42f3c859ddea1883288b2ad063b317a46f1a2ede8a8ba'
+    };
+    const endNamedTargets = {
+      'end-n': 'N=192,32',
+      'end-e': 'E=192,96',
+      'end-s': 'S=64,96',
+      'end-w': 'W=64,32'
+    };
+    for (const [topology, instruction] of Object.entries(
+      endCoordinateInstructions
+    )) {
+      const prompt = buildPrompt(
+        `cave-limestone-curved-passage-${topology}`
+      );
+      const compact = prompt.match(
+        /BEGIN FROZEN ROUTE IMAGEGEN PROMPT\n([\s\S]*?)\nEND FROZEN ROUTE IMAGEGEN PROMPT/
+      )?.[1];
+      assert.ok(compact, topology);
+      assert.ok(compact.includes(instruction), topology);
+      assert.ok(
+        compact.includes(`The only named endpoint targets are ${endNamedTargets[topology]}.`),
+        topology
+      );
+      assert.match(
+        compact,
+        new RegExp(`${topology.slice(-1).toUpperCase()} is an engine seam label, not a literal screen-cardinal direction\\.`),
+        topology
+      );
+      assert.match(
+        compact,
+        /At the final 50%, 75%, and 100% samples, the sole arm needs a continuous alpha-240 perpendicular core span 46–52 pixels wide at each sample/,
+        topology
+      );
+      assert.match(
+        compact,
+        /Join the single broad arm to one compact 48–64 pixel rounded wear terminus/,
+        topology
+      );
+      assert.match(
+        compact,
+        /Center that terminus on anchor \(128,64\), not beyond it; every terminus\/bulb pixel must stay inside x=96\.\.160, y=40\.\.88/,
+        topology
+      );
+      assert.match(
+        compact,
+        /The centered bulb may straddle the anchor only inside that box/,
+        topology
+      );
+      assert.match(
+        compact,
+        /Only the single arm may leave the box, toward its declared target; no bulb or route continuation may leave the box beyond the anchor toward the opposite or any forbidden side/,
+        topology
+      );
+      assert.match(
+        compact,
+        /Add no walls, stalagmites, columns, rock curbs, raised rims, platforms, slabs, terrain tiles, side faces, drop shadows/,
+        topology
+      );
+      assert.match(
+        compact,
+        /leave the outermost 4-pixel rectangular canvas border fully transparent/,
+        topology
+      );
+      assert.doesNotMatch(compact, /\bnarrow\b|34–36/, topology);
+      assert.equal(
+        sha256(Buffer.from(prompt.replaceAll(
+          CANONICAL_ROUTE_SKILL_READ_COMMAND,
+          '<CANONICAL_ROUTE_SKILL_READ_COMMAND>'
+        ))),
+        endPromptHashes[topology],
+        topology
+      );
+    }
+    const straightNsPrompt = buildPrompt(
+      'cave-limestone-curved-passage-straight-ns'
+    );
+    const compactStraightNsPrompt = straightNsPrompt.match(
+      /BEGIN FROZEN ROUTE IMAGEGEN PROMPT\n([\s\S]*?)\nEND FROZEN ROUTE IMAGEGEN PROMPT/
+    )?.[1];
+    assert.ok(compactStraightNsPrompt);
+    assert.match(
+      compactStraightNsPrompt,
+      /^Screen coordinates: connect screen upper-right target \(192,32\) to screen lower-left target \(64,96\) through anchor \(128,64\)\./
+    );
+    assert.match(
+      compactStraightNsPrompt,
+      /N\/S are engine seam labels, not literal screen directions/
+    );
+    assert.match(
+      compactStraightNsPrompt,
+      /never draw a screen-vertical or top-to-bottom strip, rectangular ribbon, or rectangular panel/
+    );
+    assert.match(
+      compactStraightNsPrompt,
+      /only a flat, narrow, naturally worn regional-floor route overlay/
+    );
+    assert.match(
+      compactStraightNsPrompt,
+      /only named endpoint targets are N=192,32, S=64,96/
+    );
+    assert.match(
+      compactStraightNsPrompt,
+      /Keep forbidden targets E=192,96, W=64,32 completely clear/
+    );
+    assert.match(
+      compactStraightNsPrompt,
+      /n=\(128,0\)–\(255,64\), s=\(128,127\)–\(0,64\)/
+    );
+    assert.match(
+      compactStraightNsPrompt,
+      /continuous alpha-240 perpendicular span at least 28 pixels wide/
+    );
+    assert.match(
+      compactStraightNsPrompt,
+      /At raw imagegen resolution, make the core width perpendicular to the route about 13–14% of total canvas width at all three samples/
+    );
+    assert.match(
+      compactStraightNsPrompt,
+      /resolution-independent equivalent of a target 34–36 pixels after whole-image normalization to 256x128/
+    );
+    assert.match(
+      compactStraightNsPrompt,
+      /never interpret 34–36 as raw high-resolution pixels/
+    );
+    assert.match(
+      compactStraightNsPrompt,
+      /end it within 8 pixels beyond each target/
+    );
+    assert.match(
+      compactStraightNsPrompt,
+      /Total nonzero-alpha coverage must be at most 300‰ of the canvas/
+    );
+    assert.match(
+      compactStraightNsPrompt,
+      /leave the outermost 4-pixel rectangular canvas border fully transparent/
+    );
+    assert.ok(
+      compactStraightNsPrompt.trim().split(/\s+/u).length <= 320,
+      'cave straight-ns imagegen prompt must remain compact'
+    );
+
+    const unchangedNonEndPromptHashes = {
+      'corner-es': 'sha256:4435c7a78a071cc1c82f306342c8b7cca128ea4af63bbc065a661ac0afbfc36e',
+      'corner-ne': 'sha256:c3dea29510e801d45fa49313f7f97ce57ca884e5765ef4dfee1d35dadf1daf39',
+      'corner-sw': 'sha256:c6650cdd91e839489b299c3c211b48a4a6fa010dea58861d39fb3f9887fa0b3c',
+      'corner-wn': 'sha256:0d778844c88c78391bfbb6fe8345f296a9559917805db5d329518b4062cc5564',
+      cross: 'sha256:fba6e5d500f1ebe95c904ef30c627916e4e3b25fa5139ef60643f7749b70b2d5',
+      isolated: 'sha256:462c096ee9e437e3c4e77023572ef403683d23a34d432cd18ab8d56f0a944913',
+      'tee-esw': 'sha256:dcc5349da23f73deb4d4da0f004210f34752ef4ba679301bead2b5d9dcfc6542',
+      'tee-nes': 'sha256:1f7874d18c08afc9412098c003e47368cbba0ed7f56b50f9a4ed454560516894',
+      'tee-nsw': 'sha256:3e71025643ad7fdc0f8c82f64061935c63b4c3ec542ab6c31235279480fb160b',
+      'tee-wne': 'sha256:35e592a33b97ef6ff0553ae8be5d26be7044e79dc5ecb502ed637b16b5766ca0'
+    };
+    for (const [topology, expectedHash] of Object.entries(
+      unchangedNonEndPromptHashes
+    )) {
+      const prompt = buildPrompt(
+        `cave-limestone-curved-passage-${topology}`
+      ).replaceAll(
+        CANONICAL_ROUTE_SKILL_READ_COMMAND,
+        '<CANONICAL_ROUTE_SKILL_READ_COMMAND>'
+      );
+      assert.equal(sha256(Buffer.from(prompt)), expectedHash, topology);
+    }
+    const straightEwPrompt = buildPrompt(
+      'cave-limestone-curved-passage-straight-ew'
+    );
+    const compactStraightEwPrompt = straightEwPrompt.match(
+      /BEGIN FROZEN ROUTE IMAGEGEN PROMPT\n([\s\S]*?)\nEND FROZEN ROUTE IMAGEGEN PROMPT/
+    )?.[1];
+    assert.ok(compactStraightEwPrompt);
+    assert.match(
+      compactStraightEwPrompt,
+      /^Screen coordinates: connect screen upper-left target \(64,32\) to screen lower-right target \(192,96\) through anchor \(128,64\)\./
+    );
+    assert.match(
+      compactStraightEwPrompt,
+      /E\/W are engine seam labels, not literal screen directions/
+    );
+    assert.match(
+      compactStraightEwPrompt,
+      /never draw a literal screen-horizontal left-to-right strip, rectangular ribbon, or rectangular panel/
+    );
+    assert.match(
+      compactStraightEwPrompt,
+      /only named endpoint targets are E=192,96, W=64,32/
+    );
+    assert.match(
+      compactStraightEwPrompt,
+      /Keep forbidden targets N=192,32, S=64,96 completely clear/
+    );
+    assert.ok(
+      compactStraightEwPrompt.trim().split(/\s+/u).length <= 320,
+      'cave straight-ew imagegen prompt must remain compact'
+    );
+    const transformEvidenceStraightEw = structuredClone(
+      descriptor('cave-limestone-curved-passage-straight-ew')
+    );
+    transformEvidenceStraightEw.styleReferences.push({
+      ...transformEvidenceStraightEw.styleReferences[0],
+      id: 'synthetic-approved-route-straight-ns-v1'
+    });
+    const transformEvidenceStraightEwPrompt = buildGenerationPrompt({
+      descriptor: transformEvidenceStraightEw,
+      profile: loaded.promptProfile,
+      styleFiles: ['style-reference-01.png', 'style-reference-02.png']
+    });
+    assert.doesNotMatch(
+      transformEvidenceStraightEwPrompt,
+      /BEGIN FROZEN ROUTE IMAGEGEN PROMPT/
+    );
+    assert.doesNotMatch(
+      transformEvidenceStraightEwPrompt,
+      /Screen coordinates: connect screen upper-left target/
+    );
+    assert.doesNotMatch(
+      transformEvidenceStraightEwPrompt,
+      /material, palette, and lighting authority only/
+    );
+    assert.match(
+      transformEvidenceStraightEwPrompt,
+      /Image 2 .* transform-equivalent approved straight-ns straight reference/s
+    );
+    assert.match(
+      transformEvidenceStraightEwPrompt,
+      /material scale and near-uniform band thickness only/
+    );
+    assert.match(
+      transformEvidenceStraightEwPrompt,
+      /exact named terminal coordinates and maximum 8-pixel arm-overflow rule.*occupied-span authority/s
+    );
+    for (const compact of [compactStraightNsPrompt, compactStraightEwPrompt]) {
+      assert.match(
+        compact,
+        /At the final 50%, 75%, and 100% samples, every named arm needs one continuous alpha-240 perpendicular span at least 28 pixels wide after normalization/
+      );
+      assert.match(
+        compact,
+        /core width perpendicular to the route about 13–14% of total canvas width at all three samples/
+      );
+      assert.match(
+        compact,
+        /target 34–36 pixels after whole-image normalization to 256x128; never interpret 34–36 as raw high-resolution pixels/
+      );
+    }
+    const changedStraightPromptHashes = {
+      'straight-ns': 'sha256:434a0b6a22961f10c9c7727253a1a529b4e35224d4006f67f65f48a86f1dc16b',
+      'straight-ew': 'sha256:5d566b2c208b3ac63b7de5c643818b1a3d54d9ab2b054d77118c224b67f57f6e'
+    };
+    for (const [topology, expectedHash] of Object.entries(
+      changedStraightPromptHashes
+    )) {
+      const prompt = topology === 'straight-ns'
+        ? straightNsPrompt
+        : straightEwPrompt;
+      assert.equal(
+        sha256(Buffer.from(prompt.replaceAll(
+          CANONICAL_ROUTE_SKILL_READ_COMMAND,
+          '<CANONICAL_ROUTE_SKILL_READ_COMMAND>'
+        ))),
+        expectedHash,
+        topology
+      );
+    }
+    const unchangedForestEndPromptHashes = {
+      'forest-borderwood-dirt-path-end-e': 'sha256:eeb0fd77218cab0a577f734817fe74e5b7f20012a7e81b6b866439f14d4336b2',
+      'forest-borderwood-dirt-path-end-n': 'sha256:d3d3d860fbc2240e359a4551915d9807da6f31d7a49bfa5bcf7ba10304022c12',
+      'forest-borderwood-dirt-path-end-s': 'sha256:2762b5f81044e95315f678a37b673aa313d04051f78852b0acd0f605a9ed1e31',
+      'forest-borderwood-dirt-path-end-w': 'sha256:8c09823ebb96b3563c6f72690647ecf515f28693331f99a26753a6738ac58f40',
+      'forest-heartlands-loam-path-end-e': 'sha256:fa7fd09ff7867586ace27d91fecb685cb8909e35816f0c93926ae5c5a988f4cc',
+      'forest-heartlands-loam-path-end-n': 'sha256:c72e11991985f0c1692e44eef77d390b813d3c0f55c237aa573058725ee85df6',
+      'forest-heartlands-loam-path-end-s': 'sha256:eaea7d09ea8be5e8d4174bb3b6967dd0f2eb8726213a1b136d769d535f8f54bb',
+      'forest-heartlands-loam-path-end-w': 'sha256:c53da1eb3c330d848a1e4b252732b567b2cd49cf0c6bee1f50e7eb23491fe6ef'
+    };
+    for (const [id, expectedHash] of Object.entries(
+      unchangedForestEndPromptHashes
+    )) {
+      const prompt = buildPrompt(id).replaceAll(
+        CANONICAL_ROUTE_SKILL_READ_COMMAND,
+        '<CANONICAL_ROUTE_SKILL_READ_COMMAND>'
+      );
+      assert.equal(sha256(Buffer.from(prompt)), expectedHash, id);
+    }
+    const forestRoute = loaded.descriptors.find(entry => (
+      entry.descriptor.id === 'forest-heartlands-loam-path-straight-ns'
+    )).descriptor;
+    const normalizedUnchangedForestRoutePrompt = buildGenerationPrompt({
+      descriptor: forestRoute,
+      profile: loaded.promptProfile,
+      styleFiles: forestRoute.styleReferences.map(
+        (_reference, index) => (
+          `style-reference-${String(index + 1).padStart(2, '0')}.png`
+        )
+      )
+    }).replaceAll(
+      CANONICAL_ROUTE_SKILL_READ_COMMAND,
+      '<CANONICAL_ROUTE_SKILL_READ_COMMAND>'
+    );
+    assert.equal(
+      sha256(Buffer.from(normalizedUnchangedForestRoutePrompt)),
+      'sha256:3db7ee082bc3eb986f21d2f1a1b32a4ed006fc4ecbb45ea8a9a199a57ae02ace'
+    );
+
+    const isolatedRoutePrompt = buildPrompt(
+      'cave-limestone-curved-passage-isolated'
+    );
+    const isolatedRouteDescriptor = loaded.descriptors.find(entry => (
+      entry.descriptor.id === 'cave-limestone-curved-passage-isolated'
+    )).descriptor;
+    assert.deepEqual(isolatedRouteDescriptor.routeFinishing.targetBox, {
+      x: 96,
+      y: 48,
+      width: 64,
+      height: 32
+    });
+    assert.match(
+      isolatedRoutePrompt,
+      /descriptor rasterContract and routeFinishing contract are hard acceptance requirements/
+    );
+    assert.match(
+      isolatedRoutePrompt,
+      /performs exactly one descriptor-pinned crop\/resize\/place operation/
+    );
+    assert.match(
+      isolatedRoutePrompt,
+      /closed-form largest-component crop, resize, and placement into the descriptor-pinned box/
+    );
+    assert.match(
+      isolatedRoutePrompt,
+      /one connected compact irregular wear patch centered at 128,64, with no directional arm, corridor, trail, or endpoint-band contact/
+    );
+    assert.doesNotMatch(
+      isolatedRoutePrompt,
+      /Generate every declared arm|Every named arm must|Only declared route arms|must reach the declared diamond edge bands/
+    );
+    assert.match(
+      isolatedRoutePrompt,
+      /interior bands along all four capability-diamond edge segments empty/
+    );
+    const compactIsolatedRoutePrompt = isolatedRoutePrompt.match(
+      /BEGIN FROZEN ROUTE IMAGEGEN PROMPT\n([\s\S]*?)\nEND FROZEN ROUTE IMAGEGEN PROMPT/
+    )?.[1];
+    assert.ok(compactIsolatedRoutePrompt);
+    assert.match(
+      compactIsolatedRoutePrompt,
+      /Create one connected compact irregular wear patch centered at 128,64/
+    );
+    assert.match(
+      compactIsolatedRoutePrompt,
+      /inclusive envelope x=96\.\.160, y=44\.\.84/
+    );
+    assert.match(
+      compactIsolatedRoutePrompt,
+      /irregular occupied size about 48–64 pixels wide and 24–40 pixels tall/
+    );
+    assert.match(
+      compactIsolatedRoutePrompt,
+      /Every pixel outside the single patch must remain exact chroma magenta background/
+    );
+    assert.match(
+      compactIsolatedRoutePrompt,
+      /Draw no U, V, line, tail, branch, directional arm, corridor, or trail/
+    );
+    assert.match(
+      compactIsolatedRoutePrompt,
+      /No route material may enter any capability-diamond endpoint band/
+    );
+    assert.doesNotMatch(
+      compactIsolatedRoutePrompt,
+      /Every named arm|flat, narrow, naturally worn regional-floor route overlay|transparent/
+    );
+    const caveFloorPrompt = buildPrompt('cave-limestone-worn-floor-0');
+    assert.doesNotMatch(caveFloorPrompt, /- prompt-profile\.json/);
+    assert.doesNotMatch(
+      caveFloorPrompt,
+      /single generated artifact returned by that call|Codex was launched with -C set to this disposable workspace|output_hint/
+    );
+    assert.match(
+      buildPrompt('cave-limestone-fallen-rock'),
+      /inclusive 12-pixel anchor-contact square x=84\.\.108, y=212\.\.236 centered on 96,224/
+    );
+  });
+
+  it('keeps schema-valid cave prime descriptors on evidence-aware prompts',
+    async () => {
+    const loaded = await loadBattleArt(REPOSITORY_ROOT);
+    const descriptor = id => structuredClone(loaded.descriptors.find(
+      entry => entry.descriptor.id === id
+    ).descriptor);
+    const caveBaseline = descriptor(
+      'cave-limestone-curved-passage-straight-ns'
+    ).styleReferences[0];
+    const asDraftCave = (source, {
+      id,
+      familyGroup,
+      variantId,
+      topology
+    }) => ({
+      ...source,
+      id,
+      theme: 'cave',
+      familyGroup,
+      variantId,
+      capabilities: {
+        ...source.capabilities,
+        routeTopology: topology
+      },
+      status: 'draft',
+      content: {
+        version: 1,
+        sourceSha256: null,
+        runtimeSha256: null,
+        immutableUrl: null
+      },
+      source: null
+    });
+
+    const routeFinishingPrime = asDraftCave(
+      descriptor('forest-heartlands-loam-path-straight-ns'),
+      {
+        id: 'synthetic-cave-route-finishing-prime-straight-ns',
+        familyGroup: 'synthetic-cave-route-finishing-prime',
+        variantId: 'straight-ns',
+        topology: 'straight-ns'
+      }
+    );
+    routeFinishingPrime.styleReferences = [caveBaseline];
+    assert.doesNotThrow(
+      () => assertDescriptor(routeFinishingPrime, loaded.manifest)
+    );
+    const routeFinishingPrimePrompt = buildGenerationPrompt({
+      descriptor: routeFinishingPrime,
+      profile: loaded.promptProfile,
+      styleFiles: ['style-reference-01.png']
+    });
+    assert.doesNotMatch(
+      routeFinishingPrimePrompt,
+      /BEGIN FROZEN ROUTE IMAGEGEN PROMPT|Screen coordinates:/
+    );
+    assert.doesNotMatch(
+      routeFinishingPrimePrompt,
+      /material, palette, and lighting authority only/
+    );
+    assert.match(
+      routeFinishingPrimePrompt,
+      /descriptor carries pinned numeric geometry evidence for source reference .*approved-route-straight-ns-v1/
+    );
+    assert.doesNotMatch(
+      routeFinishingPrimePrompt,
+      /JSON geometry measured from attached reference/
+    );
+    assert.match(
+      routeFinishingPrimePrompt,
+      /Treat those compact occupied proportions and terminal cuts as the prime construction target/
+    );
+
+    const directPrime = asDraftCave(
+      descriptor('forest-heartlands-loam-path-corner-es'),
+      {
+        id: 'synthetic-cave-direct-prime-corner-es',
+        familyGroup: 'synthetic-cave-direct-prime',
+        variantId: 'corner-es',
+        topology: 'corner-es'
+      }
+    );
+    directPrime.styleReferences = [{
+      ...caveBaseline,
+      id: 'synthetic-direct-geometry-prime-reference'
+    }];
+    directPrime.directGeometryPrime.sourceReferenceId =
+      directPrime.styleReferences[0].id;
+    directPrime.directGeometryPrime.sourceSha256 =
+      directPrime.styleReferences[0].sha256;
+    assert.doesNotThrow(() => assertDescriptor(directPrime, loaded.manifest));
+    const directPrimePrompt = buildGenerationPrompt({
+      descriptor: directPrime,
+      profile: loaded.promptProfile,
+      styleFiles: ['style-reference-01.png']
+    });
+    assert.doesNotMatch(
+      directPrimePrompt,
+      /BEGIN FROZEN ROUTE IMAGEGEN PROMPT|Screen coordinates:/
+    );
+    assert.doesNotMatch(
+      directPrimePrompt,
+      /material, palette, and lighting authority only/
+    );
+    assert.match(directPrimePrompt, /"directGeometryPrime": \{/);
+    assert.match(
+      directPrimePrompt,
+      /"schemaVersion": "battle-art-direct-geometry-prime-v1"/
+    );
+    assert.match(directPrimePrompt, /Edit Image 1 as the exact layout target/);
+    assert.match(
+      directPrimePrompt,
+      /Image 1 .* exact directGeometryPrime source, corner-es edit target, and sole visual geometry authority/s
+    );
+    assert.doesNotMatch(
+      directPrimePrompt,
+      /Image 1 .* guides visual style, material, species, scale, and lighting only; do not copy its topology or composition/s
+    );
+    assert.match(
+      directPrimePrompt,
+      /route subject occupies its 190-by-65 box at x=33\.\.222 and y=53\.\.117/
+    );
+
+    const missingDirectPrimeReference = structuredClone(directPrime);
+    missingDirectPrimeReference.styleReferences = [caveBaseline];
+    assert.throws(
+      () => buildGenerationPrompt({
+        descriptor: missingDirectPrimeReference,
+        profile: loaded.promptProfile,
+        styleFiles: ['style-reference-01.png']
+      }),
+      /directGeometryPrime requires exactly one matching pinned style reference/
+    );
+  });
+
+  it('gates non-forest corner-es oracle claims on matching descriptor evidence',
+    async () => {
+      const loaded = await loadBattleArt(REPOSITORY_ROOT);
+      const forestEvidence = loaded.descriptors.find(
+        entry => entry.descriptor.id
+          === 'forest-heartlands-loam-path-corner-es'
+      ).descriptor;
+      const withoutPrime = structuredClone(forestEvidence);
+      withoutPrime.theme = 'cave';
+      delete withoutPrime.directGeometryPrime;
+      const referenceOnlyPrompt = buildGenerationPrompt({
+        descriptor: withoutPrime,
+        profile: loaded.promptProfile,
+        styleFiles: ['style-reference-01.png']
+      });
+      assert.match(
+        referenceOnlyPrompt,
+        /descriptor-pinned approved corner-es silhouette/
+      );
+      assert.doesNotMatch(
+        referenceOnlyPrompt,
+        /JSON-prime|shared 29-row/
+      );
+
+      const withPrime = structuredClone(forestEvidence);
+      withPrime.theme = 'cave';
+      const evidencedPrompt = buildGenerationPrompt({
+        descriptor: withPrime,
+        profile: loaded.promptProfile,
+        styleFiles: ['style-reference-01.png']
+      });
+      assert.match(
+        evidencedPrompt,
+        /descriptor-pinned approved corner-es silhouette/
+      );
+      assert.match(evidencedPrompt, /descriptor-pinned JSON-prime/);
+      assert.match(evidencedPrompt, /shared 29-row band/);
+      assert.doesNotMatch(
+        evidencedPrompt,
+        /BEGIN FROZEN ROUTE IMAGEGEN PROMPT/
+      );
+    });
+
+  it('retains the complete validator failure sets for tracked cave route raws',
+    async () => {
+      const loaded = await loadBattleArt(REPOSITORY_ROOT);
+      const cases = [
+        {
+          family: 'cave-limestone-curved-passage-corner-es',
+          failure:
+            '350434b55495bbea93a63250df16731a40c58ce25561364eee8deaaadeccb087',
+          names: ['arm-width'],
+          messages: {
+            'arm-width': /corner-es s arm opaque perpendicular span at 100% is 26 pixels; expected at least 28/
+          }
+        },
+        {
+          family: 'cave-limestone-curved-passage-corner-ne',
+          failure:
+            'cbd62382603a2920c419ec36cfe00269d947716c4522b410773b52dc01779338',
+          names: ['border', 'arm-width', 'corner-coverage'],
+          messages: {
+            border: /outermost 4-pixel canvas border.*nontransparent pixel at 189,124/,
+            'arm-width': /corner-ne n arm opaque perpendicular span at 100% is 19 pixels; expected at least 28/,
+            'corner-coverage': /corner corner-ne alpha coverage is 258‰; expected at most 230‰/
+          }
+        },
+        {
+          family: 'cave-limestone-curved-passage-corner-sw',
+          failure:
+            'bbd655af6031f95bae99fe5e96f454a5b5d322176094f927f44c51eda434de75',
+          auditFullHash:
+            'sha256:bbd655af6031f95bae99fe5e96f454a5b5d322176094f927f44c51eda434de75',
+          auditRawSha256:
+            'sha256:f9b7e0acbfca65d008ff5042509da8175c5b8e0b4bb7fafd2927dcfebbed6ec5',
+          names: ['raster', 'arm-width', 'corner-core'],
+          messages: {
+            raster: /diamond edge-band endpoints e,w do not match declared route topology corner-sw s,w/,
+            'arm-width': /corner-sw s arm opaque perpendicular span at 50% is 22 pixels; expected at least 28/,
+            'corner-core': /corner corner-sw maximum anchor-intersecting opaque horizontal run is 25 pixels; expected at least 28/
+          }
+        },
+        {
+          family: 'cave-limestone-curved-passage-corner-sw',
+          failure:
+            '500d51ca6675b06c6aed31113ccb58e3acff7c14dc49d564f5f8a0ab2062cc6d',
+          auditFullHash:
+            'sha256:500d51ca6675b06c6aed31113ccb58e3acff7c14dc49d564f5f8a0ab2062cc6d',
+          auditRawSha256:
+            'sha256:3ea52e1573dd9fbc0b75b728d74b4130ac7783659c98e08d7630f965b8046254',
+          names: ['raster', 'arm-width', 'corner-core'],
+          messages: {
+            raster: /alpha silhouette does not contact its declared anchor/,
+            'arm-width': /corner-sw s arm opaque perpendicular span at 75% is 25 pixels; expected at least 28/,
+            'corner-core': /corner corner-sw maximum anchor-intersecting opaque horizontal run is 0 pixels; expected at least 28/
+          }
+        },
+        {
+          family: 'cave-limestone-curved-passage-end-n',
+          failure:
+            '50bbd7d1ac0948e61016f5ed24984a9535f02d1c6f1aeffe7951f3e583c03493',
+          names: ['raster'],
+          messages: {
+            raster: /diamond edge-band endpoints n,e,s do not match declared route topology end-n n/
+          }
+        },
+        {
+          family: 'cave-limestone-curved-passage-straight-ns',
+          failure:
+            '19c471861944b96910cbd82f6249e3953de17f4a1291b13b84a738954e3055bb',
+          names: ['raster', 'arm-width'],
+          messages: {
+            raster: /alpha silhouette is an opaque rectangular panel \(944‰ bounding-box fill\)/,
+            'arm-width': /straight-ns n arm opaque perpendicular span at 50% is 2 pixels; expected at least 28/
+          }
+        },
+        {
+          family: 'cave-limestone-curved-passage-straight-ns',
+          failure:
+            '42f3a2bf6eee9ea49bf776235439507ebe16aa48ba3dd10a97dbc0359b27fb15',
+          names: ['arm-width', 'straight-extent'],
+          messages: {
+            'arm-width': /straight-ns n arm opaque perpendicular span at 50% is 18 pixels; expected at least 28/,
+            'straight-extent': /straight route straight-ns n arm reaches 35\.8 pixels beyond its declared terminal at 228,24; expected at most 8 pixels without continuing toward a rectangular canvas corner/
+          }
+        },
+        {
+          family: 'cave-limestone-curved-passage-straight-ew',
+          failure:
+            '872c4a344c3e485e5f0bbb04b3e43f2c496c8bc4a1e3ef9216349ee76b92c714',
+          auditFullHash:
+            'sha256:872c4a344c3e485e5f0bbb04b3e43f2c496c8bc4a1e3ef9216349ee76b92c714',
+          names: ['raster', 'border', 'arm-width', 'straight-extent'],
+          messages: {
+            raster: /diamond edge-band endpoints n,e,s,w do not match declared route topology straight-ew e,w/,
+            border: /outermost 4-pixel canvas border.*nontransparent pixel at 252,59/,
+            'arm-width': /straight-ew e arm opaque perpendicular span at 50% is 17 pixels; expected at least 28/,
+            'straight-extent': /straight route straight-ew e arm reaches 39\.4 pixels beyond its declared terminal at 253,62; expected at most 8 pixels without continuing toward a rectangular canvas corner/
+          }
+        }
+      ];
+      for (const routeCase of cases) {
+        const failurePath =
+          `ai-image-metadata/battle-art/generated-artifacts/cave/`
+            + `${routeCase.family}/failures/${routeCase.failure}.json`;
+        if (routeCase.auditFullHash !== undefined) {
+          const audit = await auditFailedRouteAttempt({
+            root: REPOSITORY_ROOT,
+            relativePath: failurePath
+          });
+          assert.equal(audit.record.fullHash, routeCase.auditFullHash);
+          if (routeCase.auditRawSha256 !== undefined) {
+            assert.equal(audit.record.raw.sha256, routeCase.auditRawSha256);
+          }
+        }
+        const prepared = await normalizeTrackedFailedRoute(
+          REPOSITORY_ROOT,
+          failurePath,
+          loaded.promptProfile
+        );
+        assert.equal(prepared.failure.familyId, routeCase.family);
+        const failures = await collectRouteValidationFailures({
+          ...prepared,
+          profile: loaded.promptProfile
+        });
+        assert.deepEqual(Object.keys(failures), routeCase.names);
+        for (const [name, pattern] of Object.entries(routeCase.messages)) {
+          assert.match(failures[name], pattern);
+        }
+      }
+    });
+
+  it('accepts the exact latest cave end-s raw without changing failed provenance',
+    async () => {
+    const failurePath =
+      'ai-image-metadata/battle-art/generated-artifacts/cave/'
+      + 'cave-limestone-curved-passage-end-s/failures/'
+      + '1b0567ef30fe0ec594c2616442a05993dd8a066c844217e2ed3e367711406dc8.json';
+    const before = await auditFailedRouteAttempt({
+      root: REPOSITORY_ROOT,
+      relativePath: failurePath
+    });
+    assert.equal(
+      before.record.fullHash,
+      'sha256:1b0567ef30fe0ec594c2616442a05993dd8a066c844217e2ed3e367711406dc8'
+    );
+    assert.equal(
+      before.record.raw.sha256,
+      'sha256:d0e91fb0732a39672ee4584d67c15af6c03477d11b05d4117c95d0d6871dfa4b'
+    );
+
+    const loaded = await loadBattleArt(REPOSITORY_ROOT);
+    const prepared = await normalizeTrackedFailedRoute(
+      REPOSITORY_ROOT,
+      failurePath,
+      loaded.promptProfile
+    );
+    assert.deepEqual(await collectRouteValidationFailures({
+      ...prepared,
+      profile: loaded.promptProfile
+    }), {});
+    assert.deepEqual(
+      await assertRouteArmMinimumCoreWidth({
+        bytes: prepared.bytes,
+        descriptor: prepared.descriptor
+      }),
+      {
+        samples: [
+          { direction: 's', percent: 50, span: 21 },
+          { direction: 's', percent: 75, span: 20 },
+          { direction: 's', percent: 100, span: 18 }
+        ]
+      }
+    );
+
+    const after = await auditFailedRouteAttempt({
+      root: REPOSITORY_ROOT,
+      relativePath: failurePath
+    });
+    assert.deepEqual(after.file, before.file);
+    assert.deepEqual(after.record, before.record);
+    assert.deepEqual(after.rawBytes, before.rawBytes);
+  });
+
+  it('rejects stale effective prompts and omits the raw profile from cave surface workers',
+    async () => {
+    const theme = 'cave';
+    const family = 'cave-effective-prompt-surface';
+    const root = await fixture({
+      plannedDrafts: [{ theme, category: 'surface', id: family }]
+    });
+    await writeDraft({ root, theme, category: 'surface', id: family });
+    const options = {
+      projectRoot: root,
+      theme,
+      family,
+      concurrency: 1,
+      timeoutMs: 10_000,
+      dryRun: false,
+      force: false,
+      resume: false
+    };
+    await generateBattleArt(options, {
+      worker: async input => {
+        await assert.rejects(
+          readFile(path.join(input.workspace, 'prompt-profile.json')),
+          error => error.code === 'ENOENT'
+        );
+        assert.doesNotMatch(input.prompt, /- prompt-profile\.json/);
+        assert.match(input.prompt, /Regional material authority:/);
+        return candidateWorker(input);
+      }
+    });
+    const loaded = await loadBattleArt(root);
+    const descriptor = loaded.descriptors.find(
+      entry => entry.descriptor.id === family
+    ).descriptor;
+    const paths = candidatePaths(descriptor);
+    const currentPrompt = await readFile(path.join(root, paths.prompt), 'utf8');
+    const stalePrompt = currentPrompt.replace(
+      /Use only descriptor-declared regional materials\.[^\n]+/,
+      'Green forest materials belong only to the subject.'
+    );
+    assert.notEqual(stalePrompt, currentPrompt);
+    await writeFile(path.join(root, paths.prompt), stalePrompt);
+    const approvalOptions = {
+      root,
+      theme,
+      family,
+      reviewer: 'effective-prompt-reviewer@example.test',
+      decision: 'approved',
+      reason: 'The candidate satisfies the current effective prompt contract.',
+      approvedAt: '2026-08-11T12:00:00.000Z'
+    };
+    await assert.rejects(
+      approveCandidate(approvalOptions),
+      /candidate effective prompt is stale/
+    );
+    await assert.rejects(
+      generateBattleArt({ ...options, resume: true }, { worker: candidateWorker }),
+      /candidate effective prompt is stale/
+    );
+    assert.equal((await loadBattleArt(root)).descriptors.find(
+      entry => entry.descriptor.id === family
+    ).descriptor.status, 'draft');
+    await writeFile(path.join(root, paths.prompt), currentPrompt);
+    const approved = await approveCandidate(approvalOptions);
+    assert.equal(approved.changed, true);
+  });
+
+  it('audits rejected composer history without letting its stale candidate authorize work',
+    async () => {
+    const theme = 'cave';
+    const family = 'cave-composer-history-surface';
+    const root = await fixture({
+      plannedDrafts: [{ theme, category: 'surface', id: family }]
+    });
+    await writeDraft({ root, theme, category: 'surface', id: family });
+    const generateOptions = {
+      projectRoot: root,
+      theme,
+      family,
+      concurrency: 1,
+      timeoutMs: 10_000,
+      dryRun: false,
+      force: false,
+      resume: false
+    };
+    await generateBattleArt(generateOptions, { worker: candidateWorker });
+    const reviewOptions = {
+      root,
+      theme,
+      family,
+      reviewer: 'composer-history-reviewer@example.test',
+      decision: 'rejected',
+      reason: 'Reject this exact candidate while retaining its immutable evidence.',
+      reviewedAt: '2026-08-11T13:00:00.000Z'
+    };
+    const rejected = await recordCandidateReview(reviewOptions);
+    const loaded = await loadBattleArt(root);
+    const descriptor = loaded.descriptors.find(
+      entry => entry.descriptor.id === family
+    ).descriptor;
+    const paths = candidatePaths(descriptor);
+    const promptPath = path.join(root, paths.prompt);
+    const currentPrompt = await readFile(promptPath, 'utf8');
+    const priorComposerPrompt = currentPrompt.replace(
+      /Use only descriptor-declared regional materials\.[^\n]+/,
+      'Prior composer regional-material authority.'
+    );
+    assert.notEqual(priorComposerPrompt, currentPrompt);
+    await writeFile(promptPath, priorComposerPrompt);
+    const historicalReview = structuredClone(rejected.record);
+    historicalReview.candidate.worker.prompt = {
+      ...historicalReview.candidate.worker.prompt,
+      bytes: Buffer.byteLength(priorComposerPrompt),
+      sha256: sha256(Buffer.from(priorComposerPrompt))
+    };
+    const { fullHash: _fullHash, ...historicalProjection } = historicalReview;
+    historicalReview.fullHash = sha256(Buffer.from(stableJson(
+      historicalProjection
+    )));
+    await writeFile(
+      path.join(root, rejected.path),
+      stableJson(historicalReview)
+    );
+
+    const firstAudit = await auditBattleArtReviews({ root });
+    assert.equal(firstAudit.ok, true);
+    assert.ok(firstAudit.rejected >= 1);
+    assert.deepEqual(await auditBattleArtReviews({ root }), firstAudit);
+
+    const stalePattern = /candidate effective prompt is stale/;
+    await assert.rejects(
+      recordCandidateReview({
+        ...reviewOptions,
+        reason: 'A new review cannot reuse stale composer evidence.'
+      }),
+      stalePattern
+    );
+    await assert.rejects(
+      approveCandidate({
+        ...reviewOptions,
+        decision: 'approved',
+        reason: 'A new approval cannot reuse stale composer evidence.',
+        approvedAt: '2026-08-11T13:30:00.000Z'
+      }),
+      stalePattern
+    );
+    await assert.rejects(
+      generateBattleArt({ ...generateOptions, resume: true }, {
+        worker: candidateWorker
+      }),
+      stalePattern
+    );
+
+    const falseApproval = {
+      ...structuredClone(historicalReview),
+      decision: 'approved'
+    };
+    const { fullHash: _approvalHash, ...approvalProjection } = falseApproval;
+    falseApproval.fullHash = sha256(Buffer.from(stableJson(
+      approvalProjection
+    )));
+    await writeFile(path.join(root, rejected.path), stableJson(falseApproval));
+    await assert.rejects(
+      auditBattleArtReviews({ root }),
+      stalePattern
+    );
+  });
+
+  it('keeps approved cave surface review history valid across prompt-policy changes',
+    async () => {
+    const loaded = await loadBattleArt(REPOSITORY_ROOT);
+    for (const variant of [0, 1, 2, 3]) {
+      const descriptor = loaded.descriptors.find(entry => (
+        entry.descriptor.id === `cave-limestone-worn-floor-${variant}`
+      )).descriptor;
+      assert.equal(descriptor.status, 'approved');
+      assert.ok(descriptor.source.imageSha256.startsWith('sha256:'));
+    }
+    assert.equal((await auditBattleArtReviews({
+      root: REPOSITORY_ROOT
+    })).ok, true);
+  });
+
   it('gives each nonbaseline surface variant one organic macro composition', async () => {
     const loaded = await loadBattleArt(REPOSITORY_ROOT);
     const descriptor = loaded.descriptors.find(
@@ -5603,9 +10070,20 @@ describe('battle-art isolated generation and review boundary', () => {
       tierBands: descriptor.capabilities.tierBands,
       heightDeltas: descriptor.capabilities.heightDeltas
     });
-    assert.match(revised.generationPrompt, /calm mostly-moss field/);
-    assert.match(revised.generationPrompt, /one winding exposed-root seam/);
-    assert.match(revised.generationPrompt, /one off-center irregular russet island/);
+    assert.match(revised.generationPrompt, /calm mostly-primary-material field/);
+    assert.match(
+      revised.generationPrompt,
+      /one short, narrow, low-contrast winding accent vein/
+    );
+    assert.match(revised.generationPrompt, /Taper both ends out well before the quiet rim/);
+    assert.match(revised.generationPrompt, /must not divide the tile/);
+    assert.match(
+      revised.generationPrompt,
+      /one off-center irregular secondary-material island/
+    );
+    assert.match(revised.generationPrompt, /flat diffuse material change/);
+    assert.match(revised.generationPrompt, /never raised rubble or discrete stones/);
+    assert.match(revised.generationPrompt, /cool olive moss/);
     const generationPrompt = buildGenerationPrompt({
       descriptor: revised,
       profile: loaded.promptProfile,
@@ -5626,6 +10104,10 @@ describe('battle-art isolated generation and review boundary', () => {
       profile: loaded.promptProfile,
       styleFiles: ['style-reference-01.png']
     });
+    assert.equal(
+      sha256(Buffer.from(prompt)),
+      'sha256:661474fe35c0235a03ee30fe7b3a2d80e70822ecc0b6057d49bad98ce6e7e56f'
+    );
     assert.match(prompt, /declared e edge from 255,192 to 128,255/);
     assert.match(prompt, /x increases right and y increases downward/);
     assert.match(prompt, /lower-right diagonal, descending left from the right vertex/);
@@ -5640,10 +10122,36 @@ describe('battle-art isolated generation and review boundary', () => {
     assert.match(prompt, /narrow boundary strip, never a complete diamond ground tile/);
     assert.match(prompt, /clear alpha from a 12-pixel band/);
     assert.match(prompt, /bottommost connected alpha envelope/);
+    assert.doesNotMatch(prompt, /parent grounded-band audit/);
     assert.match(prompt, /crown foliage may overhang other edge bands/);
     assert.match(prompt, /no vertical slice seam, rectangular panel, crop bar/);
     assert.match(prompt, /span at least half the canvas width/);
     assert.match(prompt, /rise through at least 40% of the canvas height/);
+  });
+
+  it('aligns non-forest boundary worker audits with the parent ground envelope', async () => {
+    const loaded = await loadBattleArt(REPOSITORY_ROOT);
+    const descriptor = loaded.descriptors.find(
+      entry => entry.descriptor.id === 'cave-limestone-layered-face-s'
+    ).descriptor;
+    const prompt = buildGenerationPrompt({
+      descriptor,
+      profile: loaded.promptProfile,
+      styleFiles: ['style-reference-01.png']
+    });
+    assert.match(prompt, /canonical capability diamond of vertical radius 63/);
+    assert.match(prompt, /exact detector segment for s runs from 128,255 to 2,192/);
+    assert.match(prompt, /alpha >= 64 in the single largest 8-connected component/);
+    assert.match(prompt, /component's bottommost pixel/);
+    assert.match(prompt, /through 8 pixels above/);
+    assert.match(prompt, /middle 15%–85% projection/);
+    assert.match(prompt, /at least 23 ground-envelope pixels/);
+    assert.match(prompt, /within 10 pixels of the segment/);
+    assert.match(prompt, /at least three of four equal projection bins/);
+    assert.match(prompt, /Detached fragments, alpha below 64, upper-face pixels/);
+    assert.match(prompt, /one arbitrary alpha hit per coordinate third do not count/);
+    assert.match(prompt, /after every translation or cleanup/);
+    assert.match(prompt, /reposition or reshape the connected base/);
   });
 
   it('keeps low earth faces separate from regional canopy walls', async () => {
@@ -6196,6 +10704,125 @@ describe('battle-art isolated generation and review boundary', () => {
       readFile(path.join(rejectedRoot, 'result.json')),
       error => error.code === 'ENOENT'
     );
+  });
+
+  it('persists capped diagnostics but no candidate when a worker fails', async () => {
+    for (const testCase of [
+      {
+        label: 'timeout',
+        message: 'Codex worker timed out after 10000ms'
+      },
+      {
+        label: 'nonzero',
+        message: 'Codex worker exited with code 7'
+      }
+    ]) {
+      const root = await fixture();
+      const stdout = Buffer.alloc(MAX_WORKER_OUTPUT_BYTES + 17, 'x');
+      const stderr = Buffer.from(`${testCase.label} worker stderr\n`);
+      await assert.rejects(
+        generateBattleArt({
+          projectRoot: root,
+          theme: 'forest',
+          family: 'forest-moss-surface',
+          concurrency: 1,
+          timeoutMs: 10_000,
+          dryRun: false,
+          force: false,
+          resume: false
+        }, {
+          worker: async () => {
+            const error = new Error(testCase.message);
+            error.stdout = stdout;
+            error.stderr = stderr;
+            throw error;
+          }
+        }),
+        new RegExp(testCase.message.replaceAll(' ', '\\s'))
+      );
+      const rejectedRoot = path.join(
+        root,
+        'ai-image-metadata/battle-art/candidates/forest/forest-moss-surface'
+      );
+      assert.match(
+        await readFile(path.join(rejectedRoot, 'prompt.txt'), 'utf8'),
+        /call the imagegen tool exactly once/
+      );
+      assert.equal(
+        (await readFile(path.join(rejectedRoot, 'worker.jsonl'))).length,
+        MAX_WORKER_OUTPUT_BYTES
+      );
+      assert.equal(
+        await readFile(path.join(rejectedRoot, 'worker.stderr.log'), 'utf8'),
+        stderr.toString()
+      );
+      for (const unpublished of ['candidate.png', 'result.json']) {
+        await assert.rejects(
+          readFile(path.join(rejectedRoot, unpublished)),
+          error => error.code === 'ENOENT'
+        );
+      }
+    }
+  });
+
+  it('removes a prior final message before persisting fresh worker failure logs',
+    async () => {
+    const root = await fixture();
+    const options = {
+      projectRoot: root,
+      theme: 'forest',
+      family: 'forest-moss-surface',
+      concurrency: 1,
+      timeoutMs: 10_000,
+      dryRun: false,
+      force: false,
+      resume: false
+    };
+    await assert.rejects(
+      generateBattleArt(options, {
+        worker: async input => ({
+          ...await candidateWorker(input),
+          stdout: Buffer.alloc(0)
+        })
+      }),
+      /worker must call imagegen exactly once; observed 0/
+    );
+    const candidateRoot = path.join(
+      root,
+      'ai-image-metadata/battle-art/candidates/forest/forest-moss-surface'
+    );
+    assert.equal(
+      await readFile(path.join(candidateRoot, 'last-message.txt'), 'utf8'),
+      'generated one candidate\n'
+    );
+
+    const freshStdout = Buffer.from('fresh failed worker stdout\n');
+    const freshStderr = Buffer.from('fresh failed worker stderr\n');
+    await assert.rejects(
+      generateBattleArt(options, {
+        worker: async () => {
+          const error = new Error('Codex worker exited with code 9');
+          error.stdout = freshStdout;
+          error.stderr = freshStderr;
+          throw error;
+        }
+      }),
+      /Codex worker exited with code 9/
+    );
+    assert.equal(
+      await readFile(path.join(candidateRoot, 'worker.jsonl'), 'utf8'),
+      freshStdout.toString()
+    );
+    assert.equal(
+      await readFile(path.join(candidateRoot, 'worker.stderr.log'), 'utf8'),
+      freshStderr.toString()
+    );
+    for (const absent of ['last-message.txt', 'candidate.png', 'result.json']) {
+      await assert.rejects(
+        readFile(path.join(candidateRoot, absent)),
+        error => error.code === 'ENOENT'
+      );
+    }
   });
 
   it('rejects a known pinched direct route before review publication',
@@ -6931,6 +11558,7 @@ describe('battle-art isolated generation and review boundary', () => {
         verifiedCandidateBytes
       }) => {
         verifiedBytes = Buffer.from(verifiedCandidateBytes);
+        verifiedCandidateBytes.fill(0);
         await writeFile(
           workspaceCandidate,
           Buffer.from('post-verification pathname replacement')
@@ -7014,7 +11642,7 @@ describe('battle-art isolated generation and review boundary', () => {
     );
   });
 
-  it('rejects v2 input drift and requires archives and current inputs for approvals', async () => {
+  it('preserves v2 rejected history after draft refinement and keeps approvals strict', async () => {
     const v2Root = await fixture();
     const v2Family = 'forest-moss-surface';
     await generateBattleArt({
@@ -7027,7 +11655,7 @@ describe('battle-art isolated generation and review boundary', () => {
       force: false,
       resume: false
     }, { worker: candidateWorker });
-    await recordCandidateReview({
+    const rejectedReview = await recordCandidateReview({
       root: v2Root,
       theme: 'forest',
       family: v2Family,
@@ -7043,6 +11671,75 @@ describe('battle-art isolated generation and review boundary', () => {
     await writeFile(
       path.join(v2Root, v2DescriptorRelative),
       stableJson(v2Descriptor)
+    );
+    assert.deepEqual(await auditBattleArtReviews({ root: v2Root }), {
+      ok: true,
+      records: 2,
+      approved: 1,
+      rejected: 1
+    });
+
+    const futureReview = structuredClone(rejectedReview.record);
+    futureReview.descriptor.contentVersion += 1;
+    const { fullHash: _futureFullHash, ...futureProjection } = futureReview;
+    futureReview.fullHash = sha256(Buffer.from(stableJson(futureProjection)));
+    await writeFile(
+      path.join(v2Root, rejectedReview.path),
+      stableJson(futureReview)
+    );
+    await assert.rejects(
+      auditBattleArtReviews({ root: v2Root }),
+      /descriptor version is newer than the current family/
+    );
+    await writeFile(
+      path.join(v2Root, rejectedReview.path),
+      stableJson(rejectedReview.record)
+    );
+
+    await generateBattleArt({
+      projectRoot: v2Root,
+      theme: 'forest',
+      family: v2Family,
+      concurrency: 1,
+      timeoutMs: 10_000,
+      dryRun: false,
+      force: true,
+      resume: false
+    }, {
+      worker: async args => {
+        const result = await candidateWorker(args);
+        const candidatePath = path.join(args.workspace, 'candidate.png');
+        const replacementBytes = await sharp(candidatePath)
+          .modulate({ brightness: 0.97 })
+          .png()
+          .toBuffer();
+        await writeFile(candidatePath, replacementBytes);
+        return result;
+      }
+    });
+    await approveCandidate({
+      root: v2Root,
+      theme: 'forest',
+      family: v2Family,
+      reviewer: 'replacement-reviewer@example.test',
+      decision: 'approved',
+      reason: 'The replacement satisfies the refined draft prompt.',
+      approvedAt: '2026-07-30T12:00:00.000Z'
+    });
+    assert.deepEqual(await auditBattleArtReviews({ root: v2Root }), {
+      ok: true,
+      records: 3,
+      approved: 2,
+      rejected: 1
+    });
+    const approvedDescriptor = (await readJson(
+      v2Root,
+      v2DescriptorRelative
+    )).value;
+    approvedDescriptor.generationPrompt += ' Unreviewed approved drift.';
+    await writeFile(
+      path.join(v2Root, v2DescriptorRelative),
+      stableJson(approvedDescriptor)
     );
     await assert.rejects(
       auditBattleArtReviews({ root: v2Root }),
@@ -7754,8 +12451,8 @@ describe('battle-art isolated generation and review boundary', () => {
   });
 
   it('backfills only an exact compiled current source from preserved candidate evidence', async () => {
-    const root = await fixture();
     const family = 'forest-moss-surface';
+    const root = await fixture({ includedFamilies: [family] });
     const reviewer = 'compiled-source-reviewer@example.test';
     const reason =
       'The preserved candidate and compiled source retain the reviewed silhouette and raster contract.';
@@ -7869,9 +12566,59 @@ describe('battle-art isolated generation and review boundary', () => {
     await writeFile(resultPath, originalResult);
   });
 
-  it('pins explicit review before deterministic lossless compilation', async () => {
-    const root = await fixture();
+  it('rejects a conflicting publication pin before changing any tracked file', async () => {
     const family = 'forest-moss-surface';
+    const root = await fixture({ includedFamilies: [family] });
+    const bundle = (await readJson(root, BUNDLE_PATH)).value;
+    const inventoryContents = await readFile(
+      path.join(root, INVENTORY_PATH),
+      'utf8'
+    );
+    const emptyRegistry = (await readJson(root, INVENTORY_REGISTRY_PATH)).value;
+    await writeFile(
+      path.join(root, INVENTORY_REGISTRY_PATH),
+      stableJson(appendInventoryRegistryEntry(
+        emptyRegistry,
+        bundle,
+        inventoryContents
+      ))
+    );
+
+    await generateBattleArt({
+      projectRoot: root,
+      theme: 'forest',
+      family,
+      concurrency: 1,
+      timeoutMs: 10_000,
+      dryRun: false,
+      force: false,
+      resume: false
+    }, { worker: candidateWorker });
+    await approveCandidate({
+      root,
+      theme: 'forest',
+      family,
+      reviewer: 'reviewer@example.test',
+      decision: 'approved',
+      reason: 'The candidate passes the complete visual review checklist.',
+      approvedAt: '2026-07-30T12:00:00.000Z'
+    });
+
+    const before = await snapshotTree(root);
+    await assert.rejects(
+      compileApproved({ root }),
+      /runtime inventory registry conflicts/
+    );
+    assert.deepEqual(
+      await snapshotTree(root),
+      before,
+      'a conflicting target pin must fail before descriptors or runtime artifacts change'
+    );
+  });
+
+  it('pins explicit review before deterministic lossless compilation', async () => {
+    const family = 'forest-moss-surface';
+    const root = await fixture({ includedFamilies: [family] });
     await generateBattleArt({
       projectRoot: root,
       theme: 'forest',
@@ -7955,6 +12702,37 @@ describe('battle-art isolated generation and review boundary', () => {
 
     const compiled = await compileApproved({ root });
     assert.equal(compiled.compiled, 2);
+    const inventoryBytesAfterCompile = await readFile(path.join(
+      root,
+      INVENTORY_PATH
+    ));
+    const inventoryRegistryAfterCompile = await readFile(path.join(
+      root,
+      INVENTORY_REGISTRY_PATH
+    ));
+    const [inventoryPin] = JSON.parse(
+      inventoryRegistryAfterCompile.toString('utf8')
+    ).entries;
+    assert.deepEqual(inventoryPin, {
+      releaseId: 'battle-art-descriptors-2026-07-30',
+      releaseVersion: 10,
+      bundleManifestFullHash:
+        (await readJson(root, BUNDLE_PATH)).value.manifestFullHash,
+      inventoryBytes: inventoryBytesAfterCompile.length,
+      inventorySha256: sha256(inventoryBytesAfterCompile)
+    });
+    const publicationSnapshot = await snapshotTree(root);
+    await compileApproved({ root });
+    assert.deepEqual(
+      await snapshotTree(root),
+      publicationSnapshot,
+      'retrying an exact full publication performs no writes'
+    );
+    assert.deepEqual(
+      await readFile(path.join(root, INVENTORY_REGISTRY_PATH)),
+      inventoryRegistryAfterCompile,
+      'retrying an exact full publication leaves its inventory pin unchanged'
+    );
     loaded = await loadBattleArt(root);
     descriptor = loaded.descriptors.find(entry => entry.descriptor.id === family).descriptor;
     assert.equal(descriptor.status, 'compiled');
@@ -8007,16 +12785,8 @@ describe('battle-art isolated generation and review boundary', () => {
   });
 
   it('archives a complete immutable bundle and rejects identity replacement', async () => {
-    const tracked = await loadBattleArt(REPOSITORY_ROOT);
-    const routeFamilies = tracked.descriptors
-      .filter(entry => (
-        entry.descriptor.category === 'route-transition'
-        && entry.descriptor.id
-          !== 'forest-borderwood-dirt-path-corner-es'
-      ))
-      .map(entry => entry.descriptor.id);
     const root = await fixture({
-      excludedFamilies: routeFamilies
+      includedFamilies: ['forest-ancient-tree']
     });
     await addSyntheticStyleReference(root, 'forest-ancient-tree');
     const loaded = await loadBattleArt(root);
@@ -8078,18 +12848,25 @@ describe('battle-art isolated generation and review boundary', () => {
     )).value;
     assert.deepEqual(manifest.historicalReleases, [archived.release]);
     const inventory = (await readJson(root, INVENTORY_PATH)).value;
-    assert.deepEqual(inventory.historicalReleases, [archived.release]);
+    assert.deepEqual(
+      inventory.historicalReleases,
+      [],
+      'the inventory pinned during compilation remains immutable on archive'
+    );
     const registry = (await readJson(root, BUNDLE_REGISTRY_PATH)).value;
     assert.equal(registry.bundles.length, 1);
     await assert.rejects(
       archiveCurrentRelease({ root }),
       /already archived/
     );
+    const revisionEntry = loaded.descriptors.find(entry => (
+      entry.descriptor.id === 'forest-ancient-tree'
+    ));
     const archivedReviewPath = path.join(
       root,
       'ai-image-metadata/battle-art/reviews',
-      loaded.descriptors[0].descriptor.theme,
-      loaded.descriptors[0].descriptor.id
+      revisionEntry.descriptor.theme,
+      revisionEntry.descriptor.id
     );
     const [archivedReviewName] = await readdir(archivedReviewPath);
     const archivedReviewFile = path.join(
@@ -8105,7 +12882,7 @@ describe('battle-art isolated generation and review boundary', () => {
     await writeFile(archivedReviewFile, archivedReviewBytes);
     const family = (await readJson(
       root,
-      loaded.descriptors[0].path
+      revisionEntry.path
     )).value;
     let releaseRevision;
     let signalRevision;
@@ -8193,6 +12970,19 @@ describe('battle-art isolated generation and review boundary', () => {
       /historical source has no matching immutable approved review/
     );
     await writeFile(archivedReviewFile, archivedReviewBytes);
+    assert.equal((await assertRuntimeArtifactState(
+      await loadBattleArt(root),
+      {
+        bundle: (await readJson(root, BUNDLE_PATH)).value,
+        registry: (await readJson(root, BUNDLE_REGISTRY_PATH)).value,
+        inventory: (await readJson(root, INVENTORY_PATH)).value,
+        inventoryRegistry:
+          (await readJson(root, INVENTORY_REGISTRY_PATH)).value,
+        frontendBundle: (await readJson(root, FRONTEND_BUNDLE_PATH)).value,
+        frontendRegistry:
+          (await readJson(root, FRONTEND_BUNDLE_REGISTRY_PATH)).value
+      }
+    )).staged, true);
     assert.equal((await auditBattleArtReviews({ root })).records, loaded.descriptors.length);
   });
 

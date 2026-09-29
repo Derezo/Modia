@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "battle-map-source-prompt-profile-v1",
+  "id": "source-template-image-cave-v2",
+  "purpose": "Frozen cave-composition prompt with explicit independent formation entries and crossable-sink topology for source-template generation.",
+  "frozen": true,
+  "prompt": "Create a square compositional reference for a limestone-cave tactical battle scene viewed from a high, readable isometric angle. Show an irregular network of a broad southern cavern, a smaller northern grotto, western and eastern shelves, and a central shallow sink. Exactly three visually separate route families must leave the southern cavern through three distinct passage mouths, remain independently readable near both formations, and enter the northern grotto through three distinct passage mouths: a central sink route, a western flowstone-terrace route, and an eastern stalagmite-shelf route. The routes may interconnect at multiple mid-map junctions but must not merge into one shared throat, stair, or ramp near either formation. Render the central sink as a shallow walkable limestone depression with at least two broad, unmistakable sloped descents on both its southern and northern sides; do not surround it with a continuous raised rim or cliff. Integrate broad natural ramps, several spatially separated short carved-stone stairs, layered limestone ledges, stalagmite clusters, broken columns, and dark cavern walls that naturally own the outer boundary. Leave two opposing formation opportunities inside the cave without drawing units, spawn markers, a tactical grid, text, or a flat cleared edge strip. Keep walkable floors, elevation changes, independent passage mouths, and sink crossings visibly distinct. The image is visual inspiration for later 32 by 32 isometric map authoring, not a literal tile map.",
+  "negativeConstraints": [
+    "symmetric arena geometry",
+    "straight mine corridors or a rectangular dungeon room",
+    "routes that merge into one shared throat near a formation",
+    "a central sink enclosed by a continuous ledge, rim, or cliff",
+    "random freestanding walls",
+    "checkerboard materials",
+    "isolated height spikes or detached rock platforms",
+    "single-choke formations",
+    "text, labels, or UI",
+    "units, spawn markers, or a tactical grid",
+    "perspective that hides walkable surfaces",
+    "flat full-height cleared edge strips"
+  ]
+}

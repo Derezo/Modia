@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v2",
+  "theme": "cave",
+  "familyId": "cave-limestone-calcite-crystals",
+  "decision": "approved",
+  "reviewer": "codex-independent-reviewer",
+  "reason": "The exact pinned candidate reads as a restrained, low-profile calcite crystal cluster with pale mineral points, warm limestone shelves, and scattered cave rubble matching the reference. Its compact silhouette remains identifiable at runtime scale while clearly reading as decorative ground detail rather than a wall or blocking obstacle. The cutout is clean, grounded, and free of backdrop, frame, or obvious generation defects.",
+  "reviewedAt": "2026-08-11T10:40:20.613Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/cave/cave-limestone-calcite-crystals.json",
+    "sha256": "sha256:3baa0df37cd9ad3f469c97244fc963b0c32c82a44f90bba35c58d6d8c8b7237c",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-calcite-crystals/result.json",
+      "bytes": 2690,
+      "sha256": "sha256:51adade6cbba39d434813581b5cc4073b95a04ffcffc6ffe961f51fc1a4e9214"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-calcite-crystals/candidate.png",
+      "bytes": 13348,
+      "width": 128,
+      "height": 192,
+      "format": "png",
+      "sha256": "sha256:fc0284cd87175eef0332959606f031e23b31188b3c6b230d01e3c642c5586849"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "cave-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/cave/cave-template-01/reference.png",
+        "sha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe"
+      }
+    ],
+    "styleReferenceMode": "attachments",
+    "styleReferenceProvenance": [
+      {
+        "id": "cave-source-template-01",
+        "sha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe",
+        "stagedBasename": "style-reference-01.png"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "imageArguments": [
+        "style-reference-01.png"
+      ],
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-calcite-crystals/prompt.txt",
+        "bytes": 10203,
+        "sha256": "sha256:5fe1d9b28c29296c6336ae0274e8211eaa16a567d7fa674cf693a8b1fced2fbc"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-calcite-crystals/worker.jsonl",
+        "bytes": 27476,
+        "sha256": "sha256:8e14c27b952b5fa056e5105d4769a661f7a47f6004dca1d467a857868a7ecbba"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-calcite-crystals/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-calcite-crystals/last-message.txt",
+        "bytes": 364,
+        "sha256": "sha256:74e735580b535a1fb6f0a31e0215c57a77f4845bdffb05dd1e46f58b28609b59"
+      }
+    }
+  },
+  "fullHash": "sha256:e2e4d909ff7a36bc3fa15936d74f644cd105212877829b9c4918fd1c70b8deb0"
+}

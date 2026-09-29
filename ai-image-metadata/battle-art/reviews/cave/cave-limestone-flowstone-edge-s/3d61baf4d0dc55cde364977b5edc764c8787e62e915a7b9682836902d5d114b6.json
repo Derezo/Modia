@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v2",
+  "theme": "cave",
+  "familyId": "cave-limestone-flowstone-edge-s",
+  "decision": "approved",
+  "reviewer": "codex-independent-reviewer",
+  "reason": "The exact pinned candidate forms one continuous limestone and flowstone exposed face along the declared S lower-left diagonal, with low calcite formations and rubble consistent with the cave reference. Its seam remains readable at runtime scale, the roughly 16 pixel outward face depth correctly communicates height magnitude 1, and it stays a narrow boundary rather than a terrain tile. No concrete orientation, continuity, category, or generation defect is present. Normalization is current and detects only the S ground band. Coverage is 39 per mille with 125x68 bounds and transparent corners; every occupied column contacts the declared seam within 0.92 pixels, with no gap over 6 pixels in any third, and endpoints are reached within 2.2 pixels and 2.8 pixels.",
+  "reviewedAt": "2026-08-11T11:21:58.951Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/cave/cave-limestone-flowstone-edge-s.json",
+    "sha256": "sha256:156f0b9f92b954e8445bb8396c2eb802f05fdec0ab2791467a2f2695c2ff39d7",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-flowstone-edge-s/result.json",
+      "bytes": 2690,
+      "sha256": "sha256:43c5f0ea5658686af2d039d321e999d7310318e999da7dcadf9c649ff06a3b4e"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-flowstone-edge-s/candidate.png",
+      "bytes": 10016,
+      "width": 256,
+      "height": 256,
+      "format": "png",
+      "sha256": "sha256:3d61baf4d0dc55cde364977b5edc764c8787e62e915a7b9682836902d5d114b6"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "cave-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/cave/cave-template-01/reference.png",
+        "sha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe"
+      }
+    ],
+    "styleReferenceMode": "attachments",
+    "styleReferenceProvenance": [
+      {
+        "id": "cave-source-template-01",
+        "sha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe",
+        "stagedBasename": "style-reference-01.png"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "imageArguments": [
+        "style-reference-01.png"
+      ],
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-flowstone-edge-s/prompt.txt",
+        "bytes": 12497,
+        "sha256": "sha256:01d1a4195e6d215e46b4c5d3d1cd03fb7f8c540012074e3a8007fd58f25edd58"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-flowstone-edge-s/worker.jsonl",
+        "bytes": 36050,
+        "sha256": "sha256:97304c200a9bdb8e27ef3bd7ae1736f5fae2d2c3224d2d6f658f124fe8ef3153"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-flowstone-edge-s/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-flowstone-edge-s/last-message.txt",
+        "bytes": 301,
+        "sha256": "sha256:045bfbc835d383fe739830590d33ef8e8fc1ab9ec1384ba1469504bb2aa436c4"
+      }
+    }
+  },
+  "fullHash": "sha256:367511fc2adf47f009ff07d0d1a3e4264acfda30cad8cc13fb1c12fdb940fe1e"
+}

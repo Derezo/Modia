@@ -3,6 +3,7 @@ import {
   copyFile,
   mkdir,
   mkdtemp,
+  readdir,
   readFile,
   rm,
   writeFile
@@ -25,13 +26,48 @@ import {
   styleReferenceProvenance
 } from './lifecycle.mjs';
 import { main, parseCommand } from './cli.mjs';
+import {
+  buildGenerationPrompt,
+  revalidateFailedRouteAttempt
+} from './generate.mjs';
 import { normalizeCandidates } from './normalize.mjs';
 
 const REPOSITORY_ROOT = path.resolve(import.meta.dirname, '../..');
 const DESCRIPTOR_RELATIVE =
   'ai-image-metadata/battle-art/descriptors/forest/'
   + 'forest-borderwood-moss-ground-0.json';
+const REVALIDATED_DESCRIPTOR_RELATIVE =
+  'ai-image-metadata/battle-art/descriptors/cave/'
+  + 'cave-limestone-curved-passage-end-s.json';
+const REVALIDATED_FAILURE_RELATIVE =
+  'ai-image-metadata/battle-art/generated-artifacts/cave/'
+  + 'cave-limestone-curved-passage-end-s/failures/'
+  + '1b0567ef30fe0ec594c2616442a05993dd8a066c844217e2ed3e367711406dc8.json';
 const temporaryRoots = [];
+
+async function copyTracked(root, relative) {
+  await mkdir(path.dirname(path.join(root, relative)), { recursive: true });
+  await copyFile(path.join(REPOSITORY_ROOT, relative), path.join(root, relative));
+}
+
+async function snapshotTree(root) {
+  const snapshot = {};
+  async function visit(directory, relativeDirectory = '') {
+    const entries = await readdir(directory, { withFileTypes: true });
+    for (const entry of entries) {
+      const relative = path.join(relativeDirectory, entry.name);
+      const absolute = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        snapshot[`${relative}${path.sep}`] = 'directory';
+        await visit(absolute, relative);
+      } else {
+        snapshot[relative] = sha256(await readFile(absolute));
+      }
+    }
+  }
+  await visit(root);
+  return snapshot;
+}
 
 async function fixture() {
   const root = await mkdtemp(path.join(tmpdir(), 'modia-battle-art-normalize-'));
@@ -76,25 +112,29 @@ async function fixture() {
   await mkdir(path.dirname(path.join(root, DESCRIPTOR_RELATIVE)), { recursive: true });
   await writeFile(path.join(root, manifestRelative), stableJson(manifest));
   await writeFile(path.join(root, DESCRIPTOR_RELATIVE), stableJson(descriptor));
+  const promptProfile = JSON.parse(await readFile(
+    path.join(root, manifest.promptProfile.path),
+    'utf8'
+  ));
   const readinessRelative =
     'ai-image-metadata/battle-art/readiness-plan.json';
   const releasedReadiness = JSON.parse(await readFile(
     path.join(REPOSITORY_ROOT, readinessRelative),
     'utf8'
   ));
-  const releasedPlan = releasedReadiness.plans.find(plan => (
+  const releasedPlans = releasedReadiness.plans.filter(plan => (
     plan.requirements.some(requirement => (
       requirement.descriptorId === descriptor.id
     ))
   ));
   const readiness = {
     schemaVersion: releasedReadiness.schemaVersion,
-    plans: [{
-      ...releasedPlan,
-      requirements: releasedPlan.requirements.filter(requirement => (
+    plans: releasedPlans.map(plan => ({
+      ...plan,
+      requirements: plan.requirements.filter(requirement => (
         requirement.descriptorId === descriptor.id
       ))
-    }]
+    }))
   };
   await writeFile(path.join(root, readinessRelative), stableJson(readiness));
 
@@ -139,7 +179,17 @@ async function fixture() {
   };
   await Promise.all([
     writeFile(path.join(root, paths.metadata), stableJson(candidate)),
-    writeFile(path.join(root, paths.prompt), 'normalization fixture prompt\n'),
+    writeFile(
+      path.join(root, paths.prompt),
+      `${buildGenerationPrompt({
+        descriptor,
+        profile: promptProfile,
+        styleFiles: styleReferenceProvenance(
+          descriptor.styleReferences
+        ).map(value => value.stagedBasename),
+        textStyleFallback: true
+      })}\n`
+    ),
     writeFile(
       path.join(root, paths.stdout),
       '{"type":"item.completed","item":{"id":"imagegen-1",'
@@ -155,6 +205,90 @@ async function fixture() {
     originalBytes,
     candidate
   };
+}
+
+async function revalidatedFixture() {
+  const root = await mkdtemp(path.join(
+    tmpdir(),
+    'modia-battle-art-normalize-revalidated-'
+  ));
+  temporaryRoots.push(root);
+  const manifestRelative = 'ai-image-metadata/battle-art/manifest.json';
+  const manifest = JSON.parse(await readFile(
+    path.join(REPOSITORY_ROOT, manifestRelative),
+    'utf8'
+  ));
+  manifest.descriptors = [REVALIDATED_DESCRIPTOR_RELATIVE];
+  manifest.historicalReleases = [];
+  const descriptor = JSON.parse(await readFile(
+    path.join(REPOSITORY_ROOT, REVALIDATED_DESCRIPTOR_RELATIVE),
+    'utf8'
+  ));
+  const descriptorStyleReferencePaths = new Set(
+    descriptor.styleReferences.map(reference => reference.path)
+  );
+  manifest.styleReferences = manifest.styleReferences.filter(
+    reference => descriptorStyleReferencePaths.has(reference.path)
+  );
+  for (const relative of [
+    CORRECTIVE_STYLE_REFERENCE_REGISTRY_PATH,
+    manifest.promptProfile.path,
+    ...manifest.styleReferences.map(reference => reference.path)
+  ]) {
+    await copyTracked(root, relative);
+  }
+  await mkdir(path.dirname(path.join(root, manifestRelative)), {
+    recursive: true
+  });
+  await mkdir(path.dirname(path.join(root, REVALIDATED_DESCRIPTOR_RELATIVE)), {
+    recursive: true
+  });
+  await writeFile(path.join(root, manifestRelative), stableJson(manifest));
+  await writeFile(
+    path.join(root, REVALIDATED_DESCRIPTOR_RELATIVE),
+    stableJson(descriptor)
+  );
+
+  const readinessRelative = 'ai-image-metadata/battle-art/readiness-plan.json';
+  const releasedReadiness = JSON.parse(await readFile(
+    path.join(REPOSITORY_ROOT, readinessRelative),
+    'utf8'
+  ));
+  const releasedPlans = releasedReadiness.plans.filter(plan => (
+    plan.requirements.some(requirement => (
+      requirement.descriptorId === descriptor.id
+    ))
+  ));
+  const readiness = {
+    schemaVersion: releasedReadiness.schemaVersion,
+    plans: releasedPlans.map(plan => ({
+      ...plan,
+      requirements: plan.requirements.filter(requirement => (
+        requirement.descriptorId === descriptor.id
+      ))
+    }))
+  };
+  await mkdir(path.dirname(path.join(root, readinessRelative)), {
+    recursive: true
+  });
+  await writeFile(path.join(root, readinessRelative), stableJson(readiness));
+
+  const paths = candidatePaths(descriptor);
+  const failure = JSON.parse(await readFile(
+    path.join(REPOSITORY_ROOT, REVALIDATED_FAILURE_RELATIVE),
+    'utf8'
+  ));
+  for (const relative of [REVALIDATED_FAILURE_RELATIVE, failure.raw.path]) {
+    await copyTracked(root, relative);
+  }
+  await revalidateFailedRouteAttempt({
+    root,
+    theme: descriptor.theme,
+    family: descriptor.id,
+    failure: REVALIDATED_FAILURE_RELATIVE
+  });
+  const candidate = (await readJson(root, paths.metadata)).value;
+  return { root, descriptor, paths, candidate };
 }
 
 afterEach(async () => {
@@ -250,6 +384,119 @@ describe('battle-art candidate normalization', () => {
     assert.deepEqual(
       await readFile(path.join(state.root, state.paths.metadata)),
       currentMetadata
+    );
+  });
+
+  it('accepts a provenance-preserving revalidated candidate without writes', async () => {
+    const state = await revalidatedFixture();
+    const beforeTree = await snapshotTree(state.root);
+    const beforeMetadata = await readFile(
+      path.join(state.root, state.paths.metadata)
+    );
+    const beforeImage = await readFile(
+      path.join(state.root, state.candidate.image.path)
+    );
+    const result = await normalizeCandidates({
+      root: state.root,
+      theme: state.descriptor.theme,
+      family: state.descriptor.id,
+      check: true
+    });
+    assert.equal(result.ok, true);
+    assert.equal(result.results[0].status, 'current');
+    assert.deepEqual(
+      await readFile(path.join(state.root, state.paths.metadata)),
+      beforeMetadata
+    );
+    assert.deepEqual(
+      await readFile(path.join(state.root, state.candidate.image.path)),
+      beforeImage
+    );
+    assert.deepEqual(await snapshotTree(state.root), beforeTree);
+  });
+
+  it('rejects mixed and malformed revalidated candidate records', async () => {
+    const state = await revalidatedFixture();
+    const mixed = structuredClone(state.candidate);
+    mixed.worker = {};
+    await writeFile(
+      path.join(state.root, state.paths.metadata),
+      stableJson(mixed)
+    );
+    await assert.rejects(
+      normalizeCandidates({
+        root: state.root,
+        theme: state.descriptor.theme,
+        family: state.descriptor.id,
+        check: true
+      }),
+      /candidate metadata.worker is not allowed/
+    );
+
+    const missingDerivation = structuredClone(state.candidate);
+    delete missingDerivation.derivation;
+    await writeFile(
+      path.join(state.root, state.paths.metadata),
+      stableJson(missingDerivation)
+    );
+    await assert.rejects(
+      normalizeCandidates({
+        root: state.root,
+        theme: state.descriptor.theme,
+        family: state.descriptor.id,
+        check: true
+      }),
+      /candidate metadata.derivation is required/
+    );
+
+    const mismatchedDerivation = structuredClone(state.candidate);
+    mismatchedDerivation.derivation.source.sha256 =
+      `sha256:${'0'.repeat(64)}`;
+    await writeFile(
+      path.join(state.root, state.paths.metadata),
+      stableJson(mismatchedDerivation)
+    );
+    await assert.rejects(
+      normalizeCandidates({
+        root: state.root,
+        theme: state.descriptor.theme,
+        family: state.descriptor.id,
+        check: true
+      }),
+      /origin.raw does not match the route derivation source/
+    );
+
+    const staleOrigin = structuredClone(state.candidate);
+    staleOrigin.origin.failureRecord.sha256 = `sha256:${'0'.repeat(64)}`;
+    await writeFile(
+      path.join(state.root, state.paths.metadata),
+      stableJson(staleOrigin)
+    );
+    await assert.rejects(
+      normalizeCandidates({
+        root: state.root,
+        theme: state.descriptor.theme,
+        family: state.descriptor.id,
+        check: true
+      }),
+      /origin does not match its audited failed attempt/
+    );
+
+    const regular = await fixture();
+    const regularWithOrigin = structuredClone(regular.candidate);
+    regularWithOrigin.origin = structuredClone(state.candidate.origin);
+    await writeFile(
+      path.join(regular.root, regular.paths.metadata),
+      stableJson(regularWithOrigin)
+    );
+    await assert.rejects(
+      normalizeCandidates({
+        root: regular.root,
+        theme: regular.descriptor.theme,
+        family: regular.descriptor.id,
+        check: true
+      }),
+      /candidate metadata.origin is not allowed/
     );
   });
 

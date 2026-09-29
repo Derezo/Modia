@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "battle-art-candidate-review-v2",
+  "theme": "cave",
+  "familyId": "cave-limestone-flowstone-curtain",
+  "decision": "approved",
+  "reviewer": "codex-independent-reviewer",
+  "reason": "The exact pinned candidate reads clearly as a layered amber calcite flowstone curtain, with long draped mineral folds, a stepped limestone crown, and grounded stalagmite/rubble accents matching the cave reference. Its broad vertical sheet remains distinct from the isolated broken-column, fallen-rock, and stalagmite-cluster families at runtime downscale and convincingly communicates a one-cell solid blocker. It contains no detached backdrop, frame, or obvious generation defect.",
+  "reviewedAt": "2026-08-11T10:36:03.655Z",
+  "descriptor": {
+    "path": "ai-image-metadata/battle-art/descriptors/cave/cave-limestone-flowstone-curtain.json",
+    "sha256": "sha256:a27ff96aff972dc845ee240e5dad2dc5ae66bd206e8344f97dbe1a4f630e5203",
+    "contentVersion": 1
+  },
+  "candidate": {
+    "metadata": {
+      "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-flowstone-curtain/result.json",
+      "bytes": 2700,
+      "sha256": "sha256:22e722930fd1e28a4e3676b80213091846c206d6f8d7e0329ca5fc818492513b"
+    },
+    "image": {
+      "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-flowstone-curtain/candidate.png",
+      "bytes": 86388,
+      "width": 192,
+      "height": 256,
+      "format": "png",
+      "sha256": "sha256:dc1a289ca6427b92ac2bbcf213f840f63f899d420017acfb9e678992fe9cd096"
+    },
+    "promptProfile": {
+      "id": "battle-art-family-v2",
+      "path": "ai-image-metadata/battle-art/prompts/family-v2.json",
+      "sha256": "sha256:d48f4546ee0abeb71da9c6e3983fec1dd347056c3c2082318482a0ec6c825e8a"
+    },
+    "styleReferences": [
+      {
+        "id": "cave-source-template-01",
+        "path": "ai-image-metadata/battle-maps/sources/cave/cave-template-01/reference.png",
+        "sha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe"
+      }
+    ],
+    "styleReferenceMode": "attachments",
+    "styleReferenceProvenance": [
+      {
+        "id": "cave-source-template-01",
+        "sha256": "sha256:7219ad97e8a28ef2605169b810e6290c689e319de470ea9200a408ff7ed1bcbe",
+        "stagedBasename": "style-reference-01.png"
+      }
+    ],
+    "worker": {
+      "command": "codex",
+      "ephemeral": true,
+      "invocationCount": 1,
+      "timeoutMs": 900000,
+      "imageArguments": [
+        "style-reference-01.png"
+      ],
+      "prompt": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-flowstone-curtain/prompt.txt",
+        "bytes": 10611,
+        "sha256": "sha256:270d74ad8747693edb9358d6c284d6215584e3e57e77ec89109aef6ff12b07ea"
+      },
+      "stdout": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-flowstone-curtain/worker.jsonl",
+        "bytes": 30721,
+        "sha256": "sha256:6284eff734dc4ac4f07b1cfc1360fb009a60c4ae9b333ed026a1a5aadae84b84"
+      },
+      "stderr": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-flowstone-curtain/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "lastMessage": {
+        "path": "ai-image-metadata/battle-art/candidates/cave/cave-limestone-flowstone-curtain/last-message.txt",
+        "bytes": 405,
+        "sha256": "sha256:b71abf152b654d91e5c7e4d722b7be7b0e32b118ebe1f9ee1dacb6b948204eec"
+      }
+    }
+  },
+  "fullHash": "sha256:a052ef85a7d62f68870b5e248d27b2a6171cfa81c5b10cdc787e25f1d2f8b7e2"
+}

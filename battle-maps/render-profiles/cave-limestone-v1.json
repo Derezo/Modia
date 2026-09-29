@@ -1,0 +1,420 @@
+{
+  "schemaVersion": "battle-map-render-profile-v2",
+  "id": "cave-limestone-v1",
+  "theme": "cave",
+  "ecologyProfile": "cave-limestone",
+  "assetBundleId": "battle-art-descriptors-2026-07-30",
+  "scene": {
+    "silhouette": "organic-island",
+    "exterior": "cave-rock",
+    "backdrop": {
+      "kind": "cavern-gradient",
+      "topColor": "#101519",
+      "horizonColor": "#252D2F",
+      "bottomColor": "#3B3D38",
+      "hazeColor": "#817A68"
+    }
+  },
+  "surfaceVariantCount": 4,
+  "elevationFaceSymbols": {
+    "worn-floor": "layered-face"
+  },
+  "assetBindings": [
+    {
+      "category": "surface",
+      "symbol": "worn-floor",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "surfaceVariant": 0
+      },
+      "assetKey": "cave-limestone-worn-floor-0"
+    },
+    {
+      "category": "surface",
+      "symbol": "worn-floor",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "surfaceVariant": 1
+      },
+      "assetKey": "cave-limestone-worn-floor-1"
+    },
+    {
+      "category": "surface",
+      "symbol": "worn-floor",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "surfaceVariant": 2
+      },
+      "assetKey": "cave-limestone-worn-floor-2"
+    },
+    {
+      "category": "surface",
+      "symbol": "worn-floor",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "surfaceVariant": 3
+      },
+      "assetKey": "cave-limestone-worn-floor-3"
+    },
+    {
+      "category": "route",
+      "symbol": "curved-passage",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "routeTopology": "end-n"
+      },
+      "assetKey": "cave-limestone-curved-passage-end-n"
+    },
+    {
+      "category": "route",
+      "symbol": "curved-passage",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "routeTopology": "end-e"
+      },
+      "assetKey": "cave-limestone-curved-passage-end-e"
+    },
+    {
+      "category": "route",
+      "symbol": "curved-passage",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "routeTopology": "end-s"
+      },
+      "assetKey": "cave-limestone-curved-passage-end-s"
+    },
+    {
+      "category": "route",
+      "symbol": "curved-passage",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "routeTopology": "end-w"
+      },
+      "assetKey": "cave-limestone-curved-passage-end-w"
+    },
+    {
+      "category": "route",
+      "symbol": "curved-passage",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "routeTopology": "straight-ns"
+      },
+      "assetKey": "cave-limestone-curved-passage-straight-ns"
+    },
+    {
+      "category": "route",
+      "symbol": "curved-passage",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "routeTopology": "straight-ew"
+      },
+      "assetKey": "cave-limestone-curved-passage-straight-ew"
+    },
+    {
+      "category": "route",
+      "symbol": "curved-passage",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "routeTopology": "corner-ne"
+      },
+      "assetKey": "cave-limestone-curved-passage-corner-ne"
+    },
+    {
+      "category": "route",
+      "symbol": "curved-passage",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "routeTopology": "corner-es"
+      },
+      "assetKey": "cave-limestone-curved-passage-corner-es"
+    },
+    {
+      "category": "route",
+      "symbol": "curved-passage",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "routeTopology": "corner-sw"
+      },
+      "assetKey": "cave-limestone-curved-passage-corner-sw"
+    },
+    {
+      "category": "route",
+      "symbol": "curved-passage",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "routeTopology": "corner-wn"
+      },
+      "assetKey": "cave-limestone-curved-passage-corner-wn"
+    },
+    {
+      "category": "route",
+      "symbol": "curved-passage",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "routeTopology": "tee-nes"
+      },
+      "assetKey": "cave-limestone-curved-passage-tee-nes"
+    },
+    {
+      "category": "route",
+      "symbol": "curved-passage",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "routeTopology": "tee-esw"
+      },
+      "assetKey": "cave-limestone-curved-passage-tee-esw"
+    },
+    {
+      "category": "route",
+      "symbol": "curved-passage",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "routeTopology": "tee-nsw"
+      },
+      "assetKey": "cave-limestone-curved-passage-tee-nsw"
+    },
+    {
+      "category": "route",
+      "symbol": "curved-passage",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "routeTopology": "tee-wne"
+      },
+      "assetKey": "cave-limestone-curved-passage-tee-wne"
+    },
+    {
+      "category": "route",
+      "symbol": "curved-passage",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "routeTopology": "cross"
+      },
+      "assetKey": "cave-limestone-curved-passage-cross"
+    },
+    {
+      "category": "route",
+      "symbol": "curved-passage",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "routeTopology": "isolated"
+      },
+      "assetKey": "cave-limestone-curved-passage-isolated"
+    },
+    {
+      "category": "connection",
+      "symbol": "carved-stairs",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "direction": "n",
+        "heightDelta": 1
+      },
+      "assetKey": "cave-limestone-carved-stairs-n"
+    },
+    {
+      "category": "connection",
+      "symbol": "carved-stairs",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "direction": "e",
+        "heightDelta": 1
+      },
+      "assetKey": "cave-limestone-carved-stairs-e"
+    },
+    {
+      "category": "connection",
+      "symbol": "carved-stairs",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "direction": "s",
+        "heightDelta": 1
+      },
+      "assetKey": "cave-limestone-carved-stairs-s"
+    },
+    {
+      "category": "connection",
+      "symbol": "carved-stairs",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "direction": "w",
+        "heightDelta": 1
+      },
+      "assetKey": "cave-limestone-carved-stairs-w"
+    },
+    {
+      "category": "connection",
+      "symbol": "natural-ramp",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "direction": "n",
+        "heightDelta": 1
+      },
+      "assetKey": "cave-limestone-natural-ramp-n"
+    },
+    {
+      "category": "connection",
+      "symbol": "natural-ramp",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "direction": "e",
+        "heightDelta": 1
+      },
+      "assetKey": "cave-limestone-natural-ramp-e"
+    },
+    {
+      "category": "connection",
+      "symbol": "natural-ramp",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "direction": "s",
+        "heightDelta": 1
+      },
+      "assetKey": "cave-limestone-natural-ramp-s"
+    },
+    {
+      "category": "connection",
+      "symbol": "natural-ramp",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "direction": "w",
+        "heightDelta": 1
+      },
+      "assetKey": "cave-limestone-natural-ramp-w"
+    },
+    {
+      "category": "boundary",
+      "symbol": "flowstone-edge",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "direction": "n",
+        "heightDelta": 1
+      },
+      "assetKey": "cave-limestone-flowstone-edge-n"
+    },
+    {
+      "category": "boundary",
+      "symbol": "flowstone-edge",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "direction": "e",
+        "heightDelta": 1
+      },
+      "assetKey": "cave-limestone-flowstone-edge-e"
+    },
+    {
+      "category": "boundary",
+      "symbol": "flowstone-edge",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "direction": "s",
+        "heightDelta": 1
+      },
+      "assetKey": "cave-limestone-flowstone-edge-s"
+    },
+    {
+      "category": "boundary",
+      "symbol": "flowstone-edge",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "direction": "w",
+        "heightDelta": 1
+      },
+      "assetKey": "cave-limestone-flowstone-edge-w"
+    },
+    {
+      "category": "boundary",
+      "symbol": "layered-face",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "direction": "n",
+        "heightDelta": 1
+      },
+      "assetKey": "cave-limestone-layered-face-n"
+    },
+    {
+      "category": "boundary",
+      "symbol": "layered-face",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "direction": "e",
+        "heightDelta": 1
+      },
+      "assetKey": "cave-limestone-layered-face-e"
+    },
+    {
+      "category": "boundary",
+      "symbol": "layered-face",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "direction": "s",
+        "heightDelta": 1
+      },
+      "assetKey": "cave-limestone-layered-face-s"
+    },
+    {
+      "category": "boundary",
+      "symbol": "layered-face",
+      "match": {
+        "ecologyProfile": "cave-limestone",
+        "direction": "w",
+        "heightDelta": 1
+      },
+      "assetKey": "cave-limestone-layered-face-w"
+    },
+    {
+      "category": "obstacle",
+      "symbol": "stalagmite-cluster",
+      "match": {
+        "ecologyProfile": "cave-limestone"
+      },
+      "assetKey": "cave-limestone-stalagmite-cluster"
+    },
+    {
+      "category": "obstacle",
+      "symbol": "broken-column",
+      "match": {
+        "ecologyProfile": "cave-limestone"
+      },
+      "assetKey": "cave-limestone-broken-column"
+    },
+    {
+      "category": "obstacle",
+      "symbol": "flowstone-curtain",
+      "match": {
+        "ecologyProfile": "cave-limestone"
+      },
+      "assetKey": "cave-limestone-flowstone-curtain"
+    },
+    {
+      "category": "obstacle",
+      "symbol": "fallen-rock",
+      "match": {
+        "ecologyProfile": "cave-limestone"
+      },
+      "assetKey": "cave-limestone-fallen-rock"
+    },
+    {
+      "category": "decoration",
+      "symbol": "calcite-crystals",
+      "match": {
+        "ecologyProfile": "cave-limestone"
+      },
+      "assetKey": "cave-limestone-calcite-crystals"
+    },
+    {
+      "category": "decoration",
+      "symbol": "mineral-staining",
+      "match": {
+        "ecologyProfile": "cave-limestone"
+      },
+      "assetKey": "cave-limestone-mineral-staining"
+    },
+    {
+      "category": "decoration",
+      "symbol": "scattered-rubble",
+      "match": {
+        "ecologyProfile": "cave-limestone"
+      },
+      "assetKey": "cave-limestone-scattered-rubble"
+    }
+  ]
+}

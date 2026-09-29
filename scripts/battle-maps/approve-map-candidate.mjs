@@ -16,8 +16,9 @@ Usage:
     --map <id> --reviewer <id> [--reason <rationale>] \
     [--decision approved|rejected] [--update-pins] [--force]
 
-Template-03 and newer approvals require a bounded, trimmed, control-free rationale.
-Legacy template-01/-02 approvals retain their frozen v1 format and omit --reason.
+V3 approvals require a bounded, trimmed, control-free rationale. Historical
+forest-template-01 through forest-template-06 approvals are replay-only and
+cannot be created or changed; author a new V3 template identity instead.
 Approval never generates art or compiles a runtime map.`;
 }
 
@@ -28,7 +29,8 @@ export async function main(argv = process.argv.slice(2)) {
     allowForce: true,
     allowUpdatePins: true,
     allowReason: true,
-    requireReasonForNewApproval: true
+    requireReasonForNewApproval: true,
+    requireV3AuthoringIdentity: true
   });
   if (options.help) {
     console.log(usage());
