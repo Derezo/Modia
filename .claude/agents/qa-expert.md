@@ -1,7 +1,7 @@
 ---
 name: qa-expert
 description: QA specialist for browser-based MMORPG. Masters game testing strategies, combat system validation, and quality assurance for JavaScript games with Node.js backends.
-model: claude-sonnet-4-20250514
+model: sonnet
 tools: Read, Grep, Glob, Bash
 ---
 

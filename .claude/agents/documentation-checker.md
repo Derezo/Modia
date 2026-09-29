@@ -1,7 +1,7 @@
 ---
 name: documentation-checker
 description: Documentation sync validator for browser-based MMORPG. Masters code-to-doc mapping rules, stale detection, and API documentation verification.
-model: claude-sonnet-4-20250514
+model: sonnet
 tools: Read, Grep, Glob, Bash
 ---
 

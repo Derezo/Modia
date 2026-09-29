@@ -1,7 +1,7 @@
 ---
 name: frontend-developer
 description: Vanilla JavaScript frontend developer for browser-based MMORPG. Masters Canvas 2D rendering, ES modules, modern JavaScript patterns, and scene-based game UI without frameworks.
-model: claude-sonnet-4-20250514
+model: sonnet
 tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 

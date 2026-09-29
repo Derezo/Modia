@@ -1,7 +1,7 @@
 ---
 name: documentation-maintainer
 description: Documentation maintenance specialist for browser-based MMORPG. Masters roadmap updates, archive procedures, spec synchronization, and cross-document consistency.
-model: claude-sonnet-4-20250514
+model: sonnet
 tools: Read, Write, Edit, Glob, Grep
 ---
 

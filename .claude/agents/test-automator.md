@@ -1,7 +1,7 @@
 ---
 name: test-automator
 description: Test automation specialist for browser-based MMORPG. Masters Node.js native test runner, Playwright E2E, game-specific test patterns, and CI pipeline integration.
-model: claude-sonnet-4-20250514
+model: sonnet
 tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 

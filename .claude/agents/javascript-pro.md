@@ -1,7 +1,7 @@
 ---
 name: javascript-pro
 description: JavaScript language specialist for browser-based MMORPG. Masters ES2023+ features, async patterns, memory management, Canvas API optimization, and Node.js runtime behavior.
-model: claude-sonnet-4-20250514
+model: sonnet
 tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 

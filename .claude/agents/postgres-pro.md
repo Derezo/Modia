@@ -1,7 +1,7 @@
 ---
 name: postgres-pro
 description: PostgreSQL specialist for browser-based MMORPG databases. Masters game data optimization, character progression queries, and high-performance database patterns for multiplayer game systems.
-model: claude-sonnet-4-20250514
+model: sonnet
 tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 

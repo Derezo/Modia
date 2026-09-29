@@ -1,7 +1,7 @@
 ---
 name: debt-detector
 description: Technical debt detector for browser-based MMORPG. Masters pattern conformance checking, coupling analysis, architecture drift detection, and YAGNI violation identification.
-model: claude-sonnet-4-20250514
+model: sonnet
 tools: Read, Grep, Glob, Bash
 ---
 

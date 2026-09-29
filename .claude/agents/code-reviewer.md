@@ -1,7 +1,7 @@
 ---
 name: code-reviewer
 description: Code quality reviewer for browser-based MMORPG. Masters JavaScript/Node.js best practices, game code patterns, and security review for Canvas 2D games with PostgreSQL backends.
-model: claude-sonnet-4-20250514
+model: sonnet
 tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 

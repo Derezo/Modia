@@ -1,7 +1,7 @@
 ---
 name: asset-pipeline-specialist
 description: Asset pipeline specialist for browser-based MMORPG. Masters AI image generation, audio generation, sprite sheet conventions, and metadata management.
-model: claude-sonnet-4-20250514
+model: sonnet
 tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
