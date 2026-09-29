@@ -443,6 +443,37 @@ function broadcastPresenceChange(userId, username, status, customMessage = null,
   })();
 }
 
+/**
+ * Broadcast a node-room presence event (player:entered_node / player:left_node)
+ * for a user, honouring their showOnlineStatus privacy setting.
+ *
+ * Users who hide their online status never announce where they are, so both
+ * the enter and the leave event are suppressed. Fails closed: if the setting
+ * cannot be read, nothing is broadcast.
+ *
+ * @param {number} nodeId - Node ID (room is `node:{nodeId}`)
+ * @param {Object} message - Message to broadcast
+ * @param {number} userId - The user the event is about (excluded from delivery)
+ * @returns {Promise<boolean>} Whether the event was broadcast
+ */
+async function broadcastNodePresenceEvent(nodeId, message, userId) {
+  try {
+    if (!(await userSettingsService.showsOnlineStatus(userId))) {
+      return false;
+    }
+  } catch (err) {
+    console.error('[RoomManager] broadcastNodePresenceEvent error:', err.message);
+    return false;
+  }
+
+  const nodeRoom = `node:${nodeId}`;
+  if (!rooms.has(nodeRoom)) {
+    return false;
+  }
+  broadcastToRoom(nodeRoom, message, userId);
+  return true;
+}
+
 // ============================================================
 // Exports
 // ============================================================
@@ -472,7 +503,8 @@ export {
   // Broadcasting
   broadcastToRoom,
   sendToUser,
-  broadcastPresenceChange
+  broadcastPresenceChange,
+  broadcastNodePresenceEvent
 };
 
 export default {
@@ -491,5 +523,6 @@ export default {
   getOnlineCount,
   broadcastToRoom,
   sendToUser,
-  broadcastPresenceChange
+  broadcastPresenceChange,
+  broadcastNodePresenceEvent
 };

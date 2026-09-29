@@ -37,7 +37,8 @@ import {
   getOnlineCount,
   broadcastToRoom,
   sendToUser,
-  broadcastPresenceChange
+  broadcastPresenceChange,
+  broadcastNodePresenceEvent
 } from './roomManager.js';
 
 // Import metrics and logging
@@ -713,19 +714,17 @@ function handleDisconnect(userId, username, ws = null, connectionId = null) {
 
   const removedNodes = presenceService.clearUserFromAllNodes(userId);
   removedNodes.forEach(nodeId => {
-    const nodeRoom = `node:${nodeId}`;
-    if (rooms.has(nodeRoom)) {
-      broadcastToRoom(nodeRoom, {
-        type: 'player:left_node',
-        payload: {
-          nodeId,
-          userId,
-          username,
-          reason: 'disconnected',
-          timestamp: Date.now()
-        }
-      });
-    }
+    // Privacy-gated: hidden users never announced entering, so no leave either.
+    broadcastNodePresenceEvent(nodeId, {
+      type: 'player:left_node',
+      payload: {
+        nodeId,
+        userId,
+        username,
+        reason: 'disconnected',
+        timestamp: Date.now()
+      }
+    }, userId).catch(() => {});
   });
 
   coliseumService.cleanupPlayer(userId);
@@ -750,6 +749,7 @@ export {
   broadcastToRoom,
   sendToUser,
   broadcastPresenceChange,
+  broadcastNodePresenceEvent,
   getOnlineCount,
   isUserOnline,
   connections,
@@ -763,6 +763,7 @@ export default {
   broadcastToRoom,
   sendToUser,
   broadcastPresenceChange,
+  broadcastNodePresenceEvent,
   getOnlineCount,
   isUserOnline,
   connections,

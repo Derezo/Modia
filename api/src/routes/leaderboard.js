@@ -10,6 +10,34 @@ import { gameReadLimiter } from '../middleware/gameplayRateLimiter.js';
 
 const router = express.Router();
 
+/**
+ * Display-name subqueries. Leaderboards show a character name rather than the
+ * account username; `userColumn` is always a fixed SQL identifier from this
+ * file, never request input.
+ */
+
+// Account-level categories (pvp, gold, battles): the active party leader,
+// falling back to the highest-level character.
+function activeCharacterNameSql(userColumn) {
+  return `(
+    SELECT ch.name FROM characters ch
+    WHERE ch.user_id = ${userColumn}
+    ORDER BY (ch.party_slot = 1) DESC NULLS LAST, ch.level DESC, ch.experience DESC, ch.id ASC
+    LIMIT 1
+  )`;
+}
+
+// Level category: the character whose level is being ranked, restricted to
+// the same time window (`timeCondition` references alias `c`).
+function highestLevelCharacterNameSql(userColumn, timeCondition) {
+  return `(
+    SELECT c.name FROM characters c
+    WHERE c.user_id = ${userColumn} ${timeCondition}
+    ORDER BY c.level DESC, c.experience DESC, c.id ASC
+    LIMIT 1
+  )`;
+}
+
 // All routes require authentication
 router.use(authenticate);
 
@@ -104,6 +132,7 @@ async function getPvPLeaderboard(userId, queue, time, limit, offset) {
       ROW_NUMBER() OVER (ORDER BY pr.rating DESC, pr.wins DESC) as rank,
       pr.user_id as "userId",
       u.username,
+      ${activeCharacterNameSql('pr.user_id')} as "characterName",
       pr.rating as value,
       pr.wins,
       pr.losses,
@@ -139,6 +168,7 @@ async function getPvPLeaderboard(userId, queue, time, limit, offset) {
         SELECT
           pr.user_id,
           u.username,
+          ${activeCharacterNameSql('pr.user_id')} as character_name,
           pr.rating,
           pr.wins,
           pr.losses,
@@ -150,7 +180,8 @@ async function getPvPLeaderboard(userId, queue, time, limit, offset) {
           AND (pr.wins > 0 OR pr.losses > 0)
           ${timeCondition}
       )
-      SELECT rank, user_id as "userId", username, rating as value, wins, losses, win_streak as "winStreak"
+      SELECT rank, user_id as "userId", username, character_name as "characterName",
+             rating as value, wins, losses, win_streak as "winStreak"
       FROM ranked
       WHERE user_id = $2`,
       [queue, userId]
@@ -207,6 +238,7 @@ async function getLevelLeaderboard(userId, time, limit, offset) {
       ROW_NUMBER() OVER (ORDER BY uml.max_level DESC, uml.max_exp DESC) as rank,
       uml.user_id as "userId",
       u.username,
+      ${highestLevelCharacterNameSql('uml.user_id', timeCondition)} as "characterName",
       uml.max_level as value,
       uml.max_exp as experience,
       EXISTS(
@@ -246,13 +278,15 @@ async function getLevelLeaderboard(userId, time, limit, offset) {
         SELECT
           uml.user_id,
           u.username,
+          ${highestLevelCharacterNameSql('uml.user_id', timeCondition)} as character_name,
           uml.max_level,
           uml.max_exp,
           ROW_NUMBER() OVER (ORDER BY uml.max_level DESC, uml.max_exp DESC) as rank
         FROM user_max_level uml
         JOIN users u ON u.id = uml.user_id
       )
-      SELECT rank, user_id as "userId", username, max_level as value, max_exp as experience
+      SELECT rank, user_id as "userId", username, character_name as "characterName",
+             max_level as value, max_exp as experience
       FROM ranked
       WHERE user_id = $1`,
       [userId]
@@ -300,6 +334,7 @@ async function getGoldLeaderboard(userId, time, limit, offset) {
       ROW_NUMBER() OVER (ORDER BY u.gold DESC) as rank,
       u.id as "userId",
       u.username,
+      ${activeCharacterNameSql('u.id')} as "characterName",
       u.gold as value,
       EXISTS(
         SELECT 1 FROM character_perfect_weeks cpw
@@ -329,12 +364,13 @@ async function getGoldLeaderboard(userId, time, limit, offset) {
         SELECT
           u.id,
           u.username,
+          ${activeCharacterNameSql('u.id')} as character_name,
           u.gold,
           ROW_NUMBER() OVER (ORDER BY u.gold DESC) as rank
         FROM users u
         ${timeCondition} AND u.gold > 0
       )
-      SELECT rank, id as "userId", username, gold as value
+      SELECT rank, id as "userId", username, character_name as "characterName", gold as value
       FROM ranked
       WHERE id = $1`,
       [userId]
@@ -358,6 +394,7 @@ async function getGoldLeaderboard(userId, time, limit, offset) {
 
 /**
  * Get battle wins leaderboard (PvE battles won)
+ * PvE battles record their owner in player1_id (battles has no user_id).
  */
 async function getBattleLeaderboard(userId, time, limit, offset) {
   // Build time filter
@@ -370,7 +407,7 @@ async function getBattleLeaderboard(userId, time, limit, offset) {
 
   // Count users with victories
   const countResult = await query(
-    `SELECT COUNT(DISTINCT b.user_id) as total
+    `SELECT COUNT(DISTINCT b.player1_id) as total
      FROM battles b
      WHERE b.status = 'victory'
        AND b.battle_type = 'pve'
@@ -382,18 +419,19 @@ async function getBattleLeaderboard(userId, time, limit, offset) {
   const leaderboardResult = await query(
     `WITH battle_stats AS (
       SELECT
-        b.user_id,
+        b.player1_id AS user_id,
         COUNT(*) as wins
       FROM battles b
       WHERE b.status = 'victory'
         AND b.battle_type = 'pve'
         ${timeCondition}
-      GROUP BY b.user_id
+      GROUP BY b.player1_id
     )
     SELECT
       ROW_NUMBER() OVER (ORDER BY bs.wins DESC) as rank,
       bs.user_id as "userId",
       u.username,
+      ${activeCharacterNameSql('bs.user_id')} as "characterName",
       bs.wins as value,
       EXISTS(
         SELECT 1 FROM character_perfect_weeks cpw
@@ -421,24 +459,25 @@ async function getBattleLeaderboard(userId, time, limit, offset) {
     const userResult = await query(
       `WITH battle_stats AS (
         SELECT
-          b.user_id,
+          b.player1_id AS user_id,
           COUNT(*) as wins
         FROM battles b
         WHERE b.status = 'victory'
           AND b.battle_type = 'pve'
           ${timeCondition}
-        GROUP BY b.user_id
+        GROUP BY b.player1_id
       ),
       ranked AS (
         SELECT
           bs.user_id,
           u.username,
+          ${activeCharacterNameSql('bs.user_id')} as character_name,
           bs.wins,
           ROW_NUMBER() OVER (ORDER BY bs.wins DESC) as rank
         FROM battle_stats bs
         JOIN users u ON u.id = bs.user_id
       )
-      SELECT rank, user_id as "userId", username, wins as value
+      SELECT rank, user_id as "userId", username, character_name as "characterName", wins as value
       FROM ranked
       WHERE user_id = $1`,
       [userId]

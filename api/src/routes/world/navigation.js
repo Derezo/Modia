@@ -810,37 +810,30 @@ router.post('/travel', authenticate, travelLimiter, asyncHandler(async (req, res
   );
 
   // Dynamic import to avoid circular dependency
-  const { broadcastToRoom, rooms } = await import('../../websocket/index.js');
+  const { broadcastNodePresenceEvent } = await import('../../websocket/index.js');
 
-  // Broadcast player_left_node to old node room
-  const oldNodeRoom = `node:${currentNodeId}`;
-  if (rooms.has(oldNodeRoom)) {
-    broadcastToRoom(oldNodeRoom, {
-      type: 'player:left_node',
-      payload: {
-        nodeId: currentNodeId,
-        userId: req.user.userId,
-        username: req.user.username,
-        characterName,
-        timestamp: Date.now()
-      }
-    }, req.user.userId);
-  }
-
-  // Broadcast player_entered_node to new node room
-  const newNodeRoom = `node:${parsedTargetNodeId}`;
-  if (rooms.has(newNodeRoom)) {
-    broadcastToRoom(newNodeRoom, {
-      type: 'player:entered_node',
-      payload: {
-        nodeId: parsedTargetNodeId,
-        userId: req.user.userId,
-        username: req.user.username,
-        characterName,
-        timestamp: Date.now()
-      }
-    }, req.user.userId);
-  }
+  // Broadcast player_left_node / player_entered_node to the node rooms.
+  // Privacy-gated: users hiding their online status announce neither.
+  await broadcastNodePresenceEvent(currentNodeId, {
+    type: 'player:left_node',
+    payload: {
+      nodeId: currentNodeId,
+      userId: req.user.userId,
+      username: req.user.username,
+      characterName,
+      timestamp: Date.now()
+    }
+  }, req.user.userId);
+  await broadcastNodePresenceEvent(parsedTargetNodeId, {
+    type: 'player:entered_node',
+    payload: {
+      nodeId: parsedTargetNodeId,
+      userId: req.user.userId,
+      username: req.user.username,
+      characterName,
+      timestamp: Date.now()
+    }
+  }, req.user.userId);
 
   // Get updated stamina info
   const staminaInfo = await staminaService.getStaminaInfo(characterId);
@@ -877,7 +870,10 @@ router.post('/travel', authenticate, travelLimiter, asyncHandler(async (req, res
     currentNode: nodeResult.rows[0],
     stamina: staminaInfo,
     newDiscoveries,
-    playersAtNode: presenceService.getPlayersAtNode(parsedTargetNodeId)
+    playersAtNode: await presenceService.getPlayersAtNodeWithPrivacy(
+      parsedTargetNodeId,
+      { requesterId: req.user.userId }
+    )
   });
 }));
 
@@ -925,7 +921,10 @@ router.get('/current', authenticate, asyncHandler(async (req, res) => {
     currentNode: node,
     region: regionInfo,
     availableActions: actions,
-    playersAtNode: presenceService.getPlayersAtNode(node.id)
+    playersAtNode: await presenceService.getPlayersAtNodeWithPrivacy(
+      node.id,
+      { requesterId: req.user.userId }
+    )
   });
 }));
 
@@ -943,7 +942,10 @@ router.get('/nodes/:id/players', authenticate, asyncHandler(async (req, res) => 
     throw new AppError('Node not found', 404);
   }
 
-  const players = presenceService.getPlayersAtNode(parseInt(id, 10));
+  const players = await presenceService.getPlayersAtNodeWithPrivacy(
+    parseInt(id, 10),
+    { requesterId: req.user.userId }
+  );
 
   res.json({
     nodeId: parseInt(id, 10),

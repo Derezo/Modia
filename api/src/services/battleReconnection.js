@@ -247,9 +247,15 @@ async function handleAbandonTimeout(battleId, playerId) {
     activeUnit.hasActed = true;
     activeUnit.hasMoved = true;
 
+    // The abandoning player's unit is the acting unit for this forced wait.
+    // Semantics: if advancing past its turn produces a mutual knockout in
+    // PvP, the abandoning team loses (checkBattleEnd awards the opponent).
+    // PvE mutual knockouts stay a player defeat regardless.
+    const actingTeamId = battleService.getUnitTeamId(activeUnit);
+
     // Advance to next turn
     battleService.advanceToNextActorWithCT(state);
-    const battleEndResult = battleService.checkBattleEnd(state);
+    const battleEndResult = battleService.checkBattleEnd(state, { actingTeamId });
     if (battleEndResult.status !== 'active') {
       const completion = await completeBattleTerminalTransition({
         battleEnvelope: battle,

@@ -326,9 +326,12 @@ export async function skipPlayerTurn(
   const activeUnit = state.units.find(u => u.id === state.activeUnitId);
 
   if (activeUnit && String(activeUnit.ownerId) === String(playerId)) {
+    // The timed-out unit's team is the acting team: if ending its turn
+    // resolves in a mutual knockout, that team loses in PvP.
+    const actingTeamId = battleService.getUnitTeamId(activeUnit);
     // End this unit's turn
     battleService.advanceToNextActorWithCT(state);
-    const battleEndResult = battleService.checkBattleEnd(state);
+    const battleEndResult = battleService.checkBattleEnd(state, { actingTeamId });
     if (battleEndResult.status !== 'active') {
       const completion = await completeBattleTerminalTransition({
         battleEnvelope: battle,

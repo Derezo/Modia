@@ -213,7 +213,7 @@ describe('battle route enemy-turn revision handoff', () => {
     );
     assert.match(
       actionRoute,
-      /advanceToNextActorWithCT\(state\);[\s\S]*battleEndResult = battleService\.checkBattleEnd\(state\);[\s\S]*battleStatus = battleService\.getBattleStatusString\(battleEndResult\)/
+      /advanceToNextActorWithCT\(state\);[\s\S]*battleEndResult = battleService\.checkBattleEnd\(state, \{ actingTeamId \}\);[\s\S]*battleStatus = battleService\.getBattleStatusString\(battleEndResult\)/
     );
     assert.match(
       actionRoute,
@@ -292,11 +292,11 @@ describe('battle route enemy-turn revision handoff', () => {
     );
     assert.match(
       turnTimer,
-      /advanceToNextActorWithCT\(state\);[\s\S]*const battleEndResult = battleService\.checkBattleEnd\(state\);[\s\S]*if \(battleEndResult\.status !== 'active'\) \{[\s\S]*completeBattleTerminalTransition\(\{[\s\S]*return \{ outcome: 'terminal'/
+      /const actingTeamId = battleService\.getUnitTeamId\(activeUnit\);[\s\S]*advanceToNextActorWithCT\(state\);[\s\S]*const battleEndResult = battleService\.checkBattleEnd\(state, \{ actingTeamId \}\);[\s\S]*if \(battleEndResult\.status !== 'active'\) \{[\s\S]*completeBattleTerminalTransition\(\{[\s\S]*return \{ outcome: 'terminal'/
     );
     assert.match(
       reconnection,
-      /advanceToNextActorWithCT\(state\);[\s\S]*const battleEndResult = battleService\.checkBattleEnd\(state\);[\s\S]*if \(battleEndResult\.status !== 'active'\) \{[\s\S]*completeBattleTerminalTransition\(\{[\s\S]*return \{[\s\S]*outcome: 'terminal'/
+      /const actingTeamId = battleService\.getUnitTeamId\(activeUnit\);[\s\S]*advanceToNextActorWithCT\(state\);[\s\S]*const battleEndResult = battleService\.checkBattleEnd\(state, \{ actingTeamId \}\);[\s\S]*if \(battleEndResult\.status !== 'active'\) \{[\s\S]*completeBattleTerminalTransition\(\{[\s\S]*return \{[\s\S]*outcome: 'terminal'/
     );
   });
 

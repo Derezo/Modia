@@ -108,7 +108,13 @@ async function getOnlinePlayers(options = {}) {
       pp.custom_message,
       pp.current_node_id,
       pp.last_activity,
-      u.username
+      u.username,
+      (
+        SELECT c.name FROM characters c
+        WHERE c.user_id = pp.user_id
+        ORDER BY (c.party_slot = 1) DESC NULLS LAST, c.level DESC, c.id ASC
+        LIMIT 1
+      ) AS character_name
     FROM player_presence pp
     JOIN users u ON pp.user_id = u.id
     WHERE pp.status != 'offline'
@@ -143,6 +149,8 @@ async function getOnlinePlayers(options = {}) {
   return result.rows.map(row => ({
     userId: row.user_id,
     username: row.username,
+    // Active party leader (falls back to highest level); Tavern shows this.
+    characterName: row.character_name ?? null,
     status: row.status,
     customMessage: row.custom_message,
     currentNodeId: row.current_node_id,
@@ -472,9 +480,11 @@ async function getPresenceWithPrivacy(userId) {
 /**
  * Get all players at a node, filtered by privacy settings
  * @param {number} nodeId - Node ID
+ * @param {Object} [options]
+ * @param {number} [options.requesterId] - Requesting user; always kept in their own list
  * @returns {Promise<Array>} Array of player info, excluding those who hide online status
  */
-async function getPlayersAtNodeWithPrivacy(nodeId) {
+async function getPlayersAtNodeWithPrivacy(nodeId, { requesterId } = {}) {
   if (!nodePresence.has(nodeId)) {
     return [];
   }
@@ -485,6 +495,9 @@ async function getPlayersAtNodeWithPrivacy(nodeId) {
   // Filter out players who have showOnlineStatus disabled
   const filteredPlayers = await Promise.all(
     players.map(async (player) => {
+      if (requesterId && Number(player.userId) === Number(requesterId)) {
+        return player;
+      }
       const showsOnline = await userSettingsService.showsOnlineStatus(player.userId);
       return showsOnline ? player : null;
     })

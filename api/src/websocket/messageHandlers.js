@@ -55,7 +55,8 @@ import {
   removeUserFromRoom,
   getRoomUsers,
   isUserInRoom,
-  broadcastToRoom
+  broadcastToRoom,
+  broadcastNodePresenceEvent
 } from './roomManager.js';
 
 // ============================================================
@@ -933,14 +934,17 @@ async function handleJoinNode(ws, userId, username, payload) {
 
     addUserToRoom(nodeRoom, userId);
 
-    const playersAtNode = presenceService.getPlayersAtNode(nodeId);
+    const playersAtNode = await presenceService.getPlayersAtNodeWithPrivacy(
+      nodeId,
+      { requesterId: userId }
+    );
 
     ws.send(JSON.stringify({
       type: 'node_room_joined',
       payload: { nodeId, playersAtNode }
     }));
 
-    broadcastToRoom(nodeRoom, {
+    await broadcastNodePresenceEvent(nodeId, {
       type: 'player:entered_node',
       payload: { nodeId, userId, username, timestamp: Date.now() }
     }, userId);
@@ -959,10 +963,12 @@ function handleLeaveNode(userId, username, payload) {
     const nodeRoom = `node:${nodeId}`;
 
     if (isUserInRoom(nodeRoom, userId)) {
-      broadcastToRoom(nodeRoom, {
+      // Privacy-gated and fire-and-forget; the leaver is excluded from
+      // delivery, so removing them first does not change who is notified.
+      broadcastNodePresenceEvent(nodeId, {
         type: 'player:left_node',
         payload: { nodeId, userId, username, timestamp: Date.now() }
-      }, userId);
+      }, userId).catch(() => {});
 
       removeUserFromRoom(nodeRoom, userId);
     }

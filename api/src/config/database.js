@@ -15,6 +15,14 @@ pg.types.setTypeParser(1114, (val) => {
   return val === null ? null : new Date(val + 'Z');
 });
 
+// The write side must match: node-postgres serializes Date parameters in the
+// process's LOCAL time by default, and a TIMESTAMP column drops the offset. A
+// Date read back as UTC (above) and written again (e.g. quest period_start /
+// period_end) would shift by the process UTC offset; on a UTC-4 host, daily
+// quests assigned after 20:00 UTC were born already expired. Serialize Dates
+// as UTC so reads and writes round-trip.
+pg.defaults.parseInputDatesAsUTC = true;
+
 // Fix BIGINT parsing: PostgreSQL BIGINT is returned as string by node-postgres
 // because JavaScript Number can't safely represent all 64-bit integers.
 // For game values (XP, gold, scores), we're well under MAX_SAFE_INTEGER (9 quadrillion).
