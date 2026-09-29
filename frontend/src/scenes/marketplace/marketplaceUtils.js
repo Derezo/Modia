@@ -73,7 +73,7 @@ export function formatListingStats(listing) {
   return entries.map(([k, v]) => {
     const color = typeof v === 'number' && v < 0 ? '#8b2a2a' : '#3d6b35';
     return `<div style="display: flex; justify-content: space-between; padding: 2px 0;">
-      <span style="color: #5a4a3a;">${escapeHtml(formatSharedStatName(k, true))}</span>
+      <span style="color: #5a4a3a;">${escapeHtml(formatSharedStatName(k))}</span>
       <span style="color: ${color}; font-family: Consolas, monospace;">${escapeHtml(formatStatAmount(k, v))}</span>
     </div>`;
   }).join('');
@@ -89,3 +89,37 @@ export const RARITY_COLORS = {
   epic: '#6b4488',
   legendary: '#aa8833'
 };
+
+/**
+ * Build the arguments for POST /marketplace/listings from a sellable item.
+ *
+ * Sellable inventory comes from the user's shared item pool, so the rows
+ * carry no character id. The listing is created on behalf of the character
+ * the player is trading as (the same id MarketplaceTradePanel sends).
+ * @param {Object} item - Sellable item from getSellableInventory
+ * @param {Object|null} activeCharacter - Active character from game state
+ * @returns {{ characterId: number, characterItemId: number }}
+ * @throws {Error} When there is no active character or item instance id
+ */
+export function buildListingRequest(item, activeCharacter) {
+  const characterId = Number.parseInt(activeCharacter?.id, 10);
+  if (!Number.isInteger(characterId)) {
+    throw new Error('Select a character before listing items for sale.');
+  }
+  const characterItemId = Number.parseInt(item?.instanceId, 10);
+  if (!Number.isInteger(characterItemId)) {
+    throw new Error('This item cannot be listed.');
+  }
+  return { characterId, characterItemId };
+}
+
+/**
+ * Asking price of one of the user's listings. GET /marketplace/my-listings
+ * returns it as `price` (browse listings use `askPrice`).
+ * @param {Object} listing
+ * @returns {number}
+ */
+export function listingPrice(listing) {
+  const value = Number(listing?.price ?? listing?.askPrice);
+  return Number.isFinite(value) ? value : 0;
+}

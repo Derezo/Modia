@@ -154,11 +154,9 @@ export class ItemIcon {
 
     const itemType = options.itemType || item.item_type || item.itemType || item.type || 'weapon';
     const rarity = options.rarity || item.rarity || 'common';
-    const augments = (options.augments || item.augments || [])
-      .map(augment => typeof augment === 'string'
-        ? augment
-        : (augment?.category || augment?.type || augment?.name))
-      .filter(Boolean);
+    // Pass augment objects through whole: the compositor resolves each one's
+    // category, effect type or stat to an overlay (resolveAugmentOverlayId).
+    const augments = (options.augments || item.augments || []).filter(Boolean);
     const size = options.size || 'md';
 
     return overlayCompositor.composite({

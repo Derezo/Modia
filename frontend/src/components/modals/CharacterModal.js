@@ -44,17 +44,19 @@ import {
   getEquipRestriction,
   RARITY_TEXT_COLORS
 } from '../../utils/statDisplay.js';
-import { resolveAvailableSkillXp } from './characterModalModel.js';
+import { resolveAvailableSkillXp, buildStatSummary } from './characterModalModel.js';
 
 const STYLE_ID = 'character-modal-styles';
 
-// Equipment slot configuration
-const EQUIPMENT_SLOTS = [
+// Equipment slot configuration.
+// No item template uses the legs slot (armor templates are head/body/feet
+// only), so it is not listed: an always-empty slot reads as missing gear.
+// Off Hand stays because main_hand weapons may be dual-wielded there.
+export const EQUIPMENT_SLOTS = [
   { key: 'head', name: 'Head' },
   { key: 'body', name: 'Body' },
   { key: 'main_hand', name: 'Main Hand' },
   { key: 'off_hand', name: 'Off Hand' },
-  { key: 'legs', name: 'Legs' },
   { key: 'feet', name: 'Feet' },
   { key: 'accessory', name: 'Accessory' }
 ];
@@ -207,7 +209,13 @@ export class CharacterModal {
       }
 
       .character-modal-stat-label {
-        color: ${PARCHMENT_COLORS.text.muted};
+        color: ${PARCHMENT_COLORS.text.secondary};
+      }
+
+      .character-modal-stat-bonus {
+        margin-left: 2px;
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
+        color: ${PARCHMENT_COLORS.state.success};
       }
 
       .character-modal-stat-value {
@@ -430,13 +438,16 @@ export class CharacterModal {
   async loadData() {
     const requests = [
       this.game.api.getCharacter(this.characterId),
-      this.game.api.getCharacterSkills(this.characterId)
+      this.game.api.getCharacterSkills(this.characterId),
+      this.skillsOnly ? Promise.resolve(null) : this.game.api.getInventory(this.characterId),
+      // Gear-inclusive stats for the stat strip; base stats if this fails
+      this.game.api.getCharacterStats
+        ? this.game.api.getCharacterStats(this.characterId).catch(() => null)
+        : Promise.resolve(null)
     ];
-    if (!this.skillsOnly) {
-      requests.push(this.game.api.getInventory(this.characterId));
-    }
 
-    const [charData, skillsData, equipData] = await Promise.all(requests);
+    const [charData, skillsData, equipData, statsData] = await Promise.all(requests);
+    this.effectiveStats = statsData?.stats || statsData || null;
 
     this.character = charData.character || charData;
     this.equipment = this.skillsOnly ? {} : (equipData?.equipped || {});
@@ -531,22 +542,13 @@ export class CharacterModal {
    * @returns {string} HTML
    */
   renderStatsSummary(char) {
-    const maxHp = char.hp_max || 0;
-    const maxMp = char.mp_max || 0;
-
-    const stats = [
-      { label: 'HP', value: maxHp },
-      { label: 'MP', value: maxMp },
-      { label: 'STR', value: char.strength },
-      { label: 'INT', value: char.intelligence },
-      { label: 'AGI', value: char.agility },
-      { label: 'VIT', value: char.vitality }
-    ];
-
-    return stats.map(s => `
-      <div class="character-modal-stat">
+    // Totals include equipped gear, like battle does; the gear share is shown
+    // as a small "+N" so the base value is still readable.
+    return buildStatSummary(char, this.effectiveStats).map(s => `
+      <div class="character-modal-stat"${s.bonus ? ` title="${s.value - s.bonus} base + ${s.bonus} from equipment"` : ''}>
         <span class="character-modal-stat-label">${s.label}:</span>
         <span class="character-modal-stat-value">${s.value}</span>
+        ${s.bonus ? `<span class="character-modal-stat-bonus">(${s.bonus > 0 ? '+' : ''}${s.bonus})</span>` : ''}
       </div>
     `).join('');
   }

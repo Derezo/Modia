@@ -31,6 +31,32 @@ const SIZE_MAP = {
   xl: { mobile: 48, tablet: 40, desktop: 32 }
 };
 
+/**
+ * Glyph shown in the placeholder when an icon file is missing:
+ * the first letter of the icon name, or a neutral dot.
+ * @param {string} name
+ * @returns {string}
+ */
+export function iconPlaceholderGlyph(name) {
+  const match = String(name || '').match(/[a-z0-9]/i);
+  return match ? match[0].toUpperCase() : '\u2022';
+}
+
+/**
+ * Markup for the placeholder that replaces a missing icon image.
+ * Hidden by default when it follows an <img data-image-fallback>; shown by the
+ * CSP-safe capture-phase handler in utils/imageFallback.js on load error.
+ * @param {string} name - Icon name (for the glyph)
+ * @param {number} pixelSize - Rendered size in px
+ * @param {boolean} visible - Render visible immediately (no image to try)
+ * @returns {string}
+ */
+function placeholderHtml(name, pixelSize, visible) {
+  const display = visible ? 'inline-flex' : 'none';
+  return `<span class="modia-icon__placeholder" aria-hidden="true"
+         style="display: ${display}; width: ${pixelSize}px; height: ${pixelSize}px; font-size: ${Math.max(9, Math.round(pixelSize * 0.55))}px;">${escapeHtml(iconPlaceholderGlyph(name))}</span>`;
+}
+
 export class Icon {
   /**
    * Static size map for external reference
@@ -71,6 +97,9 @@ export class Icon {
     /** @type {HTMLElement|null} */
     this.labelElement = null;
 
+    /** @type {HTMLElement|null} Placeholder shown when the icon image is missing */
+    this.placeholderElement = null;
+
     /** @type {Function|null} */
     this.unsubscribe = null;
 
@@ -106,8 +135,17 @@ export class Icon {
     // Empty alt when label exists to avoid duplication if image fails to load
     this.imgElement.alt = this.label ? '' : `${this.category}-${this.name}`;
     this.imgElement.draggable = false;
-    this.updateImageSource();
+    this.imgElement.addEventListener('error', () => this.showPlaceholder());
     this.element.appendChild(this.imgElement);
+
+    // Placeholder shown instead of a broken image when the icon file is missing
+    this.placeholderElement = document.createElement('span');
+    this.placeholderElement.className = 'modia-icon__placeholder';
+    this.placeholderElement.setAttribute('aria-hidden', 'true');
+    this.placeholderElement.style.display = 'none';
+    this.element.appendChild(this.placeholderElement);
+
+    this.updateImageSource();
 
     // Create label if provided
     if (this.label) {
@@ -169,11 +207,37 @@ export class Icon {
     if (!this.imgElement) return;
 
     const pixelSize = this.getPixelSize();
-    const path = iconLoader.getIconPath(this.category, this.name, pixelSize);
-
-    this.imgElement.src = path;
     this.imgElement.style.width = `${pixelSize}px`;
     this.imgElement.style.height = `${pixelSize}px`;
+    if (this.placeholderElement) {
+      this.placeholderElement.textContent = iconPlaceholderGlyph(this.name);
+      this.placeholderElement.style.width = `${pixelSize}px`;
+      this.placeholderElement.style.height = `${pixelSize}px`;
+      this.placeholderElement.style.fontSize = `${Math.max(9, Math.round(pixelSize * 0.55))}px`;
+    }
+
+    if (!this.category || !this.name) {
+      this.showPlaceholder();
+      return;
+    }
+
+    // Reset any previous failure before trying the new source
+    this.imgElement.style.display = '';
+    if (this.placeholderElement) this.placeholderElement.style.display = 'none';
+    this.imgElement.src = iconLoader.getIconPath(this.category, this.name, pixelSize);
+  }
+
+  /**
+   * Replace the image with the placeholder (missing or failed icon)
+   */
+  showPlaceholder() {
+    if (this.imgElement) {
+      this.imgElement.removeAttribute('src');
+      this.imgElement.style.display = 'none';
+    }
+    if (this.placeholderElement) {
+      this.placeholderElement.style.display = 'inline-flex';
+    }
   }
 
   /**
@@ -266,6 +330,7 @@ export class Icon {
     this.element = null;
     this.imgElement = null;
     this.labelElement = null;
+    this.placeholderElement = null;
   }
 
   /**
@@ -312,15 +377,28 @@ export class Icon {
       ? `<span class="modia-icon__label">${escapeHtml(label)}</span>`
       : '';
 
+    const wrapperOpen = `<span class="${classes.join(' ')}" ${style} title="${escapeHtml(title)}">`;
+
+    // No icon to load: render the placeholder directly rather than a broken <img>
+    if (!category || !name) {
+      return `${wrapperOpen}
+      ${placeholderHtml(name, pixelSize, true)}
+      ${labelHtml}
+    </span>`;
+    }
+
     // Build image path using IconLoader for consistent normalization
     const imgPath = iconLoader.getIconPath(category, name, pixelSize);
 
     // Use descriptive alt for screen readers, but avoid label duplication when image fails
     const altText = label ? '' : `${category}-${name}`;
 
-    return `<span class="${classes.join(' ')}" ${style} title="${escapeHtml(title)}">
-      <img class="modia-icon__img" src="${imgPath}" alt="${escapeHtml(altText)}"
-           style="width: ${pixelSize}px; height: ${pixelSize}px;" draggable="false">
+    // data-image-fallback: the CSP-safe capture-phase handler (utils/imageFallback.js)
+    // hides the image and reveals the following placeholder if the file is missing.
+    return `${wrapperOpen}
+      <img class="modia-icon__img" src="${escapeHtml(imgPath)}" alt="${escapeHtml(altText)}"
+           style="width: ${pixelSize}px; height: ${pixelSize}px;" draggable="false"
+           data-image-fallback data-fallback-display="inline-flex">${placeholderHtml(name, pixelSize, false)}
       ${labelHtml}
     </span>`;
   }
@@ -426,10 +504,19 @@ export class Icon {
         opacity: 0;
       }
 
-      /* Error fallback */
-      .modia-icon__img.error {
-        opacity: 0.3;
-        filter: grayscale(100%);
+      /* Missing-icon placeholder */
+      .modia-icon__placeholder {
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        box-sizing: border-box;
+        border: 1px solid rgba(139, 115, 85, 0.6);
+        border-radius: 3px;
+        background: rgba(139, 115, 85, 0.18);
+        color: #5a4a3a;
+        font-family: 'Georgia', 'Times New Roman', serif;
+        font-weight: bold;
+        line-height: 1;
       }
     `;
     document.head.appendChild(style);

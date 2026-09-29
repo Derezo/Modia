@@ -5,7 +5,9 @@
 import { ItemDataTable } from '../../../components/ItemDataTable/index.js';
 import { ItemIcon } from '../../../components/ItemIcon.js';
 import { parchmentToast } from '../../../ui/parchment/ParchmentToast.js';
-import { formatListingStats, getRarityName } from '../marketplaceUtils.js';
+import { buildListingRequest, formatListingStats, getRarityName, RARITY_COLORS } from '../marketplaceUtils.js';
+import { escapeHtml } from '../../../utils/escapeHtml.js';
+import { describeAugment } from '../../../utils/statDisplay.js';
 
 /**
  * Render the Sell Items (Inventory) tab
@@ -79,7 +81,6 @@ function transformSellableItemForTable(item) {
     id: item.instanceId,
     instanceId: item.instanceId,
     templateId: item.templateId,
-    characterId: item.characterId,
 
     // Display
     name: item.name,
@@ -114,6 +115,13 @@ function showSellItemPanel(item, sidePanel, context) {
 
   const suggestedPrice = originalItem.estimatedPrice || originalItem.basePrice || 100;
   const statsHtml = formatListingStats(originalItem);
+  const rarity = getRarityName(originalItem.rarity);
+  const rarityLabel = rarity.charAt(0).toUpperCase() + rarity.slice(1);
+  const augmentsHtml = (originalItem.augments || [])
+    .map(aug => describeAugment(aug).text)
+    .filter(Boolean)
+    .map(text => `<div style="padding: 2px 0; color: #2d2418; font-size: 12px;">${escapeHtml(text)}</div>`)
+    .join('');
 
   sidePanel.innerHTML = `
     <div class="ui-panel" style="flex: 1; display: flex; flex-direction: column;">
@@ -123,14 +131,24 @@ function showSellItemPanel(item, sidePanel, context) {
           <div data-sell-item-icon style="display: flex; justify-content: center; margin-bottom: 8px;">
             ${ItemIcon.html({ item, size: 'lg' })}
           </div>
-          <div style="font-size: 18px; font-weight: bold; color: #2d2418;">${item.name}</div>
-          <div style="font-size: 12px; color: #5a4a3a; text-transform: capitalize;">${item.type || 'Item'}</div>
-          <div style="font-size: 12px; color: #7a6a5a; margin-top: 4px;">From: ${originalItem.characterName}</div>
+          <div style="font-size: 18px; font-weight: bold; color: #2d2418;">${escapeHtml(item.name)}</div>
+          <div style="font-size: 12px; color: #5a4a3a;">
+            <span style="font-weight: bold; color: ${RARITY_COLORS[rarity] || RARITY_COLORS.common};">${escapeHtml(rarityLabel)}</span>
+            <span style="text-transform: capitalize;">${escapeHtml(item.type || 'Item')}</span>
+          </div>
+          <div style="font-size: 12px; color: #7a6a5a; margin-top: 4px;">Listing as: ${escapeHtml(context.activeCharacter?.name || 'Unknown')}</div>
         </div>
 
         ${statsHtml ? `
           <div style="margin-bottom: 16px; padding: 10px; background: rgba(139, 115, 85, 0.1); border-radius: 4px;">
             ${statsHtml}
+          </div>
+        ` : ''}
+
+        ${augmentsHtml ? `
+          <div style="margin-bottom: 16px;">
+            <div style="color: #5a4a3a; font-size: 12px; margin-bottom: 4px; text-transform: uppercase;">Augments</div>
+            ${augmentsHtml}
           </div>
         ` : ''}
 
@@ -154,6 +172,10 @@ function showSellItemPanel(item, sidePanel, context) {
             color: #2d2418;
             box-sizing: border-box;
           " />
+        </div>
+
+        <div style="margin-bottom: 12px; font-size: 11px; color: #5a4a3a; font-style: italic;">
+          A 5% seller fee is taken from the sale price (3% with the Merchant's Seal relic).
         </div>
 
         <button id="create-listing-btn" style="
@@ -209,11 +231,8 @@ async function handleCreateListing(item, price, context) {
   const { game, updateTabs, renderContent } = context;
 
   try {
-    await game.api.createItemListing(
-      item.characterId,
-      item.instanceId,
-      price
-    );
+    const { characterId, characterItemId } = buildListingRequest(item, context.activeCharacter);
+    await game.api.createItemListing(characterId, characterItemId, price);
 
     parchmentToast.success('Listing Created', `${item.name} listed for ${price.toLocaleString()}g`);
 

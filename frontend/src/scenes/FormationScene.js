@@ -7,6 +7,10 @@ import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { PARCHMENT_COLORS, PARCHMENT_SPACING, getParchmentGradient, getParchmentScrollbarCSS } from '../ui/parchment/ParchmentTheme.js';
 import { responsive } from '../core/Responsive.js';
 import { Icon } from '../components/Icon.js';
+import { hasEquipmentUpgrade } from '../utils/statDisplay.js';
+
+/** Equipment slots that item templates use; checked for the upgrade badge */
+const UPGRADE_SLOTS = ['head', 'body', 'main_hand', 'feet', 'accessory'];
 
 /**
  * FormationScene - Unified party management hub
@@ -168,9 +172,11 @@ export class FormationScene extends Scene {
         <div class="formation-header-actions">
           <button class="parchment-btn parchment-btn-primary" id="items-btn" aria-label="Items">
             ${Icon.html('menu', 'inventory', { label: 'Items', size: 'md' })}
+            ${showLabelText ? '' : '<span class="formation-btn-text">Items</span>'}
           </button>
           <button class="parchment-btn parchment-btn-secondary" id="back-btn" aria-label="Back">
             ${Icon.html('menu', 'back', { label: 'Back', size: 'md' })}
+            ${showLabelText ? '' : '<span class="formation-btn-text">Back</span>'}
           </button>
         </div>
       </div>
@@ -368,6 +374,14 @@ export class FormationScene extends Scene {
         border-color: #2d5030;
       }
 
+      /* Phones: Icon.html drops its label, but these two header buttons
+         have room for a short word, which the faint Back icon needs. */
+      .formation-btn-text {
+        margin-left: 4px;
+        font-size: 12px;
+        font-weight: bold;
+      }
+
       /* Responsive adjustments */
       @media (max-width: 600px) {
         .formation-header {
@@ -476,20 +490,8 @@ export class FormationScene extends Scene {
       return false;
     }
 
-    // Only check slots that have content - legs and off_hand have no templates currently
-    const slots = ['head', 'body', 'main_hand', 'feet', 'accessory'];
-
-    for (const slot of slots) {
-      const current = equipment[slot];
-      const currentPower = this.calculateItemPower(current);
-
-      const better = this.inventory
-        .filter(item => this.canEquipInSlot(item, slot, character.class, character.level))
-        .find(item => this.calculateItemPower(item) > currentPower);
-
-      if (better) return true;
-    }
-    return false;
+    // Slots that item templates actually use (no legs or off_hand templates exist)
+    return hasEquipmentUpgrade(equipment, this.inventory || [], character, UPGRADE_SLOTS);
   }
 
   /**
@@ -501,66 +503,6 @@ export class FormationScene extends Scene {
     const experience = character.experience || 0;
     const spentXp = character.spent_xp || character.spentXp || 0;
     return (experience - spentXp) > 0;
-  }
-
-  /**
-   * Calculate item power for comparison
-   * @param {Object} item - Item data
-   * @returns {number}
-   */
-  calculateItemPower(item) {
-    if (!item) return 0;
-    let power = (item.attack || 0) + (item.defense || 0);
-    const stats = { ...(item.baseStats || {}), ...(item.bonusStats || {}) };
-    Object.values(stats).forEach(v => { power += v || 0; });
-    return power;
-  }
-
-  /**
-   * Check if item can be equipped in slot
-   * Finding 68/111: Added level check, equipment slot check, and snake_case support
-   * @param {Object} item - Item data
-   * @param {string} slotKey - Slot key
-   * @param {string} charClass - Character class
-   * @param {number} charLevel - Character level
-   * @returns {boolean}
-   */
-  canEquipInSlot(item, slotKey, charClass, charLevel = 1) {
-    if (!item) return false;
-
-    // Check level requirement (support both camelCase and snake_case)
-    const levelReq = item.levelRequirement ?? item.level_requirement ?? 1;
-    if (charLevel < levelReq) return false;
-
-    // Check equipment slot matches (Finding 111)
-    // Support both camelCase and snake_case for API compatibility
-    const itemSlot = item.equipmentSlot ?? item.equipment_slot ?? null;
-    if (itemSlot && itemSlot !== slotKey) return false;
-
-    const slotMap = {
-      head: ['armor'],
-      body: ['armor'],
-      legs: ['armor'],
-      feet: ['armor'],
-      main_hand: ['weapon'],
-      off_hand: ['weapon', 'shield'],
-      accessory: ['accessory']
-    };
-
-    const validTypes = slotMap[slotKey] || [];
-    if (!validTypes.includes(item.type)) return false;
-
-    // Check class restrictions (support both camelCase and snake_case)
-    const restrictions = item.classRestrictions ?? item.class_restriction ?? null;
-    if (restrictions) {
-      const restrArray = Array.isArray(restrictions) ? restrictions : [restrictions];
-      if (restrArray.length > 0) {
-        const allowed = restrArray.some(c => c.toLowerCase() === charClass?.toLowerCase());
-        if (!allowed) return false;
-      }
-    }
-
-    return true;
   }
 
   /**

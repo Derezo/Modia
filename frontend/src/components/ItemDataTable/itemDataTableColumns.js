@@ -25,6 +25,7 @@
  */
 
 import { Icon } from '../Icon.js';
+import { AUGMENT_FILTER_OPTIONS } from './augmentFilter.js';
 import { ItemIcon } from '../ItemIcon.js';
 
 import { escapeHtml, escapeHtmlAttribute } from '../../utils/escapeHtml.js';
@@ -97,7 +98,7 @@ function capitalize(str) {
  *
  * @property {function} rarity - Empty renderer (rarity shown via row border)
  * @property {function} iconName - Icon + item name with rarity coloring
- * @property {function} quantity - Stack quantity (hidden if <= 1)
+ * @property {function} quantity - Stack quantity (blank only when 0 or missing)
  * @property {function} price - Price in gold with 'g' suffix
  * @property {function} stats - Top 3 stats abbreviated (e.g., "+5 STR, +3 INT")
  * @property {function} augments - Augment icons (max 4)
@@ -159,12 +160,14 @@ export const COLUMN_RENDERERS = {
 
   /**
    * Quantity column. Unlimited stock (caravan starter gear) renders as infinity.
+   * A single item shows "x1" rather than a blank cell, so the column never
+   * looks empty (an inventory of unique gear used to show nothing at all).
    */
   quantity: (item) => {
     if (item.unlimitedStock === true || item.quantity === Infinity) {
       return '<span class="item-data-table-quantity item-data-table-quantity--unlimited" title="Unlimited stock">&infin;</span>';
     }
-    if (!item.quantity || item.quantity <= 1) return '';
+    if (!item.quantity || item.quantity < 1) return '';
     return `<span class="item-data-table-quantity">x${escapeHtml(String(item.quantity))}</span>`;
   },
 
@@ -476,7 +479,7 @@ export const COLUMN_CONFIGS = {
   estimatedPrice: {
     key: 'estimatedPrice',
     label: 'Est. Price',
-    width: '90px',
+    width: '112px',
     sortable: true,
     sortKey: 'estimatedPrice',
     align: 'right',
@@ -544,7 +547,7 @@ export const COLUMN_PRESETS = {
  *
  * @property {FilterOption[]} type - Item type filter options (weapon, armor, etc.)
  * @property {FilterOption[]} rarity - Rarity filter options (common to legendary)
- * @property {FilterOption[]} augment - Augment category filter options (fire, ice, etc.)
+ * @property {FilterOption[]} augment - Augment family filter options (see augmentFilter.js)
  *
  * @example
  * // Use in a select element
@@ -571,21 +574,8 @@ export const FILTER_OPTIONS = {
     { value: 'legendary', label: 'Legendary' }
   ],
 
-  augment: [
-    { value: '', label: 'Any Augment' },
-    { value: 'fire', label: 'Fire' },
-    { value: 'ice', label: 'Ice' },
-    { value: 'lightning', label: 'Lightning' },
-    { value: 'poison', label: 'Poison' },
-    { value: 'holy', label: 'Holy' },
-    { value: 'dark', label: 'Dark' },
-    { value: 'strength', label: 'Strength' },
-    { value: 'intelligence', label: 'Intelligence' },
-    { value: 'agility', label: 'Agility' },
-    { value: 'vitality', label: 'Vitality' },
-    { value: 'critical', label: 'Critical' },
-    { value: 'defense', label: 'Defense' }
-  ]
+  // Augment families covering every drop-table category (see augmentFilter.js)
+  augment: AUGMENT_FILTER_OPTIONS
 };
 
 export default {

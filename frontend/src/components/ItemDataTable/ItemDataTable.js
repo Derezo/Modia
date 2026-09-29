@@ -6,6 +6,7 @@
  */
 
 import { injectItemDataTableStyles } from './itemDataTableStyles.js';
+import { itemMatchesAugmentFilter } from './augmentFilter.js';
 import { COLUMN_PRESETS } from './itemDataTableColumns.js';
 import { ItemDataTableFilters } from './ItemDataTableFilters.js';
 import { ItemDataTableHeader } from './ItemDataTableHeader.js';
@@ -302,14 +303,9 @@ export class ItemDataTable {
         return false;
       }
 
-      // Augment filter
-      if (filters.augment) {
-        const hasAugment = item.augments?.some(aug =>
-          aug.category === filters.augment || aug.type === filters.augment
-        );
-        if (!hasAugment) {
-          return false;
-        }
+      // Augment filter: matches category, type, effect type or rolled stat
+      if (filters.augment && !itemMatchesAugmentFilter(item, filters.augment)) {
+        return false;
       }
 
       return true;

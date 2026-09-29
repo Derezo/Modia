@@ -12,7 +12,18 @@ import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { Icon } from '../components/Icon.js';
 import { ItemIcon } from '../components/ItemIcon.js';
 import { ItemDataTable } from '../components/ItemDataTable/index.js';
-import { escapeHtml } from '../utils/escapeHtml.js';
+import { escapeHtml, escapeHtmlAttribute } from '../utils/escapeHtml.js';
+import {
+  formatStatName,
+  formatStatValue,
+  formatStatAmount,
+  sumItemStats,
+  describeAugment,
+  formatItemEffects,
+  ITEM_EFFECT_KEYS,
+  normalizeRarity,
+  RARITY_TEXT_COLORS
+} from '../utils/statDisplay.js';
 import {
   formatCaravanRefreshCountdown,
   normalizeCaravanShopData
@@ -587,6 +598,38 @@ export class ShopScene extends Scene {
         color: ${P.state.success};
       }
 
+      .detail-stat-value.negative {
+        color: ${P.state.error};
+      }
+
+      .detail-stat-row.effect-row .detail-stat-value {
+        color: ${P.text.primary};
+        font-weight: normal;
+        text-align: right;
+      }
+
+      .detail-stat-row.augment-row .detail-stat-value {
+        font-weight: normal;
+        text-align: right;
+        max-width: 70%;
+      }
+
+      .detail-stat-row.augment-row.inactive .detail-stat-value {
+        color: ${P.text.secondary};
+      }
+
+      .augment-inactive-note {
+        display: block;
+        margin-top: 2px;
+        font-size: var(--font-size-xs, 11px);
+        font-style: italic;
+        color: ${P.text.muted};
+      }
+
+      .detail-rarity {
+        font-weight: bold;
+      }
+
       .detail-desc {
         color: ${P.text.secondary};
         font-size: var(--font-size-md, 14px);
@@ -602,6 +645,22 @@ export class ShopScene extends Scene {
         margin-top: auto;
         padding-top: 16px;
         border-top: 1px solid ${P.border};
+      }
+
+      /* Stays in view at the bottom of the scrolling detail panel, so the
+         Purchase/Sell button is never below the fold on short screens.
+         Scoped: GuildAdvancementScene uses the same class names. */
+      .shop-detail-panel .detail-actions {
+        position: sticky;
+        bottom: -16px;
+        margin-left: -16px;
+        margin-right: -16px;
+        margin-bottom: -16px;
+        padding-left: 16px;
+        padding-right: 16px;
+        padding-bottom: 16px;
+        background: linear-gradient(to bottom, ${P.light}, ${P.mid});
+        z-index: 1;
       }
 
       .quantity-selector {
@@ -1065,6 +1124,9 @@ export class ShopScene extends Scene {
     const isSoldOut = isCaravan && !unlimited && (maxQty ?? 0) <= 0;
 
     const statsHtml = this.renderDetailStats(item);
+    // Rarity was only conveyed by colour; spell it out
+    const rarityName = normalizeRarity(item.rarity);
+    const rarityLabel = rarityName.charAt(0).toUpperCase() + rarityName.slice(1);
 
     // Generate composited 64x64 item image with rarity/augment overlays
     const itemImageHtml = await ItemIcon.compositeHtml({
@@ -1089,7 +1151,7 @@ export class ShopScene extends Scene {
       </div>
       <div class="detail-header">
         <div class="detail-name">${escapeHtml(item.name || '')}${badgesHtml}</div>
-        <div class="detail-type">${item.type}${item.equipmentSlot ? ` - ${this.formatSlot(item.equipmentSlot)}` : ''}</div>
+        <div class="detail-type"><span class="detail-rarity" style="color: ${RARITY_TEXT_COLORS[rarityName]};">${escapeHtml(rarityLabel)}</span> ${escapeHtml(item.type || '')}${item.equipmentSlot ? ` - ${escapeHtml(this.formatSlot(item.equipmentSlot))}` : ''}</div>
       </div>
 
       ${item.description ? `<div class="detail-desc">${escapeHtml(item.description || '')}</div>` : ''}
@@ -1152,80 +1214,71 @@ export class ShopScene extends Scene {
   }
 
   /**
-   * Render stats for the detail panel
-   * Finding 74: Use baseStats+bonusStats for sell items (rolled item data)
+   * Render stats for the detail panel.
+   * Sell items carry rolled baseStats + bonusStats (a bonus that shares a key
+   * with a base stat adds to it); buy items carry template statBonuses.
+   * Consumable effects (potions, scrolls, boxes) are listed as effect rows.
    * @param {Object} item - Item data
    * @returns {string} HTML string
    */
   renderDetailStats(item) {
-    // For sell items, backend returns baseStats and bonusStats (rolled item data)
-    // For buy items, statBonuses contains template stats
-    // Merge all stat sources to show combined stats
-    const baseStats = item.baseStats || {};
-    const bonusStats = item.bonusStats || {};
-    const templateStats = item.statBonuses || {};
-
-    // Combine stats: use rolled stats if available, else template
-    const stats = {};
-    const allKeys = new Set([
-      ...Object.keys(baseStats),
-      ...Object.keys(bonusStats),
-      ...Object.keys(templateStats)
-    ]);
-
-    for (const key of allKeys) {
-      const base = baseStats[key] || 0;
-      const bonus = bonusStats[key] || 0;
-      const template = templateStats[key] || 0;
-
-      // If we have rolled stats, use them; otherwise fall back to template
-      const hasRolledStats = Object.keys(baseStats).length > 0 || Object.keys(bonusStats).length > 0;
-      stats[key] = hasRolledStats ? (base + bonus) : template;
-    }
-
-    if (Object.keys(stats).length === 0) return '';
-
-    const statNames = {
-      strength: 'Strength',
-      intelligence: 'Intelligence',
-      agility: 'Agility',
-      vitality: 'Vitality',
-      luck: 'Luck',
-      hp_max: 'Max HP',
-      mp_max: 'Max MP',
-      hp: 'HP',
-      mp: 'MP'
-    };
+    const hasRolledStats = Object.keys(item.baseStats || {}).length > 0
+      || Object.keys(item.bonusStats || {}).length > 0;
+    const stats = sumItemStats(hasRolledStats
+      ? item
+      : { baseStats: item.statBonuses || item.stat_bonuses || {} });
 
     let html = '';
     for (const [key, value] of Object.entries(stats)) {
-      if (value === 0) continue; // Skip zero values
-      const label = statNames[key] || key;
-      const sign = value > 0 ? '+' : '';
+      // Effect keys stored in stat bonuses are rendered as effect rows below
+      if (ITEM_EFFECT_KEYS.has(key)) continue;
+      if (typeof value === 'boolean') {
+        html += `
+        <div class="detail-stat-row">
+          <span class="detail-stat-label">${escapeHtml(formatStatValue(key, value))}</span>
+        </div>
+      `;
+        continue;
+      }
+      const signClass = value > 0 ? 'positive' : (value < 0 ? 'negative' : '');
       html += `
         <div class="detail-stat-row">
-          <span class="detail-stat-label">${label}</span>
-          <span class="detail-stat-value positive">${sign}${value}</span>
+          <span class="detail-stat-label">${escapeHtml(formatStatName(key))}</span>
+          <span class="detail-stat-value ${signClass}">${escapeHtml(formatStatAmount(key, value))}</span>
         </div>
       `;
     }
 
-    // Show augments if present (Finding 74)
-    const augments = item.augments || [];
-    if (augments.length > 0) {
+    for (const line of formatItemEffects(item)) {
       html += `
-        <div class="detail-stat-row augments-row">
-          <span class="detail-stat-label">Augments</span>
-          <span class="detail-stat-value">${escapeHtml(augments.join(', '))}</span>
+        <div class="detail-stat-row effect-row">
+          <span class="detail-stat-label">Effect</span>
+          <span class="detail-stat-value">${escapeHtml(line)}</span>
         </div>
       `;
     }
 
-    if (item.levelRequirement && item.levelRequirement > 1) {
+    for (const augment of item.augments || []) {
+      const { text, effect, active } = describeAugment(augment);
+      if (!text) continue;
+      const inactive = typeof augment === 'object' && !active && Boolean(effect);
+      const title = inactive ? `${text} (special effect not yet applied in combat)` : text;
+      // The reason is shown as text, not only in a hover title, so touch
+      // players can see why the row is greyed out.
+      html += `
+        <div class="detail-stat-row augment-row${inactive ? ' inactive' : ''}" title="${escapeHtmlAttribute(title)}">
+          <span class="detail-stat-label">Augment</span>
+          <span class="detail-stat-value">${escapeHtml(text)}${inactive ? '<span class="augment-inactive-note">Stat bonus only; effect not active in combat yet</span>' : ''}</span>
+        </div>
+      `;
+    }
+
+    const levelRequirement = Number(item.levelRequirement ?? item.level_requirement) || 0;
+    if (levelRequirement > 1) {
       html += `
         <div class="detail-stat-row">
           <span class="detail-stat-label">Required Level</span>
-          <span class="detail-stat-value">${item.levelRequirement}</span>
+          <span class="detail-stat-value">${levelRequirement}</span>
         </div>
       `;
     }

@@ -12,10 +12,8 @@
  */
 
 import { getAssetPath, getOptimalSize } from '../../../../shared/assetPaths.js';
-import {
-  CANONICAL_AUGMENT_OVERLAY_IDS,
-  resolveAugmentOverlay
-} from '../../../../shared/overlayMapping.js';
+import { CANONICAL_AUGMENT_OVERLAY_IDS } from '../../../../shared/overlayMapping.js';
+import { resolveAugmentOverlayId } from '../../utils/statDisplay.js';
 
 /**
  * Rarity overlay alpha values for compositing
@@ -63,7 +61,8 @@ export function normalizeItemSubcategory(category) {
  * @param {string} itemId - Item template identifier
  * @param {string} category - Item category (weapons, armor, accessories, etc.)
  * @param {string} [rarity='common'] - Item rarity (common, uncommon, rare, epic, legendary)
- * @param {string|null} [augment=null] - Augment type (fire, ice, lightning, poison, holy, dark)
+ * @param {string|Object|null} [augment=null] - Augment category (fire, ice, ...) or augment
+ *   object; resolved to an overlay id through resolveAugmentIconName
  * @returns {Promise<HTMLImageElement|null>} Composited item image or null if base not found
  */
 export async function loadItemComposite(context, basePath, itemId, category, rarity = 'common', augment = null) {
@@ -71,7 +70,7 @@ export async function loadItemComposite(context, basePath, itemId, category, rar
 
   // Generate cache key for this specific combination
   const subcategory = normalizeItemSubcategory(category);
-  const overlayId = resolveAugmentOverlay(augment);
+  const overlayId = resolveAugmentOverlayId(augment);
   const cacheKey = `item_${subcategory}_${itemId}_${rarity}_${overlayId || 'none'}`;
 
   // Return cached composite if available
@@ -192,7 +191,7 @@ export function composeItemSprite(base, rarityOverlay, augmentOverlay, rarity) {
  */
 export function getItemComposite(cache, itemId, category, rarity = 'common', augment = null) {
   const subcategory = normalizeItemSubcategory(category);
-  const overlayId = resolveAugmentOverlay(augment);
+  const overlayId = resolveAugmentOverlayId(augment);
   const cacheKey = `item_${subcategory}_${itemId}_${rarity}_${overlayId || 'none'}`;
   return cache.get(cacheKey) || null;
 }
@@ -235,7 +234,7 @@ export async function preloadOverlays(loadImage, basePath) {
  * Useful for preloading inventory or shop items
  * @param {Object} context - AssetLoader context with cache and loadImage
  * @param {string} basePath - Base asset path
- * @param {Array<{itemId: string, category: string, rarity?: string, augment?: string}>} items
+ * @param {Array<{itemId: string, category: string, rarity?: string, augment?: string|Object}>} items
  * @returns {Promise<PromiseSettledResult<HTMLImageElement>[]>}
  */
 export async function preloadItemComposites(context, basePath, items) {

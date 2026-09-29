@@ -1,3 +1,9 @@
+/**
+ * @module api/client
+ * @description HTTP client for the Modia API: auth token storage and refresh,
+ * request/error handling, and one method per REST endpoint (characters,
+ * world, battle, shop, marketplace, social, coliseum, relics, ...).
+ */
 import { debugLog } from '../utils/debugLogger.js';
 import { getBattleMapCapabilities } from '../battle/BattleMapSession.js';
 
@@ -49,6 +55,78 @@ function createBattleStartRequestId() {
     return globalThis.crypto.randomUUID();
   }
   return `battle-${Date.now()}-${Math.random().toString(36).slice(2, 13)}`;
+}
+
+/**
+ * Endpoints where a 401 means "wrong credentials", not "expired session".
+ * They must never trigger a token refresh or the session-expired handler.
+ */
+const CREDENTIAL_ENDPOINTS = new Set([
+  '/auth/login',
+  '/auth/register',
+  '/auth/register-with-character'
+]);
+
+export function isCredentialEndpoint(endpoint) {
+  const path = String(endpoint || '').split('?')[0];
+  return CREDENTIAL_ENDPOINTS.has(path);
+}
+
+const GENERIC_ERROR_MESSAGE = 'Something went wrong. Please try again.';
+
+function friendlyStatusMessage(status) {
+  if (status === 401) return 'Unauthorized';
+  if (status === 403) return 'You are not allowed to do that.';
+  if (status === 404) return 'The requested resource was not found.';
+  if (status === 429) return 'Too many requests. Please wait a moment and try again.';
+  if (status >= 500) return 'The server had a problem. Please try again shortly.';
+  return GENERIC_ERROR_MESSAGE;
+}
+
+/**
+ * Read a response body without assuming it is JSON.
+ * Empty bodies (204, proxies) resolve to null; non-JSON bodies resolve to
+ * null with the raw text kept for logging. Only parse errors are absorbed:
+ * a failure while reading the body itself (an abort from the request
+ * timeout, a connection dropped mid-body) propagates so request() can map it
+ * to a timeout or network error instead of treating it as an empty success.
+ * @param {Response} response
+ * @returns {Promise<{ data: any, text: string|null }>}
+ */
+export async function readResponseBody(response) {
+  if (typeof response.text !== 'function') {
+    // Minimal response objects (test doubles, polyfills) that only expose json().
+    try {
+      const data = await response.json();
+      return { data: data ?? null, text: data == null ? null : JSON.stringify(data) };
+    } catch (err) {
+      if (err instanceof SyntaxError) return { data: null, text: null };
+      throw err;
+    }
+  }
+
+  const text = await response.text();
+  if (!text || !text.trim()) {
+    return { data: null, text: null };
+  }
+  try {
+    return { data: JSON.parse(text), text };
+  } catch {
+    return { data: null, text };
+  }
+}
+
+/**
+ * Pick a player-facing message from an error body, falling back to a
+ * friendly message for the status code.
+ */
+export function errorMessageFromBody(data, status) {
+  if (data && typeof data === 'object') {
+    const message = data.error || data.message;
+    if (typeof message === 'string' && message.trim()) return message;
+    if (message && typeof message.message === 'string') return message.message;
+  }
+  return friendlyStatusMessage(status);
 }
 
 export class ApiError extends Error {
@@ -136,9 +214,12 @@ export class ApiClient {
 
     try {
       let response = await fetch(`${this.baseUrl}${endpoint}`, fetchOptions);
+      const credentialRequest = isCredentialEndpoint(endpoint);
 
-      // Handle 401 Unauthorized - attempt token refresh before failing
-      if (response.status === 401 && !options._isRetry && this.tokenRefreshManager) {
+      // Handle 401 Unauthorized - attempt token refresh before failing.
+      // Credential endpoints answer 401 for a bad username/password; that is
+      // not an expired session, so never refresh or log the player out.
+      if (response.status === 401 && !credentialRequest && !options._isRetry && this.tokenRefreshManager) {
         // Don't retry refresh endpoint itself to avoid infinite loop
         if (!endpoint.includes('/auth/refresh')) {
           const refreshed = await this.tokenRefreshManager.handle401();
@@ -158,26 +239,36 @@ export class ApiClient {
         }
       }
 
+      const { data: result, text: rawBody } = await readResponseBody(response);
+
+      debugLog('network.logAPIRequests', `${method} ${endpoint} -> ${response.status}`, {
+        response: result ?? (rawBody ? rawBody.slice(0, 200) : null)
+      });
+
       // Still unauthorized after refresh attempt
       if (response.status === 401) {
+        if (credentialRequest) {
+          throw new ApiError(errorMessageFromBody(result, 401), { status: 401, data: result });
+        }
         if (this.onUnauthorized) {
           this.onUnauthorized();
         }
-        throw new ApiError('Unauthorized', { status: 401 });
+        throw new ApiError('Unauthorized', { status: 401, data: result });
       }
 
-      const result = await response.json();
-
-      debugLog('network.logAPIRequests', `${method} ${endpoint} -> ${response.status}`, { response: result });
-
       if (!response.ok) {
-        throw new ApiError(result.error || result.message || 'Request failed', {
+        throw new ApiError(errorMessageFromBody(result, response.status), {
           status: response.status,
           data: result
         });
       }
 
-      return result;
+      if (result === null && rawBody) {
+        // A 2xx with a body we cannot parse (e.g. an HTML proxy page).
+        throw new ApiError(GENERIC_ERROR_MESSAGE, { status: response.status });
+      }
+
+      return result ?? {};
     } catch (err) {
       if (timedOut) {
         const timeoutError = new ApiError(
@@ -270,6 +361,11 @@ export class ApiClient {
 
   getCharacter(id) {
     return this.get(`/characters/${id}`);
+  }
+
+  /** Stats including equipped gear (what battle uses) */
+  getCharacterStats(id) {
+    return this.get(`/characters/${id}/stats`);
   }
 
   createCharacter(name, race, characterClass, gender = 'other') {

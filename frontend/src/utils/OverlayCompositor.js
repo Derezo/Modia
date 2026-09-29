@@ -17,10 +17,8 @@
  */
 
 import { getAssetPath, getOptimalSize } from '../../../shared/assetPaths.js';
-import {
-  CANONICAL_AUGMENT_OVERLAY_IDS,
-  resolveAugmentOverlays
-} from '../../../shared/overlayMapping.js';
+import { CANONICAL_AUGMENT_OVERLAY_IDS } from '../../../shared/overlayMapping.js';
+import { resolveAugmentOverlayIds } from './statDisplay.js';
 
 /**
  * Rarity overlay alpha values for compositing
@@ -115,7 +113,8 @@ class OverlayCompositor {
    * @param {string} options.subcategory - Item subcategory (weapons, armor, accessories, consumables)
    * @param {number} [options.size=64] - Output size in pixels
    * @param {string|number} [options.rarity='common'] - Rarity for glow overlay
-   * @param {string[]} [options.augments=[]] - Array of augment types (fire, ice, etc.)
+   * @param {Array<string|Object>} [options.augments=[]] - Augment categories (fire, ice, etc.)
+   *   or augment objects; resolved to overlay ids through resolveAugmentIconName
    * @returns {Promise<string>} Data URL of composited image
    */
   async composite(options) {
@@ -128,7 +127,7 @@ class OverlayCompositor {
     } = options;
 
     const normalizedRarity = this.normalizeRarity(rarity);
-    const resolvedAugments = resolveAugmentOverlays(augments);
+    const resolvedAugments = resolveAugmentOverlayIds(augments);
 
     // Generate cache key for this specific combination
     const augmentKey = resolvedAugments.length > 0
