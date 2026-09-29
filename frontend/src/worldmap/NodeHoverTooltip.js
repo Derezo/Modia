@@ -23,6 +23,7 @@ import {
 import { Icon } from '../components/Icon.js';
 import { responsive } from '../core/Responsive.js';
 import { ZODIAC_SHRINE_BUFFS, ZODIAC_CRYSTALS } from '@modia/shared/constants';
+import { placeNodeOverlay, viewportBounds } from './overlayPlacement.js';
 
 const STYLE_ID = 'node-hover-tooltip-styles';
 
@@ -410,7 +411,7 @@ export class NodeHoverTooltip {
 
     // Skip if same node and already visible
     if (this.currentNode?.id === node.id && this.isVisible) {
-      this.updatePosition(screenX, screenY, context.nodeSize, context.canvasHeight);
+      this.updatePosition(screenX, screenY, context.nodeSize, context.canvasHeight, context.bounds);
       return;
     }
 
@@ -428,7 +429,7 @@ export class NodeHoverTooltip {
     this.renderQuickInfo(node, context);
 
     // Position and show
-    this.updatePosition(screenX, screenY, context.nodeSize, context.canvasHeight);
+    this.updatePosition(screenX, screenY, context.nodeSize, context.canvasHeight, context.bounds);
     this.isVisible = true;
     this.element.classList.add('node-hover-tooltip--visible');
     this.element.setAttribute('aria-hidden', 'false');
@@ -472,29 +473,34 @@ export class NodeHoverTooltip {
   }
 
   /**
-   * Update tooltip position
-   * @param {number} screenX
-   * @param {number} screenY
+   * Update tooltip position, kept inside the visible canvas rect
+   * (see overlayPlacement.js).
+   * @param {number} screenX - viewport px
+   * @param {number} screenY - viewport px
    * @param {number} nodeSize
-   * @param {number} canvasHeight
+   * @param {number} canvasHeight - Legacy: canvas bottom when no bounds given
+   * @param {{left:number, top:number, right:number, bottom:number}} [bounds] - canvas rect
    */
-  updatePosition(screenX, screenY, nodeSize = 30, canvasHeight = 600) {
+  updatePosition(screenX, screenY, nodeSize = 30, canvasHeight = 600, bounds = null) {
     if (!this.isVisible) return;
 
-    // Position below node by default
-    let posY = screenY + nodeSize + 8;
-    let flipAbove = false;
+    const height = this.element.offsetHeight || 80;
+    const placement = placeNodeOverlay({
+      nodeX: screenX,
+      nodeY: screenY,
+      nodeSize,
+      width: this.element.offsetWidth || 140,
+      height,
+      bounds: bounds || viewportBounds(canvasHeight),
+      gap: 8,
+      margin: 8
+    });
 
-    // Check if too close to bottom
-    const tooltipHeight = this.element.offsetHeight || 80;
-    if (posY + tooltipHeight > canvasHeight - 20) {
-      posY = screenY - nodeSize - 8;
-      flipAbove = true;
-    }
-
-    this.element.style.left = `${screenX}px`;
-    this.element.style.top = `${posY}px`;
-    this.element.classList.toggle('node-hover-tooltip--above', flipAbove);
+    // The --above class translates the tooltip up by its own height, so its
+    // anchor is the bottom edge in that mode.
+    this.element.style.left = `${placement.centerX}px`;
+    this.element.style.top = `${placement.above ? placement.top + height : placement.top}px`;
+    this.element.classList.toggle('node-hover-tooltip--above', placement.above);
   }
 
   /**

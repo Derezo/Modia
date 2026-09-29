@@ -1205,54 +1205,8 @@ export class GarrisonScene extends Scene {
     // No per-frame updates needed
   }
 
-  render(ctx) {
-    // Draw parchment-themed background gradient
-    const gradient = ctx.createLinearGradient(0, 0, 0, this.game.targetHeight);
-    gradient.addColorStop(0, P.light);
-    gradient.addColorStop(0.5, P.mid);
-    gradient.addColorStop(1, P.dark);
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, this.game.targetWidth, this.game.targetHeight);
-
-    // Draw subtle decorative elements with gold accents
-    ctx.fillStyle = 'rgba(201, 162, 39, 0.08)';
-    for (let i = 0; i < 5; i++) {
-      const x = 100 + i * 150;
-      const y = 450 + Math.sin(Date.now() / 1000 + i) * 20;
-      ctx.beginPath();
-      ctx.arc(x, y, 30 + i * 5, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // Add subtle corner flourishes
-    ctx.strokeStyle = P.border;
-    ctx.lineWidth = 2;
-    ctx.globalAlpha = 0.3;
-
-    // Top-left flourish
-    ctx.beginPath();
-    ctx.moveTo(20, 60);
-    ctx.quadraticCurveTo(20, 20, 60, 20);
-    ctx.stroke();
-
-    // Top-right flourish
-    ctx.beginPath();
-    ctx.moveTo(this.game.targetWidth - 20, 60);
-    ctx.quadraticCurveTo(this.game.targetWidth - 20, 20, this.game.targetWidth - 60, 20);
-    ctx.stroke();
-
-    // Bottom-left flourish
-    ctx.beginPath();
-    ctx.moveTo(20, this.game.targetHeight - 60);
-    ctx.quadraticCurveTo(20, this.game.targetHeight - 20, 60, this.game.targetHeight - 20);
-    ctx.stroke();
-
-    // Bottom-right flourish
-    ctx.beginPath();
-    ctx.moveTo(this.game.targetWidth - 20, this.game.targetHeight - 60);
-    ctx.quadraticCurveTo(this.game.targetWidth - 20, this.game.targetHeight - 20, this.game.targetWidth - 60, this.game.targetHeight - 20);
-    ctx.stroke();
-
-    ctx.globalAlpha = 1.0;
+  render(_ctx) {
+    // Intentionally empty: the opaque .garrison-container DOM layer covers the
+    // whole viewport, so any canvas drawing here would never be visible.
   }
 }

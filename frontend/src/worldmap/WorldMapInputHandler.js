@@ -169,7 +169,8 @@ export class WorldMapInputHandler {
     if (scene.minimap) {
       const minimapNode = scene.minimap.handleClick(
         pos.x, pos.y,
-        scene.game.canvas.width, scene.game.canvas.height,
+        // Logical size, not canvas.width/height (the DPR-scaled backing store)
+        scene.game.targetWidth, scene.game.targetHeight,
         scene.nodes,
         scene.currentNode?.id,
         (node) => scene.isNodeAdjacent(node)

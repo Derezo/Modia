@@ -101,6 +101,10 @@ function isTravelRequestCurrent(scene, context) {
 export class WorldMapScene extends Scene {
   constructor(game) {
     super(game);
+    // The world map's logical canvas follows the container aspect ratio
+    // (Game.applyViewport); every other scene stays fixed 800x600.
+    this.fluidViewport = true;
+    this._viewportSize = null;
     this.uiElement = null;
     this.nodes = [];
     this.connections = [];
@@ -220,6 +224,11 @@ export class WorldMapScene extends Scene {
       requestContext.authUserId
     );
 
+    // Switch the canvas to this scene's fluid logical size before any camera,
+    // fog or HUD math reads game.targetWidth/targetHeight.
+    this.game.applyViewport?.(this, { notify: false });
+    this._viewportSize = { width: this.game.targetWidth, height: this.game.targetHeight };
+
     // Get asset loader reference from game
     this.assetLoader = this.game.assetLoader;
 
@@ -232,6 +241,9 @@ export class WorldMapScene extends Scene {
     // Pass the canvas so the overlay can match its position and dimensions
     this.fogOverlay = new DOMFogOverlay(this.game.canvas);
     this.fogOverlay.init();
+    // init() reads canvas.width (the DPR-scaled backing store); the fog viewBox
+    // must be in logical units to line up with the camera.
+    this.fogOverlay.setCanvasDimensions?.(this.game.targetWidth, this.game.targetHeight);
     this.fogOverlay.setNodeSpacing(this.nodeSpacing);
 
     const loaded = await this.loadWorldData(requestContext);
@@ -559,10 +571,10 @@ export class WorldMapScene extends Scene {
    */
   createHUDCanvas() {
     // Create canvas element
+    // Covers the whole main canvas in the same logical coordinate space, so
+    // the HUD panel (top-left) and the route legend (top-right) both fit.
     this.hudCanvas = document.createElement('canvas');
     this.hudCanvas.id = 'hud-canvas';
-    this.hudCanvas.width = 200;  // Enough for HUD panel (180px + padding)
-    this.hudCanvas.height = 150; // Enough for expanded HUD (~130px + padding)
 
     // Position to match main canvas top-left, above fog overlay
     this.hudCanvas.style.cssText = `
@@ -577,16 +589,13 @@ export class WorldMapScene extends Scene {
     // Insert into game container
     this.game.canvas.parentElement.appendChild(this.hudCanvas);
 
-    // Position to match main canvas
+    // Position to match main canvas (kept in sync by onResize)
     this.updateHUDCanvasPosition();
-
-    // Listen for window resize to keep position updated
-    this._hudResizeHandler = () => this.updateHUDCanvasPosition();
-    window.addEventListener('resize', this._hudResizeHandler);
   }
 
   /**
-   * Update HUD canvas position to align with main canvas top-left
+   * Size and position the HUD canvas to exactly overlay the main canvas, with
+   * the same logical size and DPR transform.
    */
   updateHUDCanvasPosition() {
     if (!this.hudCanvas) return;
@@ -594,23 +603,42 @@ export class WorldMapScene extends Scene {
     const mainCanvas = this.game.canvas;
     const mainRect = mainCanvas.getBoundingClientRect();
     const containerRect = mainCanvas.parentElement.getBoundingClientRect();
+    const dpr = this.game.dpr || 1;
+    const backingWidth = Math.round(this.game.targetWidth * dpr);
+    const backingHeight = Math.round(this.game.targetHeight * dpr);
 
-    // Calculate offset from container
-    const offsetX = mainRect.left - containerRect.left;
-    const offsetY = mainRect.top - containerRect.top;
+    // Resizing the backing store resets the context, so only do it on change.
+    if (this.hudCanvas.width !== backingWidth || this.hudCanvas.height !== backingHeight) {
+      this.hudCanvas.width = backingWidth;
+      this.hudCanvas.height = backingHeight;
+    }
+    this.hudCtx?.setTransform?.(dpr, 0, 0, dpr, 0, 0);
 
-    // Scale factor = CSS pixels per logical pixel. mainCanvas.width is the
-    // DPR-multiplied backing store after P1.1, so use targetWidth/Height.
-    const scaleX = mainRect.width / this.game.targetWidth;
-    const scaleY = mainRect.height / this.game.targetHeight;
+    this.hudCanvas.style.left = `${mainRect.left - containerRect.left}px`;
+    this.hudCanvas.style.top = `${mainRect.top - containerRect.top}px`;
+    this.hudCanvas.style.width = `${mainRect.width}px`;
+    this.hudCanvas.style.height = `${mainRect.height}px`;
+  }
 
-    // Position HUD canvas at top-left of main canvas
-    this.hudCanvas.style.left = `${offsetX}px`;
-    this.hudCanvas.style.top = `${offsetY}px`;
+  /**
+   * Called by Game.applyViewport after the canvas was resized. Keeps the map
+   * centred on the same world point and re-anchors canvas-aligned layers.
+   */
+  onResize() {
+    const width = this.game.targetWidth;
+    const height = this.game.targetHeight;
+    const previous = this._viewportSize;
+    if (previous && (previous.width !== width || previous.height !== height)) {
+      this.cameraX += (width - previous.width) / 2;
+      this.cameraY += (height - previous.height) / 2;
+    }
+    this._viewportSize = { width, height };
 
-    // Scale HUD canvas to match main canvas scaling
-    this.hudCanvas.style.width = `${this.hudCanvas.width * scaleX}px`;
-    this.hudCanvas.style.height = `${this.hudCanvas.height * scaleY}px`;
+    if (this.fogOverlay) {
+      this.fogOverlay.setCanvasDimensions?.(width, height);
+      this.fogOverlay.updateOverlayPosition?.();
+    }
+    this.updateHUDCanvasPosition();
   }
 
   /**
@@ -653,6 +681,7 @@ export class WorldMapScene extends Scene {
     const context = {
       nodeSize: position.nodeSize,
       canvasHeight: position.canvasHeight,
+      bounds: position.bounds,
       previewCost: this.pathSystem.previewCost || 0,
       previewAffordable: this.pathSystem.previewAffordable !== false,
       previewPathBlocked: this.pathSystem.previewPathBlocked || false,
@@ -762,10 +791,6 @@ export class WorldMapScene extends Scene {
 
     // Clean up HUD canvas
     if (this.hudCanvas) {
-      if (this._hudResizeHandler) {
-        window.removeEventListener('resize', this._hudResizeHandler);
-        this._hudResizeHandler = null;
-      }
       if (this.hudCanvas.parentNode) {
         this.hudCanvas.parentNode.removeChild(this.hudCanvas);
       }
@@ -783,6 +808,11 @@ export class WorldMapScene extends Scene {
       this.uiElement.remove();
       this.uiElement = null;
     }
+
+    // Hand the canvas back in the fixed 800x600 space before the next scene's
+    // enter() runs (SceneManager calls exit() then enter()).
+    this._viewportSize = null;
+    this.game.applyViewport?.(null, { notify: false });
   }
 
   async loadWorldData(requestContext = null) {
@@ -1068,7 +1098,9 @@ export class WorldMapScene extends Scene {
       x: viewportX,
       y: viewportY,
       nodeSize: this.nodeSize * scale,  // Scale the node size too
-      canvasHeight: rect.height  // Use actual display height for edge detection
+      canvasHeight: rect.height,  // Legacy: display height
+      // Visible canvas rect: DOM overlays clamp to this, not the viewport
+      bounds: { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom }
     };
   }
 
@@ -2100,18 +2132,23 @@ export class WorldMapScene extends Scene {
     // Render HUD panel to separate canvas (above fog overlay)
     if (this.hudPanel && this.hudCtx) {
       // Clear HUD canvas with transparent background
-      this.hudCtx.clearRect(0, 0, this.hudCanvas.width, this.hudCanvas.height);
+      // Context carries the DPR transform, so clear in logical units.
+      this.hudCtx.clearRect(0, 0, this.game.targetWidth, this.game.targetHeight);
       // Render HUD panel
       this.hudPanel.render(this.hudCtx);
       // Route guidance is UI, so keep it above fog and world objects.
       this.connectionRenderer.renderRouteLegend(this.hudCtx);
     }
 
-    // Update node action menu position (DOM element follows current node)
-    if (this.nodeActionMenu && this.currentNode) {
-      const position = this.getNodeScreenPosition(this.currentNode);
+    // Update node action menu position. It follows the node it is showing:
+    // world data can be reloaded mid-walk (the server has already moved the
+    // party), and tracking this.currentNode then drew the origin's name and
+    // type badge under the destination.
+    const menuNode = this.nodeActionMenu?.currentNode || this.currentNode;
+    if (this.nodeActionMenu && menuNode) {
+      const position = this.getNodeScreenPosition(menuNode);
       if (position) {
-        this.nodeActionMenu.updatePosition(position.x, position.y, position.nodeSize, position.canvasHeight);
+        this.nodeActionMenu.updatePosition(position.x, position.y, position.nodeSize, position.canvasHeight, position.bounds);
       }
     }
 
@@ -2119,7 +2156,7 @@ export class WorldMapScene extends Scene {
     if (this.nodeHoverTooltip && this.hoveredNode && this.hoveredNode.id !== this.currentNode?.id) {
       const position = this.getNodeScreenPosition(this.hoveredNode);
       if (position) {
-        this.nodeHoverTooltip.updatePosition(position.x, position.y, position.nodeSize, position.canvasHeight);
+        this.nodeHoverTooltip.updatePosition(position.x, position.y, position.nodeSize, position.canvasHeight, position.bounds);
       }
     }
 

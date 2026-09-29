@@ -30,6 +30,7 @@ import {
 import { Icon } from '../../components/Icon.js';
 import { getAssetPath, getOptimalSize } from '@shared/assetPaths.js';
 import { escapeHtml } from '../../utils/escapeHtml.js';
+import { parchmentToast } from './ParchmentToast.js';
 
 const STYLE_ID = 'profile-dropdown-styles';
 
@@ -91,8 +92,10 @@ export class ProfileDropdown {
       /* Profile Dropdown Container */
       .profile-dropdown {
         position: fixed;
-        top: 16px;
-        right: 16px;
+        /* Anchored to the visible game canvas (Game.publishCanvasAnchor), not
+           the viewport, so it never floats in a letterbox gutter. */
+        top: calc(var(--game-canvas-top, 0px) + 16px);
+        right: calc(var(--game-canvas-right, 0px) + 16px);
         z-index: 9000;
         font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
       }
@@ -539,11 +542,15 @@ export class ProfileDropdown {
         ` : ''}
         <div class="profile-dropdown__menu-item" data-action="friends">
           <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'friends', { size: 'lg' })}</span>
-          <span class="profile-dropdown__menu-label">Friends</span>
+          <span class="profile-dropdown__menu-label">Social Hub</span>
         </div>
         <div class="profile-dropdown__menu-item" data-action="quests">
           <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'quest', { size: 'lg' })}</span>
           <span class="profile-dropdown__menu-label">Quest Board</span>
+        </div>
+        <div class="profile-dropdown__menu-item" data-action="relics">
+          <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'equipment', { size: 'lg' })}</span>
+          <span class="profile-dropdown__menu-label">Relics</span>
         </div>
         <div class="profile-dropdown__menu-item" data-action="leaderboard">
           <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'leaderboard', { size: 'lg' })}</span>
@@ -986,6 +993,9 @@ export class ProfileDropdown {
       case 'quests':
         this.game.scenes.switchTo('questBoard');
         break;
+      case 'relics':
+        this.openRelicCollection();
+        break;
       case 'leaderboard':
         this.game.scenes.switchTo('leaderboard');
         break;
@@ -1000,6 +1010,29 @@ export class ProfileDropdown {
           this.game.notificationCenter.open();
         }
         break;
+    }
+  }
+
+  /**
+   * Open the relic collection. The world map scene owns the opener; other
+   * scenes fall back to opening the modal directly.
+   */
+  async openRelicCollection() {
+    const scene = this.game.scenes?.getCurrentScene?.();
+    if (typeof scene?.openRelicCollectionModal === 'function') {
+      await scene.openRelicCollectionModal();
+      return;
+    }
+    try {
+      const { RelicCollectionModal } = await import('../../modals/RelicCollectionModal.js');
+      const modal = new RelicCollectionModal({
+        game: this.game,
+        onClose: () => modal.destroy()
+      });
+      await modal.show();
+    } catch (err) {
+      console.error('Failed to open relic collection modal:', err);
+      parchmentToast.error('Error', 'Failed to load relic collection.');
     }
   }
 
@@ -1129,6 +1162,11 @@ export class ProfileDropdown {
     this.isVisible = true;
     this.element.style.display = '';
     this.updateAvatar();
+    // The party list often arrives after the dropdown is shown (world map
+    // loads it asynchronously); follow it instead of leaving a '?' portrait.
+    if (!this.charactersUnsubscribe && typeof this.game.state?.subscribe === 'function') {
+      this.charactersUnsubscribe = this.game.state.subscribe('characters', () => this.updateAvatar());
+    }
     this.fetchInitialData();
   }
 
@@ -1181,6 +1219,11 @@ export class ProfileDropdown {
       if (typeof unsub === 'function') unsub();
     }
     this.wsUnsubscribers = [];
+
+    if (this.charactersUnsubscribe) {
+      this.charactersUnsubscribe();
+      this.charactersUnsubscribe = null;
+    }
 
     // Remove from DOM
     if (this.element && this.element.parentNode) {

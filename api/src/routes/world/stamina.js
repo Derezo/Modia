@@ -14,12 +14,10 @@ import { authenticate } from '../../middleware/auth.js';
 import { staminaRestoreLimiter } from '../../middleware/economyRateLimiter.js';
 import { asyncHandler, AppError } from '../../middleware/errorHandler.js';
 import * as staminaService from '../../services/staminaService.js';
+import { STAMINA_RESTORE_NODE_TYPES } from '../../../../shared/constants.js';
 
 const router = express.Router();
 
-// Settlement node types where stamina can be restored
-// These match the node types that worldgen actually produces (see api/src/db/worldgen/constants.js SETTLEMENT_TYPES)
-const STAMINA_RESTORE_NODE_TYPES = ['castle', 'city', 'village', 'keep', 'palace'];
 
 // ============================================================================
 // STAMINA ENDPOINTS

@@ -1,5 +1,18 @@
 import { before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { registerHooks } from 'node:module';
+
+registerHooks({
+  resolve(specifier, context, nextResolve) {
+    if (specifier.startsWith('@shared/')) {
+      return {
+        url: new URL(`../../../../shared/${specifier.slice('@shared/'.length)}`, import.meta.url).href,
+        shortCircuit: true
+      };
+    }
+    return nextResolve(specifier, context);
+  }
+});
 
 class FakeClassList {
   constructor() {

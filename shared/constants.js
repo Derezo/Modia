@@ -177,6 +177,13 @@ export const BATTLE_NODE_TYPES = [NODE_TYPES.FOREST, NODE_TYPES.CAVE, NODE_TYPES
 export const COMBAT_NODE_TYPES = BATTLE_NODE_TYPES;
 
 /**
+ * Settlement node types where POST /api/world/stamina/restore is accepted.
+ * Every entry is a type world generation actually produces. Shared by the API
+ * route check and the world-map action menu so the two cannot drift.
+ */
+export const STAMINA_RESTORE_NODE_TYPES = Object.freeze(['castle', 'city', 'village', 'keep', 'palace']);
+
+/**
  * Shared traversal contract: uncleared combat locations can be reached as a
  * destination, but traversal never expands through them.
  */

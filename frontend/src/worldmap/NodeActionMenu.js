@@ -23,14 +23,10 @@ import {
 import { responsive } from '../core/Responsive.js';
 import { Icon } from '../components/Icon.js';
 import { isDevModeEnabled } from '../utils/debugLogger.js';
+import { STAMINA_RESTORE_NODE_TYPES } from '@shared/constants.js';
+import { placeNodeOverlay, viewportBounds } from './overlayPlacement.js';
 
 const STYLE_ID = 'node-action-menu-styles';
-
-/**
- * Settlement node types where POST /api/world/stamina/restore is accepted.
- * Mirrors STAMINA_RESTORE_NODE_TYPES in api/src/routes/world/stamina.js.
- */
-export const STAMINA_RESTORE_NODE_TYPES = Object.freeze(['castle', 'city', 'village', 'keep', 'palace']);
 
 /**
  * Node types that always expose Fast Travel (Wayfarer's Compass relic,
@@ -161,8 +157,14 @@ export class NodeActionMenu {
       }
 
       /* Expanded state */
+      /* Large enough for every action (castle has 9+); if the viewport is
+         shorter than the list, scroll inside the panel rather than clip. */
       .node-action-menu--expanded .node-action-menu__actions {
-        max-height: 300px;
+        max-height: min(560px, calc(100vh - 140px));
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-width: thin;
+        scrollbar-color: ${PARCHMENT_COLORS.border} transparent;
         opacity: 1;
       }
 
@@ -257,12 +259,10 @@ export class NodeActionMenu {
         height: 100% !important;
       }
 
-      /* Node type badge */
+      /* Node type badge - in flow directly under the name pill, so it
+         never overlaps the action list */
       .node-action-menu__badge {
-        position: absolute;
-        bottom: -10px;
-        left: 50%;
-        transform: translateX(-50%);
+        margin-top: 4px;
         background: rgba(0,0,0,0.85);
         color: white;
         padding: 2px 10px;
@@ -287,8 +287,8 @@ export class NodeActionMenu {
       }
 
       .node-action-menu--above .node-action-menu__badge {
-        bottom: auto;
-        top: -10px;
+        margin-top: 0;
+        margin-bottom: 4px;
       }
 
       /* Mobile adjustments */
@@ -340,6 +340,11 @@ export class NodeActionMenu {
     this.nameElement.className = 'node-action-menu__name';
     this.element.appendChild(this.nameElement);
 
+    // Type badge (sits between the name pill and the action list)
+    this.badgeElement = document.createElement('div');
+    this.badgeElement.className = 'node-action-menu__badge';
+    this.element.appendChild(this.badgeElement);
+
     // Actions container (expandable)
     this.actionsElement = document.createElement('div');
     this.actionsElement.className = 'node-action-menu__actions';
@@ -350,11 +355,6 @@ export class NodeActionMenu {
     this.actionsInner = actionsInner;
 
     this.element.appendChild(this.actionsElement);
-
-    // Type badge
-    this.badgeElement = document.createElement('div');
-    this.badgeElement.className = 'node-action-menu__badge';
-    this.element.appendChild(this.badgeElement);
   }
 
   /**
@@ -393,7 +393,7 @@ export class NodeActionMenu {
     if (position) {
       // Temporarily set visible to allow position update
       this.isVisible = true;
-      this.updatePosition(position.x, position.y, position.nodeSize, position.canvasHeight);
+      this.updatePosition(position.x, position.y, position.nodeSize, position.canvasHeight, position.bounds);
     }
 
     // Show the menu (but not expanded yet)
@@ -549,9 +549,7 @@ export class NodeActionMenu {
       marketplace: { category: 'menu', name: 'shop' },
       tavern: { category: 'menu', name: 'tavern' },
       apothecary: { category: 'menu', name: 'inventory' },
-      // TODO(menu/coliseum art is near-transparent; regenerate it and restore
-      // { category: 'menu', name: 'coliseum' }) - stop-gap icon below
-      coliseum: { category: 'actions', name: 'attack' },
+      coliseum: { category: 'menu', name: 'coliseum' },
       farm: { category: 'menu', name: 'caravan' },
       guild_hall: { category: 'menu', name: 'guild' },
       training_ground: { category: 'menu', name: 'guild' },
@@ -706,53 +704,39 @@ export class NodeActionMenu {
   }
 
   /**
-   * Update menu position to track the current node
-   * @param {number} screenX - Node X position in screen coordinates
-   * @param {number} screenY - Node Y position in screen coordinates
-   * @param {number} nodeSize - Size of the node sprite
-   * @param {number} canvasHeight - Height of the canvas
+   * Update menu position to track the current node.
+   * The menu is kept inside the visible canvas rect: below the node by
+   * default, above it only when that fits, otherwise clamped (see
+   * overlayPlacement.js). On a short phone canvas this keeps the menu on the
+   * map instead of floating in the letterbox band.
+   * @param {number} screenX - Node X position in viewport coordinates
+   * @param {number} screenY - Node Y position in viewport coordinates
+   * @param {number} nodeSize - Size of the node sprite (viewport px)
+   * @param {number} canvasHeight - Legacy: canvas bottom when no bounds given
+   * @param {{left:number, top:number, right:number, bottom:number}} [bounds] - canvas rect
    */
-  updatePosition(screenX, screenY, nodeSize, canvasHeight) {
+  updatePosition(screenX, screenY, nodeSize, canvasHeight, bounds = null) {
     if (!this.isVisible) return;
 
     this.updateShrineActionState(
       this.actionsInner.querySelector('[data-action="visit_shrine"]')
     );
 
-    // Position below the node by default
-    let posY = screenY + nodeSize + 12;
-    let flipAbove = false;
+    const placement = placeNodeOverlay({
+      nodeX: screenX,
+      nodeY: screenY,
+      nodeSize,
+      width: this.element.offsetWidth || 160,
+      height: this.element.offsetHeight || 150,
+      bounds: bounds || viewportBounds(canvasHeight),
+      gap: 12,
+      margin: 10
+    });
 
-    // Check if too close to bottom edge
-    const menuHeight = this.element.offsetHeight || 150;
-    if (posY + menuHeight > canvasHeight - 20) {
-      // Position above the node instead
-      posY = screenY - nodeSize - 12 - menuHeight;
-      flipAbove = true;
-    }
-
-    // Apply position
-    this.element.style.left = `${screenX}px`;
-    this.element.style.top = `${posY}px`;
-
-    // Toggle above/below mode
-    this.element.classList.toggle('node-action-menu--above', flipAbove);
-
-    // Horizontal edge detection
-    const rect = this.element.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-
-    if (rect.left < 10) {
-      // Too close to left edge
-      const shift = 10 - rect.left;
-      this.element.style.transform = `translateX(calc(-50% + ${shift}px))`;
-    } else if (rect.right > viewportWidth - 10) {
-      // Too close to right edge
-      const shift = rect.right - (viewportWidth - 10);
-      this.element.style.transform = `translateX(calc(-50% - ${shift}px))`;
-    } else {
-      this.element.style.transform = 'translateX(-50%)';
-    }
+    this.element.style.left = `${placement.centerX}px`;
+    this.element.style.top = `${placement.top}px`;
+    this.element.style.transform = 'translateX(-50%)';
+    this.element.classList.toggle('node-action-menu--above', placement.above);
   }
 
   /**

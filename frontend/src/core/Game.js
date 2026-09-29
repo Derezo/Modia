@@ -7,9 +7,11 @@ import { GameWebSocket } from '../api/websocket.js';
 import { AssetLoader } from './AssetLoader.js';
 import { AudioManager } from '../audio/AudioManager.js';
 import { responsive } from './Responsive.js';
+import { computeLogicalViewport, computeContainScale, computeCanvasInsets } from './viewportMath.js';
 import { injectParchmentTheme } from '../ui/parchment/ParchmentTheme.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { ProfileDropdown } from '../ui/parchment/ProfileDropdown.js';
+import { SessionReplacedPrompt } from '../ui/parchment/SessionReplacedPrompt.js';
 import SettingsModal from '../components/SettingsModal.js';
 import { NotificationCenter } from '../components/NotificationCenter.js';
 import { PartyStatusBar } from '../components/PartyStatusBar.js';
@@ -65,6 +67,9 @@ export class Game {
     // Connection indicator (DOM-based, global)
     this.connectionIndicator = null;
 
+    // "Signed in elsewhere" prompt for the session_replaced socket event
+    this.sessionReplacedPrompt = null;
+
     // Bound handler references for cleanup (window-level listeners)
     this._boundResize = null;
     this._boundKeyHandler = null;
@@ -85,6 +90,12 @@ export class Game {
     this.tokenRefreshManager = new TokenRefreshManager(this);
     this.api.setTokenRefreshManager(this.tokenRefreshManager);
     this.socket = new GameWebSocket(this.getWebSocketUrl());
+    // The server replaced this tab's session (same account opened elsewhere).
+    // Show a "Signed in elsewhere" prompt; only the player's choice reconnects.
+    this.sessionReplacedPrompt = new SessionReplacedPrompt({
+      socket: this.socket,
+      getToken: () => this.state.get('token')
+    });
     this.input = new InputHandler(this.canvas);
     this.scenes = new SceneManager(this);
 
@@ -269,6 +280,25 @@ export class Game {
   }
 
   resize() {
+    this.applyViewport(this.scenes?.getCurrentScene());
+  }
+
+  /**
+   * Size the canvas for a scene and re-anchor DOM overlays to it.
+   *
+   * Scenes are fixed 800x600 (letterboxed) unless they set
+   * `fluidViewport = true`, in which case the logical size follows the
+   * container aspect ratio (see core/viewportMath.js). A fluid scene calls this
+   * from enter() with itself and from exit() with null, so the next scene is
+   * always entered with the fixed 800x600 space.
+   *
+   * @param {Object|null} scene - Scene whose viewport mode to apply
+   * @param {Object} [options]
+   * @param {boolean} [options.notify=true] - Call scene.onResize() afterwards
+   */
+  applyViewport(scene, { notify = true } = {}) {
+    if (!this.canvas || !this.ctx) return;
+
     // Prefer visualViewport for accurate mobile viewport measurement
     let containerWidth, containerHeight;
 
@@ -283,18 +313,21 @@ export class Game {
       containerHeight = container.clientHeight || window.innerHeight;
     }
 
-    // Calculate scale to fit target dimensions
-    const scaleX = containerWidth / this.targetWidth;
-    const scaleY = containerHeight / this.targetHeight;
-    this.scale = Math.min(scaleX, scaleY);
+    // Logical size: fixed 4:3 for most scenes, container-shaped for fluid ones
+    const logical = computeLogicalViewport(containerWidth, containerHeight, {
+      fluid: scene?.fluidViewport === true
+    });
+    this.targetWidth = logical.width;
+    this.targetHeight = logical.height;
+    this.scale = computeContainScale(containerWidth, containerHeight, logical.width, logical.height);
 
     // Get device pixel ratio for crisp rendering on high-DPI displays
     const dpr = window.devicePixelRatio || 1;
     this.dpr = dpr;
 
     // Set canvas backing store size (DPR-scaled for crisp rendering)
-    this.canvas.width = this.targetWidth * dpr;
-    this.canvas.height = this.targetHeight * dpr;
+    this.canvas.width = Math.round(this.targetWidth * dpr);
+    this.canvas.height = Math.round(this.targetHeight * dpr);
 
     // Scale canvas with CSS (logical size unchanged)
     this.canvas.style.width = `${this.targetWidth * this.scale}px`;
@@ -308,10 +341,34 @@ export class Game {
       this.input.setScale(this.scale);
     }
 
-    // Notify active scene of resize
-    const currentScene = this.scenes?.getCurrentScene();
-    if (currentScene?.onResize) {
-      currentScene.onResize();
+    // Anchor DOM overlays (profile HUD, party bar, node menus) to the canvas
+    this.publishCanvasAnchor();
+
+    // Notify the scene of resize
+    if (notify && scene?.onResize) {
+      scene.onResize();
+    }
+  }
+
+  /**
+   * Publish the canvas rect as CSS custom properties on <html> so DOM
+   * overlays can anchor to the visible canvas instead of the viewport:
+   *   --game-canvas-top / -left / -right / -bottom  (inset from viewport edge)
+   *   --game-canvas-width / -height
+   * Also cached on this.canvasAnchor for JS consumers.
+   */
+  publishCanvasAnchor() {
+    if (!this.canvas?.getBoundingClientRect) return;
+    const rect = this.canvas.getBoundingClientRect();
+    const viewportWidth = document.documentElement?.clientWidth || window.innerWidth;
+    const viewportHeight = document.documentElement?.clientHeight || window.innerHeight;
+    const insets = computeCanvasInsets(rect, viewportWidth, viewportHeight);
+    this.canvasAnchor = insets;
+
+    const rootStyle = document.documentElement?.style;
+    if (!rootStyle?.setProperty) return;
+    for (const [key, value] of Object.entries(insets)) {
+      rootStyle.setProperty(`--game-canvas-${key}`, `${value}px`);
     }
   }
 
@@ -433,9 +490,9 @@ export class Game {
   setupGlobalKeyHandler() {
     this._boundKeyHandler = (e) => {
       if (e.key === 'Escape') {
-        // Check if settings modal is already open
-        if (this.settingsModal?.isVisible) {
-          return; // Let the modal handle its own ESC
+        // Settings modal open or still fading out: let it handle ESC
+        if (this.settingsModal) {
+          return;
         }
 
         // Check if current scene wants to handle ESC
@@ -862,17 +919,25 @@ export class Game {
    * Show the settings modal
    */
   showSettings() {
-    if (this.settingsModal?.isVisible) {
+    if (this.settingsModal) {
       return;
     }
 
-    this.settingsModal = new SettingsModal(this);
-    this.settingsModal.show({
+    const modal = new SettingsModal(this);
+    this.settingsModal = modal;
+    modal.show({
       onClose: (saved) => {
-        this.settingsModal = null;
+        if (this.settingsModal === modal) {
+          this.settingsModal = null;
+        }
         if (saved) {
           console.log('Settings saved');
         }
+      }
+    }).catch((error) => {
+      console.error('[Game] Failed to open settings:', error);
+      if (this.settingsModal === modal) {
+        this.settingsModal = null;
       }
     });
   }
@@ -1013,6 +1078,8 @@ export class Game {
     // Clean up subsystems
     this.input?.destroy();
     this.tokenRefreshManager?.stop();
+    this.sessionReplacedPrompt?.destroy();
+    this.sessionReplacedPrompt = null;
     this.socket?.disconnect();
     this.audio?.destroy();
     this.destroyNotificationSystem();

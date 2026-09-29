@@ -83,8 +83,9 @@ export class QuestProgressHUD {
       /* Main container */
       .quest-progress-hud {
         position: absolute;
-        top: 10px;
-        left: 10px;
+        /* Anchored to the visible canvas (Game.publishCanvasAnchor) */
+        top: calc(var(--game-canvas-top, 0px) + 10px);
+        left: calc(var(--game-canvas-left, 0px) + 10px);
         min-width: 200px;
         max-width: 280px;
         background: ${getParchmentGradient('to bottom')};
@@ -264,8 +265,8 @@ export class QuestProgressHUD {
         .quest-progress-hud {
           min-width: 180px;
           max-width: 240px;
-          top: 8px;
-          left: 8px;
+          top: calc(var(--game-canvas-top, 0px) + 8px);
+          left: calc(var(--game-canvas-left, 0px) + 8px);
         }
 
         .quest-progress-hud__header {
