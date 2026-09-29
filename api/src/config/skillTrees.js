@@ -183,7 +183,7 @@ const SKILL_TREES = {
         name: 'Recklessness',
         skills: [
           { id: 'reckless_charge', name: 'Reckless Charge', description: 'Rush + 150% ATK, take 10% HP damage', maxLevel: 100, baseCost: 100, type: 'active', icon: '🏃', power: 150, range: 5, mpCost: 20, visualCategory: 'physical', scaling: { power: 0.6, range: 0.02 } },
-          { id: 'wild_swing', name: 'Wild Swing', description: '200% ATK, 50% chance to hit', maxLevel: 100, baseCost: 100, type: 'active', icon: '🌀', power: 200, range: 1, mpCost: 15, visualCategory: 'physical', scaling: { power: 0.8 } },
+          { id: 'wild_swing', name: 'Wild Swing', description: '200% ATK, 50% chance to hit', maxLevel: 100, baseCost: 100, type: 'active', icon: '🌀', power: 200, range: 1, mpCost: 15, accuracy: 0.5, visualCategory: 'physical', scaling: { power: 0.8 } },
           { id: 'berserker_leap', name: 'Berserker Leap', description: 'Jump + AoE 100% ATK, take 5% HP', maxLevel: 100, baseCost: 150, type: 'active', icon: '🦘', requires: { reckless_charge: 5, wild_swing: 5 }, power: 100, range: 4, mpCost: 25, aoeRadius: 1, visualCategory: 'physical', scaling: { power: 0.6, range: 0.02 } },
           { id: 'martyrs_resolve', name: 'Martyr\'s Resolve', description: '+100% damage when below 30% HP', maxLevel: 100, baseCost: 200, type: 'active', icon: '✝️', requires: { berserker_leap: 5 }, power: 0, range: 0, mpCost: 30, selfBuff: 'martyr', buffDuration: 3, targetSelf: true, visualCategory: 'buff', scaling: { buffDuration: 0.02 } },
           { id: 'death_wish', name: 'Death Wish', description: '+1% ATK per 1% missing HP', maxLevel: 100, baseCost: 250, type: 'passive', icon: '💀', requires: { martyrs_resolve: 5 }, statBonus: { stat: 'lowHpDamage', percentPerLevel: 0.01 } },

@@ -267,7 +267,15 @@ function calculateOffensiveAoeValue(unit, action, state) {
   let killPotential = 0;
   let targetPriority = 0;
 
+  // For offensive skills, exclude caster from damage calculation unless skill explicitly includes self
+  const isOffensive = isOffensiveSkill(skill);
+
   for (const { unit: affectedUnit, isCenter } of affectedUnits) {
+    // Exclude caster from offensive AoE unless skill explicitly includes self
+    if (isOffensive && affectedUnit.id === unit.id && !skill.includesSelf) {
+      continue;
+    }
+
     const isFriendly = getUnitTeamId(affectedUnit) === getUnitTeamId(unit);
     const direction = isFriendly ? -1 : 1;
     const edgeMultiplier = isCenter ? 1 : 0.75;

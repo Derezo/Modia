@@ -671,8 +671,14 @@ function applySimulatedAoe(state, caster, action) {
   const hits = Math.max(1, Number(skill.hits) || 1);
   const hasDamage = hasOffensiveSkillComponent(skill);
   const hasHostileStatus = hasHostileStatusSkillComponent(skill);
+  const isOffensive = hasDamage || hasHostileStatus;
 
   for (const { unit: affectedUnit, isCenter } of affectedUnits) {
+    // Exclude caster from offensive AoE unless skill explicitly includes self
+    if (isOffensive && affectedUnit.id === caster.id && !skill.includesSelf) {
+      continue;
+    }
+
     if (hasDamage) {
       let damage = estimateActionDamage(caster, affectedUnit, action) * hits;
       if (!isCenter) damage = Math.floor(damage * 0.75);

@@ -95,6 +95,25 @@ export function withColorAlpha(color, alpha) {
 export class BattleAnimations {
   constructor() {
     this.animations = [];
+    // Settings for visual effects (controlled by user preferences)
+    this.showDamageNumbers = true;
+    this.showFloatingText = true;
+  }
+
+  /**
+   * Set whether damage numbers are shown (user setting)
+   * @param {boolean} enabled
+   */
+  setShowDamageNumbers(enabled) {
+    this.showDamageNumbers = enabled !== false;
+  }
+
+  /**
+   * Set whether floating text is shown (user setting)
+   * @param {boolean} enabled
+   */
+  setShowFloatingText(enabled) {
+    this.showFloatingText = enabled !== false;
   }
 
   /**
@@ -359,6 +378,9 @@ export class BattleAnimations {
    * @param {number} elementalModifier - Elemental effectiveness (optional)
    */
   addDamageNumber(x, y, damage, isCritical = false, element = null, elementalModifier = null) {
+    // Respect user setting for damage numbers
+    if (!this.showDamageNumbers) return;
+
     // Determine color based on element
     let color = BattleAnimations.ELEMENT_COLORS.physical;
     if (isCritical) {
@@ -409,6 +431,9 @@ export class BattleAnimations {
    * @param {string} element - Element type that was absorbed
    */
   addAbsorbNumber(x, y, amount, element = null) {
+    // Respect user setting for damage numbers
+    if (!this.showDamageNumbers) return;
+
     const color = element && BattleAnimations.ELEMENT_COLORS[element]
       ? BattleAnimations.ELEMENT_COLORS[element]
       : '#44ff88';
@@ -431,6 +456,9 @@ export class BattleAnimations {
    * Add a heal number animation
    */
   addHealNumber(x, y, amount) {
+    // Respect user setting for damage numbers (heals use same setting)
+    if (!this.showDamageNumbers) return;
+
     this.animations.push({
       type: 'heal',
       x,
@@ -447,6 +475,9 @@ export class BattleAnimations {
    * Add a miss text animation
    */
   addMiss(x, y) {
+    // Respect user setting for floating text
+    if (!this.showFloatingText) return;
+
     this.animations.push({
       type: 'miss',
       x,

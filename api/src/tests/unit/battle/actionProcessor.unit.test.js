@@ -281,6 +281,120 @@ describe('checkBattleEnd', () => {
       assert.strictEqual(result.winningTeamId, 1);
     });
   });
+
+  describe('mutual knockout (double KO)', () => {
+    it('in PvE, mutual knockout gives team 2 the win (player defeat)', () => {
+      const state = {
+        units: [
+          { id: 1, hp: 0, teamId: 1 },
+          { id: 2, hp: 0, teamId: 2 }
+        ],
+        battleType: 'pve'
+      };
+
+      const result = checkBattleEnd(state);
+
+      assert.strictEqual(result.status, 'ended');
+      assert.strictEqual(result.winningTeamId, 2, 'PvE mutual KO should result in player defeat');
+    });
+
+    it('in PvP, mutual knockout caused by team 1 gives team 2 the win', () => {
+      const state = {
+        units: [
+          { id: 1, hp: 0, teamId: 1 },
+          { id: 2, hp: 0, teamId: 2 }
+        ],
+        battleType: 'pvp'
+      };
+
+      // Team 1 was acting (e.g., used AoE that killed both)
+      const result = checkBattleEnd(state, { actingTeamId: 1 });
+
+      assert.strictEqual(result.status, 'ended');
+      assert.strictEqual(result.winningTeamId, 2, 'Acting team 1 should lose in PvP mutual KO');
+    });
+
+    it('in PvP, mutual knockout caused by team 2 gives team 1 the win', () => {
+      const state = {
+        units: [
+          { id: 1, hp: 0, teamId: 1 },
+          { id: 2, hp: 0, teamId: 2 }
+        ],
+        battleType: 'pvp'
+      };
+
+      // Team 2 was acting (e.g., used overload self-damage that killed both)
+      const result = checkBattleEnd(state, { actingTeamId: 2 });
+
+      assert.strictEqual(result.status, 'ended');
+      assert.strictEqual(result.winningTeamId, 1, 'Acting team 2 should lose in PvP mutual KO');
+    });
+
+    it('in pvp_coliseum, mutual knockout follows same rule as pvp', () => {
+      const state = {
+        units: [
+          { id: 1, hp: 0, teamId: 1 },
+          { id: 2, hp: 0, teamId: 2 }
+        ],
+        battleType: 'pvp_coliseum'
+      };
+
+      const result = checkBattleEnd(state, { actingTeamId: 1 });
+
+      assert.strictEqual(result.status, 'ended');
+      assert.strictEqual(result.winningTeamId, 2, 'Coliseum follows PvP mutual KO rules');
+    });
+
+    it('in PvP without actingTeamId, defaults to team 2 win', () => {
+      const state = {
+        units: [
+          { id: 1, hp: 0, teamId: 1 },
+          { id: 2, hp: 0, teamId: 2 }
+        ],
+        battleType: 'pvp'
+      };
+
+      // No actingTeamId provided - fall back to PvE behavior
+      const result = checkBattleEnd(state);
+
+      assert.strictEqual(result.status, 'ended');
+      assert.strictEqual(result.winningTeamId, 2, 'Without acting team info, default to team 2 win');
+    });
+
+    it('AoE caster-centered double KO gives opponent the win', () => {
+      // Simulates Fire Nova killing everyone including caster
+      const state = {
+        units: [
+          { id: 'player1', hp: 0, teamId: 1 },  // Killed by own AoE
+          { id: 'enemy1', hp: 0, teamId: 2 }    // Killed by same AoE
+        ],
+        battleType: 'pvp_coliseum'
+      };
+
+      // Team 1 cast the AoE
+      const result = checkBattleEnd(state, { actingTeamId: 1 });
+
+      assert.strictEqual(result.status, 'ended');
+      assert.strictEqual(result.winningTeamId, 2, 'Caster team loses when their AoE causes mutual KO');
+    });
+
+    it('overload self-damage double KO gives opponent the win', () => {
+      // Simulates a skill that damages the caster and kills both
+      const state = {
+        units: [
+          { id: 'player1', hp: 0, teamId: 1 },
+          { id: 'enemy1', hp: 0, teamId: 2 }  // Was killed by the attack that also killed caster
+        ],
+        battleType: 'pvp'
+      };
+
+      // Enemy (team 2) used an overload skill that killed them via self-damage
+      const result = checkBattleEnd(state, { actingTeamId: 2 });
+
+      assert.strictEqual(result.status, 'ended');
+      assert.strictEqual(result.winningTeamId, 1, 'Self-damage causing mutual KO gives opponent the win');
+    });
+  });
 });
 
 // =============================================================================
@@ -2763,8 +2877,9 @@ describe('processAction - Healing Skills', () => {
     });
     const state = createSkillTestState([caster, opponent]);
 
+    // Random values: [hit check, variance, crit check]
     const result = withRandomValues(
-      [0.5, 0.99],
+      [0.5, 0.5, 0.99],
       () => processAction(
         state,
         caster,
@@ -2832,8 +2947,9 @@ describe('processAction - Healing Skills', () => {
     });
     const state = createSkillTestState([caster, shielded, unshielded]);
 
+    // Random values: [hit1, var1, crit1, hit2, var2, crit2] for 2 AoE targets
     const result = withRandomValues(
-      [0.5, 0.99, 0.5, 0.99],
+      [0.5, 0.5, 0.99, 0.5, 0.5, 0.99],
       () => processAction(
         state,
         caster,

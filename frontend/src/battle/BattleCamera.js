@@ -45,6 +45,15 @@ export class BattleCamera {
     // Large 32x32 isometric maps need to reach roughly 0.2 on narrow phones.
     this.minZoom = 0.15;
     this.maxZoom = 2.0;
+
+    // Screen shake state
+    this.screenShakeEnabled = true; // Default enabled, set via setScreenShakeEnabled
+    this.shakeActive = false;
+    this.shakeIntensity = 0;
+    this.shakeDuration = 0;
+    this.shakeTimer = 0;
+    this.shakeOffsetX = 0;
+    this.shakeOffsetY = 0;
   }
 
   setZoom(z) {
@@ -447,5 +456,63 @@ export class BattleCamera {
    */
   easeOutCubic(t) {
     return 1 - Math.pow(1 - t, 3);
+  }
+
+  /**
+   * Set whether screen shake effects are enabled (user setting)
+   * @param {boolean} enabled
+   */
+  setScreenShakeEnabled(enabled) {
+    this.screenShakeEnabled = enabled !== false;
+  }
+
+  /**
+   * Trigger a screen shake effect
+   * @param {number} intensity - Shake intensity (pixels of displacement)
+   * @param {number} duration - Shake duration in milliseconds
+   */
+  triggerShake(intensity = 5, duration = 200) {
+    if (!this.screenShakeEnabled) return;
+
+    this.shakeIntensity = intensity;
+    this.shakeDuration = duration;
+    this.shakeTimer = 0;
+    this.shakeActive = true;
+  }
+
+  /**
+   * Get current shake offset to apply to render transform
+   * Should be called each frame to get the current offset
+   * @returns {{ x: number, y: number }}
+   */
+  getShakeOffset() {
+    if (!this.shakeActive || !this.screenShakeEnabled) {
+      return { x: 0, y: 0 };
+    }
+    return { x: this.shakeOffsetX || 0, y: this.shakeOffsetY || 0 };
+  }
+
+  /**
+   * Update screen shake animation (call each frame)
+   * @param {number} deltaTime - Time since last frame in ms
+   */
+  updateShake(deltaTime) {
+    if (!this.shakeActive) return;
+
+    this.shakeTimer += deltaTime;
+    if (this.shakeTimer >= this.shakeDuration) {
+      this.shakeActive = false;
+      this.shakeOffsetX = 0;
+      this.shakeOffsetY = 0;
+      return;
+    }
+
+    // Decay intensity over time
+    const progress = this.shakeTimer / this.shakeDuration;
+    const currentIntensity = this.shakeIntensity * (1 - progress);
+
+    // Random offset within intensity range
+    this.shakeOffsetX = (Math.random() - 0.5) * 2 * currentIntensity;
+    this.shakeOffsetY = (Math.random() - 0.5) * 2 * currentIntensity;
   }
 }

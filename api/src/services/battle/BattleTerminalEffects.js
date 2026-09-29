@@ -113,9 +113,12 @@ export function buildPveTerminalProgressionPayload({
 
   // Finding 41: Include all party character IDs for advancement progress tracking
   // Fallback to [partyLeaderId] if not provided (backward compatibility)
-  const effectivePartyIds = Array.isArray(partyCharacterIds) && partyCharacterIds.length > 0
-    ? partyCharacterIds.map(Number)
+  // Dedupe and sort canonically for idempotent payload identity
+  const isValidCharacterId = id => Number.isSafeInteger(id) && id > 0;
+  const rawIds = Array.isArray(partyCharacterIds) && partyCharacterIds.length > 0
+    ? partyCharacterIds.map(Number).filter(isValidCharacterId)
     : [Number(partyLeaderId)];
+  const effectivePartyIds = [...new Set(rawIds)].sort((a, b) => a - b);
 
   return validateBattleTerminalProgressionPayload({
     version: 1,

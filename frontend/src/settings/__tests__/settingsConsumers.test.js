@@ -26,13 +26,7 @@ const NON_CONSUMERS = new Set([
 // package; wiring them is tracked as a hand-off. Remove an entry once wired
 // (the test fails on a stale entry, so the list cannot rot).
 const PENDING_BATTLE_CONSUMERS = new Set([
-  'battle.showDamageNumbers',
-  'battle.showBattleGrid',
-  'battle.showMissChance',
-  'battle.autoEndTurn',
-  'battle.confirmEndTurn',
-  'display.showFloatingText',
-  'display.screenShake'
+  // All battle settings are now wired in BattleScene._applyBattleSettings()
 ]);
 
 // Settings enforced by the API rather than read by client code. These are

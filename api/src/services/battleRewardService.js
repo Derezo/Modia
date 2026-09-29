@@ -82,9 +82,9 @@ export async function computeRewards(state, battleId, userId) {
   const difficultyTier = nodeResult.rows[0]?.difficulty_tier || 1;
   const nodeType = nodeResult.rows[0]?.node_type || 'forest';
 
-  // Calculate rewards using service
-  const baseGold = battleService.calculateGoldReward(enemies, difficultyTier);
-  const baseExperience = battleService.calculateExperienceReward(enemies, partyLevel);
+  // Calculate rewards using service - pass players for trait bonuses (Fast Learner, Treasure Hunter, etc.)
+  const baseGold = battleService.calculateGoldReward(enemies, difficultyTier, players);
+  const baseExperience = battleService.calculateExperienceReward(enemies, partyLevel, players);
   const activeShrineEffects = await loadActiveStandardShrineEffects(userId);
   const {
     gold,

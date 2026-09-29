@@ -15,20 +15,32 @@ import {
   calculateEvasion,
   calculateCritChance as sharedCalculateCritChance,
   calculateCritMultiplier as sharedCalculateCritMultiplier,
-  calculateElementalModifier
+  calculateElementalModifier,
+  STATUS_EFFECT_REGISTRY
 } from '../../../../shared/battleMath.js';
 import { getZodiacCollectionModifier } from '../zodiacCollectionBonusService.js';
+import { getEquipmentAugmentEffect } from './equipmentAugmentEffects.js';
 
 /**
  * Combine object-form status modifiers for an effective combat stat.
  * Statuses are unique by type, while distinct active effects stack
  * multiplicatively. Invalid and negative values are ignored.
+ *
+ * Falls back to STATUS_EFFECT_REGISTRY when an effect lacks object-form
+ * modifiers, so legacy string-based effects (fortify, rage, weaken, etc.)
+ * still affect combat.
  */
 function getStatusStatMultiplier(unit, statName) {
   if (!Array.isArray(unit?.statusEffects)) return 1;
 
   return unit.statusEffects.reduce((multiplier, effect) => {
-    const value = effect?.modifiers?.[statName];
+    // First check object-form modifiers on the effect
+    let value = effect?.modifiers?.[statName];
+    // Fall back to registry if no object-form modifier
+    if (value === undefined && effect?.type) {
+      const registryEntry = STATUS_EFFECT_REGISTRY[effect.type];
+      value = registryEntry?.modifiers?.[statName];
+    }
     return typeof value === 'number' && Number.isFinite(value) && value >= 0
       ? multiplier * value
       : multiplier;
@@ -79,14 +91,18 @@ export function calculatePhysicalDamage(
   // Critical hit check with new formula: 5% base + LCK/300 (max 50%)
   const traitCritBonus = traitService.getCritChanceBonus(attacker);
   const crystalCritBonus = getZodiacCollectionModifier(attacker, 'critChance');
+  const equipCritBonus = getEquipmentAugmentEffect(attacker, 'crit_chance');
   const critChance = sharedCalculateCritChance(
     attacker,
-    traitCritBonus + crystalCritBonus + (options.critChanceBonus || 0)
+    traitCritBonus + crystalCritBonus + equipCritBonus + (options.critChanceBonus || 0)
   );
   const isCritical = Math.random() < critChance;
 
-  // Critical multiplier: 1.5 base + LCK/500 + race bonus (orcs +15%)
-  const critMultiplier = isCritical ? sharedCalculateCritMultiplier(attacker) : 1.0;
+  // Critical multiplier: 1.5 base + LCK/500 + race bonus (orcs +15%) + equipment crit_damage
+  const equipCritDamage = getEquipmentAugmentEffect(attacker, 'crit_damage');
+  const critMultiplier = isCritical
+    ? sharedCalculateCritMultiplier(attacker) + equipCritDamage
+    : 1.0;
 
   // Apply trait damage multipliers
   const traitDamageMultiplier = traitService.getPhysicalDamageMultiplier(attacker, defender, isCritical);
@@ -150,14 +166,18 @@ export function calculateMagicalDamage(
   // Critical hit check with new formula: 5% base + LCK/300 (max 50%)
   const traitCritBonus = traitService.getCritChanceBonus(attacker);
   const crystalCritBonus = getZodiacCollectionModifier(attacker, 'critChance');
+  const equipCritBonus = getEquipmentAugmentEffect(attacker, 'crit_chance');
   const critChance = sharedCalculateCritChance(
     attacker,
-    traitCritBonus + crystalCritBonus + (options.critChanceBonus || 0)
+    traitCritBonus + crystalCritBonus + equipCritBonus + (options.critChanceBonus || 0)
   );
   const isCritical = Math.random() < critChance;
 
-  // Critical multiplier: 1.5 base + LCK/500 + race bonus
-  const critMultiplier = isCritical ? sharedCalculateCritMultiplier(attacker) : 1.0;
+  // Critical multiplier: 1.5 base + LCK/500 + race bonus + equipment crit_damage
+  const equipCritDamage = getEquipmentAugmentEffect(attacker, 'crit_damage');
+  const critMultiplier = isCritical
+    ? sharedCalculateCritMultiplier(attacker) + equipCritDamage
+    : 1.0;
 
   // Apply trait damage multipliers
   const traitDamageMultiplier = traitService.getMagicalDamageMultiplier(attacker, defender, isCritical);
@@ -182,7 +202,17 @@ export function calculateMagicalDamage(
  * Evasion: 2% base + (defAGI - atkAGI)/400 + defLCK/400 (max 35%)
  * Hit chance: 95% base - evasion - blindPenalty + traitBonuses (50% min, 98% max)
  */
-export function checkHit(attacker, defender) {
+/**
+ * Check if an attack/skill hits the target.
+ * @param {Object} attacker - Attacking unit
+ * @param {Object} defender - Defending unit
+ * @param {Object} options - Optional parameters
+ * @param {number} options.accuracyMultiplier - Multiply final hit chance (e.g., 0.5 for wild_swing)
+ * @returns {boolean} Whether the attack hits
+ */
+export function checkHit(attacker, defender, options = {}) {
+  const { accuracyMultiplier = 1 } = options;
+
   // Apply trait bonuses
   const accuracyBonus = traitService.getAccuracyBonus(attacker);
   const evasionBonus = traitService.getEvasionBonus(defender);
@@ -195,8 +225,10 @@ export function checkHit(attacker, defender) {
   const blindPenalty = isBlinded ? 0.30 : 0;
 
   // Calculate hit chance: 95% base - evasion - blind + accuracy
+  // Then apply accuracyMultiplier (skill-specific accuracy like wild_swing's 50%)
   const baseHitChance = 0.95;
-  const hitChance = Math.max(0.50, Math.min(0.98, baseHitChance - targetEvasion - blindPenalty + accuracyBonus));
+  const clampedHitChance = Math.max(0.50, Math.min(0.98, baseHitChance - targetEvasion - blindPenalty + accuracyBonus));
+  const hitChance = clampedHitChance * accuracyMultiplier;
 
   return Math.random() < hitChance;
 }

@@ -1411,3 +1411,105 @@ describe('calculateItemPreview', () => {
     });
   });
 });
+
+describe('calculateDamagePreview skill hit chance', () => {
+  const attacker = { strength: 30, intelligence: 30, agility: 20, luck: 10 };
+  const defender = { vitality: 20, intelligence: 20, agility: 20, luck: 10, hp: 100, maxHp: 100 };
+
+  it('should return hitChance 1.0 for healing skills (Potion Toss)', () => {
+    const healSkill = {
+      id: 'potion_toss',
+      power: 100,
+      effect: 'heal',
+      targetAlly: true
+    };
+    const preview = calculateDamagePreview(attacker, defender, healSkill);
+
+    assert.strictEqual(preview.type, 'heal');
+    assert.strictEqual(preview.hitChance, 1.0, 'Heals should always hit');
+  });
+
+  it('should return null for no-damage skills (Taunt)', () => {
+    const tauntSkill = {
+      id: 'taunt',
+      power: 0,
+      effect: 'taunt'
+    };
+    const preview = calculateDamagePreview(attacker, defender, tauntSkill);
+
+    assert.strictEqual(preview, null, 'No-damage skills should return null');
+  });
+
+  it('should calculate real hit chance for offensive multi-hit skills (Thousand Fists)', () => {
+    const thousandFists = {
+      id: 'thousand_fists',
+      power: 30,
+      hits: 5,
+      damageType: 'physical'
+    };
+    const preview = calculateDamagePreview(attacker, defender, thousandFists);
+
+    assert.ok(preview.hits === 5, 'Multi-hit should report 5 hits');
+    // With equal AGI, hit chance should be close to BASE_ACCURACY (0.95) minus BASE_EVASION (0.02)
+    assert.ok(preview.hitChance < 1.0, 'Offensive skills should not have 100% hit');
+    assert.ok(preview.hitChance >= 0.50, 'Hit chance should be at least 50%');
+  });
+
+  it('should apply skill accuracy to hit chance (Wild Swing)', () => {
+    const wildSwing = {
+      id: 'wild_swing',
+      power: 200,
+      accuracy: 0.5,
+      damageType: 'physical'
+    };
+    const normalAttack = {
+      id: 'normal_attack',
+      power: 100,
+      damageType: 'physical'
+    };
+
+    const wildSwingPreview = calculateDamagePreview(attacker, defender, wildSwing);
+    const normalPreview = calculateDamagePreview(attacker, defender, normalAttack);
+
+    // Wild Swing should have roughly half the normal hit chance
+    assert.ok(
+      wildSwingPreview.hitChance < normalPreview.hitChance * 0.6,
+      `Wild Swing (${wildSwingPreview.hitChance}) should have much lower hit than normal (${normalPreview.hitChance})`
+    );
+    // Wild Swing with 0.5 accuracy: 0.93 (approx) * 0.5 = ~0.465
+    assert.ok(
+      wildSwingPreview.hitChance >= 0.25 && wildSwingPreview.hitChance <= 0.55,
+      `Wild Swing hit chance should be around 45-50%, got ${wildSwingPreview.hitChance}`
+    );
+  });
+
+  it('should return hitChance 1.0 for ally-targeted skills', () => {
+    const allyBuffSkill = {
+      id: 'protect',
+      power: 0,
+      effect: 'defense_up',
+      targetAlly: true
+    };
+    // For ally-targeted skills with power 0, preview returns null
+    // Let's test with a heal percent skill instead
+    const allyHealSkill = {
+      id: 'heal_light',
+      healPercent: 25,
+      targetAlly: true
+    };
+    const preview = calculateDamagePreview(attacker, defender, allyHealSkill);
+
+    assert.strictEqual(preview.hitChance, 1.0, 'Ally-targeted heals should always hit');
+  });
+
+  it('should return hitChance 1.0 for self-targeted skills', () => {
+    const selfBuffSkill = {
+      id: 'meditation',
+      healPercent: 10,
+      targetSelf: true
+    };
+    const preview = calculateDamagePreview(attacker, attacker, selfBuffSkill);
+
+    assert.strictEqual(preview.hitChance, 1.0, 'Self-targeted skills should always hit');
+  });
+});

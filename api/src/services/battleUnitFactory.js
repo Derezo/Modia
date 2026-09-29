@@ -69,7 +69,7 @@ import { normalizeZodiacCollectionBonus } from './zodiacCollectionBonusService.j
  * @param {Object} character - Character from database
  * @param {Object} formation - Formation position data (optional)
  * @param {Array} skills - Loaded skills array
- * @param {Object} options - Additional options (defaultX, defaultY, traits, zodiacAbilities, zodiacCollectionBonus, teamId)
+ * @param {Object} options - Additional options (defaultX, defaultY, traits, zodiacAbilities, zodiacCollectionBonus, equipmentAugmentEffects, teamId)
  * @returns {Object} BattleUnit object
  */
 function createPlayerBattleUnit(character, formation = null, skills = [], options = {}) {
@@ -80,6 +80,7 @@ function createPlayerBattleUnit(character, formation = null, skills = [], option
   const zodiacCollectionBonus = normalizeZodiacCollectionBonus(
     options.zodiacCollectionBonus
   );
+  const equipmentAugmentEffects = options.equipmentAugmentEffects || {};
   const teamId = options.teamId ?? 1; // Default to team 1 for player units
   const applyAllStatsBonus = value => zodiacCollectionBonus.allStats > 0
     ? Math.floor(value * (1 + zodiacCollectionBonus.allStats))
@@ -91,11 +92,18 @@ function createPlayerBattleUnit(character, formation = null, skills = [], option
   const maxMp = applyAllStatsBonus(
     character.mp_max + (character.equip_mp || 0)
   );
-  const currentHp = applyAllStatsBonus(
-    character.hp_current ?? character.hp_max
+  // Gear HP/MP raises the pool, so it raises the current value too: a
+  // character at full base HP starts the battle at full (gear-inclusive) HP
+  // instead of e.g. 128/133. Damage carried in hp_current is preserved.
+  const equipHp = Number(character.equip_hp) || 0;
+  const equipMp = Number(character.equip_mp) || 0;
+  const currentHp = Math.min(
+    maxHp,
+    applyAllStatsBonus((character.hp_current ?? character.hp_max) + equipHp)
   );
-  const currentMp = applyAllStatsBonus(
-    character.mp_current ?? character.mp_max
+  const currentMp = Math.min(
+    maxMp,
+    applyAllStatsBonus((character.mp_current ?? character.mp_max) + equipMp)
   );
 
   const unit = withBattleVisualIdentity({
@@ -153,6 +161,9 @@ function createPlayerBattleUnit(character, formation = null, skills = [], option
 
     // Permanent account-wide zodiac crystal bonuses
     zodiacCollectionBonus,
+
+    // Equipment augment combat effects (crit_chance, lifesteal, etc.)
+    equipmentAugmentEffects,
 
     // Movement/Range (from class)
     movement: CLASS_MOVEMENT[character.class?.toLowerCase()] || 3,

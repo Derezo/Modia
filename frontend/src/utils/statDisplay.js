@@ -11,6 +11,8 @@
  *   formatAugmentEffect(augment); // "+10% fire damage"
  */
 
+import { resolveAugmentOverlay } from '../../../shared/overlayMapping.js';
+
 // Full stat names mapping
 const STAT_FULL_NAMES = {
   // Common variations
@@ -689,11 +691,85 @@ export function resolveAugmentIconName(augmentOrCategory) {
 }
 
 /**
+ * Augment icon names that shared/overlayMapping.js has no overlay alias for,
+ * mapped to the closest authored overlay.
+ */
+const AUGMENT_ICON_TO_OVERLAY = {
+  accuracy_boost: 'augment_critical',
+  crit_chance: 'augment_critical',
+  damage_boost: 'augment_critical',
+  elemental_fire: 'augment_fire',
+  elemental_ice: 'augment_ice',
+  elemental_lightning: 'augment_lightning',
+  evasion: 'augment_speed',
+  cooldown: 'augment_speed',
+  healing_boost: 'augment_vitality',
+  shield: 'augment_earth',
+  stagger: 'augment_stun',
+  splash: 'augment_chain',
+  area: 'augment_chain',
+  range: 'augment_pierce',
+  cost: 'augment_arcane',
+  duration: 'augment_arcane'
+};
+
+/**
+ * Resolve an augment (object or category string) to an authored overlay id
+ * (e.g. 'augment_fire') for item compositing.
+ *
+ * Tries each of the augment's identifiers (category, effect type, type, stat)
+ * against the shared overlay mapping first, then falls back through
+ * resolveAugmentIconName so every category that has an icon also gets an
+ * overlay. Unknown augments return null rather than a misleading glow.
+ * @param {Object|string|null} augment - Augment or its category
+ * @returns {string|null} Overlay id safe to pass to getAssetPath, or null
+ */
+export function resolveAugmentOverlayId(augment) {
+  const candidates = typeof augment === 'string'
+    ? [augment]
+    : (augment && typeof augment === 'object'
+      ? [augment.category, augment.effect?.type, augment.type, augment.effect?.stat, augment.stat]
+      : []);
+
+  for (const candidate of candidates) {
+    const overlayId = resolveAugmentOverlay(candidate);
+    if (overlayId) return overlayId;
+  }
+
+  const iconName = resolveAugmentIconName(augment);
+  if (iconName === DEFAULT_AUGMENT_ICON && !candidates.includes(DEFAULT_AUGMENT_ICON)) {
+    // resolveAugmentIconName fell back to its generic icon: no real match
+    return null;
+  }
+  return resolveAugmentOverlay(iconName) || AUGMENT_ICON_TO_OVERLAY[iconName] || null;
+}
+
+/**
+ * Resolve and deduplicate overlay ids for a list of augments, preserving order.
+ * @param {Array<Object|string>} augments - Augments or categories
+ * @returns {string[]} Overlay ids
+ */
+export function resolveAugmentOverlayIds(augments) {
+  if (!Array.isArray(augments)) return [];
+  const resolved = [];
+  for (const augment of augments) {
+    const overlayId = resolveAugmentOverlayId(augment);
+    if (overlayId && !resolved.includes(overlayId)) resolved.push(overlayId);
+  }
+  return resolved;
+}
+
+/**
  * Augment effect types that the server currently applies. Stat bonuses are
  * folded into bonusStats and counted by the equipment stat aggregation; the
  * other effect types are displayed but not yet applied in combat.
  */
-export const ACTIVE_AUGMENT_EFFECT_TYPES = new Set(['stat_bonus']);
+export const ACTIVE_AUGMENT_EFFECT_TYPES = new Set([
+  'stat_bonus',
+  'crit_chance',
+  'crit_damage',
+  'lifesteal'
+]);
 
 /**
  * Whether an augment's effect is applied by the server today
@@ -788,6 +864,130 @@ export function getEquipRestriction(item, character) {
 }
 
 /**
+ * Keys that describe what a consumable does rather than a stat it grants.
+ * Some templates store these in stat_bonuses (e.g. Mega-Potion hp_restore,
+ * Mystery Box opens_to); they are shown as effects, not "+N" stats.
+ */
+export const ITEM_EFFECT_KEYS = new Set([
+  'hp_restore', 'mp_restore', 'hp_full', 'mp_full', 'cure_all', 'cure_poison',
+  'revive', 'hp_percent', 'opens_to', 'teleport', 'battle_escape', 'guaranteed',
+  'fog_reveal', 'stamina_restore', 'discount', 'scope', 'mark_node', 'nearest',
+  'buff', 'duration', 'lifesteal_buff'
+]);
+
+const EFFECT_TYPE_LABELS = {
+  heal_hp: (v) => (v ? `Restores ${v} HP` : 'Restores HP'),
+  heal_mp: (v) => (v ? `Restores ${v} MP` : 'Restores MP'),
+  heal_both: (v) => (v ? `Restores ${v} HP and MP` : 'Restores HP and MP'),
+  cure_poison: () => 'Cures poison',
+  cure_all: () => 'Cures all ailments',
+  revive: (v) => (v ? `Revives a fallen ally at ${v}% HP` : 'Revives a fallen ally')
+};
+
+const OPENS_TO_LABELS = {
+  random_rare: 'Contains a random rare item',
+  random_rare_plus: 'Contains a random rare or better item'
+};
+
+/**
+ * Human-readable lines describing what a consumable does, from any of the
+ * shapes the API uses: a caravan `effect` object, template
+ * `effectType`/`effectValue` (or snake_case), and effect keys that some
+ * templates keep in their stat bonuses.
+ * @param {Object|null} item - Item
+ * @returns {string[]} Effect lines (empty when the item has no effect)
+ */
+export function formatItemEffects(item) {
+  if (!item) return [];
+  const lines = [];
+  const add = (line) => { if (line && !lines.includes(line)) lines.push(line); };
+
+  const effectType = item.effectType ?? item.effect_type ?? null;
+  const effectValue = Number(item.effectValue ?? item.effect_value) || 0;
+  if (effectType) {
+    const label = EFFECT_TYPE_LABELS[effectType];
+    add(label ? label(effectValue) : formatStatName(effectType));
+  }
+
+  const sources = [];
+  if (item.effect && typeof item.effect === 'object') sources.push(item.effect);
+  for (const statSource of [item.statBonuses, item.stat_bonuses, item.baseStats]) {
+    if (statSource && typeof statSource === 'object') {
+      const effectOnly = Object.fromEntries(
+        Object.entries(statSource).filter(([key]) => ITEM_EFFECT_KEYS.has(key))
+      );
+      if (Object.keys(effectOnly).length > 0) sources.push(effectOnly);
+    }
+  }
+
+  for (const effect of sources) {
+    const hp = Number(effect.hp_restore) || 0;
+    const mp = Number(effect.mp_restore) || 0;
+    if (hp && !effectType) add(`Restores ${hp} HP`);
+    if (mp && !effectType) add(`Restores ${mp} MP`);
+    if (effect.hp_full) add('Restores all HP');
+    if (effect.mp_full) add('Restores all MP');
+    if (effect.cure_all && effectType !== 'cure_all') add('Cures all ailments');
+    if (effect.cure_poison && effectType !== 'cure_poison') add('Cures poison');
+    if (effect.revive && effectType !== 'revive') {
+      add(effect.hp_percent ? `Revives a fallen ally at ${effect.hp_percent}% HP` : 'Revives a fallen ally');
+    }
+    if (effect.opens_to) add(OPENS_TO_LABELS[effect.opens_to] || `Contains ${formatStatName(String(effect.opens_to)).toLowerCase()}`);
+    if (effect.teleport) add(effect.teleport === 'nearest_castle' ? 'Teleports you to the nearest castle' : `Teleports you to ${formatStatName(String(effect.teleport)).toLowerCase()}`);
+    if (effect.battle_escape) add(effect.guaranteed ? 'Guarantees escape from battle' : 'Escape from battle');
+    if (effect.fog_reveal) add(`Reveals the map within ${effect.fog_reveal} nodes`);
+    if (effect.stamina_restore) add(`Restores ${effect.stamina_restore} stamina`);
+    if (effect.discount) {
+      const pct = Math.round(Number(effect.discount) * (Number(effect.discount) < 1 ? 100 : 1));
+      add(effect.scope === 'caravan_next' ? `${pct}% off your next caravan purchase` : `${pct}% discount`);
+    }
+    if (effect.mark_node) add(`Marks the ${effect.nearest ? 'nearest ' : ''}${formatStatName(String(effect.mark_node)).toLowerCase()} on the map`);
+    if (effect.lifesteal_buff) add(`Grants ${effect.lifesteal_buff}% lifesteal`);
+    if (effect.buff && typeof effect.buff === 'object') {
+      const turns = Number(effect.duration) || 0;
+      for (const [stat, value] of Object.entries(effect.buff)) {
+        add(`${formatStatValue(stat, value)}${turns ? ` for ${turns} turns` : ''}`);
+      }
+    }
+  }
+
+  return lines;
+}
+
+/**
+ * Whether the character could equip an item in a slot: the item fits the
+ * slot (matchesEquipmentSlot) and the character meets its requirements.
+ * @param {Object} item - Item
+ * @param {string} slotKey - Equipment slot
+ * @param {Object} [character] - { level, class }
+ * @returns {boolean}
+ */
+export function canCharacterEquip(item, slotKey, character) {
+  if (!item) return false;
+  if (!matchesEquipmentSlot(item, slotKey)) return false;
+  return !getEquipRestriction(item, character);
+}
+
+/**
+ * Whether any inventory item is a strict power upgrade over what the
+ * character wears in one of the given slots.
+ * @param {Object} equipment - Map of slot key to equipped item
+ * @param {Array<Object>} inventory - Unequipped items
+ * @param {Object} character - { level, class }
+ * @param {string[]} slots - Slot keys to check
+ * @returns {boolean}
+ */
+export function hasEquipmentUpgrade(equipment, inventory, character, slots) {
+  if (!equipment || typeof equipment !== 'object' || !Array.isArray(inventory)) return false;
+  return slots.some((slotKey) => {
+    const currentPower = calculateItemPower(equipment[slotKey]);
+    return inventory.some(item =>
+      canCharacterEquip(item, slotKey, character) && calculateItemPower(item) > currentPower
+    );
+  });
+}
+
+/**
  * Normalized level and class requirements of an item
  * @param {Object} item - Item
  * @returns {{level: number, classes: string[]}}
@@ -796,7 +996,9 @@ export function getItemRequirements(item) {
   if (!item) return { level: 0, classes: [] };
   const level = Number(item.level_requirement ?? item.levelRequirement ?? 0) || 0;
   const rawClasses = item.class_restriction ?? item.classRestriction ?? item.classRestrictions ?? [];
-  const classes = Array.isArray(rawClasses) ? rawClasses.filter(Boolean) : [];
+  const classes = Array.isArray(rawClasses)
+    ? rawClasses.filter(Boolean)
+    : (typeof rawClasses === 'string' && rawClasses ? [rawClasses] : []);
   return { level, classes };
 }
 
@@ -811,9 +1013,14 @@ export default {
   sumItemStats,
   calculateItemPower,
   resolveAugmentIconName,
+  resolveAugmentOverlayId,
+  resolveAugmentOverlayIds,
   isAugmentEffectActive,
   describeAugment,
   matchesEquipmentSlot,
   getEquipRestriction,
+  canCharacterEquip,
+  hasEquipmentUpgrade,
+  formatItemEffects,
   getItemRequirements
 };

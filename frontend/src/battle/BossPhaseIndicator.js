@@ -269,8 +269,14 @@ export class BossPhaseIndicator {
 
   /**
    * Trigger screen shake effect
+   * Respects the user's display.screenShake setting
    */
   triggerScreenShake() {
+    // Check if screen shake is disabled in user settings
+    if (!this.game.getUserSetting('display.screenShake', true)) {
+      return;
+    }
+
     const canvas = this.game.canvas;
     if (!canvas) return;
 

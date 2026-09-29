@@ -34,9 +34,11 @@ import {
 import {
   isBeneficialStatusEffect,
   CURE_POISON_EFFECTS,
-  CURE_ALL_EFFECTS
+  CURE_ALL_EFFECTS,
+  calculateEffectiveStatusChance
 } from '../../../../shared/battleMath.js';
 import { applyHealingReceivedBonus } from '../zodiacCollectionBonusService.js';
+import { getEquipmentAugmentEffect } from './equipmentAugmentEffects.js';
 
 function applyDamageInstance(attacker, target, incomingDamage) {
   if (target.hp <= 0 || incomingDamage <= 0) {
@@ -577,10 +579,13 @@ function processAttackAction(state, unit, targetTile) {
       result.targetId = target.id;
       result.targetType = target.type;
 
-      // Apply lifesteal trait (heal attacker for % of damage dealt)
+      // Apply lifesteal from traits and equipment augments
+      const traitLifesteal = traitService.calculateLifesteal(unit, actualDamage);
+      const equipLifestealPercent = getEquipmentAugmentEffect(unit, 'lifesteal');
+      const equipLifesteal = Math.floor(actualDamage * equipLifestealPercent);
       const lifestealAmount = applyHealingReceivedBonus(
         unit,
-        traitService.calculateLifesteal(unit, actualDamage)
+        traitLifesteal + equipLifesteal
       );
       if (lifestealAmount > 0) {
         unit.hp = Math.min(unit.maxHp, unit.hp + lifestealAmount);
@@ -914,26 +919,33 @@ function processAoESkill(
   );
 
   // Get all units in the AoE area (includes allies - friendly fire!)
+  // For offensive skills, exclude the caster to prevent self-damage
+  const isOffensiveAoE = hasOffensiveSkillComponent(skill);
   const affectedUnits = getUnitsInAoE(
     state.units,
     targetTile.x,
     targetTile.y,
     skill.aoeRadius,
     skill.aoePattern || 'circle'
-  ).filter(({ unit: affectedUnit }) =>
-    !targetingTraversalView ||
-    isTraversalCellPlayable(targetingTraversalView, {
-      x: affectedUnit.tileX,
-      y: affectedUnit.tileY
-    })
-  );
+  ).filter(({ unit: affectedUnit }) => {
+    // Exclude caster from offensive AoE unless skill explicitly includes self
+    if (isOffensiveAoE && affectedUnit.id === unit.id && !skill.includesSelf) {
+      return false;
+    }
+    return !targetingTraversalView ||
+      isTraversalCellPlayable(targetingTraversalView, {
+        x: affectedUnit.tileX,
+        y: affectedUnit.tileY
+      });
+  });
 
   // Track AoE results
   result.isAoE = true;
   result.aoeTargets = [];
   result.aoeTiles = aoeTiles;
 
-  const isOffensive = hasOffensiveSkillComponent(skill);
+  // Reuse isOffensiveAoE computed above for caster exclusion
+  const isOffensive = isOffensiveAoE;
   const appliesBuffInArea = !isOffensive && Boolean(skill.selfBuff);
   const power = skill.power ?? 150;
   const damageType = skill.damageType || 'physical';
@@ -955,6 +967,19 @@ function processAoESkill(
     };
 
     if (isOffensive) {
+      // Check hit for offensive targets (evasion, Blind, skill accuracy)
+      const isTargetEnemy = getUnitTeamId(affectedUnit) !== getUnitTeamId(unit);
+      if (isTargetEnemy) {
+        const skillAccuracy = skill.accuracy ?? 1;
+        const didHit = checkHit(unit, affectedUnit, { accuracyMultiplier: skillAccuracy });
+        if (!didHit) {
+          targetResult.missed = true;
+          targetResult.damage = 0;
+          result.aoeTargets.push(targetResult);
+          continue;
+        }
+      }
+
       const damageResult = damageType === 'magical'
         ? calculateMagicalDamage(unit, affectedUnit, power, skillElement)
         : calculatePhysicalDamage(unit, affectedUnit, power, skillElement);
@@ -1018,22 +1043,38 @@ function processAoESkill(
     }
 
     // Apply status effect if skill has one and chance succeeds
+    // For debuffs on enemies, apply status resistance
     if (skill.effect &&
         skill.effect !== 'heal' &&
-        !isSkillEffectHandledAsBuff(skill) &&
-        Math.random() < (skill.effectChance ?? 1)) {
-      const effectApplied = applyStatusEffect(
-        affectedUnit,
-        skill.effect,
-        skill.effectDuration || 3
-      );
-      if (effectApplied) {
-        targetResult.effectApplied = skill.effect;
-        targetResult.effectDuration = skill.effectDuration || 3;
+        !isSkillEffectHandledAsBuff(skill)) {
+      const isDebuff = getUnitTeamId(affectedUnit) !== getUnitTeamId(unit);
+      const baseChance = skill.effectChance ?? 1;
+      const effectiveChance = isDebuff
+        ? calculateEffectiveStatusChance(baseChance, affectedUnit, affectedUnit.statusResist || 0)
+        : baseChance;
+
+      if (Math.random() < effectiveChance) {
+        const effectApplied = applyStatusEffect(
+          affectedUnit,
+          skill.effect,
+          skill.effectDuration || 3
+        );
+        if (effectApplied) {
+          targetResult.effectApplied = skill.effect;
+          targetResult.effectDuration = skill.effectDuration || 3;
+          result.skillEffects.push({
+            type: 'debuff',
+            effect: skill.effect,
+            duration: skill.effectDuration || 3,
+            targetId: affectedUnit.id
+          });
+        }
+      } else if (isDebuff && effectiveChance < baseChance) {
+        // Target resisted the effect
+        targetResult.effectResisted = skill.effect;
         result.skillEffects.push({
-          type: 'debuff',
+          type: 'resisted',
           effect: skill.effect,
-          duration: skill.effectDuration || 3,
           targetId: affectedUnit.id
         });
       }
@@ -1098,20 +1139,37 @@ function processSingleTargetSkill(state, unit, target, skill, skillId, result) {
       applySelfSkillEffects(unit, skill, result);
     }
 
+    // Apply status effect if skill has one and chance succeeds
+    // For debuffs on enemies, apply status resistance
     if (skill.effect &&
         skill.effect !== 'heal' &&
-        !isSkillEffectHandledAsBuff(skill) &&
-        Math.random() < (skill.effectChance ?? 1)) {
-      const effectApplied = applyStatusEffect(
-        target,
-        skill.effect,
-        skill.effectDuration || 3
-      );
-      if (effectApplied) {
+        !isSkillEffectHandledAsBuff(skill)) {
+      const isDebuff = getUnitTeamId(target) !== getUnitTeamId(unit);
+      const baseChance = skill.effectChance ?? 1;
+      const effectiveChance = isDebuff
+        ? calculateEffectiveStatusChance(baseChance, target, target.statusResist || 0)
+        : baseChance;
+
+      if (Math.random() < effectiveChance) {
+        const effectApplied = applyStatusEffect(
+          target,
+          skill.effect,
+          skill.effectDuration || 3
+        );
+        if (effectApplied) {
+          result.skillEffects.push({
+            type: 'debuff',
+            effect: skill.effect,
+            duration: skill.effectDuration || 3,
+            targetId: target.id
+          });
+        }
+      } else if (isDebuff && effectiveChance < baseChance) {
+        // Target resisted the effect
+        result.effectResisted = skill.effect;
         result.skillEffects.push({
-          type: 'debuff',
+          type: 'resisted',
           effect: skill.effect,
-          duration: skill.effectDuration || 3,
           targetId: target.id
         });
       }
@@ -1122,6 +1180,24 @@ function processSingleTargetSkill(state, unit, target, skill, skillId, result) {
     }
     unit.actUsed = true;
     return result;
+  }
+
+  // Check hit for offensive single-target skills (evasion, Blind, skill accuracy)
+  const isTargetEnemy = getUnitTeamId(target) !== getUnitTeamId(unit);
+  if (isTargetEnemy) {
+    const skillAccuracy = skill.accuracy ?? 1;
+    const didHit = checkHit(unit, target, { accuracyMultiplier: skillAccuracy });
+    if (!didHit) {
+      result.missed = true;
+      result.damage = 0;
+      result.targetId = target.id;
+      result.targetType = target.type;
+      if (skill.cooldown && skill.cooldown > 0) {
+        unit.skillCooldowns[skillId] = skill.cooldown;
+      }
+      unit.actUsed = true;
+      return result;
+    }
   }
 
   const damageResult = damageType === 'magical'
@@ -1194,20 +1270,36 @@ function processSingleTargetSkill(state, unit, target, skill, skillId, result) {
   }
 
   // Apply status effect if skill has one and chance succeeds
+  // For debuffs on enemies, apply status resistance
   if (skill.effect &&
       skill.effect !== 'heal' &&
-      !isSkillEffectHandledAsBuff(skill) &&
-      Math.random() < (skill.effectChance ?? 1)) {
-    const effectApplied = applyStatusEffect(
-      target,
-      skill.effect,
-      skill.effectDuration || 3
-    );
-    if (effectApplied) {
+      !isSkillEffectHandledAsBuff(skill)) {
+    const isDebuff = getUnitTeamId(target) !== getUnitTeamId(unit);
+    const baseChance = skill.effectChance ?? 1;
+    const effectiveChance = isDebuff
+      ? calculateEffectiveStatusChance(baseChance, target, target.statusResist || 0)
+      : baseChance;
+
+    if (Math.random() < effectiveChance) {
+      const effectApplied = applyStatusEffect(
+        target,
+        skill.effect,
+        skill.effectDuration || 3
+      );
+      if (effectApplied) {
+        result.skillEffects.push({
+          type: 'debuff',
+          effect: skill.effect,
+          duration: skill.effectDuration || 3,
+          targetId: target.id
+        });
+      }
+    } else if (isDebuff && effectiveChance < baseChance) {
+      // Target resisted the effect
+      result.effectResisted = skill.effect;
       result.skillEffects.push({
-        type: 'debuff',
+        type: 'resisted',
         effect: skill.effect,
-        duration: skill.effectDuration || 3,
         targetId: target.id
       });
     }
@@ -1549,10 +1641,17 @@ function getUnitTeamId(unit) {
  * This allows existing code like `if (result === 'active')` to still work,
  * while new code can use `result.status` and `result.winningTeamId`.
  *
+ * Mutual knockout handling:
+ *   - In PvE: Team 2 (enemies) wins by default (player defeat).
+ *   - In PvP: The acting team loses (opponent wins). If actingTeamId is provided
+ *     and battleType is 'pvp' or 'pvp_coliseum', the opponent wins.
+ *
  * @param {Object} state - Battle state
+ * @param {Object} options - Optional parameters
+ * @param {number} options.actingTeamId - Team ID of the unit whose action caused the double KO
  * @returns {Object} Battle end status with backwards-compatible valueOf()
  */
-export function checkBattleEnd(state) {
+export function checkBattleEnd(state, { actingTeamId } = {}) {
   // Count alive units per team
   const team1Alive = state.units.filter(u => u.hp > 0 && getUnitTeamId(u) === 1).length;
   const team2Alive = state.units.filter(u => u.hp > 0 && getUnitTeamId(u) === 2).length;
@@ -1562,6 +1661,24 @@ export function checkBattleEnd(state) {
   }
   if (team1Alive === 0 && team2Alive > 0) {
     return createBattleEndResult('ended', 2);
+  }
+  // Mutual knockout: both teams wiped out at the same time
+  // Only applies when there were units on both teams (not empty array scenario)
+  if (team1Alive === 0 && team2Alive === 0 && state.units.length > 0) {
+    // Check that both teams actually had units to begin with
+    const hadTeam1 = state.units.some(u => getUnitTeamId(u) === 1);
+    const hadTeam2 = state.units.some(u => getUnitTeamId(u) === 2);
+    if (hadTeam1 && hadTeam2) {
+      // In PvP (pvp or pvp_coliseum), the acting team loses - opponent wins
+      const isPvP = state.battleType === 'pvp' || state.battleType === 'pvp_coliseum';
+      if (isPvP && actingTeamId !== undefined) {
+        // Acting team caused mutual destruction, so opponent wins
+        const winningTeamId = actingTeamId === 1 ? 2 : 1;
+        return createBattleEndResult('ended', winningTeamId);
+      }
+      // PvE: team 2 wins (player defeat)
+      return createBattleEndResult('ended', 2);
+    }
   }
 
   return createBattleEndResult('active', null);

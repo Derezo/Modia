@@ -3,7 +3,13 @@
  */
 
 import * as traitService from '../traitService.js';
-import { PURIFY_EFFECTS, PREVENT_ACTING, PREVENT_MOVEMENT, PREVENT_SKILLS } from '../../../../shared/battleMath.js';
+import {
+  PURIFY_EFFECTS,
+  PREVENT_ACTING,
+  PREVENT_MOVEMENT,
+  PREVENT_SKILLS,
+  STATUS_EFFECT_REGISTRY
+} from '../../../../shared/battleMath.js';
 import { applyHealingReceivedBonus } from '../zodiacCollectionBonusService.js';
 
 /**
@@ -65,6 +71,32 @@ export function processStatusEffects(unit) {
         results.push({ type: 'regen_heal', amount: healAmount });
         break;
       }
+
+      case 'bleed': {
+        const bleedDamage = Math.floor(
+          unit.maxHp * (STATUS_EFFECT_REGISTRY.bleed?.tickDamagePercent || 0.03)
+        );
+        results.push(applyPeriodicDamage(unit, bleedDamage, 'bleed_damage'));
+        break;
+      }
+
+      case 'curse': {
+        const curseDamage = Math.floor(
+          unit.maxHp * (STATUS_EFFECT_REGISTRY.curse?.tickDamagePercent || 0.02)
+        );
+        results.push(applyPeriodicDamage(unit, curseDamage, 'curse_damage'));
+        break;
+      }
+
+      default: {
+        // Check registry for tick damage on unknown effect types
+        const registryEntry = STATUS_EFFECT_REGISTRY[effect.type];
+        if (registryEntry?.tickDamagePercent) {
+          const tickDamage = Math.floor(unit.maxHp * registryEntry.tickDamagePercent);
+          results.push(applyPeriodicDamage(unit, tickDamage, `${effect.type}_damage`));
+        }
+        break;
+      }
     }
 
     // Duration reaches zero at turn start, but the effect remains authoritative
@@ -119,11 +151,18 @@ export function canUnitMove(unit) {
 
 /**
  * Check if unit can use skills (status effects only)
+ * Checks both PREVENT_SKILLS list and registry's preventsSkills flag (e.g., berserker)
  */
 export function canUnitUseSkills(unit) {
   if (!unit.statusEffects) return true;
 
-  return !unit.statusEffects.some(e => PREVENT_SKILLS.includes(e.type));
+  return !unit.statusEffects.some(e => {
+    // Check static list first
+    if (PREVENT_SKILLS.includes(e.type)) return true;
+    // Check registry for preventsSkills (e.g., berserker rage blocks skills)
+    const registryEntry = STATUS_EFFECT_REGISTRY[e.type];
+    return registryEntry?.preventsSkills === true;
+  });
 }
 
 /**

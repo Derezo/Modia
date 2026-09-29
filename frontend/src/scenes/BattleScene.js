@@ -81,6 +81,7 @@ import { calculateDamagePreview, calculateItemPreview } from '@shared/battleMath
 import { CLASS_MOVEMENT } from '@shared/constants.js';
 import { getNpcVisualIdentity, getPlayerCharacterIdentity } from '@shared/assetPaths.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
+import { parchmentConfirm } from '../ui/parchment/parchmentConfirm.js';
 import { BattleLoadingScreen } from '../ui/parchment/BattleLoadingScreen.js';
 import { responsive } from '../core/Responsive.js';
 
@@ -482,6 +483,9 @@ export class BattleScene extends Scene {
       this.camera.centerOn(mapCenter.x, mapCenter.y, true);
     }
 
+    // Wire up battle settings from user preferences
+    this._applyBattleSettings();
+
     // Mobile auto-fit: scale zoom so the isometric grid fits the viewport.
     // Re-applies on breakpoint changes (landscape <-> portrait).
     this._applyMobileFitZoom(mapDimensions);
@@ -506,9 +510,9 @@ export class BattleScene extends Scene {
       onItem: () => this.showItemMenu(),
       onSelectItem: (itemData) => this.startItemAction(itemData),
       onSelectZodiacAbility: (abilityKey) => this.startZodiacAbility(abilityKey),
-      onWait: () => this.submitAction('wait'),
+      onWait: () => this.handleWaitAction(),
       onConfirm: () => this.confirmAction(),
-      onCancel: () => this.cancelAction(),
+      onCancel: () => this.cancelActionToMenu(),
       onContinue: () => this.endBattle(),
       onSurrender: () => this.handleSurrender(),
       onUnitPreview: (unit) => this.handleUnitPreview(unit)
@@ -524,7 +528,7 @@ export class BattleScene extends Scene {
     this.radialMenu.create({
       onMove: () => this.startMoveAction(),
       onAttack: () => this.startAttackAction(),
-      onWait: () => this.submitAction('wait'),
+      onWait: () => this.handleWaitAction(),
       onCancel: () => this.cancelAction(),
       onSkillSelect: (skillId) => this.startSkillAction(skillId),
       onItemSelect: (itemData) => this.startItemAction(itemData),
@@ -543,7 +547,7 @@ export class BattleScene extends Scene {
     this.actionBar.create({
       onMove: () => this.startMoveAction(),
       onAttack: () => this.startAttackAction(),
-      onWait: () => this.submitAction('wait'),
+      onWait: () => this.handleWaitAction(),
       onCancel: () => this.cancelAction(),
       onSkillSelect: (skillId) => this.startSkillAction(skillId),
       onItemSelect: (itemData) => this.startItemAction(itemData),
@@ -562,7 +566,7 @@ export class BattleScene extends Scene {
     this.contextMenu.create({
       onMove: () => this.startMoveAction(),
       onAttack: () => this.startAttackAction(),
-      onWait: () => this.submitAction('wait'),
+      onWait: () => this.handleWaitAction(),
       onCancel: () => this.cancelAction(),
       onSkillSelect: (skillId) => this.startSkillAction(skillId),
       onItemSelect: (itemData) => this.startItemAction(itemData),
@@ -963,6 +967,19 @@ export class BattleScene extends Scene {
     const neitherAvailable = !this.canMove && !this.canAct;
     this.turnPhase = availableActions?.turnPhase ??
       (bothAvailable ? 'ready' : (neitherAvailable ? 'done' : 'partial'));
+
+    // Auto-end turn when move and act are both used and autoEndTurn setting is on
+    // Only for local player turns, not during animations or battle end
+    if (this.autoEndTurn &&
+        neitherAvailable &&
+        this.canWait &&
+        this.isLocalPlayerTurn() &&
+        !this.isActionSubmitting &&
+        !this.battleEnded &&
+        !this.isIntroPlaying) {
+      // Use setTimeout to avoid blocking the current call stack
+      setTimeout(() => this.submitAction('wait'), 0);
+    }
   }
 
   getActionAvailability(actionType) {
@@ -1669,6 +1686,35 @@ export class BattleScene extends Scene {
   }
 
   /**
+   * Apply user battle settings to camera, animations and scene state.
+   * Called once after components are initialized.
+   */
+  _applyBattleSettings() {
+    // Display settings
+    if (this.camera) {
+      this.camera.setScreenShakeEnabled(
+        this.game.getUserSetting('display.screenShake', true)
+      );
+    }
+
+    // Animation settings
+    if (this.animations) {
+      this.animations.setShowFloatingText(
+        this.game.getUserSetting('display.showFloatingText', true)
+      );
+      this.animations.setShowDamageNumbers(
+        this.game.getUserSetting('battle.showDamageNumbers', true)
+      );
+    }
+
+    // Battle behavior settings (stored on scene for action handlers)
+    this.confirmEndTurn = this.game.getUserSetting('battle.confirmEndTurn', false);
+    this.autoEndTurn = this.game.getUserSetting('battle.autoEndTurn', true);
+    this.showBattleGrid = this.game.getUserSetting('battle.showBattleGrid', true);
+    this.showMissChance = this.game.getUserSetting('battle.showMissChance', true);
+  }
+
+  /**
    * Convert canvas logical coordinates to UI overlay screen coordinates
    * Delegates to extracted battleCoords utility.
    * @param {number} canvasX - X coordinate in canvas logical space
@@ -1776,9 +1822,9 @@ export class BattleScene extends Scene {
    * Called by Game.js global ESC handler
    */
   handleEscape() {
-    // If an action is in progress, cancel it
+    // If an action is in progress, cancel it and go back to the action menu
     if (this.currentAction !== null) {
-      this.cancelAction();
+      this.cancelActionToMenu();
       return true;
     }
 
@@ -1921,6 +1967,11 @@ export class BattleScene extends Scene {
 
     // Show on UI target card
     if (previewData) {
+      // If showMissChance is off, hide hit chance by setting it to 1.0
+      // This makes the card skip showing the percentage
+      if (!this.showMissChance && previewData.hitChance !== undefined) {
+        previewData = { ...previewData, hitChance: 1.0 };
+      }
       this.ui.showDamagePreview(previewData);
     } else {
       this.ui.hideDamagePreview();
@@ -2503,6 +2554,19 @@ export class BattleScene extends Scene {
 
     // Clear active unit preview (for self-targeting skills)
     this.ui.hideActiveUnitPreview();
+  }
+
+  /**
+   * Player backed out of targeting (Cancel button / Esc): cancel, then bring
+   * the action menu back. Without this the radial menu vanished and only
+   * reappeared by clicking the unit's own tile, which players did not find.
+   */
+  cancelActionToMenu() {
+    this.cancelAction();
+    const activeUnit = this.getActiveUnit();
+    if (activeUnit && this.isLocalActiveUnit(activeUnit)) {
+      this.showActionMenu();
+    }
   }
 
   /**
@@ -3529,6 +3593,35 @@ export class BattleScene extends Scene {
   }
 
   /**
+   * Handle wait/end turn action with optional confirmation dialog
+   * Respects the confirmEndTurn user setting
+   */
+  async handleWaitAction() {
+    // If confirmEndTurn is enabled, show confirmation before ending turn
+    if (this.confirmEndTurn) {
+      // Parchment dialog, not window.confirm(): the native one blocks the
+      // renderer (and the game loop) until dismissed.
+      if (this.waitConfirmPending) return;
+      this.waitConfirmPending = true;
+      const epoch = this.entryEpoch;
+      let confirmed = false;
+      try {
+        confirmed = await parchmentConfirm({
+          title: 'End Turn',
+          message: 'End your turn?',
+          confirmLabel: 'End Turn',
+          cancelLabel: 'Keep Playing'
+        });
+      } finally {
+        this.waitConfirmPending = false;
+      }
+      // The battle may have ended (or the scene exited) while the dialog was open
+      if (!confirmed || this.entryEpoch !== epoch) return;
+    }
+    await this.submitAction('wait');
+  }
+
+  /**
    * Handle player surrender in PvP battle
    */
   handleSurrender() {
@@ -3940,19 +4033,22 @@ export class BattleScene extends Scene {
       ? this.getUnitActiveSkills(activeUnit).find(s => s.id === this.selectedSkillId)
       : null;
 
-    const highlights = buildHighlights({
-      currentAction: this.currentAction,
-      validTiles: this.validTiles,
-      movementRange: this.movementRange,
-      selectedMoveTile: this.selectedMoveTile,
-      hoveredTile: this.hoveredTile,
-      pathfinding: this.pathfinding,
-      skill,
-      getUnitAt: (x, y) => this.getUnitAt(x, y),
-      isPvP: this.isPvP,
-      localUserId,
-      localTeamId
-    });
+    // Build tile highlights for movement/targeting, unless showBattleGrid is off
+    const highlights = this.showBattleGrid
+      ? buildHighlights({
+        currentAction: this.currentAction,
+        validTiles: this.validTiles,
+        movementRange: this.movementRange,
+        selectedMoveTile: this.selectedMoveTile,
+        hoveredTile: this.hoveredTile,
+        pathfinding: this.pathfinding,
+        skill,
+        getUnitAt: (x, y) => this.getUnitAt(x, y),
+        isPvP: this.isPvP,
+        localUserId,
+        localTeamId
+      })
+      : {};
 
     // Update occlusion only when the living-unit layout changes. Render can run
     // much more frequently than movement, so rebuilding it per frame is costly.

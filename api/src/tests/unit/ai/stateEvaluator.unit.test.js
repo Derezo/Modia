@@ -340,6 +340,81 @@ describe('StateEvaluator', () => {
       assert.ok(result.score < 0);
     });
 
+    it('excludes caster from offensive AoE damage calculation (Fire Nova, Cleave)', () => {
+      const evaluator = new StateEvaluator(getWeights('tactical'));
+      const offensiveNovaSkill = createMockSkill({
+        id: 'fire_nova',
+        power: 100,
+        range: 0,
+        aoeRadius: 2,
+        mpCost: 15,
+        damageType: 'magical'
+      });
+      // Caster is surrounded by enemies, they should all take damage but not the caster
+      const state = createMockBattleState(
+        [
+          { id: 'enemy-n', tileX: 5, tileY: 4, vitality: 10, defense: 5 },
+          { id: 'enemy-s', tileX: 5, tileY: 6, vitality: 10, defense: 5 },
+          { id: 'enemy-e', tileX: 6, tileY: 5, vitality: 10, defense: 5 }
+        ],
+        [
+          { id: 'caster', tileX: 5, tileY: 5, intelligence: 50, magicAttack: 20, vitality: 10 }
+        ]
+      );
+      const caster = state.units.find(unit => unit.id === 'caster');
+      const action = {
+        type: 'skill',
+        skill: offensiveNovaSkill,
+        target: { x: 5, y: 5 },
+        aoeCenter: { x: 5, y: 5 }
+      };
+
+      const result = evaluator.evaluateAction(caster, action, state);
+
+      // Score should be positive (damaging enemies), not negative (self-damage)
+      // Before the fix, caster would be included in AoE and penalize friendly fire
+      assert.ok(
+        result.factors.DAMAGE_DEALT > 0,
+        `Offensive AoE centered on caster should damage enemies without self-damage penalty, got ${result.factors.DAMAGE_DEALT}`
+      );
+      assert.ok(result.score > 0, 'Score should be positive for damaging 3 enemies');
+    });
+
+    it('still includes caster in buff AoE centered on self', () => {
+      const evaluator = new StateEvaluator(getWeights('support'));
+      const buffSkill = createMockSkill({
+        id: 'war_cry',
+        power: 0,
+        range: 0,
+        aoeRadius: 2,
+        damageType: 'support',
+        selfBuff: { attack: 1.3 },
+        buffDuration: 3
+      });
+      const state = createMockBattleState(
+        [
+          { id: 'caster', tileX: 5, tileY: 5, strength: 30 },
+          { id: 'ally', tileX: 6, tileY: 5, strength: 25 }
+        ],
+        [
+          { id: 'enemy', tileX: 10, tileY: 5 }
+        ]
+      );
+      const caster = state.units.find(unit => unit.id === 'caster');
+      const action = {
+        type: 'skill',
+        skill: buffSkill,
+        targetId: caster.id,
+        target: { x: 5, y: 5 },
+        aoeCenter: { x: 5, y: 5 }
+      };
+
+      const result = evaluator.evaluateAction(caster, action, state);
+
+      // Buff AoE should benefit both caster and ally
+      assert.ok(result.score > 0, 'Buff AoE should have positive value');
+    });
+
     it('values every same-team recipient of a caster-centered support AoE', () => {
       const evaluator = new StateEvaluator(getWeights('support'));
       const skill = createMockSkill({

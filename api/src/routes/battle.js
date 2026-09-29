@@ -74,6 +74,7 @@ import {
   startCleanupTimer
 } from '../services/battleActionSequence.js';
 import { buildEquipmentStatsLateral } from '../services/equipmentStats.js';
+import { sumEquipmentAugmentEffects } from '../services/battle/equipmentAugmentEffects.js';
 
 const router = express.Router();
 
@@ -743,7 +744,10 @@ async function handleBattleEnd(
     idempotent: commandReceipt?.idempotent ?? false,
     mutableState: commandReceipt?.mutableState,
     baseStateRevision: commandReceipt?.baseStateRevision,
-    replayMetadata: commandReceipt?.replayMetadata
+    replayMetadata: commandReceipt?.replayMetadata,
+    // Include the full command receipt for idempotent replay handling
+    // This ensures sendBattleActionReplay has access to battleId and map references
+    commandReceipt
   };
 }
 
@@ -1114,6 +1118,22 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
       authoritativeCharacterIds,
       { client }
     );
+
+    // Load equipment augment effects for combat (crit_chance, lifesteal, etc.)
+    const equipmentResult = await client.query(
+      `SELECT ci.character_id, ci.modifications
+       FROM character_items ci
+       WHERE ci.character_id = ANY($1::int[]) AND ci.equipped_slot IS NOT NULL`,
+      [authoritativeCharacterIds]
+    );
+    const characterAugmentEffects = {};
+    for (const charId of authoritativeCharacterIds) {
+      const charEquipment = equipmentResult.rows.filter(
+        row => row.character_id === charId
+      );
+      characterAugmentEffects[charId] = sumEquipmentAugmentEffects(charEquipment);
+    }
+
     const zodiacAbilities = await zodiacAbilityService.loadActiveZodiacAbilities(
       req.user.userId,
       { client }
@@ -1170,7 +1190,8 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
             defaultY,
             traits: characterTraits[character.id] || [],
             zodiacAbilities,
-            zodiacCollectionBonus
+            zodiacCollectionBonus,
+            equipmentAugmentEffects: characterAugmentEffects[character.id] || {}
           }
         );
       })
@@ -1663,28 +1684,66 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
 
   let phaseTransitionNotification = null;
   let changedBossState = null;
+  const phaseTransitions = [];
 
-  // Check for boss phase transitions after damage dealt
-  if (result.damage && result.targetType === 'enemy' && state.bossStates) {
-    const targetBoss = state.units.find(u => u.id === result.targetId);
-    if (targetBoss && state.bossStates[targetBoss.id]) {
-      const phaseTransition = bossService.processBossDamage(
-        targetBoss,
-        state.bossStates[targetBoss.id],
-        result.damage,
-        state
-      );
-      if (phaseTransition) {
-        result.phaseTransition = phaseTransition;
-        // Update boss display info
-        targetBoss.currentPhase = state.bossStates[targetBoss.id].currentPhase;
-        targetBoss.phaseName = phaseTransition.phaseName;
-        changedBossState = state.bossStates[targetBoss.id];
-        phaseTransitionNotification = {
-          bossId: targetBoss.id,
-          bossName: targetBoss.name,
-          ...phaseTransition
-        };
+  // Check for boss phase transitions after damage dealt (single-target, AoE)
+  if (state.bossStates) {
+    // Single-target damage
+    if (result.damage && result.targetType === 'enemy') {
+      const targetBoss = state.units.find(u => u.id === result.targetId);
+      if (targetBoss && state.bossStates[targetBoss.id]) {
+        const phaseTransition = bossService.processBossDamage(
+          targetBoss,
+          state.bossStates[targetBoss.id],
+          result.damage,
+          state
+        );
+        if (phaseTransition) {
+          phaseTransitions.push({ boss: targetBoss, transition: phaseTransition });
+        }
+      }
+    }
+
+    // AoE damage - check each affected enemy boss
+    if (result.aoeTargets && result.aoeTargets.length > 0) {
+      for (const aoeTarget of result.aoeTargets) {
+        if (aoeTarget.targetType === 'enemy' && aoeTarget.damage > 0) {
+          const targetBoss = state.units.find(u => u.id === aoeTarget.targetId);
+          if (targetBoss && state.bossStates[targetBoss.id]) {
+            const phaseTransition = bossService.processBossDamage(
+              targetBoss,
+              state.bossStates[targetBoss.id],
+              aoeTarget.damage,
+              state
+            );
+            if (phaseTransition) {
+              phaseTransitions.push({ boss: targetBoss, transition: phaseTransition });
+            }
+          }
+        }
+      }
+    }
+
+    // Apply first phase transition (if multiple bosses transition, only one is primary)
+    if (phaseTransitions.length > 0) {
+      const { boss: firstBoss, transition: firstTransition } = phaseTransitions[0];
+      result.phaseTransition = firstTransition;
+      firstBoss.currentPhase = state.bossStates[firstBoss.id].currentPhase;
+      firstBoss.phaseName = firstTransition.phaseName;
+      changedBossState = state.bossStates[firstBoss.id];
+      phaseTransitionNotification = {
+        bossId: firstBoss.id,
+        bossName: firstBoss.name,
+        ...firstTransition
+      };
+
+      // Attach all phase transitions for multi-boss scenarios
+      if (phaseTransitions.length > 1) {
+        result.allPhaseTransitions = phaseTransitions.map(({ boss, transition }) => ({
+          bossId: boss.id,
+          bossName: boss.name,
+          ...transition
+        }));
       }
     }
   }
@@ -1697,6 +1756,44 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
   let battleStatus = battleService.getBattleStatusString(battleEndResult);
   if (battleStatus === 'active' && result.turnEnded) {
     battleService.advanceToNextActorWithCT(state);
+
+    // Check for boss phase transitions from DoT damage during turn start
+    if (state.bossStates) {
+      for (const unit of state.units) {
+        if (unit.type === 'enemy' &&
+            state.bossStates[unit.id] &&
+            unit.turnStartEffects) {
+          // Sum up damage from DoT effects (poison, burn, bleed, curse, etc.)
+          const dotDamage = unit.turnStartEffects
+            .filter(effect => effect.damage > 0)
+            .reduce((sum, effect) => sum + effect.damage, 0);
+          if (dotDamage > 0) {
+            const phaseTransition = bossService.processBossDamage(
+              unit,
+              state.bossStates[unit.id],
+              dotDamage,
+              state
+            );
+            if (phaseTransition) {
+              phaseTransitions.push({ boss: unit, transition: phaseTransition });
+              unit.currentPhase = state.bossStates[unit.id].currentPhase;
+              unit.phaseName = phaseTransition.phaseName;
+
+              // If no primary phase transition yet, set it
+              if (!phaseTransitionNotification) {
+                changedBossState = state.bossStates[unit.id];
+                phaseTransitionNotification = {
+                  bossId: unit.id,
+                  bossName: unit.name,
+                  ...phaseTransition
+                };
+              }
+            }
+          }
+        }
+      }
+    }
+
     battleEndResult = battleService.checkBattleEnd(state);
     battleStatus = battleService.getBattleStatusString(battleEndResult);
   }
@@ -1794,9 +1891,11 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
       await throwBattleActionCommitError(error, battleId, req.user.userId);
     }
     if (completion.idempotent) {
+      // Use commandReceipt if available (has battleId and map references for V3 transport)
+      const replayReceipt = completion.commandReceipt ?? completion;
       return sendBattleActionReplay(
         res,
-        completion,
+        replayReceipt,
         battle,
         actionCommand.commandId,
         req.user.userId

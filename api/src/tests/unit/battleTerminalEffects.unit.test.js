@@ -65,6 +65,59 @@ describe('battle terminal effect payloads', () => {
     });
   });
 
+  it('deduplicates and sorts partyCharacterIds canonically', () => {
+    const payload = buildPveTerminalProgressionPayload({
+      battleId: 100,
+      partyLeaderId: 5,
+      partyCharacterIds: [7, 3, 7, 5, 3, 9],
+      rewardsData: {
+        enemies: [],
+        droppedItems: [],
+        players: [],
+        difficultyTier: 1,
+        gold: 50
+      }
+    });
+
+    // Duplicates removed, sorted numerically ascending
+    assert.deepEqual(payload.partyCharacterIds, [3, 5, 7, 9]);
+  });
+
+  it('filters invalid values from partyCharacterIds', () => {
+    const payload = buildPveTerminalProgressionPayload({
+      battleId: 101,
+      partyLeaderId: 2,
+      partyCharacterIds: [4, null, undefined, 'invalid', NaN, 2, 8],
+      rewardsData: {
+        enemies: [],
+        droppedItems: [],
+        players: [],
+        difficultyTier: 1,
+        gold: 25
+      }
+    });
+
+    // null, undefined, 'invalid', NaN filtered; duplicates removed; sorted
+    assert.deepEqual(payload.partyCharacterIds, [2, 4, 8]);
+  });
+
+  it('falls back to partyLeaderId when partyCharacterIds is empty', () => {
+    const payload = buildPveTerminalProgressionPayload({
+      battleId: 102,
+      partyLeaderId: 11,
+      partyCharacterIds: [],
+      rewardsData: {
+        enemies: [],
+        droppedItems: [],
+        players: [],
+        difficultyTier: 1,
+        gold: 0
+      }
+    });
+
+    assert.deepEqual(payload.partyCharacterIds, [11]);
+  });
+
   it('rejects invalid producer data before it can enter the outbox', () => {
     assert.throws(
       () => buildPveTerminalProgressionPayload({

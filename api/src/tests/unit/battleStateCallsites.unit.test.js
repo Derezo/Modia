@@ -120,9 +120,10 @@ describe('battle route enemy-turn revision handoff', () => {
       startRoute,
       /loadZodiacCollectionBonus\(\s*req\.user\.userId,\s*\{\s*client\s*\}\s*\)/
     );
+    // Check that the options object closes properly (after equipmentAugmentEffects or zodiacCollectionBonus)
     assert.match(
       startRoute,
-      /zodiacCollectionBonus\s*\}/
+      /equipmentAugmentEffects:\s*characterAugmentEffects\[character\.id\]\s*\|\|\s*\{\}/
     );
     assert.match(
       startRoute,

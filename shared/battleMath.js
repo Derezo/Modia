@@ -101,6 +101,42 @@ export const BENEFICIAL_STATUS_EFFECTS = Object.freeze([
   'pack_bonus',
   'unmovable'
 ]);
+
+// ============================================================================
+// STATUS EFFECT REGISTRY - COMBAT MODIFIERS
+// ============================================================================
+
+/**
+ * Canonical registry of status effect modifiers for buffs and debuffs.
+ * When an effect lacks object-form modifiers (e.g., legacy string-based effects),
+ * damageCalculator.getStatusStatMultiplier falls back to this registry.
+ *
+ * Keys: effect type strings (fortify, rage, weaken, etc.)
+ * Values: { modifiers: {attack?, defense?, magicAttack?, magicDefense?}, tickDamagePercent?, preventsSkills? }
+ *
+ * This registry is frozen to prevent runtime mutation.
+ */
+export const STATUS_EFFECT_REGISTRY = Object.freeze({
+  // Defensive buffs
+  fortify: { modifiers: { defense: 1.3, magicDefense: 1.3 } },
+  defense_up: { modifiers: { defense: 1.2, magicDefense: 1.2 } },
+
+  // Offensive buffs
+  rage: { modifiers: { attack: 1.2 } },
+  attack_up: { modifiers: { attack: 1.2 } },
+  frenzy: { modifiers: { attack: 1.2 } },
+  reckless: { modifiers: { attack: 1.5, defense: 0.75 } },
+  berserker: { modifiers: { attack: 2.0 }, preventsSkills: true },
+  berserk: { modifiers: { attack: 1.5, defense: 0.8 } },
+
+  // Debuffs
+  weaken: { modifiers: { attack: 0.8 } },
+  corrode: { modifiers: { defense: 0.75 } },
+
+  // Damage-over-time effects (tick damage as fraction of maxHp)
+  bleed: { tickDamagePercent: 0.03 },
+  curse: { tickDamagePercent: 0.02 }
+});
 const BENEFICIAL_STATUS_EFFECT_SET = new Set(BENEFICIAL_STATUS_EFFECTS);
 const ELEMENTAL_RESIST_STATUS_EFFECTS = new Set(
   Object.values(ELEMENTS)
@@ -653,12 +689,41 @@ export function predictTicksToAct(unit, currentCT = 0) {
  * @returns {Object} Complete preview data for UI display
  */
 export function calculateDamagePreview(attacker, defender, skill) {
-  const skillPower = skill?.power || 100;
+  // Use nullish coalescing to handle power:0 correctly (power:0 should stay 0, not become 100)
+  const skillPower = skill?.power ?? 100;
   const damageType = skill?.damageType || 'physical';
-  const isHeal = skill?.effect === 'heal' || skill?.type === 'heal';
+  const hits = skill?.hits ?? 1;
+
+  // Detect heals: effect==='heal', type==='heal', or healPercent with ally targeting
+  const isHealByEffect = skill?.effect === 'heal' || skill?.type === 'heal';
+  const isHealByPercent = (skill?.healPercent > 0) &&
+    (skill?.targetAlly === true || skill?.targetAllAllies === true);
+  const isHeal = isHealByEffect || isHealByPercent;
 
   // Calculate based on skill type
   if (isHeal) {
+    // For healPercent-based heals, calculate heal from max HP
+    if (skill?.healPercent > 0) {
+      const targetMaxHp = defender.maxHp ?? defender.hp_max ?? 100;
+      const targetHp = defender.hp ?? defender.hp_current ?? 0;
+      const healAmount = Math.floor(targetMaxHp * skill.healPercent / 100);
+      const effectiveHeal = Math.min(healAmount, targetMaxHp - targetHp);
+      return {
+        minDamage: null,
+        maxDamage: null,
+        minHeal: healAmount,
+        maxHeal: healAmount,
+        effectiveHeal,
+        hitChance: 1.0, // Heals always hit
+        critChance: 0,
+        critDamage: null,
+        willKill: false,
+        isOverheal: healAmount > (targetMaxHp - targetHp),
+        type: 'heal',
+        defenseReduction: 0,
+        hits: 1
+      };
+    }
     const healData = calculateHealing(attacker, defender, skillPower);
     return {
       minDamage: null,
@@ -672,8 +737,15 @@ export function calculateDamagePreview(attacker, defender, skill) {
       willKill: false,
       isOverheal: healData.isOverheal,
       type: 'heal',
-      defenseReduction: 0
+      defenseReduction: 0,
+      hits: 1
     };
+  }
+
+  // Check if this is a no-damage skill (power:0, not a heal)
+  // Return null so UI knows not to show a damage preview
+  if (skillPower === 0) {
+    return null;
   }
 
   // Damage calculation
@@ -682,19 +754,33 @@ export function calculateDamagePreview(attacker, defender, skill) {
     ? calculateMagicalDamage(attacker, defender, skillPower)
     : calculatePhysicalDamage(attacker, defender, skillPower);
 
-  const hitChance = calculateHitChance(attacker, defender);
+  // For offensive skills, calculate hit chance factoring in evasion, Blind, and skill accuracy.
+  // Heals and ally-targeted skills always hit (1.0).
+  // Basic attacks (no skill) also roll hit chance.
+  const isAllyTargeting = skill?.targetAlly === true ||
+    skill?.targetAllAllies === true ||
+    skill?.targetSelf === true;
+  const skillAccuracy = skill?.accuracy ?? 1;
+  const hitChance = (skill && !isAllyTargeting)
+    ? calculateHitChance(attacker, defender) * skillAccuracy
+    : (skill ? 1.0 : calculateHitChance(attacker, defender));
   const critChance = calculateCritChance(attacker);
   const critMultiplier = calculateCritMultiplier(attacker);
-  const critDamage = Math.floor(damageData.maxDamage * critMultiplier);
+
+  // Apply multi-hit multiplier
+  const totalMinDamage = damageData.minDamage * hits;
+  const totalMaxDamage = damageData.maxDamage * hits;
+  const totalAvgDamage = damageData.avgDamage * hits;
+  const critDamage = Math.floor(totalMaxDamage * critMultiplier);
 
   // Will this kill the target at max damage?
   const targetHp = defender.hp || defender.currentHp || 0;
-  const willKill = damageData.maxDamage >= targetHp;
+  const willKill = totalMaxDamage >= targetHp;
 
   return {
-    minDamage: damageData.minDamage,
-    maxDamage: damageData.maxDamage,
-    avgDamage: damageData.avgDamage,
+    minDamage: totalMinDamage,
+    maxDamage: totalMaxDamage,
+    avgDamage: totalAvgDamage,
     minHeal: null,
     maxHeal: null,
     hitChance,
@@ -703,7 +789,8 @@ export function calculateDamagePreview(attacker, defender, skill) {
     willKill,
     isOverheal: false,
     type: isMagical ? 'magical' : 'physical',
-    defenseReduction: damageData.defenseReduction
+    defenseReduction: damageData.defenseReduction,
+    hits
   };
 }
 
@@ -720,10 +807,17 @@ export function calculateDamagePreview(attacker, defender, skill) {
  * @returns {Object} Complete preview data for UI display including elevation modifiers
  */
 export function calculateDamagePreviewWithElevation(attacker, defender, skill, options = {}) {
-  const skillPower = skill?.power || 100;
+  // Use nullish coalescing to handle power:0 correctly
+  const skillPower = skill?.power ?? 100;
   const damageType = skill?.damageType || 'physical';
   const attackType = skill?.attackType || (damageType === 'physical' ? 'melee' : 'magic');
-  const isHeal = skill?.effect === 'heal' || skill?.type === 'heal';
+  const hits = skill?.hits ?? 1;
+
+  // Detect heals: effect==='heal', type==='heal', or healPercent with ally targeting
+  const isHealByEffect = skill?.effect === 'heal' || skill?.type === 'heal';
+  const isHealByPercent = (skill?.healPercent > 0) &&
+    (skill?.targetAlly === true || skill?.targetAllAllies === true);
+  const isHeal = isHealByEffect || isHealByPercent;
 
   // Get elevation values
   const attackerZ = options.attackerZ ?? attacker.z ?? attacker.elevation ?? 0;
@@ -734,6 +828,32 @@ export function calculateDamagePreviewWithElevation(attacker, defender, skill, o
 
   // Calculate based on skill type
   if (isHeal) {
+    // For healPercent-based heals, calculate heal from max HP
+    if (skill?.healPercent > 0) {
+      const targetMaxHp = defender.maxHp ?? defender.hp_max ?? 100;
+      const targetHp = defender.hp ?? defender.hp_current ?? 0;
+      const healAmount = Math.floor(targetMaxHp * skill.healPercent / 100);
+      const effectiveHeal = Math.min(healAmount, targetMaxHp - targetHp);
+      return {
+        minDamage: null,
+        maxDamage: null,
+        minHeal: healAmount,
+        maxHeal: healAmount,
+        effectiveHeal,
+        hitChance: 1.0,
+        critChance: 0,
+        critDamage: null,
+        willKill: false,
+        isOverheal: healAmount > (targetMaxHp - targetHp),
+        type: 'heal',
+        defenseReduction: 0,
+        elevationModifier: 1.0,
+        elevationDescription: null,
+        attackerElevation: attackerZ,
+        defenderElevation: defenderZ,
+        hits: 1
+      };
+    }
     const healData = calculateHealing(attacker, defender, skillPower);
     return {
       minDamage: null,
@@ -751,8 +871,15 @@ export function calculateDamagePreviewWithElevation(attacker, defender, skill, o
       elevationModifier: 1.0, // Healing not affected by elevation
       elevationDescription: null,
       attackerElevation: attackerZ,
-      defenderElevation: defenderZ
+      defenderElevation: defenderZ,
+      hits: 1
     };
+  }
+
+  // Check if this is a no-damage skill (power:0, not a heal)
+  // Return null so UI knows not to show a damage preview
+  if (skillPower === 0) {
+    return null;
   }
 
   // Damage calculation
@@ -761,14 +888,23 @@ export function calculateDamagePreviewWithElevation(attacker, defender, skill, o
     ? calculateMagicalDamage(attacker, defender, skillPower)
     : calculatePhysicalDamage(attacker, defender, skillPower);
 
-  // Apply elevation modifier to damage
-  const elevModifiedMinDamage = Math.max(1, Math.floor(damageData.minDamage * elevationMod.modifier));
-  const elevModifiedMaxDamage = Math.max(1, Math.floor(damageData.maxDamage * elevationMod.modifier));
+  // Apply elevation and multi-hit modifiers to damage
+  const baseMinDamage = damageData.minDamage * hits;
+  const baseMaxDamage = damageData.maxDamage * hits;
+  const elevModifiedMinDamage = Math.max(1, Math.floor(baseMinDamage * elevationMod.modifier));
+  const elevModifiedMaxDamage = Math.max(1, Math.floor(baseMaxDamage * elevationMod.modifier));
   const elevModifiedAvgDamage = Math.floor((elevModifiedMinDamage + elevModifiedMaxDamage) / 2);
 
-  // Calculate hit chance with elevation modifier
+  // For offensive skills, calculate hit chance factoring in evasion, Blind, skill accuracy, and elevation.
+  // Heals and ally-targeted skills always hit (1.0).
+  const isAllyTargeting = skill?.targetAlly === true ||
+    skill?.targetAllAllies === true ||
+    skill?.targetSelf === true;
   const elevAccuracyMod = calculateElevationAccuracyModifier(attackerZ, defenderZ);
-  const hitChance = calculateHitChance(attacker, defender, elevAccuracyMod, 0);
+  const skillAccuracy = skill?.accuracy ?? 1;
+  const hitChance = (skill && !isAllyTargeting)
+    ? calculateHitChance(attacker, defender, elevAccuracyMod, 0) * skillAccuracy
+    : (skill ? 1.0 : calculateHitChance(attacker, defender, elevAccuracyMod, 0));
 
   const critChance = calculateCritChance(attacker);
   const critMultiplier = calculateCritMultiplier(attacker);
@@ -800,7 +936,8 @@ export function calculateDamagePreviewWithElevation(attacker, defender, skill, o
     elevationDescription: elevationMod.description,
     elevationDiff: elevationMod.elevationDiff,
     attackerElevation: attackerZ,
-    defenderElevation: defenderZ
+    defenderElevation: defenderZ,
+    hits
   };
 }
 
