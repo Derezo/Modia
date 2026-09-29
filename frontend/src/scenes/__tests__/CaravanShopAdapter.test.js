@@ -61,4 +61,23 @@ describe('Merchant Caravan shop adapter', () => {
       'Refreshes in 1h 30m'
     );
   });
+
+  // Finding 64: Test unlimited stock items
+  it('preserves unlimited stock items with stock:null and unlimitedStock:true', () => {
+    const result = normalizeCaravanShopData({
+      items: [{
+        id: 'weathered_rod',
+        itemId: 'weathered_rod',
+        name: 'Weathered Fishing Rod',
+        stock: null,
+        unlimitedStock: true,
+        price: 50
+      }],
+      nextRefresh: '2026-07-30T08:00:00.000Z'
+    });
+
+    assert.equal(result.items[0].id, 'weathered_rod');
+    assert.equal(result.items[0].stock, null, 'stock should remain null for unlimited items');
+    assert.equal(result.items[0].unlimitedStock, true, 'unlimitedStock flag should be preserved');
+  });
 });

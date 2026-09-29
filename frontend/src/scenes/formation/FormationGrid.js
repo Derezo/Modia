@@ -19,6 +19,11 @@ export class FormationGrid {
     this.tileWidth = options.tileWidth || 64;
     this.tileHeight = options.tileHeight || 32;
 
+    // Logical (CSS pixel) dimensions for DPR scaling (Finding 79)
+    // Used instead of canvas.width/height which are in device pixels
+    this.logicalWidth = options.logicalWidth || 400;
+    this.logicalHeight = options.logicalHeight || 220;
+
     // State
     this.placedCharacters = new Map(); // "x,y" -> character
     this.hoveredTile = null;
@@ -54,6 +59,25 @@ export class FormationGrid {
     this.calculateBounds();
   }
 
+  /**
+   * Set logical (CSS pixel) dimensions for DPR scaling (Finding 79)
+   * This is the coordinate space for all grid calculations
+   * @param {number} width - Logical width in CSS pixels
+   * @param {number} height - Logical height in CSS pixels
+   */
+  setLogicalSize(width, height) {
+    this.logicalWidth = width;
+    this.logicalHeight = height;
+
+    // Scale tile size proportionally to fit the grid nicely
+    // Base: 64x32 at 400x220
+    const scaleFactor = Math.min(width / 400, height / 220);
+    this.tileWidth = Math.round(64 * scaleFactor);
+    this.tileHeight = Math.round(32 * scaleFactor);
+
+    this.calculateBounds();
+  }
+
   setTheme(theme) {
     this.theme = theme;
   }
@@ -63,11 +87,13 @@ export class FormationGrid {
   }
 
   // Coordinate conversion
+  // Finding 79: Use logicalWidth/Height instead of canvas.width/height for DPR support
   gridToScreen(gridX, gridY) {
     if (!this.canvas) return { x: 0, y: 0 };
 
-    const centerX = this.canvas.width / 2;
-    const startY = 40; // Offset from top
+    const centerX = this.logicalWidth / 2;
+    // Scale startY proportionally with tile size
+    const startY = Math.round(40 * (this.tileHeight / 32));
 
     const screenX = centerX + (gridX - gridY) * (this.tileWidth / 2);
     const screenY = startY + (gridX + gridY) * (this.tileHeight / 2);
@@ -78,8 +104,8 @@ export class FormationGrid {
   screenToGrid(screenX, screenY) {
     if (!this.canvas) return null;
 
-    const centerX = this.canvas.width / 2;
-    const startY = 40;
+    const centerX = this.logicalWidth / 2;
+    const startY = Math.round(40 * (this.tileHeight / 32));
 
     const worldX = screenX - centerX;
     const worldY = screenY - startY;
@@ -161,7 +187,8 @@ export class FormationGrid {
     if (!this.canvas) return;
 
     const ctx = this.canvas.getContext('2d');
-    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    // Finding 79: Use logical dimensions for clearRect (DPR transform is applied)
+    ctx.clearRect(0, 0, this.logicalWidth, this.logicalHeight);
 
     // Render platform shadow (diorama effect)
     this.renderPlatformShadow(ctx);
@@ -192,22 +219,28 @@ export class FormationGrid {
   }
 
   renderPlatformShadow(ctx) {
-    const centerX = this.canvas.width / 2;
+    // Finding 79: Use logicalWidth for center calculation
+    const centerX = this.logicalWidth / 2;
     const bottomY = this.gridToScreen(this.gridWidth - 1, this.gridHeight - 1).y + 30;
 
     ctx.save();
 
+    // Scale shadow size proportionally
+    const scale = this.tileWidth / 64;
+    const shadowRadiusX = Math.round(150 * scale);
+    const shadowRadiusY = Math.round(20 * scale);
+
     // Elliptical shadow beneath platform
     const gradient = ctx.createRadialGradient(
       centerX, bottomY, 0,
-      centerX, bottomY, 150
+      centerX, bottomY, shadowRadiusX
     );
     gradient.addColorStop(0, 'rgba(0, 0, 0, 0.4)');
     gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
 
     ctx.fillStyle = gradient;
     ctx.beginPath();
-    ctx.ellipse(centerX, bottomY, 150, 20, 0, 0, Math.PI * 2);
+    ctx.ellipse(centerX, bottomY, shadowRadiusX, shadowRadiusY, 0, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore();

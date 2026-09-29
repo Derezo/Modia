@@ -57,6 +57,7 @@ export class FormationScene extends Scene {
       this.abortController = null;
     }
     this.cleanupCards();
+    this.cleanupPartySummary(); // Finding 67/94: cleanup summary on exit
     if (this.activeModal) {
       this.activeModal.close();
       this.activeModal = null;
@@ -68,11 +69,20 @@ export class FormationScene extends Scene {
   }
 
   /**
-   * Clean up character cards
+   * Clean up character cards (Finding 67/94: separated from partySummary cleanup)
    */
   cleanupCards() {
     this.characterCards.forEach(card => card.destroy());
     this.characterCards = [];
+    // Note: partySummary cleanup moved to cleanupPartySummary() to prevent
+    // destroying the summary when re-rendering cards
+  }
+
+  /**
+   * Clean up party stats summary (Finding 67/94)
+   * Call this when the scene exits or before creating a new summary
+   */
+  cleanupPartySummary() {
     if (this.partySummary) {
       this.partySummary.destroy();
       this.partySummary = null;
@@ -86,6 +96,7 @@ export class FormationScene extends Scene {
     if (this.uiElement) {
       this.uiElement.remove();
       this.cleanupCards();
+      this.cleanupPartySummary(); // Finding 67/94: cleanup summary before rebuilding
       this.createUI();
       this.setupEventListeners();
     }
@@ -144,19 +155,22 @@ export class FormationScene extends Scene {
       font-family: Georgia, serif;
     `;
 
+    // Finding 108: Always show title even on mobile; Icon.html will hide text but keep tooltip
+    const showLabelText = responsive.showLabels();
+
     container.innerHTML = `
       <!-- Header -->
       <div class="formation-header">
         <h2 class="formation-title">
           ${Icon.html('menu', 'formation', { size: 'lg' })}
-          ${responsive.showLabels() ? 'Party Formation' : ''}
+          ${showLabelText ? 'Party Formation' : 'Party'}
         </h2>
         <div class="formation-header-actions">
-          <button class="parchment-btn parchment-btn-primary" id="items-btn">
-            ${Icon.html('menu', 'inventory', { label: responsive.showLabels() ? 'Items' : '', size: 'md' })}
+          <button class="parchment-btn parchment-btn-primary" id="items-btn" aria-label="Items">
+            ${Icon.html('menu', 'inventory', { label: 'Items', size: 'md' })}
           </button>
-          <button class="parchment-btn parchment-btn-secondary" id="back-btn">
-            ${Icon.html('menu', 'back', { label: responsive.showLabels() ? 'Back' : '', size: 'md' })}
+          <button class="parchment-btn parchment-btn-secondary" id="back-btn" aria-label="Back">
+            ${Icon.html('menu', 'back', { label: 'Back', size: 'md' })}
           </button>
         </div>
       </div>
@@ -375,10 +389,14 @@ export class FormationScene extends Scene {
 
   /**
    * Render party stats summary
+   * Finding 67/94: Clean up previous summary before creating new one
    */
   renderPartySummary() {
     const container = this.uiElement?.querySelector('#party-summary-container');
     if (!container) return;
+
+    // Destroy previous summary to prevent stacking and memory leaks
+    this.cleanupPartySummary();
 
     this.partySummary = new PartyStatsSummary({
       characters: this.characters,
@@ -443,19 +461,30 @@ export class FormationScene extends Scene {
 
   /**
    * Check if character has equipment upgrades available
+   * Finding 68: Code defensively for both old (no equipment) and new (with equipment) API shapes.
+   * If equipment data is not available, we cannot determine upgrades so return false.
    * @param {Object} character - Character data
    * @returns {boolean}
    */
   checkHasEquipmentUpgrade(character) {
-    const equipment = character.equipment || {};
-    const slots = ['head', 'body', 'main_hand', 'off_hand', 'legs', 'feet', 'accessory'];
+    // Support both 'equipment' and 'equipped' keys for API compatibility
+    const equipment = character.equipment || character.equipped || null;
+
+    // If equipment data is not loaded, we cannot determine upgrades
+    // This prevents false positives when API doesn't include equipment
+    if (!equipment || typeof equipment !== 'object') {
+      return false;
+    }
+
+    // Only check slots that have content - legs and off_hand have no templates currently
+    const slots = ['head', 'body', 'main_hand', 'feet', 'accessory'];
 
     for (const slot of slots) {
       const current = equipment[slot];
       const currentPower = this.calculateItemPower(current);
 
       const better = this.inventory
-        .filter(item => this.canEquipInSlot(item, slot, character.class))
+        .filter(item => this.canEquipInSlot(item, slot, character.class, character.level))
         .find(item => this.calculateItemPower(item) > currentPower);
 
       if (better) return true;
@@ -489,13 +518,24 @@ export class FormationScene extends Scene {
 
   /**
    * Check if item can be equipped in slot
+   * Finding 68/111: Added level check, equipment slot check, and snake_case support
    * @param {Object} item - Item data
    * @param {string} slotKey - Slot key
    * @param {string} charClass - Character class
+   * @param {number} charLevel - Character level
    * @returns {boolean}
    */
-  canEquipInSlot(item, slotKey, charClass) {
+  canEquipInSlot(item, slotKey, charClass, charLevel = 1) {
     if (!item) return false;
+
+    // Check level requirement (support both camelCase and snake_case)
+    const levelReq = item.levelRequirement ?? item.level_requirement ?? 1;
+    if (charLevel < levelReq) return false;
+
+    // Check equipment slot matches (Finding 111)
+    // Support both camelCase and snake_case for API compatibility
+    const itemSlot = item.equipmentSlot ?? item.equipment_slot ?? null;
+    if (itemSlot && itemSlot !== slotKey) return false;
 
     const slotMap = {
       head: ['armor'],
@@ -510,10 +550,14 @@ export class FormationScene extends Scene {
     const validTypes = slotMap[slotKey] || [];
     if (!validTypes.includes(item.type)) return false;
 
-    // Check class restrictions
-    if (item.classRestrictions?.length > 0) {
-      const allowed = item.classRestrictions.some(c => c.toLowerCase() === charClass?.toLowerCase());
-      if (!allowed) return false;
+    // Check class restrictions (support both camelCase and snake_case)
+    const restrictions = item.classRestrictions ?? item.class_restriction ?? null;
+    if (restrictions) {
+      const restrArray = Array.isArray(restrictions) ? restrictions : [restrictions];
+      if (restrArray.length > 0) {
+        const allowed = restrArray.some(c => c.toLowerCase() === charClass?.toLowerCase());
+        if (!allowed) return false;
+      }
     }
 
     return true;

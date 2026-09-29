@@ -99,6 +99,11 @@ export class BattleFormationScene extends Scene {
     // Responsive subscription
     this.responsiveUnsubscribe = null;
 
+    // DPR scaling for canvas (Finding 79)
+    this.resizeObserver = null;
+    this.logicalWidth = 400;
+    this.logicalHeight = 220;
+
     // Coliseum-specific state
     this.coliseumMatchId = null;
     this.formationDeadline = null;
@@ -230,6 +235,12 @@ export class BattleFormationScene extends Scene {
     if (this.responsiveUnsubscribe) {
       this.responsiveUnsubscribe();
       this.responsiveUnsubscribe = null;
+    }
+
+    // Disconnect ResizeObserver (Finding 79)
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
     }
 
     // Clear long press timer if active
@@ -673,6 +684,81 @@ export class BattleFormationScene extends Scene {
     this.formationGrid.setPlacedCharacters(this.placedCharacters);
     this.formationGrid.setHoveredTile(this.hoveredTile);
     this.formationGrid.setGridLocked(this.gridLocked);
+
+    // Finding 79: Set up ResizeObserver for DPR scaling
+    this.setupCanvasResizeObserver();
+  }
+
+  /**
+   * Set up ResizeObserver for DPR-scaled canvas (Finding 79)
+   */
+  setupCanvasResizeObserver() {
+    const gridArea = this.uiElement?.querySelector('.bf-grid-area');
+    if (!gridArea || !this.gridCanvas) return;
+
+    this.resizeObserver = new ResizeObserver(() => {
+      this.resizeCanvasForDPR();
+    });
+    this.resizeObserver.observe(gridArea);
+
+    // Initial resize
+    this.resizeCanvasForDPR();
+  }
+
+  /**
+   * Resize canvas for device pixel ratio (Finding 79)
+   */
+  resizeCanvasForDPR() {
+    if (!this.gridCanvas) return;
+
+    const gridArea = this.uiElement?.querySelector('.bf-grid-area');
+    if (!gridArea) return;
+
+    const dpr = window.devicePixelRatio || 1;
+
+    // Calculate logical dimensions based on available space
+    // Cap at reasonable max to prevent oversized canvas
+    const maxWidth = this.isMobile ? 360 : 600;
+    const maxHeight = this.isMobile ? 200 : 320;
+
+    // Use container size but cap to reasonable limits
+    const containerWidth = Math.min(gridArea.clientWidth - 32, maxWidth);
+    const containerHeight = Math.min(gridArea.clientHeight - 60, maxHeight);
+
+    // Maintain aspect ratio (approximately 2:1 for isometric grid)
+    const aspectRatio = 1.8;
+    let logicalW = containerWidth;
+    let logicalH = containerWidth / aspectRatio;
+
+    if (logicalH > containerHeight) {
+      logicalH = containerHeight;
+      logicalW = logicalH * aspectRatio;
+    }
+
+    // Round to whole pixels
+    logicalW = Math.round(logicalW);
+    logicalH = Math.round(logicalH);
+
+    // Store logical dimensions for coordinate conversion
+    this.logicalWidth = logicalW;
+    this.logicalHeight = logicalH;
+
+    // Set CSS size (logical pixels)
+    this.gridCanvas.style.width = `${logicalW}px`;
+    this.gridCanvas.style.height = `${logicalH}px`;
+
+    // Set backing store size (physical pixels)
+    this.gridCanvas.width = Math.round(logicalW * dpr);
+    this.gridCanvas.height = Math.round(logicalH * dpr);
+
+    // Scale context for DPR
+    const ctx = this.gridCanvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    // Update grid dimensions
+    if (this.formationGrid) {
+      this.formationGrid.setLogicalSize(logicalW, logicalH);
+    }
   }
 
   setupEventListeners() {
@@ -846,6 +932,10 @@ export class BattleFormationScene extends Scene {
   }
 
   // Grid interactions
+  /**
+   * Get canvas point in logical (CSS) pixels
+   * Finding 79: Returns CSS pixels, not device pixels, for correct DPR handling
+   */
   getGridCanvasPoint(event) {
     if (!this.gridCanvas || !event) return null;
     if (Number.isFinite(event.canvasX) && Number.isFinite(event.canvasY)) {
@@ -862,9 +952,11 @@ export class BattleFormationScene extends Scene {
       ? event.clientY
       : rect.top + (event.offsetY || 0);
 
+    // Return CSS pixels (Finding 79)
+    // rect.width/height are in CSS pixels, which matches our logical coordinate space
     return {
-      x: (clientX - rect.left) * (this.gridCanvas.width / rect.width),
-      y: (clientY - rect.top) * (this.gridCanvas.height / rect.height)
+      x: (clientX - rect.left) * (this.logicalWidth / rect.width),
+      y: (clientY - rect.top) * (this.logicalHeight / rect.height)
     };
   }
 

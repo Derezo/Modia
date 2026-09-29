@@ -61,6 +61,11 @@ export class ShopScene extends Scene {
     this.shopName = this.getShopName(data.shopType);
     this.playerGold = this.game.state.get('user')?.gold || 0;
 
+    // Reset UI state to avoid stale data from previous shop visits (Finding 102)
+    this.activeTab = 'buy';
+    this.selectedItem = null;
+    this.purchaseQuantity = 1;
+
     if (!this.nodeId || !this.shopType) {
       parchmentToast.error('Invalid Shop', 'Could not open this shop');
       this.game.scenes.switchTo('worldMap');
@@ -167,6 +172,15 @@ export class ShopScene extends Scene {
 
   isCaravan() {
     return this.shopType === 'caravan';
+  }
+
+  /**
+   * Check if an item has unlimited stock (Finding 64)
+   * @param {Object} item - Item data
+   * @returns {boolean} True if item has unlimited stock
+   */
+  isUnlimitedStock(item) {
+    return item.unlimitedStock === true || (this.isCaravan() && item.stock == null);
   }
 
   async loadShopData() {
@@ -370,13 +384,15 @@ export class ShopScene extends Scene {
 
       /* ============================================
          Responsive Layout - Tablet (600-899px)
+         Note: Uses !important because base rules appear later in stylesheet
+         (Finding 78: CSS ordering fix)
          ============================================ */
       @media (min-width: 600px) and (max-width: 899px) {
-        .shop-detail-panel {
-          width: 260px;
+        .shop-container .shop-detail-panel {
+          width: 260px !important;
         }
 
-        .shop-header {
+        .shop-container .shop-header {
           padding: var(--space-md, 12px) var(--space-lg, 16px);
         }
       }
@@ -417,7 +433,7 @@ export class ShopScene extends Scene {
 
       .shop-items-table-container .item-data-table-body {
         max-height: none;
-        height: calc(100% - 80px); /* Account for filters and header */
+        min-height: 0; /* Allow flex shrinking (Finding 77) */
       }
 
       .shop-item {
@@ -698,12 +714,10 @@ export class ShopScene extends Scene {
         font-style: italic;
       }
 
-      /* Rarity borders - preserved for item distinction */
-      .rarity-common { border-left: 3px solid #9e9e9e; }
-      .rarity-uncommon { border-left: 3px solid #1eff00; }
-      .rarity-rare { border-left: 3px solid #0070dd; }
-      .rarity-epic { border-left: 3px solid #a335ee; }
-      .rarity-legendary { border-left: 3px solid #ff8000; }
+      /* Rarity borders removed: Finding 71/98 - these global unscoped rules leaked
+       * onto item-name text in ItemDataTable and other components. ItemDataTable's
+       * own scoped .item-data-table-row.rarity-* rules handle row borders correctly.
+       */
 
       /* Caravan-specific styles */
       .caravan-refresh-info {
@@ -750,15 +764,7 @@ export class ShopScene extends Scene {
         text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
       }
 
-      .shop-item.sold-out {
-        opacity: 0.6;
-        background: linear-gradient(to bottom, #d0c0a0, #bdb39a);
-      }
-
-      .shop-item.sold-out .shop-item-name {
-        text-decoration: line-through;
-        color: ${P.text.muted};
-      }
+      /* .shop-item.sold-out rules removed - unused since migration to ItemDataTable */
 
       .regional-specialty-badge {
         display: inline-block;
@@ -926,7 +932,7 @@ export class ShopScene extends Scene {
       },
       selectionMode: 'single',
       emptyMessage: isBuyMode ? 'No items available for purchase' : 'No items to sell',
-      maxHeight: 600,
+      maxHeight: null, // Let flex layout determine height (Finding 77)
       onRowSelect: (item) => {
         this.handleTableRowSelect(item, isBuyMode);
       },
@@ -956,6 +962,18 @@ export class ShopScene extends Scene {
       : item.rarity || 'common';
 
     const isCaravan = this.isCaravan();
+    const unlimited = this.isUnlimitedStock(item);
+
+    // For unlimited items, show Infinity for display; otherwise use stock/quantity
+    let quantity;
+    if (isCaravan) {
+      quantity = unlimited ? Infinity : item.stock;
+    } else {
+      quantity = item.quantity;
+    }
+
+    // Sold out only if not unlimited AND stock is 0 or less (Finding 64)
+    const soldOut = isCaravan && !unlimited && (item.stock ?? 0) <= 0;
 
     return {
       // Identity
@@ -969,11 +987,13 @@ export class ShopScene extends Scene {
       rarity,
       description: item.description,
       spriteId: item.spriteId || item.sprite_id,
-      quantity: isCaravan ? item.stock : item.quantity,
+      quantity,
       price: isCaravan ? item.price : (isBuyMode ? item.buyPrice : item.sellPrice),
 
-      // Stats
-      baseStats: item.statBonuses || {},
+      // Stats - use baseStats/bonusStats from backend if available (Finding 74)
+      baseStats: item.baseStats || item.statBonuses || {},
+      bonusStats: item.bonusStats || {},
+      augments: item.augments || [],
 
       // Shop-specific
       supplyLevel: item.supplyLevel,
@@ -981,7 +1001,8 @@ export class ShopScene extends Scene {
 
       // Caravan-specific
       caravanExclusive: item.caravanExclusive || isCaravan,
-      soldOut: isCaravan && item.stock <= 0,
+      soldOut,
+      unlimitedStock: unlimited,
       regionalSpecialty: item.regionalSpecialty,
 
       // Original item reference for detail panel
@@ -1032,13 +1053,16 @@ export class ShopScene extends Scene {
     const item = this.selectedItem;
     const isBuyMode = this.activeTab === 'buy';
     const isCaravan = this.isCaravan();
+    const unlimited = this.isUnlimitedStock(item);
 
-    // Handle caravan items differently
+    // Handle caravan items differently (Finding 64: unlimited stock items)
     const unitPrice = isCaravan ? item.price : (isBuyMode ? item.buyPrice : item.sellPrice);
     const totalPrice = unitPrice * this.purchaseQuantity;
-    const maxQty = isCaravan ? item.stock : item.quantity;
+    // For unlimited items, allow up to 99; otherwise use stock/quantity
+    const maxQty = unlimited ? 99 : (isCaravan ? item.stock : item.quantity);
     const canAfford = isBuyMode ? (this.playerGold >= totalPrice) : true;
-    const isSoldOut = isCaravan && maxQty <= 0;
+    // Only sold out if NOT unlimited and stock is 0 or less
+    const isSoldOut = isCaravan && !unlimited && (maxQty ?? 0) <= 0;
 
     const statsHtml = this.renderDetailStats(item);
 
@@ -1127,9 +1151,39 @@ export class ShopScene extends Scene {
     });
   }
 
+  /**
+   * Render stats for the detail panel
+   * Finding 74: Use baseStats+bonusStats for sell items (rolled item data)
+   * @param {Object} item - Item data
+   * @returns {string} HTML string
+   */
   renderDetailStats(item) {
-    const stats = item.statBonuses;
-    if (!stats || Object.keys(stats).length === 0) return '';
+    // For sell items, backend returns baseStats and bonusStats (rolled item data)
+    // For buy items, statBonuses contains template stats
+    // Merge all stat sources to show combined stats
+    const baseStats = item.baseStats || {};
+    const bonusStats = item.bonusStats || {};
+    const templateStats = item.statBonuses || {};
+
+    // Combine stats: use rolled stats if available, else template
+    const stats = {};
+    const allKeys = new Set([
+      ...Object.keys(baseStats),
+      ...Object.keys(bonusStats),
+      ...Object.keys(templateStats)
+    ]);
+
+    for (const key of allKeys) {
+      const base = baseStats[key] || 0;
+      const bonus = bonusStats[key] || 0;
+      const template = templateStats[key] || 0;
+
+      // If we have rolled stats, use them; otherwise fall back to template
+      const hasRolledStats = Object.keys(baseStats).length > 0 || Object.keys(bonusStats).length > 0;
+      stats[key] = hasRolledStats ? (base + bonus) : template;
+    }
+
+    if (Object.keys(stats).length === 0) return '';
 
     const statNames = {
       strength: 'Strength',
@@ -1138,17 +1192,31 @@ export class ShopScene extends Scene {
       vitality: 'Vitality',
       luck: 'Luck',
       hp_max: 'Max HP',
-      mp_max: 'Max MP'
+      mp_max: 'Max MP',
+      hp: 'HP',
+      mp: 'MP'
     };
 
     let html = '';
     for (const [key, value] of Object.entries(stats)) {
+      if (value === 0) continue; // Skip zero values
       const label = statNames[key] || key;
       const sign = value > 0 ? '+' : '';
       html += `
         <div class="detail-stat-row">
           <span class="detail-stat-label">${label}</span>
           <span class="detail-stat-value positive">${sign}${value}</span>
+        </div>
+      `;
+    }
+
+    // Show augments if present (Finding 74)
+    const augments = item.augments || [];
+    if (augments.length > 0) {
+      html += `
+        <div class="detail-stat-row augments-row">
+          <span class="detail-stat-label">Augments</span>
+          <span class="detail-stat-value">${escapeHtml(augments.join(', '))}</span>
         </div>
       `;
     }
@@ -1280,11 +1348,7 @@ export class ShopScene extends Scene {
     return names[slot] || slot;
   }
 
-  getRarityClass(rarity) {
-    const rarityNum = typeof rarity === 'number' ? rarity : 1;
-    const classes = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
-    return `rarity-${classes[rarityNum - 1] || 'common'}`;
-  }
+  // getRarityClass removed - dead code, unused since migration to ItemDataTable (Finding 71)
 
   update(_deltaTime) {
     // No per-frame updates needed

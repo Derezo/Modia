@@ -339,6 +339,8 @@ export function getBattleFormationStyles() {
 
       #bf-formation-grid-canvas {
         border-radius: ${PARCHMENT_RADIUS.lg};
+        max-width: 100%;
+        /* Finding 79: Canvas size is set dynamically via ResizeObserver */
       }
 
       .bf-grid-instructions {
