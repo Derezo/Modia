@@ -76,8 +76,10 @@ export class SocialHubScene extends Scene {
     this.setupEventListeners();
     this.setupWebSocketHandlers();
 
-    // Join social hub room for presence updates
-    this.game.socket.joinRoom('socialHub');
+    // Join the global room for presence updates. The server only broadcasts
+    // presence_changed to 'global' (validateRoomAccess in
+    // api/src/websocket/roomManager.js rejects a bare 'socialHub' room).
+    this.game.socket.joinRoom('global');
 
     // Play social hub theme music
     if (this.game.musicContext) {
@@ -93,8 +95,8 @@ export class SocialHubScene extends Scene {
   }
 
   exit() {
-    // Leave social hub room
-    this.game.socket.leaveRoom('socialHub');
+    // Leave the global presence room joined in enter()
+    this.game.socket.leaveRoom('global');
 
     // Clean up tab instances
     Object.values(this.tabInstances).forEach(tab => {
@@ -366,6 +368,57 @@ export class SocialHubScene extends Scene {
       .social-hub-panel-body::-webkit-scrollbar-thumb:hover {
         background: ${P.borderDark};
       }
+
+      /* Phone widths: the five tabs scroll horizontally instead of being
+         pushed off-screen. A scroll container clips overflow, so the badge
+         moves inside the tab and the active tab drops its -2px overlap. */
+      @media (max-width: 767px) {
+        .social-hub-header {
+          padding: ${PARCHMENT_SPACING.sm} ${PARCHMENT_SPACING.md};
+        }
+
+        .social-hub-title h2 {
+          font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xl};
+        }
+
+        .social-hub-tabs {
+          flex-wrap: nowrap;
+          overflow-x: auto;
+          overflow-y: hidden;
+          padding: ${PARCHMENT_SPACING.sm} ${PARCHMENT_SPACING.md} 0;
+          scrollbar-width: thin;
+        }
+
+        .social-hub-tab {
+          flex: 0 0 auto;
+          min-height: 44px;
+          padding: 6px 10px;
+        }
+
+        .social-hub-tab.active {
+          margin-bottom: 0;
+        }
+
+        .social-hub-tab-badge {
+          top: 2px;
+          right: 2px;
+        }
+
+        .social-hub-content {
+          padding: ${PARCHMENT_SPACING.sm};
+        }
+      }
+
+      /* Narrow phones: icon + badge only (label kept as aria-label/title) */
+      @media (max-width: 420px) {
+        .social-hub-tab-label {
+          display: none;
+        }
+
+        .social-hub-tab {
+          padding: 6px 14px;
+        }
+      }
     `;
     document.head.appendChild(style);
   }
@@ -388,9 +441,10 @@ export class SocialHubScene extends Scene {
 
       <div class="social-hub-tabs">
         ${Object.entries(this.tabs).map(([key, tab]) => `
-          <button class="social-hub-tab ${key === this.activeTab ? 'active' : ''}" data-tab="${key}">
-            <span class="social-hub-tab-icon">${tab.icon}</span>
-            <span>${tab.label}</span>
+          <button class="social-hub-tab ${key === this.activeTab ? 'active' : ''}" data-tab="${key}"
+                  aria-label="${tab.label}" title="${tab.label}">
+            <span class="social-hub-tab-icon" aria-hidden="true">${tab.icon}</span>
+            <span class="social-hub-tab-label">${tab.label}</span>
             <span class="social-hub-tab-badge ${this.badges[key] > 0 ? '' : 'hidden'}" data-badge="${key}">
               ${this.badges[key]}
             </span>

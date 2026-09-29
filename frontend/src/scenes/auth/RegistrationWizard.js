@@ -23,6 +23,7 @@ import {
   getParchmentButtonCSS
 } from '../../ui/parchment/index.js';
 import { escapeHtml } from '../../utils/escapeHtml.js';
+import { getPasswordError, PASSWORD_HINT } from './passwordRules.js';
 
 const P = PARCHMENT_COLORS;
 const STYLE_ID = 'registration-wizard-styles';
@@ -233,14 +234,13 @@ export class RegistrationWizard {
       }
 
       .regwiz-option-grid {
-        display: flex;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
         gap: ${PARCHMENT_SPACING.sm};
-        flex-wrap: wrap;
       }
 
       .regwiz-option {
-        flex: 1;
-        min-width: 70px;
+        min-width: 0;
         padding: ${PARCHMENT_SPACING.sm};
         background: ${P.light};
         border: 2px solid ${P.border};
@@ -351,8 +351,8 @@ export class RegistrationWizard {
           order: -1;
         }
 
-        .regwiz-option {
-          min-width: 60px;
+        .regwiz-option-grid {
+          grid-template-columns: repeat(3, 1fr);
         }
       }
     `;
@@ -410,7 +410,7 @@ export class RegistrationWizard {
           <div class="regwiz-form-group">
             <label class="regwiz-label" for="regwiz-password">Password</label>
             <input type="password" id="regwiz-password" class="regwiz-input ${this.errors.pass ? 'error' : ''}"
-                   placeholder="At least 8 characters"
+                   placeholder="${PASSWORD_HINT}"
                    value="${escapeHtml(this.formData.pass)}">
             ${this.errors.pass ? `<div class="regwiz-error">${escapeHtml(this.errors.pass)}</div>` : ''}
           </div>
@@ -764,10 +764,11 @@ export class RegistrationWizard {
         race: this.formData.race,
         class: this.formData.characterClass,
         gender: this.formData.gender || 'other',
-        hp: stats.hp_max || stats.maxHp || 100,
-        maxHp: stats.hp_max || stats.maxHp || 100,
-        mp: stats.mp_max || stats.maxMp || 50,
-        maxMp: stats.mp_max || stats.maxMp || 50,
+        // GET /api/characters/preview returns calculateStats() output (hpMax/mpMax)
+        hp: stats.hpMax,
+        maxHp: stats.hpMax,
+        mp: stats.mpMax,
+        maxMp: stats.mpMax,
         strength: stats.strength || stats.str || 10,
         intelligence: stats.intelligence || stats.int || 10,
         agility: stats.agility || stats.agi || 10,
@@ -887,11 +888,10 @@ export class RegistrationWizard {
       this.errors.email = 'Please enter a valid email address';
     }
 
-    // Password validation
-    if (!pass) {
-      this.errors.pass = 'Required';
-    } else if (pass.length < 8) {
-      this.errors.pass = 'Must be at least 8 characters';
+    // Password validation (mirrors the server's 8-char / 72-byte bcrypt limits)
+    const passwordError = getPasswordError(pass);
+    if (passwordError) {
+      this.errors.pass = passwordError;
     }
 
     // Confirm validation

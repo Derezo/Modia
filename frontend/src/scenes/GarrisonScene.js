@@ -253,6 +253,8 @@ export class GarrisonScene extends Scene {
         left: 0;
         width: 100%;
         height: 100%;
+        /* Opaque page background so the letterboxed canvas never shows through */
+        background: ${getParchmentGradient()};
         display: flex;
         flex-direction: column;
       }

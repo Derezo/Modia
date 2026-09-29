@@ -24,6 +24,9 @@ export class LeaderboardScene extends Scene {
     this.userEntry = null;
     this.pagination = { limit: 50, offset: 0, total: 0, hasMore: false };
     this.loading = false;
+    // Incremented per request and on exit; a response whose sequence is no
+    // longer current is dropped (stale category/time tab, or scene exited).
+    this.loadSeq = 0;
 
     // Responsive subscription
     this._responsiveUnsubscribe = null;
@@ -46,11 +49,17 @@ export class LeaderboardScene extends Scene {
       }
     } catch (err) {
       console.error('Failed to enter LeaderboardScene:', err);
-      this.showError('Failed to load leaderboard. Please try again.');
+      if (this.uiElement) {
+        this.showError('Failed to load leaderboard. Please try again.');
+      }
     }
   }
 
   exit() {
+    // Invalidate any in-flight leaderboard request
+    this.loadSeq += 1;
+    this.loading = false;
+
     // Unsubscribe from responsive changes
     if (this._responsiveUnsubscribe) {
       this._responsiveUnsubscribe();
@@ -768,6 +777,8 @@ export class LeaderboardScene extends Scene {
   }
 
   async loadLeaderboard() {
+    const seq = ++this.loadSeq;
+    const isCurrent = () => seq === this.loadSeq && Boolean(this.uiElement);
     this.loading = true;
     this.showLoading();
 
@@ -783,6 +794,7 @@ export class LeaderboardScene extends Scene {
       }
 
       const result = await this.game.api.getLeaderboard(this.activeCategory, options);
+      if (!isCurrent()) return;
 
       this.leaderboard = result.leaderboard || [];
       this.userEntry = result.userEntry;
@@ -792,14 +804,18 @@ export class LeaderboardScene extends Scene {
       this.updatePagination();
       this.updateUserEntry();
     } catch (err) {
+      if (!isCurrent()) return;
       console.error('Failed to load leaderboard:', err);
       this.showError('Failed to load leaderboard');
     } finally {
-      this.loading = false;
+      if (seq === this.loadSeq) {
+        this.loading = false;
+      }
     }
   }
 
   showLoading() {
+    if (!this.uiElement) return;
     const container = this.uiElement.querySelector('#table-container');
     if (container) {
       container.innerHTML = `
@@ -812,6 +828,7 @@ export class LeaderboardScene extends Scene {
   }
 
   showError(message) {
+    if (!this.uiElement) return;
     const container = this.uiElement.querySelector('#table-container');
     if (container) {
       container.innerHTML = `
@@ -824,6 +841,7 @@ export class LeaderboardScene extends Scene {
   }
 
   renderLeaderboard() {
+    if (!this.uiElement) return;
     const container = this.uiElement.querySelector('#table-container');
     if (!container) return;
 
@@ -917,6 +935,7 @@ export class LeaderboardScene extends Scene {
   }
 
   updatePagination() {
+    if (!this.uiElement) return;
     const paginationEl = this.uiElement.querySelector('#pagination');
     const infoEl = this.uiElement.querySelector('#pagination-info');
     const prevBtn = this.uiElement.querySelector('#prev-page');
@@ -946,6 +965,7 @@ export class LeaderboardScene extends Scene {
   }
 
   updateUserEntry() {
+    if (!this.uiElement) return;
     const entryEl = this.uiElement.querySelector('#user-entry');
     const rankEl = this.uiElement.querySelector('#user-rank');
     const scoreEl = this.uiElement.querySelector('#user-score');

@@ -31,6 +31,9 @@ const STYLE_ID = 'recruitment-scene-styles';
  * Displays available recruits at a guild node in a card grid layout
  * Players can view recruit details, traits, skills, and purchase them
  */
+const AUTO_RELOAD_DELAY_MS = 2000;
+const AUTO_RELOAD_RETRY_MS = 30000;
+
 export class RecruitmentScene extends Scene {
   constructor(game) {
     super(game);
@@ -49,6 +52,11 @@ export class RecruitmentScene extends Scene {
     this.isLoading = true;
     this.refreshCountdown = null;
     this.countdownInterval = null;
+    // Auto-reload when the refresh time passes: at most one scheduled reload,
+    // and if the server's nextRefresh has not advanced (clock skew), retry no
+    // more often than AUTO_RELOAD_RETRY_MS.
+    this.reloadTimeout = null;
+    this.lastAutoReload = null; // { nextRefresh, at }
 
     // Components
     this.recruitCard = null;
@@ -89,6 +97,11 @@ export class RecruitmentScene extends Scene {
       clearInterval(this.countdownInterval);
       this.countdownInterval = null;
     }
+    if (this.reloadTimeout) {
+      clearTimeout(this.reloadTimeout);
+      this.reloadTimeout = null;
+    }
+    this.lastAutoReload = null;
     if (this.abortController) {
       this.abortController.abort();
       this.abortController = null;
@@ -111,11 +124,19 @@ export class RecruitmentScene extends Scene {
   }
 
   async loadData() {
+    // Responses for an entry that has since exited (or been re-entered) are dropped.
+    const generation = this.purchaseLifecycle.generation;
+    const isCurrent = () => this.purchaseLifecycle.active
+      && this.purchaseLifecycle.generation === generation
+      && Boolean(this.uiElement);
+    if (!isCurrent()) return;
+
     try {
       const [infoResult, recruitsResult] = await Promise.all([
         this.game.api.getGuildInfo(this.nodeId),
         this.game.api.getGuildRecruits(this.nodeId)
       ]);
+      if (!isCurrent()) return;
 
       this.guildInfo = infoResult;
       this.recruits = recruitsResult.recruits || [];
@@ -124,6 +145,7 @@ export class RecruitmentScene extends Scene {
 
       this.updateUI();
     } catch (err) {
+      if (!isCurrent()) return;
       console.error('Failed to load recruitment data:', err);
       parchmentToast.error('Load Failed', 'Failed to load guild recruits');
       this.isLoading = false;
@@ -138,6 +160,37 @@ export class RecruitmentScene extends Scene {
     }, 1000);
   }
 
+  /**
+   * Reload guild data once the refresh time has passed. Only one reload is
+   * ever queued; if the reloaded nextRefresh is unchanged (client clock ahead
+   * of the server), wait AUTO_RELOAD_RETRY_MS before trying again.
+   */
+  scheduleAutoReload() {
+    if (this.reloadTimeout) return;
+
+    const nextRefresh = this.guildInfo?.nextRefresh;
+    const now = Date.now();
+    if (
+      this.lastAutoReload
+      && this.lastAutoReload.nextRefresh === nextRefresh
+      && now - this.lastAutoReload.at < AUTO_RELOAD_RETRY_MS
+    ) {
+      return;
+    }
+
+    this.lastAutoReload = { nextRefresh, at: now };
+    // The handle stays set while the reload is in flight, so the per-second
+    // countdown cannot queue a duplicate.
+    const handle = setTimeout(async () => {
+      try {
+        await this.loadData();
+      } finally {
+        if (this.reloadTimeout === handle) this.reloadTimeout = null;
+      }
+    }, AUTO_RELOAD_DELAY_MS);
+    this.reloadTimeout = handle;
+  }
+
   updateCountdown() {
     if (!this.guildInfo?.nextRefresh) return;
 
@@ -147,8 +200,7 @@ export class RecruitmentScene extends Scene {
 
     if (diffMs <= 0) {
       this.refreshCountdown = 'Refreshing soon...';
-      // Trigger a data reload after a short delay
-      setTimeout(() => this.loadData(), 2000);
+      this.scheduleAutoReload();
     } else {
       const hours = Math.floor(diffMs / 3600000);
       const minutes = Math.floor((diffMs % 3600000) / 60000);

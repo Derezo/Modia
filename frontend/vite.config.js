@@ -1,5 +1,12 @@
 import { defineConfig, loadEnv } from 'vite';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
+
+// The released game version lives in the root package.json (frontend/package.json
+// is a workspace stub). Exposed to client code as __APP_VERSION__.
+const rootPackage = JSON.parse(
+  readFileSync(fileURLToPath(new URL('../package.json', import.meta.url)), 'utf8')
+);
 
 const STATIC_ASSET_EXTENSION_PATTERN =
   /\.(png|jpg|jpeg|gif|svg|webp|mp3|ogg|wav|json)$/i;
@@ -23,6 +30,9 @@ export default defineConfig(({ mode }) => {
   return {
     root: '.',
     publicDir: 'public',
+    define: {
+      __APP_VERSION__: JSON.stringify(rootPackage.version)
+    },
     server: {
       port: Number(env.VITE_FRONTEND_PORT || 8080),
       proxy: {

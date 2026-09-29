@@ -14,11 +14,9 @@
  * @see SettingsAccessibility.js - Accessibility feature application
  */
 
-// Default settings structure
-// IMPORTANT: This structure is mirrored in:
-// - api/src/routes/settings.js (backend validation)
-// - frontend/src/core/Game.js (defaults)
-// Keep all three in sync when making changes.
+// Default settings structure (the single client copy; Game.js imports it).
+// IMPORTANT: This structure is mirrored in api/src/routes/settings.js
+// (backend defaults and validation). Keep both in sync when making changes.
 export const DEFAULT_SETTINGS = {
   battle: {
     actionMenuStyle: 'radial',
@@ -44,9 +42,7 @@ export const DEFAULT_SETTINGS = {
   display: {
     animationSpeed: 'normal',
     cameraZoom: 1.0,
-    uiScale: 1.0,
     showFloatingText: true,
-    particleQuality: 'high',
     screenShake: true
   },
   accessibility: {
@@ -60,23 +56,13 @@ export const DEFAULT_SETTINGS = {
     screenReaderHints: false
   },
   gameplay: {
-    autoSave: true,
-    confirmTravel: false,
-    showTutorialHints: true,
-    questMarkerStyle: 'icon'
-  },
-  controls: {
-    keybindScheme: 'wasd',
-    touchGesturesEnabled: true,
-    doubleTapConfirm: true,
-    holdToCancel: true
+    confirmTravel: false
   },
   social: {
     showOnlineStatus: true,
     allowPartyInvites: true,
     allowFriendRequests: true,
-    chatTimestamps: true,
-    profanityFilter: true
+    chatTimestamps: true
   },
   developer: {
     enabled: false,
@@ -96,8 +82,7 @@ export const DEFAULT_SETTINGS = {
     },
     battle: {
       logTurnEvents: false,
-      logDamageCalculations: false,
-      logAIDecisions: false
+      logDamageCalculations: false
     },
     performance: {
       showFPS: false,

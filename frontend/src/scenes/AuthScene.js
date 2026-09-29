@@ -1,6 +1,8 @@
 import { Scene } from './Scene.js';
 import { AuthTransitionRenderer } from './auth/AuthTransitionRenderer.js';
 import { RegistrationWizard } from './auth/RegistrationWizard.js';
+import { getPasswordError, PASSWORD_HINT } from './auth/passwordRules.js';
+import { APP_VERSION } from '../settings/appVersion.js';
 import { ChangelogModal } from '../components/modals/ChangelogModal.js';
 import {
   PARCHMENT_COLORS,
@@ -171,6 +173,22 @@ export class AuthScene extends Scene {
       .auth-container.visible {
         opacity: 1;
         transform: translate(-50%, -50%) scale(1);
+      }
+
+      /* Registration wizard: the tall step-2 panel starts below the canvas
+         MODIA title (AuthTransitionRenderer draws it centred at 15% height)
+         instead of being vertically centred over it, and scrolls if needed. */
+      .auth-container.auth-container--wizard {
+        top: calc(15% + 56px);
+        width: auto;
+        max-width: min(900px, calc(100% - 32px));
+        max-height: calc(85% - 72px);
+        overflow-y: auto;
+        transform: translate(-50%, 0) scale(0.95);
+      }
+
+      .auth-container.auth-container--wizard.visible {
+        transform: translate(-50%, 0) scale(1);
       }
 
       .auth-panel {
@@ -426,7 +444,7 @@ export class AuthScene extends Scene {
           <div class="auth-form-group visible">
             <label for="password" class="auth-label">Password</label>
             <input type="password" id="password" class="auth-input"
-              placeholder="${isRegister ? '8+ characters' : 'Enter password'}"
+              placeholder="${isRegister ? PASSWORD_HINT : 'Enter password'}"
               autocomplete="${isRegister ? 'new-password' : 'current-password'}" required>
             <div class="auth-field-error" id="password-error"></div>
           </div>
@@ -446,7 +464,7 @@ export class AuthScene extends Scene {
         <div class="auth-switch" id="auth-switch">
           ${isRegister ? 'Already have an account? <a id="mode-toggle">Login</a>' : 'Don\'t have an account? <a id="mode-toggle">Register</a>'}
         </div>
-        <div class="version-info" id="version-info">v0.4.43</div>
+        <div class="version-info" id="version-info">v${APP_VERSION}</div>
       </div>
     `;
 
@@ -611,11 +629,11 @@ export class AuthScene extends Scene {
         break;
 
       case 'password':
-        if (!value) {
-          error = 'Password is required';
-        } else if (this.mode === 'register' && value.length < 8) {
-          error = 'Password must be at least 8 characters';
-        }
+        // Login accepts any existing password; only new passwords are checked
+        // against the server's 8-character minimum and 72-byte bcrypt maximum.
+        error = this.mode === 'register'
+          ? getPasswordError(value)
+          : (value ? null : 'Password is required');
         break;
 
       case 'confirm-password': {
@@ -844,9 +862,7 @@ export class AuthScene extends Scene {
 
     // Create wizard container
     const wizardContainer = document.createElement('div');
-    wizardContainer.className = 'auth-container visible';
-    wizardContainer.style.width = 'auto';
-    wizardContainer.style.maxWidth = '900px';
+    wizardContainer.className = 'auth-container auth-container--wizard visible';
     this.game.uiOverlay.appendChild(wizardContainer);
 
     // Store reference so we can clean up

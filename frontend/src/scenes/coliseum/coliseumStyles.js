@@ -82,13 +82,18 @@ export function getColiseumStyles() {
 
     .coliseum-title h2 {
       margin: 0;
-      color: ${ARENA_COLORS.primary};
+      color: ${P.light};
       font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
       text-shadow: 0 0 10px rgba(74, 107, 138, 0.5);
     }
 
     .coliseum-title-icon {
       font-size: 32px;
+      color: ${ARENA_COLORS.goldLight};
+    }
+
+    .coliseum-back-btn {
+      ${getParchmentButtonCSS('secondary')}
     }
 
     /* Tab Navigation - Parchment styled */
@@ -808,21 +813,27 @@ export function getColiseumStyles() {
       font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
     }
 
+    /* Loading/empty states sit on the dark arena backdrop: use a light tone */
     .coliseum-loading-spinner {
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 40px;
-      color: ${P.text.muted};
+      color: ${P.light};
       font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
     }
 
     .coliseum-no-data-message {
       padding: 40px;
       text-align: center;
-      color: ${P.text.muted};
+      color: ${P.light};
       font-style: italic;
       font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+    }
+
+    /* ...except inside parchment team panels, where muted text reads fine */
+    .coliseum-team-panel .coliseum-no-data-message {
+      color: ${P.text.muted};
     }
 
     /* Match History Styles - Parchment themed */

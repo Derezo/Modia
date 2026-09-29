@@ -3,14 +3,18 @@
  * @description Renders all settings panel content for the SettingsScene.
  *
  * Key responsibilities:
- * - Render Battle, Audio, Display, Accessibility, Gameplay, Controls, Social, Developer, Help panels
- * - Generate HTML for radio groups, checkboxes, sliders, and keybind previews
- * - Provide keybind scheme mappings
+ * - Render Battle, Audio, Display, Accessibility, Gameplay, Social, Developer, Help panels
+ * - Generate HTML for radio groups, checkboxes and sliders
+ *
+ * Only settings with a consumer are rendered (see
+ * frontend/src/settings/__tests__/settingsConsumers.test.js).
  *
  * @see SettingsScene.js - Main scene orchestration
  * @see SettingsStateManager.js - State and persistence
  * @see SettingsAccessibility.js - Accessibility feature application
  */
+
+import { APP_VERSION } from './appVersion.js';
 
 /**
  * Renders settings panel HTML content
@@ -262,26 +266,6 @@ export class SettingsPanelRenderer {
         </div>
 
         <div class="settings-section">
-          <div class="settings-section-title">Quality</div>
-
-          <div class="settings-group">
-            <div class="settings-group-label">Particle Quality</div>
-            <div class="settings-group-description">Quality level for particle effects. Lower settings may improve performance.</div>
-            <div class="settings-radio-group" data-setting="display.particleQuality">
-              <div class="settings-radio-option ${s.particleQuality === 'low' ? 'selected' : ''}" data-value="low">
-                <span class="settings-radio-label">Low</span>
-              </div>
-              <div class="settings-radio-option ${s.particleQuality === 'medium' ? 'selected' : ''}" data-value="medium">
-                <span class="settings-radio-label">Medium</span>
-              </div>
-              <div class="settings-radio-option ${s.particleQuality === 'high' ? 'selected' : ''}" data-value="high">
-                <span class="settings-radio-label">High</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="settings-section">
           <div class="settings-section-title">Scaling</div>
 
           <div class="settings-group">
@@ -293,14 +277,6 @@ export class SettingsPanelRenderer {
             </div>
           </div>
 
-          <div class="settings-group">
-            <div class="settings-group-label">UI Scale</div>
-            <div class="settings-group-description">Scale of the user interface elements.</div>
-            <div class="settings-slider-container">
-              <input type="range" class="settings-slider" id="display-ui-scale" min="75" max="150" value="${Math.round(s.uiScale * 100)}" data-setting="display.uiScale" data-scale="0.01">
-              <span class="settings-slider-value" id="display-ui-scale-value">${Math.round(s.uiScale * 100)}%</span>
-            </div>
-          </div>
         </div>
       </div>
     `;
@@ -451,18 +427,6 @@ export class SettingsPanelRenderer {
         <div class="settings-panel-title">Gameplay Settings</div>
 
         <div class="settings-section">
-          <div class="settings-section-title">Progress</div>
-
-          <div class="settings-group">
-            <div class="settings-checkbox-group">
-              <input type="checkbox" class="settings-checkbox" id="gameplay-autosave" ${s.autoSave ? 'checked' : ''} data-setting="gameplay.autoSave">
-              <label class="settings-checkbox-label" for="gameplay-autosave">Enable Auto-Save</label>
-            </div>
-            <div class="settings-group-description">Automatically save your progress at key moments.</div>
-          </div>
-        </div>
-
-        <div class="settings-section">
           <div class="settings-section-title">Navigation</div>
 
           <div class="settings-group">
@@ -471,107 +435,6 @@ export class SettingsPanelRenderer {
               <label class="settings-checkbox-label" for="gameplay-confirm-travel">Confirm Before Traveling</label>
             </div>
             <div class="settings-group-description">Show a confirmation dialog before traveling to a new location.</div>
-          </div>
-
-          <div class="settings-group">
-            <div class="settings-group-label">Quest Marker Style</div>
-            <div class="settings-group-description">How quest objectives are displayed on the map.</div>
-            <div class="settings-radio-group" data-setting="gameplay.questMarkerStyle">
-              <div class="settings-radio-option ${s.questMarkerStyle === 'icon' ? 'selected' : ''}" data-value="icon">
-                <span class="settings-radio-label">Icon Only</span>
-              </div>
-              <div class="settings-radio-option ${s.questMarkerStyle === 'arrow' ? 'selected' : ''}" data-value="arrow">
-                <span class="settings-radio-label">Arrow Only</span>
-              </div>
-              <div class="settings-radio-option ${s.questMarkerStyle === 'both' ? 'selected' : ''}" data-value="both">
-                <span class="settings-radio-label">Both</span>
-              </div>
-              <div class="settings-radio-option ${s.questMarkerStyle === 'none' ? 'selected' : ''}" data-value="none">
-                <span class="settings-radio-label">None</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="settings-section">
-          <div class="settings-section-title">Help</div>
-
-          <div class="settings-group">
-            <div class="settings-checkbox-group">
-              <input type="checkbox" class="settings-checkbox" id="gameplay-tutorial" ${s.showTutorialHints ? 'checked' : ''} data-setting="gameplay.showTutorialHints">
-              <label class="settings-checkbox-label" for="gameplay-tutorial">Show Tutorial Hints</label>
-            </div>
-            <div class="settings-group-description">Display helpful tips and tutorials for new features.</div>
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
-  /**
-   * Render the Controls settings panel
-   * @returns {string} HTML string
-   */
-  renderControlsPanel() {
-    const s = this.settings.controls;
-    const keybinds = this.getKeybindsForScheme(s.keybindScheme);
-
-    return `
-      <div class="settings-panel" id="panel-controls">
-        <div class="settings-panel-title">Control Settings</div>
-
-        <div class="settings-section">
-          <div class="settings-section-title">Keyboard</div>
-
-          <div class="settings-group">
-            <div class="settings-group-label">Keybind Scheme</div>
-            <div class="settings-group-description">Choose a preset keyboard layout for game controls.</div>
-            <div class="settings-radio-group" data-setting="controls.keybindScheme">
-              <div class="settings-radio-option ${s.keybindScheme === 'wasd' ? 'selected' : ''}" data-value="wasd">
-                <span class="settings-radio-label">WASD</span>
-              </div>
-              <div class="settings-radio-option ${s.keybindScheme === 'arrows' ? 'selected' : ''}" data-value="arrows">
-                <span class="settings-radio-label">Arrow Keys</span>
-              </div>
-              <div class="settings-radio-option ${s.keybindScheme === 'vim' ? 'selected' : ''}" data-value="vim">
-                <span class="settings-radio-label">Vim (HJKL)</span>
-              </div>
-              <div class="settings-radio-option ${s.keybindScheme === 'custom' ? 'selected' : ''}" data-value="custom">
-                <span class="settings-radio-label">Custom</span>
-              </div>
-            </div>
-
-            <div class="keybind-preview" id="keybind-preview">
-              ${this.renderKeybindPreviewContent(keybinds)}
-            </div>
-          </div>
-        </div>
-
-        <div class="settings-section">
-          <div class="settings-section-title">Touch Controls</div>
-
-          <div class="settings-group">
-            <div class="settings-checkbox-group">
-              <input type="checkbox" class="settings-checkbox" id="controls-touch" ${s.touchGesturesEnabled ? 'checked' : ''} data-setting="controls.touchGesturesEnabled">
-              <label class="settings-checkbox-label" for="controls-touch">Enable Touch Gestures</label>
-            </div>
-            <div class="settings-group-description">Enable swipe and tap gestures for touch devices.</div>
-          </div>
-
-          <div class="settings-group">
-            <div class="settings-checkbox-group">
-              <input type="checkbox" class="settings-checkbox" id="controls-double-tap" ${s.doubleTapConfirm ? 'checked' : ''} data-setting="controls.doubleTapConfirm">
-              <label class="settings-checkbox-label" for="controls-double-tap">Double-Tap to Confirm</label>
-            </div>
-            <div class="settings-group-description">Require double-tap to confirm important actions on touch devices.</div>
-          </div>
-
-          <div class="settings-group">
-            <div class="settings-checkbox-group">
-              <input type="checkbox" class="settings-checkbox" id="controls-hold-cancel" ${s.holdToCancel ? 'checked' : ''} data-setting="controls.holdToCancel">
-              <label class="settings-checkbox-label" for="controls-hold-cancel">Hold to Cancel</label>
-            </div>
-            <div class="settings-group-description">Hold an action to cancel it instead of tapping elsewhere.</div>
           </div>
         </div>
       </div>
@@ -627,13 +490,6 @@ export class SettingsPanelRenderer {
             <div class="settings-group-description">Display timestamps next to chat messages.</div>
           </div>
 
-          <div class="settings-group">
-            <div class="settings-checkbox-group">
-              <input type="checkbox" class="settings-checkbox" id="social-profanity" ${s.profanityFilter ? 'checked' : ''} data-setting="social.profanityFilter">
-              <label class="settings-checkbox-label" for="social-profanity">Enable Profanity Filter</label>
-            </div>
-            <div class="settings-group-description">Filter inappropriate language in chat messages.</div>
-          </div>
         </div>
       </div>
     `;
@@ -759,14 +615,6 @@ export class SettingsPanelRenderer {
             </div>
             <div class="settings-group-description">Show damage formula breakdowns.</div>
           </div>
-
-          <div class="settings-group">
-            <div class="settings-checkbox-group">
-              <input type="checkbox" class="settings-checkbox" id="developer-battle-ai" ${d.battle.logAIDecisions ? 'checked' : ''} ${disabledAttr} data-setting="developer.battle.logAIDecisions">
-              <label class="settings-checkbox-label" for="developer-battle-ai">Log AI Decisions</label>
-            </div>
-            <div class="settings-group-description">Show AI decision-making process.</div>
-          </div>
         </div>
 
         <div class="settings-section ${disabledClass}">
@@ -822,59 +670,10 @@ export class SettingsPanelRenderer {
             <div class="settings-group-description">
               <strong>Modia</strong> - A browser-based MMORPG with tactical turn-based combat.
               <br><br>
-              Version: 1.0.0-alpha
+              Version: ${APP_VERSION}
             </div>
           </div>
         </div>
-      </div>
-    `;
-  }
-
-  /**
-   * Get keybinds for a given scheme
-   * @param {string} scheme - 'wasd', 'arrows', 'vim', or 'custom'
-   * @returns {Object} Keybind mappings
-   */
-  getKeybindsForScheme(scheme) {
-    const schemes = {
-      wasd: { up: 'W', down: 'S', left: 'A', right: 'D', confirm: 'E', cancel: 'Q' },
-      arrows: { up: 'Up', down: 'Down', left: 'Left', right: 'Right', confirm: 'Enter', cancel: 'Esc' },
-      vim: { up: 'K', down: 'J', left: 'H', right: 'L', confirm: 'Enter', cancel: 'Esc' },
-      custom: { up: '?', down: '?', left: '?', right: '?', confirm: '?', cancel: '?' }
-    };
-    return schemes[scheme] || schemes.wasd;
-  }
-
-  /**
-   * Render keybind preview content
-   * @param {Object} keybinds - Keybind mappings
-   * @returns {string} HTML string
-   */
-  renderKeybindPreviewContent(keybinds) {
-    return `
-      <div class="keybind-item">
-        <span class="keybind-action">Move Up</span>
-        <span class="keybind-key">${keybinds.up}</span>
-      </div>
-      <div class="keybind-item">
-        <span class="keybind-action">Move Down</span>
-        <span class="keybind-key">${keybinds.down}</span>
-      </div>
-      <div class="keybind-item">
-        <span class="keybind-action">Move Left</span>
-        <span class="keybind-key">${keybinds.left}</span>
-      </div>
-      <div class="keybind-item">
-        <span class="keybind-action">Move Right</span>
-        <span class="keybind-key">${keybinds.right}</span>
-      </div>
-      <div class="keybind-item">
-        <span class="keybind-action">Confirm</span>
-        <span class="keybind-key">${keybinds.confirm}</span>
-      </div>
-      <div class="keybind-item">
-        <span class="keybind-action">Cancel</span>
-        <span class="keybind-key">${keybinds.cancel}</span>
       </div>
     `;
   }

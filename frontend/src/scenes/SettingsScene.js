@@ -27,7 +27,7 @@ const P = PARCHMENT_COLORS;
 
 /**
  * SettingsScene - Full-screen settings configuration
- * Features: 8 tabs - Battle, Audio, Display, Accessibility, Gameplay, Controls, Social, Developer
+ * Features: tabs - Battle, Audio, Display, Accessibility, Gameplay, Social, Developer, Help
  * Note: Developer tab is only shown in development mode (localhost)
  */
 export class SettingsScene extends Scene {
@@ -377,38 +377,6 @@ export class SettingsScene extends Scene {
         color: var(--parchment-text-secondary);
       }
 
-      /* Keybind Preview */
-      .keybind-preview {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: var(--parchment-spacing-sm);
-        padding: var(--parchment-spacing-md);
-        background: var(--parchment-light);
-        border: 1px solid var(--parchment-border);
-        border-radius: var(--parchment-radius-md);
-        margin-top: var(--parchment-spacing-sm);
-      }
-
-      .keybind-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 12px;
-      }
-
-      .keybind-action {
-        color: var(--parchment-text-muted);
-      }
-
-      .keybind-key {
-        padding: 2px 6px;
-        background: var(--parchment-mid);
-        border: 1px solid var(--parchment-border);
-        border-radius: 3px;
-        font-family: monospace;
-        font-weight: bold;
-      }
-
       /* Buttons */
       .settings-btn {
         padding: var(--parchment-spacing-sm) var(--parchment-spacing-lg);
@@ -470,7 +438,7 @@ export class SettingsScene extends Scene {
         align-items: center;
         gap: var(--parchment-spacing-xs);
         font-size: 12px;
-        color: var(--parchment-state-warning);
+        color: var(--parchment-warning);
         font-style: italic;
       }
 
@@ -529,10 +497,6 @@ export class SettingsScene extends Scene {
         .settings-footer-right {
           justify-content: center;
         }
-
-        .keybind-preview {
-          grid-template-columns: repeat(2, 1fr);
-        }
       }
     `;
     document.head.appendChild(style);
@@ -577,10 +541,6 @@ export class SettingsScene extends Scene {
             <span class="settings-tab-icon">&#127918;</span>
             <span class="settings-tab-label">Gameplay</span>
           </button>
-          <button class="settings-tab" data-tab="controls">
-            <span class="settings-tab-icon">&#9000;</span>
-            <span class="settings-tab-label">Controls</span>
-          </button>
           <button class="settings-tab" data-tab="social">
             <span class="settings-tab-icon">&#128101;</span>
             <span class="settings-tab-label">Social</span>
@@ -603,7 +563,6 @@ export class SettingsScene extends Scene {
           ${this.panelRenderer.renderDisplayPanel()}
           ${this.panelRenderer.renderAccessibilityPanel()}
           ${this.panelRenderer.renderGameplayPanel()}
-          ${this.panelRenderer.renderControlsPanel()}
           ${this.panelRenderer.renderSocialPanel()}
           ${this.isDevelopment ? this.panelRenderer.renderDeveloperPanel() : ''}
           ${this.panelRenderer.renderHelpPanel()}
@@ -643,11 +602,6 @@ export class SettingsScene extends Scene {
       group.querySelectorAll('.settings-radio-option').forEach(option => {
         option.addEventListener('click', () => {
           this.setRadioValue(group, settingPath, option.dataset.value);
-
-          // Update keybind preview if scheme changed
-          if (settingPath === 'controls.keybindScheme') {
-            this.updateKeybindPreview(option.dataset.value);
-          }
         }, opts);
       });
     });
@@ -759,14 +713,6 @@ export class SettingsScene extends Scene {
     if (indicator) {
       indicator.classList.toggle('visible', this.stateManager.hasUnsavedChanges());
     }
-  }
-
-  updateKeybindPreview(scheme) {
-    const keybinds = this.panelRenderer.getKeybindsForScheme(scheme);
-    const preview = this.uiElement.querySelector('#keybind-preview');
-    if (!preview) return;
-
-    preview.innerHTML = this.panelRenderer.renderKeybindPreviewContent(keybinds);
   }
 
   openFeedbackModal() {

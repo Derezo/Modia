@@ -60,8 +60,8 @@ export class TavernScene extends Scene {
     this.setupEventListeners();
     this.setupWebSocketHandlers();
 
-    // Join tavern room
-    this.game.socket.joinRoom('tavern');
+    // Join the global room (chat + presence_changed). A bare 'tavern' room is
+    // rejected by validateRoomAccess in api/src/websocket/roomManager.js.
     this.game.socket.joinRoom('global');
 
     // Subscribe to responsive breakpoint changes
@@ -83,7 +83,6 @@ export class TavernScene extends Scene {
 
   exit() {
     // Leave rooms
-    this.game.socket.leaveRoom('tavern');
     this.game.socket.leaveRoom('global');
 
     // Stop ambient sounds
@@ -287,6 +286,11 @@ export class TavernScene extends Scene {
       .chat-message-time {
         font-size: var(--font-size-sm, 12px);
         color: var(--parchment-text-muted);
+      }
+
+      /* social.chatTimestamps = false */
+      .tavern-container.hide-chat-timestamps .chat-message-time {
+        display: none;
       }
 
       .chat-message-text {
@@ -803,6 +807,8 @@ export class TavernScene extends Scene {
   createUI() {
     const container = document.createElement('div');
     container.className = 'tavern-container';
+    const showTimestamps = this.game.getUserSetting?.('social.chatTimestamps', true) !== false;
+    container.classList.toggle('hide-chat-timestamps', !showTimestamps);
 
     container.innerHTML = `
       <div class="tavern-header">

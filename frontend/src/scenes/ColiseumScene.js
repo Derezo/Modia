@@ -75,7 +75,7 @@ export class ColiseumScene extends Scene {
     this._responsiveUnsubscribe = responsive.onChange(() => this.onBreakpointChange());
 
     // Join coliseum lobby for real-time queue updates
-    this.game.socket.send({ type: 'coliseum_lobby_join' });
+    this.game.socket.send('coliseum_lobby_join');
 
     // Play coliseum theme music
     if (this.game.musicContext) {
@@ -102,7 +102,7 @@ export class ColiseumScene extends Scene {
     }
 
     // Leave coliseum lobby
-    this.game.socket.send({ type: 'coliseum_lobby_leave' });
+    this.game.socket.send('coliseum_lobby_leave');
 
     // Reset match state (includes clearing countdown)
     this.resetMatchState();
@@ -160,7 +160,7 @@ export class ColiseumScene extends Scene {
           <span class="coliseum-title-icon">&#9876;</span>
           <h2>The Coliseum</h2>
         </div>
-        <button class="btn btn-secondary" id="coliseum-back-btn">Back to World</button>
+        <button class="coliseum-back-btn" id="coliseum-back-btn">Back to World</button>
       </div>
 
       <div class="coliseum-tabs">

@@ -260,3 +260,68 @@ describe('NodeActionMenu shrine actions', () => {
     );
   });
 });
+
+function renderedActions(menu) {
+  return menu.actionsInner.children.map(child => child.dataset.action);
+}
+
+describe('NodeActionMenu settlement features', () => {
+  const CASTLE_FEATURES = [
+    'coliseum', 'tavern', 'courtyard', 'throne', 'blacksmith',
+    'apothecary', 'temple', 'stables', 'marketplace', 'garrison'
+  ];
+
+  it('shows every handled castle feature, including Fast Travel, Courtyard and Rest', () => {
+    const menu = createMenu();
+    menu.rebuildActions({ id: 1, node_type: 'castle', features: CASTLE_FEATURES });
+
+    const actions = renderedActions(menu);
+    for (const feature of [
+      'garrison', 'blacksmith', 'marketplace', 'tavern', 'apothecary',
+      'coliseum', 'courtyard', 'fast_travel', 'stamina_restore'
+    ]) {
+      assert.ok(actions.includes(feature), `castle menu is missing ${feature}`);
+    }
+    for (const dead of ['throne', 'temple', 'stables']) {
+      assert.equal(actions.includes(dead), false, `castle menu shows unhandled ${dead}`);
+    }
+    assert.equal(new Set(actions).size, actions.length, 'no duplicate buttons');
+  });
+
+  it('never renders unhandled palace features as Coming Soon buttons', () => {
+    const menu = createMenu();
+    menu.rebuildActions({
+      id: 2,
+      node_type: 'palace',
+      features: ['throne_room', 'treasury', 'royal_guard']
+    });
+
+    assert.deepEqual(renderedActions(menu), ['fast_travel', 'stamina_restore']);
+  });
+
+  it('maps city stables to Fast Travel and drops temple', () => {
+    const menu = createMenu();
+    menu.rebuildActions({ id: 3, node_type: 'city', features: ['tavern', 'stables', 'temple'] });
+
+    assert.deepEqual(renderedActions(menu), ['tavern', 'fast_travel', 'stamina_restore']);
+  });
+
+  it('offers Rest at every settlement type the stamina route accepts, and not elsewhere', () => {
+    const menu = createMenu();
+    for (const nodeType of ['castle', 'city', 'village', 'keep', 'palace']) {
+      menu.rebuildActions({ id: 4, node_type: nodeType, features: [] });
+      assert.ok(
+        renderedActions(menu).includes('stamina_restore'),
+        `${nodeType} should offer Rest`
+      );
+    }
+    for (const nodeType of ['forest', 'town', 'fishing_spot', 'guild']) {
+      menu.rebuildActions({ id: 5, node_type: nodeType, features: [] });
+      assert.equal(
+        renderedActions(menu).includes('stamina_restore'),
+        false,
+        `${nodeType} should not offer Rest`
+      );
+    }
+  });
+});

@@ -427,7 +427,10 @@ export class ProfileDropdown {
 
       .profile-dropdown__menu-icon {
         font-size: 16px;
-        text-align: center;
+        min-width: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         flex-shrink: 0;
       }
 
@@ -525,25 +528,25 @@ export class ProfileDropdown {
       <!-- Main Menu Items -->
       <div class="profile-dropdown__menu-section">
         <div class="profile-dropdown__menu-item" data-action="formation">
-          <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'formation', { size: 'sm' })}</span>
+          <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'formation', { size: 'lg' })}</span>
           <span class="profile-dropdown__menu-label">Formation</span>
         </div>
         ${hasParty ? `
         <div class="profile-dropdown__menu-item" data-action="party">
-          <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'party', { size: 'sm' })}</span>
+          <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'party', { size: 'lg' })}</span>
           <span class="profile-dropdown__menu-label">Party</span>
         </div>
         ` : ''}
         <div class="profile-dropdown__menu-item" data-action="friends">
-          <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'friends', { size: 'sm' })}</span>
+          <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'friends', { size: 'lg' })}</span>
           <span class="profile-dropdown__menu-label">Friends</span>
         </div>
         <div class="profile-dropdown__menu-item" data-action="quests">
-          <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'quest', { size: 'sm' })}</span>
+          <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'quest', { size: 'lg' })}</span>
           <span class="profile-dropdown__menu-label">Quest Board</span>
         </div>
         <div class="profile-dropdown__menu-item" data-action="leaderboard">
-          <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'leaderboard', { size: 'sm' })}</span>
+          <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'leaderboard', { size: 'lg' })}</span>
           <span class="profile-dropdown__menu-label">Leaderboards</span>
         </div>
       </div>
@@ -551,11 +554,11 @@ export class ProfileDropdown {
       <!-- Settings and Logout -->
       <div class="profile-dropdown__menu-section profile-dropdown__menu-section--divider">
         <div class="profile-dropdown__menu-item" data-action="settings">
-          <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'settings', { size: 'sm' })}</span>
+          <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'settings', { size: 'lg' })}</span>
           <span class="profile-dropdown__menu-label">Settings</span>
         </div>
         <div class="profile-dropdown__menu-item profile-dropdown__menu-item--danger" data-action="logout">
-          <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'logout', { size: 'sm' })}</span>
+          <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'logout', { size: 'lg' })}</span>
           <span class="profile-dropdown__menu-label">Logout</span>
         </div>
       </div>

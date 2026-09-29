@@ -1,3 +1,21 @@
+/**
+ * @module WorldMapScene
+ * @description The overworld map: node graph, fog of war, travel, and the
+ * per-node action menu.
+ *
+ * Key responsibilities:
+ * - Load world/region data and build the map UI on enter(); every await in
+ *   enter() is guarded by sceneSessionEpoch so a superseded entry never
+ *   builds DOM or listeners after exit()
+ * - Travel (with optional gameplay.confirmTravel prompt), chest claims,
+ *   shrine visits, fast travel and stamina restore
+ * - Route node features to their scenes/modals (handleFeature)
+ * - Camera follow and canvas rendering
+ *
+ * The global ProfileDropdown is owned by Game, not this scene.
+ *
+ * @see ../worldmap/ - Renderers, input handler, HUD, NodeActionMenu, path system
+ */
 import { Scene } from './Scene.js';
 import { WorldMapEffects } from '../worldmap/WorldMapEffects.js';
 import { WorldMapMinimap } from '../worldmap/WorldMapMinimap.js';
@@ -17,8 +35,8 @@ import {
   findInteractiveNodeAtPosition,
   WorldMapInputHandler
 } from '../worldmap/WorldMapInputHandler.js';
-import { ProfileDropdown } from '../ui/parchment/ProfileDropdown.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
+import { ParchmentModal } from '../ui/parchment/ParchmentModal.js';
 import { PartyInviteModal } from '../components/PartyInviteModal.js';
 import { responsive } from '../core/Responsive.js';
 import { RACE_TO_REGION } from '../audio/AudioAssets.js';
@@ -147,11 +165,11 @@ export class WorldMapScene extends Scene {
     // WebSocket unsubscribers
     this.wsUnsubscribers = [];
 
-    // ProfileDropdown component
-    this.profileDropdown = null;
-
     // Party invite modal
     this.partyInviteModal = null;
+
+    // Pending travel confirmation (gameplay.confirmTravel)
+    this.travelConfirmModal = null;
 
     // Responsive subscription
     this.responsiveUnsubscribe = null;
@@ -188,12 +206,27 @@ export class WorldMapScene extends Scene {
   }
 
   async enter() {
+    // SceneManager does not await enter(), so exit() (which bumps
+    // sceneSessionEpoch) can run while any await below is pending. Every await
+    // is followed by a staleness check so a superseded entry never creates DOM,
+    // listeners or HUD canvas after its exit() cleanup has already run.
+    const requestContext = {
+      sessionEpoch: this.sceneSessionEpoch ?? 0,
+      authUserId: getAuthUserId(this)
+    };
+    const isStale = () => !isSceneSessionCurrent(
+      this,
+      requestContext.sessionEpoch,
+      requestContext.authUserId
+    );
+
     // Get asset loader reference from game
     this.assetLoader = this.game.assetLoader;
 
     // Initialize effects system
     this.effects = new WorldMapEffects(this.assetLoader);
     await this.effects.init();
+    if (isStale()) return;
 
     // Initialize DOM-based fog overlay (replaces canvas fog rendering)
     // Pass the canvas so the overlay can match its position and dimensions
@@ -201,8 +234,10 @@ export class WorldMapScene extends Scene {
     this.fogOverlay.init();
     this.fogOverlay.setNodeSpacing(this.nodeSpacing);
 
-    await this.loadWorldData();
+    const loaded = await this.loadWorldData(requestContext);
+    if (loaded === false || isStale()) return;
     await this.loadRegionData();  // Load region boundaries and castle info
+    if (isStale()) return;
     this.createUI();
     this.centerOnCurrentNode();
     this.inputHandler.setup();
@@ -249,21 +284,25 @@ export class WorldMapScene extends Scene {
     this.refreshQuestMarkers();
 
     // Initialize minimap with region data
-    this.minimap = new WorldMapMinimap(this.assetLoader);
-    await this.minimap.init();
+    const minimap = new WorldMapMinimap(this.assetLoader);
+    this.minimap = minimap;
+    await minimap.init();
+    if (isStale()) return;
     this.minimap.calculateWorldBounds(this.nodes);
     this.minimap.setRegionData(this.regions, this.castleNodes);
 
     // Initialize character display
     this.mapCharacter = new WorldMapCharacter(this.assetLoader);
     await this.initMapCharacter();
+    if (isStale()) return;
 
     // Initialize unified HUD panel (stamina, travel progress, zodiac)
     // Start collapsed on mobile to keep the map unobstructed
     this.hudPanel = new WorldMapHUDPanel({ collapsed: responsive.isMobile() });
     this.hudPanel.setZodiacClickHandler(() => this.openZodiacCrystalModal());
     this.hudPanel.checkZodiacNewCrystalFlag(); // Check for new crystal notification
-    await this.refreshStamina();
+    await this.refreshStamina(requestContext);
+    if (isStale()) return;
     this.refreshZodiacCollection(); // Fetch collection data (non-blocking)
 
     // Create separate HUD canvas layer (renders above fog overlay)
@@ -272,9 +311,8 @@ export class WorldMapScene extends Scene {
     // Preload node sprites in background
     this.preloadNodeSprites();
 
-    // Initialize ProfileDropdown
-    this.profileDropdown = new ProfileDropdown(this.game);
-    this.profileDropdown.show();
+    // The global ProfileDropdown is owned by Game (initNotificationSystem) and
+    // shown on the world map by Game.updateNotificationVisibility.
 
     // Subscribe to responsive changes
     this.responsiveUnsubscribe = responsive.onChange(() => {
@@ -578,14 +616,15 @@ export class WorldMapScene extends Scene {
   /**
    * Smoothly follow the character during travel
    */
-  followCharacter() {
+  followCharacter(deltaTime = 16.67) {
     if (!this.mapCharacter) return;
 
     const targetX = -this.mapCharacter.x + this.game.targetWidth / 2;
     const targetY = -this.mapCharacter.y + this.game.targetHeight / 2;
 
-    // Smooth interpolation
-    const smoothing = 0.1;
+    // Frame-rate independent smoothing: 0.1 of the remaining distance per
+    // 60Hz frame (deltaTime is in milliseconds).
+    const smoothing = 1 - Math.pow(1 - 0.1, deltaTime / 16.67);
     this.cameraX += (targetX - this.cameraX) * smoothing;
     this.cameraY += (targetY - this.cameraY) * smoothing;
   }
@@ -674,15 +713,17 @@ export class WorldMapScene extends Scene {
     // Clean up WebSocket handlers
     this.cleanupWebSocketHandlers();
 
-    // Hide ProfileDropdown
-    if (this.profileDropdown) {
-      this.profileDropdown.hide();
-    }
-
     // Destroy HUD panel
     if (this.hudPanel) {
       this.hudPanel.destroy();
       this.hudPanel = null;
+    }
+
+    // Destroy a pending travel confirmation
+    if (this.travelConfirmModal) {
+      const modal = this.travelConfirmModal;
+      this.travelConfirmModal = null;
+      modal.destroy();
     }
 
     // Destroy party invite modal
@@ -1121,7 +1162,7 @@ export class WorldMapScene extends Scene {
       return;
     }
 
-    // Stamina restore at town nodes (requires Vitality Charm relic)
+    // Stamina restore at settlement nodes (requires Vitality Charm relic)
     if (feature === 'stamina_restore') {
       this.openStaminaRestoreModal();
       return;
@@ -1661,9 +1702,57 @@ export class WorldMapScene extends Scene {
   }
 
   /**
-   * Travel to a node with walking animation
+   * Ask the player to confirm a trip (gameplay.confirmTravel setting).
+   * @param {Object} node - Destination node
    */
-  async travelToNode(node) {
+  confirmTravelTo(node) {
+    if (this.travelConfirmModal) return;
+
+    const sessionEpoch = this.sceneSessionEpoch ?? 0;
+    const authUserId = getAuthUserId(this);
+    const content = document.createElement('p');
+    // Only quote a cost the path preview has already computed for this trip.
+    const cost = this.pathSystem?.pathPreviewCache
+      ?.get(`${this.currentNode?.id}-${node.id}`)?.cost;
+    content.textContent = Number.isFinite(cost) && cost > 0
+      ? `Travel to ${node.name}? This costs ${cost} stamina.`
+      : `Travel to ${node.name}?`;
+
+    const modal = new ParchmentModal({
+      title: 'Confirm Travel',
+      content,
+      size: 'sm',
+      closable: true,
+      closeOnOverlay: true,
+      closeOnEscape: true,
+      actions: [
+        { label: 'Cancel', variant: 'secondary', onClick: () => modal.close() },
+        {
+          label: 'Travel',
+          variant: 'primary',
+          onClick: () => {
+            modal.close();
+            if (isSceneSessionCurrent(this, sessionEpoch, authUserId)) {
+              this.travelToNode(node, { confirmed: true });
+            }
+          }
+        }
+      ],
+      onClose: () => {
+        if (this.travelConfirmModal === modal) this.travelConfirmModal = null;
+      }
+    });
+    this.travelConfirmModal = modal;
+    modal.open();
+  }
+
+  /**
+   * Travel to a node with walking animation
+   * @param {Object} node - Destination node
+   * @param {Object} [options]
+   * @param {boolean} [options.confirmed=false] - Skip the confirmTravel prompt
+   */
+  async travelToNode(node, { confirmed = false } = {}) {
     // World-location mutations are mutually exclusive. The server also locks
     // the party leader during a chest claim, but avoiding the race here keeps
     // the map interaction predictable while that request is pending.
@@ -1688,6 +1777,11 @@ export class WorldMapScene extends Scene {
     // Check if destination is discovered
     if (!this.isNodeDiscovered(node)) {
       parchmentToast.warning('Unknown Territory', 'You have not discovered this location yet.');
+      return;
+    }
+
+    if (!confirmed && this.game.getUserSetting?.('gameplay.confirmTravel', false)) {
+      this.confirmTravelTo(node);
       return;
     }
 
@@ -1877,7 +1971,7 @@ export class WorldMapScene extends Scene {
 
       // Follow camera during travel and smoothly settle after
       if (this.mapCharacter.isTraveling() || this.cameraSettling) {
-        this.followCharacter();
+        this.followCharacter(deltaTime);
 
         // Check if camera has settled (close enough to target)
         if (!this.mapCharacter.isTraveling()) {
@@ -2058,10 +2152,8 @@ export class WorldMapScene extends Scene {
     }
     this.createUI();
 
-    // Refresh ProfileDropdown
-    if (this.profileDropdown) {
-      this.profileDropdown.refresh();
-    }
+    // Refresh the Game-owned ProfileDropdown
+    this.game.profileDropdown?.refresh?.();
 
     // Collapse HUD on mobile; expand on tablet/desktop.
     if (this.hudPanel) {

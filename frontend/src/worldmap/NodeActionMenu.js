@@ -26,6 +26,30 @@ import { isDevModeEnabled } from '../utils/debugLogger.js';
 
 const STYLE_ID = 'node-action-menu-styles';
 
+/**
+ * Settlement node types where POST /api/world/stamina/restore is accepted.
+ * Mirrors STAMINA_RESTORE_NODE_TYPES in api/src/routes/world/stamina.js.
+ */
+export const STAMINA_RESTORE_NODE_TYPES = Object.freeze(['castle', 'city', 'village', 'keep', 'palace']);
+
+/**
+ * Node types that always expose Fast Travel (Wayfarer's Compass relic,
+ * checked in the handler). Nodes with a 'stables' feature also offer it.
+ */
+const FAST_TRAVEL_NODE_TYPES = Object.freeze(['castle', 'palace']);
+
+/**
+ * Features with a working handler in WorldMapScene.handleFeature (or the
+ * onAction callback). Anything else (throne, temple, throne_room, treasury,
+ * royal_guard, ...) is decorative worldgen data and is not rendered, so the
+ * menu never shows dead "Coming Soon" buttons.
+ */
+export const HANDLED_FEATURES = Object.freeze([
+  'garrison', 'blacksmith', 'marketplace', 'tavern', 'apothecary', 'coliseum',
+  'farm', 'guild_hall', 'training_ground', 'guild_advancement', 'courtyard',
+  'caravan', 'explore_ruins', 'fishing', 'fast_travel', 'stamina_restore'
+]);
+
 function getShrineCooldownUntil(node) {
   const value = node?.shrine_cooldown_until
     ?? node?.shrineCooldownUntil
@@ -219,17 +243,18 @@ export class NodeActionMenu {
 
       /* Button icon */
       .node-action-menu__button-icon {
-        width: 16px;
-        height: 16px;
+        width: 24px;
+        height: 24px;
         display: flex;
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
       }
 
-      .node-action-menu__button-icon svg {
-        width: 100%;
-        height: 100%;
+      .node-action-menu__button-icon svg,
+      .node-action-menu__button-icon img {
+        width: 100% !important;
+        height: 100% !important;
       }
 
       /* Node type badge */
@@ -289,8 +314,8 @@ export class NodeActionMenu {
         }
 
         .node-action-menu__button-icon {
-          width: 14px;
-          height: 14px;
+          width: 20px;
+          height: 20px;
         }
 
         .node-action-menu__badge {
@@ -420,8 +445,16 @@ export class NodeActionMenu {
       features = [...features, 'fishing'];
     }
 
-    // Add fast travel action for castle nodes (requires relic, checked in handler)
-    if (node.node_type === 'castle' && !features.includes('fast_travel')) {
+    // Stables provide fast travel (GAME_DESIGN: Stables -> fast travel)
+    if (features.includes('stables')) {
+      features = features.filter(f => f !== 'stables');
+      if (!features.includes('fast_travel')) {
+        features = [...features, 'fast_travel'];
+      }
+    }
+
+    // Add fast travel action for castle/palace nodes (requires relic, checked in handler)
+    if (FAST_TRAVEL_NODE_TYPES.includes(node.node_type) && !features.includes('fast_travel')) {
       features = [...features, 'fast_travel'];
     }
 
@@ -430,35 +463,20 @@ export class NodeActionMenu {
       features = [...features, 'garrison'];
     }
 
-    // Add stamina restore action for town nodes (requires relic, checked in handler)
-    if (node.node_type === 'town' && !features.includes('stamina_restore')) {
+    // Add stamina restore (Rest) at settlement nodes (requires relic, checked in handler)
+    if (STAMINA_RESTORE_NODE_TYPES.includes(node.node_type) && !features.includes('stamina_restore')) {
       features = [...features, 'stamina_restore'];
     }
 
-    if (Array.isArray(features)) {
-      // Prioritize essential features over decorative ones
-      // Garrison comes early since it's a key castle-specific feature
-      const essentialFeatures = [
-        'garrison', 'blacksmith', 'marketplace', 'tavern', 'apothecary',
-        'coliseum', 'farm', 'guild_hall', 'training_ground', 'guild_advancement', 'courtyard', 'caravan', 'explore_ruins', 'fishing',
-        'fast_travel', 'stamina_restore'
-      ];
-      const decorativeFeatures = ['throne', 'temple', 'stables'];
-
-      const prioritizedFeatures = [
-        ...essentialFeatures.filter(f => features.includes(f)),
-        ...features.filter(f => !essentialFeatures.includes(f) && !decorativeFeatures.includes(f)),
-        ...decorativeFeatures.filter(f => features.includes(f))
-      ];
-
-      // Show up to 6 features for important nodes, 3 for others
-      const maxFeatures = ['castle', 'palace', 'city'].includes(node.node_type) ? 6 : 3;
-
-      prioritizedFeatures.slice(0, maxFeatures).forEach(feature => {
+    // Only features with a handler are rendered, in HANDLED_FEATURES priority
+    // order. Every handled feature is shown: the list is bounded by the
+    // handler set, so no working action is ever cut off by a cap.
+    HANDLED_FEATURES
+      .filter(feature => features.includes(feature))
+      .forEach(feature => {
         const btn = this.createButton(feature, false, node);
         this.actionsInner.appendChild(btn);
       });
-    }
 
     // Add battle button for combat nodes
     if (['forest', 'cave', 'mountain', 'bridge'].includes(node.node_type)) {
@@ -527,11 +545,13 @@ export class NodeActionMenu {
 
     // Icon mapping - menu category for locations, actions for combat
     const iconMap = {
-      blacksmith: { category: 'menu', name: 'shop' },
+      blacksmith: { category: 'menu', name: 'equipment' },
       marketplace: { category: 'menu', name: 'shop' },
       tavern: { category: 'menu', name: 'tavern' },
-      apothecary: { category: 'menu', name: 'shop' },
-      coliseum: { category: 'menu', name: 'coliseum' },
+      apothecary: { category: 'menu', name: 'inventory' },
+      // TODO(menu/coliseum art is near-transparent; regenerate it and restore
+      // { category: 'menu', name: 'coliseum' }) - stop-gap icon below
+      coliseum: { category: 'actions', name: 'attack' },
       farm: { category: 'menu', name: 'caravan' },
       guild_hall: { category: 'menu', name: 'guild' },
       training_ground: { category: 'menu', name: 'guild' },
@@ -589,7 +609,7 @@ export class NodeActionMenu {
     const iconInfo = iconMap[feature];
     if (iconInfo) {
       // Use Icon.html() to get the inline HTML for the icon
-      const iconHtml = Icon.html(iconInfo.category, iconInfo.name, { size: 'sm' });
+      const iconHtml = Icon.html(iconInfo.category, iconInfo.name, { size: 'lg' });
       // Extract just the img tag, removing the wrapper span
       iconContainer.innerHTML = iconHtml.replace(/<span[^>]*>([^<]*)<\/span>/g, '');
     } else if (feature === 'claim_chest') {

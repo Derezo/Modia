@@ -220,6 +220,7 @@ export function injectParchmentTheme() {
       --parchment-spacing-md: ${PARCHMENT_SPACING.md};
       --parchment-spacing-lg: ${PARCHMENT_SPACING.lg};
       --parchment-spacing-xl: ${PARCHMENT_SPACING.xl};
+      --parchment-spacing-xxl: ${PARCHMENT_SPACING.xxl};
 
       /* Parchment radius */
       --parchment-radius-sm: ${PARCHMENT_RADIUS.sm};

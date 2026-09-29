@@ -43,7 +43,8 @@ const OBJECTIVE_ICONS = {
   puzzle_solves: { category: 'menu', name: 'ruins' },
   gold_earned: { category: 'resources', name: 'gold' },
   items_sold: { category: 'menu', name: 'shop' },
-  coliseum_wins: { category: 'menu', name: 'coliseum' }
+  // TODO(menu/coliseum art is near-transparent; restore { category: 'menu', name: 'coliseum' } once regenerated)
+  coliseum_wins: { category: 'actions', name: 'attack' }
 };
 
 export class QuestBoardScene extends Scene {
