@@ -1,10 +1,12 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.js';
 import {
   AUTH_SELECTORS,
-  TEST_USER,
+  createPlayer,
   generateTestCredentials,
   gotoAuth,
-  login
+  login,
+  waitForScene,
+  waitForWorldMapReady
 } from './helpers/index.js';
 
 /**
@@ -83,14 +85,21 @@ test.describe('Authentication', () => {
 
     await expect(page.locator('.regwiz-success-title')).toContainText(charName, { timeout: 15000 });
 
-    // The new account can log in.
+    // The new account can log in and, having a character, lands on the map.
     await login(page, username, password);
+    await waitForScene(page, 'worldMap');
   });
 
-  test('should login with valid credentials', async ({ page }) => {
-    await login(page, TEST_USER.username, TEST_USER.password);
+  test('should login with valid credentials', async ({ page, request }) => {
+    const player = await createPlayer(request);
+    await login(page, player.username, player.password);
 
     await expect(page.locator(AUTH_SELECTORS.error)).toHaveCount(0);
-    await expect(page.locator('canvas').first()).toBeVisible();
+    await waitForWorldMapReady(page);
+    // The session is kept in sessionStorage, not localStorage.
+    const stored = await page.evaluate(() => JSON.parse(sessionStorage.getItem('modia_auth')));
+    expect(stored.user.username).toBe(player.username);
+    expect(stored.token).toBeTruthy();
+    expect(stored.refreshToken).toBeTruthy();
   });
 });

@@ -335,6 +335,29 @@ async function cleanupTestUsers(userIds) {
       [normalizedUserIds]
     );
 
+    // item_listing_sales.listing_id references item_listings with no ON DELETE
+    // action, while item_listings cascades from characters, character_items
+    // and users. Drop the sale history of the users' listings first, or a sold
+    // listing blocks the character_items delete below.
+    await client.query(
+      `DELETE FROM item_listing_sales
+       WHERE buyer_id = ANY($1::int[])
+          OR seller_id = ANY($1::int[])
+          OR listing_id IN (
+            SELECT il.id
+            FROM item_listings il
+            WHERE il.seller_id = ANY($1::int[])
+               OR il.character_id = ANY($2::int[])
+               OR il.character_item_id IN (
+                 SELECT ci.id
+                 FROM character_items ci
+                 WHERE ci.user_id = ANY($1::int[])
+                    OR ci.character_id = ANY($2::int[])
+               )
+          )`,
+      [normalizedUserIds, charIds]
+    );
+
     if (charIds.length > 0) {
       // Clean up character-related data
       await client.query(

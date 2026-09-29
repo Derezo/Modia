@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.js';
 import { AUTH_SELECTORS, generateTestCredentials, gotoAuth } from './helpers/index.js';
 
 /**
@@ -437,6 +437,13 @@ test.describe('Registration Wizard', () => {
 
   test.describe('Trait Tooltip Display', () => {
     test('should display tooltip when hovering over trait badge', async ({ page }) => {
+      // Known bug: ParchmentCard.setTraits() re-renders the card without
+      // calling attachTooltipListeners(), so the trait badges it draws never
+      // get their mouseenter handlers and no tooltip appears. When this test
+      // starts failing as "expected to fail", the bug is fixed: delete the
+      // test.fail() line.
+      test.fail(true, 'ParchmentCard trait badges get no tooltip listeners after setTraits()');
+
       // Navigate to registration
       const registerLink = page.locator(AUTH_SELECTORS.modeToggle);
       await expect(registerLink).toBeVisible({ timeout: 10000 });
@@ -459,31 +466,21 @@ test.describe('Registration Wizard', () => {
       await page.locator('[data-race="human"]').click();
       await page.locator('[data-class="warrior"]').click();
 
-      // Wait for preview to load and traits to appear
-      await page.waitForTimeout(1000);
-
-      // Look for trait badges in the preview card
+      // Race + class give the preview card its starting traits.
       const traitBadge = page.locator('.pc-trait-badge').first();
+      await expect(traitBadge).toBeVisible({ timeout: 10000 });
+      const tooltipText = await traitBadge.getAttribute('data-tooltip');
+      expect(tooltipText).toBeTruthy();
 
-      // Check if traits are displayed (they may or may not be based on API response)
-      if (await traitBadge.isVisible({ timeout: 3000 })) {
-        // Get the tooltip text from data-tooltip attribute
-        const tooltipText = await traitBadge.getAttribute('data-tooltip');
-        expect(tooltipText).toBeTruthy();
-
-        // Hover over the trait badge
+      // The preview card re-renders while the trait preview loads; re-hover
+      // until the badge that is in the DOM has its tooltip listeners.
+      const tooltip = page.locator('.parchment-tooltip');
+      await expect(async () => {
+        await page.mouse.move(0, 0);
         await traitBadge.hover();
-
-        // Wait for tooltip to appear
-        await page.waitForTimeout(300);
-
-        // Look for tooltip element (parchment tooltip system)
-        const tooltip = page.locator('.parchment-tooltip');
-        if (await tooltip.isVisible({ timeout: 2000 })) {
-          await expect(tooltip).toContainText(/.+/);  // Contains some text
-        }
-      }
-      // If no traits are visible, the test passes (traits are optional based on API)
+        await expect(tooltip).toBeVisible({ timeout: 1000 });
+      }).toPass({ timeout: 5000 });
+      await expect(tooltip).toContainText(tooltipText.trim().slice(0, 20));
     });
   });
 

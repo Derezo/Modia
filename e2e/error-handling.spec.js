@@ -1,5 +1,15 @@
-import { test, expect } from '@playwright/test';
-import { AUTH_SELECTORS, gotoAuth, login, navigateToWorldMap, TEST_USER } from './helpers/index.js';
+import { test, expect } from './fixtures.js';
+import {
+  AUTH_SELECTORS,
+  apiCall,
+  createPlayer,
+  enterWorldMap,
+  generateTestCredentials,
+  gotoAuth,
+  sessionToken,
+  waitForScene,
+  waitForWorldMapReady
+} from './helpers/index.js';
 
 /**
  * Error Handling E2E Tests
@@ -8,7 +18,10 @@ import { AUTH_SELECTORS, gotoAuth, login, navigateToWorldMap, TEST_USER } from '
  * - Network failures
  * - Session expiration
  * - Rate limiting
- * - Invalid input
+ * - Invalid game actions
+ *
+ * Name-length and insufficient-gold validation live with their features in
+ * character-creation.spec.js and shop.spec.js.
  */
 
 test.describe('Authentication Errors', () => {
@@ -54,45 +67,52 @@ test.describe('Authentication Errors', () => {
 });
 
 test.describe('Session Handling', () => {
-  test('should handle expired token gracefully', async ({ page }) => {
-    await login(page);
-    await page.waitForTimeout(1000);
+  test('should return to login when the stored session is no longer valid', async ({ page, request }) => {
+    const player = await createPlayer(request);
+    await enterWorldMap(page, player);
 
-    // Clear the access token to simulate expiration
+    // Simulate a session that expired while the tab was closed: both tokens
+    // in sessionStorage are rejected by the API on the next start-up.
     await page.evaluate(() => {
-      localStorage.removeItem('accessToken');
+      const saved = JSON.parse(sessionStorage.getItem('modia_auth'));
+      sessionStorage.setItem('modia_auth', JSON.stringify({
+        ...saved,
+        token: 'expired.access.token',
+        refreshToken: 'expired-refresh-token'
+      }));
     });
+    await page.reload();
 
-    // Try to navigate to world map (requires auth)
-    await page.goto('/#/world');
-    await page.waitForTimeout(2000);
-
-    // Should be redirected to login or show auth error
-    const loginForm = page.locator(AUTH_SELECTORS.username);
-    const authError = page.locator(':text("session"):visible, :text("login"):visible, :text("expired"):visible');
-
-    const isOnLogin = await loginForm.isVisible({ timeout: 5000 });
-    const hasAuthError = await authError.first().isVisible({ timeout: 1000 });
-
-    expect(isOnLogin || hasAuthError).toBe(true);
+    await waitForScene(page, 'login', 20000);
+    await expect(page.locator(AUTH_SELECTORS.form)).toBeVisible({ timeout: 10000 });
+    const stored = await page.evaluate(() => JSON.parse(sessionStorage.getItem('modia_auth')));
+    expect(stored.token).toBeNull();
+    expect(stored.refreshToken).toBeNull();
   });
 
-  test('should refresh token automatically before expiration', async ({ page }) => {
-    await navigateToWorldMap(page);
+  test('should refresh a rejected access token and retry the request', async ({ page, request }) => {
+    const player = await createPlayer(request);
+    await enterWorldMap(page, player);
+    const before = await page.evaluate(() => JSON.parse(sessionStorage.getItem('modia_auth')));
+    expect(before.token).toBeTruthy();
+    expect(before.refreshToken).toBeTruthy();
+    // Tokens live in sessionStorage, never in localStorage.
+    expect(await page.evaluate(() => localStorage.getItem('accessToken'))).toBeNull();
 
-    // Store initial tokens
-    const initialAccessToken = await page.evaluate(() => localStorage.getItem('accessToken'));
-    const refreshToken = await page.evaluate(() => localStorage.getItem('refreshToken'));
+    // The API client now holds an access token the server rejects, as if it
+    // had expired. The next request gets a 401, refreshes and is retried.
+    const me = await page.evaluate(async () => {
+      window.game.api.setToken('expired.access.token');
+      return window.game.api.get('/auth/me');
+    });
+    expect(me.user.username).toBe(player.username);
 
-    expect(initialAccessToken).toBeTruthy();
-    expect(refreshToken).toBeTruthy();
-
-    // Perform actions that trigger API calls
-    await page.waitForTimeout(2000);
-
-    // Token should still be valid (or refreshed)
-    const currentAccessToken = await page.evaluate(() => localStorage.getItem('accessToken'));
-    expect(currentAccessToken).toBeTruthy();
+    const after = await page.evaluate(() => JSON.parse(sessionStorage.getItem('modia_auth')));
+    expect(after.token).toBeTruthy();
+    expect(after.token).not.toBe(before.token);
+    expect(after.refreshToken).not.toBe(before.refreshToken);
+    expect(await sessionToken(page)).toBe(after.token);
+    await waitForScene(page, 'worldMap');
   });
 });
 
@@ -106,8 +126,9 @@ test.describe('Network Error Handling', () => {
     });
 
     // Try to login
-    await page.locator(AUTH_SELECTORS.username).fill(TEST_USER.username);
-    await page.locator(AUTH_SELECTORS.password).fill(TEST_USER.password);
+    const { username, password } = generateTestCredentials();
+    await page.locator(AUTH_SELECTORS.username).fill(username);
+    await page.locator(AUTH_SELECTORS.password).fill(password);
     await page.locator(AUTH_SELECTORS.submit).click();
 
     // Should show network error
@@ -115,28 +136,36 @@ test.describe('Network Error Handling', () => {
     await expect(error.first()).toBeVisible({ timeout: 5000 });
   });
 
-  test('should show error for slow network timeout', async ({ page }) => {
+  test('should show a loading state while the login request is pending', async ({ page }) => {
     await gotoAuth(page);
 
-    // Delay all API responses significantly
-    await page.route('**/api/**', async route => {
-      await new Promise(resolve => setTimeout(resolve, 30000));
-      route.continue();
+    // Hold the login request open until the test releases it.
+    let release;
+    const released = new Promise(resolve => { release = resolve; });
+    await page.route(url => url.pathname === '/api/auth/login', async route => {
+      await released;
+      await route.fulfill({
+        status: 401,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Invalid credentials' })
+      });
     });
 
-    // Try to login
-    await page.locator(AUTH_SELECTORS.username).fill(TEST_USER.username);
-    await page.locator(AUTH_SELECTORS.password).fill(TEST_USER.password);
+    const { username, password } = generateTestCredentials();
+    await page.locator(AUTH_SELECTORS.username).fill(username);
+    await page.locator(AUTH_SELECTORS.password).fill(password);
     await page.locator(AUTH_SELECTORS.submit).click();
 
-    // Should show loading state or timeout error eventually
-    const loading = page.locator('.loading, .spinner, [aria-busy="true"]');
-    const error = page.locator('.error, [role="alert"], :text("timeout"):visible');
+    const submit = page.locator(AUTH_SELECTORS.submit);
+    await expect(submit).toBeDisabled();
+    await expect(submit).toHaveText(/Logging in/i);
+    await expect(page.locator('#auth-panel')).toHaveClass(/form-loading/);
 
-    const isLoading = await loading.first().isVisible({ timeout: 5000 });
-    const hasError = await error.first().isVisible({ timeout: 35000 });
+    release();
 
-    expect(isLoading || hasError).toBe(true);
+    await expect(submit).toBeEnabled({ timeout: 5000 });
+    await expect(submit).toHaveText(/^Login$/);
+    await expect(page.locator(AUTH_SELECTORS.error)).toHaveText(/invalid/i);
   });
 });
 
@@ -177,158 +206,85 @@ test.describe('Rate Limiting', () => {
   });
 });
 
-test.describe('Input Validation', () => {
-  test('should validate character name length', async ({ page }) => {
-    await login(page);
-    await page.waitForTimeout(1000);
-
-    // Try to create character with long name
-    const createButton = page.getByRole('button', { name: /create.*character|new.*character|\+/i });
-
-    if (await createButton.isVisible({ timeout: 5000 })) {
-      await createButton.click();
-      await page.waitForTimeout(1000);
-
-      // Select race and class
-      const raceOption = page.locator('[data-race="human"], button:has-text("Human")').first();
-      if (await raceOption.isVisible({ timeout: 2000 })) await raceOption.click();
-      await page.waitForTimeout(300);
-
-      const classOption = page.locator('[data-class="warrior"], button:has-text("Warrior")').first();
-      if (await classOption.isVisible({ timeout: 2000 })) await classOption.click();
-      await page.waitForTimeout(300);
-
-      // Enter too long name (max 24 chars)
-      const nameInput = page.getByPlaceholder(/name/i);
-      if (await nameInput.isVisible({ timeout: 2000 })) {
-        await nameInput.fill('ThisNameIsWayTooLongForACharacterName');
-
-        // Submit
-        const submitButton = page.getByRole('button', { name: /create|confirm|done/i });
-        if (await submitButton.isVisible({ timeout: 2000 })) {
-          await submitButton.click();
-
-          // Should show validation error
-          const error = page.locator('.error, [role="alert"], .toast-error');
-          await expect(error).toBeVisible({ timeout: 3000 });
-        }
-      }
-    }
-  });
-
-  test('should validate shop purchase with insufficient gold', async ({ page }) => {
-    await navigateToWorldMap(page);
-
-    // Navigate to shop (if available)
-    const shopButton = page.getByRole('button', { name: /shop|store|merchant/i });
-
-    if (await shopButton.isVisible({ timeout: 3000 })) {
-      await shopButton.click();
-      await page.waitForTimeout(1000);
-
-      // Try to buy an expensive item
-      const buyButton = page.getByRole('button', { name: /buy/i });
-      if (await buyButton.first().isVisible({ timeout: 3000 })) {
-        await buyButton.first().click();
-
-        // If insufficient gold, should show error
-        const insufficientError = page.locator(':text("insufficient"):visible, :text("not enough"):visible, :text("gold"):visible');
-        // May or may not appear depending on user's gold
-        if (await insufficientError.first().isVisible({ timeout: 3000 })) {
-          await expect(insufficientError.first()).toBeVisible();
-        }
-      }
-    }
-  });
-});
-
 test.describe('Game State Errors', () => {
-  test('should handle invalid node navigation', async ({ page }) => {
-    await navigateToWorldMap(page);
+  test('should reject travel to a node that does not exist', async ({ page, request }) => {
+    const player = await createPlayer(request);
+    await enterWorldMap(page, player);
+    const token = await sessionToken(page);
+    const { body: before } = await apiCall(request, 'GET', '/world/current', { token });
 
-    // Try to navigate to an invalid node via API
-    const token = await page.evaluate(() => localStorage.getItem('accessToken'));
+    const { status, body } = await apiCall(request, 'POST', '/world/travel', {
+      token,
+      data: { targetNodeId: 999999 },
+      expectStatus: 400
+    });
+    expect(status).toBe(400);
+    expect(body.error).toMatch(/not been discovered/i);
 
-    if (token) {
-      const response = await page.request.post('/api/world/travel', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        data: {
-          nodeId: 999999  // Invalid node ID
-        }
-      });
-
-      // Should return error status
-      expect(response.status()).toBeGreaterThanOrEqual(400);
-
-      const body = await response.json();
-      expect(body.error).toBeDefined();
-    }
+    const { body: after } = await apiCall(request, 'GET', '/world/current', { token });
+    expect(after.currentNode.id).toBe(before.currentNode.id);
   });
 
-  test('should handle travel to disconnected node', async ({ page }) => {
-    await navigateToWorldMap(page);
+  test('should reject travel to an undiscovered node in another region', async ({ page, request }) => {
+    const player = await createPlayer(request);
+    await enterWorldMap(page, player);
+    const token = await sessionToken(page);
+    const { body: current } = await apiCall(request, 'GET', '/world/current', { token });
+    const { body: regions } = await apiCall(request, 'GET', '/world/regions', { token });
+    const foreignCastle = regions.regions
+      .map(region => region.castle?.nodeId)
+      .find(nodeId => nodeId && nodeId !== current.currentNode.id);
+    expect(foreignCastle, 'another region has a castle').toBeTruthy();
 
-    // Get current node
-    const token = await page.evaluate(() => localStorage.getItem('accessToken'));
+    const { body } = await apiCall(request, 'POST', '/world/travel', {
+      token,
+      data: { targetNodeId: foreignCastle },
+      expectStatus: 400
+    });
+    expect(body.error).toMatch(/not been discovered/i);
 
-    if (token) {
-      // First get current position
-      const worldResponse = await page.request.get('/api/world/current', {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+    // The client is unaffected and still shows the starting node.
+    await expect(page.locator('.node-action-menu__name')).toHaveText(current.currentNode.name);
+  });
 
-      if (worldResponse.ok()) {
-        const worldData = await worldResponse.json();
+  test('should reject a malformed travel target', async ({ page, request }) => {
+    const player = await createPlayer(request);
+    await enterWorldMap(page, player);
+    const token = await sessionToken(page);
 
-        // Try to travel to a node that's not connected
-        // This would require knowing the world structure
-        // For now, just verify the API returns proper errors
-        const travelResponse = await page.request.post('/api/world/travel', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          data: {
-            nodeId: 1  // Likely not connected to current node
-          }
-        });
-
-        // Should be either success (if connected) or error (if not connected)
-        expect([200, 400, 404]).toContain(travelResponse.status());
-      }
-    }
+    const { body } = await apiCall(request, 'POST', '/world/travel', {
+      token,
+      data: { targetNodeId: 'not-a-number' },
+      expectStatus: 400
+    });
+    expect(typeof body.error).toBe('string');
   });
 });
 
 test.describe('WebSocket Error Handling', () => {
-  test('should reconnect after WebSocket disconnect', async ({ page }) => {
-    await navigateToWorldMap(page);
+  test('should reconnect and re-authenticate after the socket drops', async ({ page, request }) => {
+    const player = await createPlayer(request);
+    await enterWorldMap(page, player);
+    await expect.poll(() => page.evaluate(() =>
+      window.game.socket?.ws?.readyState === WebSocket.OPEN && window.game.socket.hasAuthenticatedOnce === true
+    ), { timeout: 15000 }).toBe(true);
 
-    // Close WebSocket connection
     await page.evaluate(() => {
-      if (window.game?.websocket?.ws) {
-        window.game.websocket.ws.close();
-      }
+      // 'connect' is dispatched when a reconnected socket authenticates.
+      window.__reconnected = false;
+      window.game.socket.on('connect', () => { window.__reconnected = true; });
+      window.__droppedSocket = window.game.socket.ws;
+      window.__droppedSocket.close();
     });
 
-    await page.waitForTimeout(3000);
+    // A new socket replaces the dropped one and authenticates again.
+    await expect.poll(() => page.evaluate(() => {
+      const socket = window.game.socket;
+      return window.__reconnected
+        && socket.ws !== window.__droppedSocket
+        && socket.ws?.readyState === WebSocket.OPEN;
+    }), { timeout: 20000 }).toBe(true);
 
-    // Perform an action that requires WebSocket
-    // The game should reconnect automatically
-
-    // Verify game is still functional
-    const canvas = page.locator('canvas');
-    await expect(canvas).toBeVisible();
-
-    // Check if WebSocket reconnected (may show reconnection toast)
-    const reconnectMessage = page.locator(':text("reconnect"):visible, :text("connected"):visible');
-    if (await reconnectMessage.first().isVisible({ timeout: 5000 })) {
-      await expect(reconnectMessage.first()).toBeVisible();
-    }
+    await waitForWorldMapReady(page);
   });
 });

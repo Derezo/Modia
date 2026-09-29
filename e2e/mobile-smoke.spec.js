@@ -1,5 +1,6 @@
-import { test, expect, devices } from '@playwright/test';
-import { login, TEST_USER } from './helpers/index.js';
+import { devices } from '@playwright/test';
+import { test, expect } from './fixtures.js';
+import { createPlayer, login, RATE_LIMIT_BYPASS_HEADERS, waitForWorldMapReady } from './helpers/index.js';
 
 /**
  * Mobile smoke test
@@ -19,12 +20,19 @@ const MOBILE_DEVICES = [
 
 test.describe('Mobile smoke', () => {
   for (const { name, device } of MOBILE_DEVICES) {
-    test(`${name}: login and reach the world map`, async ({ browser }) => {
-      const context = await browser.newContext({ ...device });
+    test(`${name}: login and reach the world map`, async ({ browser, request, baseURL }) => {
+      const player = await createPlayer(request);
+      const context = await browser.newContext({ ...device, baseURL });
+      // Same dev-only rate-limit bypass the shared fixture adds (fixtures.js).
+      await context.route(
+        url => url.origin === new URL(baseURL).origin && url.pathname.startsWith('/api/'),
+        route => route.fallback({ headers: { ...route.request().headers(), ...RATE_LIMIT_BYPASS_HEADERS } })
+      );
       const page = await context.newPage();
 
       try {
-        await login(page, TEST_USER.username, TEST_USER.password);
+        await login(page, player.username, player.password);
+        await waitForWorldMapReady(page);
 
         // Canvas should be mounted and sized.
         const canvas = page.locator('#game-canvas');
