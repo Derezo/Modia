@@ -73,7 +73,11 @@ const MAX_PRICE = 999999999;
 // ============================================
 router.post('/orders/limit', authenticate, requireMarketplaceAccess, orderLimiter, asyncHandler(async (req, res) => {
   logger.debug('marketplace', 'Limit order request', { body: req.body, userId: req.user.userId });
-  const { itemTemplateId, side, characterId } = req.body;
+  const { side } = req.body;
+
+  // SECURITY: Validate all ID inputs
+  const itemTemplateId = parseIntOrThrow(req.body.itemTemplateId, 'item template ID');
+  const characterId = parseIntOrThrow(req.body.characterId, 'character ID');
 
   // SECURITY: Strict price and quantity validation to prevent exploits
   const price = parseInt(req.body.price, 10);
@@ -87,9 +91,6 @@ router.post('/orders/limit', authenticate, requireMarketplaceAccess, orderLimite
   }
 
   // Validate inputs
-  if (!itemTemplateId) {
-    throw new AppError('Item template ID required', 400);
-  }
   if (!['buy', 'sell'].includes(side)) {
     throw new AppError('Side must be "buy" or "sell"', 400);
   }
@@ -200,7 +201,11 @@ router.post('/orders/limit', authenticate, requireMarketplaceAccess, orderLimite
 // POST /api/marketplace/orders/market - Execute market order
 // ============================================
 router.post('/orders/market', authenticate, requireMarketplaceAccess, marketOrderLimiter, asyncHandler(async (req, res) => {
-  const { itemTemplateId, side, characterId } = req.body;
+  const { side } = req.body;
+
+  // SECURITY: Validate all ID inputs
+  const itemTemplateId = parseIntOrThrow(req.body.itemTemplateId, 'item template ID');
+  const characterId = parseIntOrThrow(req.body.characterId, 'character ID');
 
   // SECURITY: Strict quantity validation to prevent exploits
   const quantity = parseInt(req.body.quantity, 10);
@@ -209,9 +214,6 @@ router.post('/orders/market', authenticate, requireMarketplaceAccess, marketOrde
   }
 
   // Validate inputs
-  if (!itemTemplateId) {
-    throw new AppError('Item template ID required', 400);
-  }
   if (!['buy', 'sell'].includes(side)) {
     throw new AppError('Side must be "buy" or "sell"', 400);
   }
@@ -234,9 +236,9 @@ router.post('/orders/market', authenticate, requireMarketplaceAccess, marketOrde
       client,
       req.user.userId,
       characterId,
-      parseInt(itemTemplateId, 10),
+      itemTemplateId,
       side,
-      parseInt(quantity, 10)
+      quantity
     );
   });
 
@@ -428,17 +430,11 @@ router.get('/inventory/sellable', authenticate, readLimiter, asyncHandler(async 
 // POST /api/marketplace/listings - Create a new item listing
 // ============================================
 router.post('/listings', authenticate, requireMarketplaceAccess, orderLimiter, asyncHandler(async (req, res) => {
-  const { characterId, characterItemId, price } = req.body;
+  // SECURITY: Validate all ID inputs
+  const characterId = parseIntOrThrow(req.body.characterId, 'character ID');
+  const characterItemId = parseIntOrThrow(req.body.characterItemId, 'character item ID');
 
-  // Validate inputs
-  if (!characterId) {
-    throw new AppError('Character ID required', 400);
-  }
-  if (!characterItemId) {
-    throw new AppError('Character item ID required', 400);
-  }
-
-  const priceNum = parseInt(price, 10);
+  const priceNum = parseInt(req.body.price, 10);
   if (!Number.isInteger(priceNum) || isNaN(priceNum)) {
     throw new AppError('Price must be a valid integer', 400);
   }
@@ -463,8 +459,8 @@ router.post('/listings', authenticate, requireMarketplaceAccess, orderLimiter, a
     return marketplaceService.createItemListing(
       client,
       req.user.userId,
-      parseInt(characterId, 10),
-      parseInt(characterItemId, 10),
+      characterId,
+      characterItemId,
       priceNum
     );
   });
@@ -481,16 +477,10 @@ router.post('/listings', authenticate, requireMarketplaceAccess, orderLimiter, a
 // ============================================
 router.post('/listings/:listingId/buy', authenticate, requireMarketplaceAccess, marketOrderLimiter, asyncHandler(async (req, res) => {
   const { listingId } = req.params;
-  const { characterId } = req.body;
 
-  const listingIdNum = parseInt(listingId, 10);
-  if (isNaN(listingIdNum)) {
-    throw new AppError('Invalid listing ID', 400);
-  }
-
-  if (!characterId) {
-    throw new AppError('Character ID required', 400);
-  }
+  // SECURITY: Validate all ID inputs
+  const listingIdNum = parseIntOrThrow(listingId, 'listing ID');
+  const characterId = parseIntOrThrow(req.body.characterId, 'character ID');
 
   // Verify character belongs to user
   const charResult = await query(
@@ -506,7 +496,7 @@ router.post('/listings/:listingId/buy', authenticate, requireMarketplaceAccess, 
     return marketplaceService.buyItemListing(
       client,
       req.user.userId,
-      parseInt(characterId, 10),
+      characterId,
       listingIdNum
     );
   });
@@ -548,20 +538,25 @@ router.delete('/listings/:listingId', authenticate, requireMarketplaceAccess, ca
 // GET /api/marketplace/price-suggestion - Get suggested price for an item
 // ============================================
 router.get('/price-suggestion', authenticate, readLimiter, asyncHandler(async (req, res) => {
-  const { characterItemId, characterId } = req.query;
+  const { characterItemId } = req.query;
+  // characterId is optional/ignored; ownership is verified via user_id
 
-  if (!characterItemId || !characterId) {
-    throw new AppError('Character item ID and character ID required', 400);
+  if (!characterItemId) {
+    throw new AppError('Character item ID required', 400);
   }
 
-  // Get item with modifications
+  const characterItemIdNum = parseInt(characterItemId, 10);
+  if (isNaN(characterItemIdNum)) {
+    throw new AppError('Invalid character item ID', 400);
+  }
+
+  // Get item with modifications from user's shared pool (unequipped items have character_id IS NULL)
   const itemResult = await query(
     `SELECT ci.modifications, it.base_price, it.name
      FROM character_items ci
      JOIN item_templates it ON ci.item_template_id = it.id
-     JOIN characters c ON ci.character_id = c.id
-     WHERE ci.id = $1 AND ci.character_id = $2 AND c.user_id = $3`,
-    [characterItemId, characterId, req.user.userId]
+     WHERE ci.id = $1 AND ci.user_id = $2 AND ci.equipped_slot IS NULL`,
+    [characterItemIdNum, req.user.userId]
   );
 
   if (itemResult.rows.length === 0) {
@@ -573,7 +568,7 @@ router.get('/price-suggestion', authenticate, readLimiter, asyncHandler(async (r
 
   const result = marketplaceService.calculateSuggestedPrice({
     basePrice: item.base_price,
-    rarity: mods.rarity || 'common',
+    rarity: mods.rarity,
     augments: mods.augments || []
   });
 

@@ -14,7 +14,7 @@
  */
 
 // Constants
-export { DEFAULT_TAX_RATE, AUGMENT_VALUES, RARITY_MULTIPLIERS } from './constants.js';
+export { DEFAULT_TAX_RATE, AUGMENT_VALUES, RARITY_MULTIPLIERS, RARITY_NAMES, normalizeRarityName } from './constants.js';
 
 // Order Book
 export { getOrderBook, getMatchingOrders } from './orderBook.js';
@@ -26,6 +26,7 @@ export {
   escrowItems,
   releaseEscrowedItems,
   reduceEscrow,
+  consumeReservation,
   addItemToUser
 } from './escrow.js';
 

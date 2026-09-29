@@ -14,7 +14,8 @@
 
 import { AppError } from '../../middleware/errorHandler.js';
 import { MAX_GOLD } from '../../config/constants.js';
-import { DEFAULT_TAX_RATE, AUGMENT_VALUES, RARITY_MULTIPLIERS } from './constants.js';
+import { DEFAULT_TAX_RATE, AUGMENT_VALUES, RARITY_MULTIPLIERS, normalizeRarityName } from './constants.js';
+import { getMarketplaceFeeRate } from '../relicService.js';
 
 /**
  * Calculate suggested price for an item based on its properties
@@ -23,7 +24,8 @@ import { DEFAULT_TAX_RATE, AUGMENT_VALUES, RARITY_MULTIPLIERS } from './constant
  */
 export function calculateSuggestedPrice(item) {
   const basePrice = item.basePrice || item.base_price || 10;
-  const rarity = item.rarity || 'common';
+  // Normalize rarity (handles numeric 1-5 as well as string names)
+  const rarity = normalizeRarityName(item.rarity);
   const augments = item.augments || [];
 
   // Get rarity multiplier
@@ -93,7 +95,7 @@ export async function getItemListings(client, itemTemplateId) {
       generatedName: mods.generatedName || row.template_name,
       templateName: row.template_name,
       itemType: row.item_type,
-      rarity: mods.rarity || 'common',
+      rarity: normalizeRarityName(mods.rarity),
       material: mods.material || null,
       baseStats: mods.baseStats || row.template_stats || {},
       bonusStats: mods.bonusStats || {},
@@ -133,10 +135,14 @@ export async function getListingAggregates(client, templateIds) {
 
   const aggregates = {};
   for (const row of result.rows) {
-    const rarities = (row.rarities || []).filter(r => r).sort((a, b) => {
-      const order = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
-      return order.indexOf(a) - order.indexOf(b);
-    });
+    // Normalize rarities from numeric/string to name strings, then sort
+    const rarities = (row.rarities || [])
+      .filter(r => r)
+      .map(r => normalizeRarityName(r))
+      .sort((a, b) => {
+        const order = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+        return order.indexOf(a) - order.indexOf(b);
+      });
     aggregates[row.item_template_id] = {
       listingCount: parseInt(row.listing_count, 10),
       minPrice: parseInt(row.min_price, 10),
@@ -218,9 +224,9 @@ export async function createItemListing(client, userId, characterId, characterIt
 
   const listing = listingResult.rows[0];
 
-  // Mark the item as "listed" in modifications to prevent other operations
+  // Mark the item as "listed" using both the column (guards) and modifications (legacy/snapshot)
   await client.query(
-    'UPDATE character_items SET modifications = modifications || \'{"listed": true}\'::jsonb WHERE id = $1',
+    'UPDATE character_items SET listed = TRUE, modifications = modifications || \'{"listed": true}\'::jsonb WHERE id = $1',
     [characterItemId]
   );
 
@@ -244,10 +250,10 @@ export async function createItemListing(client, userId, characterId, characterIt
  * @param {number} sellerTaxRate - Tax rate to apply
  * @returns {Promise<Object>} Purchase result
  */
-export async function buyItemListing(client, buyerUserId, buyerCharacterId, listingId, sellerTaxRate = DEFAULT_TAX_RATE) {
+export async function buyItemListing(client, buyerUserId, buyerCharacterId, listingId) {
   // Get and lock the listing
   const listingResult = await client.query(
-    `SELECT il.*, ci.id as ci_id, ci.modifications, it.name as template_name
+    `SELECT il.*, ci.id as ci_id, ci.modifications, ci.equipped_slot, it.name as template_name
      FROM item_listings il
      JOIN character_items ci ON il.character_item_id = ci.id
      JOIN item_templates it ON il.item_template_id = it.id
@@ -261,6 +267,14 @@ export async function buyItemListing(client, buyerUserId, buyerCharacterId, list
   }
 
   const listing = listingResult.rows[0];
+
+  // Defence in depth: reject if item is currently equipped (should not happen, but prevents constraint violation)
+  if (listing.equipped_slot) {
+    throw new AppError('Item is currently equipped and cannot be purchased', 409);
+  }
+
+  // Get seller's tax rate (may be reduced by Merchant's Seal relic)
+  const sellerTaxRate = await getMarketplaceFeeRate(listing.seller_id);
 
   // Can't buy your own listing
   if (listing.seller_id === buyerUserId) {
@@ -310,13 +324,13 @@ export async function buyItemListing(client, buyerUserId, buyerCharacterId, list
     );
   }
 
-  // Transfer item to buyer's shared pool and remove "listed" flag
+  // Transfer item to buyer's shared pool and clear "listed" flag on both column and modifications
   const mods = listing.modifications || {};
   delete mods.listed;
 
   await client.query(
     `UPDATE character_items
-     SET user_id = $1, character_id = NULL, modifications = $2
+     SET user_id = $1, character_id = NULL, listed = FALSE, modifications = $2
      WHERE id = $3`,
     [buyerUserId, mods, listing.character_item_id]
   );
@@ -380,12 +394,12 @@ export async function cancelItemListing(client, userId, listingId) {
     throw new AppError('Not authorized to cancel this listing', 403);
   }
 
-  // Remove "listed" flag from item
+  // Clear "listed" flag from both column and modifications
   const mods = listing.modifications || {};
   delete mods.listed;
 
   await client.query(
-    'UPDATE character_items SET modifications = $1 WHERE id = $2',
+    'UPDATE character_items SET listed = FALSE, modifications = $1 WHERE id = $2',
     [mods, listing.character_item_id]
   );
 
@@ -438,7 +452,7 @@ export async function getUserListings(client, userId) {
       generatedName: mods.generatedName || row.template_name,
       templateName: row.template_name,
       itemType: row.item_type,
-      rarity: mods.rarity || 'common',
+      rarity: normalizeRarityName(mods.rarity),
       spriteId: row.sprite_id,
       price: parseInt(row.price, 10),
       suggestedPrice: row.suggested_price ? parseInt(row.suggested_price, 10) : null,
@@ -491,21 +505,28 @@ export async function getSellableInventory(client, userId) {
     const modifications = row.modifications || {};
     const augments = modifications.augments || [];
 
+    // Normalize rarity from modifications or template (handles numeric 1-5)
+    const rarity = normalizeRarityName(modifications.rarity ?? row.rarity);
+
     // Calculate suggested price using the sync function
     const { suggestedPrice } = calculateSuggestedPrice({
       basePrice: row.base_price,
-      rarity: modifications.rarity || row.rarity || 'common',
+      rarity,
       augments
     });
 
-    // Calculate stats from modifications
-    const baseStats = row.stat_bonuses || {};
+    // Use generatedName from modifications if present (for rolled items)
+    const name = modifications.generatedName || row.name;
+
+    // Calculate stats from modifications (for rolled items) or template
+    const baseStats = modifications.baseStats || row.stat_bonuses || {};
     const bonusStats = modifications.bonusStats || {};
 
     return {
       instanceId: row.instance_id,
       templateId: row.template_id,
-      name: row.name,
+      name,
+      templateName: row.name,
       description: row.description,
       type: row.item_type,
       equipmentSlot: row.equipment_slot,
@@ -513,7 +534,7 @@ export async function getSellableInventory(client, userId) {
       bonusStats,
       levelRequirement: row.level_requirement,
       basePrice: row.base_price,
-      rarity: row.rarity,
+      rarity,
       isStackable: row.is_stackable,
       quantity: row.quantity,
       augments,

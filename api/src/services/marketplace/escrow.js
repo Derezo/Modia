@@ -108,13 +108,15 @@ export async function releaseGold(client, orderId, amount = null) {
  * @returns {Promise<number>} Quantity escrowed
  */
 export async function escrowItems(client, orderId, userId, characterId, itemTemplateId, quantity) {
-  // Check user has enough items in shared pool (not equipped)
+  // Check user has enough items in shared pool (not equipped, not listed, no character assigned)
   const itemResult = await client.query(
     `SELECT id, quantity
      FROM character_items
      WHERE user_id = $1
        AND item_template_id = $2
        AND equipped_slot IS NULL
+       AND character_id IS NULL
+       AND (listed IS NULL OR listed = FALSE)
      ORDER BY quantity DESC
      FOR UPDATE`,
     [userId, itemTemplateId]
@@ -201,15 +203,56 @@ export async function releaseEscrowedItems(client, orderId, userId = null) {
 
 /**
  * Reduce escrowed items (after partial fill)
+ * Deletes the row if quantity reaches 0 to avoid CHECK constraint violation.
  * @param {Object} client - Database client
  * @param {number} orderId - Order ID to reduce escrow for
  * @param {number} quantityFilled - Quantity that was filled
+ * @returns {Promise<boolean>} True if escrow was fully consumed (deleted)
  */
 export async function reduceEscrow(client, orderId, quantityFilled) {
+  // First try to delete if the fill would reduce to 0
+  const deleteResult = await client.query(
+    'DELETE FROM item_escrow WHERE order_id = $1 AND quantity <= $2 RETURNING order_id',
+    [orderId, quantityFilled]
+  );
+
+  if (deleteResult.rowCount > 0) {
+    return true; // Escrow fully consumed
+  }
+
+  // Otherwise, decrement
   await client.query(
     'UPDATE item_escrow SET quantity = quantity - $1 WHERE order_id = $2',
     [quantityFilled, orderId]
   );
+  return false;
+}
+
+/**
+ * Consume gold reservation (after trade fill)
+ * Deletes the row if amount would reach 0 to avoid CHECK constraint violation.
+ * @param {Object} client - Database client
+ * @param {number} orderId - Order ID to consume reservation for
+ * @param {number} amount - Amount of gold consumed by trade
+ * @returns {Promise<boolean>} True if reservation was fully consumed (deleted)
+ */
+export async function consumeReservation(client, orderId, amount) {
+  // First try to delete if the amount would reduce to 0
+  const deleteResult = await client.query(
+    'DELETE FROM gold_reservations WHERE order_id = $1 AND amount <= $2 RETURNING order_id',
+    [orderId, amount]
+  );
+
+  if (deleteResult.rowCount > 0) {
+    return true; // Reservation fully consumed
+  }
+
+  // Otherwise, decrement
+  await client.query(
+    'UPDATE gold_reservations SET amount = amount - $1 WHERE order_id = $2',
+    [amount, orderId]
+  );
+  return false;
 }
 
 /**

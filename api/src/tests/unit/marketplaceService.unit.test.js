@@ -255,6 +255,54 @@ describe('calculateSuggestedPrice', () => {
     assert.strictEqual(result.breakdown.rarityMultiplier, 1.0);
   });
 
+  test('should normalize numeric rarity 1-5 to string names', () => {
+    // Test numeric rarity 5 (legendary)
+    const itemLegendary = {
+      basePrice: 100,
+      rarity: 5, // numeric legendary
+      augments: []
+    };
+
+    const resultLegendary = calculateSuggestedPrice(itemLegendary);
+    assert.strictEqual(resultLegendary.suggestedPrice, 1000); // 100 * 10.0
+    assert.strictEqual(resultLegendary.breakdown.rarityMultiplier, 10.0);
+
+    // Test numeric rarity 3 (rare)
+    const itemRare = {
+      basePrice: 100,
+      rarity: 3, // numeric rare
+      augments: []
+    };
+
+    const resultRare = calculateSuggestedPrice(itemRare);
+    assert.strictEqual(resultRare.suggestedPrice, 250); // 100 * 2.5
+    assert.strictEqual(resultRare.breakdown.rarityMultiplier, 2.5);
+
+    // Test numeric rarity 1 (common)
+    const itemCommon = {
+      basePrice: 100,
+      rarity: 1, // numeric common
+      augments: []
+    };
+
+    const resultCommon = calculateSuggestedPrice(itemCommon);
+    assert.strictEqual(resultCommon.suggestedPrice, 100); // 100 * 1.0
+    assert.strictEqual(resultCommon.breakdown.rarityMultiplier, 1.0);
+  });
+
+  test('should normalize numeric string rarity to string names', () => {
+    // Test numeric string rarity '4' (epic)
+    const item = {
+      basePrice: 100,
+      rarity: '4', // string '4' = epic
+      augments: []
+    };
+
+    const result = calculateSuggestedPrice(item);
+    assert.strictEqual(result.suggestedPrice, 500); // 100 * 5.0
+    assert.strictEqual(result.breakdown.rarityMultiplier, 5.0);
+  });
+
   test('should handle empty augments array', () => {
     const item = {
       basePrice: 100,
@@ -736,8 +784,8 @@ describe('placeLimitOrder (mock)', () => {
         if (sql.includes('SELECT COUNT(*) as count FROM market_orders')) {
           return { rows: [{ count: '0' }] };
         }
-        if (sql.includes('SELECT id, name, is_tradeable FROM item_templates')) {
-          return { rows: [{ id: 10, name: 'Test Sword', is_tradeable: true }] };
+        if (sql.includes('SELECT id, name, is_tradeable') && sql.includes('FROM item_templates')) {
+          return { rows: [{ id: 10, name: 'Test Sword', is_tradeable: true, is_stackable: true }] };
         }
         if (sql.includes('INSERT INTO market_orders')) {
           return {
@@ -786,8 +834,8 @@ describe('placeLimitOrder (mock)', () => {
         if (sql.includes('SELECT COUNT(*) as count FROM market_orders')) {
           return { rows: [{ count: '0' }] };
         }
-        if (sql.includes('SELECT id, name, is_tradeable FROM item_templates')) {
-          return { rows: [{ id: 10, name: 'Test Sword', is_tradeable: true }] };
+        if (sql.includes('SELECT id, name, is_tradeable') && sql.includes('FROM item_templates')) {
+          return { rows: [{ id: 10, name: 'Test Sword', is_tradeable: true, is_stackable: true }] };
         }
         if (sql.includes('INSERT INTO market_orders')) {
           return {
@@ -830,8 +878,8 @@ describe('placeLimitOrder (mock)', () => {
 
     const client = createMockClient({
       'SELECT COUNT(*) as count FROM market_orders': { rows: [{ count: '0' }] },
-      'SELECT id, name, is_tradeable FROM item_templates': {
-        rows: [{ id: 10, name: 'Quest Item', is_tradeable: false }]
+      'name, is_tradeable': {
+        rows: [{ id: 10, name: 'Quest Item', is_tradeable: false, is_stackable: true }]
       }
     });
 

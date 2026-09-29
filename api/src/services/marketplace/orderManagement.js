@@ -27,8 +27,10 @@ import {
   escrowItems,
   releaseEscrowedItems,
   reduceEscrow,
+  consumeReservation,
   addItemToUser
 } from './escrow.js';
+import { getMarketplaceFeeRate } from '../relicService.js';
 
 /**
  * Helper to get party leader character ID for a user (for quest tracking)
@@ -93,11 +95,28 @@ export async function executeTrade(client, buyOrder, sellOrder, quantity, execut
   const taxAmount = Math.floor(grossAmount * sellerTaxRate);
   const netAmount = grossAmount - taxAmount;
 
-  // Reduce buyer's gold reservation (full amount)
-  await client.query(
-    'UPDATE gold_reservations SET amount = amount - $1 WHERE order_id = $2',
-    [grossAmount, buyOrder.id]
+  // Handle price improvement: if execution price < buy order's limit price, refund the difference
+  // First, get the buy order's limit price to calculate price improvement
+  const buyOrderPriceResult = await client.query(
+    'SELECT price FROM market_orders WHERE id = $1',
+    [buyOrder.id]
   );
+  const buyLimitPrice = buyOrderPriceResult.rows[0] ? parseInt(buyOrderPriceResult.rows[0].price, 10) : executionPrice;
+
+  // Amount to consume from reservation is based on the buy order's limit price (what was reserved)
+  const reservedAmountUsed = buyLimitPrice * quantity;
+
+  // Refund price improvement to buyer (if any)
+  const priceImprovement = (buyLimitPrice - executionPrice) * quantity;
+  if (priceImprovement > 0) {
+    await client.query(
+      'UPDATE users SET gold = LEAST(gold + $1, $2) WHERE id = $3',
+      [priceImprovement, MAX_GOLD, buyOrder.user_id]
+    );
+  }
+
+  // Consume buyer's gold reservation (the amount actually reserved at limit price)
+  await consumeReservation(client, buyOrder.id, reservedAmountUsed);
 
   // Add gold to seller (NET amount after fee, capped at MAX_GOLD)
   await client.query(
@@ -255,9 +274,9 @@ export async function placeLimitOrder(client, userId, characterId, itemTemplateI
     throw new AppError(`Maximum of ${MAX_OPEN_ORDERS_PER_USER} open orders allowed. Cancel existing orders first.`, 400);
   }
 
-  // Validate item is tradeable
+  // Validate item is tradeable and stackable (non-stackable items must use item listings)
   const itemResult = await client.query(
-    'SELECT id, name, is_tradeable FROM item_templates WHERE id = $1',
+    'SELECT id, name, is_tradeable, is_stackable FROM item_templates WHERE id = $1',
     [itemTemplateId]
   );
   console.log('[placeLimitOrder] Item found:', itemResult.rows[0]);
@@ -268,6 +287,11 @@ export async function placeLimitOrder(client, userId, characterId, itemTemplateI
 
   if (itemResult.rows[0].is_tradeable === false) {
     throw new AppError('This item cannot be traded', 400);
+  }
+
+  // Non-stackable items (equipment) must use item listings to preserve modifications
+  if (itemResult.rows[0].is_stackable === false) {
+    throw new AppError('Unique items must be sold via item listings', 400);
   }
 
   // Create the order
@@ -310,28 +334,30 @@ export async function placeLimitOrder(client, userId, characterId, itemTemplateI
     // Execution price is the resting order's price (price-time priority)
     const executionPrice = parseInt(matchOrder.price, 10);
 
-    let buyOrder, sellOrder;
+    let buyOrder, sellOrder, sellerUserId;
     if (side === 'buy') {
       buyOrder = { id: order.id, user_id: userId, item_template_id: itemTemplateId };
       sellOrder = matchOrder;
+      sellerUserId = matchOrder.user_id;
     } else {
       buyOrder = matchOrder;
       sellOrder = { id: order.id, user_id: userId, item_template_id: itemTemplateId };
+      sellerUserId = userId;
     }
 
-    const trade = await executeTrade(client, buyOrder, sellOrder, tradeQty, executionPrice, itemName);
+    // Get the seller's tax rate (may be reduced by Merchant's Seal relic)
+    const sellerTaxRate = await getMarketplaceFeeRate(sellerUserId);
+
+    const trade = await executeTrade(client, buyOrder, sellOrder, tradeQty, executionPrice, itemName, sellerTaxRate);
     trades.push(trade);
 
     remainingQuantity -= tradeQty;
   }
 
-  // Clean up empty reservations/escrow
-  if (remainingQuantity === 0) {
-    if (side === 'buy') {
-      await client.query('DELETE FROM gold_reservations WHERE order_id = $1 AND amount <= 0', [order.id]);
-    } else {
-      await client.query('DELETE FROM item_escrow WHERE order_id = $1 AND quantity <= 0', [order.id]);
-    }
+  // Safety net: release any leftover gold reservation if order is fully filled
+  // (handles edge cases like price improvement leaving excess reservation)
+  if (remainingQuantity === 0 && side === 'buy') {
+    await releaseGold(client, order.id);
   }
 
   // Refetch order to get updated status
@@ -377,9 +403,9 @@ export async function placeLimitOrder(client, userId, characterId, itemTemplateI
  * @returns {Promise<Object>} Execution result with trades
  */
 export async function executeMarketOrder(client, userId, characterId, itemTemplateId, side, quantity) {
-  // Validate item is tradeable
+  // Validate item is tradeable and stackable (non-stackable items must use item listings)
   const itemResult = await client.query(
-    'SELECT id, name, is_tradeable FROM item_templates WHERE id = $1',
+    'SELECT id, name, is_tradeable, is_stackable FROM item_templates WHERE id = $1',
     [itemTemplateId]
   );
 
@@ -389,6 +415,11 @@ export async function executeMarketOrder(client, userId, characterId, itemTempla
 
   if (itemResult.rows[0].is_tradeable === false) {
     throw new AppError('This item cannot be traded', 400);
+  }
+
+  // Non-stackable items (equipment) must use item listings to preserve modifications
+  if (itemResult.rows[0].is_stackable === false) {
+    throw new AppError('Unique items must be sold via item listings', 400);
   }
 
   // Get available orders to match
@@ -537,9 +568,12 @@ export async function executeMarketOrder(client, userId, characterId, itemTempla
     );
 
     if (side === 'buy') {
-      // Calculate marketplace fee for seller (5% fee)
+      // Get seller's tax rate (may be reduced by Merchant's Seal relic)
+      const sellerTaxRate = await getMarketplaceFeeRate(order.user_id);
+
+      // Calculate marketplace fee for seller
       const grossGold = executionPrice * matchQty;
-      const taxAmount = Math.floor(grossGold * DEFAULT_TAX_RATE);
+      const taxAmount = Math.floor(grossGold * sellerTaxRate);
       const netGold = grossGold - taxAmount;
 
       // Transfer NET gold to seller after fee (capped at MAX_GOLD)
@@ -554,7 +588,7 @@ export async function executeMarketOrder(client, userId, characterId, itemTempla
           `INSERT INTO marketplace_tax_ledger
            (order_id, seller_id, buyer_id, item_template_id, gross_amount, tax_amount, net_amount, tax_rate)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-          [order.id, order.user_id, userId, itemTemplateId, grossGold, taxAmount, netGold, DEFAULT_TAX_RATE]
+          [order.id, order.user_id, userId, itemTemplateId, grossGold, taxAmount, netGold, sellerTaxRate]
         );
       }
 
@@ -564,22 +598,36 @@ export async function executeMarketOrder(client, userId, characterId, itemTempla
       // Give items to buyer's shared pool
       await addItemToUser(client, userId, itemTemplateId, matchQty);
     } else {
-      // Buyer pays from their reservation (full amount)
-      const goldCost = executionPrice * matchQty;
-      await client.query(
-        'UPDATE gold_reservations SET amount = amount - $1 WHERE order_id = $2',
-        [goldCost, order.id]
-      );
-
-      // Track gross proceeds; tax will be applied when seller receives
-      totalProceeds += goldCost;
-
-      // Buyer receives items in their shared pool
-      const buyerOrderResult = await client.query(
-        'SELECT user_id FROM market_orders WHERE id = $1',
+      // Buyer pays from their reservation
+      // Get the buy order's limit price to handle price improvement
+      const buyOrderPriceResult = await client.query(
+        'SELECT price, user_id FROM market_orders WHERE id = $1',
         [order.id]
       );
-      await addItemToUser(client, buyerOrderResult.rows[0].user_id, itemTemplateId, matchQty);
+      const buyLimitPrice = parseInt(buyOrderPriceResult.rows[0].price, 10);
+      const buyerUserId = buyOrderPriceResult.rows[0].user_id;
+
+      // Amount reserved was at the buy order's limit price
+      const reservedAmount = buyLimitPrice * matchQty;
+      const actualCost = executionPrice * matchQty;
+
+      // Refund price improvement to buyer if execution price < limit price
+      const priceImprovement = (buyLimitPrice - executionPrice) * matchQty;
+      if (priceImprovement > 0) {
+        await client.query(
+          'UPDATE users SET gold = LEAST(gold + $1, $2) WHERE id = $3',
+          [priceImprovement, MAX_GOLD, buyerUserId]
+        );
+      }
+
+      // Consume from buyer's reservation (amount reserved at limit price)
+      await consumeReservation(client, order.id, reservedAmount);
+
+      // Track gross proceeds; tax will be applied when seller receives
+      totalProceeds += actualCost;
+
+      // Buyer receives items in their shared pool
+      await addItemToUser(client, buyerUserId, itemTemplateId, matchQty);
     }
 
     trades.push({
@@ -590,11 +638,14 @@ export async function executeMarketOrder(client, userId, characterId, itemTempla
     });
   }
 
-  // For sell orders: give gold to seller (after 5% fee, capped at MAX_GOLD)
+  // For sell orders: give gold to seller (fee may be reduced by Merchant's Seal relic)
   let totalTax = 0;
   let netProceeds = totalProceeds;
+  let sellerTaxRate = DEFAULT_TAX_RATE;
   if (side === 'sell' && totalProceeds > 0) {
-    totalTax = Math.floor(totalProceeds * DEFAULT_TAX_RATE);
+    // Get seller's tax rate (may be reduced by Merchant's Seal relic)
+    sellerTaxRate = await getMarketplaceFeeRate(userId);
+    totalTax = Math.floor(totalProceeds * sellerTaxRate);
     netProceeds = totalProceeds - totalTax;
 
     await client.query(
@@ -608,16 +659,13 @@ export async function executeMarketOrder(client, userId, characterId, itemTempla
         `INSERT INTO marketplace_tax_ledger
          (seller_id, item_template_id, gross_amount, tax_amount, net_amount, tax_rate)
          VALUES ($1, $2, $3, $4, $5, $6)`,
-        [userId, itemTemplateId, totalProceeds, totalTax, netProceeds, DEFAULT_TAX_RATE]
+        [userId, itemTemplateId, totalProceeds, totalTax, netProceeds, sellerTaxRate]
       );
     }
   }
 
-  // Clean up empty reservations/escrow
-  for (const { order } of ordersToMatch) {
-    await client.query('DELETE FROM gold_reservations WHERE order_id = $1 AND amount <= 0', [order.id]);
-    await client.query('DELETE FROM item_escrow WHERE order_id = $1 AND quantity <= 0', [order.id]);
-  }
+  // Note: cleanup of zero-amount reservations/escrow is no longer needed
+  // consumeReservation and reduceEscrow now delete rows that reach 0
 
   const itemName = itemResult.rows[0].name;
 
@@ -669,7 +717,7 @@ export async function executeMarketOrder(client, userId, characterId, itemTempla
     totalGold: side === 'buy' ? totalCost : totalProceeds,
     netGold: side === 'sell' ? netProceeds : totalCost,
     taxAmount: side === 'sell' ? totalTax : 0,
-    taxRate: DEFAULT_TAX_RATE,
+    taxRate: side === 'sell' ? sellerTaxRate : DEFAULT_TAX_RATE,
     averagePrice: (side === 'buy' ? totalCost : totalProceeds) / quantity,
     itemName: itemName,
     // Include info for post-transaction audit logging
@@ -719,9 +767,10 @@ export async function cancelOrder(client, orderId, userId) {
   const remainingQuantity = order.quantity - order.quantity_filled;
 
   // Return reserved gold or escrowed items
+  let actualRefundedGold = 0;
   if (order.side === 'buy') {
-    const _returnGold = order.price * remainingQuantity;
-    await releaseGold(client, orderId);
+    // releaseGold returns the actual amount released (may differ from calculated due to price improvement)
+    actualRefundedGold = await releaseGold(client, orderId);
   } else {
     // Return remaining escrowed items to user's shared pool
     await releaseEscrowedItems(client, orderId, order.user_id);
@@ -739,7 +788,7 @@ export async function cancelOrder(client, orderId, userId) {
     [order.item_template_id]
   );
 
-  const refundedGold = order.side === 'buy' ? order.price * remainingQuantity : 0;
+  const refundedGold = order.side === 'buy' ? actualRefundedGold : 0;
   const returnedItems = order.side === 'sell' ? remainingQuantity : 0;
 
   // Notify user of cancellation

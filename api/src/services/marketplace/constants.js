@@ -78,3 +78,41 @@ export const RARITY_MULTIPLIERS = {
   epic: 5.0,
   legendary: 10.0
 };
+
+/**
+ * Rarity names in order (index 0 = 1-based id 1)
+ */
+export const RARITY_NAMES = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+
+/**
+ * Normalize rarity to a string name.
+ * Handles numeric ids (1-5), numeric strings ('1'-'5'), and name strings.
+ * @param {number|string} rarity - The rarity value to normalize
+ * @returns {string} The rarity name ('common' to 'legendary')
+ */
+export function normalizeRarityName(rarity) {
+  if (rarity === null || rarity === undefined) {
+    return 'common';
+  }
+
+  // If it's already a valid rarity name string, return it
+  if (typeof rarity === 'string') {
+    const lower = rarity.toLowerCase();
+    if (RARITY_NAMES.includes(lower)) {
+      return lower;
+    }
+    // Try parsing as numeric string
+    const parsed = parseInt(rarity, 10);
+    if (!isNaN(parsed) && parsed >= 1 && parsed <= 5) {
+      return RARITY_NAMES[parsed - 1];
+    }
+    return 'common';
+  }
+
+  // Numeric rarity (1-5)
+  if (typeof rarity === 'number' && rarity >= 1 && rarity <= 5) {
+    return RARITY_NAMES[rarity - 1];
+  }
+
+  return 'common';
+}
