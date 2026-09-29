@@ -1996,17 +1996,21 @@ describe('processAction - Healing Skills', () => {
     });
     const state = createSkillTestState([caster, opponent]);
 
-    const result = processAction(
-      state,
-      caster,
-      'skill',
-      { x: opponent.tileX, y: opponent.tileY },
-      frenzy.id
+    // Random values: [hit check, variance, crit check] - ensure hit
+    const result = withRandomValues(
+      [0.5, 0.5, 0.99],
+      () => processAction(
+        state,
+        caster,
+        'skill',
+        { x: opponent.tileX, y: opponent.tileY },
+        frenzy.id
+      )
     );
 
     assert.strictEqual(result.error, undefined);
-    assert.ok(result.damage > 0);
-    assert.ok(opponent.hp < 200);
+    assert.ok(result.damage > 0, 'hybrid skill should deal damage');
+    assert.ok(opponent.hp < 200, 'opponent should take damage');
     assert.strictEqual(caster.mp, 40);
     assert.deepStrictEqual(caster.statusEffects, [{
       type: 'test_frenzy_buff',
@@ -2427,17 +2431,21 @@ describe('processAction - Healing Skills', () => {
     });
     const state = createSkillTestState([caster, opponent]);
 
-    const result = processAction(
-      state,
-      caster,
-      'skill',
-      { x: opponent.tileX, y: opponent.tileY },
-      frenzy.id
+    // Random values: [hit check, variance, crit check] - ensure hit
+    const result = withRandomValues(
+      [0.5, 0.5, 0.99],
+      () => processAction(
+        state,
+        caster,
+        'skill',
+        { x: opponent.tileX, y: opponent.tileY },
+        frenzy.id
+      )
     );
 
     assert.strictEqual(result.error, undefined);
-    assert.ok(result.damage > 0);
-    assert.ok(opponent.hp < 200);
+    assert.ok(result.damage > 0, 'Frenzy should deal damage');
+    assert.ok(opponent.hp < 200, 'opponent should take damage');
     assert.deepStrictEqual(caster.statusEffects, [{
       type: 'berserk',
       duration: 3,
@@ -2593,16 +2601,21 @@ describe('processAction - Healing Skills', () => {
       tileX: 7,
       hp: 200,
       maxHp: 200,
+      luck: 0,
       skills: []
     });
     const state = createSkillTestState([caster, opponent]);
 
-    const result = processAction(
-      state,
-      caster,
-      'skill',
-      { x: opponent.tileX, y: opponent.tileY },
-      smokeBomb.id
+    // Random values: [effect chance roll] - ensure debuff applies
+    const result = withRandomValues(
+      [0.1],
+      () => processAction(
+        state,
+        caster,
+        'skill',
+        { x: opponent.tileX, y: opponent.tileY },
+        smokeBomb.id
+      )
     );
 
     assert.strictEqual(result.error, undefined);
@@ -2724,6 +2737,7 @@ describe('processAction - Healing Skills', () => {
       teamId: 1,
       tileX: 6,
       tileY: 5,
+      luck: 0,
       statusEffects: [],
       skills: []
     });
@@ -2733,6 +2747,7 @@ describe('processAction - Healing Skills', () => {
       teamId: 1,
       tileX: 7,
       tileY: 5,
+      luck: 0,
       statusEffects: [],
       skills: []
     });
@@ -2742,6 +2757,7 @@ describe('processAction - Healing Skills', () => {
       teamId: 1,
       tileX: 6,
       tileY: 6,
+      luck: 0,
       statusEffects: [],
       skills: []
     });
@@ -2760,12 +2776,16 @@ describe('processAction - Healing Skills', () => {
       playableMask
     };
 
-    const result = processAction(
-      state,
-      caster,
-      'skill',
-      { x: centerTarget.tileX, y: centerTarget.tileY },
-      smokeBomb.id
+    // Random values: [effect chance roll for each target] - ensure debuffs apply
+    const result = withRandomValues(
+      [0.1, 0.1, 0.1],
+      () => processAction(
+        state,
+        caster,
+        'skill',
+        { x: centerTarget.tileX, y: centerTarget.tileY },
+        smokeBomb.id
+      )
     );
 
     assert.strictEqual(result.error, undefined);
@@ -2813,16 +2833,21 @@ describe('processAction - Healing Skills', () => {
       tileX: 7,
       hp: 200,
       maxHp: 200,
+      luck: 0,
       skills: []
     });
     const state = createSkillTestState([caster, opponent]);
 
-    const result = processAction(
-      state,
-      caster,
-      'skill',
-      { x: opponent.tileX, y: opponent.tileY },
-      frozenTomb.id
+    // Random values: [effect chance roll] - ensure debuff applies
+    const result = withRandomValues(
+      [0.1],
+      () => processAction(
+        state,
+        caster,
+        'skill',
+        { x: opponent.tileX, y: opponent.tileY },
+        frozenTomb.id
+      )
     );
 
     assert.strictEqual(result.error, undefined);

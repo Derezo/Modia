@@ -88,6 +88,7 @@ export {
   advanceToNextActorWithCT,
   checkBattleEnd,
   getBattleStatusString,
+  getUnitTeamId,
   // Pathfinding (for AI movement validation)
   calculatePathCost,
   // Encounter generation

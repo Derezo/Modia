@@ -1752,7 +1752,9 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
   // effects before deciding which lifecycle to commit. A poison or burn tick
   // can defeat the last member of a team while CT advances; persisting that
   // state as active would strand the battle with no legal actor.
-  let battleEndResult = battleService.checkBattleEnd(state);
+  // Pass actingTeamId for PvP mutual knockout handling: acting team loses.
+  const actingTeamId = battleService.getUnitTeamId(activeUnit);
+  let battleEndResult = battleService.checkBattleEnd(state, { actingTeamId });
   let battleStatus = battleService.getBattleStatusString(battleEndResult);
   if (battleStatus === 'active' && result.turnEnded) {
     battleService.advanceToNextActorWithCT(state);
@@ -1794,7 +1796,9 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
       }
     }
 
-    battleEndResult = battleService.checkBattleEnd(state);
+    // Re-check after DoT ticks. The acting player's team still bears
+    // responsibility for DoT damage they inflicted on earlier turns.
+    battleEndResult = battleService.checkBattleEnd(state, { actingTeamId });
     battleStatus = battleService.getBattleStatusString(battleEndResult);
   }
 

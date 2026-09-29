@@ -269,6 +269,37 @@ function processBossDamage(boss, bossState, damage, battleState) {
 }
 
 /**
+ * Check all bosses in battle state for phase transitions.
+ * Iterates over all living bosses and applies any triggered transitions.
+ * @param {Object} battleState - Full battle state with bossStates and units
+ * @returns {Array<Object>} Array of phase transition effects (one per boss that transitioned)
+ */
+function checkAllBossTransitions(battleState) {
+  if (!battleState.bossStates) return [];
+
+  const transitions = [];
+
+  for (const [unitId, bossState] of Object.entries(battleState.bossStates)) {
+    const boss = battleState.units.find(u => String(u.id) === String(unitId));
+    if (!boss || boss.hp <= 0) continue;
+
+    const transition = checkPhaseTransition(boss, bossState);
+    if (transition) {
+      const effects = applyPhaseTransition(boss, transition, bossState, battleState);
+      if (effects) {
+        transitions.push({
+          unitId,
+          bossName: boss.name,
+          ...effects
+        });
+      }
+    }
+  }
+
+  return transitions;
+}
+
+/**
  * Get boss state from battle state
  * @param {Object} battleState - Battle state
  * @param {string} unitId - Unit ID
@@ -344,6 +375,7 @@ export {
   checkPhaseTransition,
   applyPhaseTransition,
   processBossDamage,
+  checkAllBossTransitions,
   getBossState,
   applyAuraDamage,
   cleanupBossEncounter,
@@ -357,6 +389,7 @@ export default {
   checkPhaseTransition,
   applyPhaseTransition,
   processBossDamage,
+  checkAllBossTransitions,
   getBossState,
   applyAuraDamage,
   cleanupBossEncounter,

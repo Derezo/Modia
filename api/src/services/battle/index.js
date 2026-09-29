@@ -111,7 +111,8 @@ export {
   getAvailableActions,
   processAction,
   checkBattleEnd,
-  getBattleStatusString
+  getBattleStatusString,
+  getUnitTeamId
 } from './actionProcessor.js';
 
 // Encounter generation

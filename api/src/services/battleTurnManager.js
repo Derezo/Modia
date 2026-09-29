@@ -9,9 +9,10 @@
 
 import battleWebsocket from './battleWebsocket.js';
 import { battleStateRepository } from './battle/BattleStateRepository.js';
-import { getBattleStatusString } from './battle/index.js';
+import { getBattleStatusString, getUnitTeamId } from './battle/index.js';
 import { startTurnTimer } from './coliseumService.js';
 import { getAvailableActions } from './battle/actionProcessor.js';
+import { checkAllBossTransitions, saveBossEncounter } from './bossService.js';
 
 /**
  * Check if AI debug logging is enabled via user settings in battle state
@@ -188,17 +189,72 @@ async function processEnemyTurnsFromState(
 
     enemyActions.push(...actionResults);
 
-    // Check if battle ended
-    battleStatus = battleService.checkBattleEnd(state);
+    // Check for boss phase transitions after enemy action
+    // (Phase transitions modify boss stats/abilities in place via bossStates)
+    const phaseTransitionsAfterAction = checkAllBossTransitions(state);
+    for (const transition of phaseTransitionsAfterAction) {
+      console.log(`[AsyncTurnManager] Boss ${transition.bossName} transitioned to phase ${transition.toPhase}`);
+      // Update the unit's display properties for client sync
+      const bossUnit = state.units.find(u => String(u.id) === String(transition.unitId));
+      if (bossUnit && state.bossStates[transition.unitId]) {
+        bossUnit.currentPhase = state.bossStates[transition.unitId].currentPhase;
+        bossUnit.phaseName = transition.phaseName;
+      }
+      // Broadcast phase transition to connected clients
+      await battleWebsocket.broadcastPhaseTransition(battleId, {
+        bossId: transition.unitId,
+        bossName: transition.bossName,
+        ...transition
+      });
+      // Persist boss encounter state
+      if (state.bossStates[transition.unitId]) {
+        await saveBossEncounter({
+          ...state.bossStates[transition.unitId],
+          battleId
+        });
+      }
+    }
+
+    // Check if battle ended. Pass actingTeamId for PvP mutual knockout handling.
+    const actingTeamId = getUnitTeamId(activeUnit);
+    battleStatus = battleService.checkBattleEnd(state, { actingTeamId });
 
     if (battleStatus.status !== 'active') {
       console.log('[AsyncTurnManager] Battle ended with status:', battleStatus.status, 'winner:', battleStatus.winningTeamId);
       break;
     }
 
-    // Advance to next unit
+    // Advance to next unit (applies DoT ticks in turnStartEffects)
     battleService.advanceToNextActorWithCT(state);
-    battleStatus = battleService.checkBattleEnd(state);
+
+    // Check for boss phase transitions after DoT ticks
+    // (Phase transitions modify boss stats/abilities in place via bossStates)
+    const phaseTransitionsAfterDoT = checkAllBossTransitions(state);
+    for (const transition of phaseTransitionsAfterDoT) {
+      console.log(`[AsyncTurnManager] Boss ${transition.bossName} transitioned to phase ${transition.toPhase} after DoT`);
+      // Update the unit's display properties for client sync
+      const bossUnit = state.units.find(u => String(u.id) === String(transition.unitId));
+      if (bossUnit && state.bossStates[transition.unitId]) {
+        bossUnit.currentPhase = state.bossStates[transition.unitId].currentPhase;
+        bossUnit.phaseName = transition.phaseName;
+      }
+      // Broadcast phase transition to connected clients
+      await battleWebsocket.broadcastPhaseTransition(battleId, {
+        bossId: transition.unitId,
+        bossName: transition.bossName,
+        ...transition
+      });
+      // Persist boss encounter state
+      if (state.bossStates[transition.unitId]) {
+        await saveBossEncounter({
+          ...state.bossStates[transition.unitId],
+          battleId
+        });
+      }
+    }
+
+    // DoT damage from the enemy's previous actions is still attributed to them.
+    battleStatus = battleService.checkBattleEnd(state, { actingTeamId });
     if (battleStatus.status !== 'active') {
       // Turn-start damage is part of the still-uncommitted enemy-turn
       // successor. Return it to the route's normal terminal completion path
@@ -426,7 +482,10 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
       }
 
       // Check if battle ended after this action
-      const battleEndCheck = battleService.checkBattleEnd(state);
+      const battleEndCheck = battleService.checkBattleEnd(
+        state,
+        { actingTeamId: getUnitTeamId(enemy) }
+      );
       if (battleEndCheck.status !== 'active') {
         break;
       }
@@ -499,7 +558,10 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
       }
 
       // Check if battle ended
-      const battleEndCheck = battleService.checkBattleEnd(state);
+      const battleEndCheck = battleService.checkBattleEnd(
+        state,
+        { actingTeamId: getUnitTeamId(enemy) }
+      );
       if (battleEndCheck.status !== 'active') {
         break;
       }

@@ -1617,7 +1617,7 @@ export function processAction(state, unit, actionType, targetTile, skillId = nul
  * @param {Object} unit - BattleUnit
  * @returns {number} Team ID (1 or 2)
  */
-function getUnitTeamId(unit) {
+export function getUnitTeamId(unit) {
   if (unit.teamId !== undefined) {
     return unit.teamId;
   }

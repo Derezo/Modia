@@ -491,7 +491,7 @@ describe('applyActionToState()', () => {
   it('simulates AoE friendly fire across the runtime pattern and starts cooldown', () => {
     const state = createMockBattleState(
       [
-        { id: 'caster', tileX: 5, tileY: 5, strength: 50, attack: 20, mp: 50 },
+        { id: 'caster', tileX: 5, tileY: 5, strength: 50, attack: 20, mp: 50, hp: 200, maxHp: 200 },
         { id: 'ally', tileX: 6, tileY: 6, hp: 200, maxHp: 200 }
       ],
       [
@@ -519,14 +519,15 @@ describe('applyActionToState()', () => {
     assert.ok(centerEnemy.hp < edgeEnemy.hp, 'center target should take full damage');
     assert.ok(edgeEnemy.hp < 200, 'edge opponent should be damaged');
     assert.ok(ally.hp < 200, 'ally in the pattern should take friendly fire');
-    assert.ok(caster.hp < 200, 'caster in the pattern should take self-damage');
+    // Finding 46: Caster is excluded from offensive AoE unless skill.includesSelf is true
+    assert.strictEqual(caster.hp, 200, 'caster should NOT take self-damage (excluded from offensive AoE)');
     assert.strictEqual(outsideEnemy.hp, 200);
     assert.strictEqual(caster.skillCooldowns.blast, 3);
   });
 
   it('forces range-zero offensive AoEs to remain centered on the caster', () => {
     const state = createMockBattleState(
-      [{ id: 'caster', tileX: 5, tileY: 5, strength: 50, attack: 20 }],
+      [{ id: 'caster', tileX: 5, tileY: 5, strength: 50, attack: 20, hp: 200, maxHp: 200 }],
       [
         { id: 'nearby', tileX: 6, tileY: 5, hp: 200 },
         { id: 'stale-target', tileX: 12, tileY: 5, hp: 200 }
@@ -543,9 +544,30 @@ describe('applyActionToState()', () => {
       skill: { id: 'nova', power: 100, range: 0, aoeRadius: 1 }
     });
 
-    assert.ok(caster.hp < 200);
-    assert.ok(nearby.hp < 200);
-    assert.strictEqual(staleTarget.hp, 200);
+    // Finding 46: Caster is excluded from offensive AoE unless skill.includesSelf is true
+    assert.strictEqual(caster.hp, 200, 'caster excluded from offensive AoE');
+    assert.ok(nearby.hp < 200, 'nearby enemy should be damaged');
+    assert.strictEqual(staleTarget.hp, 200, 'stale target outside the recentered AoE');
+  });
+
+  it('includes caster in offensive AoE when skill.includesSelf is true', () => {
+    const state = createMockBattleState(
+      [{ id: 'caster', tileX: 5, tileY: 5, strength: 50, attack: 20, hp: 200, maxHp: 200 }],
+      [{ id: 'nearby', tileX: 6, tileY: 5, hp: 200 }]
+    );
+    const caster = state.units.find(unit => unit.id === 'caster');
+    const nearby = state.units.find(unit => unit.id === 'nearby');
+
+    applyActionToState(state, caster, {
+      type: 'skill',
+      target: { x: 5, y: 5 },
+      aoeCenter: { x: 5, y: 5 },
+      skill: { id: 'self_destruct', power: 100, range: 0, aoeRadius: 1, includesSelf: true }
+    });
+
+    // When includesSelf is true, caster should take damage from their own AoE
+    assert.ok(caster.hp < 200, 'caster takes self-damage when includesSelf is true');
+    assert.ok(nearby.hp < 200, 'nearby enemy should be damaged');
   });
 
   it('applies caster-centered support AoE buffs to living teammates in the area', () => {
