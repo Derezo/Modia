@@ -56,11 +56,13 @@ const PANEL_WIDTH = 180;
 const BASE_HEIGHT = 90; // header 6px + zodiac 36px + divider 4px + stamina 36px + footer 6px + 2px buffer
 
 /** Travel segment height including its divider */
-const TRAVEL_HEIGHT_WITH_DIVIDER = 34; // travel 30px + divider 4px
+const TRAVEL_HEIGHT_WITH_DIVIDER = 40; // travel 34px + divider 4px + 2px buffer
 
 /** Collapsed size (mobile-friendly) */
-const COLLAPSED_WIDTH = 54;
-const COLLAPSED_HEIGHT = 54;
+// Wide enough for labelled rows ("Stamina 12/20", "Zodiac 3/12"): the old
+// 54px square rendered as an unreadable blob on phones.
+const COLLAPSED_WIDTH = 112;
+const COLLAPSED_HEIGHT = 50;
 
 /** Height animation smoothing factor (0-1, higher = faster) */
 const HEIGHT_ANIMATION_SPEED = 0.15;
@@ -81,6 +83,8 @@ export class WorldMapHUDPanel {
     // Collapsed state — toggleable; renders a compact summary chip instead
     // of the full panel. Expand by tapping.
     this.collapsed = collapsed;
+    // Panels that start collapsed (phones) can be tapped closed again
+    this.collapsible = collapsed;
 
     // Create child components
     this.frameRenderer = new HUDFrameRenderer();
@@ -218,11 +222,20 @@ export class WorldMapHUDPanel {
 
     // Travel segment (if visible) - rendered at bottom to reduce animation jitter
     if (this.travelSegment.isVisible()) {
+      // The frame height eases toward its target more slowly than the
+      // segment slides in, so clip to the frame's current inner area: the
+      // "-> Destination 100%" row must never spill below the border.
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x, y, width, Math.max(0, height - CONTENT_PADDING));
+      ctx.clip();
+
       // Divider before travel
       this.renderDivider(ctx, contentX, contentY, contentWidth);
       contentY += DIVIDER_HEIGHT;
 
       this.travelSegment.render(ctx, contentX, contentY, contentWidth);
+      ctx.restore();
     }
 
     // Render particles on top of everything
@@ -273,6 +286,12 @@ export class WorldMapHUDPanel {
       return true;
     }
 
+    // On phones, tapping the rest of the expanded panel folds it back
+    if (this.collapsible) {
+      this.collapsed = true;
+      return true;
+    }
+
     return false;
   }
 
@@ -313,11 +332,13 @@ export class WorldMapHUDPanel {
     const staminaMax = this.staminaSegment.max ?? 0;
     const zodiac = this.zodiacSegment.collected ?? 0;
 
+    const zodiacTotal = this.zodiacSegment.total ?? 12;
+
     ctx.font = 'bold 12px serif';
-    ctx.fillText(`${stamina}/${staminaMax}`, x + w / 2, y + h / 2 - 8);
+    ctx.fillText(`Stamina ${stamina}/${staminaMax}`, x + w / 2, y + h / 2 - 8);
 
     ctx.font = '11px serif';
-    ctx.fillText(`☆ ${zodiac}`, x + w / 2, y + h / 2 + 10);
+    ctx.fillText(`Zodiac ${zodiac}/${zodiacTotal}`, x + w / 2, y + h / 2 + 9);
 
     ctx.restore();
   }

@@ -325,13 +325,17 @@ export function renderMinimap({ ctx, units, camera, grid, targetWidth, targetHei
     ctx.strokeRect(minimapX, minimapY, minimapWidth, minimapHeight);
   }
 
-  // Label
+  // Label: top-aligned a few px below the frame so it never overlaps the
+  // 2px border (an alphabetic baseline at +12 put the glyph tops on it).
+  ctx.save();
   ctx.fillStyle = '#888';
   ctx.font = `${responsive.getCanvasFontSize('sm')}px Arial`;
   ctx.textAlign = 'right';
+  ctx.textBaseline = 'top';
   ctx.fillText(
     'Arrows: Pan | Space: Re-center',
     minimapX + minimapWidth,
-    minimapY + minimapHeight + 12
+    minimapY + minimapHeight + 5
   );
+  ctx.restore();
 }

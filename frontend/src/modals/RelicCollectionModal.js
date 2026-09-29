@@ -12,7 +12,8 @@ import {
   PARCHMENT_COLORS,
   getParchmentGradient,
   getParchmentBorder,
-  getParchmentShadow
+  getParchmentShadow,
+  getParchmentScrollbarCSS
 } from '../ui/parchment/index.js';
 import { ZODIAC_SHRINE_BUFFS } from '@shared/constants.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
@@ -122,8 +123,12 @@ export class RelicCollectionModal {
       .relic-collection-content {
         padding: 16px;
         overflow-y: auto;
+        /* Hover lift / tooltips must not add a horizontal scrollbar */
+        overflow-x: hidden;
         flex: 1;
       }
+
+      ${getParchmentScrollbarCSS('.relic-collection-content')}
 
       .relic-collection-section {
         margin-bottom: 20px;
@@ -389,8 +394,20 @@ export class RelicCollectionModal {
         color: ${P.text.primary};
       }
 
-      .relic-collection-btn:hover {
+      .relic-collection-btn:hover:not(:disabled) {
         background: linear-gradient(to bottom, ${P.light}, ${P.mid});
+      }
+
+      .relic-collection-btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+      }
+
+      .relic-requirement {
+        margin-top: 2px;
+        font-size: 10px;
+        font-style: italic;
+        color: ${P.state.error};
       }
 
       @media (max-width: 480px) {
@@ -681,11 +698,18 @@ export class RelicCollectionModal {
         <span class="relic-status relic-status--owned">Owned</span>
       `;
     } else {
+      // claimable/requirement come from GET /relics; older payloads without
+      // them keep the button enabled and let the server decide.
+      const claimable = relic.claimable !== false;
+      const requirement = !claimable && relic.requirement
+        ? `<div class="relic-requirement">${escapeHtml(relic.requirement)}</div>`
+        : '';
       el.innerHTML = `
         <span class="relic-icon">${icon}</span>
         <div class="relic-info">
           <div class="relic-name">${escapeHtml(relic.name)}</div>
           <div class="relic-desc">${escapeHtml(relic.description || 'A mysterious artifact')}</div>
+          ${requirement}
         </div>
       `;
 
@@ -693,6 +717,8 @@ export class RelicCollectionModal {
       const claimBtn = document.createElement('button');
       claimBtn.className = 'relic-collection-btn relic-claim-btn';
       claimBtn.textContent = 'Claim';
+      claimBtn.disabled = !claimable;
+      if (!claimable && relic.requirement) claimBtn.title = relic.requirement;
       claimBtn.style.cssText = 'padding: 4px 12px; font-size: 11px;';
       claimBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -708,7 +734,8 @@ export class RelicCollectionModal {
     const iconMap = {
       wayfarers_compass: '\u{1F9ED}',    // compass
       vitality_charm: '\u2764\uFE0F',     // heart
-      merchants_coin: '\u{1FA99}',        // coin
+      merchants_seal: '\u{1FA99}',        // coin
+      cartographers_eye: '\u{1F5FA}\uFE0F', // map
       scholars_quill: '\u{1F4DC}',        // scroll
       warriors_crest: '\u{1F6E1}\uFE0F',  // shield
       default: '\u2728'                   // sparkles

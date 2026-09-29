@@ -83,9 +83,11 @@ export function transformItemForBrowseTable(item) {
   const hasListings = item.listingCount > 0;
 
   // Determine price to display
+  // Equipment with no listings has no price: showing the template base
+  // price there read as an offer nobody had made.
   let displayPrice;
-  if (isEquipment && hasListings) {
-    displayPrice = item.minListingPrice;
+  if (isEquipment) {
+    displayPrice = hasListings ? item.minListingPrice : null;
   } else {
     displayPrice = item.bestAsk || item.bestBid || item.basePrice || null;
   }
@@ -111,8 +113,8 @@ export function transformItemForBrowseTable(item) {
     price: displayPrice,
     spriteId: item.spriteId,
 
-    // Stats (from base stats if available)
-    baseStats: item.baseStats || {},
+    // Template stats (search returns them as statBonuses)
+    baseStats: item.baseStats || item.statBonuses || {},
     bonusStats: {},
 
     // Augments

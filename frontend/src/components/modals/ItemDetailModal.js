@@ -175,6 +175,7 @@ export class ItemDetailModal {
 
       .item-detail-badge--rarity {
         text-transform: capitalize;
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
       }
 
       .item-detail-description {
@@ -212,7 +213,7 @@ export class ItemDetailModal {
       }
 
       .item-detail-stat-label {
-        color: ${PARCHMENT_COLORS.text.muted};
+        color: ${PARCHMENT_COLORS.text.secondary};
       }
 
       .item-detail-stat-value {
@@ -288,9 +289,10 @@ export class ItemDetailModal {
         color: ${PARCHMENT_COLORS.text.secondary};
       }
 
+      /* Informational: the stat is already summed into the Stats grid */
       .item-detail-augment-stat {
-        color: ${PARCHMENT_COLORS.state.success};
-        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        color: ${PARCHMENT_COLORS.text.secondary};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
       }
 
       .item-detail-augment--inactive .item-detail-augment-effect {
@@ -405,8 +407,8 @@ export class ItemDetailModal {
             <h3 class="item-detail-name rarity-${rarity}">${escapeHtml(item.name)}</h3>
             <div class="item-detail-badges">
               <span class="item-detail-badge item-detail-badge--type">${escapeHtml(item.type || '')}</span>
-              <span class="item-detail-badge item-detail-badge--rarity">${escapeHtml(rarity)}</span>
-              ${item.material ? `<span class="item-detail-badge">${escapeHtml(item.material)}</span>` : ''}
+              <span class="item-detail-badge item-detail-badge--rarity" style="color: ${RARITY_COLORS[rarity]}; border-color: ${RARITY_COLORS[rarity]};">${escapeHtml(rarity)}</span>
+              ${item.material ? `<span class="item-detail-badge item-detail-badge--type">${escapeHtml(item.material)}</span>` : ''}
             </div>
           </div>
         </div>
@@ -540,7 +542,7 @@ export class ItemDetailModal {
         <span class="item-detail-augment-text">
           ${name ? `<span class="item-detail-augment-name">${escapeHtml(name)}</span>${effect ? ': ' : ''}` : ''}
           ${effect ? `<span class="item-detail-augment-effect">${escapeHtml(effect)}</span>` : ''}
-          ${statText ? ` <span class="item-detail-augment-stat">(${escapeHtml(statText)})</span>` : ''}
+          ${statText ? ` <span class="item-detail-augment-stat" title="Already counted in Stats above">(${escapeHtml(statText)}, in stats)</span>` : ''}
         </span>
         ${inactive && effect ? '<span class="item-detail-augment-tag" title="This effect is shown for reference and is not yet applied in combat">not yet active</span>' : ''}
       </div>

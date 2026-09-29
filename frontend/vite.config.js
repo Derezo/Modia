@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv } from 'vite';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
+import process from 'node:process';
 
 // The released game version lives in the root package.json (frontend/package.json
 // is a workspace stub). Exposed to client code as __APP_VERSION__.
@@ -59,10 +60,14 @@ export default defineConfig(({ mode }) => {
         name: 'cache-control-assets',
         configureServer(server) {
           server.middlewares.use((req, res, next) => {
-            // Set long cache duration for static assets
-            // Works with Cache API to prevent unnecessary revalidation
+            // Dev server: revalidate static assets on every use. Asset URLs
+            // are not content-versioned, so 'immutable' kept stale copies of
+            // regenerated art (e.g. a blank Coliseum menu icon) in the
+            // browser cache indefinitely. Revalidation is a cheap 304 via
+            // ETag; AssetLoader's Cache API layer still avoids refetching
+            // canvas assets.
             if (req.url?.startsWith('/assets/')) {
-              res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+              res.setHeader('Cache-Control', 'no-cache');
             }
             next();
           });

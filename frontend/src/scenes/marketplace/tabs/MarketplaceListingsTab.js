@@ -5,7 +5,7 @@
 import { ItemDataTable } from '../../../components/ItemDataTable/index.js';
 import { ItemIcon } from '../../../components/ItemIcon.js';
 import { parchmentToast } from '../../../ui/parchment/ParchmentToast.js';
-import { formatTime, formatListingStats, getRarityName } from '../marketplaceUtils.js';
+import { formatTime, formatListingStats, getRarityName, listingPrice } from '../marketplaceUtils.js';
 
 /**
  * Render the My Listings tab
@@ -61,7 +61,7 @@ export function renderListingsTab(mainContent, sidePanel, context) {
         <div style="margin-bottom: 12px;">
           <div style="color: #5a4a3a; font-size: 12px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Total Value</div>
           <div style="font-size: 18px; color: #2d2418; font-family: Consolas, monospace; font-weight: bold;">
-            ${myListings.reduce((sum, l) => sum + (l.askPrice || 0), 0).toLocaleString()}g
+            ${myListings.reduce((sum, l) => sum + listingPrice(l), 0).toLocaleString()}g
           </div>
         </div>
         <div class="empty-message" style="padding: 20px 0; font-size: 12px;">
@@ -90,7 +90,7 @@ function transformListingForTable(listing) {
     name: listing.generatedName || listing.itemName || 'Unknown Item',
     type: listing.itemType,
     rarity,
-    price: listing.askPrice,
+    price: listingPrice(listing),
     spriteId: listing.spriteId,
 
     // Stats
@@ -101,7 +101,7 @@ function transformListingForTable(listing) {
     augments: listing.augments || [],
 
     // Listing metadata
-    listedAt: listing.listedAt,
+    listedAt: listing.createdAt ?? listing.listedAt,
 
     // Original reference
     _original: listing
@@ -118,7 +118,8 @@ function showListingDetails(item, sidePanel, context) {
   const listing = item._original;
   if (!listing) return;
 
-  const listedDate = listing.listedAt ? new Date(listing.listedAt) : null;
+  const listedAt = listing.createdAt ?? listing.listedAt;
+  const listedDate = listedAt ? new Date(listedAt) : null;
   const statsHtml = formatListingStats(listing);
 
   sidePanel.innerHTML = `
@@ -142,7 +143,7 @@ function showListingDetails(item, sidePanel, context) {
         <div style="margin-bottom: 16px;">
           <div style="color: #5a4a3a; font-size: 12px; margin-bottom: 4px; text-transform: uppercase;">Asking Price</div>
           <div style="font-size: 24px; color: #2d2418; font-family: Consolas, monospace; font-weight: bold;">
-            ${(listing.askPrice || 0).toLocaleString()}g
+            ${listingPrice(listing).toLocaleString()}g
           </div>
         </div>
 

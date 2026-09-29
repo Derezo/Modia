@@ -11,6 +11,7 @@ import {
   getParchmentShadow
 } from '../ui/parchment/index.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
+import { parchmentConfirm } from '../ui/parchment/parchmentConfirm.js';
 
 export class PartyStatusBar {
   constructor(game) {
@@ -358,7 +359,7 @@ export class PartyStatusBar {
     if (!this.party) return;
 
     // Confirm leave
-    const confirmed = confirm('Are you sure you want to leave the party?');
+    const confirmed = await parchmentConfirm({ title: 'Leave Party', message: 'Are you sure you want to leave the party?', confirmLabel: 'Leave', confirmVariant: 'danger' });
     if (!confirmed) return;
 
     try {

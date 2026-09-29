@@ -26,8 +26,11 @@ export function injectItemDataTableStyles() {
   const style = document.createElement('style');
   style.id = STYLE_ID;
   style.textContent = `
-    /* Container */
+    /* Container. Also a size container, so narrow placements (phones, side
+       panels) can drop secondary columns instead of crushing the name. */
     .item-data-table-container {
+      container-type: inline-size;
+      container-name: item-data-table;
       display: flex;
       flex-direction: column;
       background: ${getParchmentGradient()};
@@ -404,6 +407,61 @@ export function injectItemDataTableStyles() {
 
     .stat-neutral {
       color: ${PARCHMENT_COLORS.text.muted};
+    }
+
+    /* Narrow tables (phones, side panels): the fixed-width secondary columns
+       used to take all the room and cut item names to one letter. Hide the
+       columns the detail panel repeats anyway, tighten the rest, and let the
+       name wrap onto two lines so similar items stay distinguishable. */
+    @container item-data-table (max-width: 560px) {
+      .item-data-table-header-cell[data-column="stats"],
+      .item-data-table-header-cell[data-column="augments"],
+      .item-data-table-header-cell[data-column="seller"],
+      .item-data-table-header-cell[data-column="type"],
+      .item-data-table-header-cell[data-column="supplyLevel"],
+      .item-data-table-cell[data-column="stats"],
+      .item-data-table-cell[data-column="augments"],
+      .item-data-table-cell[data-column="seller"],
+      .item-data-table-cell[data-column="type"],
+      .item-data-table-cell[data-column="supplyLevel"] {
+        display: none;
+      }
+
+      .item-data-table-header-cell,
+      .item-data-table-cell {
+        padding-left: ${PARCHMENT_SPACING.sm};
+        padding-right: ${PARCHMENT_SPACING.sm};
+      }
+
+      .item-data-table-header-cell[data-column="quantity"],
+      .item-data-table-cell[data-column="quantity"] {
+        width: 44px !important;
+      }
+
+      .item-data-table-header-cell[data-column="price"],
+      .item-data-table-cell[data-column="price"],
+      .item-data-table-header-cell[data-column="estimatedPrice"],
+      .item-data-table-cell[data-column="estimatedPrice"] {
+        width: 76px !important;
+      }
+
+      .item-data-table-header-cell[data-column="statComparison"],
+      .item-data-table-cell[data-column="statComparison"] {
+        width: 96px !important;
+      }
+
+      .item-data-table-cell[data-column="iconName"] {
+        white-space: normal;
+      }
+
+      .item-data-table-item-name {
+        white-space: normal;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        line-height: 1.2;
+        overflow-wrap: anywhere;
+      }
     }
   `;
 

@@ -41,7 +41,7 @@ export class ItemDataTableRow {
       const alignStyle = config.align ? `justify-content: ${config.align === 'right' ? 'flex-end' : config.align === 'center' ? 'center' : 'flex-start'};` : '';
 
       return `
-        <div class="item-data-table-cell" style="${widthStyle} ${alignStyle}">
+        <div class="item-data-table-cell" data-column="${columnKey}" style="${widthStyle} ${alignStyle}">
           ${content}
         </div>
       `;

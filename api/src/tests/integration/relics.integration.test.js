@@ -33,6 +33,17 @@ describe('Relics API', () => {
       assert.strictEqual(typeof relic.owned, 'boolean');
     });
 
+    it('marks unowned relics unclaimable with the missing requirement for a new user', async () => {
+      const res = await request('GET', '/api/relics', null, user.accessToken);
+
+      assert.strictEqual(res.status, 200);
+      const seal = res.body.relics.find(r => r.key === 'merchants_seal');
+      assert.ok(seal, 'merchants_seal should be seeded');
+      assert.strictEqual(seal.owned, false);
+      assert.strictEqual(seal.claimable, false);
+      assert.match(seal.requirement, /marketplace sale/);
+    });
+
     it('should require authentication', async () => {
       const res = await request('GET', '/api/relics');
       assert.strictEqual(res.status, 401);

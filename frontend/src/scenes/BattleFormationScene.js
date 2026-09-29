@@ -30,6 +30,7 @@ import { responsive } from '../core/Responsive.js';
 import { getBattleFormationStyles } from './battleFormation/battleFormationStyles.js';
 import { getNpcVisualIdentity, getPlayerCharacterIdentity } from '@shared/assetPaths.js';
 import { installImageFallbackHandler } from '../utils/imageFallback.js';
+import { withEquipmentStats } from '../utils/effectiveStats.js';
 
 // Local alias for cleaner access
 const P = PARCHMENT_COLORS;
@@ -429,6 +430,11 @@ export class BattleFormationScene extends Scene {
       try {
         const preview = await this.game.api.getEncounterPreview(data.node.id);
         this.enemies = preview.possibleEnemies || [];
+        // Enemy levels are rolled at battle start; the preview only knows
+        // the node's difficulty tier.
+        this.encounterTier = Number.isFinite(Number(preview.difficultyTier))
+          ? Number(preview.difficultyTier)
+          : null;
       } catch (err) {
         console.error('Failed to load encounter preview:', err);
         this.enemies = [];
@@ -649,6 +655,12 @@ export class BattleFormationScene extends Scene {
       const isBoss = enemy.isBoss || enemy.level > 10;
       const threatClass = isBoss ? 'bf-threat-boss' : '';
       const npcIdentity = getNpcVisualIdentity(enemy, { fallbackBiome: this.nodeType });
+      let levelHtml = '';
+      if (enemy.level) {
+        levelHtml = `<div class="bf-enemy-level">Lv.${escapeHtml(String(enemy.level))}</div>`;
+      } else if (this.encounterTier) {
+        levelHtml = `<div class="bf-enemy-level" title="Enemy levels are set when the battle starts">Tier ${this.encounterTier}</div>`;
+      }
       const portraitUrl = this.game.assetLoader.getEnemyPortraitUrl(
         npcIdentity.visualId || 'unknown',
         40
@@ -664,7 +676,7 @@ export class BattleFormationScene extends Scene {
           </div>
           <div class="bf-enemy-info">
             <div class="bf-enemy-name">${escapeHtml(enemy.name || '')}</div>
-            <div class="bf-enemy-level">Lv.${enemy.level || '?'}</div>
+            ${levelHtml}
           </div>
           ${isBoss ? '<div class="bf-threat-aura"></div>' : ''}
         </div>
@@ -1165,8 +1177,9 @@ export class BattleFormationScene extends Scene {
 
   updateDetailCard() {
     if (this.characterCard && this.selectedCharacter) {
-      // Transform API snake_case to camelCase for ParchmentCard
-      const char = this.selectedCharacter;
+      // Transform API snake_case to camelCase for ParchmentCard. Stats
+      // include equipped gear so the card matches what battle will use.
+      const char = withEquipmentStats(this.selectedCharacter);
       this.characterCard.setCharacter({
         ...char,
         hp: char.hp_current,

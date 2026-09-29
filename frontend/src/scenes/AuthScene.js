@@ -280,10 +280,13 @@ export class AuthScene extends Scene {
       }
 
       .auth-error {
-        background: rgba(139, 68, 68, 0.15);
+        background: rgba(245, 230, 225, 0.75);
         border: 1px solid ${P.state.error};
+        border-left-width: 4px;
         border-radius: ${PARCHMENT_RADIUS.sm};
-        color: ${P.state.error};
+        /* Darker than state.error for legible contrast on the tan panel */
+        color: #5e1f1f;
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
         font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
         font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
         padding: ${PARCHMENT_SPACING.sm} ${PARCHMENT_SPACING.md};
@@ -659,7 +662,10 @@ export class AuthScene extends Scene {
       input.classList.add('input-invalid');
       errorEl.textContent = error;
       errorEl.classList.add('visible');
-    } else if (input.value.trim()) {
+    } else if (input.value.trim() && this.mode === 'register') {
+      // Green "valid" only means something while registering. On login it
+      // is just a format check, and after a rejected login it read as
+      // "these credentials are right".
       input.classList.add('input-valid');
     }
   }

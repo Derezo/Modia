@@ -55,8 +55,13 @@ export default class SettingsModal {
     this.renderTabContent();
 
     // Animate in
+    // The modal can be closed/destroyed before the next frame (Esc pressed
+    // right away, scene exit), so the element may already be gone.
+    const element = this.element;
     requestAnimationFrame(() => {
-      this.element.classList.add('visible');
+      if (this.element === element) {
+        element?.classList.add('visible');
+      }
     });
   }
 
@@ -85,7 +90,7 @@ export default class SettingsModal {
         #settings-modal.visible {
           opacity: 1;
         }
-        .settings-container {
+        #settings-modal .settings-container {
           background: linear-gradient(to bottom, #d4c4a8 0%, #c9b899 50%, #bfae8a 100%);
           border: 2px solid #8b7355;
           border-radius: 4px;
@@ -104,7 +109,7 @@ export default class SettingsModal {
         }
 
         /* Header */
-        .settings-header {
+        #settings-modal .settings-header {
           padding: 12px 16px;
           border-bottom: 2px solid #8b7355;
           background: linear-gradient(to bottom, #c9b899 0%, #bfae8a 100%);
@@ -112,13 +117,13 @@ export default class SettingsModal {
           justify-content: space-between;
           align-items: center;
         }
-        .settings-title {
+        #settings-modal .settings-title {
           font-size: 18px;
           font-weight: bold;
           margin: 0;
           text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
         }
-        .settings-close {
+        #settings-modal .settings-close {
           background: none;
           border: none;
           font-size: 24px;
@@ -127,18 +132,18 @@ export default class SettingsModal {
           padding: 0 4px;
           line-height: 1;
         }
-        .settings-close:hover {
+        #settings-modal .settings-close:hover {
           color: #2d2418;
         }
 
         /* Tabs */
-        .settings-tabs {
+        #settings-modal .settings-tabs {
           display: flex;
           gap: 4px;
           padding: 8px 12px 0;
           border-bottom: 2px solid #8b7355;
         }
-        .settings-tab {
+        #settings-modal .settings-tab {
           padding: 8px 16px;
           background: linear-gradient(to bottom, #c9b899 0%, #bfae8a 100%);
           border: 2px solid #8b7355;
@@ -151,25 +156,25 @@ export default class SettingsModal {
           margin-bottom: -2px;
           transition: all 0.15s ease;
         }
-        .settings-tab:hover:not(.active) {
+        #settings-modal .settings-tab:hover:not(.active) {
           background: linear-gradient(to bottom, #d4c4a8 0%, #c9b899 50%, #bfae8a 100%);
         }
-        .settings-tab.active {
+        #settings-modal .settings-tab.active {
           background: linear-gradient(to bottom, #d4c4a8 0%, #c9b899 100%);
           color: #2d2418;
           font-weight: bold;
         }
 
         /* Content */
-        .settings-content {
+        #settings-modal .settings-content {
           flex: 1;
           padding: 16px;
           overflow-y: auto;
         }
-        .settings-section {
+        #settings-modal .settings-section {
           margin-bottom: 20px;
         }
-        .settings-section-title {
+        #settings-modal .settings-section-title {
           font-size: 15px;
           font-weight: bold;
           margin-bottom: 12px;
@@ -178,12 +183,12 @@ export default class SettingsModal {
         }
 
         /* Radio Options */
-        .settings-radio-group {
+        #settings-modal .settings-radio-group {
           display: flex;
           flex-direction: column;
           gap: 8px;
         }
-        .settings-radio {
+        #settings-modal .settings-radio {
           display: flex;
           align-items: flex-start;
           gap: 10px;
@@ -194,14 +199,14 @@ export default class SettingsModal {
           cursor: pointer;
           transition: all 0.15s ease;
         }
-        .settings-radio:hover {
+        #settings-modal .settings-radio:hover {
           background: rgba(139, 115, 85, 0.15);
         }
-        .settings-radio.selected {
+        #settings-modal .settings-radio.selected {
           background: rgba(139, 115, 85, 0.25);
           border-color: #8b7355;
         }
-        .settings-radio-circle {
+        #settings-modal .settings-radio-circle {
           width: 18px;
           height: 18px;
           border: 2px solid #8b7355;
@@ -213,30 +218,30 @@ export default class SettingsModal {
           flex-shrink: 0;
           margin-top: 2px;
         }
-        .settings-radio.selected .settings-radio-circle::after {
+        #settings-modal .settings-radio.selected .settings-radio-circle::after {
           content: '';
           width: 10px;
           height: 10px;
           background: #8b7355;
           border-radius: 50%;
         }
-        .settings-radio-content {
+        #settings-modal .settings-radio-content {
           flex: 1;
         }
-        .settings-radio-label {
+        #settings-modal .settings-radio-label {
           font-size: 14px;
           font-weight: bold;
           color: #2d2418;
           margin-bottom: 4px;
         }
-        .settings-radio-description {
+        #settings-modal .settings-radio-description {
           font-size: 12px;
           color: #5a4a3a;
           line-height: 1.4;
         }
 
         /* Footer */
-        .settings-footer {
+        #settings-modal .settings-footer {
           padding: 12px 16px;
           border-top: 2px solid #8b7355;
           background: linear-gradient(to bottom, #c9b899 0%, #bfae8a 100%);
@@ -244,7 +249,7 @@ export default class SettingsModal {
           justify-content: flex-end;
           gap: 8px;
         }
-        .settings-btn {
+        #settings-modal .settings-btn {
           padding: 8px 20px;
           border: 2px solid #8b7355;
           border-radius: 4px;
@@ -255,27 +260,27 @@ export default class SettingsModal {
           transition: all 0.15s ease;
           text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
         }
-        .settings-btn-cancel {
+        #settings-modal .settings-btn-cancel {
           background: linear-gradient(to bottom, #c9b899 0%, #bfae8a 100%);
           color: #2d2418;
         }
-        .settings-btn-cancel:hover {
+        #settings-modal .settings-btn-cancel:hover {
           background: linear-gradient(to bottom, #d4c4a8 0%, #c9b899 100%);
         }
-        .settings-btn-save {
+        #settings-modal .settings-btn-save {
           background: linear-gradient(to bottom, #8b7355 0%, #7a6345 100%);
           color: #f0e8d8;
           border-color: #6b5344;
         }
-        .settings-btn-save:hover {
+        #settings-modal .settings-btn-save:hover {
           background: linear-gradient(to bottom, #9b8365 0%, #8a7355 100%);
         }
-        .settings-btn:active {
+        #settings-modal .settings-btn:active {
           transform: translateY(1px);
         }
 
         /* Toggle Switch Styles */
-        .settings-toggle {
+        #settings-modal .settings-toggle {
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -285,14 +290,14 @@ export default class SettingsModal {
           border-radius: 4px;
           margin-bottom: 8px;
         }
-        .settings-toggle:hover {
+        #settings-modal .settings-toggle:hover {
           background: rgba(139, 115, 85, 0.15);
         }
-        .settings-toggle-label {
+        #settings-modal .settings-toggle-label {
           font-size: 14px;
           color: #2d2418;
         }
-        .settings-toggle-switch {
+        #settings-modal .settings-toggle-switch {
           position: relative;
           width: 44px;
           height: 24px;
@@ -302,7 +307,7 @@ export default class SettingsModal {
           cursor: pointer;
           transition: all 0.2s;
         }
-        .settings-toggle-switch::after {
+        #settings-modal .settings-toggle-switch::after {
           content: '';
           position: absolute;
           top: 2px;
@@ -314,16 +319,16 @@ export default class SettingsModal {
           transition: transform 0.2s;
           box-shadow: 0 1px 2px rgba(0,0,0,0.2);
         }
-        .settings-toggle-switch.active {
+        #settings-modal .settings-toggle-switch.active {
           background: #6b2d3d;  /* Burgundy accent for active state */
           border-color: #5a2433;
         }
-        .settings-toggle-switch.active::after {
+        #settings-modal .settings-toggle-switch.active::after {
           transform: translateX(20px);
         }
 
         /* Text Input Styles */
-        .settings-input {
+        #settings-modal .settings-input {
           width: 100%;
           padding: 10px 12px;
           background: linear-gradient(to bottom, #f0e8d8 0%, #e8dcc8 100%);
@@ -334,17 +339,17 @@ export default class SettingsModal {
           color: #2d2418;
           box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
         }
-        .settings-input::placeholder {
+        #settings-modal .settings-input::placeholder {
           color: #7a6a5a;
         }
-        .settings-input:focus {
+        #settings-modal .settings-input:focus {
           outline: none;
           border-color: #6b2d3d;  /* Burgundy accent for focus */
           box-shadow: inset 0 1px 3px rgba(0,0,0,0.1), 0 0 0 2px rgba(107, 45, 61, 0.2);
         }
 
         /* Select Dropdown Styles */
-        .settings-select {
+        #settings-modal .settings-select {
           width: 100%;
           padding: 10px 12px;
           background: linear-gradient(to bottom, #f0e8d8 0%, #e8dcc8 100%);
@@ -355,13 +360,13 @@ export default class SettingsModal {
           color: #2d2418;
           cursor: pointer;
         }
-        .settings-select:focus {
+        #settings-modal .settings-select:focus {
           outline: none;
           border-color: #6b2d3d;  /* Burgundy accent for focus */
         }
 
         /* Slider Styles */
-        .settings-slider-container {
+        #settings-modal .settings-slider-container {
           display: flex;
           align-items: center;
           gap: 12px;
@@ -370,12 +375,12 @@ export default class SettingsModal {
           border-radius: 4px;
           margin-bottom: 8px;
         }
-        .settings-slider-label {
+        #settings-modal .settings-slider-label {
           flex: 1;
           font-size: 14px;
           color: #2d2418;
         }
-        .settings-slider {
+        #settings-modal .settings-slider {
           width: 120px;
           height: 6px;
           -webkit-appearance: none;
@@ -385,7 +390,7 @@ export default class SettingsModal {
           border-radius: 3px;
           outline: none;
         }
-        .settings-slider::-webkit-slider-thumb {
+        #settings-modal .settings-slider::-webkit-slider-thumb {
           -webkit-appearance: none;
           appearance: none;
           width: 16px;
@@ -395,7 +400,7 @@ export default class SettingsModal {
           border-radius: 50%;
           cursor: pointer;
         }
-        .settings-slider::-moz-range-thumb {
+        #settings-modal .settings-slider::-moz-range-thumb {
           width: 16px;
           height: 16px;
           background: linear-gradient(to bottom, #6b2d3d 0%, #5a2433 100%);  /* Burgundy accent */
@@ -403,7 +408,7 @@ export default class SettingsModal {
           border-radius: 50%;
           cursor: pointer;
         }
-        .settings-slider-value {
+        #settings-modal .settings-slider-value {
           width: 40px;
           text-align: right;
           font-size: 13px;
@@ -475,6 +480,9 @@ export default class SettingsModal {
     // ESC key to close
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && this.isVisible) {
+        // Consume the key: Game's window-level Esc handler would otherwise
+        // see the modal already closing and open a fresh one.
+        e.stopPropagation();
         this.close(false);
       }
     }, { signal });
@@ -600,13 +608,26 @@ export default class SettingsModal {
   close(saved = false) {
     if (!this.isVisible) return;
 
-    this.element.classList.remove('visible');
+    // Mark closed immediately so a second Esc (or a re-open) during the fade
+    // does not act on an element that is about to be removed.
+    this.isVisible = false;
+    const element = this.element;
+    const onClose = this.onClose;
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
+    element?.classList.remove('visible');
 
     setTimeout(() => {
-      this.destroy();
+      if (this.element === element) {
+        this.destroy();
+      } else {
+        element?.remove();
+      }
 
-      if (this.onClose) {
-        this.onClose(saved);
+      if (onClose) {
+        onClose(saved);
       }
     }, 200);
   }

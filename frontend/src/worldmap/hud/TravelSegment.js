@@ -7,7 +7,7 @@
  * - Progress bar with gradient fill and percentage
  * - Does NOT draw its own background (handled by WorldMapHUDPanel)
  *
- * Structure (30px height):
+ * Structure (34px height):
  * +--------------------------------+
  * | -> Greenwood Village           |  <- 14px destination
  * | [=========>           ] 45%    |  <- 16px progress bar
@@ -17,7 +17,7 @@ import { HUD_COLORS } from '../../ui/parchment/ParchmentTheme.js';
 import { responsive } from '../../core/Responsive.js';
 
 /** Segment height when fully visible */
-const SEGMENT_HEIGHT = 30;
+const SEGMENT_HEIGHT = 34;
 
 /** Animation duration in milliseconds */
 const SLIDE_DURATION = 200;
@@ -159,12 +159,12 @@ export class TravelSegment {
     ctx.rect(x, y, width, currentHeight);
     ctx.clip();
 
-    // Row 1: Destination text (top 14px)
+    // Row 1: Destination text (up to 12px font on phones)
     const destY = y + 2;
     this.renderDestination(ctx, x + padding, destY, innerWidth);
 
-    // Row 2: Progress bar (bottom 16px)
-    const barY = y + 14;
+    // Row 2: Progress bar, below the text rather than overlapping it
+    const barY = y + 18;
     this.renderProgressBar(ctx, x + padding, barY, innerWidth);
 
     ctx.restore();

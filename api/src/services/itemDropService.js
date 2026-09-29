@@ -198,16 +198,12 @@ const CONSUMABLE_QUALITY_PREFIXES = {
   legendary: 'Supreme'
 };
 
-// Stat-based suffix fallbacks (when no augment suffix assigned)
-const STAT_SUFFIXES = {
-  strength: 'of Might',
-  intelligence: 'of Wisdom',
-  agility: 'of Swiftness',
-  vitality: 'of Fortitude',
-  luck: 'of Fortune',
-  hp_max: 'of Vitality',
-  mp_max: 'of Sorcery'
-};
+// Material words stripped from a template name before the rolled material
+// is prefixed ("Iron Axe" rolled as bronze -> "Bronze Axe").
+const MATERIAL_NAME_PREFIX = /^(Rusty|Iron|Steel|Bronze|Silver|Gold|Mythril|Copper|Platinum|Electrum|Adamantine|Celestial|Void)\s+/i;
+
+// Bases that are not made of metal: no material prefix in the name.
+const SOFT_BASE_PATTERN = /\b(Leather|Cloth|Robe|Tunic|Gi|Wraps|Coat|Hat|Pouch|Charm|Beads|Crystal|Wand|Staff|Rod|Pendant|Amulet)\b/i;
 
 // Legacy export for backwards compatibility
 const AUGMENTS = { ...PREFIX_AUGMENTS, ...SUFFIX_AUGMENTS };
@@ -565,11 +561,11 @@ function getRarityName(rarityId) {
  * @param {string} material - Material name
  * @param {string} rarity - Rarity name (common, uncommon, etc.)
  * @param {Array} augments - Array of augment objects
- * @param {Object} bonusStats - Bonus stats from augments
+ * @param {Object} _bonusStats - Unused; kept for call-site compatibility
  * @param {boolean} isConsumable - Whether this is a consumable
  * @returns {string} Generated item name
  */
-function generateItemName(template, material, rarity, augments, bonusStats, isConsumable) {
+function generateItemName(template, material, rarity, augments, _bonusStats, isConsumable) {
   const parts = [];
 
   if (isConsumable) {
@@ -597,32 +593,28 @@ function generateItemName(template, material, rarity, augments, bonusStats, isCo
     const prefixAug = augments.find(a => a.type === 'prefix');
     if (prefixAug) parts.push(prefixAug.name);
 
-    // Material + base name (strip existing material prefixes AND suffixes)
-    parts.push(capitalizeFirst(material));
-    let strippedName = template.name
-      .replace(/^(Rusty|Iron|Steel|Bronze|Silver|Gold|Mythril|Copper)\s+/i, '');
+    // Material + base name. Metal materials only read naturally on hard
+    // gear, so soft bases ("Leather Helm", "Cloth Robe", "Oak Staff") keep
+    // their own name instead of becoming "Copper Leather Helm".
+    let strippedName = template.name.replace(MATERIAL_NAME_PREFIX, '');
+    if (material && !SOFT_BASE_PATTERN.test(template.name)) {
+      parts.push(capitalizeFirst(material));
+    } else {
+      strippedName = template.name;
+    }
 
-    // Find suffix augment OR fallback to stat suffix
+    // Only a real suffix augment names the item "of X". There is no stat
+    // fallback: bonusStats come from the augments themselves, so a fallback
+    // "of Might" just repeated the prefix ("Mighty ... of Might") and implied
+    // an augment the item does not have.
     const suffixAug = augments.find(a => a.type === 'suffix');
-    const hasSuffixToAdd = suffixAug || (bonusStats && Object.keys(bonusStats).length > 0);
-
-    // Strip existing "of X" suffixes from template name if we're adding our own suffix
-    if (hasSuffixToAdd) {
+    if (suffixAug) {
       strippedName = strippedName.replace(/\s+of\s+\w+$/i, '');
     }
     parts.push(strippedName);
 
     if (suffixAug) {
       parts.push(suffixAug.name);
-    } else if (bonusStats && Object.keys(bonusStats).length > 0) {
-      // Fallback: use highest bonus stat's suffix
-      const sortedStats = Object.entries(bonusStats).sort((a, b) => b[1] - a[1]);
-      if (sortedStats.length > 0) {
-        const [highestStat] = sortedStats[0];
-        if (STAT_SUFFIXES[highestStat]) {
-          parts.push(STAT_SUFFIXES[highestStat]);
-        }
-      }
     }
   }
 
@@ -751,6 +743,7 @@ function formatDropsForResponse(drops) {
 }
 
 export {
+  generateItemName,
   rollDrops,
   rollFixedDrops,
   generateItem,

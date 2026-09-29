@@ -347,6 +347,32 @@ describe('createPlayerBattleUnit', () => {
       assert.strictEqual(unit.hp, 120);
     });
 
+    it('starts a full-HP character at full gear-inclusive HP and MP', () => {
+      const character = createMockCharacterWithEquipment({
+        hp_current: 120,
+        hp_max: 120,
+        mp_current: 40,
+        mp_max: 40
+      });
+      const unit = createPlayerBattleUnit(character);
+
+      assert.strictEqual(unit.maxHp, 170);
+      assert.strictEqual(unit.hp, 170);
+      assert.strictEqual(unit.maxMp, 60);
+      assert.strictEqual(unit.mp, 60);
+    });
+
+    it('keeps carried damage when gear adds HP', () => {
+      const character = createMockCharacterWithEquipment({
+        hp_current: 80,
+        hp_max: 120
+      });
+      const unit = createPlayerBattleUnit(character);
+
+      assert.strictEqual(unit.hp, 130); // 80 + 50 gear, still 40 below 170
+      assert.strictEqual(unit.maxHp, 170);
+    });
+
     it('handles mp_current same as hp_current', () => {
       const character = createMockCharacter({
         mp_current: null,

@@ -36,6 +36,7 @@ export { ParchmentButton } from './ParchmentButton.js';
 export { ParchmentInput } from './ParchmentInput.js';
 export { ParchmentDropdown } from './ParchmentDropdown.js';
 export { ParchmentModal } from './ParchmentModal.js';
+export { parchmentConfirm } from './parchmentConfirm.js';
 export { ParchmentToastManager, parchmentToast } from './ParchmentToast.js';
 export { ParchmentTooltip, getParchmentTooltip } from './ParchmentTooltip.js';
 export { ProfileDropdown } from './ProfileDropdown.js';

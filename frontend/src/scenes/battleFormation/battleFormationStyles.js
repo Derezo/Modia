@@ -161,7 +161,9 @@ export function getBattleFormationStyles() {
       }
 
       .bf-drawer-title {
-        color: ${P.text.primary};
+        /* The drawer is a dark translucent panel: light text to be legible */
+        color: ${P.text.inverse};
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
         font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
         font-size: ${PARCHMENT_TYPOGRAPHY.sizes.base};
         font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};

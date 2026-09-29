@@ -1,3 +1,8 @@
+/**
+ * @module GuildAdvancementScene
+ * @description Guild hall screen: lists advancement quests for the party,
+ * shows quest detail and rewards, and accepts/abandons/turns in quests.
+ */
 import { Scene } from './Scene.js';
 import { responsive } from '../core/Responsive.js';
 import {
@@ -19,6 +24,7 @@ import {
   isCharacterAtNode,
   selectGuildCharacter
 } from './guildAdvancementModel.js';
+import { parchmentConfirm } from '../ui/parchment/parchmentConfirm.js';
 
 const P = PARCHMENT_COLORS;
 const STYLE_ID = 'guild-advancement-styles';
@@ -1535,7 +1541,7 @@ export class GuildAdvancementScene extends Scene {
   }
 
   async handleAbandonQuest() {
-    if (!confirm('Are you sure you want to abandon this quest? All progress will be lost.')) {
+    if (!(await parchmentConfirm({ title: 'Abandon Quest', message: 'Are you sure you want to abandon this quest? All progress will be lost.', confirmLabel: 'Abandon', confirmVariant: 'danger' }))) {
       return;
     }
 

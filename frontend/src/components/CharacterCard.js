@@ -254,26 +254,33 @@ export class CharacterCard {
         background: linear-gradient(to bottom, #f44336, #d32f2f);
       }
 
-      /* Badge indicators */
+      /* Badge indicators: small labelled pills. Bare coloured dots only
+         explained themselves in a hover title, which touch players never see. */
       .character-card__badge {
         position: absolute;
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        border: 2px solid ${PARCHMENT_COLORS.light};
+        z-index: 1;
+        padding: 1px 5px;
+        border-radius: 8px;
+        border: 1px solid ${PARCHMENT_COLORS.light};
         box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        font-size: 9px;
+        font-weight: bold;
+        line-height: 1.4;
+        letter-spacing: 0.3px;
       }
 
       .character-card__badge--equipment {
         top: 4px;
         right: 4px;
-        background: #e53935;
+        background: #b3261e;
+        color: #fff;
       }
 
       .character-card__badge--skills {
         top: 4px;
         left: 4px;
         background: #ffc107;
+        color: #3a2a00;
       }
 
       .character-card__badge--leader {
@@ -386,8 +393,8 @@ export class CharacterCard {
     const portraitUrl = this.getPortraitUrl(character);
 
     this.element.innerHTML = `
-      ${badges.hasEquipmentUpgrade ? '<span class="character-card__badge character-card__badge--equipment" title="Equipment upgrade available"></span>' : ''}
-      ${badges.hasSkillPoints ? '<span class="character-card__badge character-card__badge--skills" title="Skill points available"></span>' : ''}
+      ${badges.hasEquipmentUpgrade ? '<span class="character-card__badge character-card__badge--equipment" title="Equipment upgrade available">GEAR</span>' : ''}
+      ${badges.hasSkillPoints ? '<span class="character-card__badge character-card__badge--skills" title="Skill points available">SKILL</span>' : ''}
       ${badges.hasLeaderBadge ? '<span class="character-card__badge character-card__badge--leader" title="Main Character">MAIN</span>' : ''}
 
       <div class="character-card__portrait">
@@ -463,6 +470,7 @@ export class CharacterCard {
       const badge = document.createElement('span');
       badge.className = 'character-card__badge character-card__badge--equipment';
       badge.title = 'Equipment upgrade available';
+      badge.textContent = 'GEAR';
       this.element.appendChild(badge);
     }
 
@@ -470,6 +478,7 @@ export class CharacterCard {
       const badge = document.createElement('span');
       badge.className = 'character-card__badge character-card__badge--skills';
       badge.title = 'Skill points available';
+      badge.textContent = 'SKILL';
       this.element.appendChild(badge);
     }
 

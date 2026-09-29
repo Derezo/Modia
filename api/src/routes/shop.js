@@ -9,6 +9,7 @@ import {
   processPurchase as processCaravanPurchase
 } from '../services/caravanService.js';
 import { presentCaravanShop } from '../services/caravanShopPresenter.js';
+import { calculateSellPrice } from '../services/shopPricing.js';
 
 const router = express.Router();
 
@@ -46,9 +47,6 @@ const SUPPLY_LEVELS = {
   surplus: { min: 21, max: Infinity, modifier: 0.60, label: 'Surplus' }
 };
 
-// Sell price is always 50% of base value
-const SELL_MODIFIER = 0.50;
-
 /**
  * Get supply level info for a given quantity
  */
@@ -67,13 +65,6 @@ function getSupplyLevel(quantity) {
 function calculateBuyPrice(basePrice, quantity) {
   const supply = getSupplyLevel(quantity);
   return Math.ceil(basePrice * supply.modifier);
-}
-
-/**
- * Calculate sell price (always 50% of base)
- */
-function calculateSellPrice(basePrice) {
-  return Math.floor(basePrice * SELL_MODIFIER);
 }
 
 /**
@@ -455,6 +446,7 @@ router.post('/:nodeId/:shopType/sell', authenticate, shopSellLimiter, asyncHandl
     // Get item from shared inventory with lock (shared items have user_id set, character_id NULL)
     const itemResult = await client.query(
       `SELECT ci.id, ci.character_id, ci.user_id, ci.item_template_id, ci.quantity, ci.equipped_slot, ci.listed,
+              ci.modifications,
               it.name, it.base_price, it.item_type, it.is_tradeable
        FROM character_items ci
        JOIN item_templates it ON ci.item_template_id = it.id
@@ -490,8 +482,8 @@ router.post('/:nodeId/:shopType/sell', authenticate, shopSellLimiter, asyncHandl
     }
     const sellQuantity = quantity;
 
-    // Calculate sell price (50% of base)
-    const unitPrice = calculateSellPrice(item.base_price);
+    // 50% of the item's value (rolled rarity and augments included)
+    const unitPrice = calculateSellPrice(item.base_price, item.modifications);
     const totalPrice = unitPrice * sellQuantity;
 
     // Add gold to user (capped at MAX_GOLD to prevent overflow)
@@ -550,7 +542,7 @@ router.post('/:nodeId/:shopType/sell', authenticate, shopSellLimiter, asyncHandl
     const updatedUser = await client.query('SELECT gold FROM users WHERE id = $1', [req.user.userId]);
 
     return {
-      itemName: item.name,
+      itemName: item.modifications?.generatedName || item.name,
       quantity: sellQuantity,
       unitPrice,
       totalPrice,
@@ -636,7 +628,7 @@ router.get('/:nodeId/:shopType/sell-inventory', authenticate, asyncHandler(async
       bonusStats,
       augments: mods.augments || [],
       basePrice: item.base_price,
-      sellPrice: calculateSellPrice(item.base_price),
+      sellPrice: calculateSellPrice(item.base_price, mods),
       spriteId: item.sprite_id
     };
   });

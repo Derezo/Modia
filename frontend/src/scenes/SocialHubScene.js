@@ -409,14 +409,18 @@ export class SocialHubScene extends Scene {
         }
       }
 
-      /* Narrow phones: icon + badge only (label kept as aria-label/title) */
+      /* Narrow phones: stack a small label under the icon. Icon-only tabs
+         were unreadable (touch has no hover title); the row scrolls anyway. */
       @media (max-width: 420px) {
-        .social-hub-tab-label {
-          display: none;
+        .social-hub-tab {
+          flex-direction: column;
+          gap: 0;
+          padding: 4px 10px;
         }
 
-        .social-hub-tab {
-          padding: 6px 14px;
+        .social-hub-tab-label {
+          font-size: 10px;
+          line-height: 1.2;
         }
       }
     `;

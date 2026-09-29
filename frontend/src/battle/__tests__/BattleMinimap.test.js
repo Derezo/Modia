@@ -225,8 +225,11 @@ describe('BattleMinimap camera viewport', () => {
       [75, 15, 110, 55],
       [70, 10, 120, 65]
     ]);
-    assert.deepEqual(labels, [['Arrows: Pan | Space: Re-center', 190, 87]]);
+    // Top-aligned 5px below the frame's bottom edge (10 + 65), clear of
+    // its 2px border.
+    assert.deepEqual(labels, [['Arrows: Pan | Space: Re-center', 190, 80]]);
     assert.equal(ctx.textAlign, 'right');
+    assert.equal(ctx.textBaseline, 'top');
   });
 
   it('retains the 120px square legacy frame when no V3 silhouette is available', () => {

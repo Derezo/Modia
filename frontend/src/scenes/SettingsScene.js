@@ -100,7 +100,7 @@ export class SettingsScene extends Scene {
     const style = document.createElement('style');
     style.id = 'settings-scene-styles';
     style.textContent = `
-      .settings-container {
+      .settings-container.settings-scene {
         position: absolute;
         top: 0;
         left: 0;
@@ -113,7 +113,7 @@ export class SettingsScene extends Scene {
         color: var(--parchment-text-primary);
       }
 
-      .settings-header {
+      .settings-scene .settings-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -123,36 +123,37 @@ export class SettingsScene extends Scene {
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       }
 
-      .settings-title {
+      .settings-scene .settings-title {
         display: flex;
         align-items: center;
         gap: var(--parchment-spacing-md);
       }
 
-      .settings-title h2 {
+      .settings-scene .settings-title h2 {
         margin: 0;
         color: var(--parchment-burgundy);
         text-shadow: 0 1px 0 var(--parchment-highlight);
         font-size: 22px;
       }
 
-      .settings-title-icon {
+      .settings-scene .settings-title-icon {
         font-size: 24px;
       }
 
-      .settings-header-actions {
+      .settings-scene .settings-header-actions {
         display: flex;
+        align-items: center;
         gap: var(--parchment-spacing-sm);
       }
 
-      .settings-content {
+      .settings-scene .settings-content {
         flex: 1;
         display: flex;
         overflow: hidden;
       }
 
       /* Sidebar Tabs */
-      .settings-sidebar {
+      .settings-scene .settings-sidebar {
         width: 200px;
         background: linear-gradient(to bottom, var(--parchment-mid) 0%, var(--parchment-dark) 100%);
         border-right: 2px solid var(--parchment-border);
@@ -163,7 +164,7 @@ export class SettingsScene extends Scene {
         overflow-y: auto;
       }
 
-      .settings-tab {
+      .settings-scene .settings-tab {
         padding: var(--parchment-spacing-md) var(--parchment-spacing-lg);
         background: linear-gradient(to bottom, var(--parchment-light) 0%, var(--parchment-mid) 100%);
         border: 2px solid var(--parchment-border);
@@ -180,38 +181,39 @@ export class SettingsScene extends Scene {
         gap: var(--parchment-spacing-sm);
       }
 
-      .settings-tab:hover:not(.active) {
+      .settings-scene .settings-tab:hover:not(.active) {
         background: linear-gradient(to bottom, var(--parchment-text-inverse) 0%, var(--parchment-light) 100%);
         color: var(--parchment-text-primary);
       }
 
-      .settings-tab.active {
+      .settings-scene .settings-tab.active {
         background: linear-gradient(to bottom, var(--parchment-text-inverse) 0%, var(--parchment-light) 100%);
         color: var(--parchment-text-primary);
         border-color: var(--parchment-burgundy);
       }
 
-      .settings-tab-icon {
+      .settings-scene .settings-tab-icon {
         font-size: 18px;
       }
 
       /* Main Panel */
-      .settings-main {
+      .settings-scene .settings-main {
         flex: 1;
         overflow-y: auto;
         padding: var(--parchment-spacing-xl);
       }
 
-      .settings-panel {
+      .settings-scene .settings-panel {
         display: none;
-        max-width: 600px;
+        max-width: 880px;
+        margin: 0 auto;
       }
 
-      .settings-panel.active {
+      .settings-scene .settings-panel.active {
         display: block;
       }
 
-      .settings-panel-title {
+      .settings-scene .settings-panel-title {
         font-size: 20px;
         font-weight: bold;
         color: var(--parchment-burgundy);
@@ -221,17 +223,17 @@ export class SettingsScene extends Scene {
         text-shadow: 0 1px 0 var(--parchment-highlight);
       }
 
-      .settings-section {
+      .settings-scene .settings-section {
         margin-bottom: var(--parchment-spacing-xl);
         padding-bottom: var(--parchment-spacing-lg);
         border-bottom: 1px solid var(--parchment-border);
       }
 
-      .settings-section:last-child {
+      .settings-scene .settings-section:last-child {
         border-bottom: none;
       }
 
-      .settings-section-title {
+      .settings-scene .settings-section-title {
         font-size: 15px;
         font-weight: bold;
         color: var(--parchment-text-primary);
@@ -240,25 +242,25 @@ export class SettingsScene extends Scene {
         letter-spacing: 0.5px;
       }
 
-      .settings-group {
+      .settings-scene .settings-group {
         margin-bottom: var(--parchment-spacing-lg);
       }
 
-      .settings-group-label {
+      .settings-scene .settings-group-label {
         font-size: 14px;
         font-weight: bold;
         color: var(--parchment-text-primary);
         margin-bottom: var(--parchment-spacing-sm);
       }
 
-      .settings-group-description {
+      .settings-scene .settings-group-description {
         font-size: 12px;
         color: var(--parchment-text-muted);
         margin-bottom: var(--parchment-spacing-md);
       }
 
       /* Form Controls */
-      .settings-select {
+      .settings-scene .settings-select {
         width: 100%;
         padding: var(--parchment-spacing-sm) var(--parchment-spacing-md);
         background: linear-gradient(to bottom, var(--parchment-text-inverse) 0%, ${P.light}ee 100%);
@@ -270,39 +272,39 @@ export class SettingsScene extends Scene {
         cursor: pointer;
       }
 
-      .settings-select:focus {
+      .settings-scene .settings-select:focus {
         outline: none;
         border-color: var(--parchment-burgundy);
       }
 
-      .settings-checkbox-group {
+      .settings-scene .settings-checkbox-group {
         display: flex;
         align-items: center;
         gap: var(--parchment-spacing-md);
         padding: var(--parchment-spacing-sm) 0;
       }
 
-      .settings-checkbox {
+      .settings-scene .settings-checkbox {
         width: 20px;
         height: 20px;
         accent-color: var(--parchment-burgundy);
         cursor: pointer;
       }
 
-      .settings-checkbox-label {
+      .settings-scene .settings-checkbox-label {
         font-size: 14px;
         cursor: pointer;
         flex: 1;
       }
 
       /* Slider/Range */
-      .settings-slider-container {
+      .settings-scene .settings-slider-container {
         display: flex;
         align-items: center;
         gap: var(--parchment-spacing-md);
       }
 
-      .settings-slider {
+      .settings-scene .settings-slider {
         flex: 1;
         height: 8px;
         border-radius: 4px;
@@ -311,7 +313,7 @@ export class SettingsScene extends Scene {
         cursor: pointer;
       }
 
-      .settings-slider::-webkit-slider-thumb {
+      .settings-scene .settings-slider::-webkit-slider-thumb {
         appearance: none;
         width: 20px;
         height: 20px;
@@ -322,7 +324,7 @@ export class SettingsScene extends Scene {
         box-shadow: 0 2px 4px rgba(0,0,0,0.2);
       }
 
-      .settings-slider::-moz-range-thumb {
+      .settings-scene .settings-slider::-moz-range-thumb {
         width: 20px;
         height: 20px;
         border-radius: 50%;
@@ -331,7 +333,7 @@ export class SettingsScene extends Scene {
         cursor: pointer;
       }
 
-      .settings-slider-value {
+      .settings-scene .settings-slider-value {
         min-width: 50px;
         text-align: right;
         font-size: 14px;
@@ -340,13 +342,13 @@ export class SettingsScene extends Scene {
       }
 
       /* Radio Group */
-      .settings-radio-group {
+      .settings-scene .settings-radio-group {
         display: flex;
         gap: var(--parchment-spacing-sm);
         flex-wrap: wrap;
       }
 
-      .settings-radio-option {
+      .settings-scene .settings-radio-option {
         display: flex;
         align-items: center;
         gap: var(--parchment-spacing-xs);
@@ -358,27 +360,27 @@ export class SettingsScene extends Scene {
         transition: all 0.2s;
       }
 
-      .settings-radio-option:hover {
+      .settings-scene .settings-radio-option:hover {
         background: linear-gradient(to bottom, var(--parchment-text-inverse) 0%, var(--parchment-light) 100%);
       }
 
-      .settings-radio-option.selected {
+      .settings-scene .settings-radio-option.selected {
         border-color: var(--parchment-burgundy);
         background: linear-gradient(to bottom, var(--parchment-text-inverse) 0%, var(--parchment-light) 100%);
       }
 
-      .settings-radio-option.selected .settings-radio-label {
+      .settings-scene .settings-radio-option.selected .settings-radio-label {
         color: var(--parchment-burgundy);
       }
 
-      .settings-radio-label {
+      .settings-scene .settings-radio-label {
         font-size: 13px;
         font-weight: bold;
         color: var(--parchment-text-secondary);
       }
 
       /* Buttons */
-      .settings-btn {
+      .settings-scene .settings-btn {
         padding: var(--parchment-spacing-sm) var(--parchment-spacing-lg);
         background: linear-gradient(to bottom, var(--parchment-mid) 0%, var(--parchment-dark) 100%);
         border: 2px solid var(--parchment-border);
@@ -391,31 +393,31 @@ export class SettingsScene extends Scene {
         transition: all 0.15s;
       }
 
-      .settings-btn:hover {
+      .settings-scene .settings-btn:hover {
         background: linear-gradient(to bottom, var(--parchment-light) 0%, var(--parchment-mid) 100%);
       }
 
-      .settings-btn:active {
+      .settings-scene .settings-btn:active {
         transform: translateY(1px);
       }
 
-      .settings-btn-primary {
+      .settings-scene .settings-btn-primary {
         background: linear-gradient(to bottom, var(--parchment-border) 0%, var(--parchment-border-dark) 100%);
         color: var(--parchment-text-inverse);
         border-color: var(--parchment-border-dark);
       }
 
-      .settings-btn-primary:hover {
+      .settings-scene .settings-btn-primary:hover {
         background: linear-gradient(to bottom, var(--parchment-border-light) 0%, var(--parchment-border) 100%);
       }
 
-      .settings-btn:disabled {
+      .settings-scene .settings-btn:disabled {
         opacity: 0.5;
         cursor: not-allowed;
       }
 
       /* Footer */
-      .settings-footer {
+      .settings-scene .settings-footer {
         display: flex;
         justify-content: space-between;
         padding: var(--parchment-spacing-md) var(--parchment-spacing-xl);
@@ -423,17 +425,17 @@ export class SettingsScene extends Scene {
         border-top: 2px solid var(--parchment-border);
       }
 
-      .settings-footer-left {
+      .settings-scene .settings-footer-left {
         display: flex;
         gap: var(--parchment-spacing-sm);
       }
 
-      .settings-footer-right {
+      .settings-scene .settings-footer-right {
         display: flex;
         gap: var(--parchment-spacing-sm);
       }
 
-      .unsaved-indicator {
+      .settings-scene .unsaved-indicator {
         display: none;
         align-items: center;
         gap: var(--parchment-spacing-xs);
@@ -442,27 +444,27 @@ export class SettingsScene extends Scene {
         font-style: italic;
       }
 
-      .unsaved-indicator.visible {
+      .settings-scene .unsaved-indicator.visible {
         display: flex;
       }
 
       /* Disabled state for developer settings */
-      .settings-section.disabled {
+      .settings-scene .settings-section.disabled {
         opacity: 0.5;
         pointer-events: none;
       }
 
-      .settings-section.disabled .settings-checkbox {
+      .settings-scene .settings-section.disabled .settings-checkbox {
         cursor: not-allowed;
       }
 
       /* Responsive */
       @media (max-width: 768px) {
-        .settings-content {
+        .settings-scene .settings-content {
           flex-direction: column;
         }
 
-        .settings-sidebar {
+        .settings-scene .settings-sidebar {
           width: 100%;
           flex-direction: row;
           overflow-x: auto;
@@ -470,31 +472,31 @@ export class SettingsScene extends Scene {
           border-bottom: 2px solid var(--parchment-border);
         }
 
-        .settings-tab {
+        .settings-scene .settings-tab {
           padding: var(--parchment-spacing-sm) var(--parchment-spacing-md);
           font-size: 12px;
           white-space: nowrap;
         }
 
-        .settings-tab-label {
+        .settings-scene .settings-tab-label {
           display: none;
         }
 
-        .settings-main {
+        .settings-scene .settings-main {
           padding: var(--parchment-spacing-md);
         }
 
-        .settings-header {
+        .settings-scene .settings-header {
           padding: var(--parchment-spacing-md);
         }
 
-        .settings-footer {
+        .settings-scene .settings-footer {
           flex-direction: column;
           gap: var(--parchment-spacing-sm);
         }
 
-        .settings-footer-left,
-        .settings-footer-right {
+        .settings-scene .settings-footer-left,
+        .settings-scene .settings-footer-right {
           justify-content: center;
         }
       }
@@ -504,7 +506,9 @@ export class SettingsScene extends Scene {
 
   createUI() {
     const container = document.createElement('div');
-    container.className = 'settings-container';
+    // .settings-scene scopes this page's CSS; SettingsModal reuses the same
+    // class names, and the unscoped rules used to pin the modal to (0,0).
+    container.className = 'settings-container settings-scene';
 
     container.innerHTML = `
       <div class="settings-header">
@@ -516,6 +520,7 @@ export class SettingsScene extends Scene {
           <span class="unsaved-indicator" id="unsaved-indicator">
             <span>&#9888;</span> Unsaved changes
           </span>
+          <button class="settings-btn" id="header-back-btn" title="Back (discard unsaved changes)">&larr; Back</button>
         </div>
       </div>
 
@@ -637,6 +642,11 @@ export class SettingsScene extends Scene {
     });
 
     // Buttons
+    this.uiElement.querySelector('#header-back-btn')?.addEventListener('click', () => {
+      this.game.audio?.playUI('button_click');
+      this.handleCancel();
+    }, opts);
+
     this.uiElement.querySelector('#cancel-btn')?.addEventListener('click', () => {
       this.game.audio?.playUI('button_click');
       this.handleCancel();

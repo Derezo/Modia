@@ -457,25 +457,30 @@ export function getParchmentMutedTextCSS() {
  * @returns {string} CSS block for scrollbar styling
  */
 export function getParchmentScrollbarCSS(selector = '') {
-  const prefix = selector ? `${selector} ` : '';
+  // With a selector, style the element's own scrollbar AND its descendants'.
+  // A bare "sel ::-webkit-scrollbar" only matches descendants, which left the
+  // scroll containers themselves with white native scrollbars.
+  const sel = (pseudo) => (selector
+    ? `${selector}${pseudo}, ${selector} ${pseudo}`
+    : pseudo);
   return `
-    ${prefix}::-webkit-scrollbar {
+    ${sel('::-webkit-scrollbar')} {
       width: 10px;
       height: 10px;
     }
-    ${prefix}::-webkit-scrollbar-track {
+    ${sel('::-webkit-scrollbar-track')} {
       background: ${PARCHMENT_COLORS.mid};
       border-radius: 5px;
     }
-    ${prefix}::-webkit-scrollbar-thumb {
+    ${sel('::-webkit-scrollbar-thumb')} {
       background: linear-gradient(to bottom, ${PARCHMENT_COLORS.border}, ${PARCHMENT_COLORS.borderDark});
       border-radius: 5px;
       border: 2px solid ${PARCHMENT_COLORS.mid};
     }
-    ${prefix}::-webkit-scrollbar-thumb:hover {
+    ${sel('::-webkit-scrollbar-thumb:hover')} {
       background: linear-gradient(to bottom, ${PARCHMENT_COLORS.borderLight}, ${PARCHMENT_COLORS.border});
     }
-    ${prefix}::-webkit-scrollbar-corner {
+    ${sel('::-webkit-scrollbar-corner')} {
       background: ${PARCHMENT_COLORS.mid};
     }
   `.trim();
