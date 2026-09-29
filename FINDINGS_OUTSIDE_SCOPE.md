@@ -2,9 +2,107 @@
 
 Issues identified during work but deliberately deferred. When closed, **delete the entry** — git history is the audit trail.
 
+Operational release gates (human-owned: migration dry-runs, deploy windows, monitoring) live in [`docs/operations/RELEASE_GATES.md`](docs/operations/RELEASE_GATES.md).
+
 ---
 
 ## Open
+
+### AI still keeps its own copies of skill classification (runtime/AI drift risk)
+
+- **Status:** Open
+- **Surfaced:** 2026-09-29 (0.5.2 release review, AoE caster-exclusion fix)
+- **Reproducer:** `git grep -n "function hasOffensiveSkillComponent\|function hasDamageSkillComponent\|function hasHostileStatusSkillComponent" api/src/services` still lists `ai/stateEvaluator.js`, `ai/actionGenerator.js` and `ai/utilityFactors.js`. `battle/actionProcessor.js` and `ai/cache.js` now share `battle/skillClassification.js`.
+- **Why deferred:** The stateEvaluator/actionGenerator variants differ slightly (`isAllyTargetingSkill`, `isRestorativeSkill`), so folding them in changes AI scoring and needs its own AI regression pass; the release fix only needed runtime and simulator to agree.
+- **Effort:** Medium (move the variants into `skillClassification.js`, reconcile the ally/restorative rules, re-run `npm run test:unit:ai`).
+- **References:** `api/src/services/battle/skillClassification.js`, `api/src/services/ai/stateEvaluator.js:77-148`, `api/src/services/ai/actionGenerator.js:413`, `api/src/services/ai/utilityFactors.js:35`.
+
+### Stale `character_items.is_equipped` column
+
+- **Status:** Open
+- **Surfaced:** 2026-09-29 (0.5.2 release review; guildmaster gear read by `is_equipped`)
+- **Reproducer:** `SELECT count(*) FROM character_items WHERE equipped_slot IS NOT NULL AND is_equipped = false;` is non-zero on dev (18 rows). The equip route (`api/src/routes/inventory.js` equip UPDATE) never writes `is_equipped`; only starter-item inserts do.
+- **Why deferred:** No reader uses it any more (the guildmaster query now filters on `equipped_slot`), so it is latent. Dropping it needs a migration plus touching the starter inserts.
+- **Effort:** Low (migration to drop the column and `idx_character_items_equipped`, remove the writes in `characters.js:345/370` and `registrationService.js:219/243`).
+- **References:** `api/src/services/guildmasterBattleService.js` (`createSoloPlayerUnit`), `api/src/routes/characters.js:345`, `api/src/services/registrationService.js:219`.
+
+### Advancement material progress credits every combatant for one drop
+
+- **Status:** Open
+- **Surfaced:** 2026-09-29 (0.5.2 release review, "bench characters earn progress" finding)
+- **Reproducer:** Win a PvE fight with a 3-character formation where one material drops; `BattleTerminalProgression.applyMutations` calls `updateMaterialProgressWithClient` for each of the 3 combatants with the full quantity.
+- **Why deferred:** Bench characters no longer receive credit (IDs now come from the battle's player units). Whether one drop should count for the whole formation is a design call, not a defect fix.
+- **Effort:** Low (credit materials to the leader or looter only, if design agrees).
+- **References:** `api/src/services/battle/BattleTerminalProgression.js:208-245`, `api/src/routes/battle.js` (PvE victory `partyCharacterIds`).
+
+### Boss summons and death aura are defined but never run
+
+- **Status:** Open
+- **Surfaced:** 2026-09-29 (0.5.2 release, discovery finding 53)
+- **Reproducer:** A boss phase whose `effects.summons` is set transitions without spawning anything, and `applyAuraDamage` is never called. Phase transitions themselves now fire from the player route and the enemy loop (`bossService.checkAllBossTransitions`).
+- **Why deferred:** Spawning units mid-battle touches turn order, the battle map occupancy and the client unit roster; it needs its own design and tests rather than a release-hardening patch.
+- **Effort:** Medium.
+- **References:** `api/src/services/bossService.js` (`checkAllBossTransitions`, `processBossDamage`), `api/src/services/battleTurnManager.js` (enemy loop), `api/src/routes/battle.js` (~1716-1790).
+
+### Battle rejoin after the 30 s disconnect timer is not recorded
+
+- **Status:** Open
+- **Surfaced:** 2026-09-29 (0.5.2 release review, realtime finding 4)
+- **Reproducer:** In a multi-human battle, stay disconnected past the 30 s window, then rejoin. `markRejoined` only commits and broadcasts `player_reconnected` while the in-memory timer still exists, so `state.disconnectedPlayers` keeps the player and others never see the reconnect. Single-human PvE is no longer tracked, so it is unaffected.
+- **Why deferred:** Only multi-human battles reach this path; the fix needs a persisted-state reconciliation on join rather than the timer lookup.
+- **Effort:** Low.
+- **References:** `api/src/services/battleReconnection.js` (`markRejoined`), `api/src/websocket/messageHandlers.js` (`handleJoinBattle`).
+
+### Files over the 3500-line blocking limit
+
+- **Status:** Open
+- **Surfaced:** 2026-09-29 (0.5.2 release; all were already over the limit on main or grew with the cave-pipeline WIP)
+- **Reproducer:** `wc -l frontend/src/scenes/BattleScene.js scripts/battle-art/lifecycle.test.mjs scripts/battle-art/lifecycle.mjs scripts/battle-art/generate.mjs scripts/battle-maps/content-release-lifecycle.mjs` gives 4251, 13137, 8527, 6100 and 3563 (BattleScene was 4084 on main).
+- **Why deferred:** Splitting BattleScene or the battle-art lifecycle mid-release is a large refactor with high regression risk; each needs its own pass per ESTABLISHED_PATTERNS.md section 10.
+- **Effort:** Medium to large each.
+- **References:** `docs/ESTABLISHED_PATTERNS.md` section 10, the files above.
+
+### Remaining UI polish from the 0.5.2 screenshot review
+
+- **Status:** Open
+- **Surfaced:** 2026-09-29 (live screenshot passes, rounds 1-2)
+- **Items:**
+  - The mobile world-map HUD chip renders at about 52x24 CSS px with tiny text (`frontend/src/worldmap/WorldMapHUDPanel.js`).
+  - Marketplace estimated prices are erratic for low-base templates with rolled rarity and augments (`api/src/services/marketplace/itemListings.js` suggested price).
+  - The first click after returning to the world map was intermittently ignored; not reproduced after the rAF change in `frontend/src/worldmap/NodeActionMenu.js`.
+  - The battle soft-lock on a later player turn was not reproduced live; camera callbacks and stranded-turn recovery were fixed from code reading (`frontend/src/battle/BattleCamera.js`, `frontend/src/battle/BattleWebSocketManager.js`). Watch player reports.
+  - The damage preview can overlap the target card and extend past the canvas edge (`frontend/src/scenes/BattleScene.js`).
+  - The battle minimap road fragments do not match the map, and the formation preview's enemy counts and ENEMY label are hard to read (`frontend/src/battle/BattleMinimap.js`, `frontend/src/scenes/BattleFormationScene.js`).
+  - Template descriptions can contradict the rolled material (e.g. a bronze description on an Iron Axe) (`api/src/db/templates/items.js`).
+- **Why deferred:** Low severity or not reproducible; each needs a focused design or content pass.
+- **Effort:** Low each.
+
+### Palace node features have no client handlers
+
+- **Status:** Open
+- **Surfaced:** 2026-09-29 (0.5.2 release, discovery finding 114)
+- **Reproducer:** Open the palace node menu. `throne_room`, `treasury` and `royal_guard` are no longer rendered because nothing handles them, so the palace shows only Fast Travel and Rest.
+- **Why deferred:** Giving the palace real features is content design, and changing `PALACE_FEATURES` requires a world regeneration or migration.
+- **Effort:** Medium.
+- **References:** `api/src/db/worldgen/constants.js` (`PALACE_FEATURES`), `frontend/src/worldmap/NodeActionMenu.js` (`HANDLED_FEATURES`).
+
+### Asset URLs are not versioned, so regenerated art can stay cached
+
+- **Status:** Open
+- **Surfaced:** 2026-09-29 (0.5.2 art regeneration: coliseum icon, female dwarf portraits, Shocking augment icon)
+- **Reproducer:** A browser that cached `/assets/.../dwarf_female_*.webp` before the deploy keeps the bearded portrait until its cache entry expires. Asset paths from `shared/assetPaths.js` have no hash or version query.
+- **Why deferred:** Needs a cache-busting scheme across `shared/assetPaths.js` and the nginx cache headers for `/assets/`.
+- **Effort:** Low to medium.
+- **References:** `shared/assetPaths.js`, `frontend/vite.config.js` (dev sets `Cache-Control: no-cache` only), `deploy.yaml` nginx template.
+
+### Frontend tests collide with a running dev server; `node --watch` misses reloads
+
+- **Status:** Open
+- **Surfaced:** 2026-09-29 (0.5.2 release verification)
+- **Reproducer:** With `npm run dev` running, `npm run test -w frontend` fails 5-8 Vite-booting test files with `Port 24678 is already in use` or `ENOSPC: System limit for number of file watchers reached`; each passes when run alone. Under the same inotify pressure the API's `node --watch` stopped restarting and served stale code for hours.
+- **Why deferred:** Environmental; the fix is test isolation (disable HMR and watchers in test Vite instances) and documenting `fs.inotify.max_user_watches`.
+- **Effort:** Low.
+- **References:** `frontend/src/scenes/__tests__/BattleScene*.test.js`, `frontend/vite.config.js`, `api/package.json` (`dev` script).
 
 ### PM2 daemon does not auto-recover; 8-day silent outage on 2026-05-07
 
@@ -18,17 +116,8 @@ Issues identified during work but deliberately deferred. When closed, **delete t
   - `/home/modia/.pm2/pm2.log` on mittonvillage.com
   - `deploy.yaml` Phase 5b — `pm2[modia-api] script=api/src/index.js mode=fork(singleton)`
   - `docs/DEPLOYMENT.md`
-- **Companion ask:** Consider also adding external uptime monitoring against `https://modia.mittonvillage.com/api/health` so the next outage is detected in minutes, not days. (Out of scope for this repo; tracking here as a pointer.)
-
-### Server-side charset validation missing on other user-named entities
-
-- **Status:** Open
-- **Surfaced:** 2026-05-28 (security audit pre-public; flagged by security-auditor re-scan)
-- **Reproducer:** Create a clan/party/LFG post with a name containing `<img src=x onerror=...>`. It is stored (parameterized query, so no SQLi) and rendered. XSS is currently blocked at render because the client now `escapeHtml()`s these in `ClanTab.js`/`PartyTab.js`/`LFGTab.js`, but there is no server-side charset gate like the one added for character names.
-- **Why deferred:** The render-side escaping (shipped in this audit) closes the actual XSS. Server-side validation is defense-in-depth and touches several create/update paths; out of scope for the pre-public hardening pass.
-- **Why it matters:** Defense-in-depth — a future template that forgets to escape one of these would reintroduce stored XSS. Mirrors the character-name fix.
-- **Effort:** Low–Medium. Reuse the pattern in `api/src/utils/nameValidation.js`; apply a (looser, allows longer text) validator to: clan name (`api/src/services/clanService.js` ~line 90), party name (`api/src/routes/party.js` ~line 225), LFG title/description (`api/src/routes/lfg.js` ~lines 149-150). Clan tags already validated (`api/src/routes/clans.js:54`).
-- **References:** `api/src/utils/nameValidation.js` (reuse), `frontend/src/social/tabs/{ClanTab,PartyTab,LFGTab}.js` (render-side escaping already in place).
+- **Companion ask:** External uptime monitoring is tracked as a standing gate in `docs/operations/RELEASE_GATES.md`.
+- **Upstream:** `lsd` (lifestream-deploy) now runs `EnsureSystemdUnit` in deploy preflight (`internal/target/vps/services.go`), installing `pm2-modia.service`. Close this entry once `systemctl is-enabled pm2-modia` reports `enabled` on the VPS after the next deploy.
 
 ### Deferred LOW-severity hardening from pre-public security audit
 
@@ -55,22 +144,3 @@ Issues identified during work but deliberately deferred. When closed, **delete t
 - **Effort:** Medium each.
 - **References:** `api/src/tests/ratelimit/`, `api/src/middleware/rateLimiterFactory.js`, `e2e/auth.spec.js`, CLAUDE.md (Canvas 2D auth scene).
 
-### Stale character-creation integration tests (predate guild-recruitment gate)
-
-- **Status:** Open
-- **Surfaced:** 2026-05-29 (during dependency-remediation verification)
-- **Reproducer:** Run `api/src/tests/integration/characters.integration.test.js` against a seeded DB. 5 tests fail: "create characters of different races/classes" expect 201 but get 400, "reject duplicate character name" expects 409 but gets 400, "delete character successfully" throws a TypeError, and one dependent inventory test fails. The route now gates manual creation: `api/src/routes/characters.js:100` throws `"Cannot create characters manually. Use guild recruitment."` (400) once a user has their starting character. The tests predate that gameplay change and still assume free multi-character creation.
-- **Why deferred:** Confirmed pre-existing and unrelated to the dependency-remediation work — `git diff main..HEAD` for `characters.js` and the test files is empty (byte-identical to main). Fixing stale gameplay tests is out of scope for a security upgrade.
-- **Why it matters:** These 5 failures mask the real signal in the integration suite — a green characters suite would let genuine regressions surface. They should be rewritten against the guild-recruitment flow (or the tests deleted if superseded).
-- **Effort:** Medium. Rewrite character-creation tests to go through guild recruitment (`api/src/routes/clans.js` / recruitment services), or assert the new 400 gate. Fix the DELETE test's TypeError separately.
-- **References:** `api/src/routes/characters.js:94-100` (recruitment gate), `api/src/tests/integration/characters.integration.test.js`, `api/src/tests/integration/inventory.integration.test.js`.
-
-### No max-length validation on passwords (bcrypt 72-byte silent truncation)
-
-- **Status:** Open
-- **Surfaced:** 2026-05-29 (flagged by security-auditor during the bcrypt 5→6 upgrade; pre-existing, not a regression)
-- **Reproducer:** Register with a password longer than 72 UTF-8 bytes. `auth.js:30` enforces only a minimum (`password.length < 8`); there is no maximum. bcrypt silently truncates input at 72 bytes, so bytes beyond 72 are ignored — two distinct long passwords sharing a 72-byte prefix would authenticate interchangeably.
-- **Why deferred:** Not a regression (bcrypt 6 did not change truncation behavior) and out of scope for the dependency-remediation pass. Exploit value is low (requires a >72-byte password and a shared prefix).
-- **Why it matters:** Defense-in-depth + user clarity — silent truncation is surprising and weakens entropy for very long passphrases.
-- **Effort:** Low. Add a max-length check (e.g. reject > 72 bytes, or pre-hash with SHA-256 to bcrypt) alongside the existing min-length gate in `api/src/routes/auth.js:30` and `api/src/services/registrationService.js`.
-- **References:** `api/src/routes/auth.js:15,30` (SALT_ROUNDS=12, min-length), `api/src/services/registrationService.js:22`.

@@ -4,6 +4,15 @@ All notable changes to Modia.
 
 ## 0.5
 
+- 0.5.2: Release hardening: about 100 verified defects fixed across economy, combat, social, realtime and UI
+  - **Upgrade note:** migration 067 purges bcrypt-hashed refresh sessions, so every signed-in player logs in once more after deploy. Migrations 062-067 run in the post-deploy hook; 065 and 066 take short exclusive locks on users and characters (5 s lock timeout), so deploy in a quiet window.
+  - **Economy:** complete marketplace fills no longer fail on the escrow CHECK constraint; a whole-stack rolled-price gold exploit and NPC-shop self-restocking are closed; listings, the Merchant's Seal fee, price-improvement refunds, rarity-aware NPC sell prices, potions, equip-slot validation and obtainable relics all work; characters with trade history can be deleted.
+  - **Combat:** rolled item stats and augments (including crit and lifesteal) apply in PvE, coliseum and advancement battles; area skills no longer hit their caster; buffs and debuffs change combat through a status-effect registry; skills can miss and statuses can be resisted; boss phases fire on AoE and DoT damage; the mutual-knockout soft-lock is fixed; the damage preview matches the server.
+  - **Social:** multiplayer parties, invites and LFG work (every call returned 500); blocking is enforced and cannot be erased by the blocked user; privacy settings are enforced server-side; clan leadership can be transferred; clan, party and LFG names are validated server-side.
+  - **Accounts and quests:** refresh-token rotation and per-session logout work; passwords over 72 bytes are rejected; login streaks, visit quests, daily bonuses and party advancement progress count correctly; the quest-board creation race is fixed.
+  - **Realtime:** session replacement, reconnect room rejoin, the coliseum forfeit timer, ELO direction and the token-refresh false reconnect are fixed.
+  - **UI:** items and augments render identically across shop, item detail, equip modal, marketplace and tables; accurate stats and augment icons; mobile layouts for shop, marketplace, social hub and world map; parchment confirms in battle; registration uses game art; regenerated coliseum icon, female dwarf portraits and augment and trait icons.
+  - **Testing:** chromium e2e runs against the real stack; the rate-limit suite runs through its own runner; new integration suites for fills, parties, LFG, blocking, privacy and quests; BATS tests for the secrets scanner.
 - 0.5.0: Major security and feature improvements with social system integration and world content expansion
   - **Security Improvements:** Sanitized admin error responses to prevent sensitive data exposure, hard-rejected stale battle action sequences with 409 status codes, extracted battle action sequence validation to dedicated service  
   - **World Content:** Added distance-tier chest loot system with `chestLootService.js` for balanced item rewards, implemented lore content system with 48 curated entries in `shared/loreContent.js` covering regional history and ancient knowledge
