@@ -13,15 +13,10 @@ import { Icon } from '../components/Icon.js';
 import { ItemIcon } from '../components/ItemIcon.js';
 import { ItemDataTable } from '../components/ItemDataTable/index.js';
 import { renderAugmentList } from '../components/AugmentList.js';
+import { renderItemStatRows } from '../components/ItemStatRows.js';
 import { parchmentConfirm } from '../ui/parchment/parchmentConfirm.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
 import {
-  formatStatName,
-  formatStatValue,
-  formatStatAmount,
-  sumItemStats,
-  formatItemEffects,
-  ITEM_EFFECT_KEYS,
   normalizeRarity,
   RARITY_TEXT_COLORS
 } from '../utils/statDisplay.js';
@@ -670,20 +665,6 @@ export class ShopScene extends Scene {
         font-weight: bold;
       }
 
-      .detail-stat-value.positive {
-        color: ${P.state.success};
-      }
-
-      .detail-stat-value.negative {
-        color: ${P.state.error};
-      }
-
-      .detail-stat-row.effect-row .detail-stat-value {
-        color: ${P.text.primary};
-        font-weight: normal;
-        text-align: right;
-      }
-
       .detail-stat-row.requirement-row .detail-stat-value {
         color: ${P.text.primary};
       }
@@ -1296,53 +1277,14 @@ export class ShopScene extends Scene {
 
   /**
    * Render stats for the detail panel.
-   * Sell items carry rolled baseStats + bonusStats (a bonus that shares a key
-   * with a base stat adds to it); buy items carry template statBonuses.
-   * Consumable effects (potions, scrolls, boxes) are listed as effect rows.
+   * Stats and consumable effects come from the shared ItemStatRows block and
+   * augments from AugmentList, so an item reads the same here as in the item
+   * detail modal, equip modal and marketplace panels.
    * @param {Object} item - Item data
    * @returns {string} HTML string
    */
   renderDetailStats(item) {
-    const hasRolledStats = Object.keys(item.baseStats || {}).length > 0
-      || Object.keys(item.bonusStats || {}).length > 0;
-    const stats = sumItemStats(hasRolledStats
-      ? item
-      : { baseStats: item.statBonuses || item.stat_bonuses || {} });
-
-    let html = '';
-    for (const [key, value] of Object.entries(stats)) {
-      // Effect keys stored in stat bonuses are rendered as effect rows below
-      if (ITEM_EFFECT_KEYS.has(key)) continue;
-      if (typeof value === 'boolean') {
-        html += `
-        <div class="detail-stat-row">
-          <span class="detail-stat-label">${escapeHtml(formatStatValue(key, value))}</span>
-        </div>
-      `;
-        continue;
-      }
-      const signClass = value > 0 ? 'positive' : (value < 0 ? 'negative' : '');
-      html += `
-        <div class="detail-stat-row">
-          <span class="detail-stat-label">${escapeHtml(formatStatName(key))}</span>
-          <span class="detail-stat-value ${signClass}">${escapeHtml(formatStatAmount(key, value))}</span>
-        </div>
-      `;
-    }
-
-    // Skip an effect line the description already states word for word
-    // ("Restores 50 HP when consumed." + "Effect: Restores 50 HP").
-    const normalize = (text) => String(text || '').toLowerCase().replace(/[^a-z0-9%]+/g, ' ').trim();
-    const description = normalize(item.description);
-    for (const line of formatItemEffects(item)) {
-      if (description && description.includes(normalize(line))) continue;
-      html += `
-        <div class="detail-stat-row effect-row">
-          <span class="detail-stat-label">Effect</span>
-          <span class="detail-stat-value">${escapeHtml(line)}</span>
-        </div>
-      `;
-    }
+    let html = renderItemStatRows(item);
 
     const levelRequirement = Number(item.levelRequirement ?? item.level_requirement) || 0;
     if (levelRequirement > 1) {

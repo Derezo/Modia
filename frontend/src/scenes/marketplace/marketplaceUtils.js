@@ -2,13 +2,8 @@
  * Marketplace Utilities - Shared helper functions
  */
 
-import {
-  normalizeRarity,
-  formatStatName as formatSharedStatName,
-  formatStatAmount,
-  sumItemStats
-} from '../../utils/statDisplay.js';
-import { escapeHtml } from '../../utils/escapeHtml.js';
+import { normalizeRarity } from '../../utils/statDisplay.js';
+import { renderItemStatRows } from '../../components/ItemStatRows.js';
 
 /**
  * Format a date/time for display
@@ -50,33 +45,15 @@ export function getRarityName(rarity) {
 }
 
 /**
- * Format stat name for display
- * @param {string} stat - Stat key name
- * @returns {string} Formatted stat name
- */
-export function formatStatName(stat) {
-  return formatSharedStatName(stat, true);
-}
-
-/**
- * Format listing stats for display
- * @param {Object} listing - Listing data
- * @returns {string} HTML string of stats
+ * Format listing stats for display: the shared ItemStatRows block (full stat
+ * names, "(+X base +Y bonus)" breakdowns, consumable effects as effect rows),
+ * so the seller's Sell / My Listings panels read the same as the buyer's
+ * listing cards, the item detail modal and the shop.
+ * @param {Object} listing - Listing or sellable item (baseStats/bonusStats)
+ * @returns {string} HTML string of stats ('' when there are none)
  */
 export function formatListingStats(listing) {
-  // Sum base and bonus stats per key (a bonus adds to the base value)
-  const stats = sumItemStats(listing);
-  const entries = Object.entries(stats);
-
-  if (entries.length === 0) return '';
-
-  return entries.map(([k, v]) => {
-    const color = typeof v === 'number' && v < 0 ? '#8b2a2a' : '#3d6b35';
-    return `<div style="display: flex; justify-content: space-between; padding: 2px 0;">
-      <span style="color: #5a4a3a;">${escapeHtml(formatSharedStatName(k))}</span>
-      <span style="color: ${color}; font-family: Georgia, serif; font-variant-numeric: tabular-nums;">${escapeHtml(formatStatAmount(k, v))}</span>
-    </div>`;
-  }).join('');
+  return renderItemStatRows(listing);
 }
 
 /**

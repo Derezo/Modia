@@ -1507,3 +1507,96 @@ describe('BattleWebSocketManager stranded local turn recovery', () => {
     assert.equal(getRecoverArgs(), null);
   });
 });
+
+describe('BattleWebSocketManager End Turn confirm dialog cleanup', () => {
+  it('calls closeWaitConfirmDialog on turn_start (Finding 6)', async () => {
+    const player = createUnit('player');
+    const enemy = createUnit('enemy', { type: 'enemy', ownerId: null });
+    const { manager, scene } = createHarness([player, enemy]);
+    let closeWaitConfirmDialogCalls = 0;
+
+    scene.game.localUserId = 1;
+    scene.battleState.activeUnitId = player.id;
+    scene.ui = {
+      updateTurnOrder() {},
+      showTurnIndicator() {}
+    };
+    scene.closeWaitConfirmDialog = () => {
+      closeWaitConfirmDialogCalls++;
+    };
+    scene.recoverLocalTurn = () => true;
+
+    // Process a turn_start event for enemy turn
+    await manager.processTurnStartEvent({
+      type: 'turn_start',
+      unitId: enemy.id,
+      unitName: 'Enemy',
+      unitType: 'enemy',
+      position: null
+    });
+
+    assert.equal(closeWaitConfirmDialogCalls, 1,
+      'turn_start should call closeWaitConfirmDialog');
+  });
+
+  it('calls closeWaitConfirmDialog on turn_skipped for local player (Finding 6)', (t) => {
+    const player = createUnit('player');
+    const { manager, scene } = createHarness([player]);
+    let closeWaitConfirmDialogCalls = 0;
+
+    scene.game = {
+      localUserId: 1,
+      user: { id: 1 },
+      audio: { playUI() {} }
+    };
+    scene.closeWaitConfirmDialog = () => {
+      closeWaitConfirmDialogCalls++;
+    };
+    scene.pvpUI = { showTimeoutWarning() {} };
+    scene.stopPvPTurnTimer = () => {};
+
+    // Stub parchmentToast to avoid DOM access
+    const previousWarning = parchmentToast.warning;
+    parchmentToast.warning = () => {};
+    t.after(() => { parchmentToast.warning = previousWarning; });
+
+    // Simulate turn_skipped for local player
+    manager.handleTurnSkipped({
+      playerId: 1,
+      timeoutsRemaining: 2,
+      reason: 'timeout'
+    });
+
+    assert.equal(closeWaitConfirmDialogCalls, 1,
+      'turn_skipped for local player should call closeWaitConfirmDialog');
+  });
+
+  it('does NOT call closeWaitConfirmDialog on turn_skipped for opponent', (t) => {
+    const player = createUnit('player');
+    const { manager, scene } = createHarness([player]);
+    let closeWaitConfirmDialogCalls = 0;
+
+    scene.game = {
+      localUserId: 1,
+      user: { id: 1 }
+    };
+    scene.closeWaitConfirmDialog = () => {
+      closeWaitConfirmDialogCalls++;
+    };
+
+    // Stub parchmentToast to avoid DOM access
+    const previousInfo = parchmentToast.info;
+    parchmentToast.info = () => {};
+    t.after(() => { parchmentToast.info = previousInfo; });
+
+    // Simulate turn_skipped for opponent (different player ID)
+    manager.handleTurnSkipped({
+      playerId: 2,
+      timeoutsRemaining: 2,
+      reason: 'timeout'
+    });
+
+    assert.equal(closeWaitConfirmDialogCalls, 0,
+      'turn_skipped for opponent should NOT call closeWaitConfirmDialog');
+  });
+});

@@ -764,8 +764,11 @@ export function calculateDamagePreview(attacker, defender, skill) {
   const hitChance = (skill && !isAllyTargeting)
     ? calculateHitChance(attacker, defender) * skillAccuracy
     : (skill ? 1.0 : calculateHitChance(attacker, defender));
-  const critChance = calculateCritChance(attacker);
-  const critMultiplier = calculateCritMultiplier(attacker);
+  // Include equipment augment crit bonuses for preview accuracy
+  const equipCritBonus = attacker.equipmentAugmentEffects?.crit_chance || 0;
+  const equipCritDamage = attacker.equipmentAugmentEffects?.crit_damage || 0;
+  const critChance = calculateCritChance(attacker, equipCritBonus);
+  const critMultiplier = calculateCritMultiplier(attacker) + equipCritDamage;
 
   // Apply multi-hit multiplier
   const totalMinDamage = damageData.minDamage * hits;
@@ -906,8 +909,11 @@ export function calculateDamagePreviewWithElevation(attacker, defender, skill, o
     ? calculateHitChance(attacker, defender, elevAccuracyMod, 0) * skillAccuracy
     : (skill ? 1.0 : calculateHitChance(attacker, defender, elevAccuracyMod, 0));
 
-  const critChance = calculateCritChance(attacker);
-  const critMultiplier = calculateCritMultiplier(attacker);
+  // Include equipment augment crit bonuses for preview accuracy
+  const equipCritBonus = attacker.equipmentAugmentEffects?.crit_chance || 0;
+  const equipCritDamage = attacker.equipmentAugmentEffects?.crit_damage || 0;
+  const critChance = calculateCritChance(attacker, equipCritBonus);
+  const critMultiplier = calculateCritMultiplier(attacker) + equipCritDamage;
   const critDamage = Math.floor(elevModifiedMaxDamage * critMultiplier);
 
   // Will this kill the target at max damage?

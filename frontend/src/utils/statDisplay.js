@@ -528,14 +528,18 @@ export function normalizeRarity(rarity) {
 /**
  * Sum an item's base and bonus stats per key. A bonus stat that shares a key
  * with a base stat adds to it (it does not replace it). Boolean flags are kept
- * as-is; non-numeric values are skipped.
+ * as-is; non-numeric values are skipped. Consumable effect keys that some
+ * templates keep in their stat bonuses (ITEM_EFFECT_KEYS, e.g. hp_restore)
+ * are not stats and are dropped unless options.includeEffects is set; show
+ * them with formatItemEffects instead.
  * @param {Object|null} item - Item with baseStats/bonusStats
  * @param {Object} [options]
  * @param {boolean} [options.includeCombat=false] - Also include item.attack / item.defense
+ * @param {boolean} [options.includeEffects=false] - Keep ITEM_EFFECT_KEYS entries
  * @returns {Object} Summed stats
  */
 export function sumItemStats(item, options = {}) {
-  const { includeCombat = false } = options;
+  const { includeCombat = false, includeEffects = false } = options;
   const stats = {};
   if (!item) return stats;
 
@@ -547,6 +551,8 @@ export function sumItemStats(item, options = {}) {
   for (const source of [item.baseStats, item.bonusStats]) {
     if (!source || typeof source !== 'object') continue;
     for (const [key, value] of Object.entries(source)) {
+      // ITEM_EFFECT_KEYS is declared further down; this runs after module load
+      if (!includeEffects && ITEM_EFFECT_KEYS.has(key)) continue;
       if (typeof value === 'boolean') {
         if (value) stats[key] = true;
         continue;
@@ -563,6 +569,73 @@ export function sumItemStats(item, options = {}) {
   }
 
   return orderStats(stats);
+}
+
+/**
+ * The "(+10 base +3 bonus)" note shown when an augment bonus adds to a base
+ * value of the same stat. Empty when either part is zero.
+ * @param {string} key - Stat key
+ * @param {number} base - Base value
+ * @param {number} bonus - Bonus value
+ * @returns {string} Breakdown text, or ''
+ */
+export function formatStatBreakdown(key, base, bonus) {
+  const baseValue = Number(base) || 0;
+  const bonusValue = Number(bonus) || 0;
+  if (!baseValue || !bonusValue) return '';
+  return `(${formatStatAmount(key, baseValue)} base ${formatStatAmount(key, bonusValue)} bonus)`;
+}
+
+/**
+ * The base/bonus stat sources of an item in any of the API's shapes.
+ * Inventory, sell and listing rows carry baseStats/bonusStats; shop buy rows
+ * and templates carry statBonuses (or snake_case stat_bonuses) instead.
+ * @param {Object|null} item - Item
+ * @returns {{baseStats: Object, bonusStats: Object}}
+ */
+export function getItemStatSources(item) {
+  const isFilled = (obj) => Boolean(obj) && typeof obj === 'object' && Object.keys(obj).length > 0;
+  if (!item) return { baseStats: {}, bonusStats: {} };
+  if (isFilled(item.baseStats) || isFilled(item.bonusStats)) {
+    return { baseStats: item.baseStats || {}, bonusStats: item.bonusStats || {} };
+  }
+  const template = item.statBonuses || item.stat_bonuses;
+  return { baseStats: isFilled(template) ? template : {}, bonusStats: {} };
+}
+
+/**
+ * The stat rows every item detail view shows (item detail modal, equip
+ * modal, shop detail, marketplace panels): full stat names, the summed
+ * base + bonus amount, and the base/bonus breakdown when both exist.
+ * Consumable effect keys are excluded (see formatItemEffects).
+ * @param {Object|null} item - Item
+ * @returns {Array<{key: string, label: string, amount: string, breakdown: string, negative: boolean, flag: boolean}>}
+ */
+export function getItemStatRows(item) {
+  if (!item) return [];
+  const { baseStats, bonusStats } = getItemStatSources(item);
+  const summed = sumItemStats({
+    attack: item.attack,
+    defense: item.defense,
+    baseStats,
+    bonusStats
+  }, { includeCombat: true });
+  const rows = [];
+  for (const [key, value] of Object.entries(summed)) {
+    if (typeof value === 'boolean') {
+      if (value) rows.push({ key, label: formatStatName(key), amount: '', breakdown: '', negative: false, flag: true });
+      continue;
+    }
+    rows.push({
+      key,
+      label: formatStatName(key),
+      amount: formatStatAmount(key, value),
+      breakdown: formatStatBreakdown(key, baseStats[key], bonusStats[key]),
+      negative: value < 0,
+      flag: false
+    });
+  }
+  return rows;
 }
 
 /**
@@ -844,6 +917,33 @@ export function describeAugment(augment) {
 }
 
 /**
+ * The one wording of an augment line, shared by the HTML augment list
+ * (components/AugmentList.js) and the plain-text tooltips in item tables.
+ * A stat_bonus augment's whole effect, and a rolled augment's stat roll, are
+ * already summed into the item's stats, so the number is not repeated: the
+ * line points up with "included above" instead. Effects the server does not
+ * apply yet are flagged inactive.
+ * @param {Object|string} aug - Augment
+ * @returns {{label: string, effect: string, statText: string, includedAbove: boolean, inactive: boolean, text: string}}
+ */
+export function describeAugmentLine(aug) {
+  const { name, effect: effectText, statText, active } = describeAugment(aug);
+  const isObject = typeof aug === 'object' && aug !== null;
+  const isStatBonus = isObject && aug.effect?.type === 'stat_bonus';
+  const includedAbove = isStatBonus || Boolean(statText);
+  const effect = isStatBonus ? '' : effectText;
+  const label = name || (isStatBonus ? 'Stat bonus' : '');
+  const inactive = isObject && !active && Boolean(effect);
+  if (!label && !effect) {
+    return { label: '', effect: '', statText, includedAbove: false, inactive: false, text: '' };
+  }
+  const head = label && effect ? `${label}: ${effect}` : (label || effect);
+  const note = includedAbove ? ` (${effect ? 'stat bonus ' : ''}included above)` : '';
+  const tag = inactive ? ' - not yet active' : '';
+  return { label, effect, statText, includedAbove, inactive, text: `${head}${note}${tag}` };
+}
+
+/**
  * The item's material, for a material chip, only when its name agrees.
  * Soft bases (leather, cloth, wood) keep their own name when generated, so a
  * rolled "iron" on "Exalted Leather Helm" would contradict the name.
@@ -1057,12 +1157,16 @@ export default {
   formatStatChanges,
   normalizeRarity,
   sumItemStats,
+  formatStatBreakdown,
+  getItemStatSources,
+  getItemStatRows,
   calculateItemPower,
   resolveAugmentIconName,
   resolveAugmentOverlayId,
   resolveAugmentOverlayIds,
   isAugmentEffectActive,
   describeAugment,
+  describeAugmentLine,
   matchesEquipmentSlot,
   getEquipRestriction,
   canCharacterEquip,

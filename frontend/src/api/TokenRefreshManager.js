@@ -149,7 +149,12 @@ export class TokenRefreshManager {
       // Update WebSocket token if connected
       if (this.game.socket?.connected) {
         this.game.socket.token = result.accessToken;
-        this.game.socket.send('auth', { token: result.accessToken });
+        // Send connectionId with re-auth so the server keeps the client's
+        // connectionId instead of minting a new one (server_<id>_<ts>)
+        this.game.socket.send('auth', {
+          token: result.accessToken,
+          connectionId: this.game.socket.connectionId
+        });
       }
 
       // Schedule next refresh

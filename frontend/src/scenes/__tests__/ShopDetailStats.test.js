@@ -52,14 +52,15 @@ const render = (item) => ShopScene.prototype.renderDetailStats.call({}, item);
 describe('ShopScene detail stats', () => {
   it('sums rolled base and bonus stats for the same key', () => {
     const html = render({ baseStats: { strength: 5 }, bonusStats: { strength: 3, agility: 2 } });
-    assert.match(html, /Strength<\/span>\s*<span class="detail-stat-value positive">\+8</);
-    assert.match(html, /Agility/);
+    // Shared ItemStatRows block: summed +8 with the base/bonus breakdown
+    assert.match(html, /Strength<\/span>\s*<span class="item-stat-value">\+8<span class="item-stat-breakdown">\(\+5 base \+3 bonus\)</);
+    assert.match(html, /Agility<\/span>\s*<span class="item-stat-value">\+2</);
   });
 
   it('marks negative stats as negative, not positive', () => {
     const html = render({ statBonuses: { agility: -2, vitality: 4 } });
-    assert.match(html, /detail-stat-value negative">-2</);
-    assert.match(html, /detail-stat-value positive">\+4</);
+    assert.match(html, /Agility<\/span>\s*<span class="item-stat-value item-stat-value--negative">-2</);
+    assert.match(html, /Vitality<\/span>\s*<span class="item-stat-value">\+4</);
   });
 
   it('uses readable stat names instead of raw keys', () => {
@@ -69,8 +70,7 @@ describe('ShopScene detail stats', () => {
 
   it('renders potion effects as effect rows, not as +N stats', () => {
     const html = render({ statBonuses: { hp_restore: 150 }, type: 'consumable' });
-    assert.match(html, /effect-row/);
-    assert.match(html, /Restores 150 HP/);
+    assert.match(html, /item-stat-row--effect">\s*<span class="item-stat-label">Effect<\/span>\s*<span class="item-stat-value">Restores 150 HP</);
     assert.doesNotMatch(html, /\+150/);
 
     const caravan = render({ effect: { hp_restore: 200, mp_restore: 100 } });

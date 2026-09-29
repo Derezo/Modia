@@ -28,7 +28,7 @@ import {
 } from '../services/coliseum/turnTimer.js';
 import { disconnectTracking } from '../services/coliseum/constants.js';
 import { recordReconnection } from '../services/ratingService.js';
-import { cancelDisconnect as cancelBattleDisconnect } from '../services/battleReconnection.js';
+import { markRejoined as markBattleRejoined } from '../services/battleReconnection.js';
 // Note: partyWebsocket is no longer imported here - party invites are handled via REST API
 import adminGenerationService from '../services/adminGenerationService.js';
 import audioGenerationService from '../services/adminAudioGenerationService.js';
@@ -614,7 +614,7 @@ async function handleColiseumFormationSubmit(ws, userId, payload) {
 /**
  * Handle join battle
  */
-async function handleJoinBattle(ws, userId, payload) {
+async function handleJoinBattle(ws, userId, username, payload) {
   if (!userId) return;
   try {
     const { battleId, battleMapCapabilities } = payload || {};
@@ -677,9 +677,12 @@ async function handleJoinBattle(ws, userId, payload) {
       payload: joinedPayload
     }));
 
-    // Cancel any pending disconnect abandon timeout for ALL battle types.
-    // This prevents the 30s abandon timer from firing after a WS blip/reconnect.
-    cancelBattleDisconnect(numericBattleId, userId);
+    // Mark the player as rejoined if they were in disconnectedPlayers tracking.
+    // This cancels the 30s abandon timer, commits the reconnect to persisted
+    // state, and broadcasts player_reconnected so co-op partners see it.
+    markBattleRejoined(numericBattleId, userId, username || 'Unknown').catch(err => {
+      console.error('Failed to mark battle rejoined:', err);
+    });
 
     // For pvp_coliseum battles, also handle coliseum-specific reconnect tracking
     if (syncState.battle?.battleType === 'pvp_coliseum') {

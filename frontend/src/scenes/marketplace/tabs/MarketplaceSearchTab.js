@@ -6,16 +6,11 @@ import { ItemDataTable } from '../../../components/ItemDataTable/index.js';
 import { marketConfirmDialog } from '../../../components/MarketConfirmDialog.js';
 import { ItemIcon } from '../../../components/ItemIcon.js';
 import { parchmentToast } from '../../../ui/parchment/ParchmentToast.js';
-import { getRarityName, formatStatName, RARITY_COLORS } from '../marketplaceUtils.js';
+import { getRarityName, RARITY_COLORS } from '../marketplaceUtils.js';
 import { loadOrderBook, renderOrderBookAndTrade, initMarketDashboard } from './MarketplaceTradePanel.js';
-import { escapeHtml, escapeHtmlAttribute } from '../../../utils/escapeHtml.js';
-import {
-  formatStatAmount,
-  sumItemStats,
-  describeAugment,
-  resolveAugmentIconName
-} from '../../../utils/statDisplay.js';
-import { Icon } from '../../../components/Icon.js';
+import { escapeHtml } from '../../../utils/escapeHtml.js';
+import { renderItemStatRows } from '../../../components/ItemStatRows.js';
+import { renderAugmentList } from '../../../components/AugmentList.js';
 
 /**
  * Render the Search/Browse tab
@@ -283,25 +278,11 @@ function renderEquipmentListingCard(listing, templateItem, index) {
     sellerName
   } = listing;
 
-  // Sum base and bonus stats per key (a bonus adds to the base value)
-  const summed = sumItemStats({ baseStats, bonusStats });
-  const statsHtml = Object.entries(summed)
-    .map(([stat, val]) => {
-      const isBonus = Number((bonusStats || {})[stat]) > 0;
-      const amount = formatStatAmount(stat, val);
-      return `<span class="stat-badge${isBonus ? ' bonus' : ''}">${escapeHtml(amount ? `${amount} ${formatStatName(stat)}` : formatStatName(stat))}</span>`;
-    })
-    .join('');
-
-  // Augments: icon + effect text, affix name as tooltip
-  const augmentsHtml = (augments || []).map(aug => {
-    if (typeof aug === 'string') {
-      return `<span class="augment-badge">${escapeHtml(aug)}</span>`;
-    }
-    const { name, effect, text } = describeAugment(aug);
-    const icon = Icon.html('augments', resolveAugmentIconName(aug), { size: 'sm', title: name || effect }) || '';
-    return `<span class="augment-badge" title="${escapeHtmlAttribute(text)}" style="display: inline-flex; align-items: center; gap: 3px;">${icon}${escapeHtml(effect || name)}</span>`;
-  }).join('');
+  // Same stat block and augment lines as the seller's Sell / My Listings
+  // panels and the item detail modal: a stat_bonus augment is not printed a
+  // second time next to the summed stat, and inactive effects are tagged
+  const statsHtml = renderItemStatRows({ baseStats, bonusStats });
+  const augmentsHtml = renderAugmentList(augments || []);
 
   // Rarity may arrive as a 1-5 number for generated items
   const rarityName = getRarityName(rarity);
@@ -335,11 +316,8 @@ function renderEquipmentListingCard(listing, templateItem, index) {
           <div style="font-size: 12px; color: #7a6a5a;">by ${escapeHtml(sellerName || '')}</div>
         </div>
       </div>
-      ${(statsHtml || augmentsHtml) ? `
-        <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; font-size: 12px;">
-          ${statsHtml}${augmentsHtml}
-        </div>
-      ` : ''}
+      ${statsHtml ? `<div style="margin-bottom: 6px;">${statsHtml}</div>` : ''}
+      ${augmentsHtml ? `<div style="margin-bottom: 8px;">${augmentsHtml}</div>` : ''}
       <button class="equipment-buy-btn" data-listing-id="${listingId}" style="
         width: 100%;
         padding: 6px 12px;

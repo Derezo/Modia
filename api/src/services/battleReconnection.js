@@ -452,6 +452,44 @@ function cancelDisconnect(battleId, playerId) {
 }
 
 /**
+ * Mark a player as rejoined after they reconnect via WebSocket join_battle.
+ * This does the full reconnect commit and broadcast that cancelDisconnect skips.
+ *
+ * Only performs the commit/broadcast if the player was actually in the
+ * disconnectedPlayers tracking; a normal first join is a no-op.
+ *
+ * @param {number} battleId - Battle ID
+ * @param {number} playerId - Player ID
+ * @param {string} playerName - Player's display name
+ * @returns {Promise<{cancelled: boolean, committed: boolean}>}
+ */
+async function markRejoined(battleId, playerId, playerName) {
+  // First, cancel the in-memory timeout
+  const wasCancelled = cancelDisconnect(battleId, playerId);
+
+  // If the player was not tracked as disconnected, no need to do anything
+  if (!wasCancelled) {
+    return { cancelled: false, committed: false };
+  }
+
+  console.log(`[Reconnection] Player ${playerName} (${playerId}) rejoined battle ${battleId} via WebSocket`);
+
+  // Update persisted state to reflect reconnection
+  const committedState = await updateBattleDisconnectState(battleId, playerId, false);
+
+  if (committedState?.committed) {
+    // Broadcast state update if there was one
+    if (committedState.update) {
+      await battleWebsocket.broadcastStateUpdate(battleId, committedState.update);
+    }
+    // Notify other players of reconnection
+    battleWebsocket.broadcastPlayerReconnected(battleId, playerId, playerName);
+  }
+
+  return { cancelled: true, committed: !!committedState?.committed };
+}
+
+/**
  * Check if a player is currently disconnected from a battle
  * @param {number} battleId - Battle ID
  * @param {number} playerId - Player ID
@@ -520,6 +558,7 @@ export {
   handleReconnect,
   handleAbandonTimeout,
   cancelDisconnect,
+  markRejoined,
   isPlayerDisconnected,
   getDisconnectedPlayers,
   cleanupBattle,

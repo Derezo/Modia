@@ -264,6 +264,19 @@ export function injectItemDataTableStyles() {
       color: ${PARCHMENT_COLORS.state.success};
     }
 
+    /* Consumable effect shown in the Stats column ("Restores 150 HP") */
+    .item-data-table-effect {
+      font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
+      font-style: italic;
+      color: ${PARCHMENT_COLORS.text.primary};
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      line-height: 1.3;
+      white-space: normal;
+    }
+
     /* Up to two lines, so "+16 Max HP, +3 VIT, +8 STR" is readable instead
        of being cut to "+16 Max HP, +3 VIT, +8 ..." */
     .item-data-table-stats {

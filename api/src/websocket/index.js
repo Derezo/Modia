@@ -288,7 +288,7 @@ function setupWebSocket(server) {
             break;
 
           case 'join_battle':
-            await handleJoinBattle(ws, userId, payload);
+            await handleJoinBattle(ws, userId, username, payload);
             break;
 
           case 'leave_battle':
@@ -686,11 +686,26 @@ function handleDisconnect(userId, username, ws = null, connectionId = null) {
   cleanupConnection(userId);
   cleanupUserRateLimits(userId);
 
-  // Handle battle disconnect for non-coliseum battles (fire-and-forget)
-  // Coliseum battles are handled by coliseumService.cleanupPlayer below
+  // Handle battle disconnect for multi-human battles only (fire-and-forget)
+  // Coliseum battles are handled by coliseumService.cleanupPlayer below.
+  // Solo PvE battles should not track disconnects because:
+  // 1. The auto-wait benefits no one (only one human)
+  // 2. handleAbandonTimeout advances to enemy turn but never starts AI processing
+  // 3. The battle soft-locks until a full page reload hits /current
   battleStateRepository.findActiveBattleForPlayer(userId)
     .then(async (battle) => {
-      if (battle && battle.battleType !== 'pvp_coliseum') {
+      if (!battle) return;
+
+      // Skip coliseum - handled separately by coliseumService.cleanupPlayer
+      if (battle.battleType === 'pvp_coliseum') return;
+
+      // Only track disconnects for battles with more than one human
+      // (PvP, co-op, or any battle with player2Id set)
+      const isMultiHuman = battle.battleType === 'pvp' ||
+        battle.battleType === 'pve_coop' ||
+        battle.player2Id != null;
+
+      if (isMultiHuman) {
         await battleReconnection.handleDisconnect(
           battle.battleId ?? battle.id,
           userId,

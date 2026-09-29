@@ -36,9 +36,7 @@ import {
   getParchmentScrollbarCSS
 } from '../../ui/parchment/ParchmentTheme.js';
 import {
-  formatStatName,
   formatStatValue,
-  formatStatAmount,
   calculateStatChanges,
   calculateItemPower,
   sumItemStats,
@@ -49,6 +47,7 @@ import {
   RARITY_TEXT_COLORS
 } from '../../utils/statDisplay.js';
 import { renderAugmentList } from '../AugmentList.js';
+import { renderItemStatRows } from '../ItemStatRows.js';
 import { escapeHtml, escapeHtmlAttribute } from '../../utils/escapeHtml.js';
 
 const STYLE_ID = 'equipment-slot-modal-styles';
@@ -202,10 +201,6 @@ export class EquipmentSlotModal {
       .equipment-slot-available-name.rarity-epic { color: #7722aa; }
       .equipment-slot-available-name.rarity-legendary { color: #cc6600; }
 
-      .equipment-slot-card-stat-value--negative {
-        color: ${PARCHMENT_COLORS.state.error} !important;
-      }
-
       /* Items the character cannot use: listed with the reason, not selectable */
       .equipment-slot-available-item.ineligible {
         cursor: not-allowed;
@@ -261,36 +256,6 @@ export class EquipmentSlotModal {
         color: ${PARCHMENT_COLORS.text.muted};
         text-transform: uppercase;
         margin-bottom: 4px;
-      }
-
-      .equipment-slot-card-stats {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-      }
-
-      .equipment-slot-card-stat {
-        display: flex;
-        justify-content: space-between;
-        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
-        padding: 2px ${PARCHMENT_SPACING.xs};
-        background: ${PARCHMENT_COLORS.dark};
-        border-radius: 3px;
-      }
-
-      .equipment-slot-card-stat-label {
-        color: ${PARCHMENT_COLORS.text.secondary};
-      }
-
-      .equipment-slot-card-stat-value {
-        color: ${PARCHMENT_COLORS.state.success};
-        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
-      }
-
-      .equipment-slot-card-effects {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
       }
 
       .equipment-slot-unequip-btn {
@@ -629,9 +594,10 @@ export class EquipmentSlotModal {
     }
 
     const rarity = normalizeRarity(item.rarity);
-    const allStats = this.getAllItemStats(item);
-    const hasStats = Object.keys(allStats).length > 0;
-    const augments = item.augments || [];
+    // Shared stat block and augment list: the same item reads the same here
+    // as in the item detail modal, shop and marketplace panels
+    const statsHtml = renderItemStatRows(item);
+    const augmentsHtml = renderAugmentList(item.augments || []);
 
     return `
       <div class="equipment-slot-card">
@@ -656,22 +622,18 @@ export class EquipmentSlotModal {
         </div>
 
         <!-- Stats -->
-        ${hasStats ? `
+        ${statsHtml ? `
           <div class="equipment-slot-card-section">
             <div class="equipment-slot-card-section-title">Stats</div>
-            <div class="equipment-slot-card-stats">
-              ${this.renderCardStats(allStats)}
-            </div>
+            ${statsHtml}
           </div>
         ` : ''}
 
-        <!-- Effects (Augments) -->
-        ${augments.length > 0 ? `
+        <!-- Augments -->
+        ${augmentsHtml ? `
           <div class="equipment-slot-card-section">
-            <div class="equipment-slot-card-section-title">Effects</div>
-            <div class="equipment-slot-card-effects">
-              ${renderAugmentList(augments)}
-            </div>
+            <div class="equipment-slot-card-section-title">Augments</div>
+            ${augmentsHtml}
           </div>
         ` : ''}
 
@@ -683,27 +645,6 @@ export class EquipmentSlotModal {
         ` : ''}
       </div>
     `;
-  }
-
-  /**
-   * Render stats for a comparison card
-   * @param {Object} stats - Stats object
-   * @returns {string} HTML
-   */
-  renderCardStats(stats) {
-    return Object.entries(stats)
-      .filter(([, v]) => v && v !== 0)
-      .map(([k, v]) => {
-        const label = escapeHtml(formatStatName(k, false));
-        const negative = typeof v === 'number' && v < 0;
-        return `
-          <div class="equipment-slot-card-stat">
-            <span class="equipment-slot-card-stat-label">${label}</span>
-            <span class="equipment-slot-card-stat-value${negative ? ' equipment-slot-card-stat-value--negative' : ''}">${escapeHtml(formatStatAmount(k, v))}</span>
-          </div>
-        `;
-      })
-      .join('');
   }
 
   /**
@@ -725,15 +666,6 @@ export class EquipmentSlotModal {
    */
   getIneligibilityReason(item) {
     return getEquipRestriction(item, { level: this.characterLevel, class: this.characterClass });
-  }
-
-  /**
-   * Get all stats from an item (attack, defense, baseStats, bonusStats combined)
-   * @param {Object} item - Item data
-   * @returns {Object} Combined stats
-   */
-  getAllItemStats(item) {
-    return sumItemStats(item, { includeCombat: true });
   }
 
   /**

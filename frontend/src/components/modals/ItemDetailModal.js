@@ -25,7 +25,8 @@ import { ParchmentModal } from '../../ui/parchment/ParchmentModal.js';
 import { CharacterPicker } from '../CharacterPicker.js';
 import { parchmentToast } from '../../ui/parchment/ParchmentToast.js';
 import { ItemIcon } from '../ItemIcon.js';
-import { renderAugmentLine, injectAugmentListStyles } from '../AugmentList.js';
+import { renderAugmentList, renderAugmentLine, injectAugmentListStyles } from '../AugmentList.js';
+import { renderItemStatRows } from '../ItemStatRows.js';
 import {
   PARCHMENT_COLORS,
   PARCHMENT_SPACING,
@@ -34,10 +35,7 @@ import {
 } from '../../ui/parchment/ParchmentTheme.js';
 import {
   formatStatName,
-  formatStatAmount,
-  formatAugmentEffect as formatAugmentEffectUtil,
   normalizeRarity,
-  sumItemStats,
   getItemRequirements,
   getDisplayMaterial,
   RARITY_TEXT_COLORS
@@ -204,40 +202,6 @@ export class ItemDetailModal {
         letter-spacing: 0.5px;
       }
 
-      .item-detail-stats {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: ${PARCHMENT_SPACING.xs};
-      }
-
-      .item-detail-stat {
-        display: flex;
-        justify-content: space-between;
-        padding: ${PARCHMENT_SPACING.xs};
-        background: ${PARCHMENT_COLORS.dark};
-        border-radius: ${PARCHMENT_RADIUS.sm};
-      }
-
-      .item-detail-stat-label {
-        color: ${PARCHMENT_COLORS.text.secondary};
-      }
-
-      .item-detail-stat-value {
-        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
-        color: ${PARCHMENT_COLORS.state.success};
-      }
-
-      .item-detail-stat-value--negative {
-        color: ${PARCHMENT_COLORS.state.error};
-      }
-
-      .item-detail-stat-bonus {
-        font-weight: normal;
-        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
-        color: ${PARCHMENT_COLORS.text.muted};
-        margin-left: 4px;
-      }
-
       .item-detail-requirements {
         display: flex;
         flex-wrap: wrap;
@@ -354,9 +318,10 @@ export class ItemDetailModal {
     const item = this.item;
     const rarity = normalizeRarity(item.rarity);
 
-    // Sum base and bonus stats (a bonus sharing a key adds to the base value)
-    const allStats = sumItemStats(item);
-    const hasStats = Object.keys(allStats).length > 0 || item.attack || item.defense;
+    // Shared stat + consumable effect rows (same block as the shop, equip
+    // modal and marketplace panels); empty for an item with neither
+    const statsHtml = renderItemStatRows(item);
+    const augmentsHtml = renderAugmentList(item.augments || []);
     const requirementsHtml = this.renderRequirements();
 
     // Check if consumable
@@ -388,24 +353,18 @@ export class ItemDetailModal {
         ${requirementsHtml}
 
         <!-- Stats -->
-        ${hasStats ? `
+        ${statsHtml ? `
           <div class="item-detail-section">
             <div class="item-detail-section-title">Stats</div>
-            <div class="item-detail-stats">
-              ${item.attack ? `<div class="item-detail-stat"><span class="item-detail-stat-label">Attack</span><span class="item-detail-stat-value">+${item.attack}</span></div>` : ''}
-              ${item.defense ? `<div class="item-detail-stat"><span class="item-detail-stat-label">Defense</span><span class="item-detail-stat-value">+${item.defense}</span></div>` : ''}
-              ${this.renderStats(allStats)}
-            </div>
+            ${statsHtml}
           </div>
         ` : ''}
 
-        <!-- Effects -->
-        ${item.augments && item.augments.length > 0 ? `
+        <!-- Augments -->
+        ${augmentsHtml ? `
           <div class="item-detail-section">
-            <div class="item-detail-section-title">Effects</div>
-            <div class="item-detail-augments">
-              ${item.augments.map(aug => this.renderAugment(aug)).join('')}
-            </div>
+            <div class="item-detail-section-title">Augments</div>
+            ${augmentsHtml}
           </div>
         ` : ''}
 
@@ -423,37 +382,6 @@ export class ItemDetailModal {
         ` : ''}
       </div>
     `;
-  }
-
-  /**
-   * Render stats grid items
-   * @param {Object} stats - Stats object
-   * @returns {string} HTML
-   */
-  renderStats(stats) {
-    const base = this.item?.baseStats || {};
-    const bonus = this.item?.bonusStats || {};
-
-    return Object.entries(stats)
-      .filter(([, v]) => v && v !== 0)
-      .map(([k, v]) => {
-        const label = escapeHtml(formatStatName(k, false)); // Use full stat names
-        const amount = escapeHtml(formatStatAmount(k, v));
-        const negative = typeof v === 'number' && v < 0;
-        // Show where the number comes from when an augment bonus adds to a base stat
-        const bonusValue = Number(bonus[k]) || 0;
-        const baseValue = Number(base[k]) || 0;
-        const breakdown = bonusValue && baseValue
-          ? `<span class="item-detail-stat-bonus">(${escapeHtml(formatStatAmount(k, baseValue))} base ${escapeHtml(formatStatAmount(k, bonusValue))} bonus)</span>`
-          : '';
-        return `
-          <div class="item-detail-stat">
-            <span class="item-detail-stat-label">${label}</span>
-            <span class="item-detail-stat-value${negative ? ' item-detail-stat-value--negative' : ''}">${amount}${breakdown}</span>
-          </div>
-        `;
-      })
-      .join('');
   }
 
   /**
@@ -500,23 +428,14 @@ export class ItemDetailModal {
   }
 
   /**
-   * Render an augment
+   * Render one augment line (the shared AugmentList line; renderContent lists
+   * all of them with renderAugmentList)
    * @param {Object} aug - Augment object
    * @returns {string} HTML
    */
   renderAugment(aug) {
     injectAugmentListStyles();
     return renderAugmentLine(aug);
-  }
-
-  /**
-   * Format augment effect for display
-   * @param {Object} aug - Augment object
-   * @returns {string} Formatted effect text
-   */
-  formatAugmentEffect(aug) {
-    // Use the centralized utility for consistent formatting
-    return formatAugmentEffectUtil(aug);
   }
 
   /**

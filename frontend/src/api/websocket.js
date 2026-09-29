@@ -75,8 +75,18 @@ export class GameWebSocket {
     // Pass connectionId to heartbeat manager
     this.heartbeatManager.setConnectionId(this.connectionId);
 
+    // Track whether this socket is a reconnection (for dispatching 'connect' only
+    // on the first auth_success of a new socket after we've authenticated before)
+    const isReconnectSocket = this.hasAuthenticatedOnce;
+
     try {
       this.ws = new WebSocket(this.url);
+
+      // Store the reconnect flag on the socket for access in onmessage.
+      // _socketAuthed tracks whether this specific socket has received its
+      // first auth_success (to distinguish from token refresh re-auth).
+      this.ws._isReconnectSocket = isReconnectSocket;
+      this.ws._socketAuthed = false;
 
       this.ws.onopen = () => {
         console.log('WebSocket connected with connectionId:', this.connectionId);
@@ -134,7 +144,12 @@ export class GameWebSocket {
           // Handle auth_success - reset reconnect attempts and dispatch connect on reconnect
           if (message.type === 'auth_success') {
             this.reconnectAttempts = 0;
-            const isReconnect = this.hasAuthenticatedOnce;
+
+            // A reconnect is the first auth_success on a newly opened socket after we
+            // have authenticated at least once before. Subsequent auth_success messages
+            // on the same socket (e.g., hourly token refresh) are NOT reconnects.
+            const isReconnect = this.ws._isReconnectSocket && !this.ws._socketAuthed;
+            this.ws._socketAuthed = true;
             this.hasAuthenticatedOnce = true;
 
             // Route auth_success to handlers first

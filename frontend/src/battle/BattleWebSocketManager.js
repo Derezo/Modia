@@ -1175,6 +1175,11 @@ export class BattleWebSocketManager {
 
     console.log(`[Battle WS] Turn skipped for player ${playerId}, reason: ${reason}, timeouts remaining: ${timeoutsRemaining}`);
 
+    // Close any open End Turn confirmation dialog when our turn is skipped
+    if (playerId === localUserId) {
+      this.scene.closeWaitConfirmDialog?.();
+    }
+
     if (playerId === localUserId && timeoutsRemaining !== null) {
       // Local player's turn was skipped - show escalating warnings
       if (timeoutsRemaining === 1) {
@@ -1786,6 +1791,12 @@ export class BattleWebSocketManager {
       stateRevision
     } = event;
     if (this.isSupersededTurnStart(event)) return;
+
+    // Close any open End Turn confirmation dialog when the turn changes.
+    // The dialog was opened for a previous unit's turn and should not
+    // remain on screen over another unit's turn.
+    this.scene.closeWaitConfirmDialog?.();
+
     const isPlayerTurn = unitType === 'player' || unitType === 'player_local';
 
     debugLog('battle.logTurnEvents', 'Turn start:', {

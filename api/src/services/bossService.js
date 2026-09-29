@@ -259,6 +259,11 @@ function getSkillDataById(skillId) {
  */
 function processBossDamage(boss, bossState, damage, battleState) {
   if (!bossState) return null;
+  // Skip dead bosses to prevent spurious phase transitions on corpses.
+  // A boss at 0% HP would cross any remaining threshold, triggering
+  // invalid phase-entry effects. The route handler also guards this,
+  // but we check here for defense in depth.
+  if (!boss || boss.hp <= 0) return null;
 
   const transition = checkPhaseTransition(boss, bossState);
   if (transition) {

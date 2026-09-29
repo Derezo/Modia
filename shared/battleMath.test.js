@@ -360,6 +360,73 @@ describe('calculateDamagePreview', () => {
     assert.ok(preview.critDamage > preview.maxDamage, 'Crit damage should exceed max damage');
     assert.ok(preview.critChance > 0, 'Should have crit chance');
   });
+
+  it('should include equipment augment crit_chance bonus', () => {
+    const baseAttacker = { strength: 20, attack: 10, luck: 10, race: 'human' };
+    const augmentedAttacker = {
+      ...baseAttacker,
+      equipmentAugmentEffects: { crit_chance: 0.15 }
+    };
+    const defender = { vitality: 10, defense: 5, hp: 100 };
+    const skill = { power: 100 };
+
+    const basePreview = calculateDamagePreview(baseAttacker, defender, skill);
+    const augmentedPreview = calculateDamagePreview(augmentedAttacker, defender, skill);
+
+    // With +15% crit chance from equipment, augmented preview should have higher crit chance
+    assert.ok(
+      augmentedPreview.critChance > basePreview.critChance,
+      `Augmented crit chance ${augmentedPreview.critChance} should exceed base ${basePreview.critChance}`
+    );
+    // The difference should be approximately 0.15 (the equipment bonus)
+    const critDiff = augmentedPreview.critChance - basePreview.critChance;
+    assert.ok(
+      Math.abs(critDiff - 0.15) < 0.001,
+      `Crit chance difference ${critDiff} should be ~0.15`
+    );
+  });
+
+  it('should include equipment augment crit_damage bonus', () => {
+    const baseAttacker = { strength: 20, attack: 10, luck: 10, race: 'human' };
+    const augmentedAttacker = {
+      ...baseAttacker,
+      equipmentAugmentEffects: { crit_damage: 0.25 }
+    };
+    const defender = { vitality: 10, defense: 5, hp: 100 };
+    const skill = { power: 100 };
+
+    const basePreview = calculateDamagePreview(baseAttacker, defender, skill);
+    const augmentedPreview = calculateDamagePreview(augmentedAttacker, defender, skill);
+
+    // With +25% crit damage multiplier, augmented preview should have higher crit damage
+    assert.ok(
+      augmentedPreview.critDamage > basePreview.critDamage,
+      `Augmented crit damage ${augmentedPreview.critDamage} should exceed base ${basePreview.critDamage}`
+    );
+  });
+
+  it('should include both equipment crit bonuses together', () => {
+    const baseAttacker = { strength: 20, attack: 10, luck: 10, race: 'human' };
+    const augmentedAttacker = {
+      ...baseAttacker,
+      equipmentAugmentEffects: { crit_chance: 0.10, crit_damage: 0.25 }
+    };
+    const defender = { vitality: 10, defense: 5, hp: 100 };
+    const skill = { power: 100 };
+
+    const basePreview = calculateDamagePreview(baseAttacker, defender, skill);
+    const augmentedPreview = calculateDamagePreview(augmentedAttacker, defender, skill);
+
+    // Both bonuses should apply
+    assert.ok(
+      augmentedPreview.critChance > basePreview.critChance,
+      'Augmented crit chance should be higher'
+    );
+    assert.ok(
+      augmentedPreview.critDamage > basePreview.critDamage,
+      'Augmented crit damage should be higher'
+    );
+  });
 });
 
 describe('calculateInitiative', () => {
@@ -853,6 +920,53 @@ describe('calculateDamagePreviewWithElevation', () => {
     assert.ok(preview.baseDamage, 'Should include baseDamage object');
     assert.ok(preview.baseDamage.min > 0, 'Base min damage should be positive');
     assert.ok(preview.maxDamage >= preview.baseDamage.max, 'Elevated max should >= base max');
+  });
+
+  it('should include equipment augment crit_chance bonus with elevation', () => {
+    const baseAttacker = { strength: 50, attack: 10, luck: 10, race: 'human' };
+    const augmentedAttacker = {
+      ...baseAttacker,
+      equipmentAugmentEffects: { crit_chance: 0.15 }
+    };
+    const defender = { vitality: 10, defense: 5, hp: 200 };
+    const skill = { power: 100 };
+
+    const basePreview = calculateDamagePreviewWithElevation(baseAttacker, defender, skill, {
+      attackerZ: 1, defenderZ: 0
+    });
+    const augmentedPreview = calculateDamagePreviewWithElevation(augmentedAttacker, defender, skill, {
+      attackerZ: 1, defenderZ: 0
+    });
+
+    // With +15% crit chance from equipment, augmented preview should have higher crit chance
+    const critDiff = augmentedPreview.critChance - basePreview.critChance;
+    assert.ok(
+      Math.abs(critDiff - 0.15) < 0.001,
+      `Crit chance difference ${critDiff} should be ~0.15`
+    );
+  });
+
+  it('should include equipment augment crit_damage bonus with elevation', () => {
+    const baseAttacker = { strength: 50, attack: 10, luck: 10, race: 'human' };
+    const augmentedAttacker = {
+      ...baseAttacker,
+      equipmentAugmentEffects: { crit_damage: 0.25 }
+    };
+    const defender = { vitality: 10, defense: 5, hp: 200 };
+    const skill = { power: 100 };
+
+    const basePreview = calculateDamagePreviewWithElevation(baseAttacker, defender, skill, {
+      attackerZ: 1, defenderZ: 0
+    });
+    const augmentedPreview = calculateDamagePreviewWithElevation(augmentedAttacker, defender, skill, {
+      attackerZ: 1, defenderZ: 0
+    });
+
+    // With +25% crit damage multiplier, augmented preview should have higher crit damage
+    assert.ok(
+      augmentedPreview.critDamage > basePreview.critDamage,
+      `Augmented crit damage ${augmentedPreview.critDamage} should exceed base ${basePreview.critDamage}`
+    );
   });
 });
 

@@ -815,34 +815,6 @@
   background: rgba(139, 115, 85, 0.2);
 }
 
-/* Equipment Listing Badges */
-.stat-badge {
-  display: inline-block;
-  padding: 2px 6px;
-  background: linear-gradient(to bottom, #e8dcc8 0%, #d9ccb8 100%);
-  border: 1px solid #8b7355;
-  border-radius: 3px;
-  color: #2d2418;
-  font-family: Georgia, serif; font-variant-numeric: tabular-nums;
-}
-
-.stat-badge.bonus {
-  background: linear-gradient(to bottom, #d4e8c8 0%, #c4d8b8 100%);
-  border-color: #5a8b45;
-  color: #2d5a18;
-}
-
-.augment-badge {
-  display: inline-block;
-  padding: 2px 6px;
-  background: linear-gradient(to bottom, #e0d0f0 0%, #d0c0e0 100%);
-  border: 1px solid #8b6bbb;
-  border-radius: 3px;
-  color: #4a2a6a;
-  font-family: Georgia, serif;
-  font-style: italic;
-}
-
 /* Loading spinner */
 .loading-spinner {
   width: 30px;

@@ -3,17 +3,11 @@
  * Shows full generated names, augments, stats, and allows purchasing
  */
 
-import { Icon } from './Icon.js';
 import { ItemIcon } from './ItemIcon.js';
-import { escapeHtml, escapeHtmlAttribute } from '../utils/escapeHtml.js';
-import {
-  formatStatName,
-  formatStatAmount,
-  sumItemStats,
-  normalizeRarity,
-  describeAugment,
-  resolveAugmentIconName
-} from '../utils/statDisplay.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
+import { normalizeRarity } from '../utils/statDisplay.js';
+import { renderItemStatRows } from './ItemStatRows.js';
+import { renderAugmentList } from './AugmentList.js';
 
 
 // Parchment theme colors (shared with marketplace scene)
@@ -185,63 +179,10 @@ export class MarketplaceItemPanel {
         margin-bottom: 8px;
       }
 
-      .stat-row {
-        display: flex;
-        justify-content: space-between;
-        font-size: 12px;
-        padding: 2px 0;
-        font-family: Consolas, monospace;
-      }
-
-      .stat-label {
-        color: ${PARCHMENT.text.secondary};
-      }
-
-      .stat-value {
-        color: ${PARCHMENT.text.primary};
-      }
-
-      .stat-value.bonus {
-        color: #3d6b35;
-      }
-
-      .stat-value.negative {
-        color: #8b2a2a;
-      }
-
-      .stat-bonus-note {
-        color: ${PARCHMENT.text.muted};
-        font-size: 11px;
-        margin-left: 4px;
-      }
-
-      .augment-name {
-        font-weight: bold;
-      }
-
-      .augment-item.inactive .augment-effect {
-        color: ${PARCHMENT.text.muted};
-        font-style: italic;
-      }
-
       .listing-augments {
         margin-top: 8px;
         padding-top: 8px;
         border-top: 1px dashed ${PARCHMENT.border.light};
-      }
-
-      .augment-item {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 12px;
-        padding: 3px 0;
-        color: #7c5cbf;
-        font-family: Georgia, serif;
-      }
-
-      .augment-icon {
-        font-size: 14px;
       }
 
       .listing-footer {
@@ -445,40 +386,10 @@ export class MarketplaceItemPanel {
       sellerName
     } = listing;
 
-    // Sum base and bonus stats per key; show where a bonus added to a base value
-    const summed = sumItemStats({ baseStats, bonusStats });
-    const statsHtml = Object.entries(summed)
-      .map(([stat, val]) => {
-        const bonus = Number((bonusStats || {})[stat]) || 0;
-        const base = Number((baseStats || {})[stat]) || 0;
-        const valueClass = typeof val === 'number' && val < 0 ? 'negative' : (bonus && !base ? 'bonus' : '');
-        const note = bonus && base
-          ? `<span class="stat-bonus-note">(${escapeHtml(formatStatAmount(stat, bonus))} bonus)</span>`
-          : '';
-        return `
-        <div class="stat-row">
-          <span class="stat-label">${escapeHtml(this.formatStatName(stat))}</span>
-          <span class="stat-value ${valueClass}">${escapeHtml(formatStatAmount(stat, val))}${note}</span>
-        </div>
-      `;
-      }).join('');
-
-    // Format augments: name, effect and rolled stat
-    const augmentsHtml = (augments || []).map(aug => {
-      const { name, effect, statText, active } = describeAugment(aug);
-      const inactive = typeof aug === 'object' && !active;
-      const title = inactive && effect ? `${effect} (not yet applied in combat)` : (effect || name);
-      return `
-      <div class="augment-item${inactive ? ' inactive' : ''}" title="${escapeHtmlAttribute(title)}">
-        <span class="augment-icon">${this.getAugmentIcon(aug)}</span>
-        <span>
-          ${name ? `<span class="augment-name">${escapeHtml(name)}</span>${effect ? ': ' : ''}` : ''}
-          ${effect ? `<span class="augment-effect">${escapeHtml(effect)}</span>` : ''}
-          ${statText ? ` (${escapeHtml(statText)})` : ''}
-        </span>
-      </div>
-    `;
-    }).join('');
+    // Shared stat block and augment lines: identical to the marketplace
+    // Search listing cards, Sell / My Listings panels and item detail modal
+    const statsHtml = renderItemStatRows({ baseStats, bonusStats });
+    const augmentsHtml = renderAugmentList(augments || []);
 
     // Meta line: Rarity + Material (rarity may arrive as a 1-5 number)
     const rarityName = normalizeRarity(rarity);
@@ -542,21 +453,6 @@ export class MarketplaceItemPanel {
     if (this.onBuy) {
       this.onBuy(listing);
     }
-  }
-
-  /**
-   * Format stat name for display (shared abbreviations)
-   */
-  formatStatName(stat) {
-    return formatStatName(stat, true);
-  }
-
-  /**
-   * Get icon for an augment (every category maps to an existing icon file)
-   */
-  getAugmentIcon(augment) {
-    const { name, effect } = describeAugment(augment);
-    return Icon.html('augments', resolveAugmentIconName(augment), { size: 'sm', title: name || effect });
   }
 
   capitalize(str) {

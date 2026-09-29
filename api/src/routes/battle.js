@@ -1523,6 +1523,33 @@ router.get('/:battleId/rejoin', authenticate, rejoinLimiter, asyncHandler(async 
     req.user.userId
   );
 
+  // Resume enemy turn processing if the active unit is an enemy.
+  // This handles the case where the battle advanced to an enemy turn during
+  // handleAbandonTimeout (or any other disconnect handling), so the player
+  // does not have to refresh a second time to trigger /current.
+  const activeUnit = battleState.units?.find(u => u.id === battleState.activeUnitId);
+  if (activeUnit && activeUnit.type === 'enemy' && activeUnit.hp > 0) {
+    console.log('[Battle] Resuming enemy turn processing for battle (rejoin)', battleEnvelope.id, '- active unit:', activeUnit.name);
+    setImmediate(async () => {
+      try {
+        const enemyTurnResult = await battleTurnManager.processEnemyTurnsAsync(
+          parseInt(battleId),
+          battleEnvelope.state,
+          aiService,
+          battleService,
+          battleEnvelope.stateRevision
+        );
+        await handleProcessedEnemyTurns(
+          parseInt(battleId),
+          enemyTurnResult,
+          req.user.userId
+        );
+      } catch (error) {
+        console.error('Resume enemy turn processing error (rejoin):', error);
+      }
+    });
+  }
+
   res.json(createBattleTransportResponse({
     success: true,
     battleId: battleEnvelope.id,
@@ -1686,7 +1713,7 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
     // Single-target damage
     if (result.damage && result.targetType === 'enemy') {
       const targetBoss = state.units.find(u => u.id === result.targetId);
-      if (targetBoss && state.bossStates[targetBoss.id]) {
+      if (targetBoss && state.bossStates[targetBoss.id] && targetBoss.hp > 0) {
         const phaseTransition = bossService.processBossDamage(
           targetBoss,
           state.bossStates[targetBoss.id],
@@ -1704,7 +1731,7 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
       for (const aoeTarget of result.aoeTargets) {
         if (aoeTarget.targetType === 'enemy' && aoeTarget.damage > 0) {
           const targetBoss = state.units.find(u => u.id === aoeTarget.targetId);
-          if (targetBoss && state.bossStates[targetBoss.id]) {
+          if (targetBoss && state.bossStates[targetBoss.id] && targetBoss.hp > 0) {
             const phaseTransition = bossService.processBossDamage(
               targetBoss,
               state.bossStates[targetBoss.id],
@@ -1759,7 +1786,8 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
       for (const unit of state.units) {
         if (unit.type === 'enemy' &&
             state.bossStates[unit.id] &&
-            unit.turnStartEffects) {
+            unit.turnStartEffects &&
+            unit.hp > 0) {
           // Sum up damage from DoT effects (poison, burn, bleed, curse, etc.)
           const dotDamage = unit.turnStartEffects
             .filter(effect => effect.damage > 0)

@@ -533,6 +533,36 @@ export class ColiseumScene extends Scene {
       'coliseum:error': (payload) => {
         console.warn('Coliseum error:', payload);
         parchmentToast.error('Coliseum Error', payload.message || 'An error occurred');
+      },
+
+      // Handle socket reconnect - the server dropped our queue/lobby subscription
+      // on disconnect (coliseumService.cleanupPlayer), so we need to rejoin
+      'connect': () => {
+        console.log('[Coliseum] Socket reconnected - rejoining lobby');
+        // Rejoin the coliseum lobby for real-time queue updates
+        this.game.socket.send('coliseum_lobby_join');
+        this.loadQueueStatuses();
+
+        // If we were in a queue, we've been removed by the server - notify the user
+        if (this.isInQueue && !this.currentMatch && this.selectedQueue) {
+          parchmentToast.warning('Disconnected', 'You were removed from the queue, please rejoin.');
+          this.isInQueue = false;
+          this.queueStatus = null;
+          this.updateContent();
+        }
+
+        // If we had a pending match, it was cancelled - clear the state
+        if (this.currentMatch && this.currentMatch.status === 'pending') {
+          parchmentToast.warning('Match Cancelled', 'Your match was cancelled due to disconnection.');
+          this.currentMatch = null;
+          this.isReady = false;
+          this.opponentReady = false;
+          if (this.matchCountdown) {
+            clearInterval(this.matchCountdown);
+            this.matchCountdown = null;
+          }
+          this.updateContent();
+        }
       }
     };
 

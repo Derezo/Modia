@@ -2,7 +2,8 @@
  * AugmentList - the one presentation for an item's augments.
  *
  * Used wherever an item's augments are listed in a detail view (item detail
- * modal, shop detail panel, equip modal, marketplace sell and listing panels)
+ * modal, shop detail panel, equip modal, marketplace sell, listing and buyer
+ * listing-card panels)
  * so every screen shows the same line: icon, bold augment name, its effect,
  * a note when the stat roll is already counted in the stats above, and a
  * short muted "not yet active" tag for effects the server does not apply.
@@ -18,7 +19,7 @@ import {
   PARCHMENT_TYPOGRAPHY,
   PARCHMENT_RADIUS
 } from '../ui/parchment/ParchmentTheme.js';
-import { describeAugment, resolveAugmentIconName } from '../utils/statDisplay.js';
+import { describeAugment, describeAugmentLine, resolveAugmentIconName } from '../utils/statDisplay.js';
 import { escapeHtml, escapeHtmlAttribute } from '../utils/escapeHtml.js';
 
 const STYLE_ID = 'augment-list-styles';
@@ -32,6 +33,7 @@ export function injectAugmentListStyles() {
   style.id = STYLE_ID;
   style.textContent = `
     .item-detail-augments {
+      font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
       display: flex;
       flex-direction: column;
       gap: ${PARCHMENT_SPACING.xs};
@@ -98,16 +100,11 @@ export function injectAugmentListStyles() {
  */
 export function renderAugmentLine(aug) {
   const iconName = resolveAugmentIconName(aug);
-  const { name, effect: effectText, statText, active } = describeAugment(aug);
-  const inactive = typeof aug === 'object' && aug !== null && !active;
-  // A stat_bonus augment's whole effect, and a rolled augment's stat roll,
-  // are already summed into the stats. Name the augment and point up instead
-  // of printing the same number a second time.
-  const isStatBonus = typeof aug === 'object' && aug?.effect?.type === 'stat_bonus';
-  const includedAbove = isStatBonus || Boolean(statText);
-  const effect = isStatBonus ? '' : effectText;
-  const label = name || (isStatBonus ? 'Stat bonus' : '');
+  // describeAugmentLine is the single wording source, shared with the
+  // plain-text tooltips in item tables
+  const { label, effect, statText, includedAbove, inactive } = describeAugmentLine(aug);
   if (!label && !effect) return '';
+  const { effect: effectText } = describeAugment(aug);
 
   return `
       <div class="item-detail-augment${inactive ? ' item-detail-augment--inactive' : ''}">
@@ -119,7 +116,7 @@ export function renderAugmentLine(aug) {
           ${effect ? `<span class="item-detail-augment-effect">${escapeHtml(effect)}</span>` : ''}
           ${includedAbove ? ` <span class="item-detail-augment-stat" title="${escapeHtmlAttribute(statText || effectText)}, already counted in the stats above">(${effect ? 'stat bonus ' : ''}included above)</span>` : ''}
         </span>
-        ${inactive && effect ? '<span class="item-detail-augment-tag" title="This effect is shown for reference and is not yet applied in combat">not yet active</span>' : ''}
+        ${inactive ? '<span class="item-detail-augment-tag" title="This effect is shown for reference and is not yet applied in combat">not yet active</span>' : ''}
       </div>
     `;
 }

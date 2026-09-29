@@ -729,7 +729,7 @@ describe('messageHandlers - Module Structure', () => {
     );
 
     try {
-      await handleJoinBattle(ws, userId, {
+      await handleJoinBattle(ws, userId, 'TestUser', {
         battleId,
         battleMapCapabilities: capabilities
       });
@@ -740,7 +740,7 @@ describe('messageHandlers - Module Structure', () => {
       assert.ok(ws.sentMessages[0].payload.battleMapCapabilities);
 
       ws.clearMessages();
-      await handleJoinBattle(ws, userId, { battleId });
+      await handleJoinBattle(ws, userId, 'TestUser', { battleId });
 
       assert.strictEqual(
         reliability.getRegisteredBattleMapCapabilities(ws, battleId),

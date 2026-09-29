@@ -683,6 +683,9 @@ export class BattleScene extends Scene {
   exit() {
     this.entryEpoch = (Number(this.entryEpoch) || 0) + 1;
 
+    // Close any open End Turn confirmation dialog
+    this.closeWaitConfirmDialog();
+
     this.zodiacAvailabilityRequestId++;
     this.zodiacSubmissionRequestId++;
     this.zodiacAvailabilityController?.abort();
@@ -3515,6 +3518,9 @@ export class BattleScene extends Scene {
       battleEnded: this.battleEnded
     });
 
+    // Close any open End Turn confirmation dialog
+    this.closeWaitConfirmDialog();
+
     // Guard against double-trigger
     if (this.battleEnded) {
       console.log('[BattleScene] handleBattleEndWithStats skipped - already ended');
@@ -3651,21 +3657,38 @@ export class BattleScene extends Scene {
       if (this.waitConfirmPending) return;
       this.waitConfirmPending = true;
       const epoch = this.entryEpoch;
+      const activeUnitId = this.getActiveUnit()?.id;
       let confirmed = false;
       try {
-        confirmed = await parchmentConfirm({
+        const dialog = parchmentConfirm({
           title: 'End Turn',
           message: 'End your turn?',
           confirmLabel: 'End Turn',
           cancelLabel: 'Keep Playing'
         });
+        this.waitConfirmDialog = dialog;
+        confirmed = await dialog.promise;
       } finally {
         this.waitConfirmPending = false;
+        this.waitConfirmDialog = null;
       }
-      // The battle may have ended (or the scene exited) while the dialog was open
+      // The battle may have ended, scene exited, or active unit changed while
+      // the dialog was open
       if (!confirmed || this.entryEpoch !== epoch) return;
+      if (this.getActiveUnit()?.id !== activeUnitId) return;
     }
     await this.submitAction('wait');
+  }
+
+  /**
+   * Close the End Turn confirmation dialog if it's open.
+   * Called on scene exit, battle end, and turn change.
+   */
+  closeWaitConfirmDialog() {
+    if (this.waitConfirmDialog) {
+      this.waitConfirmDialog.close();
+      this.waitConfirmDialog = null;
+    }
   }
 
   /**

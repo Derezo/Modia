@@ -136,7 +136,9 @@ describe('battle route enemy-turn revision handoff', () => {
     const calls = [
       /processEnemyTurnsAsync\(\s*battleId,\s*battleState,\s*aiService,\s*battleService,\s*stateRevision\s*\)/,
       /processEnemyTurnsAsync\(\s*battleId,\s*state,\s*aiService,\s*battleService,\s*battleEnvelope\.stateRevision\s*\)/,
-      /processEnemyTurnsAsync\(\s*battleId,\s*authoritativeBattle\.state,\s*aiService,\s*battleService,\s*authoritativeBattle\.stateRevision\s*\)/
+      /processEnemyTurnsAsync\(\s*battleId,\s*authoritativeBattle\.state,\s*aiService,\s*battleService,\s*authoritativeBattle\.stateRevision\s*\)/,
+      // Rejoin endpoint resumes enemy turn processing if the active unit is an enemy
+      /processEnemyTurnsAsync\(\s*parseInt\(battleId\),\s*battleEnvelope\.state,\s*aiService,\s*battleService,\s*battleEnvelope\.stateRevision\s*\)/
     ];
 
     for (const call of calls) {
@@ -524,7 +526,8 @@ describe('battle route enemy-turn revision handoff', () => {
       )
     ];
 
-    assert.equal(processingSegments.length, 3);
+    // 4 callsites: action processing, start route, current route, rejoin route
+    assert.equal(processingSegments.length, 4);
     for (const [segment] of processingSegments) {
       assert.doesNotMatch(segment, /UPDATE battles/);
     }

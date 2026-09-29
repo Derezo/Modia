@@ -34,7 +34,8 @@ import {
   sumItemStats,
   calculateItemPower,
   normalizeRarity,
-  describeAugment,
+  describeAugmentLine,
+  formatItemEffects,
   resolveAugmentIconName
 } from '../../utils/statDisplay.js';
 
@@ -70,7 +71,7 @@ function renderItemName(item, fallback) {
   const rarityClass = `rarity-${normalizeRarity(item.rarity)}`;
   const augmentCount = Array.isArray(item.augments) ? item.augments.length : 0;
   const augmentTitle = augmentCount > 0
-    ? item.augments.map(aug => describeAugment(aug).text).filter(Boolean).join('\n')
+    ? item.augments.map(aug => describeAugmentLine(aug).text).filter(Boolean).join('\n')
     : '';
   const augmentChip = augmentCount > 0
     ? `<span class="item-data-table-aug-count" title="${escapeHtmlAttribute(augmentTitle)}">${augmentCount} aug</span>`
@@ -191,7 +192,15 @@ export const COLUMN_RENDERERS = {
     // Base and bonus stats sum per key (a bonus adds to, not replaces, the base)
     const entries = statEntries(item);
 
-    if (entries.length === 0) return '-';
+    if (entries.length === 0) {
+      // Consumables: their effect, worded as in every detail view, never as
+      // a "+150 HPRE" stat (sumItemStats drops ITEM_EFFECT_KEYS)
+      // Rows built by scene adapters keep the API item as _original, which
+      // carries effectType/effect fields the row itself drops
+      const effects = formatItemEffects(item._original || item);
+      if (effects.length === 0) return '-';
+      return `<span class="item-data-table-effect" title="${escapeHtmlAttribute(effects.join('\n'))}">${escapeHtml(effects[0])}</span>`;
+    }
 
     const all = entries.map(([k, v]) => formatStatAbbrev(k, v));
     const shown = entries
@@ -213,7 +222,7 @@ export const COLUMN_RENDERERS = {
     return `
       <div class="item-data-table-augments">
         ${item.augments.slice(0, 4).map(aug => {
-    const { text } = describeAugment(aug);
+    const { text } = describeAugmentLine(aug);
     return Icon.html('augments', resolveAugmentIconName(aug), { size: 'sm', title: text }) || '';
   }).join('')}
       </div>
