@@ -109,7 +109,14 @@ test.describe('Session Handling', () => {
 
     const after = await page.evaluate(() => JSON.parse(sessionStorage.getItem('modia_auth')));
     expect(after.token).toBeTruthy();
-    expect(after.token).not.toBe(before.token);
+    // The rejected token was replaced everywhere. Do not compare against
+    // before.token: access tokens carry only userId/username and a
+    // second-resolution iat, so a refresh in the same second as login yields
+    // a byte-identical (and valid) token. The rotated refresh token below is
+    // what proves a refresh happened.
+    expect(after.token).not.toBe('expired.access.token');
+    expect(await page.evaluate(() => window.game.api.token)).toBe(after.token);
+    expect(after.refreshToken).toBeTruthy();
     expect(after.refreshToken).not.toBe(before.refreshToken);
     expect(await sessionToken(page)).toBe(after.token);
     await waitForScene(page, 'worldMap');

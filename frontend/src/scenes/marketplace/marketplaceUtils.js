@@ -100,3 +100,17 @@ export function listingPrice(listing) {
   const value = Number(listing?.price ?? listing?.askPrice);
   return Number.isFinite(value) ? value : 0;
 }
+
+/**
+ * Merge preloaded browse results with a server search page, deduplicated by
+ * template id (server rows win: they carry the fresher listing data).
+ * @param {Array<Object>} preloaded - Raw items from the initial browse load
+ * @param {Array<Object>} found - Raw items from GET /marketplace/search?q=
+ * @returns {Array<Object>} Raw items, preloaded order first
+ */
+export function mergeSearchResults(preloaded, found) {
+  const byId = new Map();
+  for (const item of preloaded || []) byId.set(item.id, item);
+  for (const item of found || []) byId.set(item.id, item);
+  return [...byId.values()];
+}

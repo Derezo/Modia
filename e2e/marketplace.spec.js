@@ -143,12 +143,6 @@ test.describe('Marketplace System', () => {
 
 test.describe('Marketplace Transactions', () => {
   test('should count existing listings in the tab label on open', async ({ page, request }) => {
-    // Known bug: MarketplaceScene.loadInitialData() stores myOrders and
-    // myListings but never calls updateTabs(), so the labels keep the "(0)"
-    // they were created with until another action refreshes them. When this
-    // test starts failing as "expected to fail", the bug is fixed: delete the
-    // test.fail() line.
-    test.fail(true, 'MarketplaceScene tab counts are not refreshed after the initial load');
 
     const player = await createPlayer(request);
     const boots = await acquireEquipment(request, player);

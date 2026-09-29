@@ -437,12 +437,6 @@ test.describe('Registration Wizard', () => {
 
   test.describe('Trait Tooltip Display', () => {
     test('should display tooltip when hovering over trait badge', async ({ page }) => {
-      // Known bug: ParchmentCard.setTraits() re-renders the card without
-      // calling attachTooltipListeners(), so the trait badges it draws never
-      // get their mouseenter handlers and no tooltip appears. When this test
-      // starts failing as "expected to fail", the bug is fixed: delete the
-      // test.fail() line.
-      test.fail(true, 'ParchmentCard trait badges get no tooltip listeners after setTraits()');
 
       // Navigate to registration
       const registerLink = page.locator(AUTH_SELECTORS.modeToggle);

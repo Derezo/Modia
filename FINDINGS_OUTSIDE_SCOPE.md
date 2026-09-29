@@ -73,6 +73,7 @@ Operational release gates (human-owned: migration dry-runs, deploy windows, moni
   - The battle soft-lock on a later player turn was not reproduced live; camera callbacks and stranded-turn recovery were fixed from code reading (`frontend/src/battle/BattleCamera.js`, `frontend/src/battle/BattleWebSocketManager.js`). Watch player reports.
   - The damage preview can overlap the target card and extend past the canvas edge (`frontend/src/scenes/BattleScene.js`).
   - The battle minimap road fragments do not match the map, and the formation preview's enemy counts and ENEMY label are hard to read (`frontend/src/battle/BattleMinimap.js`, `frontend/src/scenes/BattleFormationScene.js`).
+  - Marketplace Browse rows found by the new server search are not kept in `context.searchResults`, so they vanish if the tab re-renders (e.g. after a purchase) until the player types again (`frontend/src/scenes/marketplace/tabs/MarketplaceSearchTab.js` `bindServerSearch`). Relatedly, `api/src/routes/marketplace/search.js` does not escape `%`/`_` in the ILIKE term (loose matching only; the query is parameterized).
   - Template descriptions can contradict the rolled material (e.g. a bronze description on an Iron Axe) (`api/src/db/templates/items.js`).
 - **Why deferred:** Low severity or not reproducible; each needs a focused design or content pass.
 - **Effort:** Low each.

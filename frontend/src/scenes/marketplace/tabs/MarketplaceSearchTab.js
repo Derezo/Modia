@@ -6,7 +6,7 @@ import { ItemDataTable } from '../../../components/ItemDataTable/index.js';
 import { marketConfirmDialog } from '../../../components/MarketConfirmDialog.js';
 import { ItemIcon } from '../../../components/ItemIcon.js';
 import { parchmentToast } from '../../../ui/parchment/ParchmentToast.js';
-import { getRarityName, RARITY_COLORS } from '../marketplaceUtils.js';
+import { getRarityName, RARITY_COLORS, mergeSearchResults } from '../marketplaceUtils.js';
 import { loadOrderBook, renderOrderBookAndTrade, initMarketDashboard } from './MarketplaceTradePanel.js';
 import { escapeHtml } from '../../../utils/escapeHtml.js';
 import { renderItemStatRows } from '../../../components/ItemStatRows.js';
@@ -55,6 +55,8 @@ export function renderSearchTab(mainContent, sidePanel, context) {
     onRowDoubleClick: (item) => handleBrowseItemSelect(item, sidePanel, context)
   });
 
+  bindServerSearch(tableContainer, context);
+
   // Side panel
   if (selectedItem) {
     renderUnifiedItemPanel(sidePanel, selectedItem, context);
@@ -65,6 +67,54 @@ export function renderSearchTab(mainContent, sidePanel, context) {
       </div>
     `;
   }
+}
+
+/** Delay after the last keystroke before the search box queries the API */
+const SERVER_SEARCH_DEBOUNCE_MS = 300;
+/** Largest page GET /marketplace/search accepts */
+const SERVER_SEARCH_LIMIT = 100;
+
+/**
+ * The initial browse load is only the first page of templates (most open
+ * orders, then alphabetical), and the table's search box filters rows in the
+ * browser. Without a server query, an item past that first page, such as a
+ * "Rusty Sword" another player has listed, could never be found or bought.
+ * Typing in the search box therefore also asks the API for matching
+ * templates and adds them to the table; the table's own filter still applies.
+ * @param {HTMLElement} tableContainer - Browse table container
+ * @param {Object} context - Shared context from MarketplaceScene
+ */
+function bindServerSearch(tableContainer, context) {
+  const input = tableContainer.querySelector('.item-data-table-search');
+  if (!input) return;
+
+  const table = context.browseTable;
+  let timer = null;
+  let requestSeq = 0;
+
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    const query = input.value.trim();
+    const seq = ++requestSeq;
+
+    if (!query) {
+      table.setItems((context.searchResults || []).map(transformItemForBrowseTable));
+      return;
+    }
+
+    timer = setTimeout(async () => {
+      try {
+        const data = await context.game.api.searchMarketItems(query, null, null, SERVER_SEARCH_LIMIT);
+        // A newer keystroke, or a re-render that replaced this table, wins
+        if (seq !== requestSeq || context.browseTable !== table) return;
+        const merged = mergeSearchResults(context.searchResults, data.items);
+        table.setItems(merged.map(transformItemForBrowseTable));
+      } catch (err) {
+        // Keep the locally filtered rows; the search limiter may have tripped
+        console.error('Marketplace search failed:', err);
+      }
+    }, SERVER_SEARCH_DEBOUNCE_MS);
+  });
 }
 
 /**

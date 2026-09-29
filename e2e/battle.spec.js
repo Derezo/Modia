@@ -156,13 +156,15 @@ test.describe('Battle System', () => {
 
     const revision = () => page.evaluate(() => window.game.scenes.getCurrentScene().stateRevision ?? 0);
     const before = await revision();
-    // With the battle.confirmEndTurn setting on, ending the turn asks for
-    // confirmation first; answer it the way a player would.
-    page.on('dialog', dialog => {
-      expect(dialog.message()).toMatch(/end your turn/i);
-      return dialog.accept();
-    });
     await battleAction(page, 'wait').click();
+
+    // battle.confirmEndTurn defaults on, so ending the turn asks for
+    // confirmation first in a parchment dialog (c250c0cb replaced the native
+    // window.confirm, which froze the game loop); answer it as a player would.
+    const confirm = page.locator('.parchment-modal').filter({ hasText: /end your turn/i });
+    await expect(confirm).toBeVisible();
+    await confirm.locator('.parchment-modal-footer button', { hasText: 'End Turn' }).click();
+    await expect(confirm).toHaveCount(0);
 
     // The server accepted the action: the battle state moved on. (The
     // "Turn Complete" banner can be gone again by the time it is polled when
