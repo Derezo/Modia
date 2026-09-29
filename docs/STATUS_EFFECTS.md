@@ -2,7 +2,7 @@
 
 | Document | Version | Last Updated |
 |----------|---------|--------------|
-| Status Effect Taxonomy | 1.0 | 2026-01-27 |
+| Status Effect Taxonomy | 1.1 | 2026-09-29 |
 
 ## Table of Contents
 
@@ -14,6 +14,7 @@
    - 2.4 Healing Over Time (HoT)
    - 2.5 Stat Modifiers
    - 2.6 Zodiac Effects
+   - 2.7 Status Effect Registry (Buffs, Debuffs, Bleed, Curse)
 3. [Action Restriction Matrix](#3-action-restriction-matrix)
 4. [Cleansing and Removal](#4-cleansing-and-removal)
 5. [Stacking and Duration Rules](#5-stacking-and-duration-rules)
@@ -53,6 +54,10 @@ Status effects are temporary conditions applied to units during battle. They mod
 | slow | Debuff | -1 movement, -50% CT gain | 2 turns |
 | haste | Buff | +1 movement, +50% CT gain | 3 turns |
 | blind | Debuff | -30% accuracy | 2 turns |
+| bleed | DoT | 3% max HP/turn (registry) | skill-defined |
+| curse | DoT | 2% max HP/turn (registry) | skill-defined |
+| fortify, defense_up, rage, attack_up, frenzy, reckless, berserk, berserker | Buff | Stat multipliers (registry, 2.7) | skill-defined |
+| weaken, corrode | Debuff | Stat multipliers (registry, 2.7) | skill-defined |
 
 ---
 
@@ -114,6 +119,31 @@ Zodiac abilities are character-specific effects determined by the character's zo
 | Capricorn | mountains_endurance | +25% defense for 2 turns |
 | Aquarius | cascade | Heal self 20% max HP |
 | Pisces | dreamwave | 50% chance to sleep target for 1 turn |
+
+### 2.7 Status Effect Registry (Buffs, Debuffs, Bleed, Curse)
+
+`STATUS_EFFECT_REGISTRY` in `shared/battleMath.js` is a frozen (`Object.freeze`) table of combat modifiers for named buffs and debuffs. Before it existed, effects such as Fortify, Rage, Weaken and Bleed were applied and displayed but did not change combat.
+
+| Effect | Modifiers | Other |
+|--------|-----------|-------|
+| fortify | defense x1.3, magicDefense x1.3 | |
+| defense_up | defense x1.2, magicDefense x1.2 | |
+| rage, attack_up, frenzy | attack x1.2 | |
+| reckless | attack x1.5, defense x0.75 | |
+| berserk | attack x1.5, defense x0.8 | |
+| berserker | attack x2.0 | Prevents skills |
+| weaken | attack x0.8 | |
+| corrode | defense x0.75 | |
+| bleed | | 3% max HP damage per tick |
+| curse | | 2% max HP damage per tick |
+
+How it is used on the server:
+
+- **Stat multipliers:** `getStatusStatMultiplier()` in `api/src/services/battle/damageCalculator.js` multiplies the attacker's attack power and the defender's defense power by every active effect's modifier. An effect object that carries its own `modifiers` wins; otherwise the registry entry for its `type` is used. This is what makes effects restored from saved battle state (which may be plain type records) work after a reconnect.
+- **Tick damage:** `statusEffectManager.js` deals `floor(maxHp * tickDamagePercent)` for `bleed`, `curse` and any other registry entry with `tickDamagePercent`.
+- **Skill lock:** `canUseSkills()` blocks skills for effects in `PREVENT_SKILLS` and for registry entries with `preventsSkills: true` (berserker).
+
+The damage preview functions in `shared/battleMath.js` do not apply registry multipliers, so a preview can differ from the server while a buff or debuff is active.
 
 ---
 
@@ -241,6 +271,18 @@ resistChance = 10% + (LCK / 200)
 
 A unit with 80 LCK has a `10% + 80/200 = 50%` resistance chance (at the cap).
 
+Resistance is applied by `calculateEffectiveStatusChance()` in `shared/battleMath.js`:
+
+```
+effectiveChance = skill.effectChance (default 1) × (1 - resistChance)
+resistChance    = min(50%, 10% + LCK/200 + unit.statusResist)
+```
+
+- It applies only when the target is on the other team (a debuff). Effects on allies or the caster, and buffs, are never resisted.
+- It is used for single-target skills, damage-free debuff skills and every target of an area skill (`actionProcessor.js`).
+- When the roll fails because of resistance, the action result gets `effectResisted` and a `skillEffects` entry `{ type: 'resisted', effect, targetId }`, which the client shows as a resist.
+- A skill that misses (see [BATTLE_TURN_SYSTEM.md](BATTLE_TURN_SYSTEM.md#skill-hit-rolls)) applies no status effect.
+
 ---
 
 ## 8. Turn Processing Order
@@ -269,7 +311,10 @@ const PREVENT_SKILLS   = ['stun', 'freeze', 'sleep', 'silence'];
 // Cleansing tiers
 const CURE_POISON_EFFECTS = ['poison'];
 const CURE_ALL_EFFECTS    = ['poison', 'blind', 'silence', 'slow', 'burn'];
-const PURIFY_EFFECTS      = ['poison', 'burn', 'blind', 'silence', 'slow', 'stun', 'freeze', 'root'];
+const PURIFY_EFFECTS      = ['poison', 'zodiac_poison', 'burn', 'blind', 'silence', 'slow', 'stun', 'freeze', 'root'];
+
+// Combat modifiers for named buffs/debuffs (frozen); see Section 2.7
+const STATUS_EFFECT_REGISTRY = Object.freeze({ fortify: {...}, rage: {...}, bleed: {...}, ... });
 ```
 
 These constants are shared between the API (server-side validation) and the frontend (client-side UI feedback) via the `shared/` workspace.
@@ -281,7 +326,8 @@ These constants are shared between the API (server-side validation) and the fron
 | File | Purpose |
 |------|---------|
 | `api/src/services/battle/statusEffectManager.js` | All status effect processing logic |
-| `shared/battleMath.js` | Shared constants (`PREVENT_*`, `CURE_*`, `PURIFY_*`) |
+| `shared/battleMath.js` | Shared constants (`PREVENT_*`, `CURE_*`, `PURIFY_*`), `STATUS_EFFECT_REGISTRY`, resistance formulas |
+| `api/src/services/battle/damageCalculator.js` | Registry stat multipliers in damage |
 | `api/src/services/battle/movementService.js` | Movement range modifiers (slow/haste) |
 | `api/src/services/battle/actionProcessor.js` | Status effect application during actions |
 | `api/src/config/skillTrees.js` | Skill definitions with effect types and durations |
@@ -307,3 +353,4 @@ These constants are shared between the API (server-side validation) and the fron
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | 2026-01-27 | Initial document: full status effect taxonomy from codebase audit |
+| 1.1 | 2026-09-29 | Added the status effect registry (buff/debuff multipliers, bleed and curse ticks, berserker skill lock) and documented where status resistance is applied |

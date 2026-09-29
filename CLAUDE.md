@@ -109,8 +109,8 @@ Workspace-specific commands use `-w` flag: `npm run test -w api`, `npm run lint 
 Multi-file system spanning backend and frontend:
 - **Backend:** `battleService.js` (damage formulas, status effects), `battleWebsocket.js` (real-time sync), `battleTurnManager.js` (async turn processing), `battleReconnection.js` (state persistence), `aiService.js` + `services/ai/*.js` (utility-based AI with lookahead)
 - **Frontend:** `BattleScene.js` orchestrates `BattleGrid.js` (tactical grid), `BattleUnit.js` (unit rendering), `BattleUI.js` (HUD), `BattleAnimations.js`, `BattlePathfinding.js`, `BattleCamera.js`, `BattleIntro.js`, `BattleWebSocketManager.js` (WebSocket events and turn queue)
-- Damage formulas: Physical = `(STR + equipment) * skillPower - (VIT + defense) * 0.15`; Magic = `(INT + magicAttack) * skillPower - (INT + magicDefense) * 0.075`
-- Turn order based on agility + random variance
+- Damage formulas (source of truth `shared/battleMath.js`; server `api/src/services/battle/damageCalculator.js`), diminishing-returns defense: Physical = `(STR + attack) * skillPower% * (1 - DEF/(DEF+100))`, DEF = VIT + defense; Magic = `(INT + magicAttack) * skillPower% * (1 - MDEF/(MDEF+80))`, MDEF = INT/2 + magicDefense. Then elemental modifier, 0.9-1.1 variance, crit and traits
+- Turn order: CT system (`turnOrderService.js`). Each tick a unit gains `5 + AGI/10` CT (haste x1.5, slow x0.5) and acts at 100 CT; ties go to higher CT, then AGI, then players. See `docs/BATTLE_TURN_SYSTEM.md`
 
 ### Activity Nodes
 Four activity node types with dedicated routes and services:
@@ -131,7 +131,7 @@ PvP matchmaking and ranked battles:
 
 ### WebSocket Protocol
 Room-based subscriptions at `/ws`:
-- **Message types:** `auth`, `join_room`, `leave_room`, `chat_message`, `party_*`, `battle_*`, `coliseum_*`
+- **Message types:** `auth`, `join_room`, `leave_room`, `chat_message`, `party_leave`, `battle_*`, `coliseum_*`. Party create/invite/join go through REST (`/api/party/multiplayer/*`); the server only pushes `party:*` events
 - **Rooms:** `chat:global`, `tavern:{nodeId}`, `marketplace`, `party:{partyId}`, `battle:{battleId}`, `coliseum:{matchId}`
 - Services: `chatService.js`, `presenceService.js`, `partyWebsocket.js`, `battleWebsocket.js`, `coliseumService.js`, `marketplaceWebsocket.js`
 

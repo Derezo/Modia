@@ -70,10 +70,12 @@
 
 ## 2. CI/CD Pipeline
 
-### 2.1 GitHub Actions
+### 2.1 Local Verification (no CI)
 
-- [ ] Lint / test / build workflow (legacy workflows removed during lsd migration; reintroduce against lsd-managed deploys when needed)
-- [x] Dependency automation (Dependabot config in `.github/dependabot.yml`)
+There is no CI and no `.github/` directory; GitHub Actions workflows and the Dependabot config were removed (commit `675b860d`). Project policy is local verification, so no workflow is planned.
+
+- [x] Pre-commit secrets scanner (`.husky/pre-commit` -> `scripts/check-secrets.sh`), covered by BATS tests run with `npm run test:shell`
+- [x] Lint and tests run locally before tagging a release: `npm run lint`, `npm run test -w api`, `npm run test -w frontend`, `npm run test:e2e`, plus the worldgen seed corpus (`npm run test:worldgen:corpus -w api`)
 
 ### 2.2 Deployment
 

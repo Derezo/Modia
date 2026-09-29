@@ -99,11 +99,19 @@ Fish Value = baseValue * sizeMultiplier * (isBigOne ? 2.0 : 1.0)
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
 | `/api/fishing/status` | GET | Restore the user's active session |
+| `/api/fishing/:nodeId/setup` | GET | Gear and setup options for the node |
 | `/api/fishing/:nodeId/start` | POST | Start fishing session |
-| `/api/fishing/:nodeId/catch` | POST | Register a catch |
-| `/api/fishing/:nodeId/big-one` | POST | Claim Big One |
+| `/api/fishing/:nodeId/gear` | POST | Change equipped fishing gear |
+| `/api/fishing/:nodeId/cast` | POST | Cast; returns an attempt ID |
+| `/api/fishing/:nodeId/casts/:attemptId/release` | POST | Release the cast |
+| `/api/fishing/:nodeId/casts/:attemptId/hook` | POST | Hook a bite |
+| `/api/fishing/:nodeId/casts/:attemptId/reel` | POST | Reel input |
+| `/api/fishing/:nodeId/casts/:attemptId/resolve` | POST | Resolve the attempt (catch, escape, Big One) |
 | `/api/fishing/:nodeId/end` | POST | End session, collect rewards |
 | `/api/fishing/:nodeId/status` | GET | Get session status |
+| `/api/fishing/:nodeId/catch`, `/api/fishing/:nodeId/big-one` | POST | **410 Gone.** Legacy endpoints replaced by the cast protocol |
+
+Route source: `api/src/routes/fishing.js`.
 
 ---
 
@@ -213,8 +221,10 @@ Traveling merchant shops offering exclusive items not found in regular shops.
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
-| `/api/shop/caravan/:nodeId` | GET | Get caravan inventory |
-| `/api/shop/caravan/:nodeId/buy` | POST | Purchase item |
+| `/api/shops/:nodeId/caravan` | GET | Get caravan inventory |
+| `/api/shops/:nodeId/caravan/buy` | POST | Purchase item |
+
+The caravan uses the generic shop routes `/api/shops/:nodeId/:shopType` (`api/src/routes/shop.js`) with `shopType = caravan`.
 
 ---
 

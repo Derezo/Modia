@@ -95,6 +95,8 @@ This document tracks all documentation discrepancies identified, changes made, a
   - Item Naming System
 - Bumped version to 4.0
 
+**Correction (2026-09-29):** The 2026-01-25 evidence was wrong. `items.js` templates have no material or augment fields, but `api/src/services/itemDropService.js` already generated drops with materials, rarity-scaled stats, augments and composed names, stored in `character_items.modifications`. ITEM_SYSTEM.md v5.0 documents these as implemented (Section 5) and keeps only weapon/armor variety and the unapplied augment effects as planned.
+
 ---
 
 ## Phase 2: Missing Documentation

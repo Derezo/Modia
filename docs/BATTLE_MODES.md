@@ -5,8 +5,8 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 1.1 |
-| Last Updated | January 2026 |
+| Version | 1.2 |
+| Last Updated | September 2026 |
 | System Type | Battle Mode Definitions and Configuration |
 
 ---
@@ -257,7 +257,7 @@ One-on-one competitive battle between two players.
 | Victory | All opponent units defeated | Full rewards |
 | Defeat | All your units defeated | Participation rewards |
 | Forfeit | Surrender or disconnect timeout | No rewards |
-| Draw | Simultaneous defeat (rare) | Partial rewards for both |
+| Mutual knockout | Both sides wiped out by the same action | No draw. The side whose action caused it loses and the opponent wins (see [BATTLE_TURN_SYSTEM.md 4.8](BATTLE_TURN_SYSTEM.md#48-battle-end-and-mutual-knockout)). This applies only when the caller passes the acting team; otherwise team 2 wins. |
 
 ---
 
@@ -989,3 +989,4 @@ Distributed around edges and corners based on player count.
 |---------|------|--------|---------|
 | 1.0 | Jan 2026 | - | Initial document: All battle mode configurations |
 | 1.1 | Jan 2026 | - | Added prominent implementation status section; marked unimplemented modes |
+| 1.2 | Sep 2026 | - | Replaced the PvP draw outcome with the mutual knockout rule |

@@ -134,6 +134,11 @@ Turn Transition Flow:
 | Physical Base | `base = ATK * (skill_power / 100)` | GAME_DESIGN.md |
 | Defense Reduction | `reduction = DEF / (DEF + 100)` | GAME_DESIGN.md |
 | Final Damage | `floor(max(1, reduced_damage * crit_multiplier))` | GAME_DESIGN.md |
+| Magic Defense Reduction | `MDEF / (MDEF + 80)`, MDEF = INT/2 + magicDefense | `shared/battleMath.js` |
+| **Hit / Status** | | |
+| Hit Chance (attacks and skills) | `clamp(95% - evasion - blind 30% + acc, 50%, 98%) * skill.accuracy` | BATTLE_TURN_SYSTEM.md 4.6 |
+| Status Resistance | `min(50%, 10% + LCK/200)`, enemy-applied effects only | STATUS_EFFECTS.md 7 |
+| Buff/Debuff Multipliers | `STATUS_EFFECT_REGISTRY` | STATUS_EFFECTS.md 2.7 |
 | **Level/XP** | | |
 | XP for Level N | `100 * N^2.8` | CHARACTER_PROGRESSION.md |
 | Skill Cost | `baseCost * (level + 1)^1.5` | SKILL_TREES.md |
@@ -304,3 +309,4 @@ Turn Transition Flow:
 |---------|------|---------|
 | 1.0 | January 2026 | Initial index document |
 | 1.1 | February 2026 | Added BattleStatsTable.js and BattleStatsAggregator.js to frontend components |
+| 1.2 | September 2026 | Added magic defense, hit chance, status resistance and status registry to Key Formulas |

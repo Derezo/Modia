@@ -5,8 +5,8 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 4.1 |
-| Last Updated | January 2026 |
+| Version | 4.2 |
+| Last Updated | September 2026 |
 | Genre | Tactical RPG / MMORPG |
 
 ---
@@ -312,36 +312,20 @@ When battle begins:
 
 The world is a **node-based graph** procedurally generated from a global seed. All players share the same world layout.
 
-```
-                        [Palace]
-                           |
-            [Mountain]-----+-----[Cave]
-                |          |          |
-    [Village]---+---[City]-+-[Forest]-+---[Guild]
-                |          |          |
-            [Bridge]-------+-----[Village]
-                           |
-                      [CASTLE]  <-- Starting Point
-                           |
-            [Forest]-------+-----[City]
-                |          |          |
-            [Cave]----[Village]---[Mountain]
-                           |
-                       [Guild]
-```
+It is split into five Voronoi regions, one per race. Each region has its own castle, three guilds, cities, villages, battle nodes and activity nodes arranged in rings around that castle. Bridges, wilderness zones and trade routes link neighbouring regions, and a single Grand Palace sits where several regions meet.
 
 ### 3.2 Node Types
 
-#### Castle (Central Hub)
-- **Spawn Point**: All new characters start here
+#### Castle (Regional Hub)
+- **Spawn Point**: A new character starts at the castle of its race's home region (`world_regions.castle_node_id`)
 - **Features**: Coliseum, Tavern, Courtyard, Throne, Blacksmith, Apothecary, Temple, Stables, Marketplace, Garrison
-- **Count**: Exactly 1 (at origin)
+- **Count**: 5, one per region
 - **Garrison**: Hire mixed-class recruits with regional race/class bias, refreshed hourly
 
 #### City
 - **Features**: Tavern + 2 random from (Blacksmith, Apothecary, Temple, Stables)
 - **Distribution**: Multiple throughout world
-- **Difficulty**: Varies by distance from center
+- **Difficulty**: Varies by distance from the region's castle
 
 #### Village
 - **Features**: Farm + optional Apothecary (50% chance)
@@ -371,14 +355,13 @@ The world is a **node-based graph** procedurally generated from a global seed. A
 #### Guild
 - **Features**: Class-specific training, recruitment, quests (future)
 - **Types**: Warriors' Guild, Wizards' Guild, Monks' Guild, Chemists' Guild
-- **Count**: 4 total (one per class)
-- **Distance**: 5-8 nodes from center
+- **Count**: 15, three per region: one primary guild near the castle (Ring 1) matching the region's race, plus two secondary guilds (Ring 2)
 - **Recruitment**: Recruit permanent party members with randomized stats, traits, and skills (see [GUILD_RECRUITMENT_SYSTEM.md](GUILD_RECRUITMENT_SYSTEM.md))
 
 #### Palace
 - **Features**: End-game content (TBD)
-- **Count**: Exactly 1
-- **Distance**: Minimum 13 nodes from center
+- **Count**: Exactly 1 (the Grand Palace)
+- **Placement**: At the Voronoi vertex farthest from the castles, where several regions meet
 - **Special**: Rare encounters, unique rewards
 
 ### 3.3 Node Features
@@ -390,23 +373,21 @@ The world is a **node-based graph** procedurally generated from a global seed. A
 | Blacksmith | Castle, City | Buy/sell weapons and armor |
 | Apothecary | Castle, City, Village | Buy consumables, sell materials |
 | Temple | Castle, City | Remove curses/debuffs (future) |
-| Stables | Castle, City | Fast travel (future) |
+| Stables | Castle, City | No function yet. Fast travel to region castles is unlocked by the Wayfarer's Compass relic (see ITEM_SYSTEM.md) |
 | Marketplace | Castle | Player-to-player trading |
 | Garrison | Castle | Hire mixed-class recruits with regional bias |
 | Farm | Village | Buy food items |
 
 ### 3.4 World Generation Rules
 
-1. **Central Castle**: Always at coordinates (0, 0)
-2. **Ring Distribution**:
-   - Ring 1 (distance 3-4): Cities, Villages, Forests
-   - Ring 2 (distance 5-7): Cities, Villages, Forests, Caves
-   - Ring 3 (distance 8-11): Villages, Forests, Caves, Mountains, Bridges
-   - Ring 4+ (distance 12+): Forests, Caves, Mountains, Bridges
-3. **Guild Placement**: 4 guilds at distance 5-8, one per class
-4. **Palace Placement**: Exactly 1, minimum distance 13
-5. **Connectivity**: All nodes connected (no isolated nodes)
-6. **Node Names**: Procedurally generated from prefix/suffix lists
+The world has five regions, one per race, generated deterministically from `WORLD_SEED` (`api/src/db/worldgen/`):
+
+1. **Castle placement**: 5 castles placed by force-directed layout plus Lloyd's relaxation (`castlePlacement.js`).
+2. **Region partitioning**: Voronoi cells around the castles form the region borders (`voronoiPartitioning.js`).
+3. **Node generation**: Poisson disk sampling inside each region, with rings by distance from that region's castle (Ring 1: cities, villages, primary guild; Ring 2: keep, secondary guilds, villages, battle nodes; outer rings: battle and activity nodes) (`nodeGeneration.js`).
+4. **Internal connections**: A minimum spanning tree plus extra edges per region (`internalConnections.js`).
+5. **Inter-region connections**: Bridges, wilderness zones, trade routes, the Grand Palace, and gap infill so no connection exceeds the maximum spacing (`interRegionConnections.js`).
+6. **Validation**: Connectivity, terminators, difficulty tiers and spacing checks (`validation.js`).
 
 > **Detailed Documentation**: See [WORLDGEN_TECHNICAL_DEEP_DIVE.md](WORLDGEN_TECHNICAL_DEEP_DIVE.md) for the complete 6-phase world generation algorithm including Voronoi partitioning, MST connections, and region theming.
 
@@ -457,17 +438,19 @@ Combat is **turn-based tactical** on an **8x8 isometric grid**. Each unit accumu
 |---------|-------|
 | Battle victories (30-250g by tier) | NPC shop purchases |
 | PvP victories (50-100g) | Equipment upgrades |
-| Selling to NPCs (50% of base) | Consumables |
+| Selling to NPCs (50% of value, see ECONOMY_SYSTEM.md) | Consumables, relic fast travel and stamina restore |
 
 ### Item Rarity
 
-| Rarity | Drop Rate | Price Multiplier | Color |
-|--------|-----------|------------------|-------|
-| Common | 70% | 1x | White |
-| Uncommon | 20% | 2x | Green |
-| Rare | 8% | 5x | Blue |
-| Epic | 1.8% | 15x | Purple |
-| Legendary | 0.2% | 50x | Gold |
+| Rarity | Price Multiplier | Color |
+|--------|------------------|-------|
+| Common | 1x | White |
+| Uncommon | 1.5x | Green |
+| Rare | 2.5x | Blue |
+| Epic | 5x | Purple |
+| Legendary | 10x | Orange |
+
+Drop rarity is not a global table: each enemy's `drop_table.rarityWeights` sets it. A generated item's value is `base_price * multiplier * (1 + level * 0.05)` (`itemDropService.js`).
 
 > **Detailed Documentation**: See [ECONOMY_SYSTEM.md](ECONOMY_SYSTEM.md) for complete NPC shop mechanics, dynamic pricing, and marketplace order book system. See [ITEM_SYSTEM.md](ITEM_SYSTEM.md) for equipment slots, rarity generation, and drop tables.
 
@@ -669,3 +652,4 @@ Real-time chat in Tavern nodes with 160 character limit and 100 message scroll-b
 | 3.0 | Jan 2026 | - | Added Related Documents section with battle system docs |
 | 4.0 | Jan 2026 | - | Refactored to index document: condensed combat/economy/multiplayer sections, added Document Index, links to specialized docs |
 | 4.1 | Feb 2026 | - | Added Garrison feature to castle: hire mixed-class recruits with regional race/class bias, refreshed hourly |
+| 4.2 | Sep 2026 | - | World section matches the 5-region generator (5 castles, 15 guilds, Grand Palace at a Voronoi vertex); rarity price multipliers corrected to 1/1.5/2.5/5/10 |

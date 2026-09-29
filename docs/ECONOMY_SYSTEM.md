@@ -56,7 +56,7 @@ Modia's economy consists of two primary trading systems:
 
 **Gold** is the sole currency, earned through:
 - Battle victories (30-250g based on difficulty)
-- Selling items to NPCs (50% of base value)
+- Selling items to NPCs (50% of item value; see Section 2.2)
 - Selling items to players via marketplace
 
 ### 1.3 Gold Flow Diagram
@@ -108,21 +108,28 @@ NPC shops provide a reliable way to buy and sell items at fixed locations throug
 
 When players sell items to NPCs:
 
-**Base Formula:**
+<a id="npc-sell-pricing"></a>
+**NPC sell pricing** (`calculateSellPrice()` in `api/src/services/shopPricing.js`, used by both `GET .../sell-inventory` and `POST .../sell`, so the shown and paid prices always agree):
+
 ```
-sell_price = floor(item_base_value × 0.50)
+plain template item (no rolled rarity, no augments):
+  sell_price = floor(base_price × 0.50)
+
+rolled drop (modifications.rarity set, or any augments):
+  value      = floor(base_price × rarityMultiplier × (1 + 0.15 × Σ augment category values))
+  sell_price = floor(value × 0.50)
 ```
+
+`value` is the marketplace suggested price (`calculateSuggestedPrice()`, `services/marketplace/itemListings.js`). Rarity multipliers are 1 / 1.5 / 2.5 / 5 / 10 for Common to Legendary; augment category values come from `AUGMENT_VALUES` in `services/marketplace/constants.js` (unknown categories count 0.5).
 
 **Rules:**
-- Items must match shop specialty (see Section 2.5)
-- Sold items enter NPC inventory for resale to other players
-- Transaction is immediate (gold added to player balance)
-- No quantity limits
+- Equipped items, items listed on the marketplace and non-tradeable items cannot be sold. Any shop type buys any item; there is no specialty check on selling
+- Gold is added immediately
+- If the shop stocks that item type, the sold quantity is added to its inventory as the plain template (rolled stats and augments are not resold). A new row created this way has `restock_quantity = 0`, so it is buy-back stock that never regenerates.
 
 **Example:**
-- Player sells "Steel Sword" (base value: 500g)
-- Blacksmith pays: 500 × 0.50 = 250g
-- Steel Sword enters Blacksmith's inventory
+- Player sells a plain "Steel Sword" (base price 500g): 500 × 0.50 = 250g
+- A Rare Steel Sword with one `fire` augment (0.8): value = 500 × 2.5 × 1.12 = 1,400g, sells for 700g
 
 ### 2.3 NPC Selling (Dynamic Supply-Based Pricing)
 
@@ -364,7 +371,7 @@ The Player Marketplace is an open exchange system located exclusively at Castle 
 |---------|-------------|
 | Location | Castle nodes only |
 | Order Types | Limit Orders, Market Orders |
-| Fees | 5% seller tax on completed trades (see below) |
+| Fees | 5% seller tax on completed trades, 3% with the Merchant's Seal (see below) |
 | Max Orders | 10 open orders per player (buy + sell combined) |
 | Item Restrictions | No Key Items |
 
@@ -375,13 +382,15 @@ The marketplace applies a **5% seller tax** on all completed trades:
 | Fee Type | Rate | When Applied | Paid By |
 |----------|------|--------------|---------|
 | Listing Fee | None | - | - |
-| Seller Tax | 5% | On trade completion | Seller |
+| Seller Tax | 5% (3% with Merchant's Seal) | On trade completion | Seller |
 | Buyer Tax | None | - | - |
+
+**Merchant's Seal:** the seller's rate comes from `getMarketplaceFeeRate(sellerUserId, client)` in `relicService.js`. It returns the relic's `fee_rate` (0.03) if the seller owns the Merchant's Seal, else 0.05. The lookup runs on the open trade transaction's client for order-book fills and item-listing purchases, and the applied rate is written to `marketplace_tax_ledger.tax_rate`. The Seal is claimable after the user's first completed marketplace sale (see [ITEM_SYSTEM.md](ITEM_SYSTEM.md#4-relic-system)).
 
 **How it works:**
 - When a trade executes, the buyer pays the full trade price
 - The seller receives 95% of the trade price (gross amount minus 5% tax)
-- Tax is calculated as `floor(grossAmount * 0.05)` (rounded down)
+- Tax is calculated as `floor(grossAmount * sellerTaxRate)` (rounded down)
 
 **Example:**
 ```
@@ -1597,10 +1606,11 @@ Response:
 |------|------|-------|
 | NPC Buy Rate | 50% loss | Player sells at 50%, buys at 60-120% |
 | NPC Stock Purchases | 60-120% | Base stock is gold creation |
-| Marketplace Tax | 5% per trade | Seller tax on completed trades |
+| Marketplace Tax | 5% per trade (3% with Merchant's Seal) | Seller tax on completed trades |
 | Guild/Garrison Recruitment | 400-6,000g | Major gold sink for party expansion |
 | Caravan Purchases | 115% premium | Exclusive items at higher prices |
-| Stables (future) | Variable | Fast travel costs |
+| Fast travel (Wayfarer's Compass) | 100g + 50g per region of distance (100-300g) | To a region castle; `POST /api/world/fast-travel` |
+| Stamina restore (Vitality Charm) | 100g per stamina point | At castle, city, village, keep or palace nodes; `POST /api/world/stamina/restore` |
 | Repair (future) | 10-20% value | Equipment durability |
 
 #### Guild Recruitment Pricing
@@ -1694,3 +1704,4 @@ Where:
 | 2.1 | 2026-01-25 | Fixed P1-1: Documented 5% seller tax and tax ledger system |
 | 2.2 | 2026-01-25 | P2-3: Added shop restock mechanics, item listing system, caravan shop system |
 | 2.3 | 2026-02-01 | Updated guild recruitment pricing formula: base 400g, trait costs by rarity, skill costs, stat variance bonus |
+| 2.4 | 2026-09-29 | NPC sell pricing includes rolled rarity and augments; player-sold stock never restocks; Merchant's Seal 3% seller fee; relic fast travel and stamina restore added to gold sinks |

@@ -62,7 +62,7 @@ Repeatable quests that reset on a daily (UTC midnight) and weekly (Monday UTC mi
 - `daily_quest_history` - Completion history
 - `character_login_streaks` - Streak tracking
 
-**API Routes:** `/api/quests/*` (to be implemented)
+**API Routes:** `/api/quests/*` (`api/src/routes/quests.js`; see [API_SPECIFICATION.md](API_SPECIFICATION.md)). Service: `api/src/services/dailyQuestService.js`. UI: `frontend/src/scenes/QuestBoardScene.js`, opened from the profile menu.
 
 ---
 

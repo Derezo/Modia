@@ -5,9 +5,9 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| API Version | 3.0 |
+| API Version | 3.1 |
 | Base URL | `/api` |
-| Last Updated | July 2026 |
+| Last Updated | September 2026 |
 
 ---
 
@@ -51,6 +51,8 @@ All responses are JSON with the following structure:
 
 > **Note:** All error responses include a `requestId` field (UUID) for correlation with server-side exception tracking. Include this ID when reporting issues to help with debugging.
 
+5xx responses always have the body `{ "error": "Internal Server Error", "requestId": "..." }`; internal error text and stack traces are only logged server-side. 4xx responses carry the `AppError` message. Malformed numeric IDs that reach PostgreSQL (invalid input syntax, out of range) return 400 `Invalid parameter`, not 500.
+
 ### 1.4 HTTP Status Codes
 
 | Code | Meaning |
@@ -82,7 +84,7 @@ POST /api/auth/register
 {
   "username": "string (3-32 chars)",
   "email": "string (valid email)",
-  "password": "string (8+ chars)"
+  "password": "string (8+ chars, at most 72 UTF-8 bytes)"
 }
 ```
 
@@ -106,6 +108,7 @@ POST /api/auth/register
 | 400 | Username, email, and password are required |
 | 400 | Username must be between 3 and 32 characters |
 | 400 | Password must be at least 8 characters |
+| 400 | Password exceeds maximum length (72 bytes) |
 | 400 | Invalid email format |
 | 409 | Username already exists |
 | 409 | Email already exists |
@@ -173,6 +176,7 @@ POST /api/auth/register-with-character
 | 400 | Character name, race, and class are required |
 | 400 | Username must be between 3 and 32 characters |
 | 400 | Password must be at least 8 characters |
+| 400 | Password exceeds maximum length (72 bytes) |
 | 400 | Invalid email format |
 | 400 | Character name must be between 2 and 24 characters |
 | 400 | Invalid race |
@@ -256,16 +260,22 @@ POST /api/auth/refresh
     "email": "player1@example.com",
     "gold": 500
   },
-  "accessToken": "eyJhbGciOiJIUzI1NiIs..."
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIs..."
 }
 ```
+
+**Rotation:** every successful refresh deletes the session row for the presented token and issues a new refresh token (7-day expiry). The old refresh token is rejected from then on, so clients must store the `refreshToken` from each response. The delete is atomic (`DELETE ... RETURNING`), so two concurrent refreshes with the same token cannot both succeed.
+
+**Storage:** `user_sessions.refresh_token_hash` holds the SHA-256 hex digest of the token. (bcrypt only compared the first 72 bytes, which every JWT from the same user shares, so rotation and per-session logout did not work with bcrypt.) Sessions created before this change are not accepted; those users log in again.
 
 **Errors:**
 | Code | Message |
 |------|---------|
 | 400 | Refresh token is required |
+| 400 | Refresh token must be a string |
 | 401 | Invalid refresh token |
-| 401 | Invalid or expired refresh token |
+| 401 | Invalid or expired refresh token (also returned for an already-rotated token) |
 
 ---
 
@@ -286,12 +296,19 @@ POST /api/auth/logout
 }
 ```
 
+With `refreshToken`, only that session is deleted (matched by its SHA-256 digest). Without it, every session for the user is deleted.
+
 **Response (200 OK):**
 ```json
 {
   "message": "Logged out successfully"
 }
 ```
+
+**Errors:**
+| Code | Message |
+|------|---------|
+| 400 | Refresh token must be a string |
 
 ---
 
@@ -699,6 +716,40 @@ PUT /api/party/battle
 | 400 | Cannot have more than 5 characters in battle party |
 | 400 | Battle party must have at least 1 character |
 | 400 | One or more characters not found or are incapacitated |
+
+---
+
+### 4.4 Multiplayer Parties
+
+Multi-user parties (separate from the character formation above). All routes require `Authorization: Bearer <token>`. Party creation, invites and joining are **REST-only**; the WebSocket only pushes events (`party:invite_received`, `party:member_joined`, `party:member_left`, `party:disbanded`, `party:leader_changed`) and accepts `party_leave`. The old WebSocket invite path was removed.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/party/multiplayer/current` | The caller's party in `forming` or `ready` status, or none |
+| POST | `/api/party/multiplayer` | Create a party. Body: `{ name?, partyType?, maxMembers? }`. Returns 201 with `{ party }` |
+| GET | `/api/party/multiplayer/invites` | Pending invites for the caller |
+| POST | `/api/party/multiplayer/decline/:inviteId` | Decline an invite |
+| GET | `/api/party/multiplayer/:partyId` | Party details and members |
+| POST | `/api/party/multiplayer/:partyId/invite` | Invite a player (leader only). Body: `{ username }`. Invite expires after 5 minutes |
+| POST | `/api/party/multiplayer/join/:inviteId` | Accept an invite and join |
+| POST | `/api/party/multiplayer/:partyId/leave` | Leave the party |
+| PUT | `/api/party/multiplayer/:partyId/ready` | Body: `{ isReady: boolean }` |
+| POST | `/api/party/multiplayer/:partyId/start` | Start the party battle (leader only, all ready). Body: `{ nodeId }` |
+
+**Create:** `partyType` is `adventure` (default), `coliseum_team` or `raid`; the legacy aliases `pve`, `pve_coop` and `pvp_team` are mapped to these. `maxMembers` is 2-8 (default 4). `name` is validated as a display name (1-64 chars); the default is `"<username>'s Party"`.
+
+**Errors (selected):**
+| Code | Message |
+|------|---------|
+| 400 | Invalid party type. Must be one of: adventure, coliseum_team, raid |
+| 400 | maxMembers must be between 2 and 8 |
+| 400 | You are already in a party |
+| 400 | Cannot invite yourself / Cannot invite this player (blocked) / That player is already in a party / Invite already pending for this player / Party is full |
+| 403 | Only the party leader can invite players |
+| 403 | This player is not accepting party invitations (target has `allowPartyInvites: false`) |
+| 403 | This invite is not for you |
+| 400 | Invite has expired / Invite is no longer valid |
+| 404 | Party not found / Invite not found |
 
 ---
 
@@ -3099,7 +3150,7 @@ POST /api/shops/:nodeId/:shopType/buy
 
 ### 12.3 Sell Item
 
-Sell an item to a shop. Sell price is always 50% of base price.
+Sell an item to a shop. The unit price is `calculateSellPrice()`: 50% of `base_price` for a plain template item, or 50% of the rarity- and augment-adjusted value for a rolled drop. `GET .../sell-inventory` shows the same `sellPrice`. See [ECONOMY_SYSTEM.md](ECONOMY_SYSTEM.md#npc-sell-pricing).
 
 ```
 POST /api/shops/:nodeId/:shopType/sell
@@ -3875,19 +3926,36 @@ PUT /api/settings
 | 400 | Settings must be an object |
 | 400 | Invalid actionMenuStyle value |
 
+**Social privacy settings** (`social` group, all default `true`) are enforced by the server, not just the client:
+
+| Setting | Effect when `false` |
+|---------|---------------------|
+| `allowFriendRequests` | `POST /api/friends/request/:username` to this user returns 403 |
+| `allowPartyInvites` | `POST /api/party/multiplayer/:partyId/invite` to this user returns 403 |
+| `showOnlineStatus` | Friend lists, player search, `/api/chat/online` and `/api/chat/presence/:userId` show the user as offline. Node player lists (`playersAtNode` in world travel and location responses, and the WebSocket `join_node` presence) do not yet apply this setting |
+
+A successful update clears the user's entry in the 30-second `userSettingsService` cache, so the change applies immediately.
+
 ---
 
 ## 16. Fishing Endpoints
 
-Activity node for auto-fishing with chance of rare catches.
+Activity node fishing using the cast protocol (`api/src/routes/fishing.js`). See [ACTIVITY_NODES.md](ACTIVITY_NODES.md) for mechanics.
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/fishing/:nodeId` | Get fishing spot state and current session |
-| POST | `/api/fishing/:nodeId/start` | Start fishing session at node |
-| POST | `/api/fishing/:nodeId/stop` | Stop current fishing session |
-| POST | `/api/fishing/:nodeId/catch` | Attempt to catch during Big One event |
-| GET | `/api/fishing/inventory` | Get player's fish inventory |
+| GET | `/api/fishing/status` | The user's active session, if any |
+| GET | `/api/fishing/:nodeId/setup` | Gear and setup options for the node |
+| POST | `/api/fishing/:nodeId/start` | Start a session |
+| POST | `/api/fishing/:nodeId/gear` | Change fishing gear |
+| POST | `/api/fishing/:nodeId/cast` | Cast; returns an attempt ID |
+| POST | `/api/fishing/:nodeId/casts/:attemptId/release` | Release |
+| POST | `/api/fishing/:nodeId/casts/:attemptId/hook` | Hook |
+| POST | `/api/fishing/:nodeId/casts/:attemptId/reel` | Reel |
+| POST | `/api/fishing/:nodeId/casts/:attemptId/resolve` | Resolve the attempt |
+| POST | `/api/fishing/:nodeId/end` | End the session and collect rewards |
+| GET | `/api/fishing/:nodeId/status` | Session status at this node |
+| POST | `/api/fishing/:nodeId/catch`, `/api/fishing/:nodeId/big-one` | 410 Gone (legacy) |
 
 ---
 
@@ -3903,49 +3971,90 @@ Activity node for sliding puzzle minigame with regional themes.
 
 ---
 
+<a id="relics"></a>
 ## 18. Relics Endpoints
 
-Collection system for permanent stat bonuses.
+Account-wide relics that unlock features (fast travel, stamina restore, reduced marketplace fee). See [ITEM_SYSTEM.md](ITEM_SYSTEM.md#4-relic-system) for effects and claim conditions.
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/relics` | Get all relics and completion status |
-| GET | `/api/relics/:relicId` | Get specific relic details |
-| POST | `/api/relics/:relicId/claim` | Claim a relic (requires real database validation) |
-| POST | `/api/relics/:relicId/activate` | Activate a collected relic |
+| GET | `/api/relics` | All relics with `owned`, `acquiredAt`, `claimable` and `requirement` |
+| GET | `/api/relics/owned` | Owned relics and `count` |
+| GET | `/api/relics/check/:key` | `{ relicKey, owned, effects }` |
+| POST | `/api/relics/:id/claim` | Claim a relic (rate limited: `economy:relic_claim`) |
+| POST | `/api/relics/grant/:key` | Development/test only; 403 when `NODE_ENV` is anything else |
 
-> **Note (2026-04-25):** Relic claim endpoints now use real database lookups for quest validation. No longer accepts client-supplied `questCompleted`, `guildRequirementMet`, or `achievementCompleted` flags. Validation is performed server-side via `character_quests`, `daily_quest_history`, character class tier validation, and `pvp_achievements` tables.
+**GET /api/relics item:**
+```json
+{
+  "id": 3,
+  "key": "merchants_seal",
+  "name": "Merchant's Seal",
+  "rarity": "epic",
+  "acquisitionType": "achievement",
+  "effects": { "unlock": "reduced_marketplace_fee", "fee_rate": 0.03 },
+  "owned": false,
+  "acquiredAt": null,
+  "claimable": false,
+  "requirement": "Complete at least one marketplace sale to claim this relic"
+}
+```
+
+**POST /api/relics/:id/claim** takes no body. Eligibility is checked server-side (`checkRelicEligibility`); client-supplied flags are ignored.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "You have acquired the Merchant's Seal!",
+  "relic": { "id": 3, "key": "merchants_seal", "name": "Merchant's Seal", "description": "...", "rarity": "epic", "effects": { "...": "..." }, "acquiredAt": "2026-09-29T12:00:00.000Z" }
+}
+```
+
+**Errors:**
+| Code | Message |
+|------|---------|
+| 400 | Invalid relic ID |
+| 400 | You already own this relic |
+| 400 | The unmet requirement, e.g. "Complete any tier 1 guild advancement quest to claim this relic", "Visit any watchtower to claim this relic", "This relic is not yet obtainable" |
+| 404 | Relic not found |
+| 429 | Too many relic claim attempts. Please wait a moment. |
 
 ---
 
 ## 19. Friends Endpoints
 
-Social system for friend management and invites.
-
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/friends` | Get friend list with online status |
-| GET | `/api/friends/requests` | Get pending friend requests |
-| POST | `/api/friends/request` | Send friend request |
-| POST | `/api/friends/accept/:userId` | Accept friend request |
-| POST | `/api/friends/decline/:userId` | Decline friend request |
-| DELETE | `/api/friends/:userId` | Remove friend |
-| POST | `/api/friends/:userId/block` | Block user |
-| DELETE | `/api/friends/:userId/block` | Unblock user |
-| GET | `/api/friends/blocked` | Get blocked users list |
+| GET | `/api/friends` | Friend list with presence |
+| GET | `/api/friends/requests` | Pending friend requests |
+| GET | `/api/friends/blocked` | Blocked users |
+| GET | `/api/friends/search` | Search players |
+| POST | `/api/friends/request/:username` | Send a friend request |
+| POST | `/api/friends/accept/:requestId` | Accept a request |
+| POST | `/api/friends/decline/:requestId` | Decline a request |
+| PUT | `/api/friends/:friendId` | Update a friendship |
+| DELETE | `/api/friends/:friendId` | Remove a friend |
+| POST | `/api/friends/:friendId/block` | Block a user |
+| DELETE | `/api/friends/:friendId/block` | Unblock (only the user who created the block can remove it) |
+
+**Privacy settings (enforced server-side):**
+- A friend request to a user with `social.allowFriendRequests: false` returns **403** "This user is not accepting friend requests".
+- For users with `social.showOnlineStatus: false`, friend lists and player search report `online: false`, `status: "offline"`, and hide `customMessage` and `currentNodeId`.
+
+Settings are read through `userSettingsService` with a 30-second cache that `PUT /api/settings` clears for the user, so changes take effect immediately.
 
 ---
 
 ## 20. LFG Endpoints
 
-Looking-for-group system for party formation.
-
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/lfg` | Get active LFG posts |
-| POST | `/api/lfg` | Create LFG post |
-| DELETE | `/api/lfg/:postId` | Delete own LFG post |
-| POST | `/api/lfg/:postId/apply` | Apply to join LFG group |
+| GET | `/api/lfg` | Active LFG posts |
+| GET | `/api/lfg/my-post` | The caller's active post |
+| POST | `/api/lfg` | Create a post (title and text validated server-side) |
+| DELETE | `/api/lfg/:postId` | Delete own post |
+| POST | `/api/lfg/:postId/apply` | Apply to a post |
 
 ---
 
@@ -3981,17 +4090,37 @@ Guild advancement quest system for class progression.
 
 ## 23. Daily/Weekly Quests Endpoints
 
-Repeatable quest system with daily and weekly resets.
+Source: `api/src/routes/quests.js`. Reading the daily or weekly list assigns new quests when a reset is due.
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/quests/daily` | Get available daily quests |
-| GET | `/api/quests/weekly` | Get available weekly quests |
-| GET | `/api/quests/progress` | Get quest completion progress |
-| POST | `/api/quests/:questId/claim` | Claim quest reward |
-| GET | `/api/quests/bonus` | Get active quest bonuses |
-| GET | `/api/quests/elite` | Get elite quest challenges |
-| POST | `/api/quests/elite/:questId/start` | Start elite quest |
+| GET | `/api/quests/daily/:characterId` | Daily quests (refreshes if due) |
+| GET | `/api/quests/weekly/:characterId` | Weekly quests (refreshes if due) |
+| GET | `/api/quests/markers/:characterId` | World map quest markers |
+| POST | `/api/quests/refresh/:characterId` | Force the refresh check |
+| POST | `/api/quests/:questId/claim` | Claim one quest. Body: `{ characterId }` |
+| POST | `/api/quests/claim-all` | Claim every completed quest. Body: `{ characterId }` |
+| GET | `/api/quests/streaks/:characterId` | Login streak info |
+| GET | `/api/quests/first-blood` | First-blood records |
+| GET | `/api/quests/champions` | Champions list |
+
+**POST /api/quests/:questId/claim response (200 OK):**
+```json
+{ "success": true, "reward": { "...": "..." }, "completionBonus": null, "newGold": 1450 }
+```
+
+A single claim also checks the daily completion bonus (idempotent), so claiming the last quest one by one grants it; `completionBonus` is `null` when none was granted.
+
+**Claim errors:**
+| Code | Message |
+|------|---------|
+| 400 | Invalid quest ID / invalid character ID |
+| 404 | Character not found (not owned by the caller) |
+| 404 | Quest not found |
+| 409 | Quest not completed |
+| 409 | Rewards already claimed |
+
+These were 500s before this release.
 
 ---
 
@@ -4014,29 +4143,72 @@ PvP arena with matchmaking and rankings.
 
 ## 25. Clans Endpoints
 
-Clan system for player organizations.
-
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/clans` | Search/list clans |
-| POST | `/api/clans` | Create new clan |
-| GET | `/api/clans/:clanId` | Get clan details |
-| POST | `/api/clans/:clanId/join` | Request to join clan |
-| POST | `/api/clans/:clanId/leave` | Leave current clan |
-| POST | `/api/clans/:clanId/invite` | Invite player to clan (officer+) |
+| POST | `/api/clans` | Create a clan (name validated server-side) |
+| GET | `/api/clans/my` | The caller's clan |
+| GET | `/api/clans/invites` | Pending clan invites for the caller |
+| GET | `/api/clans/:id` | Clan details |
+| POST | `/api/clans/:id/leave` | Leave the clan. The leader must transfer leadership or disband first |
+| DELETE | `/api/clans/:id` | Disband (leader only) |
+| POST | `/api/clans/:id/invite/:username` | Invite a player |
+| POST | `/api/clans/invite/:inviteId/accept` | Accept an invite (runs in one locked transaction) |
+| POST | `/api/clans/invite/:inviteId/decline` | Decline an invite |
+| POST | `/api/clans/:id/transfer` | Transfer leadership (leader only) |
+| GET | `/api/clans/:id/messages` | Clan chat history |
+| POST | `/api/clans/:id/messages` | Post a clan message |
+
+### 25.1 Transfer Leadership
+
+```
+POST /api/clans/:id/transfer
+```
+
+**Request Body:**
+```json
+{ "userId": 42 }
+```
+
+The clan row is locked, `clans.leader_id` moves to the target, the target's `clan_members.role` becomes `leader` and the old leader becomes `officer`, all in one transaction.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Leadership transferred",
+  "clanId": 7,
+  "clanName": "Iron Wolves",
+  "newLeaderId": 42,
+  "newLeaderUsername": "player42"
+}
+```
+
+**Errors:**
+| Code | Message |
+|------|---------|
+| 400 | Invalid clan ID / Invalid target user ID |
+| 400 | You are already the leader |
+| 403 | Only the clan leader can transfer leadership |
+| 404 | Clan not found |
+| 404 | Target user is not a member of this clan |
 
 ---
 
 ## 26. Chat Endpoints
 
-Chat message history retrieval (real-time via WebSocket).
+Chat history and presence (real-time messages go over WebSocket).
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/chat/history/:room` | Get chat history for room |
-| GET | `/api/chat/rooms` | Get available chat rooms |
-| POST | `/api/chat/report` | Report chat message |
-| DELETE | `/api/chat/:messageId` | Delete own message |
+| GET | `/api/chat/history/:roomType` | Chat history for a room (party history requires membership) |
+| GET | `/api/chat/dm/:targetUserId` | Direct-message history (blocks enforced) |
+| GET | `/api/chat/conversations` | DM conversation list |
+| POST | `/api/chat/reaction` | Add a reaction |
+| DELETE | `/api/chat/reaction` | Remove a reaction |
+| GET | `/api/chat/online` | Online players; omits users with `showOnlineStatus: false` (the caller always sees themselves) |
+| PUT | `/api/chat/presence` | Set own status (`online`, `away`, `busy`) and custom message (max 128 chars) |
+| GET | `/api/chat/presence/:userId` | A user's presence, masked as offline if they hide their online status |
 
 ---
 
@@ -4127,6 +4299,26 @@ GET /api/feedback/my
 
 ---
 
+## 27a. Health Endpoints
+
+No authentication.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/health` | Liveness for load balancers |
+| GET | `/api/health/ready` | Readiness: database, Redis and terminal-effects checks |
+| GET | `/api/health/live` | Liveness probe |
+| GET | `/api/health/metrics` | Operational metrics |
+
+**GET /api/health response (200 OK):**
+```json
+{ "status": "ok", "timestamp": "2026-09-29T18:22:39.692Z", "version": "0.5.0" }
+```
+
+`version` is `APP_VERSION` if set, otherwise the `version` field of the root `package.json`. It is no longer hard-coded.
+
+---
+
 ## 28. Error Codes
 
 | Code | HTTP Status | Description |
@@ -4159,3 +4351,4 @@ GET /api/feedback/my
 | 2.8 | Feb 2026 | - | Updated guild and garrison recruit price examples to reflect new pricing formula: base 400g + trait rarity costs + skill costs + stat variance bonus. Added price calculation notes with cross-reference to ECONOMY_SYSTEM.md. |
 | 2.9 | Feb 2026 | - | Added coliseum:match_result WebSocket event (Section 7.11) for PvP match completion with detailed payload schema including unit stats, battle summary, and rating information. |
 | 3.0 | Jul 2026 | - | Completed private shrine map state and activation contracts, plus authoritative Zodiac signature discovery and free-action battle endpoints. |
+| 3.1 | Sep 2026 | - | Refresh-token rotation and SHA-256 session storage, 72-byte password limit, multiplayer party routes (4.4, REST-only invites), cast-protocol fishing routes, relic claim eligibility, friends privacy enforcement, quest claim 4xx codes, clan leadership transfer (25.1), chat presence privacy, health endpoints with package version |

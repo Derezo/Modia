@@ -2,7 +2,7 @@
 
 | Document | Version | Last Updated |
 |----------|---------|--------------|
-| Item System Specification | 4.0 | 2026-01-25 |
+| Item System Specification | 5.0 | 2026-09-29 |
 
 ## Table of Contents
 
@@ -18,26 +18,28 @@
 4. [Relic System](#4-relic-system)
    - 4.1 Overview
    - 4.2 Relic Templates
-   - 4.3 Acquisition Methods
-   - 4.4 Permanent Bonuses
-   - 4.5 Collection UI
-5. [Planned Features (Not Yet Implemented)](#5-planned-features-not-yet-implemented)
-   - 5.1 Material Progression System
-   - 5.2 Augmentation System
-   - 5.3 Procedural Item Generation
-   - 5.4 Advanced Weapon/Armor Types
-   - 5.5 Item Naming System
+   - 4.3 Acquisition Conditions
+   - 4.4 Collection UI
+5. [Procedural Item Generation (Implemented)](#5-procedural-item-generation-implemented)
+   - 5.1 Generation Steps
+   - 5.2 Material Tiers
+   - 5.3 Rarity Rolls
+   - 5.4 Augments
+   - 5.5 Naming
+   - 5.6 Value
+6. [Planned Features (Not Yet Implemented)](#6-planned-features-not-yet-implemented)
 
 ---
 
 ## 1. Overview
 
-Items in Modia are defined as static templates with fixed stats. The current implementation uses a straightforward template system where each item has predetermined stat bonuses, level requirements, and pricing.
+Items in Modia start from templates (`api/src/db/templates/items.js`). Items bought from NPC shops are the plain template. Enemy drops are generated from a template with a rolled rarity, material, stats and augments (Section 5).
 
 ### Core Concepts (Current)
 
-- **Template**: Static item definition with fixed stats (see `api/src/db/templates/items.js`)
-- **Rarity**: Integer value (1-4) affecting drop rates and item value
+- **Template**: Base item definition (see `api/src/db/templates/items.js`)
+- **Rolled item**: A generated instance whose stats, augments and name live in `character_items.modifications`
+- **Rarity**: Integer value (1-5) affecting stats, augment slots and item value
 - **Equipment Slot**: Where the item can be equipped (main_hand, body, head, feet, accessory)
 - **Stat Bonuses**: Object containing stat modifications (strength, intelligence, etc.)
 
@@ -58,7 +60,7 @@ Each item is defined with the following properties:
   equipment_slot: 'main_hand',  // main_hand, body, head, feet, accessory (or null)
   stat_bonuses: { strength: 7 }, // Object with stat modifications
   level_requirement: 5,         // Minimum level to equip
-  base_price: 150,              // Gold cost (sell value = base_price / 2)
+  base_price: 150,              // Gold cost (NPC sell value: see ECONOMY_SYSTEM.md)
   rarity: 2,                    // 1=Common, 2=Uncommon, 3=Rare, 4=Epic
   description: 'A sturdy iron blade forged by skilled smiths.'
 }
@@ -108,7 +110,7 @@ The current implementation uses a simple integer rarity system:
 | 3 | Rare | Good stats, rare drops |
 | 4 | Epic | Powerful items, very rare |
 
-**Note:** There is no Legendary (5) tier currently implemented in item templates.
+**Note:** No item template has rarity 5. Legendary (5) exists only on generated items when the generator is asked for it (`forcedRarity` or an enemy's `rarityWeights`); see Section 5.3.
 
 ### 2.5 Shop Stock
 
@@ -390,286 +392,133 @@ calculateDrops(enemy, killer):
 
 ### 4.1 Overview
 
-Relics are rare collectible items that provide **permanent stat bonuses** to the owning player. Unlike equipment, relics are not worn or traded—they are collected and their bonuses apply automatically.
+Relics are account-wide unlocks. Each one is claimed once per user (`user_relics`) and turns on a feature or an economy modifier for every character on the account. They are not equipment and cannot be traded or sold.
 
-Key characteristics:
-- **Permanent**: Bonuses persist across all characters
-- **Non-tradeable**: Cannot be sold or traded
-- **Unique**: Each relic can only be collected once
-- **Cumulative**: Multiple relics stack their bonuses
+Source of truth: `relic_templates` (seeded by `api/src/migrations/033_relic_system.sql`, acquisition rules set by migrations 062 and 064) and `api/src/services/relicService.js`.
 
 ### 4.2 Relic Templates
 
-| Relic | Stat Bonus | Acquisition |
-|-------|------------|-------------|
-| Ancient Coin | +2% Gold Drop | Ruins puzzle completion |
-| Dragon Scale | +5 Physical Defense | Boss drop (dragon enemies) |
-| Fairy Dust | +3% MP Regeneration | Rare shrine blessing |
-| Warrior's Medal | +2 STR | Guild advancement (Warrior) |
-| Scholar's Tome | +2 INT | Guild advancement (Wizard) |
-| Monk's Beads | +2 AGI | Guild advancement (Monk) |
-| Alchemist's Stone | +2 VIT | Guild advancement (Chemist) |
+| Key | Relic | Rarity | Acquisition type | Effect (`effects` JSON) | Where the effect applies |
+|-----|-------|--------|------------------|-------------------------|--------------------------|
+| `wayfarers_compass` | Wayfarer's Compass | rare | quest | `unlock: fast_travel` | `GET /api/world/fast-travel/destinations` and `POST /api/world/fast-travel` to a region castle. Cost is 100g + 50g per region of distance (`routes/world/progression.js`). |
+| `vitality_charm` | Vitality Charm | rare | quest | `unlock: stamina_restore`, `cost_per_point: 100` | `POST /api/world/stamina/restore` at a castle, city, village, keep or palace node, 100g per stamina point. |
+| `merchants_seal` | Merchant's Seal | epic | achievement | `unlock: reduced_marketplace_fee`, `fee_rate: 0.03` | Seller fee on marketplace fills drops from 5% to 3% (`getMarketplaceFeeRate`). See [ECONOMY_SYSTEM.md](ECONOMY_SYSTEM.md). |
+| `cartographers_eye` | Cartographer's Eye | uncommon | node | `unlock: extended_watchtower`, `reveal_bonus: 2` | Claimable, but no server or client code reads `reveal_bonus` yet, so owning it has no gameplay effect today. |
 
-*Note: This is a subset of available relics. Additional relics may be added in future updates.*
+### 4.3 Acquisition Conditions
 
-### 4.3 Acquisition Methods
+Claims are validated server-side by `checkRelicEligibility()` in `relicService.js`. The conditions are class-agnostic and do not depend on world-generation IDs:
 
-| Method | Description |
-|--------|-------------|
-| **Ruins** | Complete sliding tile puzzles in ruin nodes |
-| **Shrines** | Visit zodiac shrines throughout the world |
-| **Guild Advancement** | Complete guild advancement quests |
-| **Boss Drops** | Defeat specific boss enemies |
-| **Discovery Nodes** | Find rare discovery nodes at world edges |
+| Relic | Condition to claim |
+|-------|--------------------|
+| Wayfarer's Compass | Any character on the account has completed a guild advancement quest of tier <= 1 (`acquisition_id = 1` is the required tier). |
+| Vitality Charm | Same as the Compass: any completed tier-1 advancement quest. |
+| Cartographer's Eye | The user has travelled to (not merely revealed) any `watchtower` node. |
+| Merchant's Seal | The user has at least one completed marketplace sale (`market_trades.seller_id`). |
 
-### 4.4 Permanent Bonuses
+A relic with no usable condition (no special case and a NULL `acquisition_id`) is reported as "not yet obtainable" and cannot be claimed. `shop`-type relics are never claimable through the claim endpoint. There is no longer an unconditional claim path; `POST /api/relics/grant/:key` only works when `NODE_ENV` is `development` or `test`.
 
-Relic bonuses are applied at the account level:
+`GET /api/relics` returns, for each unowned relic, `claimable` (boolean) and `requirement` (the unmet condition, or `null`). `POST /api/relics/:id/claim` re-runs the same check. See [API_SPECIFICATION.md](API_SPECIFICATION.md#relics).
 
-```javascript
-// Relic bonus calculation
-function getRelicBonuses(userId) {
-  const relics = getUserRelics(userId);
-  return relics.reduce((bonuses, relic) => {
-    // Add each relic's stats to cumulative bonuses
-    return mergeStats(bonuses, relic.statBonus);
-  }, {});
-}
-```
+### 4.4 Collection UI
 
-Bonuses affect:
-- **Base stats**: STR, INT, AGI, VIT, LUK
-- **Derived stats**: Defense, critical chance, regeneration
-- **Economy**: Gold drop rate, XP gain
-
-### 4.5 Collection UI
-
-The `RelicCollectionModal.js` component displays:
-- All collected relics with icons and descriptions
-- Total cumulative bonuses from collection
-- Zodiac crystal collection progress (12 crystals)
-- Completion percentage toward full collection
-
-Access via:
-- World map menu -> "Relics" button
-- Profile dropdown -> "Collection"
+`frontend/src/modals/RelicCollectionModal.js` lists every relic with its owned state, shows the requirement for locked relics, and offers a Claim button when `claimable` is true. It also shows zodiac crystal collection progress.
 
 ---
 
-## 5. Planned Features (Not Yet Implemented)
+## 5. Procedural Item Generation (Implemented)
 
-> **Note:** The following sections describe planned game systems that are **not yet implemented** in the codebase. They are preserved here as design specifications for future development. The current implementation uses static item templates as documented in Section 2.
+Enemy drops and seeded starter items are generated from templates by `generateItem()` in `api/src/services/itemDropService.js`. Callers are `rollDrops()` (battle rewards) and `api/src/db/seed.js`. Items bought from NPC shops are plain templates without rolled data.
 
-### 5.1 Material Progression System
-
-**Status:** Not implemented. Current items have fixed stats without material variants.
-
-Materials would determine base item stats and scale with character level requirements. Higher-tier materials would provide better base stats but require higher levels to equip.
-
-#### Metal Material Tiers (Planned)
-
-| Tier | Material | Stat Multiplier | Level Req | Properties |
-|------|----------|-----------------|-----------|------------|
-| 1 | Copper | 0.80x | 1 | Soft, easily worked |
-| 2 | Iron | 1.00x | 1 | Baseline material |
-| 3 | Bronze | 1.10x | 10 | Durable alloy |
-| 4 | Steel | 1.25x | 20 | Hardened iron |
-| 5 | Silver | 1.40x | 35 | Anti-undead (+10% vs undead) |
-| 6 | Gold | 1.55x | 50 | Magic conductivity (+5% spell power) |
-| 7 | Platinum | 1.70x | 70 | Noble metal, corrosion resistant |
-| 8 | Mythril | 1.85x | 90 | Lightweight (-1 movement cost) |
-| 9 | Obsidian | 2.00x | 120 | High crit (+5% crit chance) |
-| 10 | Adamantine | 2.20x | 150 | Nearly indestructible |
-| 11 | Dragonbone | 2.50x | 180 | Inherent fire resistance |
-| 12 | Celestial | 3.00x | 210 | All elemental +5% |
-
-#### Wood Material Tiers (Planned)
-
-| Tier | Material | Stat Multiplier | Level Req |
-|------|----------|-----------------|-----------|
-| 1 | Pine | 0.80x | 1 |
-| 2 | Oak | 1.00x | 1 |
-| 3 | Ash | 1.15x | 15 |
-| 4 | Yew | 1.30x | 30 |
-| 5 | Ebony | 1.50x | 50 |
-| 6 | Ironwood | 1.70x | 75 |
-| 7 | Spiritwood | 1.90x | 100 |
-| 8 | Eldertree | 2.10x | 130 |
-| 9 | Worldtree | 2.40x | 165 |
-| 10 | Celestial Oak | 2.80x | 200 |
-
-#### Cloth/Leather Material Tiers (Planned)
-
-| Tier | Material | Stat Multiplier | Level Req |
-|------|----------|-----------------|-----------|
-| 1 | Linen | 0.80x | 1 |
-| 2 | Cotton | 1.00x | 1 |
-| 3 | Wool | 1.15x | 15 |
-| 4 | Leather | 1.30x | 25 |
-| 5 | Silk | 1.50x | 45 |
-| 6 | Shadowweave | 1.70x | 65 |
-| 7 | Dragonhide | 1.90x | 90 |
-| 8 | Mageweave | 2.10x | 120 |
-| 9 | Ethereal Silk | 2.40x | 155 |
-| 10 | Starcloth | 2.80x | 190 |
-
-### 5.2 Augmentation System
-
-**Status:** Not implemented. Current items have fixed properties without augments.
-
-Augmentations would add special effects to items through prefixes and suffixes. Items would gain augmentation slots based on rarity, with effects scaling by intensity tier.
-
-#### Augmentation Overview (Planned)
-
-| Rarity | Augment Slots | Max Intensity |
-|--------|---------------|---------------|
-| Common | 0 | - |
-| Uncommon | 0-1 | Minor |
-| Rare | 1 | Standard |
-| Epic | 1-2 | Greater |
-| Legendary | 2 | Supreme |
-
-#### Elemental Augments (Planned)
-
-Eight elements are planned: Fire, Ice, Lightning, Poison, Holy, Dark, Earth, Wind
-
-Example - Fire Augments:
-
-| Intensity | Prefix | Suffix | Weapon Effect |
-|-----------|--------|--------|---------------|
-| Minor | Warm | of Sparks | +3% fire damage |
-| Lesser | Heated | of Flames | +6% fire damage, 1% burn |
-| Standard | Blazing | of Burning | +10% fire damage, 2% burn |
-| Greater | Scorching | of Inferno | +15% fire damage, 3% burn |
-| Supreme | Volcanic | of Cinders | +25% fire damage, 5% burn |
-
-#### Enemy-Type Augments (Planned)
-
-Prefixes providing bonuses against specific enemy types:
-- Dragonbane/Wyrmslayer (vs Dragons)
-- Undeadbane/Soulreaper (vs Undead)
-- Demonslayer/Hellbreaker (vs Demons)
-- Beastmaster/Apex Hunter (vs Beasts)
-- Giantslayer/Titanfall (vs Giants)
-
-#### Support Augments (Planned)
-
-- Health/Mana regeneration
-- Lifesteal/Drain effects
-- Experience/Gold bonuses
-
-#### Combat Augments (Planned)
-
-- Critical hit bonuses
-- Attack speed/Initiative
-- Evasion/Movement
-- Armor penetration
-
-### 5.3 Procedural Item Generation
-
-**Status:** Not implemented. Current items are static templates with fixed stats.
-
-The planned system would generate item instances from templates with:
-- Seeded random stat rolls within defined ranges
-- Rarity-based stat multipliers
-- Material selection based on level
-- Augmentation rolls based on rarity
-- Dynamic naming based on components
-
-#### Planned Generation Algorithm
-
-1. Initialize with seed for deterministic generation
-2. Roll rarity (70% Common, 20% Uncommon, 8% Rare, 1.8% Epic, 0.2% Legendary)
-3. Select material based on level and rarity
-4. Calculate base stats with material multiplier
-5. Roll bonus stats based on rarity slots
-6. Roll augmentations based on rarity
-7. Generate dynamic name from components
-8. Calculate price from all factors
-
-#### Planned Template Schema
+The rolled result is stored in `character_items.modifications`:
 
 ```json
 {
-  "templateId": "string",
-  "name": "string",
-  "itemType": "weapon|armor|accessory",
-  "equipmentSlot": "main_hand|body|head|feet|accessory",
-  "materialType": "metal|wood|cloth",
-  "baseStats": { "statName": "baseValue" },
-  "statRanges": { "statName": { "min": 0, "max": 0 } },
-  "possibleBonusStats": ["statName"],
-  "maxBonusStats": 4,
-  "levelRequirement": 1,
-  "classRequirement": ["class_id"] | null,
-  "basePrice": 100
+  "generationSeed": 12345,
+  "material": "mythril",
+  "rarity": 4,
+  "baseStats": { "vitality": 14 },
+  "bonusStats": { "luck": 5, "vitality": 7 },
+  "augments": [{ "key": "venomous", "type": "prefix", "name": "Venomous", "category": "poison", "stat": "luck", "value": 5, "effect": { "type": "poison_chance", "value": 0.05 } }],
+  "generatedName": "Exalted Venomous Mythril Greaves of the Guardian",
+  "spriteId": "..."
 }
 ```
 
-### 5.4 Advanced Weapon/Armor Types
+### 5.1 Generation Steps
 
-**Status:** Partially documented, not fully implemented. Current items use simplified types.
+1. Seed a `SeededRandom` with the generation seed.
+2. Rarity: forced by the caller, otherwise the template's rarity. Drops roll rarity from the enemy's `drop_table.rarityWeights`.
+3. Material: picked from the tier for the target level (table 5.2).
+4. Base stats: each template stat is multiplied by a rarity roll (table 5.3) and by `(1 + level * 0.02)`, then floored. Stored as `baseStats`.
+5. Augment slots: rolled from the rarity's slot range. Equipment slot 0 prefers a prefix (70%), later slots prefer a suffix (70%). An augment category can appear only once per item.
+6. Each equipment augment rolls a flat stat bonus in its range; these are summed into `bonusStats`.
+7. Name and value are derived (5.5, 5.6). Level requirement is `max(template requirement, floor(level * 0.8))`.
 
-#### Planned Weapon Variety
+### 5.2 Material Tiers
 
-The full weapon system would include:
-- **Swords:** Shortsword, Longsword, Greatsword, Rapier, Katana, Scimitar, Claymore, Falchion
-- **Axes:** Hatchet, Hand Axe, Battle Axe, Greataxe, Double Axe, War Axe
-- **Maces:** Club, Mace, Morningstar, Flail, Warhammer, Maul
-- **Polearms:** Spear, Pike, Halberd, Glaive, Lance, Trident
-- **Staves:** Quarterstaff, Magic Staff, Battle Staff, Arcane Rod, Grand Staff, Elder Staff
-- **Fist Weapons:** Hand Wraps, Knuckles, Claws, Cestus, Tiger Claws, Katar, Tekko
-- **Daggers:** Knife, Dagger, Stiletto, Kris, Dirk, Parrying Dagger, Throwing Knife
-- **Ranged:** Hand Crossbow, Light Crossbow, Heavy Crossbow, Repeater, Arbalest
+| Level | Materials | Quality label |
+|-------|-----------|---------------|
+| 1-9 | copper, iron | Common |
+| 10-19 | bronze, steel | Fine |
+| 20-34 | silver, gold | Superior |
+| 35-69 | platinum, electrum | Exceptional |
+| 70-89 | mythril, adamantine | Masterwork |
+| 90+ | celestial, void | Legendary |
 
-#### Planned Off-Hand Equipment
+The material only affects the name. It has no separate stat multiplier.
 
-Currently not implemented:
-- Shields (Buckler, Round Shield, Kite Shield, Tower Shield, Pavise)
-- Orbs and Tomes for casters
-- Dual-wield options
+### 5.3 Rarity Rolls
 
-#### Planned Armor Variety
+| Rarity | Stat multiplier | Augment slots | Value multiplier |
+|--------|-----------------|---------------|------------------|
+| Common (1) | 0.80-1.00 | 0 | 1x |
+| Uncommon (2) | 0.90-1.10 | 0-1 | 1.5x |
+| Rare (3) | 1.00-1.20 | 1-2 | 2.5x |
+| Epic (4) | 1.10-1.30 | 2-3 | 5x |
+| Legendary (5) | 1.20-1.50 | 3-4 | 10x |
 
-- Heavy Armor with movement penalties
-- Medium Armor with balanced stats
-- Light Armor with MP bonuses
-- Class-specific restrictions
+### 5.4 Augments
 
-### 5.5 Item Naming System
+**Equipment prefixes:** Blazing, Frozen, Shocking, Venomous, Blessed, Shadowed (elemental); Keen (`crit_chance` +5%), Swift, Deadly, Mighty (combat); Sturdy, Warded, Reinforced (defensive); Dragonbane, Undeadbane, Demonslayer (enemy type).
 
-**Status:** Not implemented. Current items use static names.
+**Equipment suffixes:** of Flames, of Frost, of Thunder, of Venom, of Light, of Darkness (`lifesteal` 3%); of Might, of Wisdom, of Swiftness, of Fortitude, of Fortune (stat); of Vitality, of Sorcery, of Mending, of the Sage (support); of Precision (`crit_damage` +15%), of Lethality (`crit_damage` +25%); of the Bulwark, of Warding, of the Guardian (defensive).
 
-The planned naming system would dynamically generate names:
+**Consumable augments:** Potent, Concentrated, Empowered, Arcane, Purifying, Sanctified, Absolute, Blessed, Divine (prefixes); of Mending, of Restoration, of Regeneration, of Sorcery, of Channeling, of Fortitude, of Might, of Insight, of Alacrity, of Grace, of Swiftness, of Sharing (suffixes).
 
-```
-[Quality Prefix] [Augment Prefix] [Material] [Item Type] [Augment Suffix]
-```
+What actually applies in combat on this branch:
 
-Examples:
-- "Fine Steel Longsword" (Uncommon, no augments)
-- "Masterwork Blazing Mythril Greatsword" (Rare, fire augment)
-- "Divine Wyrmslayer Celestial Greatsword of Cinders" (Legendary, dual augments)
+| Part of the augment | Applied? |
+|---------------------|----------|
+| Rolled `baseStats` and every augment's flat `bonusStats` | Yes. `api/src/services/equipmentStats.js` sums `modifications.baseStats` (falling back to the template `stat_bonuses`), `modifications.bonusStats` and legacy top-level keys, and maps `hp_max`/`mp_max` to `hp`/`mp`. PvE battles, coliseum, guildmaster battles and the character sheet all use it, so combat matches the inventory UI. |
+| `crit_chance`, `crit_damage` effects | Yes, in `damageCalculator.js` for attacks and skills. |
+| `lifesteal` effect | Yes, on basic attacks (`actionProcessor.js`). |
+| Other equipment effects (elemental damage, proc chances, `damage_vs`, regen, block, resist, `damage_reduction`, `heal_on_hit`, ...) | No. They are stored, shown in the UI and priced, but no battle code reads them. |
+| Consumable augment effects | No. Consumables use their template effect only. |
 
-#### Quality Prefixes by Rarity (Planned)
+### 5.5 Naming
 
-| Rarity | Prefixes |
-|--------|----------|
-| Common | (none) |
-| Uncommon | Fine, Sturdy, Sharp, Polished |
-| Rare | Superior, Masterwork, Enchanted, Pristine |
-| Epic | Exalted, Ancient, Mythical |
-| Legendary | Divine, Primordial, Godforged, Celestial |
+Equipment: `[Quality] [Prefix augment] [Material] [Base name] [Suffix augment]`. Consumables: `[Quality] [Prefix augment] [Base name] [Suffix augment]`.
 
-#### Stat-Based Suffixes (Planned)
+- Quality by rarity: equipment none / Fine / Superior / Exalted / Divine; consumables none / Fine / Superior / Exceptional / Supreme.
+- A material word already in the template name (Iron, Rusty, Steel, ...) is replaced by the rolled material. Soft bases (leather, cloth, robes, staves, wands, charms, amulets and similar) keep their own name with no material.
+- "of X" appears only when a suffix augment rolled. There is no stat-based fallback suffix.
 
-| Stat | Suffix |
-|------|--------|
-| STR | of Might |
-| INT | of Wisdom |
-| AGI | of Swiftness |
-| VIT | of Fortitude |
-| LUK | of Fortune |
+Example: `Exalted Venomous Mythril Greaves of the Guardian`.
+
+### 5.6 Value
+
+Generation value: `floor(base_price * rarityMultiplier * (1 + level * 0.05))` with the multipliers in 5.3.
+
+Marketplace suggested price and NPC buy-back use `calculateSuggestedPrice()` (`services/marketplace/itemListings.js`): `floor(base_price * rarityMultiplier * (1 + 0.15 * sum(augment category values)))`. NPC sell pricing is described in [ECONOMY_SYSTEM.md](ECONOMY_SYSTEM.md#npc-sell-pricing).
+
+---
+
+## 6. Planned Features (Not Yet Implemented)
+
+- **Weapon and armor variety:** swords, axes, maces, polearms, daggers, crossbows; shields, orbs and tomes in an off-hand slot; heavy/medium/light armor classes with movement or MP trade-offs. Current templates use the five slots in 2.2.
+- **Remaining augment effects:** the equipment and consumable augment effects marked "No" in 5.4.
+- **Cartographer's Eye reveal bonus:** the `reveal_bonus` effect is defined but not read by the watchtower reveal.
 
 ---
 
@@ -694,3 +543,4 @@ Examples:
 | 2.0 | 2026-01-06 | Added drop table specifications |
 | 3.0 | 2026-01-22 | Added Relic System (templates, acquisition, bonuses, UI) |
 | 4.0 | 2026-01-25 | Major restructure: Documented current implementation (Section 2), moved unimplemented material/augmentation/generation systems to "Planned Features" (Section 5), updated to match actual `items.js` template structure |
+| 5.0 | 2026-09-29 | Procedural generation, materials, augments and naming documented as implemented (Section 5), with which augment effects apply in combat. Relic section replaced with the four real templates and their claim conditions. |

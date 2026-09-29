@@ -2,7 +2,7 @@
 
 Complete reference for all development, testing, and asset generation commands.
 
-**Last Updated:** 2026-02-03
+**Last Updated:** 2026-09-29
 
 ---
 
@@ -16,8 +16,10 @@ npm run dev:setup                       # Smart startup: checks ports, Docker, m
 
 ```bash
 docker compose up -d                    # Start PostgreSQL (required first)
-npm run dev                             # Start both API (port 3000) and frontend (port 8080)
+npm run dev                             # Start both API (PORT from .env) and frontend (port 8080)
 ```
+
+The API listens on `PORT` from `.env` and falls back to 3000 (`.env.example` sets 3000; the main dev workstation uses 3001). The API test helper (`api/src/tests/testHelper.js`, or `TEST_API_BASE_URL`) and the Playwright config read `PORT` and fall back to 3001, so keep `PORT` in step with the running API.
 
 ## Individual Services
 
@@ -39,19 +41,32 @@ npm run test -w shared                  # Shared module tests (battleMath, pathf
 # Targeted testing
 npm run test:unit -w api                # Unit tests + balance tests (fast, no server needed)
 npm run test:integration -w api         # Integration tests (requires running server)
-npm run test:ratelimit -w api           # Rate limit tests (TEST_RATE_LIMITS=true)
+npm run test:ratelimit -w api           # Rate limit tests (runner starts its own API with TEST_RATE_LIMITS=true)
 npm run test:quick -w api               # Alias for test:unit
+npm run test:shell                      # BATS tests in tests/ (pre-commit secrets scanner); needs `bats` on PATH
 
-# Single test file
-node --test api/src/tests/integration/auth.integration.test.js
+# Single test file (cap concurrency at 4 on this host)
+cd api && NODE_ENV=test node --test --test-concurrency=4 src/tests/unit/<file>.test.js
+cd api && PORT=3001 NODE_ENV=test node --test --test-concurrency=4 src/tests/integration/<file>.test.js
 ```
+
+Rate-limit suites fail fast unless launched by `api/src/tests/runRateLimitTests.js`, which spawns a dedicated API on a free loopback port. Run them only through `npm run test:ratelimit -w api`.
+
+`test:shell` runs `bats tests/`. `tests/check-secrets.bats` covers `scripts/check-secrets.sh`, the scanner `.husky/pre-commit` runs on every commit. Run it after editing that script.
 
 ## E2E Testing (Playwright)
 
-Playwright auto-starts servers, so no manual startup needed.
+Playwright starts `npm run dev:api` and `npm run dev:frontend` if they are not already running, and reuses running dev servers otherwise.
+
+- **API port:** `playwright.config.js` loads `.env` and uses `PORT` (default 3001) for the API health check. Keep it in step with the running API. `TEST_BYPASS_SECRET` also comes from `.env`; `e2e/helpers/game.js` sends it as the rate-limit bypass header.
+- **Frontend:** fixed at `http://localhost:8080`. Set `E2E_BASE_URL` to point at another already-running frontend (for example a Vite instance with HMR off); Playwright then does not manage the frontend.
+- **Workers:** capped at 4 locally.
+- **Getting to the login form:** the game is a canvas SPA with a title intro, not URL routes. Use `gotoAuth(page)` from `e2e/helpers/index.js`: it loads `/`, presses Escape until the auth form is visible and waits for focus on `#username`. `login(page, username, password)` builds on it. Use the selectors in `AUTH_SELECTORS` (`#username`, `#password`, `#auth-btn`, ...).
+- **Password length:** registration rejects passwords over 72 UTF-8 bytes, so keep fixture passwords short (and containing `test`, for the secrets scanner).
 
 ```bash
 npx playwright test                     # Run all E2E tests
+npx playwright test --project=chromium  # Chromium only
 npx playwright test e2e/auth.spec.js    # Single spec file
 npx playwright test --ui                # Interactive UI mode
 npx playwright test --headed            # Run with visible browser
@@ -274,11 +289,11 @@ The monorepo uses npm workspaces (defined in root `package.json`):
 
 | Workspace | Port | Purpose |
 |-----------|------|---------|
-| `api/` | 3000 | Node.js/Express backend |
+| `api/` | `PORT` (3000 default, 3001 in local `.env`) | Node.js/Express backend |
 | `frontend/` | 8080 | Vanilla JS game client (Vite) |
 | `admin/` | 5173 | React asset manager dashboard (Vite) |
 | `shared/` | - | Constants and utilities used by api/frontend |
-| `e2e/` | - | Playwright E2E tests (auto-starts servers) |
+| `e2e/` | - | Playwright E2E tests (starts or reuses dev servers) |
 
 Workspace-specific commands use `-w` flag: `npm run test -w api`, `npm run lint -w frontend`
 

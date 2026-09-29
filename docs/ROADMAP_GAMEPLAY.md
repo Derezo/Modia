@@ -597,7 +597,7 @@ Per ITEM_SYSTEM.md specifications:
 - [ ] Proximity-based chat bubbles
 - [ ] Interaction zones (bar, tables, fireplace)
 - [ ] Emote system (/wave, /sit, /dance)
-- [ ] Quest board for daily quests
+- [x] Quest board for daily quests (`QuestBoardScene`, opened from the profile menu rather than the tavern)
 
 ---
 
@@ -607,7 +607,6 @@ Per ITEM_SYSTEM.md specifications:
 
 | Feature | Description | Priority |
 |---------|-------------|----------|
-| Daily/Weekly Quest System | Repeatable content loop for player retention | **High** |
 | Remaining Advanced Guilds | 12 additional beyond MVP 4 | Medium |
 | Guild Quest System | Non-advancement quests | Medium |
 | New Enemies | Additional enemy types (Tier 5+) | Medium |

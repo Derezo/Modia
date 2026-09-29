@@ -394,7 +394,7 @@ Message Types:
 |--------|------|-------------|-------------|
 | id | SERIAL | PRIMARY KEY | Unique identifier |
 | user_id | INTEGER | FK → users.id | Session owner |
-| refresh_token_hash | VARCHAR(255) | NOT NULL | Hashed refresh token |
+| refresh_token_hash | VARCHAR(255) | NOT NULL | SHA-256 hex digest of the refresh token (rotated on every refresh) |
 | expires_at | TIMESTAMP | NOT NULL | Token expiration |
 | created_at | TIMESTAMP | DEFAULT NOW() | Session created |
 

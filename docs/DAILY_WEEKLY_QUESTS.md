@@ -592,32 +592,33 @@ export async function updateQuestProgress(characterId, objectiveType, amount) {
 
 ## Implementation Checklist
 
+Verified against the code on 2026-09-29.
+
 ### Backend
 
-- [ ] Create `dailyQuestService.js` with core logic
-- [ ] Add quest assignment on character login
-- [ ] Add progress update hooks to battle, world, fishing, ruins, marketplace services
-- [ ] Create API endpoints (daily, weekly, claim, streaks)
-- [ ] Add streak calculation and bonus logic
-- [ ] Schedule periodic cleanup of expired quests
+- [x] `api/src/services/dailyQuestService.js` with core logic
+- [x] Quest assignment: done lazily by `refreshQuestsIfNeeded()` when the character's daily/weekly quests are read (`GET /api/quests/daily|weekly/:characterId`) or refreshed, not on login
+- [x] Progress hooks in battle rewards, world navigation (distinct node visits, migration 063), fishing, ruins and marketplace
+- [x] API endpoints: daily, weekly, markers, refresh, claim, claim-all, streaks, first-blood, champions
+- [x] Streak calculation and bonus logic (login streak increments on the first daily refresh of a new day)
+- [x] Daily completion bonus granted after single claims as well as claim-all
+- [x] Periodic cleanup of expired quests (`startCleanupScheduler`, started from `api/src/index.js`)
 
 ### Frontend
 
-- [ ] Create `QuestBoardScene.js` with tab UI
-- [ ] Create quest card component with progress bar
-- [ ] Add streak display with fire emoji animation
-- [ ] Add CLAIM button with success animation
-- [ ] Integrate Quest Board button in WorldMapScene header
-- [ ] Add Quest Board option to TavernScene
-- [ ] Add notification badge for claimable quests
+- [x] `QuestBoardScene.js` with daily/weekly tabs
+- [x] Quest cards with progress bars
+- [x] Streak display
+- [x] Claim and Claim All buttons
+- [x] Quest Board entry in the profile menu (not a WorldMapScene header button)
+- [ ] Quest Board option in TavernScene
+- [ ] Notification badge for claimable quests
 
 ### Testing
 
-- [ ] Unit tests for quest selection algorithm
-- [ ] Unit tests for streak calculation
-- [ ] Integration tests for progress updates
-- [ ] Integration tests for reward claiming
-- [ ] E2E test for full quest flow
+- [x] Unit tests: `api/src/tests/unit/dailyQuestService.unit.test.js` (requirements matching, streaks, selection weights, completion bonus)
+- [x] Integration tests: `api/src/tests/integration/quests.integration.test.js` (progress, claim, claim-all, 4xx claim errors)
+- [x] E2E: `e2e/quests.spec.js` (open board, tabs, streak, reset countdown, Claim All state)
 
 ---
 
@@ -637,3 +638,4 @@ export async function updateQuestProgress(characterId, objectiveType, amount) {
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | January 2026 | Initial specification based on migration 034 schema |
+| 1.1 | September 2026 | Implementation checklist ticked against the shipped code; unshipped Tavern entry and notification badge left open |

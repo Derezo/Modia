@@ -5,8 +5,8 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 1.3 |
-| Last Updated | July 2026 |
+| Version | 1.4 |
+| Last Updated | September 2026 |
 | System Type | CT-Based Turn Order with WebSocket Sync |
 
 ---
@@ -287,6 +287,40 @@ Some status effects restrict available actions:
 | Silence | No | Skills only | Can Move and basic Attack |
 
 > For the full status effect taxonomy including cleansing, stacking, and resistance mechanics, see [STATUS_EFFECTS.md](STATUS_EFFECTS.md).
+
+<a id="skill-hit-rolls"></a>
+### 4.6 Hit Rolls (Attacks and Skills)
+
+Basic attacks and offensive skills roll to hit against each enemy target (`checkHit()` in `api/src/services/battle/damageCalculator.js`):
+
+```
+evasion   = clamp(2% + (defender AGI - attacker AGI)/400 + defender LCK/400 + trait evasion, 2%, 35%)
+hitChance = clamp(95% - evasion - (attacker Blind ? 30% : 0) + trait accuracy, 50%, 98%)
+          × skill.accuracy (default 1.0; e.g. Wild Swing 0.5)
+```
+
+- **Skills can miss.** A missed single-target skill deals no damage and applies no status effect, but still spends its MP, starts its cooldown and uses the ACT action. The result carries `missed: true`.
+- **Area skills roll per target.** Each enemy in the area rolls separately; a miss adds an `aoeTargets` entry with `missed: true` and `damage: 0`. Allies caught in an offensive area do not roll and are always hit.
+- Heals, buffs and other ally-targeted skills never roll.
+- The damage preview (`calculateDamagePreview*` in `shared/battleMath.js`) shows the same hit chance.
+
+### 4.7 Area Skills and the Caster
+
+An offensive area skill (any skill with a damage component) **does not affect its caster**, even when the caster stands inside the area (for example a caster-centred Fire Nova). Other allies inside the area are still hit (friendly fire). A skill can opt back in with `includesSelf: true`; no current skill does. Support area skills (buffs, heals) still include the caster.
+
+The AI mirrors this: `services/ai/cache.js` and `services/ai/stateEvaluator.js` exclude the caster when scoring offensive area skills.
+
+### 4.8 Battle End and Mutual Knockout
+
+`checkBattleEnd()` in `api/src/services/battle/actionProcessor.js` returns `{ status, winningTeamId }`:
+
+| Alive after the action | Result |
+|------------------------|--------|
+| Only team 1 | Team 1 wins |
+| Only team 2 | Team 2 wins |
+| Neither (mutual knockout, both teams had units) | PvE: team 2 wins (player defeat). PvP (`pvp`, `pvp_coliseum`): the team whose action caused the knockout loses, so the opponent wins. |
+
+The PvP rule depends on the caller passing `{ actingTeamId }`. Without it, a PvP mutual knockout falls back to the PvE result (team 2 wins).
 
 ---
 
@@ -1450,6 +1484,7 @@ WHERE id = $2;
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 1.4 | Sep 2026 | - | Added hit rolls for skills (4.6), caster exclusion for offensive area skills (4.7), and battle end / mutual knockout rules (4.8) |
 | 1.3 | Jul 2026 | - | Completed Zodiac signature execution, targeting, once-per-party battle use, next-attack effects, full-turn status durations, and terminal turn-start damage handling. |
 | 1.2 | Jan 2026 | - | Added sections 11-15: Two-action state machine, formation system, zodiac abilities, boss phases, trait modifiers |
 | 1.1 | Jan 2026 | - | Fixed CT formula: documented diminishing returns formula `5 + (AGI/10)`, updated initial CT formula, corrected haste/slow modifiers |

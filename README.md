@@ -56,7 +56,7 @@ npm run db:seed
 npm run dev
 ```
 
-The API runs on `http://localhost:3000` and the frontend on `http://localhost:8080`.
+The API runs on `PORT` from `.env` (`http://localhost:3000` with `.env.example`) and the frontend on `http://localhost:8080`. The API test helper and Playwright read the same `PORT` and fall back to 3001, so export `PORT` (or set it in `.env`) to match the running API when you run integration or e2e tests.
 
 `db:seed`, `db:reset`, and `db:fresh` are destructive bootstrap/reset
 operations for empty or disposable environments. They are not a live-world
@@ -73,12 +73,14 @@ for snapshot verification, a disposable restore drill, and post-commit recovery.
 npm run dev
 
 # Run individually
-npm run dev:api        # API on port 3000
+npm run dev:api        # API on PORT from .env
 npm run dev:frontend   # Frontend on port 8080
 
 # Testing
 npm run test           # Run all tests
 npm run test -w api    # API tests only
+npm run test:e2e       # Playwright e2e (starts or reuses the dev servers)
+npm run test:shell     # BATS tests for the pre-commit secrets scanner (needs bats)
 
 # Database
 npm run db:reset       # Re-run migrations + seed
