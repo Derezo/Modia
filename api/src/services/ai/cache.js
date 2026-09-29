@@ -7,6 +7,11 @@
 
 import { getUnitsInAoE } from '../battle/aoeService.js';
 import {
+  hasOffensiveSkillComponent,
+  getSkillBuffEffect,
+  hasHostileStatusSkillComponent
+} from '../battle/skillClassification.js';
+import {
   isBeneficialStatusEffect,
   CURE_ALL_EFFECTS,
   CURE_POISON_EFFECTS
@@ -437,29 +442,6 @@ function hasSupportSkillComponent(skill) {
     skill?.effect === 'heal';
 }
 
-function hasOffensiveSkillComponent(skill) {
-  return Number(skill?.power) > 0 &&
-    skill?.targetSelf !== true &&
-    skill?.targetAlly !== true &&
-    skill?.targetAllAllies !== true &&
-    skill?.damageType !== 'support' &&
-    skill?.damageType !== 'heal' &&
-    skill?.effect !== 'heal';
-}
-
-function getSkillBuffEffect(skill) {
-  if (typeof skill?.selfBuff === 'string') return skill.selfBuff;
-  if (skill?.selfBuff && typeof skill.selfBuff === 'object') {
-    return skill.selfBuff.type || `${skill.id || 'skill'}_buff`;
-  }
-  if (skill?.effect && skill.effect !== 'heal') return skill.effect;
-  return null;
-}
-
-function isSkillEffectHandledAsBuff(skill) {
-  return Boolean(skill?.selfBuff) &&
-    skill.effect === getSkillBuffEffect(skill);
-}
 
 function isCasterCenteredSupportBuffAoe(skill) {
   return Boolean(skill?.selfBuff) &&
@@ -470,23 +452,6 @@ function isCasterCenteredSupportBuffAoe(skill) {
     !hasOffensiveSkillComponent(skill);
 }
 
-function hasHostileStatusSkillComponent(skill) {
-  if (!skill?.effect || skill.effect === 'heal' ||
-      isSkillEffectHandledAsBuff(skill) ||
-      skill.targetSelf === true ||
-      skill.targetAlly === true ||
-      skill.targetAllAllies === true) {
-    return false;
-  }
-
-  if (!hasOffensiveSkillComponent(skill) &&
-      (skill.selfBuff || skill.cleanse || skill.mpRestore > 0 ||
-       skill.healPercent > 0 || skill.damageType === 'heal')) {
-    return false;
-  }
-
-  return true;
-}
 
 function getSupportRecipients(state, caster, requestedTarget, skill) {
   if (skill.targetAllAllies === true) {

@@ -167,6 +167,8 @@ export async function persistCaravanPurchaseItem(client, userId, inventoryItem, 
          AND item_template_id = $2
          AND character_id IS NULL
          AND equipped_slot IS NULL
+         AND (modifications IS NULL OR NOT (modifications ? 'rarity'))
+       ORDER BY id
        LIMIT 1
        FOR UPDATE`,
       [userId, templateId]

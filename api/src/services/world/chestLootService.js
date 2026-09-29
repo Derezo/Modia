@@ -136,9 +136,13 @@ export async function addItemsToInventory(client, userId, items) {
 
     if (isStackable) {
       // Try to stack with existing item
+      // (never into a rolled drop row: its rarity/augments belong to that unit only)
       const existingResult = await client.query(
         `SELECT id, quantity FROM character_items
-         WHERE user_id = $1 AND item_template_id = $2 AND equipped_slot IS NULL`,
+         WHERE user_id = $1 AND item_template_id = $2 AND equipped_slot IS NULL
+           AND (modifications IS NULL OR NOT (modifications ? 'rarity'))
+         ORDER BY id
+         LIMIT 1`,
         [userId, item.template_id]
       );
 

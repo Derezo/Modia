@@ -39,6 +39,12 @@ import {
 } from '../../../../shared/battleMath.js';
 import { applyHealingReceivedBonus } from '../zodiacCollectionBonusService.js';
 import { getEquipmentAugmentEffect } from './equipmentAugmentEffects.js';
+import {
+  hasOffensiveSkillComponent,
+  getSkillBuffEffect,
+  isSkillEffectHandledAsBuff,
+  excludesCasterFromAoE
+} from './skillClassification.js';
 
 function applyDamageInstance(attacker, target, incomingDamage) {
   if (target.hp <= 0 || incomingDamage <= 0) {
@@ -124,14 +130,22 @@ function consumeBasicAttackEffects(unit, effects) {
   return consumed;
 }
 
-function hasOffensiveSkillComponent(skill) {
-  return Number(skill?.power) > 0 &&
-    skill?.targetSelf !== true &&
-    skill?.targetAlly !== true &&
-    skill?.targetAllAllies !== true &&
-    skill?.damageType !== 'support' &&
-    skill?.damageType !== 'heal' &&
-    skill?.effect !== 'heal';
+
+/**
+ * Roll a status effect once and classify the outcome.
+ * A single roll is compared against both chances: below effectiveChance the
+ * effect lands; in [effectiveChance, baseChance) it would have landed without
+ * the target's resistance, so it is reported as resisted; anything else is a
+ * plain miss and reports nothing. (Resistance is never below 10%, so treating
+ * every failed debuff roll as "resisted" mislabelled most misses.)
+ *
+ * @returns {'applied'|'resisted'|'missed'}
+ */
+export function rollStatusEffect(baseChance, effectiveChance, isDebuff) {
+  const roll = Math.random();
+  if (roll < effectiveChance) return 'applied';
+  if (isDebuff && roll < baseChance) return 'resisted';
+  return 'missed';
 }
 
 function hasSelfSkillComponent(skill) {
@@ -144,19 +158,6 @@ function hasSelfSkillComponent(skill) {
       skill?.targetAllAllies !== true);
 }
 
-function getSkillBuffEffect(skill) {
-  if (typeof skill?.selfBuff === 'string') return skill.selfBuff;
-  if (skill?.selfBuff && typeof skill.selfBuff === 'object') {
-    return skill.selfBuff.type || `${skill.id || 'skill'}_buff`;
-  }
-  if (skill?.effect && skill.effect !== 'heal') return skill.effect;
-  return null;
-}
-
-function isSkillEffectHandledAsBuff(skill) {
-  return Boolean(skill?.selfBuff) &&
-    skill.effect === getSkillBuffEffect(skill);
-}
 
 function applySkillBuff(target, skill, result) {
   const buffEffect = getSkillBuffEffect(skill);
@@ -919,8 +920,9 @@ function processAoESkill(
   );
 
   // Get all units in the AoE area (includes allies - friendly fire!)
-  // For offensive skills, exclude the caster to prevent self-damage
-  const isOffensiveAoE = hasOffensiveSkillComponent(skill);
+  // Offensive AoEs (damage OR hostile status, e.g. smoke_bomb blind) exclude
+  // the caster unless the skill includes self. Same rule as the AI simulator.
+  const excludeCaster = excludesCasterFromAoE(skill);
   const affectedUnits = getUnitsInAoE(
     state.units,
     targetTile.x,
@@ -928,8 +930,7 @@ function processAoESkill(
     skill.aoeRadius,
     skill.aoePattern || 'circle'
   ).filter(({ unit: affectedUnit }) => {
-    // Exclude caster from offensive AoE unless skill explicitly includes self
-    if (isOffensiveAoE && affectedUnit.id === unit.id && !skill.includesSelf) {
+    if (excludeCaster && affectedUnit.id === unit.id) {
       return false;
     }
     return !targetingTraversalView ||
@@ -944,8 +945,8 @@ function processAoESkill(
   result.aoeTargets = [];
   result.aoeTiles = aoeTiles;
 
-  // Reuse isOffensiveAoE computed above for caster exclusion
-  const isOffensive = isOffensiveAoE;
+  // Damage / hit-check branch: damaging skills only
+  const isOffensive = hasOffensiveSkillComponent(skill);
   const appliesBuffInArea = !isOffensive && Boolean(skill.selfBuff);
   const power = skill.power ?? 150;
   const damageType = skill.damageType || 'physical';
@@ -1053,7 +1054,8 @@ function processAoESkill(
         ? calculateEffectiveStatusChance(baseChance, affectedUnit, affectedUnit.statusResist || 0)
         : baseChance;
 
-      if (Math.random() < effectiveChance) {
+      const statusRoll = rollStatusEffect(baseChance, effectiveChance, isDebuff);
+      if (statusRoll === 'applied') {
         const effectApplied = applyStatusEffect(
           affectedUnit,
           skill.effect,
@@ -1069,8 +1071,8 @@ function processAoESkill(
             targetId: affectedUnit.id
           });
         }
-      } else if (isDebuff && effectiveChance < baseChance) {
-        // Target resisted the effect
+      } else if (statusRoll === 'resisted') {
+        // Resistance changed the outcome (roll in [effectiveChance, baseChance))
         targetResult.effectResisted = skill.effect;
         result.skillEffects.push({
           type: 'resisted',
@@ -1150,7 +1152,8 @@ function processSingleTargetSkill(state, unit, target, skill, skillId, result) {
         ? calculateEffectiveStatusChance(baseChance, target, target.statusResist || 0)
         : baseChance;
 
-      if (Math.random() < effectiveChance) {
+      const statusRoll = rollStatusEffect(baseChance, effectiveChance, isDebuff);
+      if (statusRoll === 'applied') {
         const effectApplied = applyStatusEffect(
           target,
           skill.effect,
@@ -1164,8 +1167,8 @@ function processSingleTargetSkill(state, unit, target, skill, skillId, result) {
             targetId: target.id
           });
         }
-      } else if (isDebuff && effectiveChance < baseChance) {
-        // Target resisted the effect
+      } else if (statusRoll === 'resisted') {
+        // Resistance changed the outcome (roll in [effectiveChance, baseChance))
         result.effectResisted = skill.effect;
         result.skillEffects.push({
           type: 'resisted',
@@ -1280,7 +1283,8 @@ function processSingleTargetSkill(state, unit, target, skill, skillId, result) {
       ? calculateEffectiveStatusChance(baseChance, target, target.statusResist || 0)
       : baseChance;
 
-    if (Math.random() < effectiveChance) {
+    const statusRoll = rollStatusEffect(baseChance, effectiveChance, isDebuff);
+    if (statusRoll === 'applied') {
       const effectApplied = applyStatusEffect(
         target,
         skill.effect,
@@ -1294,8 +1298,8 @@ function processSingleTargetSkill(state, unit, target, skill, skillId, result) {
           targetId: target.id
         });
       }
-    } else if (isDebuff && effectiveChance < baseChance) {
-      // Target resisted the effect
+    } else if (statusRoll === 'resisted') {
+      // Resistance changed the outcome (roll in [effectiveChance, baseChance))
       result.effectResisted = skill.effect;
       result.skillEffects.push({
         type: 'resisted',

@@ -541,6 +541,24 @@ describe('Coliseum battle snapshot transaction', () => {
             rowCount: params[0] === player1Id ? zodiacSigns.length : 0
           };
         }
+        if (sql.includes('FROM character_items ci')
+          && sql.includes('equipped_slot IS NOT NULL')
+          && !sql.includes('LEFT JOIN LATERAL')) {
+          transactionEvents.push('loadAugmentEffects');
+          assert.deepStrictEqual(
+            [...params[0]].sort((a, b) => a - b),
+            [player1CharacterId, player2CharacterId].sort((a, b) => a - b)
+          );
+          return {
+            rows: [{
+              character_id: player1CharacterId,
+              modifications: {
+                augments: [{ effect: { type: 'crit_chance', value: 0.07 } }]
+              }
+            }],
+            rowCount: 1
+          };
+        }
         if (sql.includes('UPDATE characters SET in_battle = true')) {
           updateCount += 1;
           transactionEvents.push(`updateInBattle:${params[0]}`);
@@ -636,6 +654,9 @@ describe('Coliseum battle snapshot transaction', () => {
     const player2Snapshot = createBattleInput.initialMutableState.units
       .find(unit => unit.id === player2CharacterId);
     assert.equal(player1Snapshot.ownerId, player1Id);
+    // Augment combat effects apply in coliseum like PvE
+    assert.equal(player1Snapshot.equipmentAugmentEffects.crit_chance, 0.07);
+    assert.deepStrictEqual(player2Snapshot.equipmentAugmentEffects, {});
     assert.equal(player1Snapshot.strength, 49);
     assert.equal(player1Snapshot.maxHp, 157);
     assert.equal(player1Snapshot.attack, 11);

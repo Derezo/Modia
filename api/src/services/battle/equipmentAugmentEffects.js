@@ -64,3 +64,37 @@ export function getEquipmentAugmentEffect(unit, effectType) {
   if (!unit?.equipmentAugmentEffects) return 0;
   return unit.equipmentAugmentEffects[effectType] || 0;
 }
+
+/**
+ * Load the combat augment effects of every equipped item for a set of
+ * characters. Shared by all battle unit builders (PvE start, guildmaster
+ * advancement, coliseum) so crit/lifesteal augments apply in every mode.
+ *
+ * @param {{query: Function}} client - pg client or pool
+ * @param {Array<number>} characterIds - Character IDs
+ * @returns {Promise<Object<number, Object>>} characterId -> aggregated effects
+ */
+export async function loadEquipmentAugmentEffects(client, characterIds) {
+  const ids = [...new Set((characterIds || []).map(Number))]
+    .filter(id => Number.isSafeInteger(id) && id > 0);
+  const effectsByCharacter = {};
+  for (const id of ids) {
+    effectsByCharacter[id] = {};
+  }
+  if (ids.length === 0) {
+    return effectsByCharacter;
+  }
+
+  const result = await client.query(
+    `SELECT ci.character_id, ci.modifications
+     FROM character_items ci
+     WHERE ci.character_id = ANY($1::int[]) AND ci.equipped_slot IS NOT NULL`,
+    [ids]
+  );
+  for (const id of ids) {
+    effectsByCharacter[id] = sumEquipmentAugmentEffects(
+      result.rows.filter(row => Number(row.character_id) === id)
+    );
+  }
+  return effectsByCharacter;
+}

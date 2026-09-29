@@ -507,25 +507,12 @@ export async function executeMarketOrder(client, userId, characterId, itemTempla
       [totalCost, userId]
     );
   } else {
-    // For sell orders: escrow items first
-    // Check user has enough items in shared pool (unlisted)
-    const itemCheck = await client.query(
-      `SELECT COALESCE(SUM(quantity), 0) as total
-       FROM character_items
-       WHERE user_id = $1
-         AND item_template_id = $2
-         AND equipped_slot IS NULL
-         AND character_id IS NULL
-         AND (listed IS NULL OR listed = FALSE)`,
-      [userId, itemTemplateId]
-    );
-
-    if (parseInt(itemCheck.rows[0].total, 10) < quantity) {
-      throw new AppError(`Insufficient items. Have ${itemCheck.rows[0].total}, need ${quantity}`, 400);
-    }
-
-    // Deduct items from seller's shared pool (unlisted only)
-    const deductResult = await client.query(
+    // For sell orders: take the items from the seller's shared pool first.
+    // The locked SELECT is the only stock check: an unlocked SUM pre-check
+    // could pass while a concurrent shop sell / discard deletes a row, which
+    // FOR UPDATE then skips, and the trade would go through for items the
+    // seller no longer holds (duplication). Same rule as escrowItems.
+    const lockedItems = await client.query(
       `SELECT id, quantity
        FROM character_items
        WHERE user_id = $1
@@ -538,20 +525,29 @@ export async function executeMarketOrder(client, userId, characterId, itemTempla
       [userId, itemTemplateId]
     );
 
+    // Plan the deductions against the locked rows before touching anything
     let remaining = quantity;
-    for (const item of deductResult.rows) {
+    const deductions = [];
+    for (const item of lockedItems.rows) {
       if (remaining <= 0) break;
-
       const deductAmount = Math.min(remaining, item.quantity);
-      if (deductAmount >= item.quantity) {
-        await client.query('DELETE FROM character_items WHERE id = $1', [item.id]);
+      deductions.push({ id: item.id, deductAmount, deleteRow: deductAmount >= item.quantity });
+      remaining -= deductAmount;
+    }
+
+    if (remaining > 0) {
+      throw new AppError(`Insufficient items. Need ${quantity}, have ${quantity - remaining}`, 400);
+    }
+
+    for (const { id, deductAmount, deleteRow } of deductions) {
+      if (deleteRow) {
+        await client.query('DELETE FROM character_items WHERE id = $1', [id]);
       } else {
         await client.query(
           'UPDATE character_items SET quantity = quantity - $1 WHERE id = $2',
-          [deductAmount, item.id]
+          [deductAmount, id]
         );
       }
-      remaining -= deductAmount;
     }
   }
 

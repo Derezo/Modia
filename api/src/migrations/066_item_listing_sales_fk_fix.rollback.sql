@@ -1,20 +1,19 @@
 -- Rollback for migration 066: Restore original item_listing_sales FK behavior
 --
--- Note: This rollback sets listing_id back to NOT NULL, which may fail if any
--- rows have listing_id = NULL (from cascade deletes during the forward migration).
--- Run a cleanup query first if needed.
+-- NOT NULL is intentionally not restored. Once the forward migration has done
+-- its job, rows orphaned by listing deletes keep listing_id = NULL, and a
+-- SET NOT NULL would fail and leave `migrate:rollback` stuck on 066 (and so
+-- unable to reach 065 or earlier). A nullable column is harmless to older
+-- code, and Postgres accepts the FK below with NULL values present, so this
+-- rollback always succeeds and sales history is kept.
+
+SET LOCAL lock_timeout = '5s';
 
 -- Step 1: Drop the modified constraint
 ALTER TABLE item_listing_sales
   DROP CONSTRAINT IF EXISTS item_listing_sales_listing_id_fkey;
 
--- Step 2: Restore NOT NULL (may fail if NULLs exist)
--- If this fails, you'll need to delete rows with NULL listing_id first:
---   DELETE FROM item_listing_sales WHERE listing_id IS NULL;
-ALTER TABLE item_listing_sales
-  ALTER COLUMN listing_id SET NOT NULL;
-
--- Step 3: Re-add the original FK (no ON DELETE action)
+-- Step 2: Re-add the original FK (no ON DELETE action)
 ALTER TABLE item_listing_sales
   ADD CONSTRAINT item_listing_sales_listing_id_fkey
     FOREIGN KEY (listing_id) REFERENCES item_listings(id);

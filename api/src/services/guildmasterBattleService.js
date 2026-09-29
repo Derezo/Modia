@@ -29,6 +29,7 @@ import { loadActiveZodiacAbilities } from './zodiacAbilityService.js';
 import { loadZodiacCollectionBonus } from './zodiacCollectionBonusService.js';
 import * as bossService from './bossService.js';
 import { sumEquipmentStats } from './equipmentStats.js';
+import { loadEquipmentAugmentEffects } from './battle/equipmentAugmentEffects.js';
 
 const BASE_CLASSES = ['warrior', 'wizard', 'monk', 'chemist'];
 
@@ -332,12 +333,17 @@ export async function createSoloPlayerUnit(character, { client = null } = {}) {
 
   const char = charResult.rows[0] || character;
 
-  // Get equipped items for stat bonuses
+  // Get equipped items for stat bonuses. equipped_slot is the source of
+  // truth (the equip route never maintains the legacy is_equipped flag).
   const equipResult = await executeQuery(
     `SELECT ci.*, it.stat_bonuses, it.equipment_slot
      FROM character_items ci
      JOIN item_templates it ON ci.item_template_id = it.id
-     WHERE ci.character_id = $1 AND ci.is_equipped = true`,
+     WHERE ci.character_id = $1 AND ci.equipped_slot IS NOT NULL`,
+    [character.id]
+  );
+  const augmentEffects = await loadEquipmentAugmentEffects(
+    { query: executeQuery },
     [character.id]
   );
 
@@ -380,7 +386,8 @@ export async function createSoloPlayerUnit(character, { client = null } = {}) {
     defaultX: 0,
     defaultY: 0,
     zodiacAbilities,
-    zodiacCollectionBonus
+    zodiacCollectionBonus,
+    equipmentAugmentEffects: augmentEffects[Number(character.id)] || {}
   });
 
   // Preserve the advancement battle's established encounter ID and explicit

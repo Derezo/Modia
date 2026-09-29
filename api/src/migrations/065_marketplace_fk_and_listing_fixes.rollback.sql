@@ -2,6 +2,45 @@
 --
 -- This reverses the FK constraint changes but cannot undo the data fixes
 
+SET LOCAL lock_timeout = '5s';
+
+-- =====================================================
+-- PART 0: Restore UNIQUE (character_item_id, status) on item_listings
+-- =====================================================
+-- The forward migration allows many historical rows per (item, status).
+-- The old constraint does not, so keep the newest row per pair and drop the
+-- rest. Runs after rollback 066, so item_listing_sales.listing_id is nullable:
+-- detach any sales rows from the dropped listings first (sales history kept).
+WITH dupes AS (
+  SELECT id FROM (
+    SELECT id, ROW_NUMBER() OVER (
+      PARTITION BY character_item_id, status ORDER BY id DESC
+    ) AS rn
+    FROM item_listings
+  ) ranked
+  WHERE rn > 1
+)
+UPDATE item_listing_sales SET listing_id = NULL
+WHERE listing_id IN (SELECT id FROM dupes);
+
+DELETE FROM item_listings il
+USING (
+  SELECT id FROM (
+    SELECT id, ROW_NUMBER() OVER (
+      PARTITION BY character_item_id, status ORDER BY id DESC
+    ) AS rn
+    FROM item_listings
+  ) ranked
+  WHERE rn > 1
+) d
+WHERE il.id = d.id;
+
+DROP INDEX IF EXISTS uniq_item_listings_active_item;
+ALTER TABLE item_listings DROP CONSTRAINT IF EXISTS unique_item_listing;
+ALTER TABLE item_listings
+  ADD CONSTRAINT unique_item_listing UNIQUE (character_item_id, status)
+  DEFERRABLE INITIALLY DEFERRED;
+
 -- =====================================================
 -- PART 1: Restore original FK constraints
 -- =====================================================

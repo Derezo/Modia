@@ -74,7 +74,7 @@ import {
   startCleanupTimer
 } from '../services/battleActionSequence.js';
 import { buildEquipmentStatsLateral } from '../services/equipmentStats.js';
-import { sumEquipmentAugmentEffects } from '../services/battle/equipmentAugmentEffects.js';
+import { loadEquipmentAugmentEffects } from '../services/battle/equipmentAugmentEffects.js';
 
 const router = express.Router();
 
@@ -618,17 +618,21 @@ async function handleBattleEnd(
       if (!distributed.idempotent) {
         await consumeBattleInventoryItem(client, consumedInventoryId, userId);
         await bossService.cleanupBossEncounter(battleId, { client });
-        // Finding 41: Look up ALL party character IDs, not just the leader
-        // This enables advancement quest progress for non-leader party members
-        const partyResult = await client.query(
-          `SELECT id, party_slot
+        // Finding 41: advancement quest progress goes to every character that
+        // actually fought, not just the leader. Take them from the battle's
+        // player units (the chosen formation, up to MAX_BATTLE_PARTY_SIZE),
+        // never from the live roster: benched party_slot members did not fight.
+        const partyCharacterIds = battleRewardService.getRewardParticipantCharacterIds(
+          rewardsData.players,
+          userId
+        );
+        const leaderResult = await client.query(
+          `SELECT id
            FROM characters
-           WHERE user_id = $1 AND party_slot IS NOT NULL
-           ORDER BY party_slot`,
+           WHERE user_id = $1 AND party_slot = 1`,
           [userId]
         );
-        const partyCharacterIds = partyResult.rows.map(row => row.id);
-        const partyLeaderId = partyResult.rows.find(row => row.party_slot === 1)?.id;
+        const partyLeaderId = leaderResult.rows[0]?.id;
         if (!partyLeaderId) {
           throw new Error(
             `Cannot enqueue terminal progression for battle ${battleId}: `
@@ -1120,19 +1124,10 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
     );
 
     // Load equipment augment effects for combat (crit_chance, lifesteal, etc.)
-    const equipmentResult = await client.query(
-      `SELECT ci.character_id, ci.modifications
-       FROM character_items ci
-       WHERE ci.character_id = ANY($1::int[]) AND ci.equipped_slot IS NOT NULL`,
-      [authoritativeCharacterIds]
+    const characterAugmentEffects = await loadEquipmentAugmentEffects(
+      client,
+      authoritativeCharacterIds
     );
-    const characterAugmentEffects = {};
-    for (const charId of authoritativeCharacterIds) {
-      const charEquipment = equipmentResult.rows.filter(
-        row => row.character_id === charId
-      );
-      characterAugmentEffects[charId] = sumEquipmentAugmentEffects(charEquipment);
-    }
 
     const zodiacAbilities = await zodiacAbilityService.loadActiveZodiacAbilities(
       req.user.userId,

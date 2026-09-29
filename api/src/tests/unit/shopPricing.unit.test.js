@@ -79,7 +79,7 @@ describe('shopPricing no-arbitrage invariants', () => {
     };
     const basePrice = 100;
 
-    const sellPrice = calculateSellPrice(basePrice, modifications);
+    const sellPrice = calculateSellPrice(basePrice, modifications, 'weapon');
 
     // suggestedPrice = 100 * 2.5 * (1 + 1.8 * 0.15) = 100 * 2.5 * 1.27 = 317.5 -> 317
     // sellPrice = 317 * 0.5 = 158.5 -> 158

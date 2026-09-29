@@ -42,6 +42,32 @@ describe('durable battle terminal-effect callsites', () => {
     assert.doesNotMatch(victoryBranch, /updateQuestProgress|completeAdvancementQuest/);
   });
 
+  it('credits PvE advancement progress to combatants, not the benched roster', async () => {
+    const route = await readSource('routes/battle.js');
+    const start = route.indexOf("} else if (!isPvP && status === 'victory') {");
+    const end = route.indexOf('} else {', start);
+    const victoryBranch = route.slice(start, end);
+
+    assert.match(
+      victoryBranch,
+      /const partyCharacterIds = battleRewardService\.getRewardParticipantCharacterIds\(\s*rewardsData\.players,\s*userId\s*\)/
+    );
+    // The live roster (party_slot up to 12) includes characters left out of
+    // the formation; it must never be the source of credited IDs.
+    assert.doesNotMatch(victoryBranch, /party_slot IS NOT NULL/);
+
+    const { getRewardParticipantCharacterIds } = await import(
+      '../../services/battleRewardService.js'
+    );
+    // Formation of 3 chosen from a larger roster: only those 3 are units.
+    const players = [
+      { id: 101, type: 'player', ownerId: 5 },
+      { id: 'u-2', characterId: 107, type: 'player', ownerId: 5 },
+      { id: 112, type: 'player', ownerId: 5 }
+    ];
+    assert.deepEqual(getRewardParticipantCharacterIds(players, 5), [101, 107, 112]);
+  });
+
   it('enqueues Coliseum progression and badges in the match transaction', async () => {
     const lifecycle = await readSource('services/coliseum/matchLifecycle.js');
     const completionStart = lifecycle.indexOf('export async function completeMatch(');

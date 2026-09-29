@@ -48,23 +48,65 @@ WHERE it.id = ci.item_template_id
   AND ci.equipped_slot <> it.equipment_slot;
 
 -- Part 3: Clean up player-sold shop inventory that shouldn't regenerate
--- Find npc_shop_inventory rows that are not in the native stock list for that node/shop
--- and set their restock_quantity to 0 so they never regenerate.
--- Note: Native stock is seeded with restock_quantity > 0; player-sold should be 0.
--- This handles any rows that were incorrectly created with restock_quantity > 0.
+-- Before this release, POST /shops/.../sell created new npc_shop_inventory rows
+-- with restock_quantity = the sold quantity, so a drop-only or caravan item
+-- sold into a shop regenerated forever. Native stock is fully defined by
+-- SHOP_STOCK (api/src/db/templates/items.js); seedShopInventory inserts one
+-- row per (shop_type, templateId) with restock_quantity = qty. Match that
+-- list exactly rather than guessing from quantities.
+--
+-- KEEP IN SYNC: the VALUES list below must equal SHOP_STOCK. The unit test
+-- migration064ShopStock.unit.test.js fails if the two drift apart.
+CREATE TEMP TABLE migration_064_native_stock (
+  shop_type VARCHAR(50) NOT NULL,
+  item_template_id INTEGER NOT NULL,
+  qty INTEGER NOT NULL,
+  PRIMARY KEY (shop_type, item_template_id)
+) ON COMMIT DROP;
 
--- First, identify native stock by looking at items that should be in shops based on
--- seed data patterns (items with is_shop_item = true or similar markers).
--- Since we don't have a definitive native stock table, we'll set restock_quantity = 0
--- for any rows where the current quantity exceeds the restock_quantity (player-added stock).
--- Actually, the safest approach: if restock_quantity = 0 already, leave it.
--- If restock_quantity > 0 but quantity > restock_quantity, this row was player-augmented.
+INSERT INTO migration_064_native_stock (shop_type, item_template_id, qty) VALUES
+    ('blacksmith', 1, 10),
+    ('blacksmith', 4, 8),
+    ('blacksmith', 6, 8),
+    ('blacksmith', 7, 10),
+    ('blacksmith', 9, 8),
+    ('blacksmith', 16, 6),
+    ('blacksmith', 18, 6),
+    ('blacksmith', 21, 10),
+    ('blacksmith', 23, 10),
+    ('blacksmith', 2, 4),
+    ('blacksmith', 8, 4),
+    ('blacksmith', 17, 3),
+    ('blacksmith', 19, 3),
+    ('blacksmith', 22, 4),
+    ('blacksmith', 24, 4),
+    ('blacksmith', 25, 3),
+    ('apothecary', 12, 20),
+    ('apothecary', 13, 15),
+    ('apothecary', 14, 10),
+    ('apothecary', 29, 8),
+    ('apothecary', 30, 6),
+    ('apothecary', 31, 3),
+    ('apothecary', 32, 5),
+    ('apothecary', 15, 2),
+    ('farm', 12, 15),
+    ('farm', 13, 10),
+    ('farm', 14, 8);
 
--- A cleaner approach: Set restock_quantity = 0 for all rows where the item_template
--- is a drop-only or caravan-exclusive item (not naturally in shops).
--- For now, we'll just ensure new player-sells use restock_quantity=0 (already fixed in shop.js).
--- Existing bad rows can be identified by high quantities that exceed typical restock levels.
--- Conservative fix: set restock_quantity = 0 for any row where quantity > 50 (unusual for native stock).
-UPDATE npc_shop_inventory
+-- 1) Player-sold rows (not native to that shop type) never regenerate
+UPDATE npc_shop_inventory s
 SET restock_quantity = 0
-WHERE quantity > 50 AND restock_quantity > 0;
+WHERE s.restock_quantity > 0
+  AND NOT EXISTS (
+    SELECT 1 FROM migration_064_native_stock n
+    WHERE n.shop_type = s.shop_type
+      AND n.item_template_id = s.item_template_id
+  );
+
+-- 2) Native rows get their seeded restock level back (undoes any drift)
+UPDATE npc_shop_inventory s
+SET restock_quantity = n.qty
+FROM migration_064_native_stock n
+WHERE n.shop_type = s.shop_type
+  AND n.item_template_id = s.item_template_id
+  AND s.restock_quantity IS DISTINCT FROM n.qty;

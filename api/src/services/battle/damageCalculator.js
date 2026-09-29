@@ -26,21 +26,21 @@ import { getEquipmentAugmentEffect } from './equipmentAugmentEffects.js';
  * Statuses are unique by type, while distinct active effects stack
  * multiplicatively. Invalid and negative values are ignored.
  *
- * Falls back to STATUS_EFFECT_REGISTRY when an effect lacks object-form
- * modifiers, so legacy string-based effects (fortify, rage, weaken, etc.)
- * still affect combat.
+ * Falls back to STATUS_EFFECT_REGISTRY only when an effect has NO
+ * object-form modifiers at all, so legacy string-based effects (fortify,
+ * rage, weaken, etc.) still affect combat. An effect that carries its own
+ * modifiers object is used exactly as written: a partial object (e.g. an NPC
+ * defense_up of { defense: 1.3 }) must not pick up the registry's other stats
+ * (defense_up's magicDefense 1.2) one key at a time.
  */
 function getStatusStatMultiplier(unit, statName) {
   if (!Array.isArray(unit?.statusEffects)) return 1;
 
   return unit.statusEffects.reduce((multiplier, effect) => {
-    // First check object-form modifiers on the effect
-    let value = effect?.modifiers?.[statName];
-    // Fall back to registry if no object-form modifier
-    if (value === undefined && effect?.type) {
-      const registryEntry = STATUS_EFFECT_REGISTRY[effect.type];
-      value = registryEntry?.modifiers?.[statName];
-    }
+    const mods = (effect?.modifiers && typeof effect.modifiers === 'object')
+      ? effect.modifiers
+      : STATUS_EFFECT_REGISTRY[effect?.type]?.modifiers;
+    const value = mods?.[statName];
     return typeof value === 'number' && Number.isFinite(value) && value >= 0
       ? multiplier * value
       : multiplier;

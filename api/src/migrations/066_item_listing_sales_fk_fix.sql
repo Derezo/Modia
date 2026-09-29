@@ -8,6 +8,12 @@
 -- Solution: Make listing_id nullable and add ON DELETE SET NULL so the cascade
 -- chain doesn't break. The sales history is preserved with listing_id = NULL.
 
+-- Runs against live traffic: fail fast instead of queueing every query on
+-- item_listings behind a blocked ACCESS EXCLUSIVE request. On timeout the
+-- transaction rolls back cleanly; re-run `npm run db:migrate`.
+SET LOCAL lock_timeout = '5s';
+SET LOCAL statement_timeout = '60s';
+
 -- Step 1: Drop the existing constraint
 ALTER TABLE item_listing_sales
   DROP CONSTRAINT IF EXISTS item_listing_sales_listing_id_fkey;

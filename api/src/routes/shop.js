@@ -359,9 +359,13 @@ router.post('/:nodeId/:shopType/buy', authenticate, shopBuyLimiter, asyncHandler
     // Add item to user's shared inventory (stack if consumable/material)
     if (['consumable', 'material'].includes(shopItem.item_type)) {
       // Try to stack with existing item in shared pool
+      // (never into a rolled drop row: its rarity/augments belong to that unit only)
       const existingResult = await client.query(
         `SELECT id, quantity FROM character_items
-         WHERE user_id = $1 AND item_template_id = $2 AND equipped_slot IS NULL`,
+         WHERE user_id = $1 AND item_template_id = $2 AND equipped_slot IS NULL
+           AND (modifications IS NULL OR NOT (modifications ? 'rarity'))
+         ORDER BY id
+         LIMIT 1`,
         [req.user.userId, itemTemplateId]
       );
 
@@ -486,8 +490,9 @@ router.post('/:nodeId/:shopType/sell', authenticate, shopSellLimiter, asyncHandl
     }
     const sellQuantity = quantity;
 
-    // 50% of the item's value (rolled rarity and augments included)
-    const unitPrice = calculateSellPrice(item.base_price, item.modifications);
+    // 50% of the item's value (rolled rarity and augments count for
+    // equipment only; stackables always sell at 50% of base_price)
+    const unitPrice = calculateSellPrice(item.base_price, item.modifications, item.item_type);
     const totalPrice = unitPrice * sellQuantity;
 
     // Add gold to user (capped at MAX_GOLD to prevent overflow)
@@ -637,7 +642,7 @@ router.get('/:nodeId/:shopType/sell-inventory', authenticate, asyncHandler(async
       bonusStats,
       augments: mods.augments || [],
       basePrice: item.base_price,
-      sellPrice: calculateSellPrice(item.base_price, mods),
+      sellPrice: calculateSellPrice(item.base_price, mods, item.item_type),
       spriteId: item.sprite_id,
       effectType: item.effect_type,
       effectValue: item.effect_value,

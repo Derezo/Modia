@@ -25,6 +25,7 @@ import { BattleStatePoller } from './BattleStatePoller.js';
 import { connectionQuality } from '../api/connectionQuality.js';
 import { applyBattleMapPatch, mergeBattleStatePatch } from './mergeBattleState.js';
 import { getBattleMapCapabilities } from './BattleMapSession.js';
+import { getStatusPopup } from './statusPopup.js';
 
 const QUEUE_TIMEOUT_MS = 5000; // 5 second timeout for queue events
 const TURN_RECOVERY_SYNC_DELAY_MS = 750;
@@ -2168,18 +2169,18 @@ export class BattleWebSocketManager {
           const effectTarget = effect.targetId != null
             ? this.units.get(effect.targetId)
             : resourceTarget;
-          const rawLabel = effect.effect || effect.status || effect.type;
-          if (!effectTarget || !rawLabel) continue;
+          const popup = getStatusPopup(effect);
+          if (!effectTarget || !popup) continue;
 
-          const label = effect.type === 'cleanse' && !effect.effect
-            ? 'CLEANSED'
-            : String(rawLabel).toUpperCase();
+          const { label } = popup;
           const statusKey = `${effectTarget.id}:${label}`;
           if (shownStatuses.has(statusKey)) continue;
           shownStatuses.add(statusKey);
 
           this.animations.addStatusEffect(effectTarget.screenX, effectTarget.screenY - 74, label);
-          this.scene.audioManager.playStatusEffectSound(effect.effect || effect.status || effect.type);
+          if (popup.sound) {
+            this.scene.audioManager.playStatusEffectSound(popup.sound);
+          }
         }
       }
 

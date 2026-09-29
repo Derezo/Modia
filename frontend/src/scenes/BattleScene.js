@@ -84,6 +84,7 @@ import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { parchmentConfirm } from '../ui/parchment/parchmentConfirm.js';
 import { BattleLoadingScreen } from '../ui/parchment/BattleLoadingScreen.js';
 import { responsive } from '../core/Responsive.js';
+import { getStatusPopup } from '../battle/statusPopup.js';
 
 // Pause before reopening the action menu for a turn's remaining action, so
 // the damage or heal numbers it would cover can be read first.
@@ -3015,18 +3016,18 @@ export class BattleScene extends Scene {
         const effectTarget = effect.targetId != null
           ? this.units.get(effect.targetId)
           : resourceTarget;
-        const rawLabel = effect.effect || effect.status || effect.type;
-        if (!effectTarget || !rawLabel) continue;
+        const popup = getStatusPopup(effect);
+        if (!effectTarget || !popup) continue;
 
-        const label = effect.type === 'cleanse' && !effect.effect
-          ? 'CLEANSED'
-          : String(rawLabel).toUpperCase();
+        const { label } = popup;
         const statusKey = `${effectTarget.id}:${label}`;
         if (shownStatuses.has(statusKey)) continue;
         shownStatuses.add(statusKey);
 
         this.animations.addStatusEffect(effectTarget.screenX, effectTarget.screenY - 74, label);
-        this.audioManager.playStatusEffectSound(effect.effect || effect.status || effect.type);
+        if (popup.sound) {
+          this.audioManager.playStatusEffectSound(popup.sound);
+        }
         showedOutcomeFeedback = true;
       }
 

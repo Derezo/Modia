@@ -219,8 +219,9 @@ router.post('/refresh', refreshLimiter, asyncHandler(async (req, res) => {
   );
 
   if (deleteResult.rows.length === 0) {
-    // Token might be old bcrypt format or invalid/reused
-    // Check if ANY session exists for debug, but don't accept bcrypt hashes
+    // Invalid, expired or already-rotated token. Pre-0.5.2 bcrypt sessions are
+    // deliberately not accepted (bcrypt truncates JWTs at 72 bytes); migration
+    // 067 purges them, so those players log in again once.
     throw new AppError('Invalid or expired refresh token', 401);
   }
 

@@ -133,11 +133,14 @@ describe('guildmaster player battle snapshot', () => {
       { client }
     );
 
-    assert.equal(calls.length, 5);
+    // characters, equipped items, augment effects, skills, collection, abilities
+    assert.equal(calls.length, 6);
     assert.equal(unit.id, 'player_77');
     assert.equal(unit.characterId, 77);
     assert.equal(unit.ownerId, 501);
-    assert.equal(unit.hp, 84);
+    // Gear HP (+20) raises current HP too (battleUnitFactory, 385b87e6):
+    // floor((80 + 20) * 1.05) = 105, capped at maxHp 126
+    assert.equal(unit.hp, 105);
     assert.equal(unit.maxHp, 126);
     assert.equal(unit.strength, 110);
     assert.equal(unit.attack, 21);
@@ -149,6 +152,65 @@ describe('guildmaster player battle snapshot', () => {
       ['rams_charge']
     );
     assert.deepEqual(unit.usedZodiacAbilities, []);
+  });
+});
+
+describe('guildmaster player gear loading', () => {
+  function makeClient(calls) {
+    return {
+      async query(sql, params) {
+        calls.push({ sql, params });
+        if (sql.includes('FROM characters c')) {
+          return {
+            rows: [{
+              id: 66, user_id: 503, name: 'Geared Challenger', class: 'warrior',
+              race: 'human', gender: 'male', level: 12, hp_current: 100, hp_max: 100,
+              mp_current: 30, mp_max: 30, strength: 50, intelligence: 20,
+              agility: 30, vitality: 40, luck: 10
+            }]
+          };
+        }
+        if (sql.includes('FROM character_items')) {
+          // Gear equipped after creation: equipped_slot set, is_equipped false
+          if (!/equipped_slot IS NOT NULL/.test(sql)) {
+            return { rows: [] };
+          }
+          return {
+            rows: [{
+              character_id: 66,
+              is_equipped: false,
+              equipped_slot: 'main_hand',
+              stat_bonuses: { strength: 7 },
+              modifications: JSON.stringify({
+                augments: [{ key: 'keen', effect: { type: 'crit_chance', value: 0.05 } }]
+              })
+            }]
+          };
+        }
+        if (sql.includes('FROM character_skills')
+          || sql.includes('FROM user_shrine_visits')
+          || sql.includes('FROM user_zodiac_crystals')) {
+          return { rows: [] };
+        }
+        throw new Error(`Unexpected query: ${sql}`);
+      }
+    };
+  }
+
+  it('reads equipment by equipped_slot, not the stale is_equipped flag', async () => {
+    const calls = [];
+    const unit = await createSoloPlayerUnit({ id: 66, level: 12 }, { client: makeClient(calls) });
+    const gearQueries = calls.filter(c => c.sql.includes('FROM character_items'));
+    assert.ok(gearQueries.length > 0);
+    for (const { sql } of gearQueries) {
+      assert.doesNotMatch(sql, /is_equipped/);
+    }
+    assert.equal(unit.strength, 57, 'post-creation gear strength must count');
+  });
+
+  it('applies equipment augment combat effects (crit, lifesteal) like PvE', async () => {
+    const unit = await createSoloPlayerUnit({ id: 66, level: 12 }, { client: makeClient([]) });
+    assert.equal(unit.equipmentAugmentEffects.crit_chance, 0.05);
   });
 });
 

@@ -66,6 +66,7 @@ import {
   sendWithAck
 } from '../messageReliability.js';
 import { buildEquipmentStatsLateral } from '../equipmentStats.js';
+import { loadEquipmentAugmentEffects } from '../battle/equipmentAugmentEffects.js';
 
 // Register completeMatch with turnTimer to break circular dependency
 setCompleteMatchFn(completeMatch);
@@ -886,6 +887,13 @@ async function startMatchWithFormations(matchId) {
         { client }
       );
 
+      // Combat augment effects (crit_chance, lifesteal, ...) for both parties,
+      // the same as PvE and advancement battles
+      const augmentEffects = await loadEquipmentAugmentEffects(
+        client,
+        [...player1Party, ...player2Party].map(char => char.id)
+      );
+
       // Build initial battle state
       const initialState = {
         turn: 1,
@@ -926,7 +934,8 @@ async function startMatchWithFormations(matchId) {
         }, { tileX, tileY }, char.skills || [], {
           teamId: 1,
           zodiacAbilities: player1ZodiacAbilities,
-          zodiacCollectionBonus: player1ZodiacCollectionBonus
+          zodiacCollectionBonus: player1ZodiacCollectionBonus,
+          equipmentAugmentEffects: augmentEffects[Number(char.id)] || {}
         }));
       });
 
@@ -955,7 +964,8 @@ async function startMatchWithFormations(matchId) {
         }, { tileX, tileY }, char.skills || [], {
           teamId: 2,
           zodiacAbilities: player2ZodiacAbilities,
-          zodiacCollectionBonus: player2ZodiacCollectionBonus
+          zodiacCollectionBonus: player2ZodiacCollectionBonus,
+          equipmentAugmentEffects: augmentEffects[Number(char.id)] || {}
         }));
       });
 

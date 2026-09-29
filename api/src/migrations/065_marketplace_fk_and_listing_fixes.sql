@@ -6,6 +6,20 @@
 -- 2. Backfills character_items.listed = TRUE for items with active item_listings
 -- 3. Cancels any active listing whose item is equipped (data integrity fix)
 -- 4. Releases stranded gold_reservations for filled orders
+--
+-- Part 3 first replaces item_listings' UNIQUE (character_item_id, status)
+-- constraint with an active-only unique index. The old deferred constraint
+-- allowed only ONE historical row per status, so cancelling an equipped
+-- item's listing when the item already had a cancelled listing (list ->
+-- cancel -> relist -> equip) failed at COMMIT and aborted this migration.
+--
+-- Runs after the PM2 reload against live traffic. DROP CONSTRAINT on an FK
+-- takes ACCESS EXCLUSIVE on the referenced users/characters tables; fail fast
+-- rather than queue every API query behind a blocked lock request. If this
+-- times out, the transaction rolls back cleanly: re-run `npm run db:migrate`.
+
+SET LOCAL lock_timeout = '5s';
+SET LOCAL statement_timeout = '60s';
 
 -- =====================================================
 -- PART 1: Update FK constraints to ON DELETE SET NULL
@@ -88,6 +102,16 @@ WHERE ci.listed IS NOT TRUE
 -- PART 3: Cancel listings for equipped items
 -- =====================================================
 
+-- Only one ACTIVE listing per item is an invariant; any number of historical
+-- (cancelled / sold / expired) rows per item is legitimate. Swap the
+-- (character_item_id, status) constraint for an active-only unique index so
+-- the cancel below (and a second cancel of a relisted item at runtime,
+-- cancelItemListing) cannot collide with an older cancelled row.
+ALTER TABLE item_listings DROP CONSTRAINT IF EXISTS unique_item_listing;
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_item_listings_active_item
+  ON item_listings (character_item_id)
+  WHERE status = 'active';
+
 -- Cancel any active listing whose item is currently equipped
 -- This is a data integrity fix - equipped items should not be listed
 UPDATE item_listings il
@@ -158,6 +182,15 @@ BEGIN
 
   ASSERT equipped_listed_count = 0,
     'Migration failed: equipped items still have listed flag';
+
+  ASSERT NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'unique_item_listing'
+  ), 'Migration failed: unique_item_listing constraint still present';
+
+  ASSERT EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE tablename = 'item_listings' AND indexname = 'uniq_item_listings_active_item'
+  ), 'Migration failed: active-only listing index missing';
 
   RAISE NOTICE 'Migration 065 completed successfully';
 END $$;
