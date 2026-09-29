@@ -4,6 +4,9 @@ import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import { MAX_PARTY_SIZE, MAX_BATTLE_PARTY_SIZE } from '../config/constants.js';
 import partyWebsocket from '../services/partyWebsocket.js';
+import { parseIdParam } from '../utils/parseParams.js';
+import { isBlocked } from '../services/friendService.js';
+import { validateDisplayName } from '../utils/nameValidation.js';
 
 const router = express.Router();
 
@@ -233,13 +236,32 @@ router.get('/multiplayer/current', authenticate, asyncHandler(async (req, res) =
 
 // POST /api/party/multiplayer - Create a new multiplayer party
 router.post('/multiplayer', authenticate, asyncHandler(async (req, res) => {
-  const { name, partyType = 'pve_coop', maxMembers = 4 } = req.body;
+  const { name, partyType = 'adventure', maxMembers = 4 } = req.body;
 
-  // Validate party type
-  const validTypes = ['pve_coop', 'pvp_team', 'pvp_ffa'];
-  if (!validTypes.includes(partyType)) {
+  // Map legacy party types to DB enum values
+  const typeAliases = {
+    pve: 'adventure',
+    pve_coop: 'adventure',
+    pvp_team: 'coliseum_team'
+  };
+  const resolvedType = typeAliases[partyType] ?? partyType;
+
+  // Validate party type against DB enum
+  const validTypes = ['adventure', 'coliseum_team', 'raid'];
+  if (!validTypes.includes(resolvedType)) {
     throw new AppError(`Invalid party type. Must be one of: ${validTypes.join(', ')}`, 400);
   }
+
+  // Validate maxMembers
+  const parsedMaxMembers = parseInt(maxMembers, 10);
+  if (isNaN(parsedMaxMembers) || parsedMaxMembers < 2 || parsedMaxMembers > 8) {
+    throw new AppError('maxMembers must be between 2 and 8', 400);
+  }
+
+  // Validate party name
+  const partyName = name
+    ? validateDisplayName(name, { label: 'Party name', min: 1, max: 64 })
+    : `${req.user.username}'s Party`;
 
   // Check if user is already in a party
   const existingResult = await query(
@@ -258,7 +280,7 @@ router.post('/multiplayer', authenticate, asyncHandler(async (req, res) => {
     `INSERT INTO parties (leader_id, party_type, name, status, max_members)
      VALUES ($1, $2, $3, 'forming', $4)
      RETURNING id, name, party_type, status, max_members, created_at`,
-    [req.user.userId, partyType, name || `${req.user.username}'s Party`, Math.min(maxMembers, 8)]
+    [req.user.userId, resolvedType, partyName, parsedMaxMembers]
   );
 
   const party = partyResult.rows[0];
@@ -290,9 +312,61 @@ router.post('/multiplayer', authenticate, asyncHandler(async (req, res) => {
   });
 }));
 
+// GET /api/party/multiplayer/invites - Get pending invites for current user
+// NOTE: This route MUST be registered before /multiplayer/:partyId to avoid shadowing
+router.get('/multiplayer/invites', authenticate, asyncHandler(async (req, res) => {
+  const result = await query(
+    `SELECT pi.id, pi.party_id, pi.expires_at,
+            p.name as party_name,
+            u.username as inviter_username
+     FROM party_invites pi
+     JOIN parties p ON pi.party_id = p.id
+     JOIN users u ON pi.inviter_id = u.id
+     WHERE pi.invitee_id = $1
+       AND pi.invite_status = 'pending'
+       AND pi.expires_at > NOW()
+     ORDER BY pi.created_at DESC`,
+    [req.user.userId]
+  );
+
+  res.json({ invites: result.rows });
+}));
+
+// POST /api/party/multiplayer/decline/:inviteId - Decline an invite
+// NOTE: This route MUST be registered before /multiplayer/:partyId to avoid shadowing
+router.post('/multiplayer/decline/:inviteId', authenticate, asyncHandler(async (req, res) => {
+  const inviteId = parseIdParam(req.params.inviteId, 'invite ID');
+
+  const result = await query(
+    `UPDATE party_invites SET invite_status = 'declined', responded_at = NOW()
+     WHERE id = $1 AND invitee_id = $2 AND invite_status = 'pending'
+     RETURNING party_id, inviter_id`,
+    [inviteId, req.user.userId]
+  );
+
+  if (result.rows.length === 0) {
+    throw new AppError('Invite not found or already processed', 404);
+  }
+
+  // Notify inviter via WebSocket
+  partyWebsocket.declineInvite(inviteId, req.user.userId);
+
+  res.json({ success: true });
+}));
+
 // GET /api/party/multiplayer/:partyId - Get party details
 router.get('/multiplayer/:partyId', authenticate, asyncHandler(async (req, res) => {
-  const { partyId } = req.params;
+  const partyId = parseIdParam(req.params.partyId, 'party ID');
+
+  // Verify user is a member (security: don't expose party info to non-members)
+  const memberCheck = await query(
+    'SELECT 1 FROM party_members WHERE party_id = $1 AND user_id = $2',
+    [partyId, req.user.userId]
+  );
+
+  if (memberCheck.rows.length === 0) {
+    throw new AppError('Party not found', 404);
+  }
 
   // Get party info
   const partyResult = await query(
@@ -339,7 +413,7 @@ router.get('/multiplayer/:partyId', authenticate, asyncHandler(async (req, res) 
 
 // POST /api/party/multiplayer/:partyId/invite - Invite a player by username
 router.post('/multiplayer/:partyId/invite', authenticate, asyncHandler(async (req, res) => {
-  const { partyId } = req.params;
+  const partyId = parseIdParam(req.params.partyId, 'party ID');
   const { username } = req.body;
 
   if (!username) {
@@ -389,6 +463,12 @@ router.post('/multiplayer/:partyId/invite', authenticate, asyncHandler(async (re
     throw new AppError('Cannot invite yourself', 400);
   }
 
+  // Check if either user has blocked the other
+  const blocked = await isBlocked(req.user.userId, targetUser.id);
+  if (blocked) {
+    throw new AppError('Cannot invite this player', 400);
+  }
+
   // Check if target is already in a party
   const targetPartyCheck = await query(
     `SELECT p.id FROM parties p
@@ -404,7 +484,7 @@ router.post('/multiplayer/:partyId/invite', authenticate, asyncHandler(async (re
   // Check for existing pending invite
   const existingInvite = await query(
     `SELECT id FROM party_invites
-     WHERE party_id = $1 AND invitee_id = $2 AND status = 'pending'`,
+     WHERE party_id = $1 AND invitee_id = $2 AND invite_status = 'pending'`,
     [partyId, targetUser.id]
   );
 
@@ -414,7 +494,7 @@ router.post('/multiplayer/:partyId/invite', authenticate, asyncHandler(async (re
 
   // Create invite in database
   const inviteResult = await query(
-    `INSERT INTO party_invites (party_id, inviter_id, invitee_id, status, expires_at)
+    `INSERT INTO party_invites (party_id, inviter_id, invitee_id, invite_status, expires_at)
      VALUES ($1, $2, $3, 'pending', NOW() + INTERVAL '5 minutes')
      RETURNING id, expires_at`,
     [partyId, req.user.userId, targetUser.id]
@@ -422,14 +502,16 @@ router.post('/multiplayer/:partyId/invite', authenticate, asyncHandler(async (re
 
   const invite = inviteResult.rows[0];
 
-  // Send invite via WebSocket
-  await partyWebsocket.sendInvite(
-    req.user.userId,
-    req.user.username,
-    targetUser.id,
-    null, // No character ID needed for party invites
-    { partyId: parseInt(partyId), partyName: party.name }
-  );
+  // Send invite via WebSocket with DB invite ID
+  await partyWebsocket.sendInvite({
+    inviteId: invite.id,
+    expiresAt: invite.expires_at,
+    fromUserId: req.user.userId,
+    fromUsername: req.user.username,
+    toUserId: targetUser.id,
+    partyId,
+    partyName: party.name
+  });
 
   res.json({
     success: true,
@@ -443,11 +525,11 @@ router.post('/multiplayer/:partyId/invite', authenticate, asyncHandler(async (re
 
 // POST /api/party/multiplayer/join/:inviteId - Accept invite and join party
 router.post('/multiplayer/join/:inviteId', authenticate, asyncHandler(async (req, res) => {
-  const { inviteId } = req.params;
+  const inviteId = parseIdParam(req.params.inviteId, 'invite ID');
 
   // Get and validate invite
   const inviteResult = await query(
-    `SELECT pi.id, pi.party_id, pi.inviter_id, pi.invitee_id, pi.status, pi.expires_at,
+    `SELECT pi.id, pi.party_id, pi.inviter_id, pi.invitee_id, pi.invite_status, pi.expires_at,
             p.name as party_name, p.status as party_status, p.max_members,
             (SELECT COUNT(*) FROM party_members WHERE party_id = p.id) as member_count
      FROM party_invites pi
@@ -466,13 +548,13 @@ router.post('/multiplayer/join/:inviteId', authenticate, asyncHandler(async (req
     throw new AppError('This invite is not for you', 403);
   }
 
-  if (invite.status !== 'pending') {
+  if (invite.invite_status !== 'pending') {
     throw new AppError('Invite is no longer valid', 400);
   }
 
   if (new Date(invite.expires_at) < new Date()) {
     await query(
-      'UPDATE party_invites SET status = \'expired\' WHERE id = $1',
+      'UPDATE party_invites SET invite_status = \'expired\' WHERE id = $1',
       [inviteId]
     );
     throw new AppError('Invite has expired', 400);
@@ -500,7 +582,7 @@ router.post('/multiplayer/join/:inviteId', authenticate, asyncHandler(async (req
 
   // Update invite status
   await query(
-    'UPDATE party_invites SET status = \'accepted\' WHERE id = $1',
+    'UPDATE party_invites SET invite_status = \'accepted\', responded_at = NOW() WHERE id = $1',
     [inviteId]
   );
 
@@ -521,9 +603,6 @@ router.post('/multiplayer/join/:inviteId', authenticate, asyncHandler(async (req
     req.user.username,
     null // Character name can be fetched separately
   );
-
-  // Accept invite in WebSocket service
-  await partyWebsocket.acceptInvite(parseInt(inviteId), req.user.userId, req.user.username);
 
   // Get updated party info
   const partyResult = await query(
@@ -554,7 +633,7 @@ router.post('/multiplayer/join/:inviteId', authenticate, asyncHandler(async (req
 
 // POST /api/party/multiplayer/:partyId/leave - Leave a party
 router.post('/multiplayer/:partyId/leave', authenticate, asyncHandler(async (req, res) => {
-  const { partyId } = req.params;
+  const partyId = parseIdParam(req.params.partyId, 'party ID');
 
   // Verify membership
   const memberResult = await query(
@@ -626,24 +705,36 @@ router.post('/multiplayer/:partyId/leave', authenticate, asyncHandler(async (req
 
 // PUT /api/party/multiplayer/:partyId/ready - Set ready status
 router.put('/multiplayer/:partyId/ready', authenticate, asyncHandler(async (req, res) => {
-  const { partyId } = req.params;
+  const partyId = parseIdParam(req.params.partyId, 'party ID');
   const { isReady } = req.body;
 
   if (typeof isReady !== 'boolean') {
     throw new AppError('isReady must be a boolean', 400);
   }
 
-  // Verify membership and update
-  const result = await query(
-    `UPDATE party_members SET is_ready = $1
-     WHERE party_id = $2 AND user_id = $3
-     RETURNING user_id`,
-    [isReady, partyId, req.user.userId]
+  // First check party status - only allow ready changes when forming or ready
+  const partyCheck = await query(
+    `SELECT p.status FROM parties p
+     JOIN party_members pm ON p.id = pm.party_id
+     WHERE pm.party_id = $1 AND pm.user_id = $2`,
+    [partyId, req.user.userId]
   );
 
-  if (result.rows.length === 0) {
+  if (partyCheck.rows.length === 0) {
     throw new AppError('You are not in this party', 404);
   }
+
+  const partyStatus = partyCheck.rows[0].status;
+  if (partyStatus !== 'forming' && partyStatus !== 'ready') {
+    throw new AppError('Cannot change ready status - party is in battle or disbanded', 409);
+  }
+
+  // Update ready status
+  await query(
+    `UPDATE party_members SET is_ready = $1
+     WHERE party_id = $2 AND user_id = $3`,
+    [isReady, partyId, req.user.userId]
+  );
 
   // Broadcast ready status change
   const roomName = `party:${partyId}`;
@@ -651,7 +742,7 @@ router.put('/multiplayer/:partyId/ready', authenticate, asyncHandler(async (req,
   websocket.broadcastToRoom(roomName, {
     type: 'party:member_ready',
     payload: {
-      partyId: parseInt(partyId),
+      partyId,
       userId: req.user.userId,
       isReady
     }
@@ -669,16 +760,22 @@ router.put('/multiplayer/:partyId/ready', authenticate, asyncHandler(async (req,
   const { total, ready_count } = readyCheck.rows[0];
   const allReady = parseInt(total) > 1 && parseInt(ready_count) === parseInt(total);
 
-  // Update party status if all ready
+  // Update party status based on ready state (only when forming or ready)
   if (allReady) {
     await query(
-      'UPDATE parties SET status = \'ready\' WHERE id = $1',
+      'UPDATE parties SET status = \'ready\' WHERE id = $1 AND status IN (\'forming\', \'ready\')',
       [partyId]
     );
     websocket.broadcastToRoom(roomName, {
       type: 'party:all_ready',
-      payload: { partyId: parseInt(partyId) }
+      payload: { partyId }
     });
+  } else {
+    // Reset to forming if not all ready and currently ready
+    await query(
+      'UPDATE parties SET status = \'forming\' WHERE id = $1 AND status = \'ready\'',
+      [partyId]
+    );
   }
 
   res.json({
@@ -690,7 +787,7 @@ router.put('/multiplayer/:partyId/ready', authenticate, asyncHandler(async (req,
 
 // POST /api/party/multiplayer/:partyId/start - Start battle (leader only)
 router.post('/multiplayer/:partyId/start', authenticate, asyncHandler(async (req, res) => {
-  const { partyId } = req.params;
+  const partyId = parseIdParam(req.params.partyId, 'party ID');
   const { nodeId } = req.body;
 
   if (!nodeId) {
@@ -752,46 +849,6 @@ router.post('/multiplayer/:partyId/start', authenticate, asyncHandler(async (req
     nodeId,
     memberIds
   });
-}));
-
-// GET /api/party/multiplayer/invites - Get pending invites for current user
-router.get('/multiplayer/invites', authenticate, asyncHandler(async (req, res) => {
-  const result = await query(
-    `SELECT pi.id, pi.party_id, pi.expires_at,
-            p.name as party_name,
-            u.username as inviter_username
-     FROM party_invites pi
-     JOIN parties p ON pi.party_id = p.id
-     JOIN users u ON pi.inviter_id = u.id
-     WHERE pi.invitee_id = $1
-       AND pi.status = 'pending'
-       AND pi.expires_at > NOW()
-     ORDER BY pi.created_at DESC`,
-    [req.user.userId]
-  );
-
-  res.json({ invites: result.rows });
-}));
-
-// POST /api/party/multiplayer/decline/:inviteId - Decline an invite
-router.post('/multiplayer/decline/:inviteId', authenticate, asyncHandler(async (req, res) => {
-  const { inviteId } = req.params;
-
-  const result = await query(
-    `UPDATE party_invites SET status = 'declined'
-     WHERE id = $1 AND invitee_id = $2 AND status = 'pending'
-     RETURNING party_id, inviter_id`,
-    [inviteId, req.user.userId]
-  );
-
-  if (result.rows.length === 0) {
-    throw new AppError('Invite not found or already processed', 404);
-  }
-
-  // Notify inviter via WebSocket
-  partyWebsocket.declineInvite(parseInt(inviteId), req.user.userId);
-
-  res.json({ success: true });
 }));
 
 export default router;

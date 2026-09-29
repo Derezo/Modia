@@ -51,13 +51,41 @@ const errorHandler = (err, req, res, _next) => {
     });
   }
 
+  // PostgreSQL invalid input errors - return 400 instead of 500
+  // 22P02: invalid text representation (e.g., 'abc' for integer)
+  // 22003: numeric_value_out_of_range
+  // 22007/22008: invalid datetime format
+  // 2201W/2201X: negative LIMIT/OFFSET
+  // 23502: not_null_violation (missing required field)
+  if (['22P02', '22003', '22007', '22008', '2201W', '2201X', '23502'].includes(err.code)) {
+    logger.warn('errorHandler', 'Invalid parameter', {
+      path: req.path,
+      code: err.code
+    });
+    return res.status(400).json({
+      error: 'Invalid parameter'
+    });
+  }
+
   // Default error response
-  res.status(statusCode).json({
-    error: err.message || 'Internal Server Error',
-    ...(requestId && { requestId }),
-    ...(err.data && { ...err.data }),
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-  });
+  // SECURITY: Never expose internal error messages for 500s
+  if (statusCode >= 500) {
+    // Log the real error server-side (already done above)
+    // but return a generic message to the client
+    res.status(statusCode).json({
+      error: 'Internal Server Error',
+      ...(requestId && { requestId }),
+      ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    });
+  } else {
+    // For 4xx errors, it's safe to include the message (it's meant for the client)
+    res.status(statusCode).json({
+      error: err.message || 'Request failed',
+      ...(requestId && { requestId }),
+      ...(err.data && { ...err.data }),
+      ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    });
+  }
 };
 
 // Async handler wrapper to catch errors in async route handlers

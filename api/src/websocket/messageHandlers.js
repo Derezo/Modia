@@ -19,10 +19,11 @@ import { WebSocket } from 'ws';
 import chatService from '../services/chatService.js';
 import { verifyCharacterOwnership } from '../services/characterService.js';
 import presenceService from '../services/presenceService.js';
+import { isBlocked } from '../services/friendService.js';
 import coliseumService from '../services/coliseumService.js';
 import { submitFormation } from '../services/coliseum/matchLifecycle.js';
 import { handleSurrender as coliseumHandleSurrender } from '../services/coliseum/turnTimer.js';
-import * as partyWebsocket from '../services/partyWebsocket.js';
+// Note: partyWebsocket is no longer imported here - party invites are handled via REST API
 import adminGenerationService from '../services/adminGenerationService.js';
 import audioGenerationService from '../services/adminAudioGenerationService.js';
 import {
@@ -215,27 +216,63 @@ async function handlePrivateMessage(ws, userId, username, payload) {
       return;
     }
 
-    // If characterId is provided, verify ownership (null is allowed for DMs without attribution)
-    if (characterId) {
-      const ownsCharacter = await verifyCharacterOwnership(characterId, userId);
-      if (!ownsCharacter) {
-        ws.send(JSON.stringify({
-          type: 'error',
-          payload: { message: 'Invalid character' }
-        }));
-        return;
-      }
+    // Parse target user ID as number
+    const targetId = parseInt(targetUserId, 10);
+    if (isNaN(targetId)) {
+      ws.send(JSON.stringify({
+        type: 'error',
+        payload: { message: 'Invalid target user ID' }
+      }));
+      return;
+    }
+
+    // Cannot message yourself
+    if (targetId === userId) {
+      ws.send(JSON.stringify({
+        type: 'error',
+        payload: { message: 'Cannot send message to yourself' }
+      }));
+      return;
+    }
+
+    // Check if either user has blocked the other
+    const blocked = await isBlocked(userId, targetId);
+    if (blocked) {
+      ws.send(JSON.stringify({
+        type: 'error',
+        payload: { message: 'Cannot message this user' }
+      }));
+      return;
+    }
+
+    // CharacterId is required for DMs (DB column is NOT NULL)
+    if (!characterId) {
+      ws.send(JSON.stringify({
+        type: 'error',
+        payload: { message: 'A character is required to send messages' }
+      }));
+      return;
+    }
+
+    // Verify character ownership
+    const ownsCharacter = await verifyCharacterOwnership(characterId, userId);
+    if (!ownsCharacter) {
+      ws.send(JSON.stringify({
+        type: 'error',
+        payload: { message: 'Invalid character' }
+      }));
+      return;
     }
 
     const savedMessage = await chatService.saveMessage({
-      characterId: characterId || null,
+      characterId,
       senderUserId: userId,
       roomType: 'dm',
       message: dmMessage.substring(0, 500),
-      targetUserId
+      targetUserId: targetId
     });
 
-    const recipientWs = connections.get(targetUserId);
+    const recipientWs = connections.get(targetId);
     if (recipientWs && recipientWs.readyState === WebSocket.OPEN) {
       recipientWs.send(JSON.stringify({
         type: 'private_message_received',
@@ -253,7 +290,7 @@ async function handlePrivateMessage(ws, userId, username, payload) {
       type: 'private_message_sent',
       payload: {
         id: savedMessage.id,
-        targetUserId,
+        targetUserId: targetId,
         message: savedMessage.message,
         timestamp: savedMessage.created_at
       }
@@ -826,87 +863,11 @@ async function handleBattleSurrender(ws, userId, payload) {
 // Party Handlers
 // ============================================================
 
-/**
- * Handle party invite
- */
-async function handlePartyInvite(ws, userId, username, payload) {
-  if (!userId) return;
-  try {
-    const { targetUserId, characterId } = payload;
-    if (!targetUserId) {
-      ws.send(JSON.stringify({
-        type: 'error',
-        payload: { message: 'Target user required' }
-      }));
-      return;
-    }
-
-    // Verify the user owns this character
-    if (characterId) {
-      const ownsCharacter = await verifyCharacterOwnership(characterId, userId);
-      if (!ownsCharacter) {
-        ws.send(JSON.stringify({
-          type: 'error',
-          payload: { message: 'Invalid character' }
-        }));
-        return;
-      }
-    }
-
-    const result = await partyWebsocket.sendInvite(userId, username, targetUserId, characterId);
-    if (result.success) {
-      ws.send(JSON.stringify({
-        type: 'party:invite_sent',
-        payload: { inviteId: result.inviteId, targetUserId }
-      }));
-    } else {
-      ws.send(JSON.stringify({
-        type: 'error',
-        payload: { message: result.error }
-      }));
-    }
-  } catch (err) {
-    console.error('Party invite error:', err);
-  }
-}
-
-/**
- * Handle party invite accept
- */
-async function handlePartyInviteAccept(ws, userId, username, payload) {
-  if (!userId) return;
-  try {
-    const { inviteId } = payload;
-    const result = await partyWebsocket.acceptInvite(inviteId, userId, username);
-    if (!result.success) {
-      ws.send(JSON.stringify({
-        type: 'error',
-        payload: { message: result.error }
-      }));
-    }
-  } catch (err) {
-    console.error('Party invite accept error:', err);
-  }
-}
-
-/**
- * Handle party invite decline
- */
-async function handlePartyInviteDecline(ws, userId, payload) {
-  if (!userId) return;
-  try {
-    const { inviteId } = payload;
-    const result = await partyWebsocket.declineInvite(inviteId, userId);
-    if (!result.success) {
-      ws.send(JSON.stringify({
-        type: 'error',
-        payload: { message: result.error }
-      }));
-    }
-  } catch (err) {
-    console.error('Party invite decline error:', err);
-  }
-}
+// NOTE: Party invites are handled via REST API (POST /api/party/multiplayer/:partyId/invite)
+// not via WebSocket. The old WS handlers (handlePartyInvite, handlePartyInviteAccept,
+// handlePartyInviteDecline) were removed because they called partyWebsocket functions
+// with the old positional signature. The REST route creates the DB invite and calls
+// partyWebsocket.sendInvite with the new object signature.
 
 /**
  * Handle party leave
@@ -1338,10 +1299,7 @@ export {
   handleAckMessage,
   handleBattleSurrender,
 
-  // Party
-  handlePartyInvite,
-  handlePartyInviteAccept,
-  handlePartyInviteDecline,
+  // Party (invites handled via REST API, not WS)
   handlePartyLeave,
 
   // Node

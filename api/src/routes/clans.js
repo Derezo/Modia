@@ -7,6 +7,7 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import * as clanService from '../services/clanService.js';
+import { validateDisplayName, validateFreeText } from '../utils/nameValidation.js';
 import {
   clanCreateLimiter,
   clanInviteLimiter,
@@ -42,29 +43,35 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
 router.post('/', authenticate, clanCreateLimiter, asyncHandler(async (req, res) => {
   const { name, tag, description } = req.body;
 
-  if (!name || name.trim().length < 3 || name.trim().length > 32) {
-    throw new AppError('Clan name must be 3-32 characters', 400);
+  // Validate clan name with proper charset validation
+  const validatedName = validateDisplayName(name, { label: 'Clan name', min: 3, max: 32 });
+
+  // Validate tag type before calling methods on it
+  if (tag === undefined || tag === null) {
+    throw new AppError('Clan tag is required', 400);
+  }
+  if (typeof tag !== 'string') {
+    throw new AppError('Clan tag must be a string', 400);
   }
 
-  if (!tag || tag.trim().length < 2 || tag.trim().length > 6) {
+  const trimmedTag = tag.trim();
+  if (trimmedTag.length < 2 || trimmedTag.length > 6) {
     throw new AppError('Clan tag must be 2-6 characters', 400);
   }
 
   // Validate tag is alphanumeric
-  if (!/^[A-Za-z0-9]+$/.test(tag.trim())) {
+  if (!/^[A-Za-z0-9]+$/.test(trimmedTag)) {
     throw new AppError('Clan tag must be alphanumeric', 400);
   }
 
-  // Validate description length (optional but must be <= 256 chars)
-  if (description && description.trim().length > 256) {
-    throw new AppError('Clan description must be 256 characters or less', 400);
-  }
+  // Validate description with free-text validation (optional, max 256)
+  const validatedDescription = validateFreeText(description, { label: 'Clan description', max: 256, optional: true });
 
   try {
     const clan = await clanService.createClan(req.user.userId, {
-      name: name.trim(),
-      tag: tag.trim().toUpperCase(),
-      description: description?.trim() || null
+      name: validatedName,
+      tag: trimmedTag.toUpperCase(),
+      description: validatedDescription
     });
 
     res.status(201).json({
@@ -73,6 +80,9 @@ router.post('/', authenticate, clanCreateLimiter, asyncHandler(async (req, res) 
       clan
     });
   } catch (error) {
+    if (error.statusCode) {
+      throw error; // Already an AppError
+    }
     if (error.message.includes('already')) {
       throw new AppError(error.message, 400);
     }
@@ -328,7 +338,12 @@ router.post('/:id/messages', authenticate, clanMessageLimiter, asyncHandler(asyn
     throw new AppError('Invalid clan ID', 400);
   }
 
-  if (!message || message.trim().length === 0) {
+  // Type check before calling string methods (prevents TypeError on non-string input)
+  if (typeof message !== 'string') {
+    throw new AppError('Message is required', 400);
+  }
+
+  if (message.trim().length === 0) {
     throw new AppError('Message is required', 400);
   }
 

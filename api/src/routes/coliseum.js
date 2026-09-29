@@ -64,7 +64,7 @@ router.get('/queues', queuesLimiter, async (req, res) => {
 router.get('/queue/:queueType/players', queuesLimiter, async (req, res) => {
   try {
     const { queueType } = req.params;
-    const userId = req.user.id;
+    const userId = req.user.userId;
 
     // Validate queue type
     const validQueues = ['1v1', '3v3', '5v5'];
@@ -90,7 +90,7 @@ router.get('/queue/:queueType/players', queuesLimiter, async (req, res) => {
 router.get('/leaderboard', async (req, res) => {
   try {
     const { queue = '1v1', limit = 100, time = 'all' } = req.query;
-    const userId = req.user.id;
+    const userId = req.user.userId;
     const parsedLimit = Math.min(parseInt(limit, 10) || 100, 100);
 
     // Validate queue type
@@ -195,7 +195,7 @@ router.get('/leaderboard', async (req, res) => {
 router.get('/matches', async (req, res) => {
   try {
     const { filter = 'all', limit = 20, offset = 0 } = req.query;
-    const userId = req.user.id;
+    const userId = req.user.userId;
     const parsedLimit = Math.min(parseInt(limit, 10) || 20, 50);
     const parsedOffset = parseInt(offset, 10) || 0;
 
@@ -306,7 +306,7 @@ router.get('/matches/:matchId', async (req, res) => {
 router.post('/surrender', async (req, res) => {
   try {
     const numericBattleId = Number(req.body?.battleId);
-    const userId = req.user.userId ?? req.user.id;
+    const userId = req.user.userId;
 
     if (!Number.isSafeInteger(numericBattleId) || numericBattleId <= 0) {
       return res.status(400).json({ error: 'Battle ID is required' });
@@ -400,7 +400,7 @@ router.get('/achievements/:userId', async (req, res) => {
  */
 router.get('/my-achievements', async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.userId;
 
     // Get user's achievements
     const achievements = await getUserAchievements(userId);
@@ -440,7 +440,7 @@ router.get('/my-achievements', async (req, res) => {
  */
 router.get('/stats', async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.userId;
 
     const result = await query(
       `SELECT

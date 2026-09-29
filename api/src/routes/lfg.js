@@ -3,6 +3,8 @@ import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import { query } from '../config/database.js';
 import { sendToUser } from '../websocket/index.js';
+import { parseBoundedInt, parseLimit } from '../utils/parseParams.js';
+import { validateFreeText } from '../utils/nameValidation.js';
 
 const router = express.Router();
 
@@ -12,6 +14,18 @@ const router = express.Router();
  */
 router.get('/', authenticate, asyncHandler(async (req, res) => {
   const { minLevel, maxLevel, contentTier, limit = 50 } = req.query;
+
+  // Validate params with proper error handling
+  const parsedLimit = parseLimit(limit, 50, 100);
+  const parsedMinLevel = minLevel !== undefined
+    ? parseBoundedInt(minLevel, { min: 1, max: 100, name: 'minLevel' })
+    : null;
+  const parsedMaxLevel = maxLevel !== undefined
+    ? parseBoundedInt(maxLevel, { min: 1, max: 100, name: 'maxLevel' })
+    : null;
+  const parsedContentTier = contentTier !== undefined
+    ? parseBoundedInt(contentTier, { min: 1, max: 5, name: 'contentTier' })
+    : null;
 
   let sql = `
     SELECT
@@ -47,26 +61,26 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
   const params = [];
   let paramIndex = 1;
 
-  if (minLevel) {
+  if (parsedMinLevel !== null) {
     sql += ` AND lp.max_level >= $${paramIndex}`;
-    params.push(parseInt(minLevel, 10));
+    params.push(parsedMinLevel);
     paramIndex++;
   }
 
-  if (maxLevel) {
+  if (parsedMaxLevel !== null) {
     sql += ` AND lp.min_level <= $${paramIndex}`;
-    params.push(parseInt(maxLevel, 10));
+    params.push(parsedMaxLevel);
     paramIndex++;
   }
 
-  if (contentTier) {
+  if (parsedContentTier !== null) {
     sql += ` AND lp.content_tier = $${paramIndex}`;
-    params.push(parseInt(contentTier, 10));
+    params.push(parsedContentTier);
     paramIndex++;
   }
 
   sql += ` ORDER BY lp.created_at DESC LIMIT $${paramIndex}`;
-  params.push(Math.min(parseInt(limit, 10) || 50, 100));
+  params.push(parsedLimit);
 
   const result = await query(sql, params);
 
@@ -80,14 +94,14 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
 router.post('/', authenticate, asyncHandler(async (req, res) => {
   const { title, description, lookingFor, minLevel, maxLevel, contentTier, expiresInHours } = req.body;
 
-  // Validate required fields
-  if (!title || title.length < 3 || title.length > 64) {
+  // Validate title using free-text validation (allows punctuation like !, ?, etc.)
+  const validatedTitle = validateFreeText(title, { label: 'Title', max: 64, optional: false });
+  if (validatedTitle.length < 3) {
     throw new AppError('Title must be between 3 and 64 characters', 400);
   }
 
-  if (description && description.length > 256) {
-    throw new AppError('Description must be 256 characters or less', 400);
-  }
+  // Validate description using proper string validation
+  const validatedDescription = validateFreeText(description, { label: 'Description', max: 256 });
 
   // Validate lookingFor array
   const validRoles = ['warrior', 'wizard', 'monk', 'chemist', 'tank', 'healer', 'dps', 'any'];
@@ -99,23 +113,29 @@ router.post('/', authenticate, asyncHandler(async (req, res) => {
     }
   }
 
-  // Validate level range
-  const minLvl = minLevel ? Math.max(1, Math.min(100, parseInt(minLevel, 10))) : 1;
-  const maxLvl = maxLevel ? Math.max(1, Math.min(100, parseInt(maxLevel, 10))) : 100;
+  // Validate level range with proper integer parsing
+  const minLvl = minLevel !== undefined
+    ? parseBoundedInt(minLevel, { min: 1, max: 100, name: 'minLevel' })
+    : 1;
+  const maxLvl = maxLevel !== undefined
+    ? parseBoundedInt(maxLevel, { min: 1, max: 100, name: 'maxLevel' })
+    : 100;
 
   if (minLvl > maxLvl) {
     throw new AppError('Minimum level cannot be greater than maximum level', 400);
   }
 
   // Validate content tier
-  const tier = contentTier ? parseInt(contentTier, 10) : null;
-  if (tier !== null && (tier < 1 || tier > 5)) {
-    throw new AppError('Content tier must be between 1 and 5', 400);
-  }
+  const tier = contentTier !== undefined
+    ? parseBoundedInt(contentTier, { min: 1, max: 5, name: 'contentTier' })
+    : null;
 
   // Calculate expiration (default 4 hours)
-  const hours = expiresInHours ? Math.min(Math.max(1, parseInt(expiresInHours, 10)), 24) : 4;
-  const expiresAt = new Date(Date.now() + hours * 60 * 60 * 1000);
+  // IMPORTANT: Use ISO string to avoid timezone conversion issues with 'timestamp without time zone' columns
+  const hours = expiresInHours !== undefined
+    ? parseBoundedInt(expiresInHours, { min: 1, max: 24, name: 'expiresInHours' })
+    : 4;
+  const expiresAt = new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
 
   // Check if user already has an active post
   const existingPost = await query(
@@ -127,11 +147,11 @@ router.post('/', authenticate, asyncHandler(async (req, res) => {
     throw new AppError('You already have an active LFG post. Delete it before creating a new one.', 400);
   }
 
-  // Get user's party if they have one
+  // Get user's party if they have one (fix: use correct party status values)
   const partyResult = await query(
     `SELECT p.id FROM parties p
      JOIN party_members pm ON p.id = pm.party_id
-     WHERE pm.user_id = $1 AND p.status = 'active'
+     WHERE pm.user_id = $1 AND p.status IN ('forming', 'ready')
      LIMIT 1`,
     [req.user.userId]
   );
@@ -146,8 +166,8 @@ router.post('/', authenticate, asyncHandler(async (req, res) => {
     [
       req.user.userId,
       partyId,
-      title.trim(),
-      description ? description.trim() : null,
+      validatedTitle,
+      validatedDescription,
       lookingFor || [],
       minLvl,
       maxLvl,

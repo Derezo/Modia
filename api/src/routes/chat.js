@@ -4,6 +4,8 @@ import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import { chatReactionLimiter, presenceUpdateLimiter } from '../middleware/socialRateLimiter.js';
 import chatService from '../services/chatService.js';
 import presenceService from '../services/presenceService.js';
+import { query } from '../config/database.js';
+import { parseIdParam, parseDateParam, parseLimit } from '../utils/parseParams.js';
 
 const router = express.Router();
 
@@ -21,11 +23,45 @@ router.get('/history/:roomType', authenticate, asyncHandler(async (req, res) => 
     throw new AppError('Invalid room type', 400);
   }
 
+  // Parse and validate params
+  const parsedBefore = parseDateParam(before, 'before');
+  const parsedLimit = parseLimit(limit, 50, 100);
+
+  // For party chat, require partyId and verify membership
+  if (roomType === 'party') {
+    if (!partyId) {
+      throw new AppError('partyId is required for party chat history', 400);
+    }
+    const parsedPartyId = parseIdParam(partyId, 'partyId');
+
+    // Verify user is a member of this party
+    const memberCheck = await query(
+      'SELECT 1 FROM party_members WHERE party_id = $1 AND user_id = $2',
+      [parsedPartyId, req.user.userId]
+    );
+
+    if (memberCheck.rows.length === 0) {
+      throw new AppError('Access denied', 403);
+    }
+
+    const messages = await chatService.getHistory(roomType, {
+      before: parsedBefore,
+      limit: parsedLimit,
+      nodeId: null,
+      partyId: parsedPartyId
+    });
+
+    return res.json({ messages });
+  }
+
+  // For local chat, optionally filter by nodeId
+  const parsedNodeId = nodeId ? parseIdParam(nodeId, 'nodeId') : null;
+
   const messages = await chatService.getHistory(roomType, {
-    before: before ? new Date(before) : null,
-    limit: Math.min(parseInt(limit, 10) || 50, 100),
-    nodeId: nodeId ? parseInt(nodeId, 10) : null,
-    partyId: partyId ? parseInt(partyId, 10) : null
+    before: parsedBefore,
+    limit: parsedLimit,
+    nodeId: parsedNodeId,
+    partyId: null
   });
 
   res.json({ messages });
@@ -36,17 +72,15 @@ router.get('/history/:roomType', authenticate, asyncHandler(async (req, res) => 
  * Get DM history with a specific user
  */
 router.get('/dm/:targetUserId', authenticate, asyncHandler(async (req, res) => {
-  const { targetUserId } = req.params;
+  const targetId = parseIdParam(req.params.targetUserId, 'target user ID');
   const { before, limit = 50 } = req.query;
 
-  const targetId = parseInt(targetUserId, 10);
-  if (isNaN(targetId)) {
-    throw new AppError('Invalid target user ID', 400);
-  }
+  const parsedBefore = parseDateParam(before, 'before');
+  const parsedLimit = parseLimit(limit, 50, 100);
 
   const messages = await chatService.getDMHistory(req.user.userId, targetId, {
-    before: before ? new Date(before) : null,
-    limit: Math.min(parseInt(limit, 10) || 50, 100)
+    before: parsedBefore,
+    limit: parsedLimit
   });
 
   res.json({ messages });
@@ -78,10 +112,18 @@ router.post('/reaction', authenticate, chatReactionLimiter, asyncHandler(async (
     throw new AppError('Message ID and emoji are required', 400);
   }
 
-  // Validate emoji (simple check - allow common emoji patterns)
-  const emojiRegex = /^[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]{1,2}$/u;
-  const simpleEmoji = /^:[a-z_]+:$/;
-  if (!emojiRegex.test(emoji) && !simpleEmoji.test(emoji) && emoji.length > 8) {
+  // Validate emoji string type and length
+  if (typeof emoji !== 'string' || emoji.length > 32) {
+    throw new AppError('Invalid emoji format', 400);
+  }
+
+  // Validate emoji format - allow common emoji patterns or shortcodes
+  // Unicode emoji (including ZWJ sequences and variation selectors)
+  const emojiRegex = /^(?:[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]|\u{FE0F}|\u{200D})+$/u;
+  // Shortcode format like :smile: or :thumbs_up:
+  const shortcodeRegex = /^:[a-z_]{1,30}:$/;
+
+  if (!emojiRegex.test(emoji) && !shortcodeRegex.test(emoji)) {
     throw new AppError('Invalid emoji format', 400);
   }
 
@@ -139,14 +181,28 @@ router.put('/presence', authenticate, presenceUpdateLimiter, asyncHandler(async 
     throw new AppError('Invalid status. Must be: online, away, or busy', 400);
   }
 
-  if (customMessage && customMessage.length > 128) {
+  // Validate customMessage - must be string, null, or undefined
+  // undefined = no change, null or '' = clear, string = set
+  let normalizedMessage;
+  if (customMessage === undefined) {
+    normalizedMessage = undefined; // no change
+  } else if (customMessage === null || customMessage === '') {
+    normalizedMessage = null; // clear
+  } else if (typeof customMessage !== 'string') {
+    throw new AppError('customMessage must be a string', 400);
+  } else if (customMessage.length > 128) {
     throw new AppError('Custom message must be 128 characters or less', 400);
+  } else {
+    normalizedMessage = customMessage.trim();
+    if (normalizedMessage === '') {
+      normalizedMessage = null; // clear if only whitespace
+    }
   }
 
   const presence = await presenceService.setPresence(
     req.user.userId,
     status || 'online',
-    { customMessage }
+    { customMessage: normalizedMessage }
   );
 
   res.json({ presence });

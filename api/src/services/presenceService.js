@@ -18,21 +18,27 @@ const nodePresence = new Map();
  * @param {number} userId - User ID
  * @param {string} status - Status (online, away, busy, offline)
  * @param {Object} options - Additional options
+ * @param {string|null|undefined} options.customMessage - Custom message (undefined = no change, null = clear)
+ * @param {number|null} options.currentNodeId - Current node ID
  * @returns {Object} Updated presence
  */
 async function setPresence(userId, status, options = {}) {
-  const { customMessage = null, currentNodeId = null } = options;
+  const { customMessage, currentNodeId = null } = options;
+
+  // Determine if we should update customMessage
+  // undefined = keep existing, null = clear, string = set
+  const shouldUpdateMessage = customMessage !== undefined;
 
   const result = await query(
     `INSERT INTO player_presence (user_id, status, custom_message, current_node_id, last_activity)
      VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
      ON CONFLICT (user_id) DO UPDATE SET
        status = $2,
-       custom_message = COALESCE($3, player_presence.custom_message),
+       custom_message = CASE WHEN $5 THEN $3 ELSE player_presence.custom_message END,
        current_node_id = COALESCE($4, player_presence.current_node_id),
        last_activity = CURRENT_TIMESTAMP
      RETURNING *`,
-    [userId, status, customMessage, currentNodeId]
+    [userId, status, customMessage ?? null, currentNodeId, shouldUpdateMessage]
   );
 
   const presence = result.rows[0];

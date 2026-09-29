@@ -235,11 +235,12 @@ export async function blockUser(userId, blockedId) {
     throw new Error('Cannot block yourself');
   }
 
-  // Remove any existing friendship first
+  // Remove any existing non-block friendship first
+  // SECURITY: Do not remove the other user's block row - each user's block is independent
   await query(
     `DELETE FROM friendships
      WHERE (user_id = $1 AND friend_id = $2)
-        OR (user_id = $2 AND friend_id = $1)`,
+        OR (user_id = $2 AND friend_id = $1 AND status <> 'blocked')`,
     [userId, blockedId]
   );
 
@@ -451,6 +452,7 @@ export async function searchPlayers(queryStr, excludeUserId, limit = 20) {
   const searchPattern = `%${queryStr.replace(/[%_]/g, '\\$&')}%`;
 
   // Find users matching the query, excluding blocked users
+  // Use EXISTS subqueries to avoid duplicates when both friendship rows exist
   const result = await query(
     `SELECT
        u.id,
@@ -459,15 +461,20 @@ export async function searchPlayers(queryStr, excludeUserId, limit = 20) {
        c.level,
        c.race,
        c.class,
-       CASE WHEN f.id IS NOT NULL AND f.status = 'accepted' THEN true ELSE false END as is_friend,
-       CASE WHEN f.id IS NOT NULL AND f.status = 'pending' AND f.user_id = $2 THEN true ELSE false END as request_sent,
-       CASE WHEN f.id IS NOT NULL AND f.status = 'pending' AND f.friend_id = $2 THEN true ELSE false END as request_received
+       EXISTS(
+         SELECT 1 FROM friendships f
+         WHERE f.user_id = $2 AND f.friend_id = u.id AND f.status = 'accepted'
+       ) as is_friend,
+       EXISTS(
+         SELECT 1 FROM friendships f
+         WHERE f.user_id = $2 AND f.friend_id = u.id AND f.status = 'pending'
+       ) as request_sent,
+       EXISTS(
+         SELECT 1 FROM friendships f
+         WHERE f.user_id = u.id AND f.friend_id = $2 AND f.status = 'pending'
+       ) as request_received
      FROM users u
      LEFT JOIN characters c ON c.user_id = u.id AND c.party_slot = 1
-     LEFT JOIN friendships f ON (
-       (f.user_id = $2 AND f.friend_id = u.id) OR
-       (f.user_id = u.id AND f.friend_id = $2)
-     )
      WHERE u.username ILIKE $1
        AND u.id != $2
        AND NOT EXISTS (

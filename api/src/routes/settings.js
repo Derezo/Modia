@@ -101,6 +101,59 @@ const DEFAULT_SETTINGS = {
   }
 };
 
+// Maximum allowed size for settings JSON (16KB)
+const MAX_SETTINGS_SIZE = 16 * 1024;
+
+// Keys to skip for security (prototype pollution prevention)
+const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
+/**
+ * Prune an object to only include keys that exist in a schema.
+ * Prevents storing arbitrary unknown keys that could accumulate indefinitely.
+ *
+ * @param {Object} input - Input object to prune
+ * @param {Object} schema - Schema defining allowed keys (DEFAULT_SETTINGS)
+ * @returns {Object} Pruned object containing only known keys
+ */
+function pruneToSchema(input, schema) {
+  if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+    return {};
+  }
+
+  const result = {};
+
+  for (const key of Object.keys(input)) {
+    // Skip dangerous keys (prototype pollution)
+    if (DANGEROUS_KEYS.has(key)) {
+      continue;
+    }
+
+    // Only include keys that exist in the schema
+    if (!(key in schema)) {
+      continue;
+    }
+
+    const schemaValue = schema[key];
+    const inputValue = input[key];
+
+    // If schema value is an object, recurse and prune nested structure
+    if (schemaValue && typeof schemaValue === 'object' && !Array.isArray(schemaValue)) {
+      // Input must also be an object for nested structure
+      if (inputValue && typeof inputValue === 'object' && !Array.isArray(inputValue)) {
+        result[key] = pruneToSchema(inputValue, schemaValue);
+      }
+      // Otherwise skip (don't include non-object for object schema)
+    } else {
+      // For primitive values, just copy if present
+      if (inputValue !== undefined) {
+        result[key] = inputValue;
+      }
+    }
+  }
+
+  return result;
+}
+
 /**
  * Deep merge two objects
  * @param {Object} target - Target object
@@ -111,6 +164,11 @@ function deepMerge(target, source) {
   const result = { ...target };
 
   for (const key of Object.keys(source)) {
+    // Skip dangerous keys
+    if (DANGEROUS_KEYS.has(key)) {
+      continue;
+    }
+
     if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
       result[key] = deepMerge(result[key] || {}, source[key]);
     } else {
@@ -478,8 +536,11 @@ router.put('/', authenticate, asyncHandler(async (req, res) => {
     delete newSettings.developer;
   }
 
-  // Validate incoming settings
-  const validation = validateSettings(newSettings);
+  // Prune incoming settings to only include known keys
+  const prunedNewSettings = pruneToSchema(newSettings, DEFAULT_SETTINGS);
+
+  // Validate pruned settings
+  const validation = validateSettings(prunedNewSettings);
   if (!validation.valid) {
     throw new AppError(validation.error, 400);
   }
@@ -490,17 +551,25 @@ router.put('/', authenticate, asyncHandler(async (req, res) => {
     [userId]
   );
 
+  // Start from defaults, then apply pruned existing settings (cleans up old junk keys)
   let currentSettings = DEFAULT_SETTINGS;
   if (existingResult.rows.length > 0) {
-    currentSettings = existingResult.rows[0].settings;
+    const prunedExisting = pruneToSchema(existingResult.rows[0].settings, DEFAULT_SETTINGS);
+    currentSettings = deepMerge(DEFAULT_SETTINGS, prunedExisting);
   }
 
-  // Deep merge new settings into existing
-  let mergedSettings = deepMerge(currentSettings, newSettings);
+  // Deep merge pruned new settings into existing
+  let mergedSettings = deepMerge(currentSettings, prunedNewSettings);
 
   // SECURITY: Ensure developer mode is always disabled in production
   if (isProduction) {
     mergedSettings = sanitizeSettingsForProduction(mergedSettings);
+  }
+
+  // Safety net: reject if settings are too large
+  const settingsJson = JSON.stringify(mergedSettings);
+  if (settingsJson.length > MAX_SETTINGS_SIZE) {
+    throw new AppError(`Settings exceed maximum allowed size (${MAX_SETTINGS_SIZE} bytes)`, 400);
   }
 
   // Upsert the settings

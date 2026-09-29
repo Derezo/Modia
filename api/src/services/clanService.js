@@ -5,6 +5,8 @@
 
 import { query } from '../config/database.js';
 import * as notificationService from './notificationService.js';
+import { isBlocked } from './friendService.js';
+import { AppError } from '../middleware/errorHandler.js';
 
 /**
  * List all clans with optional search
@@ -225,7 +227,7 @@ export async function leaveClan(userId, clanId) {
   const role = memberResult.rows[0].role;
 
   if (role === 'leader') {
-    throw new Error('The leader cannot leave the clan. Transfer leadership or disband instead.');
+    throw new Error('The leader cannot leave the clan. Disband the clan instead.');
   }
 
   // Remove member
@@ -284,11 +286,17 @@ export async function invitePlayer(inviterId, clanId, username) {
   );
 
   if (userResult.rows.length === 0) {
-    throw new Error('User not found');
+    throw new AppError('User not found', 404);
   }
 
   const inviteeId = userResult.rows[0].id;
   const inviteeUsername = userResult.rows[0].username;
+
+  // Check if either user has blocked the other
+  const blocked = await isBlocked(inviterId, inviteeId);
+  if (blocked) {
+    throw new AppError('Cannot invite this user', 400);
+  }
 
   // Check if invitee is already in the clan
   const existingMember = await query(

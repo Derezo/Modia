@@ -536,9 +536,12 @@ describe('messageHandlers - Module Structure', () => {
     assert.strictEqual(typeof handlers.handlePrivateMessage, 'function');
   });
 
-  it('should export handlePartyInvite', async () => {
+  it('should not export the removed WebSocket party invite handlers', async () => {
+    // Party invites go through the REST API (POST /api/party/multiplayer/:partyId/invite).
     const handlers = await import('../../../websocket/messageHandlers.js');
-    assert.strictEqual(typeof handlers.handlePartyInvite, 'function');
+    assert.strictEqual(handlers.handlePartyInvite, undefined);
+    assert.strictEqual(handlers.handlePartyInviteAccept, undefined);
+    assert.strictEqual(handlers.handlePartyInviteDecline, undefined);
   });
 
   it('should export handleColiseumQueueJoin', async () => {

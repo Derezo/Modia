@@ -23,9 +23,9 @@ router.get('/:category', gameReadLimiter, async (req, res) => {
   try {
     const { category } = req.params;
     const { time = 'all', limit = 50, offset = 0, queue = '1v1' } = req.query;
-    const userId = req.user.id;
+    const userId = req.user.userId;
     const parsedLimit = Math.min(parseInt(limit, 10) || 50, 100);
-    const parsedOffset = parseInt(offset, 10) || 0;
+    const parsedOffset = Math.max(parseInt(offset, 10) || 0, 0);
 
     // Validate category
     const validCategories = ['pvp', 'level', 'gold', 'battles'];

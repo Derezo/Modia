@@ -836,11 +836,11 @@ export class ApiClient {
   /**
    * Create a new multiplayer party
    * @param {string} name - Party name
-   * @param {string} partyType - Type: 'pve_coop', 'pvp_team', 'pvp_ffa'
+   * @param {string} partyType - Type: 'adventure', 'coliseum_team', 'raid'
    * @param {number} maxMembers - Maximum members (default 4, max 8)
    * @returns {Promise<{party: Object}>}
    */
-  createMultiplayerParty(name, partyType = 'pve_coop', maxMembers = 4) {
+  createMultiplayerParty(name, partyType = 'adventure', maxMembers = 4) {
     return this.post('/party/multiplayer', { name, partyType, maxMembers });
   }
 

@@ -2,7 +2,6 @@
  * Party WebSocket Service - Handles real-time party invite and membership events
  */
 
-import { query } from '../config/database.js';
 import { sendWithAck, broadcastWithAck } from './messageReliability.js';
 
 // Lazy-load websocket to avoid circular dependency
@@ -15,65 +14,25 @@ async function getWebsocket() {
   return _websocket;
 }
 
-// Pending invites: inviteId -> { fromUserId, toUserId, fromUsername, characterId, expiresAt, timeoutId }
-const pendingInvites = new Map();
-
-// Invite ID counter
-let inviteIdCounter = 1;
-
-// Invite expiration time (5 minutes)
-const INVITE_EXPIRATION_MS = 5 * 60 * 1000;
-
 // Track all active timeouts for cleanup (used in tests)
 const activeTimeouts = new Set();
 
 /**
  * Send a party invite to another player
- * @param {number} fromUserId - Inviting user ID
- * @param {string} fromUsername - Inviting user's username
- * @param {number} toUserId - Target user ID
- * @param {number} characterId - Character initiating invite
- * @param {Object} partyInfo - Optional party information { partyId, partyName }
+ * Uses the DB invite ID passed from the REST route (no in-memory counter).
+ *
+ * @param {Object} params - Invite parameters
+ * @param {number} params.inviteId - DB invite ID (from party_invites table)
+ * @param {Date|string} params.expiresAt - Expiration timestamp
+ * @param {number} params.fromUserId - Inviting user ID
+ * @param {string} params.fromUsername - Inviting user's username
+ * @param {number} params.toUserId - Target user ID
+ * @param {number} params.partyId - Party ID
+ * @param {string} params.partyName - Party name
  * @returns {Object} Invite result
  */
-async function sendInvite(fromUserId, fromUsername, toUserId, characterId, partyInfo = null) {
-  // Check if target is already in a party
-  const _partyCheck = await query(
-    `SELECT p.id FROM parties p
-     JOIN party_members pm ON p.id = pm.party_id
-     WHERE pm.user_id = $1`,
-    [toUserId]
-  );
-
-  // Note: For now, this is a simplified implementation
-  // In a full implementation, you'd check party membership from DB
-
-  // Create invite
-  const inviteId = inviteIdCounter++;
-  const invite = {
-    id: inviteId,
-    fromUserId,
-    fromUsername,
-    toUserId,
-    characterId,
-    partyId: partyInfo?.partyId || null,
-    partyName: partyInfo?.partyName || null,
-    createdAt: Date.now(),
-    expiresAt: Date.now() + INVITE_EXPIRATION_MS
-  };
-
-  // Set expiration timeout and track it
-  const timeoutId = setTimeout(() => {
-    activeTimeouts.delete(timeoutId);
-    expireInvite(inviteId);
-  }, INVITE_EXPIRATION_MS);
-  activeTimeouts.add(timeoutId);
-  invite.timeoutId = timeoutId;
-
-  pendingInvites.set(inviteId, invite);
-
+async function sendInvite({ inviteId, expiresAt, fromUserId, fromUsername, toUserId, partyId, partyName }) {
   // Send invite to target user with ACK tracking
-  // Use inviteId as context for sequence tracking
   const ws = await getWebsocket();
   const targetWs = ws.connections?.get(toUserId);
   if (targetWs && targetWs.readyState === 1) {
@@ -83,9 +42,9 @@ async function sendInvite(fromUserId, fromUsername, toUserId, characterId, party
         inviteId,
         fromUserId,
         fromUsername,
-        partyId: invite.partyId,
-        partyName: invite.partyName,
-        expiresAt: invite.expiresAt
+        partyId,
+        partyName,
+        expiresAt
       }
     }, `party:invite:${inviteId}`, toUserId);
   }
@@ -94,135 +53,18 @@ async function sendInvite(fromUserId, fromUsername, toUserId, characterId, party
 }
 
 /**
- * Accept a party invite
- * @param {number} inviteId - Invite ID
- * @param {number} userId - Accepting user ID
- * @param {string} username - Accepting user's username
- * @returns {Object} Result
- */
-async function acceptInvite(inviteId, userId, username) {
-  const invite = pendingInvites.get(inviteId);
-
-  if (!invite) {
-    return { success: false, error: 'Invite not found or expired' };
-  }
-
-  if (invite.toUserId !== userId) {
-    return { success: false, error: 'This invite is not for you' };
-  }
-
-  if (Date.now() > invite.expiresAt) {
-    if (invite.timeoutId) {
-      clearTimeout(invite.timeoutId);
-      activeTimeouts.delete(invite.timeoutId);
-    }
-    pendingInvites.delete(inviteId);
-    return { success: false, error: 'Invite has expired' };
-  }
-
-  // Clear timeout and remove invite
-  if (invite.timeoutId) {
-    clearTimeout(invite.timeoutId);
-    activeTimeouts.delete(invite.timeoutId);
-  }
-  pendingInvites.delete(inviteId);
-
-  const ws = await getWebsocket();
-
-  // Notify the inviter with ACK tracking
-  const inviterWs = ws.connections?.get(invite.fromUserId);
-  if (inviterWs && inviterWs.readyState === 1) {
-    sendWithAck(inviterWs, {
-      type: 'party:invite_accepted',
-      payload: {
-        inviteId,
-        userId,
-        username
-      }
-    }, `party:invite:${inviteId}`, invite.fromUserId);
-  }
-
-  // Notify the new member with ACK tracking
-  const memberWs = ws.connections?.get(userId);
-  if (memberWs && memberWs.readyState === 1) {
-    sendWithAck(memberWs, {
-      type: 'party:joined',
-      payload: {
-        inviteId,
-        leaderId: invite.fromUserId,
-        leaderUsername: invite.fromUsername
-      }
-    }, `party:invite:${inviteId}`, userId);
-  }
-
-  // In a full implementation, you'd:
-  // 1. Create or get the party from database
-  // 2. Add the user to the party
-  // 3. Join them to the party WebSocket room
-  // 4. Broadcast party:member_joined to all party members
-
-  return { success: true };
-}
-
-/**
- * Decline a party invite
+ * Decline a party invite - just notifies the inviter via WebSocket.
+ * The actual DB update is done by the REST route.
+ *
  * @param {number} inviteId - Invite ID
  * @param {number} userId - Declining user ID
  * @returns {Object} Result
  */
 async function declineInvite(inviteId, userId) {
-  const invite = pendingInvites.get(inviteId);
-
-  if (!invite) {
-    return { success: false, error: 'Invite not found or expired' };
-  }
-
-  if (invite.toUserId !== userId) {
-    return { success: false, error: 'This invite is not for you' };
-  }
-
-  // Clear timeout and remove invite
-  if (invite.timeoutId) {
-    clearTimeout(invite.timeoutId);
-    activeTimeouts.delete(invite.timeoutId);
-  }
-  pendingInvites.delete(inviteId);
-
-  const ws = await getWebsocket();
-
-  // Notify the inviter
-  ws.sendToUser(invite.fromUserId, {
-    type: 'party:invite_declined',
-    payload: {
-      inviteId,
-      userId
-    }
-  });
-
+  // Note: We can't get the inviter ID without a DB query here.
+  // The REST route already handles the notification by updating the DB.
+  // This function is kept for backwards compatibility but may not be needed.
   return { success: true };
-}
-
-/**
- * Expire an invite (called by timeout)
- */
-async function expireInvite(inviteId) {
-  const invite = pendingInvites.get(inviteId);
-  if (!invite) return;
-
-  pendingInvites.delete(inviteId);
-
-  const ws = await getWebsocket();
-
-  // Notify both parties
-  ws.sendToUser(invite.fromUserId, {
-    type: 'party:invite_expired',
-    payload: { inviteId }
-  });
-
-  ws.sendToUser(invite.toUserId, {
-    type: 'party:invite_expired',
-    payload: { inviteId }
-  });
 }
 
 /**
@@ -356,29 +198,6 @@ async function leavePartyRoom(partyId, userId) {
 }
 
 /**
- * Get pending invites for a user
- * @param {number} userId - User ID
- * @returns {Array} Pending invites
- */
-function getPendingInvitesForUser(userId) {
-  const invites = [];
-  const now = Date.now();
-
-  pendingInvites.forEach((invite) => {
-    if (invite.toUserId === userId && invite.expiresAt > now) {
-      invites.push({
-        inviteId: invite.id,
-        fromUserId: invite.fromUserId,
-        fromUsername: invite.fromUsername,
-        expiresAt: invite.expiresAt
-      });
-    }
-  });
-
-  return invites;
-}
-
-/**
  * Clear all active timeouts (for test cleanup)
  * @private
  */
@@ -387,37 +206,10 @@ function _clearAllTimeouts() {
     clearTimeout(timeoutId);
   }
   activeTimeouts.clear();
-  pendingInvites.clear();
-}
-
-/**
- * Clean up user's invites on disconnect
- * @param {number} userId - User ID
- */
-async function cleanupUserInvites(userId) {
-  // Cancel all invites from this user
-  const toCancel = [];
-
-  pendingInvites.forEach((invite, inviteId) => {
-    if (invite.fromUserId === userId) {
-      toCancel.push({ inviteId, toUserId: invite.toUserId });
-    }
-  });
-
-  const ws = await getWebsocket();
-
-  toCancel.forEach(({ inviteId, toUserId }) => {
-    pendingInvites.delete(inviteId);
-    ws.sendToUser(toUserId, {
-      type: 'party:invite_expired',
-      payload: { inviteId, reason: 'Inviter disconnected' }
-    });
-  });
 }
 
 export {
   sendInvite,
-  acceptInvite,
   declineInvite,
   broadcastMemberJoined,
   broadcastMemberLeft,
@@ -425,14 +217,11 @@ export {
   broadcastLeaderChanged,
   joinPartyRoom,
   leavePartyRoom,
-  getPendingInvitesForUser,
-  cleanupUserInvites,
   _clearAllTimeouts
 };
 
 export default {
   sendInvite,
-  acceptInvite,
   declineInvite,
   broadcastMemberJoined,
   broadcastMemberLeft,
@@ -440,7 +229,5 @@ export default {
   broadcastLeaderChanged,
   joinPartyRoom,
   leavePartyRoom,
-  getPendingInvitesForUser,
-  cleanupUserInvites,
   _clearAllTimeouts
 };

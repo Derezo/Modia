@@ -18,7 +18,6 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { verifyAccessToken } from '../config/jwt.js';
 import presenceService from '../services/presenceService.js';
 import coliseumService from '../services/coliseumService.js';
-import * as partyWebsocket from '../services/partyWebsocket.js';
 import * as marketplaceWebsocket from '../services/marketplaceWebsocket.js';
 import * as garrisonWebsocket from './garrisonWebsocket.js';
 import { cleanupConnection } from '../services/messageReliability.js';
@@ -81,9 +80,6 @@ import {
   handleBattleSyncRequest,
   handleAckMessage,
   handleBattleSurrender,
-  handlePartyInvite,
-  handlePartyInviteAccept,
-  handlePartyInviteDecline,
   handlePartyLeave,
   handleJoinNode,
   handleLeaveNode,
@@ -298,18 +294,6 @@ function setupWebSocket(server) {
 
           case 'battle:surrender':
             await handleBattleSurrender(ws, userId, payload);
-            break;
-
-          case 'party_invite':
-            await handlePartyInvite(ws, userId, username, payload);
-            break;
-
-          case 'party_invite_accept':
-            await handlePartyInviteAccept(ws, userId, username, payload);
-            break;
-
-          case 'party_invite_decline':
-            await handlePartyInviteDecline(ws, userId, payload);
             break;
 
           case 'party_leave':
@@ -695,7 +679,6 @@ function handleDisconnect(userId, username) {
   });
 
   coliseumService.cleanupPlayer(userId);
-  partyWebsocket.cleanupUserInvites(userId);
   marketplaceWebsocket.cleanupUserSubscriptions(userId);
   garrisonWebsocket.cleanupUserGarrisonSubscriptions(userId, rooms);
 
