@@ -14,16 +14,21 @@
 
 import { AppError } from '../../middleware/errorHandler.js';
 import { MAX_GOLD } from '../../config/constants.js';
-import { AUGMENT_VALUES, RARITY_MULTIPLIERS, normalizeRarityName } from './constants.js';
+import { AUGMENT_VALUES, RARITY_MULTIPLIERS, normalizeRarityName, statBlockValue } from './constants.js';
 import { getMarketplaceFeeRate } from '../relicService.js';
 
 /**
  * Calculate suggested price for an item based on its properties
- * @param {Object} item - Item with basePrice, rarity, augments
+ * @param {Object} item - Item with basePrice, rarity, augments and, for a
+ *   rolled drop, baseStats (modifications.baseStats)
  * @returns {Object} Suggested price and breakdown
  */
 export function calculateSuggestedPrice(item) {
-  const basePrice = item.basePrice || item.base_price || 10;
+  const templatePrice = item.basePrice || item.base_price || 10;
+  // A rolled drop is worth at least its rolled stat block, so a level-8 rare
+  // rolled on a 2g starter template is not priced like the starter item.
+  const statValue = statBlockValue(item.baseStats);
+  const basePrice = Math.max(templatePrice, statValue);
   // Normalize rarity (handles numeric 1-5 as well as string names)
   const rarity = normalizeRarityName(item.rarity);
   const augments = item.augments || [];
@@ -48,6 +53,8 @@ export function calculateSuggestedPrice(item) {
     suggestedPrice,
     breakdown: {
       basePrice,
+      templatePrice,
+      statValue,
       rarityMultiplier: rarityMult,
       augmentMultiplier: parseFloat(augmentMult.toFixed(2)),
       augmentCount: augments.length
@@ -210,7 +217,8 @@ export async function createItemListing(client, userId, characterId, characterIt
   const { suggestedPrice } = calculateSuggestedPrice({
     basePrice: item.base_price,
     rarity: mods.rarity || 'common',
-    augments: mods.augments || []
+    augments: mods.augments || [],
+    baseStats: mods.rarity != null ? mods.baseStats : null
   });
 
   // Create listing with modification snapshot
@@ -523,7 +531,8 @@ export async function getSellableInventory(client, userId) {
     const { suggestedPrice } = calculateSuggestedPrice({
       basePrice: row.base_price,
       rarity: modifications.rarity,
-      augments
+      augments,
+      baseStats: modifications.rarity != null ? modifications.baseStats : null
     });
 
     // Use generatedName from modifications if present (for rolled items)

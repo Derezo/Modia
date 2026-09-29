@@ -40,19 +40,19 @@ export function renderOrdersTab(mainContent, sidePanel, context) {
       <div style="padding: 16px; font-family: Georgia, serif;">
         <div style="margin-bottom: 12px;">
           <div style="color: #5a4a3a; font-size: 12px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Buy Orders</div>
-          <div style="font-size: 18px; color: #3d6b35; font-family: Consolas, monospace;">
+          <div style="font-size: 18px; color: #3d6b35; font-family: Georgia, serif; font-variant-numeric: tabular-nums;">
             ${myOrders.filter(o => o.side === 'buy').length}
           </div>
         </div>
         <div style="margin-bottom: 12px;">
           <div style="color: #5a4a3a; font-size: 12px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Sell Orders</div>
-          <div style="font-size: 18px; color: #8b4444; font-family: Consolas, monospace;">
+          <div style="font-size: 18px; color: #8b4444; font-family: Georgia, serif; font-variant-numeric: tabular-nums;">
             ${myOrders.filter(o => o.side === 'sell').length}
           </div>
         </div>
         <div>
           <div style="color: #5a4a3a; font-size: 12px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Gold Reserved</div>
-          <div style="font-size: 18px; color: #2d2418; font-family: Consolas, monospace; font-weight: bold; text-shadow: 0 1px 2px rgba(255,255,255,0.3);">
+          <div style="font-size: 18px; color: #2d2418; font-family: Georgia, serif; font-variant-numeric: tabular-nums; font-weight: bold; text-shadow: 0 1px 2px rgba(255,255,255,0.3);">
             ${myOrders
     .filter(o => o.side === 'buy')
     .reduce((sum, o) => sum + (o.price * o.quantityRemaining), 0).toLocaleString()}g

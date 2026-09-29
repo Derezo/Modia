@@ -112,7 +112,7 @@ describe('BattleScene authoritative action gate', () => {
         targetTile: { x: 2, y: 3 }
       });
       assert.deepEqual(scene.selectedMoveTile, { x: 2, y: 3 });
-      assert.deepEqual(messages, ['Move to (2, 3)?']);
+      assert.deepEqual(messages, ['Move here?']);
     }
   });
 

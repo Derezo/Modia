@@ -85,6 +85,10 @@ import { parchmentConfirm } from '../ui/parchment/parchmentConfirm.js';
 import { BattleLoadingScreen } from '../ui/parchment/BattleLoadingScreen.js';
 import { responsive } from '../core/Responsive.js';
 
+// Pause before reopening the action menu for a turn's remaining action, so
+// the damage or heal numbers it would cover can be read first.
+const PARTIAL_TURN_MENU_DELAY_MS = 700;
+
 export function createBattleCommandId() {
   if (globalThis.crypto?.randomUUID) {
     return globalThis.crypto.randomUUID();
@@ -701,6 +705,10 @@ export class BattleScene extends Scene {
     }
 
     // Clean up PvP turn timer
+    if (this.partialTurnMenuTimer) {
+      clearTimeout(this.partialTurnMenuTimer);
+      this.partialTurnMenuTimer = null;
+    }
     if (this.pvpTurnTimer) {
       clearInterval(this.pvpTurnTimer);
       this.pvpTurnTimer = null;
@@ -1371,9 +1379,17 @@ export class BattleScene extends Scene {
       // exposes the Confirm UI and a second click on this tile submits.
       this.selectedMoveTile = { x, y };
       this.pendingAction = { type: 'move', targetTile: { x, y } };
-      this.ui.showConfirmation(`Move to (${x}, ${y})?`);
+      this.ui.showConfirmation('Move here?');
     } else if (this.currentAction === 'move' && !isValidTile) {
       this.selectedMoveTile = null;
+    } else if ((this.currentAction === 'attack' || this.currentAction === 'skill') &&
+               !isValidTile) {
+      // Say why nothing happens on an out-of-range unit (attacks reach the
+      // four adjacent tiles, not diagonals) instead of ignoring the click.
+      const target = this.getUnitAt(x, y);
+      if (target && target !== activeUnit && target.isAlive?.() !== false) {
+        parchmentToast.info('Out of Range', `${target.name} is not in range. Choose a highlighted tile.`);
+      }
     } else if (this.currentAction === 'attack' && isValidTile) {
       // Tile-based targeting: allow attacking any valid tile
       const target = this.getUnitAt(x, y);
@@ -1777,13 +1793,7 @@ export class BattleScene extends Scene {
     const activeUnit = this.getActiveUnit();
     if (!activeUnit || activeUnit.type !== 'player') return;
 
-    // Get unit's screen position in canvas coordinates
-    const worldPos = this.grid.gridToScreenWorld(activeUnit.gridX, activeUnit.gridY);
-    const screenPos = this.camera.worldToScreen(worldPos.x, worldPos.y);
-    const zoomedPos = this.camera.screenToZoomed(screenPos.x, screenPos.y - 40);
-
-    // Convert canvas coords to overlay coords for DOM positioning
-    const overlayPos = this.canvasToOverlayCoords(zoomedPos.x, zoomedPos.y);
+    const overlayPos = this.getRadialMenuAnchor(activeUnit);
 
     // Update radial menu segment availability
     this.radialMenu.setSegmentEnabled('move', this.canMove);
@@ -1797,6 +1807,32 @@ export class BattleScene extends Scene {
 
     // Show radial menu above the unit
     this.radialMenu.show(overlayPos.x, overlayPos.y, activeUnit.mp);
+  }
+
+  /**
+   * Overlay position (CSS px) the radial menu centres on: just above the
+   * unit, through the camera's current transform.
+   * @param {Object} unit - Battle unit
+   * @returns {{x: number, y: number}}
+   */
+  getRadialMenuAnchor(unit) {
+    const worldPos = this.grid.gridToScreenWorld(unit.gridX, unit.gridY);
+    const screenPos = this.camera.worldToScreen(worldPos.x, worldPos.y);
+    const zoomedPos = this.camera.screenToZoomed(screenPos.x, screenPos.y - 40);
+    return this.canvasToOverlayCoords(zoomedPos.x, zoomedPos.y);
+  }
+
+  /**
+   * Keep an open radial menu attached to its unit while the camera moves
+   * (turn-start pans, follow lerp, manual panning). It used to stay where
+   * the unit had been when it opened, over empty tiles or an enemy.
+   */
+  updateRadialMenuAnchor() {
+    if (!this.radialMenu?.isVisible || !this.grid || !this.camera) return;
+    const activeUnit = this.getActiveUnit();
+    if (!activeUnit) return;
+    const pos = this.getRadialMenuAnchor(activeUnit);
+    this.radialMenu.setPosition?.(pos.x, pos.y);
   }
 
   /**
@@ -3314,12 +3350,17 @@ export class BattleScene extends Scene {
       );
     }
 
-    // The authoritative response has already committed the partial turn and
-    // local presentation has completed, so no additional UI settle delay is
-    // needed before exposing the remaining action.
-    if (this.getActiveUnit()?.id === activeUnit.id && !this.currentAction) {
-      this.showActionMenu();
-    }
+    // Reopen the menu for the remaining action once the damage/heal numbers
+    // have had a moment on screen; opening at once covered them.
+    if (this.partialTurnMenuTimer) clearTimeout(this.partialTurnMenuTimer);
+    this.partialTurnMenuTimer = setTimeout(() => {
+      this.partialTurnMenuTimer = null;
+      if (this.battleEnded) return;
+      if (this.getActiveUnit()?.id === activeUnit.id && !this.currentAction &&
+          this.canSubmitAction('any')) {
+        this.showActionMenu();
+      }
+    }, PARTIAL_TURN_MENU_DELAY_MS);
   }
 
   /**
@@ -3501,8 +3542,13 @@ export class BattleScene extends Scene {
       if (isWinner) unit.playVictoryAnimation?.();
     }
 
-    // Hide battle UI elements for outro
+    // Hide battle UI elements for outro. The radial and context menus are
+    // DOM overlays above the canvas and would otherwise cover the result.
+    this.hideRadialMenu();
+    this.contextMenu?.hide?.();
+    this.clearActionTargetingState?.();
     if (this.ui) {
+      this.ui.hideConfirmation?.();
       this.ui.hideActionMenu();
       this.ui.hideForOutro();
       // Also disable PvP mode to hide surrender button
@@ -3939,6 +3985,7 @@ export class BattleScene extends Scene {
 
     // Update camera (also advances an active turn transition exactly once)
     this.camera.update(deltaTime);
+    this.updateRadialMenuAnchor();
 
     // Update animations
     this.animations.update(deltaTime);

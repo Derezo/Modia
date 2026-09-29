@@ -7,7 +7,7 @@ import { ItemIcon } from '../../../components/ItemIcon.js';
 import { parchmentToast } from '../../../ui/parchment/ParchmentToast.js';
 import { buildListingRequest, formatListingStats, getRarityName, RARITY_COLORS } from '../marketplaceUtils.js';
 import { escapeHtml } from '../../../utils/escapeHtml.js';
-import { describeAugment } from '../../../utils/statDisplay.js';
+import { renderAugmentList } from '../../../components/AugmentList.js';
 
 /**
  * Render the Sell Items (Inventory) tab
@@ -38,7 +38,9 @@ export function renderInventoryTab(mainContent, sidePanel, context) {
   context.inventoryTable = new ItemDataTable(tableContainer, {
     items,
     variant: 'sellable',
-    columns: ['rarity', 'iconName', 'quantity', 'estimatedPrice'],
+    // Stats and augments help pick what to list; the table hides them itself
+    // when it is narrow (phones).
+    columns: ['rarity', 'iconName', 'stats', 'augments', 'quantity', 'estimatedPrice'],
     filters: {
       showTypeFilter: true,
       showRarityFilter: true,
@@ -58,7 +60,7 @@ export function renderInventoryTab(mainContent, sidePanel, context) {
       <div style="padding: 16px; font-family: Georgia, serif;">
         <div style="margin-bottom: 12px;">
           <div style="color: #5a4a3a; font-size: 12px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Available Items</div>
-          <div style="font-size: 18px; color: #2d2418; font-family: Consolas, monospace;">${sellableItems.length}</div>
+          <div style="font-size: 18px; color: #2d2418; font-family: Georgia, serif; font-variant-numeric: tabular-nums;">${sellableItems.length}</div>
         </div>
         <div class="empty-message" style="padding: 20px 0; font-size: 12px;">
           Select an item to set a price and list it for sale
@@ -117,11 +119,8 @@ function showSellItemPanel(item, sidePanel, context) {
   const statsHtml = formatListingStats(originalItem);
   const rarity = getRarityName(originalItem.rarity);
   const rarityLabel = rarity.charAt(0).toUpperCase() + rarity.slice(1);
-  const augmentsHtml = (originalItem.augments || [])
-    .map(aug => describeAugment(aug).text)
-    .filter(Boolean)
-    .map(text => `<div style="padding: 2px 0; color: #2d2418; font-size: 12px;">${escapeHtml(text)}</div>`)
-    .join('');
+  // Same augment presentation as the item detail and shop panels
+  const augmentsHtml = renderAugmentList(originalItem.augments || []);
 
   sidePanel.innerHTML = `
     <div class="ui-panel" style="flex: 1; display: flex; flex-direction: column;">
@@ -154,7 +153,7 @@ function showSellItemPanel(item, sidePanel, context) {
 
         <div style="margin-bottom: 16px;">
           <div style="color: #5a4a3a; font-size: 12px; margin-bottom: 4px; text-transform: uppercase;">Suggested Price</div>
-          <div style="font-size: 16px; color: #7a6a5a; font-family: Consolas, monospace;">
+          <div style="font-size: 16px; color: #7a6a5a; font-family: Georgia, serif; font-variant-numeric: tabular-nums;">
             ~${suggestedPrice.toLocaleString()}g
           </div>
         </div>
@@ -165,7 +164,7 @@ function showSellItemPanel(item, sidePanel, context) {
             width: 100%;
             padding: 10px;
             font-size: 18px;
-            font-family: Consolas, monospace;
+            font-family: Georgia, serif; font-variant-numeric: tabular-nums;
             background: #f5edd8;
             border: 2px solid #8b7355;
             border-radius: 4px;

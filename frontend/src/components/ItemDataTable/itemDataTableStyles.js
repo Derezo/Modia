@@ -264,10 +264,34 @@ export function injectItemDataTableStyles() {
       color: ${PARCHMENT_COLORS.state.success};
     }
 
+    /* Up to two lines, so "+16 Max HP, +3 VIT, +8 STR" is readable instead
+       of being cut to "+16 Max HP, +3 VIT, +8 ..." */
     .item-data-table-stats {
       overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      line-height: 1.3;
+      white-space: normal;
+    }
+
+    .item-data-table-cell[data-column="stats"] {
+      white-space: normal;
+    }
+
+    /* Wide tables: give Stats the room the flexible Item column was leaving
+       empty. */
+    @container item-data-table (min-width: 860px) {
+      .item-data-table-header-cell[data-column="stats"],
+      .item-data-table-cell[data-column="stats"] {
+        width: 240px !important;
+      }
+
+      /* Four augment discs on one row */
+      .item-data-table-header-cell[data-column="augments"],
+      .item-data-table-cell[data-column="augments"] {
+        width: 128px !important;
+      }
     }
 
     .item-data-table-cell .stat-negative {
@@ -279,10 +303,22 @@ export function injectItemDataTableStyles() {
       font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
     }
 
-    /* Augments cell */
+    /* Augments cell: each icon on a dark disc so pale effect icons stay
+       visible on parchment rows (they read as blobs before) */
     .item-data-table-augments {
       display: flex;
-      gap: 2px;
+      gap: 3px;
+      flex-wrap: wrap;
+    }
+
+    .item-data-table-augments .modia-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(61, 41, 20, 0.55);
     }
 
     .item-data-table-augment-icon {
@@ -431,6 +467,15 @@ export function injectItemDataTableStyles() {
       .item-data-table-cell {
         padding-left: ${PARCHMENT_SPACING.sm};
         padding-right: ${PARCHMENT_SPACING.sm};
+      }
+
+      /* Short columns: let a two-word label ("Est. Price") wrap instead of
+         being clipped to "T. PRICE". */
+      .item-data-table-header-cell {
+        white-space: normal;
+        letter-spacing: 0;
+        line-height: 1.1;
+        overflow-wrap: normal;
       }
 
       .item-data-table-header-cell[data-column="quantity"],

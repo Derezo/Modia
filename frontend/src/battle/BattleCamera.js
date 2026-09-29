@@ -176,10 +176,27 @@ export class BattleCamera {
    */
   enterManualMode() {
     this.mode = 'manual';
-    // Cancel turn transition if user takes manual control
+    // Cancel turn transition if user takes manual control. Still settle its
+    // completion callback: the battle event queue awaits it, and dropping it
+    // left the queue hung until its timeout.
     if (this.turnTransitionActive) {
       this.turnTransitionActive = false;
-      this.onTurnTransitionComplete = null;
+      this.settleTurnTransitionCallback();
+    }
+  }
+
+  /**
+   * Call and clear the pending turn-transition completion callback, once.
+   */
+  settleTurnTransitionCallback() {
+    const callback = this.onTurnTransitionComplete;
+    this.onTurnTransitionComplete = null;
+    if (typeof callback === 'function') {
+      try {
+        callback();
+      } catch (error) {
+        console.error('[BattleCamera] Turn transition callback failed:', error);
+      }
     }
   }
 
@@ -395,6 +412,9 @@ export class BattleCamera {
    * @param {number} duration - Transition duration in ms (default 800)
    */
   startTurnTransition(targetX, targetY, onComplete = null, duration = 800) {
+    // A new transition supersedes any running one; settle the old callback so
+    // whoever awaited it is not left pending forever.
+    if (this.turnTransitionActive) this.settleTurnTransitionCallback();
     this.turnTransitionActive = true;
     this.turnTransitionStart = { x: this.x, y: this.y };
     this.turnTransitionTarget = { x: targetX, y: targetY };
@@ -435,10 +455,7 @@ export class BattleCamera {
     // Check completion
     if (progress >= 1) {
       this.turnTransitionActive = false;
-      if (this.onTurnTransitionComplete) {
-        this.onTurnTransitionComplete();
-        this.onTurnTransitionComplete = null;
-      }
+      this.settleTurnTransitionCallback();
     }
 
     return this.turnTransitionActive;

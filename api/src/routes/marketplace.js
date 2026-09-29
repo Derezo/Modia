@@ -569,7 +569,8 @@ router.get('/price-suggestion', authenticate, readLimiter, asyncHandler(async (r
   const result = marketplaceService.calculateSuggestedPrice({
     basePrice: item.base_price,
     rarity: mods.rarity,
-    augments: mods.augments || []
+    augments: mods.augments || [],
+    baseStats: mods.rarity != null ? mods.baseStats : null
   });
 
   res.json({

@@ -82,6 +82,35 @@ export const RARITY_MULTIPLIERS = {
 /**
  * Rarity names in order (index 0 = 1-based id 1)
  */
+/**
+ * Gold value of one rolled stat point, used as a floor for a rolled drop's
+ * base price. Calibrated on the shop templates (Iron Sword 150g for 7 STR,
+ * Bronze Axe 90g for 5 STR, Oak Staff 60g for 5 INT: ~12-21g per point).
+ * HP/MP pools count at one fifth. Without the floor, drops rolled on the 2g
+ * starter templates (Trainee Tunic, Warrior's Pendant) were estimated at a
+ * few gold regardless of level, rarity or stats.
+ */
+export const STAT_POINT_GOLD = 18;
+export const POOL_POINT_DIVISOR = 5;
+
+const POOL_STATS = new Set(['hp_max', 'mp_max', 'hp', 'mp', 'maxHp', 'maxMp']);
+
+/**
+ * Gold value of a rolled item's stat block (numeric entries only).
+ * @param {Object|null} stats - e.g. modifications.baseStats
+ * @returns {number}
+ */
+export function statBlockValue(stats) {
+  if (!stats || typeof stats !== 'object') return 0;
+  let points = 0;
+  for (const [key, raw] of Object.entries(stats)) {
+    const value = Number(raw);
+    if (!Number.isFinite(value) || value <= 0) continue;
+    points += POOL_STATS.has(key) ? value / POOL_POINT_DIVISOR : value;
+  }
+  return Math.floor(points * STAT_POINT_GOLD);
+}
+
 export const RARITY_NAMES = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
 
 /**

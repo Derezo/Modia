@@ -22,9 +22,16 @@ describe('augment "not yet active" styling', () => {
   });
 
   it('components derive inactive state from describeAugment, not a local type list', () => {
-    for (const file of ['MarketplaceItemPanel.js', 'modals/ItemDetailModal.js', 'modals/EquipmentSlotModal.js']) {
+    // AugmentList.js is the shared augment line used by the item detail and
+    // equip modals (and the shop and marketplace panels)
+    for (const file of ['MarketplaceItemPanel.js', 'AugmentList.js']) {
       const source = readFileSync(join(componentsDir, file), 'utf8');
       assert.match(source, /describeAugment\(aug\)/, file);
+      assert.doesNotMatch(source, /fire_damage|lifesteal|crit_chance/, `${file} hardcodes augment effect types`);
+    }
+    for (const file of ['modals/ItemDetailModal.js', 'modals/EquipmentSlotModal.js']) {
+      const source = readFileSync(join(componentsDir, file), 'utf8');
+      assert.match(source, /from '\.\.\/AugmentList\.js'/, `${file} renders augments through AugmentList`);
       assert.doesNotMatch(source, /fire_damage|lifesteal|crit_chance/, `${file} hardcodes augment effect types`);
     }
   });

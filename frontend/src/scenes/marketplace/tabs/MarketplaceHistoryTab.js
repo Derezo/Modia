@@ -50,7 +50,7 @@ export async function renderHistoryTab(mainContent, sidePanel, context) {
                   </div>
                 </div>
                 <div style="text-align: right;">
-                  <div style="color: #2d2418; font-family: Consolas, monospace; font-weight: bold;">${trade.totalGold.toLocaleString()}g (${trade.price.toLocaleString()}g x ${trade.quantity})</div>
+                  <div style="color: #2d2418; font-family: Georgia, serif; font-variant-numeric: tabular-nums; font-weight: bold;">${trade.totalGold.toLocaleString()}g (${trade.price.toLocaleString()}g x ${trade.quantity})</div>
                   <div class="trade-row-time">${formatTime(trade.executedAt)}</div>
                 </div>
               </div>
@@ -69,19 +69,19 @@ export async function renderHistoryTab(mainContent, sidePanel, context) {
       <div style="padding: 16px; font-family: Georgia, serif;">
         <div style="margin-bottom: 12px;">
           <div style="color: #5a4a3a; font-size: 12px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Total Trades</div>
-          <div style="font-size: 18px; color: #2d2418; font-family: Consolas, monospace;">${myTrades.length}</div>
+          <div style="font-size: 18px; color: #2d2418; font-family: Georgia, serif; font-variant-numeric: tabular-nums;">${myTrades.length}</div>
         </div>
         <div style="margin-bottom: 12px;">
           <div style="color: #5a4a3a; font-size: 12px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Gold Spent</div>
-          <div style="font-size: 18px; color: #8b4444; font-family: Consolas, monospace;">${buyTotal.toLocaleString()}g</div>
+          <div style="font-size: 18px; color: #8b4444; font-family: Georgia, serif; font-variant-numeric: tabular-nums;">${buyTotal.toLocaleString()}g</div>
         </div>
         <div style="margin-bottom: 12px;">
           <div style="color: #5a4a3a; font-size: 12px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Gold Earned</div>
-          <div style="font-size: 18px; color: #3d6b35; font-family: Consolas, monospace;">${sellTotal.toLocaleString()}g</div>
+          <div style="font-size: 18px; color: #3d6b35; font-family: Georgia, serif; font-variant-numeric: tabular-nums;">${sellTotal.toLocaleString()}g</div>
         </div>
         <div>
           <div style="color: #5a4a3a; font-size: 12px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Net P/L</div>
-          <div style="font-size: 18px; color: ${sellTotal - buyTotal >= 0 ? '#3d6b35' : '#8b4444'}; font-family: Consolas, monospace;">
+          <div style="font-size: 18px; color: ${sellTotal - buyTotal >= 0 ? '#3d6b35' : '#8b4444'}; font-family: Georgia, serif; font-variant-numeric: tabular-nums;">
             ${sellTotal - buyTotal >= 0 ? '+' : ''}${(sellTotal - buyTotal).toLocaleString()}g
           </div>
         </div>

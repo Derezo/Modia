@@ -562,7 +562,38 @@ export function sumItemStats(item, options = {}) {
     if (value === 0) delete stats[key];
   }
 
-  return stats;
+  return orderStats(stats);
+}
+
+/**
+ * Canonical display order for stat keys: combat, pools, then the primary
+ * attributes as STR/AGI/INT/VIT/LCK (the order used by stat strips).
+ */
+export const STAT_DISPLAY_ORDER = [
+  'attack', 'physical_attack', 'defense', 'physical_defense',
+  'magic_attack', 'magicAttack', 'magic_defense', 'magicDefense',
+  'hp_max', 'maxHp', 'hp', 'mp_max', 'maxMp', 'mp',
+  'strength', 'str', 'agility', 'agi', 'intelligence', 'int',
+  'vitality', 'vit', 'luck', 'lck'
+];
+
+/**
+ * Return a copy of a stats object with its keys in STAT_DISPLAY_ORDER;
+ * unknown keys keep their relative order after the known ones.
+ * @param {Object} stats - Stats keyed by stat name
+ * @returns {Object} Reordered copy
+ */
+export function orderStats(stats) {
+  if (!stats || typeof stats !== 'object') return {};
+  const rank = (key) => {
+    const i = STAT_DISPLAY_ORDER.indexOf(key);
+    return i === -1 ? STAT_DISPLAY_ORDER.length : i;
+  };
+  const keys = Object.keys(stats);
+  keys.sort((a, b) => rank(a) - rank(b));
+  const ordered = {};
+  for (const key of keys) ordered[key] = stats[key];
+  return ordered;
 }
 
 /**
@@ -810,6 +841,21 @@ export function describeAugment(augment) {
   ].filter(Boolean).join(' ');
 
   return { name, effect: effectPart, statText, active: isAugmentEffectActive(augment), text };
+}
+
+/**
+ * The item's material, for a material chip, only when its name agrees.
+ * Soft bases (leather, cloth, wood) keep their own name when generated, so a
+ * rolled "iron" on "Exalted Leather Helm" would contradict the name.
+ * @param {Object} item - Item with material and name
+ * @returns {string|null} Capitalised material, or null to show no chip
+ */
+export function getDisplayMaterial(item) {
+  const material = item?.material ?? item?.itemData?.material ?? null;
+  if (!material || typeof material !== 'string') return null;
+  const name = String(item.name || item.displayName || '').toLowerCase();
+  if (name && !name.includes(material.toLowerCase())) return null;
+  return material.charAt(0).toUpperCase() + material.slice(1);
 }
 
 /**

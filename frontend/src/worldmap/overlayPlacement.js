@@ -25,7 +25,9 @@ function clamp(value, min, max) {
  * @param {{left:number, top:number, right:number, bottom:number}} params.bounds - canvas rect
  * @param {number} [params.gap=12] - space between node and overlay
  * @param {number} [params.margin=8] - minimum inset from the bounds
- * @returns {{ centerX: number, top: number, above: boolean }}
+ * @param {boolean} [params.allowSide=false] - when neither below nor above
+ *   fits, place beside the node rather than over it
+ * @returns {{ centerX: number, top: number, above: boolean, side?: string }}
  *   centerX is the overlay's horizontal centre (overlays use translateX(-50%)),
  *   top is the overlay's top edge.
  */
@@ -37,7 +39,8 @@ export function placeNodeOverlay({
   height,
   bounds,
   gap = 12,
-  margin = 8
+  margin = 8,
+  allowSide = false
 }) {
   const minTop = bounds.top + margin;
   const maxBottom = bounds.bottom - margin;
@@ -46,6 +49,23 @@ export function placeNodeOverlay({
   const aboveTop = nodeY - nodeSize - gap - height;
   const fitsBelow = belowTop + height <= maxBottom;
   const fitsAbove = aboveTop >= minTop;
+
+  // Tall overlays (an expanded castle menu) that fit neither below nor above
+  // would be clamped on top of the node and hide it. When allowed, sit beside
+  // the node instead, on whichever side has room.
+  if (allowSide && !fitsBelow && !fitsAbove) {
+    const rightLeft = nodeX + nodeSize + gap;
+    const leftLeft = nodeX - nodeSize - gap - width;
+    const fitsRight = rightLeft + width <= bounds.right - margin;
+    const fitsLeft = leftLeft >= bounds.left + margin;
+    if (fitsRight || fitsLeft) {
+      const useRight = fitsRight &&
+        (!fitsLeft || (bounds.right - nodeX) >= (nodeX - bounds.left));
+      const left = useRight ? rightLeft : leftLeft;
+      const top = clamp(nodeY - height / 2, minTop, Math.max(minTop, maxBottom - height));
+      return { centerX: left + width / 2, top, above: false, side: useRight ? 'right' : 'left' };
+    }
+  }
 
   let above;
   if (fitsBelow) {

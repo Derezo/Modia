@@ -275,7 +275,10 @@ export class CharacterPicker {
     const classColor = getClassColor(char.class);
     const classIcon = getClassIcon(char.class);
     const portraitUrl = this.getPortraitUrl(char);
-    const hpPercent = char.maxHp > 0 ? Math.round((char.currentHp / char.maxHp) * 100) : 100;
+    // Accept raw /api/characters rows (hp_current/hp_max) as well as camelCase
+    const currentHp = Number(char.currentHp ?? char.hp_current ?? 0);
+    const maxHp = Number(char.maxHp ?? char.hp_max ?? 0);
+    const hpPercent = maxHp > 0 ? Math.round((currentHp / maxHp) * 100) : 100;
     const hpClass = hpPercent <= 25 ? 'character-picker__hp-fill--critical'
       : hpPercent <= 50 ? 'character-picker__hp-fill--low' : '';
 
@@ -302,7 +305,7 @@ export class CharacterPicker {
         <div class="character-picker__hp">
           <div class="character-picker__hp-fill ${hpClass}" style="width: ${hpPercent}%;"></div>
         </div>
-        <span class="character-picker__hp-text">${char.currentHp}/${char.maxHp}</span>
+        <span class="character-picker__hp-text">${currentHp}/${maxHp}</span>
       </div>
     `;
   }

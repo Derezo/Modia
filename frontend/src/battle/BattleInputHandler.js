@@ -180,6 +180,14 @@ export class BattleInputHandler {
       return null;
     }
 
+    // A click on a unit's sprite body means that unit, not the tile drawn
+    // behind it (only the foot tile used to count). Not while choosing a
+    // move destination, where the tile behind a unit is the likely target.
+    if (this.scene.currentAction !== 'move') {
+      const bodyTile = this.getUnitBodyTileAt(pos);
+      if (bodyTile) return bodyTile;
+    }
+
     const candidates = this.scene.grid.getTileAtScreen(
       pos.x,
       pos.y,
@@ -195,6 +203,31 @@ export class BattleInputHandler {
     const fallback = candidates[Math.min(this.tileCycleIndex, candidates.length - 1)];
     const tile = matchingCandidate || fallback;
     return { x: tile.x, y: tile.y };
+  }
+
+  /**
+   * Tile of the front-most living unit whose sprite body contains a canvas
+   * point. Bodies are drawn upward from the unit's foot point, roughly
+   * 40px wide and 50px tall above the footprint ellipse.
+   * @param {{x: number, y: number}} pos - Canvas position
+   * @returns {{x: number, y: number}|null}
+   */
+  getUnitBodyTileAt(pos) {
+    const scene = this.scene;
+    const camera = scene.camera;
+    if (!camera?.screenToWorld || !scene.units) return null;
+    const unzoomed = camera.screenToUnzoomed ? camera.screenToUnzoomed(pos.x, pos.y) : pos;
+    const world = camera.screenToWorld(unzoomed.x, unzoomed.y);
+    let best = null;
+    for (const unit of scene.units.values()) {
+      if (!unit?.isAlive?.() || !Number.isFinite(unit.screenX) || !Number.isFinite(unit.screenY)) continue;
+      const dx = world.x - unit.screenX;
+      const dy = world.y - unit.screenY;
+      if (Math.abs(dx) <= 20 && dy >= -58 && dy <= -10) {
+        if (!best || unit.screenY > best.screenY) best = unit;
+      }
+    }
+    return best ? { x: best.gridX, y: best.gridY } : null;
   }
 
   /** Clear hover/cycling state when the scene grid is unavailable. */

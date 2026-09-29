@@ -31,6 +31,20 @@ describe('calculateSellPrice', () => {
     assert.strictEqual(calculateSellPrice(150, mods), Math.floor(suggestedPrice * SELL_MODIFIER));
   });
 
+  it('prices a rolled drop on a 2g starter template by its stats, not the template', () => {
+    // Rare 2-augment "Demonslayer Trainee Tunic" rolled at mid level
+    const mods = { rarity: 3, baseStats: { vitality: 4, hp_max: 10 }, augments: [aug('power'), aug('protection')] };
+    const price = calculateSellPrice(2, mods);
+    const plainStarter = calculateSellPrice(2);
+    assert.strictEqual(plainStarter, 1, 'an unrolled starter item stays near worthless');
+    assert.ok(price >= 100, `rolled starter-base rare sells for ${price}`);
+  });
+
+  it('never prices a rolled drop below its template', () => {
+    const mods = { rarity: 1, baseStats: { strength: 1 }, augments: [] };
+    assert.strictEqual(calculateSellPrice(400, mods), 200);
+  });
+
   it('treats a missing base price as zero', () => {
     assert.strictEqual(calculateSellPrice(undefined), 0);
   });

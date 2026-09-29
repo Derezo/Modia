@@ -143,9 +143,11 @@ export class FormationScene extends Scene {
     const isTablet = responsive.isTablet();
 
     // Calculate grid columns based on viewport
-    let gridCols = 'repeat(4, 1fr)';
-    if (isMobile) gridCols = 'repeat(2, 1fr)';
-    else if (isTablet) gridCols = 'repeat(3, 1fr)';
+    // Card-width tracks, centred: with 1fr tracks a small party sat in the
+    // left column of an empty grid.
+    let gridCols = 'repeat(auto-fit, 160px)';
+    if (isMobile) gridCols = 'repeat(2, 140px)';
+    else if (isTablet) gridCols = 'repeat(auto-fit, 140px)';
 
     container.style.cssText = `
       position: absolute;
@@ -298,6 +300,7 @@ export class FormationScene extends Scene {
         gap: ${PARCHMENT_SPACING.md};
         max-width: 800px;
         margin: 0 auto;
+        justify-content: center;
       }
 
       /* Empty Slot */

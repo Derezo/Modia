@@ -64,6 +64,14 @@ const TRAVEL_HEIGHT_WITH_DIVIDER = 40; // travel 34px + divider 4px + 2px buffer
 const COLLAPSED_WIDTH = 112;
 const COLLAPSED_HEIGHT = 50;
 
+/**
+ * On a scaled-down canvas (phones: the logical map is drawn at about half
+ * size) the HUD is enlarged back toward its design size in CSS pixels, so
+ * "Stamina 8/8" stays legible instead of rendering at ~5px. Capped so the
+ * expanded panel does not swallow the map.
+ */
+const MAX_HUD_UPSCALE = 2.2;
+
 /** Height animation smoothing factor (0-1, higher = faster) */
 const HEIGHT_ANIMATION_SPEED = 0.15;
 
@@ -103,6 +111,36 @@ export class WorldMapHUDPanel {
 
   setCollapsed(value) {
     this.collapsed = !!value;
+  }
+
+  /**
+   * Tell the panel how many CSS pixels one logical canvas pixel occupies
+   * (Game.scale). Below 1 the panel is drawn larger to compensate.
+   * @param {number} scale - CSS px per logical px
+   */
+  setDisplayScale(scale) {
+    this.displayScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
+  }
+
+  /**
+   * Factor the panel is enlarged by (1 on desktop).
+   * @returns {number}
+   */
+  getUpscale() {
+    const scale = this.displayScale || 1;
+    return scale >= 1 ? 1 : Math.min(MAX_HUD_UPSCALE, 1 / scale);
+  }
+
+  /**
+   * Map a canvas point into the panel's unscaled drawing space.
+   * @returns {{x: number, y: number}}
+   */
+  toPanelSpace(canvasX, canvasY) {
+    const k = this.getUpscale();
+    return {
+      x: this.x + (canvasX - this.x) / k,
+      y: this.y + (canvasY - this.y) / k
+    };
   }
 
   // ========== Proxy Methods to Child Segments ==========
@@ -192,6 +230,26 @@ export class WorldMapHUDPanel {
    * @param {CanvasRenderingContext2D} ctx - Canvas context
    */
   render(ctx) {
+    const k = this.getUpscale();
+    if (k !== 1) {
+      // Enlarge around the panel's top-left corner; hit tests use
+      // toPanelSpace() to undo this.
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      ctx.scale(k, k);
+      ctx.translate(-this.x, -this.y);
+      this._renderPanel(ctx);
+      ctx.restore();
+      return;
+    }
+    this._renderPanel(ctx);
+  }
+
+  /**
+   * Render the panel in its unscaled design space.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   */
+  _renderPanel(ctx) {
     if (this.collapsed) {
       this._renderCollapsed(ctx);
       return;
@@ -268,11 +326,12 @@ export class WorldMapHUDPanel {
    * @param {number} canvasY - Click Y coordinate in canvas space
    * @returns {boolean} True if click was handled
    */
-  handleClick(canvasX, canvasY) {
+  handleClick(rawX, rawY) {
     // Check if click is within panel bounds first
-    if (!this.containsPoint(canvasX, canvasY)) {
+    if (!this.containsPoint(rawX, rawY)) {
       return false;
     }
+    const { x: canvasX, y: canvasY } = this.toPanelSpace(rawX, rawY);
 
     // Collapsed chip: any tap on the chip expands the panel
     if (this.collapsed) {
@@ -301,7 +360,8 @@ export class WorldMapHUDPanel {
    * @param {number} y - Y coordinate
    * @returns {boolean}
    */
-  containsPoint(x, y) {
+  containsPoint(rawX, rawY) {
+    const { x, y } = this.toPanelSpace(rawX, rawY);
     if (this.collapsed) {
       return x >= this.x && x <= this.x + COLLAPSED_WIDTH &&
              y >= this.y && y <= this.y + COLLAPSED_HEIGHT;

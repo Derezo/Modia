@@ -518,6 +518,9 @@ export class ParchmentModal {
 
     // Trigger animation
     requestAnimationFrame(() => {
+      // The modal may have been closed or destroyed before this frame ran
+      // (fast open/close, or throttled rAF in a background tab).
+      if (!this.isOpen || this.isClosing || !this.overlayElement || !this.modalElement) return;
       this.overlayElement.classList.add('visible');
 
       // Focus the first focusable element or the modal itself
@@ -542,9 +545,10 @@ export class ParchmentModal {
    * Close the modal
    */
   close() {
-    if (!this.isOpen) return;
+    if (!this.isOpen || this.isClosing) return;
+    this.isClosing = true;
 
-    this.overlayElement.classList.remove('visible');
+    this.overlayElement?.classList.remove('visible');
 
     // Wait for animation to complete before removing from DOM
     setTimeout(() => {
@@ -562,6 +566,7 @@ export class ParchmentModal {
    */
   destroy() {
     this.isOpen = false;
+    this.isClosing = false;
 
     // Unregister modal and unlock scroll
     unregisterModal(this);

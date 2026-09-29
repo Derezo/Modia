@@ -45,3 +45,29 @@ describe('BattleCamera pan gesture distance', () => {
     assert.equal(camera.getPanDistance(), 50);
   });
 });
+
+describe('BattleCamera turn transition callbacks', () => {
+  it('settles a superseded transition callback instead of dropping it', () => {
+    const camera = new BattleCamera(400, 300);
+    camera.setBoundsFromWorld(-1000, -1000, 1000, 1000);
+    let first = 0;
+    let second = 0;
+    camera.startTurnTransition(100, 100, () => { first++; }, 500);
+    camera.startTurnTransition(200, 200, () => { second++; }, 500);
+    assert.equal(first, 1, 'the replaced transition resolves');
+    assert.equal(second, 0);
+    camera.update(600);
+    assert.equal(second, 1);
+    assert.equal(first, 1, 'settled exactly once');
+  });
+
+  it('settles the callback when the player takes manual control', () => {
+    const camera = new BattleCamera(400, 300);
+    camera.setBoundsFromWorld(-1000, -1000, 1000, 1000);
+    let done = 0;
+    camera.startTurnTransition(100, 100, () => { done++; }, 500);
+    camera.startPan(0, 0);
+    camera.updatePan(50, 50);
+    assert.equal(done, 1);
+  });
+});

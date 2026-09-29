@@ -1464,3 +1464,46 @@ describe('BattleWebSocketManager revisioned state updates', () => {
     assert.equal(pollCount, 1);
   });
 });
+
+describe('BattleWebSocketManager stranded local turn recovery', () => {
+  function strandedHarness() {
+    const player = createUnit('p1');
+    const { manager, scene } = createHarness([player]);
+    let recoverArgs = null;
+    scene.inputEnabled = false;
+    scene.battleState = {
+      status: 'active',
+      activeUnitId: 'p1',
+      units: [{ id: 'p1', moveUsed: false, actUsed: false, turnPhase: 'ready' }]
+    };
+    scene.recoverLocalTurn = (args) => {
+      recoverArgs = args;
+      scene.inputEnabled = true;
+      return true;
+    };
+    return { manager, scene, getRecoverArgs: () => recoverArgs };
+  }
+
+  it('unlocks a local turn left locked after a queue timeout', () => {
+    const { manager, scene, getRecoverArgs } = strandedHarness();
+    manager.handleQueueTimeout({ type: 'turn_start' });
+    assert.equal(scene.inputEnabled, true);
+    assert.equal(getRecoverArgs().unitId, 'p1');
+    assert.deepEqual(
+      { canMove: getRecoverArgs().availableActions.canMove, canAct: getRecoverArgs().availableActions.canAct },
+      { canMove: true, canAct: true },
+      'availability is derived from the authoritative unit when none is cached'
+    );
+  });
+
+  it('does nothing when input is already enabled or an enemy is active', () => {
+    const { manager, scene, getRecoverArgs } = strandedHarness();
+    scene.inputEnabled = true;
+    assert.equal(manager.recoverStrandedLocalTurn('test'), false);
+    scene.inputEnabled = false;
+    scene.units.set('e1', createUnit('e1', { type: 'enemy', ownerId: null }));
+    scene.battleState.activeUnitId = 'e1';
+    assert.equal(manager.recoverStrandedLocalTurn('test'), false);
+    assert.equal(getRecoverArgs(), null);
+  });
+});

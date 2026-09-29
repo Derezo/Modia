@@ -299,29 +299,8 @@ html, body {
   text-decoration: underline;
 }
 
-/* Character Card */
-.character-card {
-  background: linear-gradient(135deg, #1e1e3f 0%, #16213e 100%);
-  border: 2px solid #4a4a6a;
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.character-card:hover {
-  border-color: #ffd700;
-  transform: translateX(4px);
-}
-
-.character-card.selected {
-  border-color: #ffd700;
-  background: linear-gradient(135deg, #2a2a4f 0%, #1e1e3f 100%);
-}
+/* Character Card: styled by components/CharacterCard.js. The old navy
+   flex rules here overrode its layout (horizontal card, badges on the border). */
 
 .character-avatar {
   width: 48px;

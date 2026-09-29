@@ -161,10 +161,19 @@ export class RelicCollectionModal {
       }
 
       /* Zodiac Grid */
+      /* minmax(0, 1fr): a 1fr track grows to its content's min width, so
+         long sign/bonus words pushed the tiles past the grid (122px tiles in
+         a 104px track) and got clipped. */
       .zodiac-grid {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 10px;
+      }
+
+      @media (max-width: 420px) {
+        .zodiac-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
       }
 
       .zodiac-crystal {
@@ -178,6 +187,9 @@ export class RelicCollectionModal {
         transition: all 0.2s ease;
         cursor: default;
         position: relative;
+        min-width: 0;
+        text-align: center;
+        overflow-wrap: anywhere;
       }
 
       .zodiac-crystal--collected {

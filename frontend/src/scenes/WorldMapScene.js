@@ -1064,6 +1064,23 @@ export class WorldMapScene extends Scene {
     this.uiElement = container;
   }
 
+  /**
+   * Escape closes the open node action menu first; Settings opens only when
+   * nothing on the map is open (Game's global Escape handler).
+   * @returns {boolean} Whether the scene handled the key
+   */
+  handleEscape() {
+    if (this.game.profileDropdown?.isOpen) {
+      this.game.profileDropdown.closeDropdown();
+      return true;
+    }
+    if (this.nodeActionMenu?.isExpanded) {
+      this.nodeActionMenu.collapse();
+      return true;
+    }
+    return false;
+  }
+
   // Menu functionality is now handled by ProfileDropdown
 
   /**
@@ -2134,7 +2151,8 @@ export class WorldMapScene extends Scene {
       // Clear HUD canvas with transparent background
       // Context carries the DPR transform, so clear in logical units.
       this.hudCtx.clearRect(0, 0, this.game.targetWidth, this.game.targetHeight);
-      // Render HUD panel
+      // Render HUD panel (enlarged on scaled-down phone canvases)
+      this.hudPanel.setDisplayScale(this.game.scale);
       this.hudPanel.render(this.hudCtx);
       // Route guidance is UI, so keep it above fog and world objects.
       this.connectionRenderer.renderRouteLegend(this.hudCtx);

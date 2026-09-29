@@ -1304,6 +1304,11 @@ export class BattleWebSocketManager {
       // poller in critical mode until every presentation gate is idle.
       if (!this.shouldDeferAuthoritativeState()) {
         this.statePoller?.setCriticalMode(false);
+        // The queue has drained: if an earlier event timed out or was
+        // superseded, the local turn may still be locked. Unlock it.
+        if (this.turnEventQueue.length === 0) {
+          this.recoverStrandedLocalTurn('queue_drained');
+        }
       }
       this.updatePollerState();
     }
@@ -1347,8 +1352,9 @@ export class BattleWebSocketManager {
     // Increment timeout counter
     this.timeoutCount++;
 
-    // Update connection quality
-    connectionQuality.onRetryScheduled();
+    // Not reported to connectionQuality: a stalled animation is not a network
+    // retry, and nothing ever resolved these, so the global indicator showed
+    // "Slow Connection | 2 retries" at 2 ms latency for the rest of the session.
 
     // If multiple timeouts, trigger full resync
     if (this.timeoutCount >= 3) {
@@ -1356,6 +1362,63 @@ export class BattleWebSocketManager {
       this.requestFullStateSync({ reason: 'queue_timeout' });
       this.timeoutCount = 0;
     }
+
+    // A timed-out presentation event must never leave the local turn locked.
+    // The resync above may come back as a duplicate of the revision we
+    // already hold, which reconciles nothing, so recover from the state the
+    // client already has as well.
+    this.recoverStrandedLocalTurn('queue_timeout');
+  }
+
+  /**
+   * If the authoritative state says a local unit is active but input is
+   * locked with nothing left to present, give the player their controls
+   * back. Falls back to a state sync and poll when the client does not hold
+   * the unit's availability.
+   * @param {string} reason - For logs and the sync request
+   * @returns {boolean} Whether controls were recovered
+   */
+  recoverStrandedLocalTurn(reason = 'stranded_turn') {
+    const scene = this.scene;
+    if (!scene || scene.battleEnded || scene.inputEnabled ||
+        scene.isActionSubmitting === true || scene.isIntroPlaying) {
+      return false;
+    }
+    const state = this.battleState || scene.battleState;
+    if ((state?.status ?? 'active') !== 'active') return false;
+    const activeUnitId = state?.activeUnitId;
+    const activeUnit = activeUnitId != null ? this.units.get(activeUnitId) : null;
+    if (!activeUnit || !scene.isLocalActiveUnit?.(activeUnit)) return false;
+
+    const stateUnit = state?.units?.find(u => String(u.id) === String(activeUnitId));
+    const derived = stateUnit &&
+      (typeof stateUnit.moveUsed === 'boolean' || typeof stateUnit.actUsed === 'boolean')
+      ? {
+        canMove: stateUnit.moveUsed !== true,
+        canAct: stateUnit.actUsed !== true,
+        turnPhase: stateUnit.turnPhase
+      }
+      : null;
+    const availability = scene.serverAvailableActions ??
+      state?.availableActions ??
+      derived;
+
+    const recovered = availability
+      ? scene.recoverLocalTurn?.({
+        unitId: activeUnitId,
+        availableActions: availability,
+        stateRevision: scene.stateRevision ?? state?.stateRevision
+      })
+      : false;
+    if (recovered) {
+      this.lastYourTurnUnitId = activeUnitId;
+      console.log(`[Battle Queue] Recovered local turn after ${reason}:`, activeUnitId);
+      return true;
+    }
+    // Nothing reliable locally: ask the server and let the poller reconcile
+    this.requestFullStateSync({ reason: `${reason}_recovery` });
+    void this.statePoller?.poll?.();
+    return false;
   }
 
   /**

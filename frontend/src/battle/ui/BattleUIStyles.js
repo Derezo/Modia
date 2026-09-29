@@ -278,6 +278,43 @@ export function getBattleUIStyles() {
       0%, 100% { opacity: 0.6; }
       50% { opacity: 1; }
     }
+
+    /* Move/attack confirmation and the targeting Cancel bar: parchment, not
+       the legacy navy .ui-panel/.btn system style */
+    #battle-ui #confirm-panel .ui-panel,
+    #battle-ui #action-menu .ui-panel {
+      background: linear-gradient(to bottom, #f0e6d2 0%, #e2d3b4 100%);
+      border: 2px solid #8b7355;
+      border-radius: 6px;
+      color: #2d2418;
+      font-family: Georgia, serif;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+    #battle-ui #confirm-text {
+      font-weight: bold;
+      color: #2d2418;
+    }
+    #battle-ui #confirm-panel .btn,
+    #battle-ui #action-menu .btn {
+      font-family: Georgia, serif;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+    #battle-ui #confirm-panel .btn-primary {
+      background: linear-gradient(to bottom, #5a9e4a 0%, #3d7530 100%);
+      border: 2px solid #2f5c25;
+      color: #fff;
+    }
+    #battle-ui #confirm-panel .btn-secondary,
+    #battle-ui #action-menu .btn-secondary {
+      background: linear-gradient(to bottom, #e8dcc8 0%, #c9b899 100%);
+      border: 2px solid #8b7355;
+      color: #2d2418;
+    }
+    #battle-ui #confirm-panel .btn-secondary:hover,
+    #battle-ui #action-menu .btn-secondary:hover {
+      background: linear-gradient(to bottom, #f0e8d8 0%, #d4c4a8 100%);
+    }
   `;
 }
 

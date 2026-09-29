@@ -171,3 +171,19 @@ describe('equipment rules', () => {
     assert.equal(getEquipRestriction(item, { level: 20, class: 'Warrior' }), null);
   });
 });
+
+describe('stat display order and material chip', async () => {
+  const { orderStats, getDisplayMaterial } = await import('../statDisplay.js');
+
+  it('orders stats STR/AGI/INT/VIT/LCK after pools', () => {
+    const ordered = orderStats({ luck: 1, vitality: 2, strength: 3, intelligence: 4, hp_max: 5, agility: 6 });
+    assert.deepEqual(Object.keys(ordered), ['hp_max', 'strength', 'agility', 'intelligence', 'vitality', 'luck']);
+    assert.deepEqual(Object.keys(sumItemStats({ baseStats: { luck: 1, strength: 2 } })), ['strength', 'luck']);
+  });
+
+  it('hides a rolled material that the item name contradicts', () => {
+    assert.equal(getDisplayMaterial({ name: 'Exalted Leather Helm of Warding', material: 'iron' }), null);
+    assert.equal(getDisplayMaterial({ name: 'Divine Blessed Iron Axe', material: 'iron' }), 'Iron');
+    assert.equal(getDisplayMaterial({ name: 'Plain Thing' }), null);
+  });
+});

@@ -558,6 +558,16 @@ export class BattleOutroSequence {
   }
 
   /**
+   * Whether the outro was given any reward figures to show.
+   * @returns {boolean}
+   */
+  hasRewardData() {
+    const r = this.rewards || {};
+    return r.gold !== undefined || r.experience !== undefined ||
+      (Array.isArray(r.items) && r.items.length > 0);
+  }
+
+  /**
    * Render rewards (gold, XP, items)
    */
   renderRewards(ctx, w, h) {
@@ -707,8 +717,15 @@ export class BattleOutroSequence {
   }
 
   renderRewardPanel(ctx, layout, itemCount) {
-    const { panel, stats } = layout;
-    const revealProgress = Math.max(this.goldProgress, this.xpProgress, ...this.itemProgress, 0);
+    const { panel } = layout;
+    // A battle that ended through a state poll (not the battle:end event)
+    // carries no reward breakdown; say where the rewards went instead of
+    // drawing an empty, half-transparent panel.
+    const hasRewardData = this.hasRewardData();
+    const stats = hasRewardData ? layout.stats : [];
+    const revealProgress = hasRewardData
+      ? Math.max(this.goldProgress, this.xpProgress, ...this.itemProgress, 0)
+      : 1;
 
     ctx.save();
     ctx.globalAlpha = clamp(0.25 + revealProgress * 1.5, 0, 1);
@@ -727,6 +744,13 @@ export class BattleOutroSequence {
     ctx.textBaseline = 'middle';
     ctx.fillStyle = REWARD_PANEL_COLORS.heading;
     ctx.fillText('REWARDS EARNED', panel.x + panel.width / 2, layout.headerY);
+
+    if (!hasRewardData) {
+      ctx.font = `${layout.compact ? 15 : 14}px Georgia, serif`;
+      ctx.fillStyle = REWARD_PANEL_COLORS.heading;
+      ctx.fillText('Your rewards have been added to your party.',
+        panel.x + panel.width / 2, layout.stats[0].y + layout.stats[0].height / 2);
+    }
 
     for (const stat of stats) {
       ctx.fillStyle = REWARD_PANEL_COLORS.cardInset;

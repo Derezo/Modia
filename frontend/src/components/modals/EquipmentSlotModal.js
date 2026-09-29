@@ -26,7 +26,6 @@
 
 import { ParchmentModal } from '../../ui/parchment/ParchmentModal.js';
 import { parchmentToast } from '../../ui/parchment/ParchmentToast.js';
-import { Icon } from '../Icon.js';
 import { ItemIcon } from '../ItemIcon.js';
 import {
   PARCHMENT_COLORS,
@@ -40,15 +39,16 @@ import {
   formatStatName,
   formatStatValue,
   formatStatAmount,
-  describeAugment,
-  resolveAugmentIconName,
   calculateStatChanges,
   calculateItemPower,
   sumItemStats,
   normalizeRarity,
   matchesEquipmentSlot,
-  getEquipRestriction
+  getEquipRestriction,
+  getDisplayMaterial,
+  RARITY_TEXT_COLORS
 } from '../../utils/statDisplay.js';
+import { renderAugmentList } from '../AugmentList.js';
 import { escapeHtml, escapeHtmlAttribute } from '../../utils/escapeHtml.js';
 
 const STYLE_ID = 'equipment-slot-modal-styles';
@@ -206,15 +206,6 @@ export class EquipmentSlotModal {
         color: ${PARCHMENT_COLORS.state.error} !important;
       }
 
-      .equipment-slot-card-effect-name {
-        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
-      }
-
-      .equipment-slot-card-effect--inactive .equipment-slot-card-effect-desc {
-        color: ${PARCHMENT_COLORS.text.muted};
-        font-style: italic;
-      }
-
       /* Items the character cannot use: listed with the reason, not selectable */
       .equipment-slot-available-item.ineligible {
         cursor: not-allowed;
@@ -253,6 +244,11 @@ export class EquipmentSlotModal {
         border-radius: 8px;
         color: ${PARCHMENT_COLORS.text.secondary};
         text-transform: capitalize;
+      }
+
+      .equipment-slot-card-badge--rarity {
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        border: 1px solid transparent;
       }
 
       .equipment-slot-card-section {
@@ -295,26 +291,6 @@ export class EquipmentSlotModal {
         display: flex;
         flex-direction: column;
         gap: 4px;
-      }
-
-      .equipment-slot-card-effect {
-        display: flex;
-        align-items: center;
-        gap: ${PARCHMENT_SPACING.xs};
-        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
-        padding: 2px ${PARCHMENT_SPACING.xs};
-        background: ${PARCHMENT_COLORS.dark};
-        border-radius: 3px;
-      }
-
-      .equipment-slot-card-effect-icon {
-        width: 16px;
-        height: 16px;
-        flex-shrink: 0;
-      }
-
-      .equipment-slot-card-effect-text {
-        color: ${PARCHMENT_COLORS.text.primary};
       }
 
       .equipment-slot-unequip-btn {
@@ -672,8 +648,8 @@ export class EquipmentSlotModal {
               ${escapeHtml(item.name)}
             </div>
             <div class="equipment-slot-card-badges">
-              <span class="equipment-slot-card-badge">${rarity}</span>
-              ${item.material ? `<span class="equipment-slot-card-badge">${escapeHtml(item.material)}</span>` : ''}
+              <span class="equipment-slot-card-badge equipment-slot-card-badge--rarity" style="color: ${RARITY_TEXT_COLORS[rarity] || 'inherit'}; border-color: ${RARITY_TEXT_COLORS[rarity] || 'transparent'};">${rarity}</span>
+              ${getDisplayMaterial(item) ? `<span class="equipment-slot-card-badge">${escapeHtml(getDisplayMaterial(item))}</span>` : ''}
               ${this.renderRequirementBadge(item)}
             </div>
           </div>
@@ -694,7 +670,7 @@ export class EquipmentSlotModal {
           <div class="equipment-slot-card-section">
             <div class="equipment-slot-card-section-title">Effects</div>
             <div class="equipment-slot-card-effects">
-              ${augments.map(aug => this.renderCardAugment(aug)).join('')}
+              ${renderAugmentList(augments)}
             </div>
           </div>
         ` : ''}
@@ -728,33 +704,6 @@ export class EquipmentSlotModal {
         `;
       })
       .join('');
-  }
-
-  /**
-   * Render an augment effect for a comparison card
-   * @param {Object} aug - Augment object
-   * @returns {string} HTML
-   */
-  renderCardAugment(aug) {
-    const iconName = resolveAugmentIconName(aug);
-    const { name, effect, statText, active } = describeAugment(aug);
-    const inactive = typeof aug === 'object' && !active;
-    const tooltip = inactive && effect
-      ? `${effect} (not yet applied in combat)`
-      : (effect || name);
-
-    return `
-      <div class="equipment-slot-card-effect${inactive ? ' equipment-slot-card-effect--inactive' : ''}" title="${escapeHtmlAttribute(tooltip)}">
-        <span class="equipment-slot-card-effect-icon">
-          ${Icon.html('augments', iconName, { size: 'sm', title: name || effect }) || ''}
-        </span>
-        <span class="equipment-slot-card-effect-text">
-          ${name ? `<span class="equipment-slot-card-effect-name">${escapeHtml(name)}</span>${effect ? ': ' : ''}` : ''}
-          ${effect ? `<span class="equipment-slot-card-effect-desc">${escapeHtml(effect)}</span>` : ''}
-          ${statText ? ` (${escapeHtml(statText)})` : ''}
-        </span>
-      </div>
-    `;
   }
 
   /**

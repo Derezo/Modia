@@ -186,6 +186,9 @@ export class WorldMapInputHandler {
 
     if (clickedNode && clickedNode.id !== scene.currentNode?.id) {
       scene.travelToNode(clickedNode);
+    } else if (clickedNode && !scene.isTraveling) {
+      // Clicking the node you stand on opens (or closes) its action menu
+      scene.nodeActionMenu?.toggleExpanded?.();
     }
   }
 

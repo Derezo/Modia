@@ -676,6 +676,7 @@ export class ProfileDropdown {
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && this.isOpen) {
         this.closeDropdown();
+        e.preventDefault();
         e.stopPropagation();
       }
     }, { signal });

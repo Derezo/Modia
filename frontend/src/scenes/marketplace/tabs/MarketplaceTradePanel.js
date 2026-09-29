@@ -6,6 +6,7 @@ import { MarketDashboard } from '../../../components/MarketDashboard.js';
 import { marketConfirmDialog } from '../../../components/MarketConfirmDialog.js';
 import { parchmentToast } from '../../../ui/parchment/ParchmentToast.js';
 import { formatTime } from '../marketplaceUtils.js';
+import { escapeHtml } from '../../../utils/escapeHtml.js';
 
 /**
  * Load order book data for an item
@@ -48,7 +49,7 @@ export function renderOrderBookAndTrade(sidePanel, context) {
     <div id="market-dashboard-container" class="market-dashboard-container" style="margin-bottom: 12px;"></div>
 
     <div class="ui-panel order-book-panel">
-      <div class="ui-panel-header">${item.name} - Order Book</div>
+      <div class="ui-panel-header">${escapeHtml(item.name)} - Order Book</div>
       <div class="order-book-header">
         <span>Price</span>
         <span>Quantity</span>

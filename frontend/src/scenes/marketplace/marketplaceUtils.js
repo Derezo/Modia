@@ -74,7 +74,7 @@ export function formatListingStats(listing) {
     const color = typeof v === 'number' && v < 0 ? '#8b2a2a' : '#3d6b35';
     return `<div style="display: flex; justify-content: space-between; padding: 2px 0;">
       <span style="color: #5a4a3a;">${escapeHtml(formatSharedStatName(k))}</span>
-      <span style="color: ${color}; font-family: Consolas, monospace;">${escapeHtml(formatStatAmount(k, v))}</span>
+      <span style="color: ${color}; font-family: Georgia, serif; font-variant-numeric: tabular-nums;">${escapeHtml(formatStatAmount(k, v))}</span>
     </div>`;
   }).join('');
 }

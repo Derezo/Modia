@@ -116,6 +116,10 @@ export class BattleConfirmationUI {
     const textEl = this.element?.querySelector('#confirm-text');
     if (panel) panel.style.display = 'block';
     if (textEl) textEl.textContent = text;
+    // The confirm panel has its own Cancel; hide the targeting bar's
+    // "Cancel (Esc)" meanwhile so two cancel buttons are not stacked.
+    const targetingCancel = this.element?.querySelector('#action-menu');
+    if (targetingCancel) targetingCancel.style.visibility = 'hidden';
   }
 
   /**
@@ -124,6 +128,8 @@ export class BattleConfirmationUI {
   hideConfirmation() {
     const panel = this.element?.querySelector('#confirm-panel');
     if (panel) panel.style.display = 'none';
+    const targetingCancel = this.element?.querySelector('#action-menu');
+    if (targetingCancel) targetingCancel.style.visibility = '';
   }
 
   /**

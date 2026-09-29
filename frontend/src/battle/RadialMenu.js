@@ -305,6 +305,9 @@ export class RadialMenu {
    */
   handleClickOutside(e) {
     if (!this.isVisible) return;
+    // A click on something the menu itself just removed (the submenu's
+    // Cancel button closes the submenu before this runs) is not outside.
+    if (e.target && e.target.isConnected === false) return;
     if (this.element && !this.element.contains(e.target)) {
       this.callbacks.onCancel?.();
       this.hide();
@@ -343,11 +346,15 @@ export class RadialMenu {
       left: ${this.outerRadius * 2 + 40}px;
       top: 50%;
       transform: translateY(-50%);
-      background: rgba(20, 20, 40, 0.95);
-      border: 2px solid #ffd700;
+      background: linear-gradient(to bottom, #f0e6d2 0%, #e2d3b4 100%);
+      border: 2px solid #8b7355;
       border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+      font-family: Georgia, serif;
       padding: 10px;
-      min-width: 160px;
+      min-width: 190px;
+      scrollbar-width: thin;
+      scrollbar-color: #8b7355 #e2d3b4;
       max-height: 300px;
       overflow-y: auto;
     `;
@@ -358,7 +365,7 @@ export class RadialMenu {
         ? 'Select Item'
         : 'Select Zodiac Ability';
     submenu.innerHTML = `
-      <div style="color: #ffd700; font-weight: bold; margin-bottom: 10px; font-size: 12px; text-align: center;">
+      <div style="color: #6b2d3d; font-weight: bold; margin-bottom: 10px; font-size: 12px; text-align: center; text-transform: uppercase; letter-spacing: 0.5px;">
         ${title}
       </div>
       <div class="submenu-items"></div>
@@ -367,7 +374,7 @@ export class RadialMenu {
     const itemsContainer = submenu.querySelector('.submenu-items');
 
     if (items.length === 0) {
-      itemsContainer.innerHTML = '<div style="color: #666; font-style: italic; font-size: 11px; text-align: center; padding: 10px;">None available</div>';
+      itemsContainer.innerHTML = '<div style="color: #7a6a5a; font-style: italic; font-size: 11px; text-align: center; padding: 10px;">None available</div>';
     } else {
       items.forEach((item) => {
         const onCooldown = type === 'skill' && item.currentCooldown && item.currentCooldown > 0;
@@ -381,13 +388,19 @@ export class RadialMenu {
           width: 100%;
           padding: 8px 10px;
           margin-bottom: 4px;
-          background: ${disabled ? '#222' : '#2a2a4a'};
-          border: 1px solid ${disabled ? '#444' : '#4a4a6a'};
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+          background: ${disabled ? 'rgba(139, 115, 85, 0.12)' : 'linear-gradient(to bottom, #f5edd8, #e8dcc8)'};
+          border: 1px solid ${disabled ? 'rgba(139, 115, 85, 0.35)' : '#8b7355'};
           border-radius: 4px;
-          color: ${disabled ? '#555' : '#fff'};
+          color: ${disabled ? '#9a8a7a' : '#2d2418'};
           cursor: ${disabled ? 'not-allowed' : 'pointer'};
           text-align: left;
-          font-size: 11px;
+          font-family: Georgia, serif;
+          font-size: 12px;
+          white-space: nowrap;
           transition: background 0.15s;
         `;
 
@@ -398,23 +411,23 @@ export class RadialMenu {
             : item, { size: 'sm' });
         const costOrQty = type === 'skill'
           ? onCooldown
-            ? `<span style="color: #f88; margin-left: 6px;">${item.currentCooldown}⏱</span>`
-            : `<span style="color: ${disabled ? '#446' : '#6af'}; margin-left: 6px;">${item.mpCost}MP</span>`
+            ? `<span style="color: #a33a2a; margin-left: 6px; flex-shrink: 0;">${item.currentCooldown}⏱</span>`
+            : `<span style="color: ${disabled ? '#9a8a7a' : '#2f5d8a'}; margin-left: 6px; flex-shrink: 0; font-weight: bold;">${item.mpCost}MP</span>`
           : type === 'item'
-            ? `<span style="color: #8f8; margin-left: 6px;">x${escapeHtml(String(item.quantity ?? 1))}</span>`
-            : '<span style="color: #ffd700; margin-left: 6px;">FREE</span>';
+            ? `<span style="color: #3d6b35; margin-left: 6px; flex-shrink: 0; font-weight: bold;">x${escapeHtml(String(item.quantity ?? 1))}</span>`
+            : '<span style="color: #8b6914; margin-left: 6px; flex-shrink: 0; font-weight: bold;">FREE</span>';
 
         btn.innerHTML = `
-          <span>${icon} ${escapeHtml(item.name)}</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px; min-width: 0;">${icon} ${escapeHtml(item.name)}</span>
           ${costOrQty}
         `;
 
         if (!disabled) {
           btn.addEventListener('mouseenter', () => {
-            btn.style.background = '#3a3a5a';
+            btn.style.background = 'linear-gradient(to bottom, #fff7e6, #f0e2c4)';
           });
           btn.addEventListener('mouseleave', () => {
-            btn.style.background = '#2a2a4a';
+            btn.style.background = 'linear-gradient(to bottom, #f5edd8, #e8dcc8)';
           });
           btn.addEventListener('click', () => {
             if (type === 'skill') {
@@ -441,21 +454,26 @@ export class RadialMenu {
       width: 100%;
       padding: 8px 10px;
       margin-top: 10px;
-      background: #333;
-      border: 1px solid #555;
+      background: linear-gradient(to bottom, #e8dcc8, #c9b899);
+      border: 1px solid #8b7355;
       border-radius: 4px;
-      color: #aaa;
+      color: #2d2418;
       cursor: pointer;
-      font-size: 11px;
+      font-family: Georgia, serif;
+      font-size: 12px;
       transition: background 0.15s;
     `;
     cancelBtn.addEventListener('mouseenter', () => {
-      cancelBtn.style.background = '#444';
+      cancelBtn.style.background = 'linear-gradient(to bottom, #f0e8d8, #d4c4a8)';
     });
     cancelBtn.addEventListener('mouseleave', () => {
-      cancelBtn.style.background = '#333';
+      cancelBtn.style.background = 'linear-gradient(to bottom, #e8dcc8, #c9b899)';
     });
-    cancelBtn.addEventListener('click', () => this.closeSubmenu());
+    // Back to the radial, not out of it
+    cancelBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.closeSubmenu();
+    });
     itemsContainer.appendChild(cancelBtn);
 
     this.element.appendChild(submenu);
@@ -494,6 +512,22 @@ export class RadialMenu {
     setTimeout(() => {
       document.addEventListener('click', this.boundClickOutsideHandler);
     }, 100);
+  }
+
+  /**
+   * Move an open menu to a new centre (e.g. to follow its unit while the
+   * camera pans). No-op for sub-pixel changes.
+   * @param {number} screenX - Overlay X (CSS px)
+   * @param {number} screenY - Overlay Y (CSS px)
+   */
+  setPosition(screenX, screenY) {
+    if (!this.element || !this.isVisible) return;
+    if (Math.abs(screenX - this.centerX) < 0.5 && Math.abs(screenY - this.centerY) < 0.5) return;
+    this.centerX = screenX;
+    this.centerY = screenY;
+    const halfSize = this.outerRadius + 30;
+    this.element.style.left = `${screenX - halfSize}px`;
+    this.element.style.top = `${screenY - halfSize}px`;
   }
 
   /**

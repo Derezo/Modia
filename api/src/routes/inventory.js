@@ -47,7 +47,11 @@ function formatItem(item) {
     // Sprite ID for item icon display
     spriteId: item.sprite_id,
     // Equipment slot from template (for slot validation on client)
-    equipmentSlot: item.equipment_slot || null
+    equipmentSlot: item.equipment_slot || null,
+    // Consumable effect (heal_hp, heal_mp, heal_both, revive, ...) so the
+    // client can pick valid targets for out-of-battle use
+    effectType: item.effect_type || null,
+    effectValue: item.effect_value ?? null
   };
 }
 
@@ -60,7 +64,7 @@ router.get('/shared', authenticate, gameReadLimiter, asyncHandler(async (req, re
     `SELECT ci.id as instance_id, ci.quantity, ci.modifications,
             it.id as template_id, it.name, it.item_type, it.rarity,
             it.stat_bonuses, it.description, it.level_requirement, it.class_restriction,
-            it.sprite_id, it.equipment_slot
+            it.sprite_id, it.equipment_slot, it.effect_type, it.effect_value
      FROM character_items ci
      JOIN item_templates it ON ci.item_template_id = it.id
      WHERE ci.user_id = $1 AND ci.equipped_slot IS NULL

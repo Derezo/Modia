@@ -15,7 +15,9 @@
 
 import { Scene } from './Scene.js';
 import { PARCHMENT_COLORS, injectParchmentTheme } from '../ui/parchment/index.js';
+import { getParchmentScrollbarCSS } from '../ui/parchment/ParchmentTheme.js';
 import { FeedbackModal } from '../modals/FeedbackModal.js';
+import { Icon } from '../components/Icon.js';
 import {
   SettingsPanelRenderer,
   SettingsStateManager,
@@ -193,8 +195,17 @@ export class SettingsScene extends Scene {
       }
 
       .settings-scene .settings-tab-icon {
-        font-size: 18px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        flex-shrink: 0;
       }
+
+      /* Parchment scrollbars on the scrolling columns (were white/native) */
+      ${getParchmentScrollbarCSS('.settings-scene .settings-main')}
+      ${getParchmentScrollbarCSS('.settings-scene .settings-sidebar')}
 
       /* Main Panel */
       .settings-scene .settings-main {
@@ -527,37 +538,37 @@ export class SettingsScene extends Scene {
       <div class="settings-content">
         <div class="settings-sidebar">
           <button class="settings-tab active" data-tab="battle">
-            <span class="settings-tab-icon">&#9876;</span>
+            <span class="settings-tab-icon">${Icon.html('actions', 'attack', { size: 'sm' })}</span>
             <span class="settings-tab-label">Battle</span>
           </button>
           <button class="settings-tab" data-tab="audio">
-            <span class="settings-tab-icon">&#127925;</span>
+            <span class="settings-tab-icon">${Icon.html('menu', 'notifications', { size: 'sm' })}</span>
             <span class="settings-tab-label">Audio</span>
           </button>
           <button class="settings-tab" data-tab="display">
-            <span class="settings-tab-icon">&#128187;</span>
+            <span class="settings-tab-icon">${Icon.html('menu', 'map', { size: 'sm' })}</span>
             <span class="settings-tab-label">Display</span>
           </button>
           <button class="settings-tab" data-tab="accessibility">
-            <span class="settings-tab-icon">&#9855;</span>
+            <span class="settings-tab-icon">${Icon.html('menu', 'characters', { size: 'sm' })}</span>
             <span class="settings-tab-label">Accessibility</span>
           </button>
           <button class="settings-tab" data-tab="gameplay">
-            <span class="settings-tab-icon">&#127918;</span>
+            <span class="settings-tab-icon">${Icon.html('menu', 'quest', { size: 'sm' })}</span>
             <span class="settings-tab-label">Gameplay</span>
           </button>
           <button class="settings-tab" data-tab="social">
-            <span class="settings-tab-icon">&#128101;</span>
+            <span class="settings-tab-icon">${Icon.html('menu', 'friends', { size: 'sm' })}</span>
             <span class="settings-tab-label">Social</span>
           </button>
           ${this.isDevelopment ? `
           <button class="settings-tab" data-tab="developer">
-            <span class="settings-tab-icon">&#128295;</span>
+            <span class="settings-tab-icon">${Icon.html('menu', 'settings', { size: 'sm' })}</span>
             <span class="settings-tab-label">Developer</span>
           </button>
           ` : ''}
           <button class="settings-tab" data-tab="help">
-            <span class="settings-tab-icon">&#10068;</span>
+            <span class="settings-tab-icon">${Icon.html('menu', 'help', { size: 'sm' })}</span>
             <span class="settings-tab-label">Help</span>
           </button>
         </div>

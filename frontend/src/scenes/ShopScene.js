@@ -12,13 +12,14 @@ import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { Icon } from '../components/Icon.js';
 import { ItemIcon } from '../components/ItemIcon.js';
 import { ItemDataTable } from '../components/ItemDataTable/index.js';
-import { escapeHtml, escapeHtmlAttribute } from '../utils/escapeHtml.js';
+import { renderAugmentList } from '../components/AugmentList.js';
+import { parchmentConfirm } from '../ui/parchment/parchmentConfirm.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
 import {
   formatStatName,
   formatStatValue,
   formatStatAmount,
   sumItemStats,
-  describeAugment,
   formatItemEffects,
   ITEM_EFFECT_KEYS,
   normalizeRarity,
@@ -358,8 +359,83 @@ export class ShopScene extends Scene {
 
         .shop-detail-panel {
           width: 100% !important;
-          max-height: 320px;
+          min-width: 0;
+          max-height: min(52vh, 400px);
           order: 1;
+        }
+
+        /* Phone: the item's image sits beside its name, and quantity,
+           total and the action button share one row, so the sticky
+           action block no longer hides what is being bought or sold. */
+        .shop-detail-panel .detail-content {
+          padding: 10px 12px;
+        }
+
+        .shop-detail-panel .detail-hero {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          text-align: left;
+          padding-bottom: 8px;
+          margin-bottom: 8px;
+          border-bottom: 1px solid ${P.border};
+        }
+
+        .shop-detail-panel .detail-hero .shop-detail-image {
+          margin-bottom: 0 !important;
+          flex: 0 0 auto;
+        }
+
+        .shop-detail-panel .detail-hero .detail-header {
+          text-align: left;
+          padding-bottom: 0;
+          margin-bottom: 0;
+          border-bottom: none;
+        }
+
+        .shop-detail-panel .detail-name {
+          font-size: var(--font-size-md, 15px);
+        }
+
+        .shop-detail-panel .detail-desc {
+          font-size: var(--font-size-sm, 12px);
+          margin-bottom: 8px;
+        }
+
+        .shop-detail-panel .detail-stat-row {
+          padding: 3px 0;
+        }
+
+        .shop-detail-panel .detail-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          bottom: -10px;
+          margin-left: -12px;
+          margin-right: -12px;
+          margin-bottom: -10px;
+          padding: 8px 12px;
+        }
+
+        .shop-detail-panel .detail-actions .quantity-selector {
+          margin-bottom: 0;
+          gap: 6px;
+        }
+
+        .shop-detail-panel .detail-actions .total-price {
+          margin-bottom: 0;
+          flex: 1;
+          min-width: 0;
+        }
+
+        .shop-detail-panel .detail-actions .total-value {
+          font-size: var(--font-size-md, 15px);
+        }
+
+        .shop-detail-panel .detail-actions .action-btn {
+          width: auto;
+          flex: 0 0 auto;
+          padding: 6px 16px;
         }
 
         .shop-items-panel {
@@ -608,22 +684,26 @@ export class ShopScene extends Scene {
         text-align: right;
       }
 
-      .detail-stat-row.augment-row .detail-stat-value {
+      .detail-stat-row.requirement-row .detail-stat-value {
+        color: ${P.text.primary};
+      }
+
+      .detail-stat-row.requirement-row.unmet .detail-stat-value {
+        color: ${P.state.error};
+      }
+
+      .requirement-note {
         font-weight: normal;
-        text-align: right;
-        max-width: 70%;
+        font-size: var(--font-size-sm, 12px);
       }
 
-      .detail-stat-row.augment-row.inactive .detail-stat-value {
+      .detail-section-title {
+        margin: 12px 0 6px;
+        font-size: var(--font-size-sm, 12px);
+        font-weight: bold;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
         color: ${P.text.secondary};
-      }
-
-      .augment-inactive-note {
-        display: block;
-        margin-top: 2px;
-        font-size: var(--font-size-xs, 11px);
-        font-style: italic;
-        color: ${P.text.muted};
       }
 
       .detail-rarity {
@@ -737,14 +817,14 @@ export class ShopScene extends Scene {
       }
 
       .action-btn.buy-btn {
-        background: linear-gradient(to bottom, ${P.state.info}, #3a5068);
+        background: linear-gradient(to bottom, #8b5a2b, #5d3a1a);
         border: 2px solid ${P.borderDark};
         color: #fff;
         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
       }
 
       .action-btn.buy-btn:hover:not(:disabled) {
-        background: linear-gradient(to bottom, #3a5068, ${P.state.info});
+        background: linear-gradient(to bottom, #5d3a1a, #8b5a2b);
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
       }
 
@@ -980,9 +1060,11 @@ export class ShopScene extends Scene {
     this.itemTable = new ItemDataTable(containerEl, {
       items,
       variant: isBuyMode ? 'shop' : 'inventory',
+      // Type and Stats let players compare without opening each item; the
+      // table hides them itself when it is narrow (phones).
       columns: isBuyMode
-        ? ['rarity', 'iconName', 'supplyLevel', 'quantity', 'price']
-        : ['rarity', 'iconName', 'type', 'quantity', 'price'],
+        ? ['rarity', 'iconName', 'type', 'stats', 'supplyLevel', 'quantity', 'price']
+        : ['rarity', 'iconName', 'type', 'stats', 'quantity', 'price'],
       filters: {
         showTypeFilter: true,
         showRarityFilter: true,
@@ -995,14 +1077,11 @@ export class ShopScene extends Scene {
       onRowSelect: (item) => {
         this.handleTableRowSelect(item, isBuyMode);
       },
+      // Double-click only selects: a quick buy/sell fired on whichever row
+      // was under the cursor after the list re-sorted, and sold valuable
+      // items with no confirmation.
       onRowDoubleClick: (item) => {
-        // Quick buy/sell on double-click
         this.handleTableRowSelect(item, isBuyMode);
-        if (isBuyMode) {
-          this.handleBuy();
-        } else {
-          this.handleSell();
-        }
       }
     });
   }
@@ -1146,12 +1225,14 @@ export class ShopScene extends Scene {
     }
 
     detailEl.innerHTML = `
-      <div class="shop-detail-image" style="text-align: center; margin-bottom: 16px;">
-        ${itemImageHtml}
-      </div>
-      <div class="detail-header">
-        <div class="detail-name">${escapeHtml(item.name || '')}${badgesHtml}</div>
-        <div class="detail-type"><span class="detail-rarity" style="color: ${RARITY_TEXT_COLORS[rarityName]};">${escapeHtml(rarityLabel)}</span> ${escapeHtml(item.type || '')}${item.equipmentSlot ? ` - ${escapeHtml(this.formatSlot(item.equipmentSlot))}` : ''}</div>
+      <div class="detail-hero">
+        <div class="shop-detail-image" style="text-align: center; margin-bottom: 16px;">
+          ${itemImageHtml}
+        </div>
+        <div class="detail-header">
+          <div class="detail-name">${escapeHtml(item.name || '')}${badgesHtml}</div>
+          <div class="detail-type"><span class="detail-rarity" style="color: ${RARITY_TEXT_COLORS[rarityName]};">${escapeHtml(rarityLabel)}</span> ${escapeHtml(item.type || '')}${item.equipmentSlot ? ` - ${escapeHtml(this.formatSlot(item.equipmentSlot))}` : ''}</div>
+        </div>
       </div>
 
       ${item.description ? `<div class="detail-desc">${escapeHtml(item.description || '')}</div>` : ''}
@@ -1249,7 +1330,12 @@ export class ShopScene extends Scene {
       `;
     }
 
+    // Skip an effect line the description already states word for word
+    // ("Restores 50 HP when consumed." + "Effect: Restores 50 HP").
+    const normalize = (text) => String(text || '').toLowerCase().replace(/[^a-z0-9%]+/g, ' ').trim();
+    const description = normalize(item.description);
     for (const line of formatItemEffects(item)) {
+      if (description && description.includes(normalize(line))) continue;
       html += `
         <div class="detail-stat-row effect-row">
           <span class="detail-stat-label">Effect</span>
@@ -1258,28 +1344,25 @@ export class ShopScene extends Scene {
       `;
     }
 
-    for (const augment of item.augments || []) {
-      const { text, effect, active } = describeAugment(augment);
-      if (!text) continue;
-      const inactive = typeof augment === 'object' && !active && Boolean(effect);
-      const title = inactive ? `${text} (special effect not yet applied in combat)` : text;
-      // The reason is shown as text, not only in a hover title, so touch
-      // players can see why the row is greyed out.
+    const levelRequirement = Number(item.levelRequirement ?? item.level_requirement) || 0;
+    if (levelRequirement > 1) {
+      const characters = this.game?.state?.get?.('characters') || [];
+      const highestLevel = characters.reduce((max, c) => Math.max(max, Number(c.level) || 0), 0);
+      // Unknown party (no characters loaded) is not flagged as unmet
+      const unmet = characters.length > 0 && highestLevel < levelRequirement;
       html += `
-        <div class="detail-stat-row augment-row${inactive ? ' inactive' : ''}" title="${escapeHtmlAttribute(title)}">
-          <span class="detail-stat-label">Augment</span>
-          <span class="detail-stat-value">${escapeHtml(text)}${inactive ? '<span class="augment-inactive-note">Stat bonus only; effect not active in combat yet</span>' : ''}</span>
+        <div class="detail-stat-row requirement-row${unmet ? ' unmet' : ''}"${unmet ? ' title="No party member meets this level yet"' : ''}>
+          <span class="detail-stat-label">Required Level</span>
+          <span class="detail-stat-value">${levelRequirement}${unmet ? ' <span class="requirement-note">(not met)</span>' : ''}</span>
         </div>
       `;
     }
 
-    const levelRequirement = Number(item.levelRequirement ?? item.level_requirement) || 0;
-    if (levelRequirement > 1) {
+    const augmentsHtml = renderAugmentList(item.augments || []);
+    if (augmentsHtml) {
       html += `
-        <div class="detail-stat-row">
-          <span class="detail-stat-label">Required Level</span>
-          <span class="detail-stat-value">${levelRequirement}</span>
-        </div>
+        <div class="detail-section-title">Augments</div>
+        ${augmentsHtml}
       `;
     }
 
@@ -1328,9 +1411,39 @@ export class ShopScene extends Scene {
     }
   }
 
+  /**
+   * Whether selling this item deserves a confirmation: anything above common
+   * rarity, or carrying augments.
+   * @param {Object} item - Sellable item
+   * @returns {boolean}
+   */
+  needsSellConfirmation(item) {
+    if (!item) return false;
+    const rarity = normalizeRarity(item.rarity);
+    return rarity !== 'common' || (item.augments?.length || 0) > 0;
+  }
+
   async handleSell() {
     if (!this.selectedItem) return;
+    if (this.isSelling) return;
 
+    const item = this.selectedItem;
+    const quantity = this.purchaseQuantity;
+    if (this.needsSellConfirmation(item)) {
+      const rarityName = normalizeRarity(item.rarity);
+      const rarityLabel = rarityName.charAt(0).toUpperCase() + rarityName.slice(1);
+      const total = (item.sellPrice || 0) * quantity;
+      const confirmed = await parchmentConfirm({
+        title: 'Sell Item',
+        message: `Sell ${quantity > 1 ? `${quantity} x ` : ''}${item.name} (${rarityLabel}) for ${total.toLocaleString()}g? This cannot be undone.`,
+        confirmLabel: 'Sell',
+        confirmVariant: 'danger'
+      });
+      // The selection may have changed while the dialog was open
+      if (!confirmed || this.selectedItem !== item) return;
+    }
+
+    this.isSelling = true;
     try {
       const result = await this.game.api.sellToShop(
         this.nodeId,
@@ -1356,6 +1469,8 @@ export class ShopScene extends Scene {
 
     } catch (err) {
       parchmentToast.error('Sale Failed', err.message);
+    } finally {
+      this.isSelling = false;
     }
   }
 

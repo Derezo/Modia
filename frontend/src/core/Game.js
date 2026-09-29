@@ -495,6 +495,13 @@ export class Game {
           return;
         }
 
+        // Something closer to the focus (a modal, menu or dropdown) already
+        // consumed this Escape. One keypress must not both close that and
+        // open Settings.
+        if (e.defaultPrevented) {
+          return;
+        }
+
         // Check if current scene wants to handle ESC
         const currentScene = this.scenes?.getCurrentScene();
         if (currentScene?.handleEscape?.()) {
@@ -923,6 +930,10 @@ export class Game {
       return;
     }
 
+    // The profile dropdown sits above modal backdrops; never leave it open
+    // over Settings.
+    this.profileDropdown?.closeDropdown?.();
+
     const modal = new SettingsModal(this);
     this.settingsModal = modal;
     modal.show({
@@ -958,11 +969,13 @@ export class Game {
     this.partyStatusBar = new PartyStatusBar(this);
 
     // Create connection indicator (DOM-based, global)
-    // Position in top-right, show latency in tooltip, hide when healthy to reduce visual noise
+    // Show latency in tooltip, hide when healthy to reduce visual noise
     this.connectionIndicator = new ConnectionIndicatorDOM(connectionQuality, {
       showLatency: true,
       hideWhenHealthy: true,
-      position: 'top-right'
+      // Bottom-left of the canvas: top-right is where every DOM scene puts
+      // its "Back to Map" button, and the dot sat on its corner.
+      position: 'bottom-left'
     });
 
     // Show the profile dropdown (replaces old notification bell + menu)

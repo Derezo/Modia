@@ -31,7 +31,8 @@ import {
   PARCHMENT_SPACING,
   PARCHMENT_TYPOGRAPHY,
   PARCHMENT_RADIUS,
-  getParchmentBorder
+  getParchmentBorder,
+  getParchmentScrollbarCSS
 } from '../../ui/parchment/ParchmentTheme.js';
 import { getAssetPath, getOptimalSize } from '@shared/assetPaths.js';
 import { escapeHtml, escapeHtmlAttribute } from '../../utils/escapeHtml.js';
@@ -223,12 +224,18 @@ export class CharacterModal {
         color: ${PARCHMENT_COLORS.text.primary};
       }
 
+      .character-modal-stat-value--low {
+        color: ${PARCHMENT_COLORS.state.error};
+      }
+
       /* Accordions Container */
       .character-modal-accordions {
         padding: ${PARCHMENT_SPACING.md};
         max-height: 400px;
         overflow-y: auto;
       }
+
+      ${getParchmentScrollbarCSS('.character-modal-accordions')}
 
       /* Equipment Section */
       .character-modal-equipment-header {
@@ -544,13 +551,28 @@ export class CharacterModal {
   renderStatsSummary(char) {
     // Totals include equipped gear, like battle does; the gear share is shown
     // as a small "+N" so the base value is still readable.
-    return buildStatSummary(char, this.effectiveStats).map(s => `
-      <div class="character-modal-stat"${s.bonus ? ` title="${s.value - s.bonus} base + ${s.bonus} from equipment"` : ''}>
+    // HP and MP show current / max, so a wounded character does not look
+    // healthy here.
+    const currentOf = (key, rawKey) => {
+      const value = Number(this.effectiveStats?.[key]?.current ?? char[rawKey]);
+      return Number.isFinite(value) ? Math.max(0, Math.trunc(value)) : null;
+    };
+    const current = { HP: currentOf('hp', 'hp_current'), MP: currentOf('mp', 'mp_current') };
+    return buildStatSummary(char, this.effectiveStats).map(s => {
+      const cur = current[s.label];
+      const showCurrent = cur !== null && cur !== undefined && cur < s.value;
+      const low = showCurrent && s.label === 'HP' && s.value > 0 && cur / s.value <= 0.5;
+      const titleParts = [];
+      if (showCurrent) titleParts.push(`${cur} of ${s.value} ${s.label}`);
+      if (s.bonus) titleParts.push(`${s.value - s.bonus} base + ${s.bonus} from equipment`);
+      return `
+      <div class="character-modal-stat"${titleParts.length ? ` title="${escapeHtmlAttribute(titleParts.join('; '))}"` : ''}>
         <span class="character-modal-stat-label">${s.label}:</span>
-        <span class="character-modal-stat-value">${s.value}</span>
+        <span class="character-modal-stat-value${low ? ' character-modal-stat-value--low' : ''}">${showCurrent ? `${cur}/${s.value}` : s.value}</span>
         ${s.bonus ? `<span class="character-modal-stat-bonus">(${s.bonus > 0 ? '+' : ''}${s.bonus})</span>` : ''}
       </div>
-    `).join('');
+    `;
+    }).join('');
   }
 
   /**

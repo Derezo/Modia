@@ -730,7 +730,8 @@ export class NodeActionMenu {
       height: this.element.offsetHeight || 150,
       bounds: bounds || viewportBounds(canvasHeight),
       gap: 12,
-      margin: 10
+      margin: 10,
+      allowSide: true
     });
 
     this.element.style.left = `${placement.centerX}px`;
@@ -762,11 +763,21 @@ export class NodeActionMenu {
   expand() {
     if (!this.isVisible) return;
 
-    // Small delay for smoother animation sequence
-    requestAnimationFrame(() => {
-      this.element.classList.add('node-action-menu--expanded');
-      this.isExpanded = true;
-    });
+    // Expand synchronously. This used to wait for the next animation frame,
+    // so in a throttled or background tab the menu stayed collapsed and the
+    // player's first click appeared to do nothing. Reading layout first lets
+    // the max-height transition still run.
+    void this.element.offsetHeight;
+    this.element.classList.add('node-action-menu--expanded');
+    this.isExpanded = true;
+  }
+
+  /**
+   * Expand when collapsed, collapse when expanded.
+   */
+  toggleExpanded() {
+    if (this.isExpanded) this.collapse();
+    else this.expand();
   }
 
   /**

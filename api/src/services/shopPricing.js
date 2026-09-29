@@ -35,7 +35,8 @@ export function calculateSellPrice(basePrice, modifications = null) {
   const { suggestedPrice } = calculateSuggestedPrice({
     basePrice: base,
     rarity: mods.rarity,
-    augments
+    augments,
+    baseStats: rolled ? mods.baseStats : null
   });
   return Math.floor(suggestedPrice * SELL_MODIFIER);
 }

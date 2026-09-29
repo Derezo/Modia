@@ -5,7 +5,9 @@
 import { ItemDataTable } from '../../../components/ItemDataTable/index.js';
 import { ItemIcon } from '../../../components/ItemIcon.js';
 import { parchmentToast } from '../../../ui/parchment/ParchmentToast.js';
-import { formatTime, formatListingStats, getRarityName, listingPrice } from '../marketplaceUtils.js';
+import { formatTime, formatListingStats, getRarityName, listingPrice, RARITY_COLORS } from '../marketplaceUtils.js';
+import { renderAugmentList } from '../../../components/AugmentList.js';
+import { escapeHtml } from '../../../utils/escapeHtml.js';
 
 /**
  * Render the My Listings tab
@@ -56,11 +58,11 @@ export function renderListingsTab(mainContent, sidePanel, context) {
       <div style="padding: 16px; font-family: Georgia, serif;">
         <div style="margin-bottom: 12px;">
           <div style="color: #5a4a3a; font-size: 12px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Active Listings</div>
-          <div style="font-size: 18px; color: #2d2418; font-family: Consolas, monospace;">${myListings.length}</div>
+          <div style="font-size: 18px; color: #2d2418; font-family: Georgia, serif; font-variant-numeric: tabular-nums;">${myListings.length}</div>
         </div>
         <div style="margin-bottom: 12px;">
           <div style="color: #5a4a3a; font-size: 12px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Total Value</div>
-          <div style="font-size: 18px; color: #2d2418; font-family: Consolas, monospace; font-weight: bold;">
+          <div style="font-size: 18px; color: #2d2418; font-family: Georgia, serif; font-variant-numeric: tabular-nums; font-weight: bold;">
             ${myListings.reduce((sum, l) => sum + listingPrice(l), 0).toLocaleString()}g
           </div>
         </div>
@@ -121,6 +123,9 @@ function showListingDetails(item, sidePanel, context) {
   const listedAt = listing.createdAt ?? listing.listedAt;
   const listedDate = listedAt ? new Date(listedAt) : null;
   const statsHtml = formatListingStats(listing);
+  const rarity = item.rarity || getRarityName(listing.rarity);
+  const rarityLabel = rarity.charAt(0).toUpperCase() + rarity.slice(1);
+  const augmentsHtml = renderAugmentList(listing.augments || []);
 
   sidePanel.innerHTML = `
     <div class="ui-panel" style="flex: 1; display: flex; flex-direction: column;">
@@ -130,8 +135,11 @@ function showListingDetails(item, sidePanel, context) {
           <div data-active-listing-icon style="display: flex; justify-content: center; margin-bottom: 8px;">
             ${ItemIcon.html({ item, size: 'lg' })}
           </div>
-          <div style="font-size: 18px; font-weight: bold; color: #2d2418;">${item.name}</div>
-          <div style="font-size: 12px; color: #5a4a3a; text-transform: capitalize;">${listing.itemType || 'Item'}</div>
+          <div style="font-size: 18px; font-weight: bold; color: #2d2418;">${escapeHtml(item.name)}</div>
+          <div style="font-size: 12px; color: #5a4a3a;">
+            <span style="font-weight: bold; color: ${RARITY_COLORS[rarity] || RARITY_COLORS.common};">${escapeHtml(rarityLabel)}</span>
+            <span style="text-transform: capitalize;">${escapeHtml(listing.itemType || 'Item')}</span>
+          </div>
         </div>
 
         ${statsHtml ? `
@@ -140,9 +148,16 @@ function showListingDetails(item, sidePanel, context) {
           </div>
         ` : ''}
 
+        ${augmentsHtml ? `
+          <div style="margin-bottom: 16px;">
+            <div style="color: #5a4a3a; font-size: 12px; margin-bottom: 4px; text-transform: uppercase;">Augments</div>
+            ${augmentsHtml}
+          </div>
+        ` : ''}
+
         <div style="margin-bottom: 16px;">
           <div style="color: #5a4a3a; font-size: 12px; margin-bottom: 4px; text-transform: uppercase;">Asking Price</div>
-          <div style="font-size: 24px; color: #2d2418; font-family: Consolas, monospace; font-weight: bold;">
+          <div style="font-size: 24px; color: #2d2418; font-family: Georgia, serif; font-variant-numeric: tabular-nums; font-weight: bold;">
             ${listingPrice(listing).toLocaleString()}g
           </div>
         </div>

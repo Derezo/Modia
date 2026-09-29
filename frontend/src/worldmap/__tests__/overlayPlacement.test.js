@@ -60,3 +60,25 @@ describe('placeNodeOverlay', () => {
     assert.equal(p.centerX, 195);
   });
 });
+
+describe('placeNodeOverlay side placement', () => {
+  const bounds = { left: 0, top: 0, right: 1440, bottom: 900 };
+
+  it('sits beside the node when a tall overlay fits neither below nor above', () => {
+    const placement = placeNodeOverlay({
+      nodeX: 700, nodeY: 450, nodeSize: 30, width: 180, height: 700,
+      bounds, gap: 12, margin: 10, allowSide: true
+    });
+    assert.equal(placement.side, 'right');
+    const left = placement.centerX - 90;
+    assert.ok(left >= 700 + 30 + 12, 'does not cover the node horizontally');
+  });
+
+  it('keeps the old clamped placement unless side placement is allowed', () => {
+    const placement = placeNodeOverlay({
+      nodeX: 700, nodeY: 450, nodeSize: 30, width: 180, height: 700, bounds
+    });
+    assert.equal(placement.side, undefined);
+    assert.equal(placement.centerX, 700);
+  });
+});
