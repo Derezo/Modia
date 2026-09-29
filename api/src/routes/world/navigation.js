@@ -606,9 +606,11 @@ router.get('/path/:targetNodeId', authenticate, asyncHandler(async (req, res) =>
 router.post('/travel', authenticate, travelLimiter, asyncHandler(async (req, res) => {
   const { targetNodeId } = req.body;
 
+  // Finding 44: Validate numeric input
   if (!targetNodeId) {
     throw new AppError('targetNodeId is required', 400);
   }
+  const parsedTargetNodeId = parseIntOrThrow(targetNodeId, 'targetNodeId');
 
   // Get user's current position and party leader character
   const charResult = await query(
@@ -625,7 +627,7 @@ router.post('/travel', authenticate, travelLimiter, asyncHandler(async (req, res
   const characterId = charResult.rows[0].character_id;
 
   // Already at destination
-  if (currentNodeId === targetNodeId) {
+  if (currentNodeId === parsedTargetNodeId) {
     throw new AppError('Already at destination', 400);
   }
 
@@ -642,7 +644,7 @@ router.post('/travel', authenticate, travelLimiter, asyncHandler(async (req, res
   // Check if destination is discovered
   const discoveryCheck = await query(
     'SELECT 1 FROM user_node_discovery WHERE user_id = $1 AND node_id = $2',
-    [req.user.userId, targetNodeId]
+    [req.user.userId, parsedTargetNodeId]
   );
 
   if (discoveryCheck.rows.length === 0) {
@@ -652,7 +654,7 @@ router.post('/travel', authenticate, travelLimiter, asyncHandler(async (req, res
   // Find shortest path with blocking awareness
   const pathResult = await findWorldPath(
     currentNodeId,
-    targetNodeId,
+    parsedTargetNodeId,
     req.user.userId,
     { restrictToDiscovered: true }
   );
@@ -668,7 +670,7 @@ router.post('/travel', authenticate, travelLimiter, asyncHandler(async (req, res
   // - Traveling TO a blocked node (destination) - to initiate battle
   // We block: traveling THROUGH other blocked nodes to reach destination
   const blockedIntermediates = pathResult.blockedInPath.filter(
-    nodeId => nodeId !== targetNodeId && nodeId !== currentNodeId
+    nodeId => nodeId !== parsedTargetNodeId && nodeId !== currentNodeId
   );
 
   if (blockedIntermediates.length > 0) {
@@ -689,7 +691,7 @@ router.post('/travel', authenticate, travelLimiter, asyncHandler(async (req, res
   const blockedNodes = await getBlockedNodes(req.user.userId);
   if (blockedNodes.has(currentNodeId)) {
     const visitedNodes = await getVisitedNodes(req.user.userId);
-    if (!visitedNodes.has(targetNodeId)) {
+    if (!visitedNodes.has(parsedTargetNodeId)) {
       throw new AppError(
         'You must defeat the enemies here before exploring further, or retreat to a previously visited location.',
         400
@@ -745,7 +747,7 @@ router.post('/travel', authenticate, travelLimiter, asyncHandler(async (req, res
     await client.query(
       `UPDATE characters SET current_node_id = $1
        WHERE user_id = $2 AND party_slot IS NOT NULL`,
-      [targetNodeId, req.user.userId]
+      [parsedTargetNodeId, req.user.userId]
     );
 
     const discoveries = [];
@@ -782,12 +784,12 @@ router.post('/travel', authenticate, travelLimiter, asyncHandler(async (req, res
      LEFT JOIN user_chest_claims ucc ON wn.id = ucc.node_id AND ucc.user_id = $2
      LEFT JOIN user_shrine_visits usv ON wn.id = usv.node_id AND usv.user_id = $2
      WHERE wn.id = $1`,
-    [targetNodeId, req.user.userId]
+    [parsedTargetNodeId, req.user.userId]
   );
 
-  // Get path node details for animation
+  // Get path node details for animation (include region_id for quest progress tracking)
   const pathNodesResult = await query(
-    'SELECT id, name, node_type, x_coord, y_coord FROM world_nodes WHERE id = ANY($1) ORDER BY array_position($1, id)',
+    'SELECT id, name, node_type, x_coord, y_coord, region_id FROM world_nodes WHERE id = ANY($1) ORDER BY array_position($1, id)',
     [pathResult.path]
   );
 
@@ -801,7 +803,7 @@ router.post('/travel', authenticate, travelLimiter, asyncHandler(async (req, res
   // Update node presence tracking and broadcast events
   presenceService.moveNode(
     currentNodeId,
-    targetNodeId,
+    parsedTargetNodeId,
     req.user.userId,
     req.user.username,
     characterName
@@ -826,12 +828,12 @@ router.post('/travel', authenticate, travelLimiter, asyncHandler(async (req, res
   }
 
   // Broadcast player_entered_node to new node room
-  const newNodeRoom = `node:${targetNodeId}`;
+  const newNodeRoom = `node:${parsedTargetNodeId}`;
   if (rooms.has(newNodeRoom)) {
     broadcastToRoom(newNodeRoom, {
       type: 'player:entered_node',
       payload: {
-        nodeId: targetNodeId,
+        nodeId: parsedTargetNodeId,
         userId: req.user.userId,
         username: req.user.username,
         characterName,
@@ -844,28 +846,27 @@ router.post('/travel', authenticate, travelLimiter, asyncHandler(async (req, res
   const staminaInfo = await staminaService.getStaminaInfo(characterId);
 
   // Daily/Weekly quest progress hooks (fire-and-forget pattern)
+  // Finding 38 & 115: Loop over ALL nodes on the path (except origin) and track each one.
+  // This gives 'Visit 2 shrines' +1 per shrine passed, and 'Visit N nodes' counts all distinct.
+  // Deduplication (same node/region revisited) is handled by dailyQuestService.updateProgressWithClient.
+  const pathNodes = pathNodesResult.rows;
+
+  // Skip the origin node (index 0) - we're already there
+  for (let i = 1; i < pathNodes.length; i++) {
+    const node = pathNodes[i];
+    // Track node visit with nodeType for filtered quests (shrines, taverns) and nodeId for deduplication
+    dailyQuestService.updateProgress(characterId, 'visit_nodes', 1, {
+      nodeType: node.node_type,
+      nodeId: node.id
+    }).catch(err => console.warn('[Quest] visit_nodes progress failed:', err.message));
+  }
+
+  // Track region visits - destination region only, deduplication handled by service
   const destNode = nodeResult.rows[0];
-
-  // Track node visits (count all unique nodes in path)
-  dailyQuestService.updateProgress(characterId, 'visit_nodes', pathResult.path.length, {
-    nodeType: destNode.node_type
-  }).catch(err => console.warn('[Quest] visit_nodes progress failed:', err.message));
-
-  // Track region visits (only count unique new region if destination differs from origin)
   if (destNode.region_id) {
-    // Get origin region
-    const originRegion = await query(
-      'SELECT region_id FROM world_nodes WHERE id = $1',
-      [currentNodeId]
-    );
-    const originRegionId = originRegion.rows[0]?.region_id;
-
-    // If we entered a new region, track it
-    if (originRegionId !== destNode.region_id) {
-      dailyQuestService.updateProgress(characterId, 'visit_regions', 1, {
-        regionId: destNode.region_id
-      }).catch(err => console.warn('[Quest] visit_regions progress failed:', err.message));
-    }
+    dailyQuestService.updateProgress(characterId, 'visit_regions', 1, {
+      regionId: destNode.region_id
+    }).catch(err => console.warn('[Quest] visit_regions progress failed:', err.message));
   }
 
   res.json({
@@ -876,7 +877,7 @@ router.post('/travel', authenticate, travelLimiter, asyncHandler(async (req, res
     currentNode: nodeResult.rows[0],
     stamina: staminaInfo,
     newDiscoveries,
-    playersAtNode: presenceService.getPlayersAtNode(targetNodeId)
+    playersAtNode: presenceService.getPlayersAtNode(parsedTargetNodeId)
   });
 }));
 

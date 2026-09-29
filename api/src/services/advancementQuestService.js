@@ -733,8 +733,9 @@ export async function completeQuestWithClient(client, characterId, battleId) {
          strength = $4,
          intelligence = $5,
          agility = $6,
-         vitality = $7
-     WHERE id = $8`,
+         vitality = $7,
+         luck = $8
+     WHERE id = $9`,
     [
       newClass,
       newStats.hpMax,
@@ -743,6 +744,7 @@ export async function completeQuestWithClient(client, characterId, battleId) {
       newStats.intelligence,
       newStats.agility,
       newStats.vitality,
+      newStats.luck,
       characterId
     ]
   );

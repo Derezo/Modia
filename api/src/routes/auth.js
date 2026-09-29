@@ -1,14 +1,14 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
 import { query } from '../config/database.js';
-import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../config/jwt.js';
+import { generateAccessToken, generateRefreshToken, hashRefreshToken, verifyRefreshToken } from '../config/jwt.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import { authLimiter } from '../middleware/rateLimiter.js';
 import { refreshLimiter } from '../middleware/refreshRateLimiter.js';
 import { authenticate } from '../middleware/auth.js';
 import { STARTING_GOLD } from '../config/constants.js';
 import { validateAndRepairDiscovery, fixOrphanedCharacters } from '../services/world/discoveryValidationService.js';
-import { registerUserWithCharacter } from '../services/registrationService.js';
+import { registerUserWithCharacter, validatePassword } from '../services/registrationService.js';
 
 const router = express.Router();
 
@@ -17,6 +17,17 @@ const SALT_ROUNDS = 12;
 // POST /api/auth/register
 router.post('/register', authLimiter, asyncHandler(async (req, res) => {
   const { username, email, password } = req.body;
+
+  // Type checks (Finding 44: non-string input causes 500)
+  if (typeof username !== 'string') {
+    throw new AppError('Username must be a string', 400);
+  }
+  if (typeof email !== 'string') {
+    throw new AppError('Email must be a string', 400);
+  }
+  if (typeof password !== 'string') {
+    throw new AppError('Password must be a string', 400);
+  }
 
   // Validation
   if (!username || !email || !password) {
@@ -27,9 +38,8 @@ router.post('/register', authLimiter, asyncHandler(async (req, res) => {
     throw new AppError('Username must be between 3 and 32 characters', 400);
   }
 
-  if (password.length < 8) {
-    throw new AppError('Password must be at least 8 characters', 400);
-  }
+  // Password validation (Finding 35: bcrypt truncates at 72 bytes)
+  validatePassword(password);
 
   // Email validation
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -54,8 +64,8 @@ router.post('/register', authLimiter, asyncHandler(async (req, res) => {
   const accessToken = generateAccessToken(user.id, user.username);
   const refreshToken = generateRefreshToken(user.id);
 
-  // Store refresh token hash
-  const refreshTokenHash = await bcrypt.hash(refreshToken, SALT_ROUNDS);
+  // Store sha256 hash of refresh token (Finding 34: bcrypt truncates JWTs at 72 bytes)
+  const refreshTokenHash = hashRefreshToken(refreshToken);
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
   await query(
@@ -91,6 +101,14 @@ router.post('/register-with-character', authLimiter, asyncHandler(async (req, re
 // POST /api/auth/login
 router.post('/login', authLimiter, asyncHandler(async (req, res) => {
   const { username, password } = req.body;
+
+  // Type checks (Finding 44: non-string input causes 500)
+  if (typeof username !== 'string') {
+    throw new AppError('Username must be a string', 400);
+  }
+  if (typeof password !== 'string') {
+    throw new AppError('Password must be a string', 400);
+  }
 
   if (!username || !password) {
     throw new AppError('Username and password are required', 400);
@@ -147,8 +165,8 @@ router.post('/login', authLimiter, asyncHandler(async (req, res) => {
   const accessToken = generateAccessToken(user.id, user.username);
   const refreshToken = generateRefreshToken(user.id);
 
-  // Store refresh token hash
-  const refreshTokenHash = await bcrypt.hash(refreshToken, SALT_ROUNDS);
+  // Store sha256 hash of refresh token (Finding 34: bcrypt truncates JWTs at 72 bytes)
+  const refreshTokenHash = hashRefreshToken(refreshToken);
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
   await query(
@@ -177,7 +195,12 @@ router.post('/refresh', refreshLimiter, asyncHandler(async (req, res) => {
     throw new AppError('Refresh token is required', 400);
   }
 
-  // Verify refresh token
+  // Type check (Finding 44)
+  if (typeof refreshToken !== 'string') {
+    throw new AppError('Refresh token must be a string', 400);
+  }
+
+  // Verify refresh token signature
   let decoded;
   try {
     decoded = verifyRefreshToken(refreshToken);
@@ -185,23 +208,19 @@ router.post('/refresh', refreshLimiter, asyncHandler(async (req, res) => {
     throw new AppError('Invalid refresh token', 401);
   }
 
-  // Find valid session
-  const sessionsResult = await query(
-    `SELECT id, refresh_token_hash FROM user_sessions
-     WHERE user_id = $1 AND expires_at > NOW()`,
-    [decoded.userId]
+  // Find valid session using sha256 hash (Finding 34: bcrypt truncates JWTs)
+  // Use atomic DELETE with RETURNING to prevent race conditions
+  const tokenHash = hashRefreshToken(refreshToken);
+  const deleteResult = await query(
+    `DELETE FROM user_sessions
+     WHERE user_id = $1 AND refresh_token_hash = $2 AND expires_at > NOW()
+     RETURNING id`,
+    [decoded.userId, tokenHash]
   );
 
-  let validSession = null;
-  for (const session of sessionsResult.rows) {
-    const valid = await bcrypt.compare(refreshToken, session.refresh_token_hash);
-    if (valid) {
-      validSession = session;
-      break;
-    }
-  }
-
-  if (!validSession) {
+  if (deleteResult.rows.length === 0) {
+    // Token might be old bcrypt format or invalid/reused
+    // Check if ANY session exists for debug, but don't accept bcrypt hashes
     throw new AppError('Invalid or expired refresh token', 401);
   }
 
@@ -222,11 +241,10 @@ router.post('/refresh', refreshLimiter, asyncHandler(async (req, res) => {
 
   // Generate new refresh token (refresh token rotation for security)
   const newRefreshToken = generateRefreshToken(user.id);
-  const newRefreshTokenHash = await bcrypt.hash(newRefreshToken, SALT_ROUNDS);
+  const newRefreshTokenHash = hashRefreshToken(newRefreshToken);
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
-  // Delete old session and create new one
-  await query('DELETE FROM user_sessions WHERE id = $1', [validSession.id]);
+  // Create new session
   await query(
     `INSERT INTO user_sessions (user_id, refresh_token_hash, expires_at)
      VALUES ($1, $2, $3)`,
@@ -250,19 +268,15 @@ router.post('/logout', authenticate, asyncHandler(async (req, res) => {
   const { refreshToken } = req.body;
 
   if (refreshToken) {
-    // Invalidate specific session
-    const sessionsResult = await query(
-      'SELECT id, refresh_token_hash FROM user_sessions WHERE user_id = $1',
-      [req.user.userId]
-    );
-
-    for (const session of sessionsResult.rows) {
-      const valid = await bcrypt.compare(refreshToken, session.refresh_token_hash);
-      if (valid) {
-        await query('DELETE FROM user_sessions WHERE id = $1', [session.id]);
-        break;
-      }
+    // Invalidate specific session using sha256 hash (Finding 34)
+    if (typeof refreshToken !== 'string') {
+      throw new AppError('Refresh token must be a string', 400);
     }
+    const tokenHash = hashRefreshToken(refreshToken);
+    await query(
+      'DELETE FROM user_sessions WHERE user_id = $1 AND refresh_token_hash = $2',
+      [req.user.userId, tokenHash]
+    );
   } else {
     // Invalidate all sessions for user
     await query('DELETE FROM user_sessions WHERE user_id = $1', [req.user.userId]);

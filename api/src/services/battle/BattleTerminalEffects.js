@@ -66,10 +66,14 @@ function aggregateRecords(records, readKey, compareKeys) {
  * Convert the exact reward input committed for a PvE victory into a compact,
  * canonical progression event. Aggregating here keeps the outbox payload
  * bounded and makes its identity independent of incidental unit/item order.
+ *
+ * Finding 41: Accept partyCharacterIds array so advancement progress applies
+ * to all party members with active quests, not just the leader.
  */
 export function buildPveTerminalProgressionPayload({
   battleId,
   partyLeaderId,
+  partyCharacterIds = null,
   rewardsData,
   isAdvancementBattle = false,
   challengerCharacterId = null
@@ -107,10 +111,17 @@ export function buildPveTerminalProgressionPayload({
     }
     : null;
 
+  // Finding 41: Include all party character IDs for advancement progress tracking
+  // Fallback to [partyLeaderId] if not provided (backward compatibility)
+  const effectivePartyIds = Array.isArray(partyCharacterIds) && partyCharacterIds.length > 0
+    ? partyCharacterIds.map(Number)
+    : [Number(partyLeaderId)];
+
   return validateBattleTerminalProgressionPayload({
     version: 1,
     kind: 'pve_victory',
     partyLeaderId: Number(partyLeaderId),
+    partyCharacterIds: effectivePartyIds,
     enemies,
     droppedItems,
     node,

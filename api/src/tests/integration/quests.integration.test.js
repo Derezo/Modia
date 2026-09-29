@@ -232,7 +232,8 @@ describe('Quests API Integration', () => {
         user.accessToken
       );
 
-      assert.strictEqual(response.status, 500, 'Should reject incomplete quest');
+      // Finding 40: Now correctly returns 409 (conflict) instead of 500 (server error)
+      assert.strictEqual(response.status, 409, 'Should reject incomplete quest with 409');
       assert.ok(response.body.error, 'Should have error message');
     });
 
@@ -330,6 +331,217 @@ describe('Quests API Integration', () => {
 
       const weeklyResult = await pool.query('SELECT get_weekly_period_start() as period_start');
       assert.ok(weeklyResult.rows[0].period_start, 'Should have weekly period start');
+    });
+  });
+
+  describe('Streak Calculation (Finding 37)', () => {
+    // These tests verify the streak calculation uses SQL date arithmetic
+    // to avoid timezone drift between JS Date and Postgres DATE.
+
+    it('should increment streak when last_login_date is yesterday', async () => {
+      const testUser = await ctx.createUser();
+      const testChar = await ctx.createCharacter(testUser.accessToken);
+
+      // Set up streak with last_login_date = yesterday, current_streak = 3
+      await pool.query(
+        `UPDATE character_login_streaks
+         SET last_login_date = CURRENT_DATE - 1,
+             current_streak = 3,
+             longest_streak = 3
+         WHERE character_id = $1`,
+        [testChar.id]
+      );
+
+      // Fetch daily quests to trigger refreshQuestsIfNeeded -> updateStreak
+      const response = await request('GET',
+        `/api/quests/daily/${testChar.id}`,
+        null,
+        testUser.accessToken
+      );
+
+      assert.strictEqual(response.status, 200, 'Should return 200');
+
+      // Verify streak was incremented
+      const streakResult = await pool.query(
+        'SELECT current_streak, longest_streak FROM character_login_streaks WHERE character_id = $1',
+        [testChar.id]
+      );
+      assert.strictEqual(streakResult.rows[0].current_streak, 4, 'Streak should be 4 (3 + 1)');
+      assert.strictEqual(streakResult.rows[0].longest_streak, 4, 'Longest streak should update to 4');
+    });
+
+    it('should start new character with streak of 1', async () => {
+      const testUser = await ctx.createUser();
+      const testChar = await ctx.createCharacter(testUser.accessToken);
+
+      // Remove any existing streak record to simulate first login
+      await pool.query(
+        'DELETE FROM character_login_streaks WHERE character_id = $1',
+        [testChar.id]
+      );
+
+      // Fetch daily quests to trigger streak creation
+      const response = await request('GET',
+        `/api/quests/daily/${testChar.id}`,
+        null,
+        testUser.accessToken
+      );
+
+      assert.strictEqual(response.status, 200, 'Should return 200');
+
+      // Verify streak is 1
+      const streakResult = await pool.query(
+        'SELECT current_streak, longest_streak FROM character_login_streaks WHERE character_id = $1',
+        [testChar.id]
+      );
+      assert.strictEqual(streakResult.rows[0].current_streak, 1, 'New character should have streak 1');
+      assert.strictEqual(streakResult.rows[0].longest_streak, 1, 'Longest streak should be 1');
+    });
+
+    it('should reset streak when last_login_date is more than 1 day ago', async () => {
+      const testUser = await ctx.createUser();
+      const testChar = await ctx.createCharacter(testUser.accessToken);
+
+      // Set up streak with last_login_date = 3 days ago, current_streak = 5
+      await pool.query(
+        `UPDATE character_login_streaks
+         SET last_login_date = CURRENT_DATE - 3,
+             current_streak = 5,
+             longest_streak = 10
+         WHERE character_id = $1`,
+        [testChar.id]
+      );
+
+      // Fetch daily quests to trigger streak update
+      const response = await request('GET',
+        `/api/quests/daily/${testChar.id}`,
+        null,
+        testUser.accessToken
+      );
+
+      assert.strictEqual(response.status, 200, 'Should return 200');
+
+      // Verify streak was reset to 1
+      const streakResult = await pool.query(
+        'SELECT current_streak, longest_streak FROM character_login_streaks WHERE character_id = $1',
+        [testChar.id]
+      );
+      assert.strictEqual(streakResult.rows[0].current_streak, 1, 'Streak should reset to 1');
+      assert.strictEqual(streakResult.rows[0].longest_streak, 10, 'Longest streak should be preserved');
+    });
+  });
+
+  describe('Visit Quest Deduplication (Finding 38 & 115)', () => {
+    // These tests verify that visit_nodes and visit_regions quests
+    // properly deduplicate progress using progress_data.
+
+    it('should not count revisiting the same node twice', async () => {
+      const testUser = await ctx.createUser();
+      const testChar = await ctx.createCharacter(testUser.accessToken);
+
+      // Get a visit_nodes quest
+      const questResult = await pool.query(
+        `SELECT cdq.id, cdq.current_progress, cdq.target_progress
+         FROM character_daily_quests cdq
+         JOIN daily_quest_templates dqt ON dqt.id = cdq.quest_template_id
+         WHERE cdq.character_id = $1
+           AND dqt.objective_type = 'visit_nodes'
+           AND cdq.is_completed = FALSE
+         LIMIT 1`,
+        [testChar.id]
+      );
+
+      if (questResult.rows.length === 0) {
+        // No visit_nodes quest assigned, skip test
+        return;
+      }
+
+      const quest = questResult.rows[0];
+      const initialProgress = quest.current_progress;
+
+      // Import dailyQuestService to call updateProgress directly
+      const dailyQuestService = await import('../../services/dailyQuestService.js');
+
+      // Visit node 999 for the first time
+      await dailyQuestService.updateProgress(testChar.id, 'visit_nodes', 1, {
+        nodeType: 'tavern',
+        nodeId: 999
+      });
+
+      // Check progress increased by 1
+      const afterFirst = await pool.query(
+        'SELECT current_progress, progress_data FROM character_daily_quests WHERE id = $1',
+        [quest.id]
+      );
+      assert.strictEqual(afterFirst.rows[0].current_progress, initialProgress + 1, 'Progress should increase by 1');
+      assert.ok(afterFirst.rows[0].progress_data?.visited_node_ids?.includes(999), 'Node 999 should be tracked');
+
+      // Visit node 999 again - should NOT increase progress
+      await dailyQuestService.updateProgress(testChar.id, 'visit_nodes', 1, {
+        nodeType: 'tavern',
+        nodeId: 999
+      });
+
+      const afterSecond = await pool.query(
+        'SELECT current_progress FROM character_daily_quests WHERE id = $1',
+        [quest.id]
+      );
+      assert.strictEqual(afterSecond.rows[0].current_progress, initialProgress + 1, 'Revisit should not increase progress');
+    });
+
+    it('should not count crossing the same region border multiple times', async () => {
+      const testUser = await ctx.createUser();
+      const testChar = await ctx.createCharacter(testUser.accessToken);
+
+      // Get a visit_regions quest
+      const questResult = await pool.query(
+        `SELECT cdq.id, cdq.current_progress, cdq.target_progress
+         FROM character_daily_quests cdq
+         JOIN daily_quest_templates dqt ON dqt.id = cdq.quest_template_id
+         WHERE cdq.character_id = $1
+           AND dqt.objective_type = 'visit_regions'
+           AND cdq.is_completed = FALSE
+         LIMIT 1`,
+        [testChar.id]
+      );
+
+      if (questResult.rows.length === 0) {
+        // No visit_regions quest assigned, skip test
+        return;
+      }
+
+      const quest = questResult.rows[0];
+      const initialProgress = quest.current_progress;
+
+      // Import dailyQuestService
+      const dailyQuestService = await import('../../services/dailyQuestService.js');
+
+      // Visit region 1 for the first time
+      await dailyQuestService.updateProgress(testChar.id, 'visit_regions', 1, {
+        regionId: 1
+      });
+
+      // Check progress increased
+      const afterFirst = await pool.query(
+        'SELECT current_progress, progress_data FROM character_daily_quests WHERE id = $1',
+        [quest.id]
+      );
+      assert.strictEqual(afterFirst.rows[0].current_progress, initialProgress + 1, 'Progress should increase by 1');
+      assert.ok(afterFirst.rows[0].progress_data?.visited_region_ids?.includes(1), 'Region 1 should be tracked');
+
+      // Cross back and forth 5 times - should NOT give +5
+      for (let i = 0; i < 5; i++) {
+        await dailyQuestService.updateProgress(testChar.id, 'visit_regions', 1, {
+          regionId: 1
+        });
+      }
+
+      const afterMany = await pool.query(
+        'SELECT current_progress FROM character_daily_quests WHERE id = $1',
+        [quest.id]
+      );
+      // Progress should still be initialProgress + 1 (not +6)
+      assert.strictEqual(afterMany.rows[0].current_progress, initialProgress + 1, 'Border crossing should not count multiple times');
     });
   });
 });

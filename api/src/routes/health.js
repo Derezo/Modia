@@ -1,4 +1,5 @@
 import express from 'express';
+import { createRequire } from 'node:module';
 import { pool } from '../config/database.js';
 import { connections, rooms } from '../websocket/index.js';
 import { isRedisConfigured, isRedisConnected, pingRedis } from '../config/redis.js';
@@ -12,7 +13,9 @@ import { getMetricsSnapshot as getWebSocketMetricsSnapshot } from '../websocket/
 
 const router = express.Router();
 
-const VERSION = '1.0.0';
+// Finding 36: Read version from root package.json instead of hardcoding
+const require = createRequire(import.meta.url);
+const VERSION = process.env.APP_VERSION || require('../../../package.json').version;
 const startTime = Date.now();
 
 // Request tracking for metrics

@@ -15,6 +15,7 @@ import express from 'express';
 import { query } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
+import { parseIntOrThrow } from '../utils/validateNumericParam.js';
 import * as questService from '../services/advancementQuestService.js';
 import * as guildmasterBattleService from '../services/guildmasterBattleService.js';
 import * as battleService from '../services/battleService.js';
@@ -175,9 +176,12 @@ router.get('/current/:characterId', authenticate, readLimiter, asyncHandler(veri
 router.post('/accept', authenticate, actionLimiter, asyncHandler(async (req, res) => {
   const { characterId, questTemplateId, nodeId } = req.body;
 
+  // Finding 44: Validate numeric inputs to prevent 500 from pg errors
   if (!characterId || !questTemplateId) {
     throw new AppError('characterId and questTemplateId are required', 400);
   }
+  const parsedCharacterId = parseIntOrThrow(characterId, 'characterId');
+  const parsedQuestTemplateId = parseIntOrThrow(questTemplateId, 'questTemplateId');
   const nodeIdError = questService.getAdvancementNodeIdError(nodeId);
   if (nodeIdError) {
     throw new AppError(nodeIdError, 400);
@@ -186,7 +190,7 @@ router.post('/accept', authenticate, actionLimiter, asyncHandler(async (req, res
   // Verify ownership
   const charResult = await query(
     'SELECT id, user_id, name FROM characters WHERE id = $1',
-    [characterId]
+    [parsedCharacterId]
   );
 
   if (charResult.rows.length === 0) {
@@ -199,8 +203,8 @@ router.post('/accept', authenticate, actionLimiter, asyncHandler(async (req, res
 
   try {
     const result = await questService.acceptQuest(
-      characterId,
-      questTemplateId,
+      parsedCharacterId,
+      parsedQuestTemplateId,
       nodeId
     );
 
@@ -257,9 +261,11 @@ router.post('/boss/start', authenticate, startLimiter, asyncHandler(async (req, 
   const { characterId, nodeId } = req.body;
   const battleMapCapabilities = readAdvancementBattleMapCapabilities(req);
 
+  // Finding 44: Validate numeric input
   if (!characterId) {
     throw new AppError('characterId is required', 400);
   }
+  const parsedCharacterId = parseIntOrThrow(characterId, 'characterId');
   const nodeIdError = questService.getAdvancementNodeIdError(nodeId);
   if (nodeIdError) {
     throw new AppError(nodeIdError, 400);
@@ -270,7 +276,7 @@ router.post('/boss/start', authenticate, startLimiter, asyncHandler(async (req, 
     `SELECT id, user_id, name, class, level, current_node_id
      FROM characters
      WHERE id = $1`,
-    [characterId]
+    [parsedCharacterId]
   );
 
   if (charResult.rows.length === 0) {
@@ -284,7 +290,7 @@ router.post('/boss/start', authenticate, startLimiter, asyncHandler(async (req, 
   const character = charResult.rows[0];
 
   // Check eligibility
-  const eligibility = await questService.canStartBossTrial(characterId);
+  const eligibility = await questService.canStartBossTrial(parsedCharacterId);
 
   if (!eligibility.eligible) {
     throw new AppError(eligibility.reason, 400);
@@ -315,7 +321,7 @@ router.post('/boss/start', authenticate, startLimiter, asyncHandler(async (req, 
       clientCapabilities: battleMapCapabilities
     };
     battleConfig = await guildmasterBattleService.generateGuildmasterBattle(
-      { id: characterId, level: character.level || 10 },
+      { id: parsedCharacterId, level: character.level || 10 },
       targetClass,
       nodeId,
       {
@@ -368,7 +374,7 @@ router.post('/boss/start', authenticate, startLimiter, asyncHandler(async (req, 
     success: true,
     message: `Boss trial against ${battleConfig.guildmaster.name} has begun!`,
     battleId,
-    characterId,
+    characterId: parsedCharacterId,
     targetClass,
     mapSeed: battleConfig.mapSeed,
     mapWidth: battleEnvelope.mapWidth,

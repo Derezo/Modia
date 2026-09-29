@@ -11,7 +11,7 @@
 
 import bcrypt from 'bcrypt';
 import { withTransaction } from '../config/database.js';
-import { generateAccessToken, generateRefreshToken } from '../config/jwt.js';
+import { generateAccessToken, generateRefreshToken, hashRefreshToken } from '../config/jwt.js';
 import { calculateStats, STARTING_EXPERIENCE, RACES, CLASSES, GENDERS } from '../config/constants.js';
 import { STARTING_GOLD } from '../config/constants.js';
 import { STARTING_CONSUMABLES } from '../../../shared/constants.js';
@@ -20,6 +20,28 @@ import { validateCharacterNameResult } from '../utils/nameValidation.js';
 import { AppError } from '../middleware/errorHandler.js';
 
 const SALT_ROUNDS = 12;
+
+/**
+ * Validates a password meets security requirements.
+ * @param {string} password - The password to validate
+ * @throws {AppError} 400 error if validation fails
+ *
+ * Finding 35: bcrypt silently truncates input at 72 bytes, so a password
+ * longer than 72 UTF-8 bytes would have its suffix ignored. Reject such
+ * passwords at registration with a clear error.
+ */
+export function validatePassword(password) {
+  if (typeof password !== 'string') {
+    throw new AppError('Password must be a string', 400);
+  }
+  if (password.length < 8) {
+    throw new AppError('Password must be at least 8 characters', 400);
+  }
+  const byteLength = Buffer.byteLength(password, 'utf8');
+  if (byteLength > 72) {
+    throw new AppError('Password exceeds maximum length (72 bytes)', 400);
+  }
+}
 
 // Starter equipment by class (weapon, armor, accessory)
 const STARTER_EQUIPMENT = {
@@ -60,13 +82,11 @@ function validateInput({ username, email, password, characterName, race, charact
     throw new AppError('Invalid email format', 400);
   }
 
-  // Password validation
-  if (!password || typeof password !== 'string') {
+  // Password validation (Finding 35: bcrypt truncates at 72 bytes)
+  if (!password) {
     throw new AppError('Password is required', 400);
   }
-  if (password.length < 8) {
-    throw new AppError('Password must be at least 8 characters', 400);
-  }
+  validatePassword(password);
 
   // Character name validation (defense-in-depth for XSS prevention)
   const nameResult = validateCharacterNameResult(characterName);
@@ -249,8 +269,8 @@ export async function registerUserWithCharacter({
     const accessToken = generateAccessToken(user.id, user.username);
     const refreshToken = generateRefreshToken(user.id);
 
-    // Store refresh token hash in session
-    const refreshTokenHash = await bcrypt.hash(refreshToken, SALT_ROUNDS);
+    // Store sha256 hash of refresh token (Finding 34: bcrypt truncates JWTs)
+    const refreshTokenHash = hashRefreshToken(refreshToken);
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
     await client.query(

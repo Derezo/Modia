@@ -53,6 +53,18 @@ function requireArray(value, name) {
   return value;
 }
 
+function normalizePartyCharacterIds(payload) {
+  // Finding 41: Accept partyCharacterIds for advancement progress on all party members
+  // Fallback to [partyLeaderId] for backward compatibility with older outbox rows
+  if (payload.partyCharacterIds === null || payload.partyCharacterIds === undefined) {
+    return null; // Will use fallback in applyMutations
+  }
+  const ids = requireArray(payload.partyCharacterIds, 'payload.partyCharacterIds');
+  return ids.map((id, index) =>
+    requirePositiveInteger(id, `payload.partyCharacterIds[${index}]`)
+  );
+}
+
 function normalizePvePayload(payload) {
   const enemies = requireArray(payload.enemies, 'payload.enemies').map(
     (enemy, index) => {
@@ -107,13 +119,18 @@ function normalizePvePayload(payload) {
     };
   }
 
+  const partyLeaderId = requirePositiveInteger(
+    payload.partyLeaderId,
+    'payload.partyLeaderId'
+  );
+  const partyCharacterIds = normalizePartyCharacterIds(payload);
+
   return {
     version: 1,
     kind: 'pve_victory',
-    partyLeaderId: requirePositiveInteger(
-      payload.partyLeaderId,
-      'payload.partyLeaderId'
-    ),
+    partyLeaderId,
+    // Finding 41: Include partyCharacterIds, fallback to [partyLeaderId]
+    partyCharacterIds: partyCharacterIds || [partyLeaderId],
     enemies,
     droppedItems,
     node,
@@ -185,41 +202,49 @@ export function createBattleTerminalProgression({
       return { kind: payload.kind, advancementComplete: null };
     }
 
-    for (const [enemyType, count] of aggregateBy(
-      payload.enemies,
-      'type',
-      'count'
-    )) {
-      await advancementQuests.updateEnemyProgressWithClient(
-        client,
-        payload.partyLeaderId,
-        enemyType,
-        count
-      );
+    // Finding 41: Apply advancement quest progress to ALL party members, not just leader.
+    // Each party member may have an active advancement quest that should progress.
+    // The update functions are idempotent for characters without active quests.
+    const partyIds = payload.partyCharacterIds || [payload.partyLeaderId];
+
+    for (const characterId of partyIds) {
+      for (const [enemyType, count] of aggregateBy(
+        payload.enemies,
+        'type',
+        'count'
+      )) {
+        await advancementQuests.updateEnemyProgressWithClient(
+          client,
+          characterId,
+          enemyType,
+          count
+        );
+      }
+
+      if (payload.node) {
+        await advancementQuests.updateNodeProgressWithClient(
+          client,
+          characterId,
+          payload.node.id,
+          payload.node.type
+        );
+      }
+
+      for (const [templateId, quantity] of aggregateBy(
+        payload.droppedItems,
+        'templateId',
+        'quantity'
+      )) {
+        await advancementQuests.updateMaterialProgressWithClient(
+          client,
+          characterId,
+          templateId,
+          quantity
+        );
+      }
     }
 
-    if (payload.node) {
-      await advancementQuests.updateNodeProgressWithClient(
-        client,
-        payload.partyLeaderId,
-        payload.node.id,
-        payload.node.type
-      );
-    }
-
-    for (const [templateId, quantity] of aggregateBy(
-      payload.droppedItems,
-      'templateId',
-      'quantity'
-    )) {
-      await advancementQuests.updateMaterialProgressWithClient(
-        client,
-        payload.partyLeaderId,
-        templateId,
-        quantity
-      );
-    }
-
+    // Daily quest updates still go to the party leader only
     const dailyUpdates = [
       ['kill_enemies', payload.enemies.reduce((sum, enemy) => sum + enemy.count, 0), {}],
       ['complete_battles', 1, { tier: payload.difficultyTier }]

@@ -206,6 +206,36 @@ describe('Auth API', () => {
 
       assert.strictEqual(res.status, 400);
     });
+
+    it('should invalidate old token after rotation (reuse detection)', async () => {
+      // Create a fresh user for this test to avoid affecting other tests
+      const username = uniqueUsername();
+      const email = uniqueEmail();
+
+      const regRes = await request('POST', '/api/auth/register', {
+        username,
+        email,
+        password: 'TestPassword123!'
+      });
+      assert.strictEqual(regRes.status, 201);
+      if (regRes.body?.user?.id) createdUserIds.push(regRes.body.user.id);
+
+      const originalToken = regRes.body.refreshToken;
+
+      // Rotate the token
+      const refreshRes = await request('POST', '/api/auth/refresh', {
+        refreshToken: originalToken
+      });
+      assert.strictEqual(refreshRes.status, 200);
+      assert.ok(refreshRes.body.refreshToken);
+      assert.notStrictEqual(refreshRes.body.refreshToken, originalToken);
+
+      // Attempt to reuse the original token - should fail
+      const reuseRes = await request('POST', '/api/auth/refresh', {
+        refreshToken: originalToken
+      });
+      assert.strictEqual(reuseRes.status, 401, 'Rotated-out token should be rejected');
+    });
   });
 
   describe('GET /api/auth/me', () => {

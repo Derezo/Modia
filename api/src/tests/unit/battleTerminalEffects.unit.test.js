@@ -45,6 +45,7 @@ describe('battle terminal effect payloads', () => {
       version: 1,
       kind: 'pve_victory',
       partyLeaderId: 7,
+      partyCharacterIds: [7],
       enemies: [
         { type: 'bandit', count: 1 },
         { type: 'wolf', count: 2 }

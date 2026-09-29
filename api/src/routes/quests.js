@@ -196,7 +196,16 @@ router.post('/:questId/claim', authenticate, questClaimLimiter, asyncHandler(asy
 
   const reward = await dailyQuestService.claimReward(questId, parsedCharacterId);
 
-  // Get updated user gold
+  // Finding 39: Check and grant completion bonus after single quest claims too
+  // grantCompletionBonus is idempotent (checks character_completion_bonuses table)
+  let completionBonus = null;
+  try {
+    completionBonus = await dailyQuestService.grantCompletionBonus(parsedCharacterId);
+  } catch (err) {
+    console.warn('[Quest] Completion bonus check failed:', err.message);
+  }
+
+  // Get updated user gold (after potential completion bonus)
   const goldResult = await pool.query(
     'SELECT gold FROM users WHERE id = $1',
     [req.user.userId]
@@ -205,6 +214,7 @@ router.post('/:questId/claim', authenticate, questClaimLimiter, asyncHandler(asy
   res.json({
     success: true,
     reward,
+    completionBonus,
     newGold: goldResult.rows[0].gold
   });
 }));

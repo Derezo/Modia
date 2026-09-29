@@ -10,6 +10,7 @@
 
 import { query, withTransaction } from '../config/database.js';
 import { MAX_GOLD, MAX_XP } from '../config/constants.js';
+import { AppError } from '../middleware/errorHandler.js';
 
 // Constants
 const DAILY_QUEST_COUNT = 3;
@@ -42,8 +43,9 @@ export async function refreshQuestsIfNeeded(characterId) {
     [characterId]
   );
 
+  // Finding 40: Use AppError with proper status code
   if (charResult.rows.length === 0) {
-    throw new Error('Character not found');
+    throw new AppError('Character not found', 404);
   }
 
   const { level, user_id: userId } = charResult.rows[0];
@@ -55,6 +57,9 @@ export async function refreshQuestsIfNeeded(characterId) {
   );
 
   if (needsDaily.rows[0].needs_refresh) {
+    // Finding 37: Update streak BEFORE assignQuests, because assignQuests
+    // sets last_login_date = CURRENT_DATE which makes updateStreak see daysDiff=0
+    await updateStreak(characterId);
     result.dailyQuests = await assignQuests(characterId, userId, level, 'daily');
     result.dailyRefreshed = true;
   }
@@ -68,11 +73,6 @@ export async function refreshQuestsIfNeeded(characterId) {
   if (needsWeekly.rows[0].needs_refresh) {
     result.weeklyQuests = await assignQuests(characterId, userId, level, 'weekly');
     result.weeklyRefreshed = true;
-  }
-
-  // Update streak
-  if (result.dailyRefreshed) {
-    await updateStreak(characterId);
   }
 
   return result;
@@ -174,12 +174,13 @@ async function assignQuests(characterId, userId, level, period) {
   }
 
   // Update last reset timestamp
+  // Finding 37: Do NOT update last_login_date here - updateStreak is the only writer
+  // to prevent daysDiff calculation from seeing today's date before the streak increments
   await query(
-    `INSERT INTO character_login_streaks (character_id, last_login_date, ${period === 'daily' ? 'last_daily_reset' : 'last_weekly_reset'})
-     VALUES ($1, CURRENT_DATE, NOW())
+    `INSERT INTO character_login_streaks (character_id, ${period === 'daily' ? 'last_daily_reset' : 'last_weekly_reset'})
+     VALUES ($1, NOW())
      ON CONFLICT (character_id) DO UPDATE SET
-       ${period === 'daily' ? 'last_daily_reset' : 'last_weekly_reset'} = NOW(),
-       last_login_date = CURRENT_DATE`,
+       ${period === 'daily' ? 'last_daily_reset' : 'last_weekly_reset'} = NOW()`,
     [characterId]
   );
 
@@ -298,6 +299,11 @@ export async function updateProgress(characterId, objectiveType, amount = 1, met
  * Transaction-aware progress update used by durable terminal effects.
  * The caller owns the client lifecycle. Notifications can be disabled so no
  * non-transactional work is published before the transaction commits.
+ *
+ * Finding 38 & 115: For visit_nodes and visit_regions objective types, this function
+ * now tracks visited node/region IDs in progress_data to prevent counting revisits.
+ * 'Visit N different nodes' and 'Visit all 5 regions' quests now require actually
+ * visiting distinct locations.
  */
 export async function updateProgressWithClient(
   client,
@@ -315,6 +321,7 @@ export async function updateProgressWithClient(
   const questsResult = await client.query(
     `SELECT cdq.id, cdq.current_progress, cdq.target_progress, cdq.is_completed,
             cdq.quest_template_id, cdq.period, cdq.period_start,
+            cdq.progress_data,
             dqt.objective_requirements
      FROM character_daily_quests cdq
      JOIN daily_quest_templates dqt ON dqt.id = cdq.quest_template_id
@@ -332,17 +339,50 @@ export async function updateProgressWithClient(
       continue;
     }
 
-    const newProgress = Math.min(quest.current_progress + amount, quest.target_progress);
+    // Finding 38 & 115: Deduplicate visit_nodes and visit_regions progress
+    let effectiveAmount = amount;
+    let updatedProgressData = quest.progress_data || {};
+
+    if (objectiveType === 'visit_nodes' && metadata.nodeId) {
+      const visitedIds = updatedProgressData.visited_node_ids || [];
+      if (visitedIds.includes(metadata.nodeId)) {
+        // Already visited this node during this quest period - skip
+        continue;
+      }
+      // Add to visited set
+      updatedProgressData = {
+        ...updatedProgressData,
+        visited_node_ids: [...visitedIds, metadata.nodeId]
+      };
+      // Progress = distinct count, so always +1 for a new node
+      effectiveAmount = 1;
+    } else if (objectiveType === 'visit_regions' && metadata.regionId) {
+      const visitedIds = updatedProgressData.visited_region_ids || [];
+      if (visitedIds.includes(metadata.regionId)) {
+        // Already visited this region during this quest period - skip
+        continue;
+      }
+      // Add to visited set
+      updatedProgressData = {
+        ...updatedProgressData,
+        visited_region_ids: [...visitedIds, metadata.regionId]
+      };
+      // Progress = distinct count, so always +1 for a new region
+      effectiveAmount = 1;
+    }
+
+    const newProgress = Math.min(quest.current_progress + effectiveAmount, quest.target_progress);
     const completed = newProgress >= quest.target_progress;
 
-    // Update progress
+    // Update progress and progress_data
     await client.query(
       `UPDATE character_daily_quests
        SET current_progress = $1,
            is_completed = $2,
+           progress_data = $3,
            completed_at = CASE WHEN $2 AND completed_at IS NULL THEN NOW() ELSE completed_at END
-       WHERE id = $3`,
-      [newProgress, completed, quest.id]
+       WHERE id = $4`,
+      [newProgress, completed, updatedProgressData, quest.id]
     );
 
     // If completed, try to claim First Blood and send notification
@@ -469,18 +509,19 @@ export async function claimReward(questId, characterId) {
       [questId, characterId]
     );
 
+    // Finding 40: Use AppError with proper status codes
     if (questResult.rows.length === 0) {
-      throw new Error('Quest not found');
+      throw new AppError('Quest not found', 404);
     }
 
     const quest = questResult.rows[0];
 
     if (!quest.is_completed) {
-      throw new Error('Quest not completed');
+      throw new AppError('Quest not completed', 409);
     }
 
     if (quest.rewards_claimed) {
-      throw new Error('Rewards already claimed');
+      throw new AppError('Rewards already claimed', 409);
     }
 
     const baseRewards = quest.rewards;
@@ -677,8 +718,9 @@ async function checkCompletionBonus(client, characterId) {
 
 /**
  * Grant Completion Bonus (called after claiming all daily quests)
+ * Finding 39: Exported so single-claim routes can call it too
  */
-async function grantCompletionBonus(characterId) {
+export async function grantCompletionBonus(characterId) {
   return withTransaction(async (client) => {
     // Check if all daily quests are completed and claimed
     const checkResult = await client.query(
@@ -800,17 +842,24 @@ export async function getStreakInfo(characterId) {
 
 /**
  * Update streak on login
+ *
+ * Finding 37 fix: Compute days_diff in SQL using (CURRENT_DATE - last_login_date)
+ * to avoid timezone drift between JS Date and Postgres DATE when the API
+ * process TZ differs from the database timezone.
  */
 async function updateStreak(characterId) {
+  // Compute the day difference in SQL to avoid JS/DB timezone mismatch.
+  // CURRENT_DATE and last_login_date are both DATE types in the DB timezone.
   const result = await query(
-    `SELECT current_streak, longest_streak, last_login_date
+    `SELECT current_streak, longest_streak,
+            (CURRENT_DATE - last_login_date) AS days_diff
      FROM character_login_streaks
      WHERE character_id = $1`,
     [characterId]
   );
 
   if (result.rows.length === 0) {
-    // First login - create record
+    // First login - create record with streak 1
     await query(
       `INSERT INTO character_login_streaks (character_id, current_streak, longest_streak, last_login_date)
        VALUES ($1, 1, 1, CURRENT_DATE)`,
@@ -819,23 +868,18 @@ async function updateStreak(characterId) {
     return;
   }
 
-  const { current_streak, longest_streak, last_login_date } = result.rows[0];
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const lastLogin = new Date(last_login_date);
-  lastLogin.setHours(0, 0, 0, 0);
+  const { current_streak, longest_streak, days_diff } = result.rows[0];
 
-  const daysDiff = Math.floor((today - lastLogin) / (1000 * 60 * 60 * 24));
-
+  // days_diff is an integer: 0 = same day, 1 = consecutive, >1 or null = broken
   let newStreak;
-  if (daysDiff === 0) {
-    // Same day - no change
+  if (days_diff <= 0) {
+    // Same day or future date (clock skew) - no change
     return;
-  } else if (daysDiff === 1) {
+  } else if (days_diff === 1) {
     // Consecutive day - increment streak
     newStreak = current_streak + 1;
   } else {
-    // Streak broken
+    // Streak broken (missed a day or more)
     newStreak = 1;
   }
 

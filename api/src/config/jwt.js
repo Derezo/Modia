@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import crypto from 'node:crypto';
 
 // Security: Fail startup if JWT secrets are not set in production
 const isProduction = process.env.NODE_ENV === 'production';
@@ -34,10 +35,21 @@ const generateAccessToken = (userId, username) => {
 
 const generateRefreshToken = (userId) => {
   return jwt.sign(
-    { userId, type: 'refresh' },
+    { userId, type: 'refresh', jti: crypto.randomUUID() },
     JWT_REFRESH_SECRET,
     { expiresIn: JWT_REFRESH_EXPIRES_IN }
   );
+};
+
+/**
+ * Create a sha256 hash of a refresh token for secure storage.
+ * Unlike bcrypt, sha256 considers the full token, so refresh tokens
+ * with different iat/exp/jti claims produce different hashes.
+ * @param {string} token - The refresh token to hash
+ * @returns {string} Hex-encoded sha256 hash
+ */
+const hashRefreshToken = (token) => {
+  return crypto.createHash('sha256').update(token).digest('hex');
 };
 
 const verifyAccessToken = (token) => {
@@ -53,6 +65,7 @@ export {
   JWT_REFRESH_SECRET,
   generateAccessToken,
   generateRefreshToken,
+  hashRefreshToken,
   verifyAccessToken,
   verifyRefreshToken
 };
