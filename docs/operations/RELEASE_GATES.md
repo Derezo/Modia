@@ -35,6 +35,9 @@ deploying the release it names. Code defects live in `FINDINGS_OUTSIDE_SCOPE.md`
 ## Standing
 
 - **External uptime monitoring for `https://modia.mittonvillage.com/api/health`.** The
-  2026-05-07 outage ran 8 days undetected. `lsd` now installs the `pm2-modia` systemd unit
-  on every deploy, but nothing alerts on downtime.
+  v0.5.3 deploy created the `modia-health` monitor through `lsd`. Confirm it alerts a
+  human (not just logs) before relying on it.
   *Owner:* operator.
+- **Production requires `CORS_ORIGINS`.** The API refuses to start with
+  `NODE_ENV=production` when it is unset. It lives in lsd-vault (`lsd secrets ls modia`)
+  and is declared in the local `deploy.yaml`. The v0.5.2 deploy failed on exactly this.
