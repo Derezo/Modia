@@ -216,7 +216,8 @@ router.delete('/:postId', authenticate, asyncHandler(async (req, res) => {
  */
 router.post('/:postId/apply', authenticate, asyncHandler(async (req, res) => {
   const { postId } = req.params;
-  const { message } = req.body;
+  // Same rule as the post's own description: optional, string, <= 256, no markup
+  const message = validateFreeText(req.body.message, { label: 'Message', max: 256 });
 
   const postIdInt = parseInt(postId, 10);
   if (isNaN(postIdInt)) {
@@ -269,7 +270,7 @@ router.post('/:postId/apply', authenticate, asyncHandler(async (req, res) => {
     applicantId: req.user.userId,
     applicantUsername: req.user.username,
     applicantCharacter: applicantChar,
-    message: message ? message.substring(0, 256) : null
+    message
   };
 
   await query(
@@ -279,7 +280,7 @@ router.post('/:postId/apply', authenticate, asyncHandler(async (req, res) => {
       post.user_id,
       'lfg_application',
       `${req.user.username} wants to join your group`,
-      message ? message.substring(0, 256) : `${req.user.username} applied to join "${post.title}"`,
+      message ?? `${req.user.username} applied to join "${post.title}"`,
       JSON.stringify(notificationPayload)
     ]
   );
@@ -290,7 +291,7 @@ router.post('/:postId/apply', authenticate, asyncHandler(async (req, res) => {
     payload: {
       type: 'lfg_application',
       title: `${req.user.username} wants to join your group`,
-      message: message ? message.substring(0, 256) : `${req.user.username} applied to join "${post.title}"`,
+      message: message ?? `${req.user.username} applied to join "${post.title}"`,
       ...notificationPayload
     }
   });

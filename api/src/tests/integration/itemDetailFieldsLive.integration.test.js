@@ -127,4 +127,41 @@ describe('item detail fields and potion use (live)', () => {
     );
     assert.equal(remaining.rows[0].quantity, 1);
   });
+
+  it('rejects a non-numeric sell itemInstanceId with 400', async () => {
+    const res = await request(
+      'POST',
+      `/api/shops/${shopNodeId}/${shopType}/sell`,
+      { itemInstanceId: 'abc', quantity: 1 },
+      user.accessToken
+    );
+    assert.equal(res.status, 400, JSON.stringify(res.body));
+  });
+
+  it('caravan purchase of an unknown item is a 404 service error, not a raw 400', async () => {
+    const caravan = await query(
+      "SELECT id FROM world_nodes WHERE node_type = 'merchant_caravan' ORDER BY id LIMIT 1"
+    );
+    if (caravan.rows.length === 0) return; // world without a caravan
+    const caravanNodeId = caravan.rows[0].id;
+    await query(
+      'UPDATE characters SET current_node_id = $1 WHERE id = $2',
+      [caravanNodeId, character.id]
+    );
+    try {
+      const res = await request(
+        'POST',
+        `/api/shops/${caravanNodeId}/caravan/buy`,
+        { itemId: 'no_such_caravan_item', quantity: 1 },
+        user.accessToken
+      );
+      assert.equal(res.status, 404, JSON.stringify(res.body));
+      assert.equal(res.body.error, 'Item not available at this caravan');
+    } finally {
+      await query(
+        'UPDATE characters SET current_node_id = $1 WHERE id = $2',
+        [shopNodeId, character.id]
+      );
+    }
+  });
 });

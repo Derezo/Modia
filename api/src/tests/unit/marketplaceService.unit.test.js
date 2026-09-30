@@ -618,6 +618,25 @@ describe('escrowItems (mock)', () => {
     // Should delete instead of update when quantity matches
     assert.ok(calls.some(c => c.sql.includes('DELETE FROM character_items')));
   });
+
+  test('only escrows rows without per-unit modifications', async () => {
+    const { escrowItems, UNMODIFIED_ITEM_ROW_SQL } =
+      await import('../../services/marketplace/escrow.js');
+
+    const calls = [];
+    const client = {
+      query: async (sql, params) => {
+        calls.push({ sql, params });
+        if (sql.includes('SELECT id, quantity')) return { rows: [{ id: 1, quantity: 5 }] };
+        return { rowCount: 1 };
+      }
+    };
+
+    await escrowItems(client, 1, 100, 1, 10, 5);
+
+    const lockQuery = calls.find(c => c.sql.includes('SELECT id, quantity'));
+    assert.ok(lockQuery.sql.includes(UNMODIFIED_ITEM_ROW_SQL));
+  });
 });
 
 describe('releaseEscrowedItems (mock)', () => {
@@ -631,8 +650,8 @@ describe('releaseEscrowedItems (mock)', () => {
       'SELECT user_id FROM market_orders': {
         rows: [{ user_id: 100 }]
       },
-      'SELECT item_type FROM item_templates': {
-        rows: [{ item_type: 'consumable' }]
+      'SELECT is_stackable FROM item_templates': {
+        rows: [{ is_stackable: true }]
       },
       'SELECT id, quantity FROM character_items': {
         rows: []
@@ -680,8 +699,8 @@ describe('executeTrade (mock)', () => {
         if (sql.includes('SELECT user_id, item_template_id FROM market_orders')) {
           return { rows: [{ user_id: 100, item_template_id: 10 }] };
         }
-        if (sql.includes('SELECT item_type FROM item_templates')) {
-          return { rows: [{ item_type: 'weapon' }] };
+        if (sql.includes('SELECT is_stackable FROM item_templates')) {
+          return { rows: [{ is_stackable: false }] };
         }
         return { rows: [], rowCount: 1 };
       }
@@ -716,8 +735,8 @@ describe('executeTrade (mock)', () => {
         if (sql.includes('SELECT user_id, item_template_id FROM market_orders')) {
           return { rows: [{ user_id: 100, item_template_id: 10 }] };
         }
-        if (sql.includes('SELECT item_type FROM item_templates')) {
-          return { rows: [{ item_type: 'weapon' }] };
+        if (sql.includes('SELECT is_stackable FROM item_templates')) {
+          return { rows: [{ is_stackable: false }] };
         }
         return { rows: [], rowCount: 1 };
       }
@@ -751,8 +770,8 @@ describe('executeTrade (mock)', () => {
         if (sql.includes('SELECT user_id, item_template_id FROM market_orders')) {
           return { rows: [{ user_id: 100, item_template_id: 10 }] };
         }
-        if (sql.includes('SELECT item_type FROM item_templates')) {
-          return { rows: [{ item_type: 'weapon' }] };
+        if (sql.includes('SELECT is_stackable FROM item_templates')) {
+          return { rows: [{ is_stackable: false }] };
         }
         return { rows: [], rowCount: 1 };
       }
@@ -961,8 +980,8 @@ describe('cancelOrder (mock)', () => {
         if (sql.includes('SELECT character_id, item_template_id, quantity FROM item_escrow')) {
           return { rows: [{ character_id: 1, item_template_id: 10, quantity: 3 }] };
         }
-        if (sql.includes('SELECT item_type FROM item_templates')) {
-          return { rows: [{ item_type: 'weapon' }] };
+        if (sql.includes('SELECT is_stackable FROM item_templates')) {
+          return { rows: [{ is_stackable: false }] };
         }
         if (sql.includes('SELECT name FROM item_templates')) {
           return { rows: [{ name: 'Test Sword' }] };
@@ -1044,8 +1063,8 @@ describe('addItemToUser (mock)', () => {
     const client = {
       query: async (sql, params) => {
         calls.push({ sql, params });
-        if (sql.includes('SELECT item_type FROM item_templates')) {
-          return { rows: [{ item_type: 'consumable' }] };
+        if (sql.includes('SELECT is_stackable FROM item_templates')) {
+          return { rows: [{ is_stackable: true }] };
         }
         if (sql.includes('SELECT id, quantity FROM character_items') && sql.includes('user_id')) {
           return { rows: [{ id: 1, quantity: 5 }] };
@@ -1068,8 +1087,8 @@ describe('addItemToUser (mock)', () => {
     const client = {
       query: async (sql, params) => {
         calls.push({ sql, params });
-        if (sql.includes('SELECT item_type FROM item_templates')) {
-          return { rows: [{ item_type: 'consumable' }] };
+        if (sql.includes('SELECT is_stackable FROM item_templates')) {
+          return { rows: [{ is_stackable: true }] };
         }
         if (sql.includes('SELECT id, quantity FROM character_items')) {
           return { rows: [] };
@@ -1091,8 +1110,8 @@ describe('addItemToUser (mock)', () => {
     const client = {
       query: async (sql, params) => {
         calls.push({ sql, params });
-        if (sql.includes('SELECT item_type FROM item_templates')) {
-          return { rows: [{ item_type: 'weapon' }] };
+        if (sql.includes('SELECT is_stackable FROM item_templates')) {
+          return { rows: [{ is_stackable: false }] };
         }
         return { rows: [], rowCount: 1 };
       }
@@ -1103,6 +1122,70 @@ describe('addItemToUser (mock)', () => {
     // Should create 3 separate entries
     const inserts = calls.filter(c => c.sql.includes('INSERT INTO character_items'));
     assert.strictEqual(inserts.length, 3);
+  });
+
+  test('takes stackability from item_templates.is_stackable, not item_type', async () => {
+    const { addItemToUser } = await import('../../services/marketplaceService.js');
+
+    const calls = [];
+    const client = {
+      query: async (sql, params) => {
+        calls.push({ sql, params });
+        if (sql.includes('FROM item_templates')) {
+          // A material template flagged non-stackable must not be merged
+          return { rows: [{ item_type: 'material', is_stackable: false }] };
+        }
+        if (sql.includes('SELECT id, quantity FROM character_items')) {
+          return { rows: [{ id: 1, quantity: 5 }] };
+        }
+        return { rows: [], rowCount: 1 };
+      }
+    };
+
+    await addItemToUser(client, 100, 10, 2);
+
+    assert.ok(calls[0].sql.includes('is_stackable'));
+    assert.ok(!calls.some(c => c.sql.includes('UPDATE character_items SET quantity')));
+    const inserts = calls.filter(c => c.sql.includes('INSERT INTO character_items'));
+    assert.strictEqual(inserts.length, 2);
+  });
+
+  test('never stacks onto a row that carries modifications', async () => {
+    const { addItemToUser, UNMODIFIED_ITEM_ROW_SQL } =
+      await import('../../services/marketplace/escrow.js');
+
+    const calls = [];
+    const client = {
+      query: async (sql, params) => {
+        calls.push({ sql, params });
+        if (sql.includes('FROM item_templates')) return { rows: [{ is_stackable: true }] };
+        return { rows: [], rowCount: 1 };
+      }
+    };
+
+    await addItemToUser(client, 100, 10, 2);
+
+    const lookup = calls.find(c => c.sql.includes('SELECT id, quantity FROM character_items'));
+    assert.ok(lookup.sql.includes(UNMODIFIED_ITEM_ROW_SQL));
+  });
+
+  test('stacks only into the shared pool (no character bag row, not listed)', async () => {
+    const { addItemToUser } = await import('../../services/marketplace/escrow.js');
+
+    const calls = [];
+    const client = {
+      query: async (sql, params) => {
+        calls.push({ sql, params });
+        if (sql.includes('FROM item_templates')) return { rows: [{ is_stackable: true }] };
+        return { rows: [], rowCount: 1 };
+      }
+    };
+
+    await addItemToUser(client, 100, 10, 2);
+
+    const lookup = calls.find(c => c.sql.includes('SELECT id, quantity FROM character_items'));
+    assert.match(lookup.sql, /character_id IS NULL/);
+    assert.match(lookup.sql, /listed IS NULL OR listed = FALSE/);
   });
 });
 

@@ -1,9 +1,10 @@
 import 'dotenv/config';
 import { defineConfig, devices } from '@playwright/test';
 
-// The API listens on PORT from .env (3001 in local dev). Loading .env keeps
+// The API listens on PORT from .env, defaulting to 3000 like the API itself
+// (api/src/index.js) and vite.config.js. Loading .env keeps
 // PORT and TEST_BYPASS_SECRET in step with the running API.
-const API_PORT = process.env.PORT || 3001;
+const API_PORT = process.env.PORT || 3000;
 
 // The frontend dev server is fixed at 8080. E2E_BASE_URL points the suite at
 // another already-running frontend instead (for example a Vite instance with

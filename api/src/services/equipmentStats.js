@@ -155,11 +155,65 @@ export function buildEquipmentStatsLateral() {
 }
 
 /**
+ * Parse a JSONB column that may arrive as a string.
+ * @param {Object|string|null} value
+ * @returns {Object}
+ */
+function parseJsonObject(value) {
+  if (typeof value === 'string') return JSON.parse(value);
+  return value && typeof value === 'object' ? value : {};
+}
+
+/**
+ * An item's base stats: each key from modifications.baseStats, falling back
+ * to the template's stat_bonuses for any key baseStats does not set (missing
+ * or null). This is the per-key rule the SQL lateral uses
+ * (COALESCE(baseStats.k, template.k)), so the JS sums, the GET /characters
+ * equipment payload and the battle builders agree. A fixed-gear drop written
+ * with baseStats {} therefore keeps its template stats.
+ *
+ * @param {Object|string|null} modifications - character_items.modifications
+ * @param {Object|string|null} templateStatBonuses - item_templates.stat_bonuses
+ * @returns {Object} Merged base stats
+ */
+export function resolveItemBaseStats(modifications, templateStatBonuses) {
+  const mods = parseJsonObject(modifications);
+  const merged = { ...parseJsonObject(templateStatBonuses) };
+  const baseStats = mods.baseStats && typeof mods.baseStats === 'object' ? mods.baseStats : {};
+  for (const [key, value] of Object.entries(baseStats)) {
+    if (value !== null && value !== undefined) merged[key] = value;
+  }
+  return merged;
+}
+
+/**
+ * An item's augment bonusStats plus any legacy top-level stat keys on
+ * modifications (old rows stored e.g. { strength: 2 } at the top level).
+ * The SQL lateral and sumEquipmentStats count both, so a payload that sends
+ * only bonusStats to the client would under-report those items.
+ *
+ * @param {Object|string|null} modifications - character_items.modifications
+ * @returns {Object} bonusStats with legacy keys added
+ */
+export function resolveItemBonusStats(modifications) {
+  const mods = parseJsonObject(modifications);
+  const result = { ...(mods.bonusStats && typeof mods.bonusStats === 'object' ? mods.bonusStats : {}) };
+  for (const key of EQUIPMENT_STAT_KEYS) {
+    const value = Number(mods[key]);
+    if (mods[key] === undefined || mods[key] === null || !Number.isFinite(value) || value === 0) continue;
+    result[key] = (Number(result[key]) || 0) + value;
+  }
+  return result;
+}
+
+/**
  * Calculate equipment bonuses from an array of equipped item rows.
  * Each row should have: stat_bonuses (from template), modifications (from character_items).
  *
  * This is the JS equivalent of buildEquipmentStatsLateral for use when
- * equipment rows are already loaded (e.g., guildmasterBattleService).
+ * equipment rows are already loaded (e.g., guildmasterBattleService). It
+ * applies the same per-key template fallback and legacy top-level keys; the
+ * equipmentStatsParity integration test runs both over the same rows.
  *
  * @param {Array<Object>} equipment - Array of equipped item rows
  * @returns {Object} Aggregated equipment bonuses with normalized keys
@@ -180,16 +234,10 @@ export function sumEquipmentStats(equipment) {
   };
 
   for (const item of equipment) {
-    const templateStats = typeof item.stat_bonuses === 'string'
-      ? JSON.parse(item.stat_bonuses)
-      : item.stat_bonuses || {};
+    const modifications = parseJsonObject(item.modifications);
 
-    const modifications = typeof item.modifications === 'string'
-      ? JSON.parse(item.modifications)
-      : item.modifications || {};
-
-    // Use baseStats if present (generated item), otherwise use template stats
-    const baseStats = modifications.baseStats || templateStats;
+    // Per-key: baseStats where set, template stat_bonuses otherwise
+    const baseStats = resolveItemBaseStats(modifications, item.stat_bonuses);
     const bonusStats = modifications.bonusStats || {};
 
     // Core stats
@@ -231,23 +279,17 @@ export function sumEquipmentStats(equipment) {
 
 /**
  * Get effective item stats for a single item.
- * Combines baseStats (or template fallback) with bonusStats.
+ * Combines baseStats (per-key template fallback) with bonusStats.
  *
  * @param {Object} modifications - Item modifications object
  * @param {Object} templateStatBonuses - Template stat_bonuses object
  * @returns {Object} Effective stats with normalized keys
  */
 export function getEffectiveItemStats(modifications, templateStatBonuses) {
-  const mods = typeof modifications === 'string'
-    ? JSON.parse(modifications)
-    : modifications || {};
+  const mods = parseJsonObject(modifications);
 
-  const template = typeof templateStatBonuses === 'string'
-    ? JSON.parse(templateStatBonuses)
-    : templateStatBonuses || {};
-
-  // Use baseStats if present (generated item), otherwise use template
-  const baseStats = mods.baseStats || template;
+  // Per-key: baseStats where set, template stat_bonuses otherwise
+  const baseStats = resolveItemBaseStats(mods, templateStatBonuses);
   const bonusStats = mods.bonusStats || {};
 
   const result = {

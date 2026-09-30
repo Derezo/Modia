@@ -28,7 +28,8 @@ import {
   releaseEscrowedItems,
   reduceEscrow,
   consumeReservation,
-  addItemToUser
+  addItemToUser,
+  UNMODIFIED_ITEM_ROW_SQL
 } from './escrow.js';
 import { getMarketplaceFeeRate } from '../relicService.js';
 
@@ -520,6 +521,7 @@ export async function executeMarketOrder(client, userId, characterId, itemTempla
          AND equipped_slot IS NULL
          AND character_id IS NULL
          AND (listed IS NULL OR listed = FALSE)
+         AND ${UNMODIFIED_ITEM_ROW_SQL}
        ORDER BY quantity DESC
        FOR UPDATE`,
       [userId, itemTemplateId]

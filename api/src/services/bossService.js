@@ -274,6 +274,47 @@ function processBossDamage(boss, bossState, damage, battleState) {
 }
 
 /**
+ * Run processBossDamage for every enemy boss an action damaged, once per boss.
+ *
+ * For an AoE skill, actionProcessor sets result.targetId/damage to the
+ * primary target and the summed AoE damage AND lists that target again in
+ * result.aoeTargets. Processing both would call processBossDamage twice on
+ * the same boss, and since each call advances at most one HP-threshold
+ * phase, one AoE hit could skip a phase that a single-target hit of the
+ * same size would not. So aoeTargets, when present, is the only source,
+ * and each boss is processed once with its summed damage.
+ *
+ * @param {Object} battleState - Battle state with units and bossStates
+ * @param {Object} result - processAction result
+ * @returns {Array<{boss: Object, transition: Object}>} Transitions, in target order
+ */
+function processActionBossDamage(battleState, result) {
+  if (!battleState?.bossStates || !result) return [];
+
+  const damageByTarget = new Map();
+  const addDamage = (targetId, targetType, damage) => {
+    if (targetType !== 'enemy' || !(damage > 0)) return;
+    damageByTarget.set(targetId, (damageByTarget.get(targetId) || 0) + damage);
+  };
+  if (Array.isArray(result.aoeTargets) && result.aoeTargets.length > 0) {
+    for (const aoeTarget of result.aoeTargets) {
+      addDamage(aoeTarget.targetId, aoeTarget.targetType, aoeTarget.damage);
+    }
+  } else {
+    addDamage(result.targetId, result.targetType, result.damage);
+  }
+
+  const transitions = [];
+  for (const [targetId, damage] of damageByTarget) {
+    const boss = battleState.units.find(u => u.id === targetId);
+    if (!boss || !battleState.bossStates[boss.id] || boss.hp <= 0) continue;
+    const transition = processBossDamage(boss, battleState.bossStates[boss.id], damage, battleState);
+    if (transition) transitions.push({ boss, transition });
+  }
+  return transitions;
+}
+
+/**
  * Check all bosses in battle state for phase transitions.
  * Iterates over all living bosses and applies any triggered transitions.
  * @param {Object} battleState - Full battle state with bossStates and units
@@ -380,6 +421,7 @@ export {
   checkPhaseTransition,
   applyPhaseTransition,
   processBossDamage,
+  processActionBossDamage,
   checkAllBossTransitions,
   getBossState,
   applyAuraDamage,
@@ -394,6 +436,7 @@ export default {
   checkPhaseTransition,
   applyPhaseTransition,
   processBossDamage,
+  processActionBossDamage,
   checkAllBossTransitions,
   getBossState,
   applyAuraDamage,

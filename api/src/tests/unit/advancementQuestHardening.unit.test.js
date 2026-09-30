@@ -136,6 +136,39 @@ describe('advancement quest hardening', () => {
     assert.match(calls[2].sql, /target_class = \$5/);
   });
 
+  it('rejects domain failures as client errors and lets internal errors through unwrapped', async () => {
+    const clientWith = (handler) => ({ query: async (sql, params) => handler(sql, params) });
+    const lockedSorcerer = { rows: [{ id: 7, class: 'sorcerer', level: 20, current_node_id: 12 }] };
+
+    await assert.rejects(
+      acceptQuestWithClient(clientWith(sql => {
+        if (sql.includes('FROM characters')) return lockedSorcerer;
+        if (sql.includes('FROM character_quests')) return { rows: [{ id: 1 }] };
+        throw new Error(`Unexpected query: ${sql}`);
+      }), 7, 41, 12),
+      err => err.name === 'AppError' && err.statusCode === 409
+    );
+    await assert.rejects(
+      acceptQuestWithClient(clientWith(() => ({ rows: [] })), 7, 41, 12),
+      err => err.name === 'AppError' && err.statusCode === 404
+    );
+    // A database fault is not relabelled as a 400 with its internal message
+    const dbFault = Object.assign(new Error('relation "character_quests" does not exist'), { code: '42P01' });
+    await assert.rejects(
+      acceptQuestWithClient(clientWith(sql => {
+        if (sql.includes('FROM characters')) return lockedSorcerer;
+        throw dbFault;
+      }), 7, 41, 12),
+      err => err === dbFault
+    );
+  });
+
+  it('the accept route no longer wraps every service error in a 400', async () => {
+    const source = await readFile(new URL('../../routes/advancementQuest.js', import.meta.url), 'utf8');
+    const accept = source.slice(source.indexOf("router.post('/accept'"), source.indexOf("router.post('/abandon"));
+    assert.doesNotMatch(accept, /new AppError\(error\.message, 400\)/);
+  });
+
   it('keeps objective display metadata in calculated progress DTOs', () => {
     const materials = calculateMaterialProgress([
       {

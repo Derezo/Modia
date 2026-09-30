@@ -18,7 +18,7 @@ router.get('/history/:roomType', authenticate, asyncHandler(async (req, res) => 
   const { before, limit = 50, nodeId, partyId } = req.query;
 
   // Validate room type
-  const validRoomTypes = ['global', 'party', 'local'];
+  const validRoomTypes = ['global', 'party'];
   if (!validRoomTypes.includes(roomType)) {
     throw new AppError('Invalid room type', 400);
   }
@@ -54,7 +54,7 @@ router.get('/history/:roomType', authenticate, asyncHandler(async (req, res) => 
     return res.json({ messages });
   }
 
-  // For local chat, optionally filter by nodeId
+  // Global chat, optionally narrowed to one node's local messages
   const parsedNodeId = nodeId ? parseIdParam(nodeId, 'nodeId') : null;
 
   const messages = await chatService.getHistory(roomType, {
@@ -91,11 +91,9 @@ router.get('/dm/:targetUserId', authenticate, asyncHandler(async (req, res) => {
  * Get recent DM conversations for current user
  */
 router.get('/conversations', authenticate, asyncHandler(async (req, res) => {
-  const { limit = 20 } = req.query;
-
   const conversations = await chatService.getRecentDMConversations(
     req.user.userId,
-    Math.min(parseInt(limit, 10) || 20, 50)
+    parseLimit(req.query.limit, 20, 50)
   );
 
   res.json({ conversations });
@@ -112,27 +110,8 @@ router.post('/reaction', authenticate, chatReactionLimiter, asyncHandler(async (
     throw new AppError('Message ID and emoji are required', 400);
   }
 
-  // Validate emoji string type and length
-  if (typeof emoji !== 'string' || emoji.length > 32) {
-    throw new AppError('Invalid emoji format', 400);
-  }
-
-  // Validate emoji format - allow common emoji patterns or shortcodes
-  // Unicode emoji (including ZWJ sequences and variation selectors)
-  const emojiRegex = /^(?:[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]|\u{FE0F}|\u{200D})+$/u;
-  // Shortcode format like :smile: or :thumbs_up:
-  const shortcodeRegex = /^:[a-z_]{1,30}:$/;
-
-  if (!emojiRegex.test(emoji) && !shortcodeRegex.test(emoji)) {
-    throw new AppError('Invalid emoji format', 400);
-  }
-
-  // Verify message exists
-  const message = await chatService.getMessageById(messageId);
-  if (!message) {
-    throw new AppError('Message not found', 404);
-  }
-
+  // Emoji format and message visibility are enforced in chatService so the
+  // WebSocket path gets the same rules.
   const result = await chatService.addReaction(messageId, req.user.userId, emoji);
 
   res.json(result);
@@ -159,11 +138,11 @@ router.delete('/reaction', authenticate, chatReactionLimiter, asyncHandler(async
  * Get online players (excludes those with showOnlineStatus=false)
  */
 router.get('/online', authenticate, asyncHandler(async (req, res) => {
-  const { nodeId, limit = 100 } = req.query;
+  const { nodeId, limit } = req.query;
 
   const players = await presenceService.getOnlinePlayersWithPrivacy({
-    nodeId: nodeId ? parseInt(nodeId, 10) : null,
-    limit: Math.min(parseInt(limit, 10) || 100, 200),
+    nodeId: nodeId ? parseIdParam(nodeId, 'nodeId') : null,
+    limit: parseLimit(limit, 100, 200),
     requesterId: req.user.userId // Ensure requester always sees themselves
   });
 
@@ -182,23 +161,8 @@ router.put('/presence', authenticate, presenceUpdateLimiter, asyncHandler(async 
     throw new AppError('Invalid status. Must be: online, away, or busy', 400);
   }
 
-  // Validate customMessage - must be string, null, or undefined
-  // undefined = no change, null or '' = clear, string = set
-  let normalizedMessage;
-  if (customMessage === undefined) {
-    normalizedMessage = undefined; // no change
-  } else if (customMessage === null || customMessage === '') {
-    normalizedMessage = null; // clear
-  } else if (typeof customMessage !== 'string') {
-    throw new AppError('customMessage must be a string', 400);
-  } else if (customMessage.length > 128) {
-    throw new AppError('Custom message must be 128 characters or less', 400);
-  } else {
-    normalizedMessage = customMessage.trim();
-    if (normalizedMessage === '') {
-      normalizedMessage = null; // clear if only whitespace
-    }
-  }
+  // undefined = no change, null / '' / whitespace = clear, string = set
+  const normalizedMessage = presenceService.normalizeCustomMessage(customMessage);
 
   const presence = await presenceService.setPresence(
     req.user.userId,
@@ -214,7 +178,7 @@ router.put('/presence', authenticate, presenceUpdateLimiter, asyncHandler(async 
  * Get a specific user's presence (respects showOnlineStatus privacy)
  */
 router.get('/presence/:userId', authenticate, asyncHandler(async (req, res) => {
-  const targetUserId = parseInt(req.params.userId, 10);
+  const targetUserId = parseIdParam(req.params.userId, 'userId');
 
   // Users can always see their own presence
   if (targetUserId === req.user.userId) {

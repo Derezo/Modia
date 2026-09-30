@@ -59,9 +59,20 @@ describe('partyWebsocket', () => {
       assert.strictEqual(typeof partyWebsocket.declineInvite, 'function');
     });
 
-    test('should return success (no-op for backwards compatibility)', async () => {
-      const result = await partyWebsocket.declineInvite(99999, getUniqueUserId());
+    test('notifies the inviter it is given (offline inviter is not an error)', async () => {
+      const result = await partyWebsocket.declineInvite({
+        inviteId: 99999,
+        partyId: getUniquePartyId(),
+        inviterId: getUniqueUserId(),
+        userId: getUniqueUserId(),
+        username: 'testDecliner'
+      });
       assert.strictEqual(result.success, true);
+    });
+
+    test('reports failure when no inviter is known', async () => {
+      const result = await partyWebsocket.declineInvite({ inviteId: 99999 });
+      assert.strictEqual(result.success, false);
     });
   });
 

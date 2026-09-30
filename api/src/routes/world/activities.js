@@ -30,6 +30,7 @@ import {
 import { generateChestLoot, addItemsToInventory } from '../../services/world/chestLootService.js';
 import { getLoreContent } from '../../../../shared/loreContent.js';
 import { parseIntOrThrow } from '../../utils/validateNumericParam.js';
+import { getRelicEffects } from '../../services/relicService.js';
 
 const router = express.Router();
 
@@ -727,8 +728,12 @@ router.get('/watchtower-view/:nodeId', authenticate, asyncHandler(async (req, re
   // Use pixel-based reveal radius (~3000px diameter = 1500px radius)
   // watchtower_reveal_radius in DB is a multiplier (DB default is 2, meaning 3000px radius)
   // The base is 1500px, multiplied by the radius value to get final pixel radius
+  // Cartographer's Eye (relic effect reveal_bonus) adds to that multiplier:
+  // with the seeded reveal_bonus of 2, a default tower reveals 4 x 1500px.
   const baseRevealRadiusPixels = 1500;
-  const radiusMultiplier = watchtowerNode.watchtower_reveal_radius ?? 2;
+  const relicEffects = await getRelicEffects(userId, 'cartographers_eye');
+  const relicRevealBonus = Math.max(0, Number(relicEffects?.reveal_bonus) || 0);
+  const radiusMultiplier = (watchtowerNode.watchtower_reveal_radius ?? 2) + relicRevealBonus;
   const revealRadiusPixels = baseRevealRadiusPixels * radiusMultiplier;
 
   // Spatial query: find all nodes within pixel radius using Euclidean distance
@@ -795,7 +800,8 @@ router.get('/watchtower-view/:nodeId', authenticate, asyncHandler(async (req, re
       node_type: watchtowerNode.node_type,
       region_id: watchtowerNode.region_id,
       region_race: watchtowerNode.region_race,
-      reveal_radius_pixels: revealRadiusPixels
+      reveal_radius_pixels: revealRadiusPixels,
+      relic_reveal_bonus: relicRevealBonus
     },
     revealedNodes,
     revealedConnections: revealedConnectionsResult.rows

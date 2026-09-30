@@ -1,6 +1,7 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
 import { request, createTestContext, query, resetRateLimitersViaApi } from '../testHelper.js';
+import { checkRelicEligibility } from '../../services/relicService.js';
 
 describe('Relics API', () => {
   let ctx;
@@ -266,4 +267,65 @@ describe('Relics API', () => {
       assert.strictEqual(res.body.effects.fee_rate, 0.03);
     });
   });
+
+  describe('quest relic tier requirement', () => {
+    it('a lower-tier quest does not satisfy a higher tier; a higher tier satisfies a lower one', async () => {
+      const tierUser = await ctx.createUser();
+      const character = await ctx.createCharacter(tierUser.accessToken);
+      const tierTwo = { key: 'tier_two_probe', acquisition_type: 'quest', acquisition_id: 2 };
+      const tierOne = { key: 'tier_one_probe', acquisition_type: 'quest', acquisition_id: 1 };
+
+      const complete = async (tier) => {
+        const tpl = await query('SELECT id FROM advancement_quest_templates WHERE tier = $1 ORDER BY id LIMIT 1', [tier]);
+        assert.ok(tpl.rows.length > 0, `a tier-${tier} quest template exists`);
+        await query(
+          `INSERT INTO character_quests (character_id, quest_template_id, status, completed_at)
+           VALUES ($1, $2, 'completed', NOW())`,
+          [character.id, tpl.rows[0].id]
+        );
+      };
+
+      await complete(1);
+      const onlyTierOne = await checkRelicEligibility(tierUser.userId, tierTwo);
+      assert.strictEqual(onlyTierOne.canClaim, false);
+      assert.match(onlyTierOne.validationMessage, /tier 2 or higher/);
+      assert.strictEqual((await checkRelicEligibility(tierUser.userId, tierOne)).canClaim, true);
+
+      await query('DELETE FROM character_quests WHERE character_id = $1', [character.id]);
+      await complete(2);
+      assert.strictEqual((await checkRelicEligibility(tierUser.userId, tierTwo)).canClaim, true);
+      assert.strictEqual((await checkRelicEligibility(tierUser.userId, tierOne)).canClaim, true);
+
+      await query('DELETE FROM character_quests WHERE character_id = $1', [character.id]);
+    });
+  });
+
+  describe('Cartographer\'s Eye widens the watchtower reveal', () => {
+    it('adds reveal_bonus to the watchtower radius multiplier', async () => {
+      const eyeUser = await ctx.createUser();
+      const tower = await query(
+        `SELECT id, watchtower_reveal_radius FROM world_nodes WHERE node_type = 'watchtower' ORDER BY id LIMIT 1`
+      );
+      assert.ok(tower.rows.length > 0, 'a watchtower node exists');
+      const { id, watchtower_reveal_radius: radius } = tower.rows[0];
+      const multiplier = radius ?? 2;
+
+      const without = await request('GET', `/api/world/watchtower-view/${id}`, null, eyeUser.accessToken);
+      assert.strictEqual(without.status, 200, JSON.stringify(without.body));
+      assert.strictEqual(without.body.watchtowerNode.reveal_radius_pixels, 1500 * multiplier);
+      assert.strictEqual(without.body.watchtowerNode.relic_reveal_bonus, 0);
+
+      const grant = await request('POST', '/api/relics/grant/cartographers_eye', {}, eyeUser.accessToken);
+      assert.ok([200, 201].includes(grant.status), JSON.stringify(grant.body));
+
+      const withEye = await request('GET', `/api/world/watchtower-view/${id}`, null, eyeUser.accessToken);
+      assert.strictEqual(withEye.status, 200);
+      assert.strictEqual(withEye.body.watchtowerNode.relic_reveal_bonus, 2);
+      assert.strictEqual(withEye.body.watchtowerNode.reveal_radius_pixels, 1500 * (multiplier + 2));
+      assert.ok(withEye.body.revealedNodes.length >= without.body.revealedNodes.length);
+
+      await query('DELETE FROM user_relics WHERE user_id = $1', [eyeUser.userId]);
+    });
+  });
 });
+

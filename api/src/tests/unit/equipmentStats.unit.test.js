@@ -11,7 +11,8 @@ import assert from 'node:assert';
 import {
   sumEquipmentStats,
   getEffectiveItemStats,
-  buildEquipmentStatsLateral
+  buildEquipmentStatsLateral,
+  resolveItemBaseStats
 } from '../../services/equipmentStats.js';
 
 describe('sumEquipmentStats', () => {
@@ -218,6 +219,38 @@ describe('getEffectiveItemStats', () => {
 
     assert.strictEqual(result.hp, 50);
     assert.strictEqual(result.mp, 30);
+  });
+});
+
+describe('per-key template fallback (same rule as the SQL lateral)', () => {
+  it('keeps template stats for a fixed-gear drop written with baseStats {}', () => {
+    // itemDropService writes baseStats {} for fixed gear; the SQL lateral
+    // COALESCEs per key, so the JS must not treat {} as "no stats"
+    const result = sumEquipmentStats([
+      { stat_bonuses: { strength: 7, hp_max: 12 }, modifications: { baseStats: {} } }
+    ]);
+    assert.strictEqual(result.strength, 7);
+    assert.strictEqual(result.hp, 12);
+  });
+
+  it('falls back per key when baseStats lacks a template key', () => {
+    const row = {
+      stat_bonuses: { strength: 5, vitality: 3 },
+      modifications: { baseStats: { strength: 9, luck: null } }
+    };
+    const summed = sumEquipmentStats([row]);
+    assert.strictEqual(summed.strength, 9);
+    assert.strictEqual(summed.vitality, 3);
+    assert.strictEqual(summed.luck, 0);
+    assert.strictEqual(getEffectiveItemStats(row.modifications, row.stat_bonuses).vitality, 3);
+  });
+
+  it('resolveItemBaseStats keeps an explicit 0 and parses JSON strings', () => {
+    assert.deepStrictEqual(
+      resolveItemBaseStats('{"baseStats":{"strength":0}}', '{"strength":4,"agility":2}'),
+      { strength: 0, agility: 2 }
+    );
+    assert.deepStrictEqual(resolveItemBaseStats(null, null), {});
   });
 });
 

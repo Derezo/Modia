@@ -139,4 +139,16 @@ describe('errorHandler security', () => {
     assert.ok(!JSON.stringify(capturedResponse).includes('orders'));
     assert.strictEqual(capturedResponse.stack, undefined);
   });
+
+  it('should map a PostgreSQL check violation to a generic 400', () => {
+    const error = new Error('new row for relation "character_items" violates check constraint "character_items_quantity_check"');
+    error.code = '23514';
+    error.stack = 'error: new row...\n    at Parser.parse...';
+
+    errorHandler(error, mockReq, mockRes, () => {});
+
+    assert.strictEqual(mockRes.statusCode, 400);
+    assert.strictEqual(capturedResponse.error, 'Invalid parameter');
+    assert.ok(!JSON.stringify(capturedResponse).includes('character_items'));
+  });
 });

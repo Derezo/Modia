@@ -270,6 +270,13 @@ describe('LFG API', () => {
       assert.ok(res.body.success);
     });
 
+    it('should reject a non-string, oversized or markup apply message with 400', async () => {
+      for (const message of [{ text: 'x' }, 'x'.repeat(257), '<b>join</b>']) {
+        const res = await request('POST', `/api/lfg/${postId}/apply`, { message }, applier.accessToken);
+        assert.strictEqual(res.status, 400, `message ${JSON.stringify(message).slice(0, 40)}: ${JSON.stringify(res.body)}`);
+      }
+    });
+
     it('should reject applying to own post', async () => {
       const res = await request('POST', `/api/lfg/${postId}/apply`, {}, applyOwner.accessToken);
 

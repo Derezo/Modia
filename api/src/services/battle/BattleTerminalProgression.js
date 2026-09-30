@@ -54,10 +54,10 @@ function requireArray(value, name) {
 }
 
 function normalizePartyCharacterIds(payload) {
-  // Finding 41: Accept partyCharacterIds for advancement progress on all party members
-  // Fallback to [partyLeaderId] for backward compatibility with older outbox rows
+  // Finding 41: Accept partyCharacterIds for advancement progress on all party members.
+  // Older outbox rows have none; applyMutations falls back to [partyLeaderId].
   if (payload.partyCharacterIds === null || payload.partyCharacterIds === undefined) {
-    return null; // Will use fallback in applyMutations
+    return null;
   }
   const ids = requireArray(payload.partyCharacterIds, 'payload.partyCharacterIds');
   return ids.map((id, index) =>
@@ -129,8 +129,12 @@ function normalizePvePayload(payload) {
     version: 1,
     kind: 'pve_victory',
     partyLeaderId,
-    // Finding 41: Include partyCharacterIds, fallback to [partyLeaderId]
-    partyCharacterIds: partyCharacterIds || [partyLeaderId],
+    // Finding 41: include partyCharacterIds only when the event carried them.
+    // Synthesising [partyLeaderId] here would change the normalized shape, so
+    // a receipt stored before partyCharacterIds existed would no longer match
+    // (payload = $2::JSONB) and a replay or redrive would throw a key
+    // conflict. applyMutations applies the leader fallback instead.
+    ...(partyCharacterIds ? { partyCharacterIds } : {}),
     enemies,
     droppedItems,
     node,

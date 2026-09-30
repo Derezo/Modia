@@ -201,27 +201,25 @@ router.post('/accept', authenticate, actionLimiter, asyncHandler(async (req, res
     throw new AppError('Not authorized to access this character', 403);
   }
 
-  try {
-    const result = await questService.acceptQuest(
-      parsedCharacterId,
-      parsedQuestTemplateId,
-      nodeId
-    );
+  // Domain rejections are AppErrors (400/404/409) from the service; anything
+  // else (pg, TypeError) reaches the error handler as a logged, generic 500
+  const result = await questService.acceptQuest(
+    parsedCharacterId,
+    parsedQuestTemplateId,
+    nodeId
+  );
 
-    res.json({
-      success: true,
-      message: `${charResult.rows[0].name} has accepted the quest: ${result.template.quest_name}`,
-      quest: {
-        id: result.quest.id,
-        questName: result.template.quest_name,
-        questDescription: result.template.quest_description,
-        targetClass: result.template.target_class,
-        tier: result.template.tier
-      }
-    });
-  } catch (error) {
-    throw new AppError(error.message, 400);
-  }
+  res.json({
+    success: true,
+    message: `${charResult.rows[0].name} has accepted the quest: ${result.template.quest_name}`,
+    quest: {
+      id: result.quest.id,
+      questName: result.template.quest_name,
+      questDescription: result.template.quest_description,
+      targetClass: result.template.target_class,
+      tier: result.template.tier
+    }
+  });
 }));
 
 // POST /api/advancement/abandon/:characterId - Abandon current quest

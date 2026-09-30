@@ -84,22 +84,35 @@ export async function createClan(userId, { name, tag, description }) {
     throw new Error('A clan with that tag already exists');
   }
 
-  // Create the clan
-  const clanResult = await query(
-    `INSERT INTO clans (name, tag, leader_id, description, created_at)
-     VALUES ($1, $2, $3, $4, NOW())
-     RETURNING id, name, tag, leader_id, description, max_members, created_at`,
-    [name, tag, userId, description || null]
-  );
+  // Create the clan and its leader membership atomically, serialized on the
+  // user like acceptInvite, so a concurrent join cannot leave the user in two
+  // clans or leave a clan with no members (uniq_clan_members_user backstop).
+  const clan = await withTransaction(async (client) => {
+    await client.query('SELECT id FROM users WHERE id = $1 FOR UPDATE', [userId]);
+    const memberCheck = await client.query(
+      'SELECT clan_id FROM clan_members WHERE user_id = $1',
+      [userId]
+    );
+    if (memberCheck.rows.length > 0) {
+      throw new Error('You are already in a clan. Leave your current clan first.');
+    }
 
-  const clan = clanResult.rows[0];
+    const clanResult = await client.query(
+      `INSERT INTO clans (name, tag, leader_id, description, created_at)
+       VALUES ($1, $2, $3, $4, NOW())
+       RETURNING id, name, tag, leader_id, description, max_members, created_at`,
+      [name, tag, userId, description || null]
+    );
+    const created = clanResult.rows[0];
 
-  // Add creator as a member with leader role
-  await query(
-    `INSERT INTO clan_members (clan_id, user_id, role, joined_at)
-     VALUES ($1, $2, 'leader', NOW())`,
-    [clan.id, userId]
-  );
+    // Add creator as a member with leader role
+    await client.query(
+      `INSERT INTO clan_members (clan_id, user_id, role, joined_at)
+       VALUES ($1, $2, 'leader', NOW())`,
+      [created.id, userId]
+    );
+    return created;
+  });
 
   // Get username for response
   const userResult = await query('SELECT username FROM users WHERE id = $1', [userId]);
@@ -528,6 +541,14 @@ export async function acceptInvite(userId, inviteId) {
 
   // Run the acceptance in a transaction with FOR UPDATE to prevent race conditions
   return await withTransaction(async (client) => {
+    // Serialize this user's joins: two invites from different clans lock
+    // different clan rows, so without a per-user lock both accepts could see
+    // no membership and both insert (uniq_clan_members_user is the backstop).
+    // Taken FIRST: the winner later declines the user's other pending
+    // invites, so locking an invite row before the user row would deadlock
+    // against a concurrent accept of that other invite.
+    await client.query('SELECT id FROM users WHERE id = $1 FOR UPDATE', [userId]);
+
     // Lock the invite row
     const inviteResult = await client.query(
       `SELECT id, clan_id, status
@@ -544,12 +565,15 @@ export async function acceptInvite(userId, inviteId) {
       throw new AppError('Invite is no longer pending', 409);
     }
 
-    // Lock the clan row and get capacity info
+    // Lock the clan row in its own statement. The member count must be read
+    // by a LATER statement: under READ COMMITTED a COUNT in the locking
+    // statement uses that statement's start snapshot, so a transaction that
+    // waited on the lock would miss the insert of the one it waited for and
+    // two accepts could both fill the last slot.
     const clanResult = await client.query(
-      `SELECT c.id, c.name, c.max_members,
-              (SELECT COUNT(*) FROM clan_members WHERE clan_id = c.id) as member_count
-       FROM clans c
-       WHERE c.id = $1
+      `SELECT id, name, max_members
+       FROM clans
+       WHERE id = $1
        FOR UPDATE`,
       [invite.clan_id]
     );
@@ -559,11 +583,15 @@ export async function acceptInvite(userId, inviteId) {
     }
 
     const clan = clanResult.rows[0];
-    if (parseInt(clan.member_count, 10) >= clan.max_members) {
+    const countResult = await client.query(
+      'SELECT COUNT(*)::int AS member_count FROM clan_members WHERE clan_id = $1',
+      [invite.clan_id]
+    );
+    if (countResult.rows[0].member_count >= clan.max_members) {
       throw new AppError('Clan is full', 409);
     }
 
-    // Re-check membership under transaction (in case of concurrent joins)
+    // Re-check membership under this user's row lock
     const memberCheck = await client.query(
       'SELECT clan_id FROM clan_members WHERE user_id = $1',
       [userId]
@@ -580,11 +608,18 @@ export async function acceptInvite(userId, inviteId) {
     );
 
     // Add the member
-    await client.query(
-      `INSERT INTO clan_members (clan_id, user_id, role, joined_at)
-       VALUES ($1, $2, 'member', NOW())`,
-      [invite.clan_id, userId]
-    );
+    try {
+      await client.query(
+        `INSERT INTO clan_members (clan_id, user_id, role, joined_at)
+         VALUES ($1, $2, 'member', NOW())`,
+        [invite.clan_id, userId]
+      );
+    } catch (error) {
+      if (error.code === '23505') {
+        throw new AppError('You are already in a clan', 409);
+      }
+      throw error;
+    }
 
     // Decline any other pending invites for this user
     await client.query(

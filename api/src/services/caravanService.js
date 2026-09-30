@@ -15,6 +15,7 @@
 
 import { SeededRandom } from '../config/constants.js';
 import { query, withTransaction } from '../config/database.js';
+import { AppError } from '../middleware/errorHandler.js';
 import {
   CARAVAN_PRICE_MODIFIER,
   CARAVAN_REFRESH_INTERVAL,
@@ -524,7 +525,7 @@ export async function processPurchase(userId, nodeId, itemId, quantity = 1) {
     // SECURITY: Coerce itemId to string to prevent TypeError when a numeric value is passed
     const itemIdStr = String(itemId ?? '');
     if (!itemIdStr) {
-      throw new Error('Item ID is required');
+      throw new AppError('Item ID is required', 400);
     }
     const lockKey = nodeId * 100000 + Math.abs(itemIdStr.split('').reduce((a, b) => a + b.charCodeAt(0), 0) % 100000);
     await client.query('SELECT pg_advisory_xact_lock($1)', [lockKey]);
@@ -532,13 +533,13 @@ export async function processPurchase(userId, nodeId, itemId, quantity = 1) {
     // Get caravan data
     const caravanData = await getCaravanData(nodeId);
     if (!caravanData) {
-      throw new Error('Caravan not found at this location');
+      throw new AppError('Caravan not found at this location', 404);
     }
 
     // Find item in inventory
     const inventoryItem = caravanData.inventory.find(item => item.itemId === itemId);
     if (!inventoryItem) {
-      throw new Error('Item not available at this caravan');
+      throw new AppError('Item not available at this caravan', 404);
     }
 
     // Check current stock (now safe due to advisory lock)
@@ -551,7 +552,7 @@ export async function processPurchase(userId, nodeId, itemId, quantity = 1) {
     );
 
     if (!inventoryItem.unlimitedStock && currentStock < quantity) {
-      throw new Error(`Insufficient stock. Only ${currentStock} available.`);
+      throw new AppError(`Insufficient stock. Only ${currentStock} available.`, 400);
     }
 
     // Calculate total price
@@ -564,12 +565,12 @@ export async function processPurchase(userId, nodeId, itemId, quantity = 1) {
     );
 
     if (userResult.rows.length === 0) {
-      throw new Error('User not found');
+      throw new AppError('User not found', 404);
     }
 
     const userGold = userResult.rows[0].gold;
     if (userGold < totalPrice) {
-      throw new Error(`Insufficient gold. Need ${totalPrice}, have ${userGold}.`);
+      throw new AppError(`Insufficient gold. Need ${totalPrice}, have ${userGold}.`, 400);
     }
 
     // Deduct gold

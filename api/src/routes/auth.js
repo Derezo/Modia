@@ -227,7 +227,7 @@ router.post('/refresh', refreshLimiter, asyncHandler(async (req, res) => {
 
   // Get user
   const userResult = await query(
-    'SELECT id, username, email, gold FROM users WHERE id = $1',
+    'SELECT id, username, email, gold, is_banned FROM users WHERE id = $1',
     [decoded.userId]
   );
 
@@ -236,6 +236,15 @@ router.post('/refresh', refreshLimiter, asyncHandler(async (req, res) => {
   }
 
   const user = userResult.rows[0];
+
+  // A ban must also stop token rotation: /login refuses banned users, and a
+  // refresh token obtained before the ban would otherwise mint access tokens
+  // indefinitely. The presented session is already deleted above; drop the
+  // rest so no other device can keep rotating either.
+  if (user.is_banned) {
+    await query('DELETE FROM user_sessions WHERE user_id = $1', [user.id]);
+    throw new AppError('Account has been banned', 403);
+  }
 
   // Generate new access token
   const accessToken = generateAccessToken(user.id, user.username);

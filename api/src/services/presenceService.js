@@ -1,5 +1,6 @@
 import { query } from '../config/database.js';
 import * as userSettingsService from './userSettingsService.js';
+import { AppError } from '../middleware/errorHandler.js';
 
 /**
  * Presence Service - Handles player online status tracking and node presence
@@ -13,6 +14,28 @@ const typingUsers = new Map(); // roomKey -> Set of { userId, username, timestam
 
 // Node presence tracking: nodeId -> Map of userId -> { username, characterName, timestamp }
 const nodePresence = new Map();
+
+export const CUSTOM_MESSAGE_MAX = 128;
+
+/**
+ * Normalize a client-supplied presence customMessage (REST and WS share it).
+ * undefined = no change, null / '' / whitespace = clear, string = set.
+ * @param {*} customMessage - Raw client value
+ * @returns {string|null|undefined} Normalized value for setPresence
+ * @throws {AppError} 400 for non-strings or over-length text
+ */
+function normalizeCustomMessage(customMessage) {
+  if (customMessage === undefined) return undefined;
+  if (customMessage === null) return null;
+  if (typeof customMessage !== 'string') {
+    throw new AppError('customMessage must be a string', 400);
+  }
+  const trimmed = customMessage.trim();
+  if (trimmed.length > CUSTOM_MESSAGE_MAX) {
+    throw new AppError(`Custom message must be ${CUSTOM_MESSAGE_MAX} characters or less`, 400);
+  }
+  return trimmed === '' ? null : trimmed;
+}
 
 /**
  * Set a user's presence status
@@ -532,6 +555,7 @@ async function getOnlinePlayersWithPrivacy(options = {}) {
 }
 
 export {
+  normalizeCustomMessage,
   setPresence,
   getPresence,
   getOnlinePlayers,
@@ -558,6 +582,7 @@ export {
 };
 
 export default {
+  normalizeCustomMessage,
   setPresence,
   getPresence,
   getOnlinePlayers,

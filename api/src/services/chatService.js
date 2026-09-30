@@ -1,4 +1,5 @@
 import { query } from '../config/database.js';
+import { AppError } from '../middleware/errorHandler.js';
 
 /**
  * Chat Service - Handles all chat-related database operations
@@ -34,12 +35,21 @@ async function saveMessage(messageData) {
 
 /**
  * Get chat history for a room
- * @param {string} roomType - Room type (global, party, dm)
+ * @param {string} roomType - Room type (global, or party with options.partyId)
  * @param {Object} options - Query options
  * @returns {Array} Messages
  */
 async function getHistory(roomType, options = {}) {
   const { limit = 50, before = null, nodeId = null, partyId = null } = options;
+
+  // Second line of defence behind the route's membership check: party
+  // history is only ever read for one party, and DMs go through
+  // getDMHistory. Any other room type would return every row of that type.
+  if (roomType === 'party') {
+    if (!partyId) throw new AppError('partyId is required for party chat history', 400);
+  } else if (roomType !== 'global') {
+    throw new AppError('Invalid room type', 400);
+  }
 
   let queryText = `
     SELECT
@@ -77,7 +87,7 @@ async function getHistory(roomType, options = {}) {
     paramIndex++;
   }
 
-  if (partyId && roomType === 'party') {
+  if (roomType === 'party') {
     queryText += ` AND cm.party_id = $${paramIndex}`;
     params.push(partyId);
     paramIndex++;
@@ -142,6 +152,68 @@ async function getDMHistory(userId1, userId2, options = {}) {
   return result.rows.reverse();
 }
 
+// Unicode emoji (including ZWJ sequences and variation selectors)
+const EMOJI_RE = /^(?:[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]|\u{FE0F}|\u{200D})+$/u;
+// Shortcode format like :smile: or :thumbs_up:
+const SHORTCODE_RE = /^:[a-z_]{1,30}:$/;
+
+/**
+ * Validate a reaction emoji (shared by the REST and WebSocket paths).
+ * @param {*} emoji - Client-supplied emoji
+ * @returns {string} The emoji
+ * @throws {AppError} 400 when it is not a supported emoji or shortcode
+ */
+function validateReactionEmoji(emoji) {
+  if (typeof emoji !== 'string' || emoji.length === 0 || emoji.length > 32 ||
+      (!EMOJI_RE.test(emoji) && !SHORTCODE_RE.test(emoji))) {
+    throw new AppError('Invalid emoji format', 400);
+  }
+  return emoji;
+}
+
+/**
+ * Whether a user may see (and so react to) a message: global chat is
+ * public, a DM only to its two participants, party chat only to members.
+ * @param {Object} message - chat_messages row
+ * @param {number} userId - Viewer
+ * @returns {Promise<boolean>}
+ */
+async function canUserSeeMessage(message, userId) {
+  if (!message) return false;
+  if (message.room_type === 'global') return true;
+  if (message.room_type === 'dm') {
+    return Number(message.sender_user_id) === Number(userId) ||
+      Number(message.target_user_id) === Number(userId);
+  }
+  if (message.room_type === 'party' && message.party_id != null) {
+    const member = await query(
+      'SELECT 1 FROM party_members WHERE party_id = $1 AND user_id = $2',
+      [message.party_id, userId]
+    );
+    return member.rows.length > 0;
+  }
+  return false;
+}
+
+/**
+ * Resolve a reaction target the user can see, or throw.
+ * A hidden message is reported as not found so its existence does not leak.
+ * @param {*} messageId - Client-supplied message ID
+ * @param {number} userId - Reacting user
+ * @returns {Promise<number>} Parsed message ID
+ */
+async function resolveVisibleMessageId(messageId, userId) {
+  const parsedId = Number(messageId);
+  if (!Number.isSafeInteger(parsedId) || parsedId < 1) {
+    throw new AppError('Invalid message ID', 400);
+  }
+  const message = await getMessageById(parsedId);
+  if (!(await canUserSeeMessage(message, userId))) {
+    throw new AppError('Message not found', 404);
+  }
+  return parsedId;
+}
+
 /**
  * Add a reaction to a message
  * @param {number} messageId - Message ID
@@ -150,6 +222,9 @@ async function getDMHistory(userId1, userId2, options = {}) {
  * @returns {Object} Updated reaction data
  */
 async function addReaction(messageId, userId, emoji) {
+  validateReactionEmoji(emoji);
+  messageId = await resolveVisibleMessageId(messageId, userId);
+
   // Insert into reactions table (will fail silently if duplicate)
   await query(
     `INSERT INTO chat_reactions (message_id, user_id, emoji)
@@ -191,6 +266,11 @@ async function addReaction(messageId, userId, emoji) {
  * @returns {Object} Updated reaction data
  */
 async function removeReaction(messageId, userId, emoji) {
+  if (typeof emoji !== 'string' || emoji.length === 0 || emoji.length > 32) {
+    throw new AppError('Invalid emoji format', 400);
+  }
+  messageId = await resolveVisibleMessageId(messageId, userId);
+
   await query(
     `DELETE FROM chat_reactions
      WHERE message_id = $1 AND user_id = $2 AND emoji = $3`,
@@ -275,6 +355,8 @@ async function getRecentDMConversations(userId, limit = 20) {
 
 export {
   saveMessage,
+  validateReactionEmoji,
+  canUserSeeMessage,
   getHistory,
   getDMHistory,
   addReaction,
@@ -285,6 +367,8 @@ export {
 
 export default {
   saveMessage,
+  validateReactionEmoji,
+  canUserSeeMessage,
   getHistory,
   getDMHistory,
   addReaction,

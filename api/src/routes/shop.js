@@ -3,6 +3,7 @@ import { query, withTransaction } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import { MAX_GOLD } from '../config/constants.js';
+import { parseIntOrThrow } from '../utils/validateNumericParam.js';
 import { shopBuyLimiter, shopSellLimiter } from '../middleware/economyRateLimiter.js';
 import {
   getCaravanInventoryWithStock,
@@ -263,34 +264,26 @@ router.post('/:nodeId/:shopType/buy', authenticate, shopBuyLimiter, asyncHandler
       throw new AppError('This location is not a merchant caravan', 400);
     }
 
-    try {
-      const result = await processCaravanPurchase(
-        req.user.userId,
-        nodeIdNum,
-        caravanItemId,
-        quantity
-      );
+    // processCaravanPurchase throws AppErrors for player-facing failures;
+    // anything else is an internal error and reaches the sanitizing
+    // errorHandler as a 500 (never echoed back as a 400 with raw text).
+    const result = await processCaravanPurchase(
+      req.user.userId,
+      nodeIdNum,
+      caravanItemId,
+      quantity
+    );
 
-      return res.json({
-        success: true,
-        message: `Purchased ${result.quantity}x ${result.itemName} for ${result.totalPrice} gold`,
-        itemId: result.itemId,
-        itemName: result.itemName,
-        quantity: result.quantity,
-        totalPrice: result.totalPrice,
-        remainingGold: result.remainingGold,
-        remainingStock: result.remainingStock
-      });
-    } catch (error) {
-      // Convert service errors to AppErrors
-      if (error.message.includes('Insufficient')) {
-        throw new AppError(error.message, 400);
-      }
-      if (error.message.includes('not found') || error.message.includes('not available')) {
-        throw new AppError(error.message, 404);
-      }
-      throw new AppError(error.message, 400);
-    }
+    return res.json({
+      success: true,
+      message: `Purchased ${result.quantity}x ${result.itemName} for ${result.totalPrice} gold`,
+      itemId: result.itemId,
+      itemName: result.itemName,
+      quantity: result.quantity,
+      totalPrice: result.totalPrice,
+      remainingGold: result.remainingGold,
+      remainingStock: result.remainingStock
+    });
   }
 
   // Standard shop handling (blacksmith, apothecary, farm)
@@ -424,7 +417,6 @@ router.post('/:nodeId/:shopType/buy', authenticate, shopBuyLimiter, asyncHandler
 // ============================================
 router.post('/:nodeId/:shopType/sell', authenticate, shopSellLimiter, asyncHandler(async (req, res) => {
   const { nodeId, shopType } = req.params;
-  const { itemInstanceId } = req.body;
   const nodeIdNum = parseInt(nodeId, 10);
 
   // SECURITY: Strict quantity validation to prevent negative quantity exploits
@@ -437,9 +429,11 @@ router.post('/:nodeId/:shopType/sell', authenticate, shopSellLimiter, asyncHandl
   if (isNaN(nodeIdNum)) {
     throw new AppError('Invalid node ID', 400);
   }
-  if (!itemInstanceId) {
+  if (req.body.itemInstanceId === undefined || req.body.itemInstanceId === null ||
+      req.body.itemInstanceId === '') {
     throw new AppError('Item instance ID required', 400);
   }
+  const itemInstanceId = parseIntOrThrow(req.body.itemInstanceId, 'item instance ID');
   if (quantity < 1 || quantity > 9999) {
     throw new AppError('Invalid quantity (1-9999)', 400);
   }

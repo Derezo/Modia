@@ -114,6 +114,66 @@ async function processEnemyTurnsAsync(
   }
 }
 
+/**
+ * Run boss phase transitions for the current state and sync the boss units'
+ * display fields. Returns entries with a snapshot of each boss state, to be
+ * announced and persisted by flushBossPhaseTransitions once the enemy turn
+ * that caused them has committed.
+ * @param {Object} state - Battle state (bossStates changed in place)
+ * @returns {Array<{transition: Object, bossState: Object|null}>}
+ */
+function collectBossPhaseTransitions(state) {
+  const collected = [];
+  for (const transition of checkAllBossTransitions(state)) {
+    console.log(`[AsyncTurnManager] Boss ${transition.bossName} transitioned to phase ${transition.toPhase}`);
+    const bossUnit = state.units.find(u => String(u.id) === String(transition.unitId));
+    const bossState = state.bossStates?.[transition.unitId] ?? null;
+    if (bossUnit && bossState) {
+      bossUnit.currentPhase = bossState.currentPhase;
+      bossUnit.phaseName = transition.phaseName;
+    }
+    collected.push({ transition, bossState: bossState ? structuredClone(bossState) : null });
+  }
+  return collected;
+}
+
+/**
+ * Announce and persist boss phase transitions of a committed enemy turn.
+ * A boss_encounters write failure is logged, not thrown: the battle state
+ * (which carries bossStates) is already committed, and throwing here would
+ * abort the enemy loop after the fact.
+ *
+ * @param {number} battleId
+ * @param {Array<{transition: Object, bossState: Object|null}>} pending
+ * @param {Object} [deps] - Injectable for tests
+ */
+async function flushBossPhaseTransitions(
+  battleId,
+  pending,
+  {
+    broadcast = (id, payload) => battleWebsocket.broadcastPhaseTransition(id, payload),
+    save = saveBossEncounter
+  } = {}
+) {
+  for (const { transition, bossState } of pending) {
+    try {
+      await broadcast(battleId, {
+        bossId: transition.unitId,
+        bossName: transition.bossName,
+        ...transition
+      });
+    } catch (error) {
+      console.error('[AsyncTurnManager] Failed to broadcast boss phase transition:', error.message);
+    }
+    if (!bossState) continue;
+    try {
+      await save({ ...bossState, battleId });
+    } catch (error) {
+      console.error('[AsyncTurnManager] Failed to save boss encounter:', error.message);
+    }
+  }
+}
+
 async function processEnemyTurnsFromState(
   battleId,
   state,
@@ -128,6 +188,8 @@ async function processEnemyTurnsFromState(
   let battleStatus = { status: 'active', winningTeamId: null };
   let iterations = 0;
   const maxIterations = 50; // Safety limit
+  // Boss phase transitions of the not-yet-committed enemy turn
+  const pendingPhaseTransitions = [];
 
   console.log('[AsyncTurnManager] Starting enemy turn processing for battle', battleId);
 
@@ -189,31 +251,10 @@ async function processEnemyTurnsFromState(
 
     enemyActions.push(...actionResults);
 
-    // Check for boss phase transitions after enemy action
-    // (Phase transitions modify boss stats/abilities in place via bossStates)
-    const phaseTransitionsAfterAction = checkAllBossTransitions(state);
-    for (const transition of phaseTransitionsAfterAction) {
-      console.log(`[AsyncTurnManager] Boss ${transition.bossName} transitioned to phase ${transition.toPhase}`);
-      // Update the unit's display properties for client sync
-      const bossUnit = state.units.find(u => String(u.id) === String(transition.unitId));
-      if (bossUnit && state.bossStates[transition.unitId]) {
-        bossUnit.currentPhase = state.bossStates[transition.unitId].currentPhase;
-        bossUnit.phaseName = transition.phaseName;
-      }
-      // Broadcast phase transition to connected clients
-      await battleWebsocket.broadcastPhaseTransition(battleId, {
-        bossId: transition.unitId,
-        bossName: transition.bossName,
-        ...transition
-      });
-      // Persist boss encounter state
-      if (state.bossStates[transition.unitId]) {
-        await saveBossEncounter({
-          ...state.bossStates[transition.unitId],
-          battleId
-        });
-      }
-    }
+    // Check for boss phase transitions after enemy action. They change
+    // state.bossStates in place and are announced and persisted only after
+    // this turn's state commits (see flushBossPhaseTransitions).
+    pendingPhaseTransitions.push(...collectBossPhaseTransitions(state));
 
     // Check if battle ended. Pass actingTeamId for PvP mutual knockout handling.
     const actingTeamId = getUnitTeamId(activeUnit);
@@ -227,31 +268,8 @@ async function processEnemyTurnsFromState(
     // Advance to next unit (applies DoT ticks in turnStartEffects)
     battleService.advanceToNextActorWithCT(state);
 
-    // Check for boss phase transitions after DoT ticks
-    // (Phase transitions modify boss stats/abilities in place via bossStates)
-    const phaseTransitionsAfterDoT = checkAllBossTransitions(state);
-    for (const transition of phaseTransitionsAfterDoT) {
-      console.log(`[AsyncTurnManager] Boss ${transition.bossName} transitioned to phase ${transition.toPhase} after DoT`);
-      // Update the unit's display properties for client sync
-      const bossUnit = state.units.find(u => String(u.id) === String(transition.unitId));
-      if (bossUnit && state.bossStates[transition.unitId]) {
-        bossUnit.currentPhase = state.bossStates[transition.unitId].currentPhase;
-        bossUnit.phaseName = transition.phaseName;
-      }
-      // Broadcast phase transition to connected clients
-      await battleWebsocket.broadcastPhaseTransition(battleId, {
-        bossId: transition.unitId,
-        bossName: transition.bossName,
-        ...transition
-      });
-      // Persist boss encounter state
-      if (state.bossStates[transition.unitId]) {
-        await saveBossEncounter({
-          ...state.bossStates[transition.unitId],
-          battleId
-        });
-      }
-    }
+    // Check for boss phase transitions after DoT ticks (also held until commit)
+    pendingPhaseTransitions.push(...collectBossPhaseTransitions(state));
 
     // DoT damage from the enemy's previous actions is still attributed to them.
     battleStatus = battleService.checkBattleEnd(state, { actingTeamId });
@@ -271,6 +289,7 @@ async function processEnemyTurnsFromState(
     lastCommittedUpdate = commitResult.update;
     state = structuredClone(commitResult.envelope.state);
     await battleWebsocket.broadcastStateUpdate(battleId, commitResult.update);
+    await flushBossPhaseTransitions(battleId, pendingPhaseTransitions.splice(0));
 
     // Small buffer before next turn
     await delay(TIMING.TURN_END_BUFFER);
@@ -289,7 +308,11 @@ async function processEnemyTurnsFromState(
     committedUpdate: lastCommittedUpdate,
     battleStatus: battleStatusString,
     battleEndResult: battleStatus, // Full result object with winningTeamId
-    enemyActions
+    enemyActions,
+    // Transitions from a final, uncommitted enemy turn (a terminal break).
+    // Nothing was broadcast or saved for them; boss_encounters rows are
+    // removed with the battle, so callers may only announce them.
+    pendingPhaseTransitions
   };
 }
 
@@ -832,6 +855,8 @@ async function notifyPlayerTurn(battleId, state, stateRevision = null) {
 export {
   processEnemyTurnsAsync,
   processEnemyTurnWithVisualization,
+  collectBossPhaseTransitions,
+  flushBossPhaseTransitions,
   notifyPlayerTurn,
   updateBattleState,
   TIMING

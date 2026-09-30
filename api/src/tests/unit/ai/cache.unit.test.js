@@ -1118,6 +1118,23 @@ describe('estimateActionDamage()', () => {
     assert.ok(d200 > d100, `200 power (${d200}) should deal more than 100 power (${d100})`);
   });
 
+  it('applies registry status modifiers like the real damage formula', () => {
+    const plain = createMockUnit({ strength: 30, attack: 15 });
+    const raging = createMockUnit({ strength: 30, attack: 15, statusEffects: [{ type: 'rage' }] });
+    const weakened = createMockUnit({ strength: 30, attack: 15, statusEffects: [{ type: 'weaken' }] });
+    const target = createMockUnit({ vitality: 20, defense: 10 });
+    const fortified = createMockUnit({ vitality: 20, defense: 10, statusEffects: [{ type: 'fortify' }] });
+
+    const base = estimateActionDamage(plain, target, {});
+    // (45 * 1.2) - 4.5 = 49.5 -> 49
+    assert.strictEqual(estimateActionDamage(raging, target, {}), 49);
+    // (45 * 0.8) - 4.5 = 31.5 -> 31
+    assert.strictEqual(estimateActionDamage(weakened, target, {}), 31);
+    // 45 - (30 * 1.3 * 0.15 = 5.85) = 39.15 -> 39
+    assert.strictEqual(estimateActionDamage(plain, fortified, {}), 39);
+    assert.strictEqual(base, 40);
+  });
+
   it('uses default power of 100 when no skill', () => {
     const attacker = createMockUnit({ strength: 30, attack: 15 });
     const target = createMockUnit({ vitality: 20, defense: 10 });

@@ -170,8 +170,16 @@ describe('Multiplayer Party API', () => {
       );
       assert.strictEqual(inviteCheck.rows[0].invite_status, 'accepted');
 
-      // Clean up: user2 leaves
-      await request('POST', `/api/party/multiplayer/${partyId}/leave`, {}, user2.accessToken);
+      // Leaving removes the member and ends their access to the party
+      const leaveRes = await request('POST', `/api/party/multiplayer/${partyId}/leave`, {}, user2.accessToken);
+      assert.strictEqual(leaveRes.status, 200, JSON.stringify(leaveRes.body));
+      const membership = await query(
+        'SELECT 1 FROM party_members WHERE party_id = $1 AND user_id = $2',
+        [partyId, user2.userId]
+      );
+      assert.strictEqual(membership.rows.length, 0);
+      const afterLeave = await request('GET', `/api/party/multiplayer/${partyId}`, null, user2.accessToken);
+      assert.strictEqual(afterLeave.status, 404);
     });
 
     it('should decline invite with correct status update', async () => {
@@ -320,4 +328,84 @@ describe('Multiplayer Party API', () => {
       assert.ok(inviteRes.body.invite, 'Should have invite object');
     });
   });
+
+  describe('Concurrent joins', () => {
+    const cleanups = [];
+
+    after(async () => {
+      for (const fn of cleanups.reverse()) {
+        await fn().catch(() => {});
+      }
+    });
+
+    async function createParty(leader, maxMembers) {
+      const res = await request('POST', '/api/party/multiplayer', { name: 'Race Party', maxMembers }, leader.accessToken);
+      assert.strictEqual(res.status, 201, JSON.stringify(res.body));
+      const id = res.body.party.id;
+      cleanups.push(() => query('DELETE FROM parties WHERE id = $1', [id]));
+      return id;
+    }
+
+    async function invite(partyId, leader, invitee) {
+      const res = await request('POST', `/api/party/multiplayer/${partyId}/invite`, { username: invitee.username }, leader.accessToken);
+      assert.strictEqual(res.status, 200, JSON.stringify(res.body));
+      return res.body.invite.id;
+    }
+
+    it('two invitees racing for the last slot: exactly one joins', async () => {
+      const leader = await ctx.createUser();
+      const a = await ctx.createUser();
+      const b = await ctx.createUser();
+      const partyId = await createParty(leader, 2);
+      const inviteA = await invite(partyId, leader, a);
+      const inviteB = await invite(partyId, leader, b);
+
+      const results = await Promise.all([
+        request('POST', `/api/party/multiplayer/join/${inviteA}`, {}, a.accessToken),
+        request('POST', `/api/party/multiplayer/join/${inviteB}`, {}, b.accessToken)
+      ]);
+
+      assert.deepStrictEqual(results.map(r => r.status).sort(), [200, 400], JSON.stringify(results.map(r => r.body)));
+      const members = await query('SELECT COUNT(*)::int AS n FROM party_members WHERE party_id = $1', [partyId]);
+      assert.strictEqual(members.rows[0].n, 2);
+    });
+
+    it('one user accepting two invites at once joins exactly one party', async () => {
+      const leaderA = await ctx.createUser();
+      const leaderB = await ctx.createUser();
+      const joiner = await ctx.createUser();
+      const partyA = await createParty(leaderA, 4);
+      const partyB = await createParty(leaderB, 4);
+      const inviteA = await invite(partyA, leaderA, joiner);
+      const inviteB = await invite(partyB, leaderB, joiner);
+
+      const results = await Promise.all([
+        request('POST', `/api/party/multiplayer/join/${inviteA}`, {}, joiner.accessToken),
+        request('POST', `/api/party/multiplayer/join/${inviteB}`, {}, joiner.accessToken)
+      ]);
+
+      assert.deepStrictEqual(results.map(r => r.status).sort(), [200, 400], JSON.stringify(results.map(r => r.body)));
+      const memberships = await query(
+        'SELECT party_id FROM party_members WHERE user_id = $1 AND party_id = ANY($2::int[])',
+        [joiner.userId, [partyA, partyB]]
+      );
+      assert.strictEqual(memberships.rows.length, 1);
+    });
+
+    it('a replayed accept of the same invite is refused', async () => {
+      const leader = await ctx.createUser();
+      const joiner = await ctx.createUser();
+      const partyId = await createParty(leader, 4);
+      const inviteId = await invite(partyId, leader, joiner);
+
+      const results = await Promise.all([
+        request('POST', `/api/party/multiplayer/join/${inviteId}`, {}, joiner.accessToken),
+        request('POST', `/api/party/multiplayer/join/${inviteId}`, {}, joiner.accessToken)
+      ]);
+      assert.deepStrictEqual(results.map(r => r.status).sort(), [200, 400]);
+      const members = await query('SELECT COUNT(*)::int AS n FROM party_members WHERE party_id = $1 AND user_id = $2', [partyId, joiner.userId]);
+      assert.strictEqual(members.rows[0].n, 1);
+    });
+  });
 });
+

@@ -49,7 +49,8 @@ import {
 import {
   createBattleActionProcessingState,
   createBattleActionReplayStateTransport,
-  createBattleActionStateTransport
+  createBattleActionStateTransport,
+  getTerminalReplayReceipt
 } from '../services/battle/BattleActionTransport.js';
 import { battleTerminalOutbox } from '../services/battle/BattleTerminalOutbox.js';
 import {
@@ -1708,43 +1709,10 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
   let changedBossState = null;
   const phaseTransitions = [];
 
-  // Check for boss phase transitions after damage dealt (single-target, AoE)
+  // Check for boss phase transitions after damage dealt (single-target, AoE).
+  // Each damaged boss is processed once (processActionBossDamage).
   if (state.bossStates) {
-    // Single-target damage
-    if (result.damage && result.targetType === 'enemy') {
-      const targetBoss = state.units.find(u => u.id === result.targetId);
-      if (targetBoss && state.bossStates[targetBoss.id] && targetBoss.hp > 0) {
-        const phaseTransition = bossService.processBossDamage(
-          targetBoss,
-          state.bossStates[targetBoss.id],
-          result.damage,
-          state
-        );
-        if (phaseTransition) {
-          phaseTransitions.push({ boss: targetBoss, transition: phaseTransition });
-        }
-      }
-    }
-
-    // AoE damage - check each affected enemy boss
-    if (result.aoeTargets && result.aoeTargets.length > 0) {
-      for (const aoeTarget of result.aoeTargets) {
-        if (aoeTarget.targetType === 'enemy' && aoeTarget.damage > 0) {
-          const targetBoss = state.units.find(u => u.id === aoeTarget.targetId);
-          if (targetBoss && state.bossStates[targetBoss.id] && targetBoss.hp > 0) {
-            const phaseTransition = bossService.processBossDamage(
-              targetBoss,
-              state.bossStates[targetBoss.id],
-              aoeTarget.damage,
-              state
-            );
-            if (phaseTransition) {
-              phaseTransitions.push({ boss: targetBoss, transition: phaseTransition });
-            }
-          }
-        }
-      }
-    }
+    phaseTransitions.push(...bossService.processActionBossDamage(state, result));
 
     // Apply first phase transition (if multiple bosses transition, only one is primary)
     if (phaseTransitions.length > 0) {
@@ -1918,11 +1886,9 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
       await throwBattleActionCommitError(error, battleId, req.user.userId);
     }
     if (completion.idempotent) {
-      // Use commandReceipt if available (has battleId and map references for V3 transport)
-      const replayReceipt = completion.commandReceipt ?? completion;
       return sendBattleActionReplay(
         res,
-        replayReceipt,
+        getTerminalReplayReceipt(completion),
         battle,
         actionCommand.commandId,
         req.user.userId

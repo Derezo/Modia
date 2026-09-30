@@ -41,8 +41,19 @@ try {
   // Will fail on first use with helpful error
 }
 
-// SECURITY: Admin mode is STRICTLY disabled in production
-const isProduction = process.env.NODE_ENV === 'production';
+// SECURITY: admin routes are allow-listed to these environments. An unset,
+// 'staging' or any other NODE_ENV is refused (fail closed); these routes have
+// no authentication of their own.
+export const ADMIN_ALLOWED_ENVIRONMENTS = Object.freeze(['development', 'test']);
+
+/**
+ * Whether admin routes may run, read per request so a NODE_ENV loaded by
+ * dotenv after this module was evaluated still counts.
+ * @returns {boolean}
+ */
+export function isAdminEnvironment() {
+  return ADMIN_ALLOWED_ENVIRONMENTS.includes(process.env.NODE_ENV);
+}
 
 // Cached trait data for prompt construction
 let cachedTraitData = null;
@@ -57,14 +68,15 @@ export function ensureUtilities() {
 }
 
 /**
- * Middleware to check admin mode is enabled
- * SECURITY: Explicitly blocks production even if DEBUG=true is set
+ * Middleware: admin routes run only when NODE_ENV is development or test.
+ * SECURITY: blocks production and every other or unset NODE_ENV, even if
+ * DEBUG=true is set.
  */
 export function requireDevMode(req, res, next) {
-  if (isProduction) {
-    console.warn(`[SECURITY] Admin endpoint access attempted in production by IP: ${req.ip}`);
+  if (!isAdminEnvironment()) {
+    console.warn(`[SECURITY] Admin endpoint access attempted with NODE_ENV=${process.env.NODE_ENV || '(unset)'} by IP: ${req.ip}`);
     return res.status(403).json({
-      error: 'Admin endpoints are disabled in production'
+      error: 'Admin endpoints are only available in development and test'
     });
   }
   next();

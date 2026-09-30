@@ -248,4 +248,47 @@ describe('presence privacy (live)', () => {
     assert.equal(own.status, 200);
     assert.ok(own.body.players.some(p => Number(p.userId) === Number(hidden.userId)));
   });
+
+  it('a hidden user joining and leaving global is not announced or listed', async () => {
+    const obs = await openClient(observer.accessToken);
+    clients.push(obs);
+    send(obs, 'join_room', { room: 'global' });
+    await waitFor(obs, m => m.type === 'room_joined' && m.payload.room === 'global');
+
+    // Control: the visible user's join, membership and leave reach the observer
+    const vis = await openClient(visible.accessToken);
+    clients.push(vis);
+    send(vis, 'join_room', { room: 'global' });
+    await waitFor(obs, aboutUser(visible.userId, 'user_joined'));
+    const visJoined = await waitFor(vis, m => m.type === 'room_joined' && m.payload.room === 'global');
+    assert.ok(visJoined.payload.users.map(Number).includes(Number(observer.userId)));
+
+    const hid = await openClient(hidden.accessToken);
+    clients.push(hid);
+    send(hid, 'join_room', { room: 'global' });
+    const hidJoined = await waitFor(hid, m => m.type === 'room_joined' && m.payload.room === 'global');
+    // The hidden user sees themselves in their own list
+    assert.ok(hidJoined.payload.users.map(Number).includes(Number(hidden.userId)));
+
+    // A later joiner does not see the hidden user in the member list (a
+    // separate user: a second socket for 'visible' would replace its session)
+    const lateUser = await ctx.createUser();
+    const late = await openClient(lateUser.accessToken);
+    clients.push(late);
+    send(late, 'join_room', { room: 'global' });
+    const lateJoined = await waitFor(late, m => m.type === 'room_joined' && m.payload.room === 'global');
+    assert.ok(!lateJoined.payload.users.map(Number).includes(Number(hidden.userId)));
+
+    send(hid, 'leave_room', { room: 'global' });
+    await waitFor(hid, m => m.type === 'room_left');
+    send(vis, 'leave_room', { room: 'global' });
+    await waitFor(obs, aboutUser(visible.userId, 'user_left'));
+    await delay(QUIET_MS);
+
+    const leaked = obs.messages.filter(
+      m => (m.type === 'user_joined' || m.type === 'user_left') && Number(m.payload?.userId) === Number(hidden.userId)
+    );
+    assert.deepEqual(leaked, [], 'hidden user join/leave must not be broadcast');
+  });
 });
+

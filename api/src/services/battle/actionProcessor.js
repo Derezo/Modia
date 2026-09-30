@@ -46,6 +46,21 @@ import {
   excludesCasterFromAoE
 } from './skillClassification.js';
 
+/**
+ * Lifesteal for damage dealt: trait lifesteal plus the equipment augment
+ * 'lifesteal' fraction. Used by basic attacks and by single-target and AoE
+ * skills, so a lifesteal augment heals on every damaging action.
+ * @param {Object} unit - Attacker
+ * @param {number} damage - Damage dealt
+ * @returns {number} HP to restore before healing-received bonuses
+ */
+export function computeLifesteal(unit, damage) {
+  if (!(damage > 0)) return 0;
+  const traitLifesteal = traitService.calculateLifesteal(unit, damage);
+  const equipLifesteal = Math.floor(damage * getEquipmentAugmentEffect(unit, 'lifesteal'));
+  return traitLifesteal + equipLifesteal;
+}
+
 function applyDamageInstance(attacker, target, incomingDamage) {
   if (target.hp <= 0 || incomingDamage <= 0) {
     return {
@@ -581,12 +596,9 @@ function processAttackAction(state, unit, targetTile) {
       result.targetType = target.type;
 
       // Apply lifesteal from traits and equipment augments
-      const traitLifesteal = traitService.calculateLifesteal(unit, actualDamage);
-      const equipLifestealPercent = getEquipmentAugmentEffect(unit, 'lifesteal');
-      const equipLifesteal = Math.floor(actualDamage * equipLifestealPercent);
       const lifestealAmount = applyHealingReceivedBonus(
         unit,
-        traitLifesteal + equipLifesteal
+        computeLifesteal(unit, actualDamage)
       );
       if (lifestealAmount > 0) {
         unit.hp = Math.min(unit.maxHp, unit.hp + lifestealAmount);
@@ -1085,10 +1097,10 @@ function processAoESkill(
     result.aoeTargets.push(targetResult);
   }
 
-  // Apply lifesteal for total AoE damage dealt
+  // Apply lifesteal (traits and equipment augments) for total AoE damage dealt
   const lifestealAmount = applyHealingReceivedBonus(
     unit,
-    traitService.calculateLifesteal(unit, totalAoEDamage)
+    computeLifesteal(unit, totalAoEDamage)
   );
   if (lifestealAmount > 0) {
     unit.hp = Math.min(unit.maxHp, unit.hp + lifestealAmount);
@@ -1258,10 +1270,10 @@ function processSingleTargetSkill(state, unit, target, skill, skillId, result) {
   result.targetId = target.id;
   result.targetType = target.type;
 
-  // Apply lifesteal trait
+  // Apply lifesteal (traits and equipment augments)
   const lifestealAmount = applyHealingReceivedBonus(
     unit,
-    traitService.calculateLifesteal(unit, totalDamage)
+    computeLifesteal(unit, totalDamage)
   );
   if (lifestealAmount > 0) {
     unit.hp = Math.min(unit.maxHp, unit.hp + lifestealAmount);

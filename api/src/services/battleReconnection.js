@@ -137,7 +137,9 @@ async function handleReconnect(battleId, playerId, playerName) {
       const battleTracking = disconnectTracking.get(battleId);
       const playerTracking = battleTracking?.[playerId];
       if (playerTracking && !playerTracking.reconnected) {
-        coliseumHandlePlayerReconnect(battleId, playerId);
+        // Cancel the forfeit timer only: the grace-period block below owns
+        // the turn-timer restart for this HTTP reconnect path
+        coliseumHandlePlayerReconnect(battleId, playerId, { restartTimer: false });
         // Record reconnection in rating system
         if (playerTracking.disconnectId) {
           recordReconnection(playerTracking.disconnectId).catch(err => {

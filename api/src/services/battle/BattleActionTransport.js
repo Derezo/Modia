@@ -72,3 +72,19 @@ export function createBattleActionReplayStateTransport({
     update: createBattleMutableStateUpdateV1(receipt)
   });
 }
+
+/**
+ * The receipt to replay when a terminal (battle-ending) action turns out to
+ * be an idempotent retry inside handleBattleEnd.
+ *
+ * handleBattleEnd returns a completion summary (rewards, state, pvpInfo, ...)
+ * that has no battleId or map reference, so building a V3 replay update from
+ * it throws and the retry answered 500. The stored command receipt carries
+ * those references; the summary is only a fallback for callers that have none.
+ *
+ * @param {Object} completion - handleBattleEnd result
+ * @returns {Object} Receipt for sendBattleActionReplay
+ */
+export function getTerminalReplayReceipt(completion) {
+  return completion?.commandReceipt ?? completion;
+}

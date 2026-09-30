@@ -12,10 +12,9 @@
 import bcrypt from 'bcrypt';
 import { withTransaction } from '../config/database.js';
 import { generateAccessToken, generateRefreshToken, hashRefreshToken } from '../config/jwt.js';
-import { calculateStats, STARTING_EXPERIENCE, RACES, CLASSES, GENDERS } from '../config/constants.js';
+import { RACES, CLASSES, GENDERS } from '../config/constants.js';
 import { STARTING_GOLD } from '../config/constants.js';
-import { STARTING_CONSUMABLES } from '../../../shared/constants.js';
-import { discoverNodeAndAdjacent } from './world/discoveryService.js';
+import { createFirstCharacterWithClient } from './firstCharacterService.js';
 import { validateCharacterNameResult } from '../utils/nameValidation.js';
 import { AppError } from '../middleware/errorHandler.js';
 
@@ -42,22 +41,6 @@ export function validatePassword(password) {
     throw new AppError('Password exceeds maximum length (72 bytes)', 400);
   }
 }
-
-// Starter equipment by class (weapon, armor, accessory)
-const STARTER_EQUIPMENT = {
-  warrior: ['Trainee Sword', 'Trainee Tunic', 'Warrior\'s Pendant'],
-  wizard: ['Novice Wand', 'Student Robe', 'Mage\'s Crystal'],
-  monk: ['Initiate Wraps', 'Initiate Gi', 'Monk\'s Beads'],
-  chemist: ['Mixing Rod', 'Alchemist Coat', 'Reagent Pouch']
-};
-
-// Starter skills by class (first skill in each class tree)
-const STARTER_SKILLS = {
-  warrior: ['power_strike'],
-  wizard: ['fireball'],
-  monk: ['palm_strike'],
-  chemist: ['brew_potion']
-};
 
 /**
  * Validates registration input data
@@ -170,100 +153,13 @@ export async function registerUserWithCharacter({
     );
     const user = userResult.rows[0];
 
-    // Calculate initial stats
-    const stats = calculateStats(race, characterClass, 1);
-
-    // Get spawn location (race's homeland castle)
-    const regionResult = await client.query(
-      'SELECT id, castle_node_id FROM world_regions WHERE race = $1',
-      [race]
-    );
-
-    if (regionResult.rows.length === 0) {
-      throw new Error('Invalid race for spawn location');
-    }
-
-    const region = regionResult.rows[0];
-    const spawnNodeId = region.castle_node_id;
-    const homeRegionId = region.id;
-
-    if (!spawnNodeId) {
-      throw new Error('Unable to determine spawn location');
-    }
-
-    // Insert character with party_slot=1 (first character is always party leader)
-    const characterResult = await client.query(
-      `INSERT INTO characters (
-         user_id, name, race, class, gender, level, experience,
-         hp_current, hp_max, mp_current, mp_max,
-         strength, intelligence, agility, vitality, luck,
-         party_slot, current_node_id, home_region_id
-       )
-       VALUES ($1, $2, $3, $4, $5, 1, $6, $7, $7, $8, $8, $9, $10, $11, $12, $13, 1, $14, $15)
-       RETURNING *`,
-      [
-        user.id, characterName, race, characterClass, gender,
-        STARTING_EXPERIENCE,
-        stats.hpMax, stats.mpMax,
-        stats.strength, stats.intelligence, stats.agility, stats.vitality, stats.luck,
-        spawnNodeId, homeRegionId
-      ]
-    );
-    const character = characterResult.rows[0];
-
-    // Grant starter equipment
-    const starterItems = STARTER_EQUIPMENT[characterClass];
-    if (starterItems) {
-      for (const itemName of starterItems) {
-        await client.query(
-          `INSERT INTO character_items (character_id, item_template_id, quantity, is_equipped, equipped_slot)
-           SELECT $1, id, 1, true, equipment_slot
-           FROM item_templates WHERE name = $2`,
-          [character.id, itemName]
-        );
-      }
-    }
-
-    // Grant starter skills
-    const starterSkills = STARTER_SKILLS[characterClass];
-    if (starterSkills) {
-      for (const skillId of starterSkills) {
-        await client.query(
-          `INSERT INTO character_skills (character_id, skill_id, level)
-           VALUES ($1, $2, 1)
-           ON CONFLICT (character_id, skill_id) DO NOTHING`,
-          [character.id, skillId]
-        );
-      }
-    }
-
-    // Grant starting consumables to shared inventory (character_id NULL)
-    for (const { templateId, quantity } of STARTING_CONSUMABLES) {
-      await client.query(
-        `INSERT INTO character_items (user_id, character_id, item_template_id, quantity, is_equipped)
-         VALUES ($1, NULL, $2, $3, false)`,
-        [user.id, templateId, quantity]
-      );
-    }
-
-    // Grant starting trait based on race/class combination
-    const startingTraitResult = await client.query(
-      'SELECT trait_id FROM starting_trait_mappings WHERE race = $1 AND class = $2',
-      [race, characterClass]
-    );
-
-    if (startingTraitResult.rows.length > 0) {
-      const traitId = startingTraitResult.rows[0].trait_id;
-      await client.query(
-        `INSERT INTO character_traits (character_id, trait_id)
-         VALUES ($1, $2)
-         ON CONFLICT (character_id, trait_id) DO NOTHING`,
-        [character.id, traitId]
-      );
-    }
-
-    // Initialize node discovery (pass client for transaction)
-    await discoverNodeAndAdjacent(user.id, spawnNodeId, client);
+    const character = await createFirstCharacterWithClient(client, {
+      userId: user.id,
+      name: characterName,
+      race,
+      characterClass,
+      gender
+    });
 
     // Generate JWT tokens
     const accessToken = generateAccessToken(user.id, user.username);

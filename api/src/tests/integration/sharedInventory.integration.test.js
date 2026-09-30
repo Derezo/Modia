@@ -472,6 +472,55 @@ describe('Shared Inventory System', () => {
         await cleanupTestItems(createdItems);
       }
     });
+
+    it('should keep weapons in their template hand (no dual-wield, no shield in main hand)', async () => {
+      const createdItems = [];
+      const createdTemplates = [];
+
+      try {
+        const templates = await query(
+          `INSERT INTO item_templates (name, item_type, equipment_slot, level_requirement)
+           VALUES ('Test Slot Blade', 'weapon', 'main_hand', 1),
+                  ('Test Slot Buckler', 'weapon', 'off_hand', 1)
+           RETURNING id, equipment_slot`
+        );
+        for (const row of templates.rows) createdTemplates.push(row.id);
+        const bladeTemplateId = templates.rows.find(r => r.equipment_slot === 'main_hand').id;
+        const bucklerTemplateId = templates.rows.find(r => r.equipment_slot === 'off_hand').id;
+
+        const bladeId = await createSharedPoolItem(testUser.userId, bladeTemplateId);
+        const bucklerId = await createSharedPoolItem(testUser.userId, bucklerTemplateId);
+        createdItems.push(bladeId, bucklerId);
+
+        const bladeOffHand = await request('POST', '/api/inventory/equip', {
+          characterId: testCharacter1.id,
+          itemInstanceId: bladeId,
+          slot: 'off_hand'
+        }, testUser.accessToken);
+        assert.strictEqual(bladeOffHand.status, 400);
+        assert.match(bladeOffHand.body.error, /main_hand slot/);
+
+        const bucklerMainHand = await request('POST', '/api/inventory/equip', {
+          characterId: testCharacter1.id,
+          itemInstanceId: bucklerId,
+          slot: 'main_hand'
+        }, testUser.accessToken);
+        assert.strictEqual(bucklerMainHand.status, 400);
+        assert.match(bucklerMainHand.body.error, /off_hand slot/);
+
+        const bucklerOffHand = await request('POST', '/api/inventory/equip', {
+          characterId: testCharacter1.id,
+          itemInstanceId: bucklerId,
+          slot: 'off_hand'
+        }, testUser.accessToken);
+        assert.strictEqual(bucklerOffHand.status, 200);
+      } finally {
+        await cleanupTestItems(createdItems);
+        if (createdTemplates.length > 0) {
+          await query('DELETE FROM item_templates WHERE id = ANY($1)', [createdTemplates]);
+        }
+      }
+    });
   });
 
   describe('POST /api/inventory/unequip', () => {

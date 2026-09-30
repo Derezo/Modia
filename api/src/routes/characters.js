@@ -2,14 +2,13 @@ import express from 'express';
 import { query, withTransaction } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
-import { RACES, CLASSES, GENDERS, calculateStats, STARTING_EXPERIENCE, RACE_BASE_STATS } from '../config/constants.js';
-import { STARTING_CONSUMABLES } from '../../../shared/constants.js';
+import { RACES, CLASSES, GENDERS, calculateStats, RACE_BASE_STATS } from '../config/constants.js';
 import { validateCharacterName } from '../utils/nameValidation.js';
 import { parseIntOrThrow } from '../utils/validateNumericParam.js';
 import * as staminaService from '../services/staminaService.js';
 import { assertNoUnsettledFishingSession } from '../services/fishingTravelGuard.js';
-import { discoverNodeAndAdjacent } from '../services/world/discoveryService.js';
-import { buildEquipmentStatsLateral } from '../services/equipmentStats.js';
+import { createFirstCharacterWithClient } from '../services/firstCharacterService.js';
+import { buildEquipmentStatsLateral, resolveItemBaseStats, resolveItemBonusStats } from '../services/equipmentStats.js';
 import {
   characterCreateLimiter,
   characterDeleteLimiter,
@@ -17,22 +16,6 @@ import {
 } from '../middleware/characterRateLimiter.js';
 
 const router = express.Router();
-
-// Starter equipment by class (weapon, armor, accessory)
-const STARTER_EQUIPMENT = {
-  warrior: ['Trainee Sword', 'Trainee Tunic', 'Warrior\'s Pendant'],
-  wizard: ['Novice Wand', 'Student Robe', 'Mage\'s Crystal'],
-  monk: ['Initiate Wraps', 'Initiate Gi', 'Monk\'s Beads'],
-  chemist: ['Mixing Rod', 'Alchemist Coat', 'Reagent Pouch']
-};
-
-// Starter skills by class (first skill in each class tree)
-const STARTER_SKILLS = {
-  warrior: ['power_strike'],
-  wizard: ['fireball'],
-  monk: ['palm_strike'],
-  chemist: ['brew_potion']
-};
 
 /**
  * Respawn a party after serializing against battle lifecycle writes.
@@ -205,15 +188,13 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
     if (!equipmentByCharacter[row.character_id]) {
       equipmentByCharacter[row.character_id] = {};
     }
-    // Parse stats for power calculation
-    const templateStats = typeof row.stat_bonuses === 'string'
-      ? JSON.parse(row.stat_bonuses)
-      : row.stat_bonuses || {};
+    // Same per-key template fallback as the battle stat lateral, so the
+    // client's gear totals (effectiveStats.js) match what battle uses
     const mods = typeof row.modifications === 'string'
       ? JSON.parse(row.modifications)
       : row.modifications || {};
-    const baseStats = mods.baseStats || templateStats;
-    const bonusStats = mods.bonusStats || {};
+    const baseStats = resolveItemBaseStats(mods, row.stat_bonuses);
+    const bonusStats = resolveItemBonusStats(mods);
 
     equipmentByCharacter[row.character_id][row.equipped_slot] = {
       templateId: row.template_id,
@@ -271,9 +252,6 @@ router.post('/', authenticate, characterCreateLimiter, asyncHandler(async (req, 
     throw new AppError(`Invalid gender. Must be one of: ${Object.values(GENDERS).join(', ')}`, 400);
   }
 
-  // Calculate initial stats before transaction (no DB needed)
-  const stats = calculateStats(race, characterClass, 1);
-
   // All character creation happens atomically in a transaction
   const character = await withTransaction(async (client) => {
     // Lock the user row to prevent concurrent character creation races
@@ -294,107 +272,13 @@ router.post('/', authenticate, characterCreateLimiter, asyncHandler(async (req, 
       throw new AppError('Cannot create characters manually. Use guild recruitment.', 400);
     }
 
-    // Look up home region by race for spawn location
-    const regionResult = await client.query(
-      'SELECT id, castle_node_id FROM world_regions WHERE race = $1',
-      [race]
-    );
-
-    if (regionResult.rows.length === 0) {
-      throw new AppError('Invalid race for spawn location', 400);
-    }
-
-    const region = regionResult.rows[0];
-    const spawnNodeId = region.castle_node_id;
-    const homeRegionId = region.id;
-
-    if (!spawnNodeId) {
-      console.error(`[CharacterCreate] ERROR: No castle_node_id for race ${race} in world_regions`);
-      throw new AppError('Unable to determine spawn location', 500);
-    }
-
-    // Insert character at racial homeland castle with starting experience
-    // First character always gets party_slot = 1
-    // Note: Gold is stored at user level (users.gold), not per-character
-    const result = await client.query(
-      `INSERT INTO characters (
-         user_id, name, race, class, gender, level, experience,
-         hp_current, hp_max, mp_current, mp_max,
-         strength, intelligence, agility, vitality, luck,
-         party_slot, current_node_id, home_region_id
-       )
-       VALUES ($1, $2, $3, $4, $5, 1, $6, $7, $7, $8, $8, $9, $10, $11, $12, $13, 1, $14, $15)
-       RETURNING *`,
-      [
-        userId, name, race, characterClass, gender,
-        STARTING_EXPERIENCE,
-        stats.hpMax, stats.mpMax,
-        stats.strength, stats.intelligence, stats.agility, stats.vitality, stats.luck,
-        spawnNodeId,
-        homeRegionId
-      ]
-    );
-
-    const newCharacter = result.rows[0];
-
-    // Grant starter equipment
-    const starterItems = STARTER_EQUIPMENT[characterClass];
-    if (starterItems) {
-      for (const itemName of starterItems) {
-        await client.query(
-          `INSERT INTO character_items (character_id, item_template_id, quantity, is_equipped, equipped_slot)
-           SELECT $1, id, 1, true, equipment_slot
-           FROM item_templates WHERE name = $2`,
-          [newCharacter.id, itemName]
-        );
-      }
-    }
-
-    // Grant starter skills
-    const starterSkills = STARTER_SKILLS[characterClass];
-    if (starterSkills) {
-      for (const skillId of starterSkills) {
-        await client.query(
-          `INSERT INTO character_skills (character_id, skill_id, level)
-           VALUES ($1, $2, 1)
-           ON CONFLICT (character_id, skill_id) DO NOTHING`,
-          [newCharacter.id, skillId]
-        );
-      }
-    }
-
-    // Grant starting consumables to shared inventory (character_id NULL)
-    // This matches registrationService.js so players get the same start regardless of path
-    for (const { templateId, quantity } of STARTING_CONSUMABLES) {
-      await client.query(
-        `INSERT INTO character_items (user_id, character_id, item_template_id, quantity, is_equipped)
-         VALUES ($1, NULL, $2, $3, false)`,
-        [userId, templateId, quantity]
-      );
-    }
-
-    // Grant starting trait based on race/class combination
-    const startingTraitResult = await client.query(
-      'SELECT trait_id FROM starting_trait_mappings WHERE race = $1 AND class = $2',
-      [race, characterClass]
-    );
-
-    if (startingTraitResult.rows.length > 0) {
-      const traitId = startingTraitResult.rows[0].trait_id;
-      await client.query(
-        `INSERT INTO character_traits (character_id, trait_id)
-         VALUES ($1, $2)
-         ON CONFLICT (character_id, trait_id) DO NOTHING`,
-        [newCharacter.id, traitId]
-      );
-      console.log(`[CharacterCreate] Assigned starting trait ${traitId} to character ${newCharacter.id}`);
-    }
-
-    // Initialize node discovery inside transaction
-    console.log(`[CharacterCreate] Discovering spawn node for user ${userId}: nodeId=${spawnNodeId}`);
-    await discoverNodeAndAdjacent(userId, spawnNodeId, client);
-
-    return newCharacter;
+    return createFirstCharacterWithClient(client, {
+      userId,
+      name,
+      race,
+      characterClass,
+      gender
+    });
   });
 
   res.status(201).json({ character });

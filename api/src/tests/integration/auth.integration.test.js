@@ -1,6 +1,6 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
-import { request, uniqueUsername, uniqueEmail, resetRateLimitersViaApi, cleanupTestUser } from '../testHelper.js';
+import { request, uniqueUsername, uniqueEmail, resetRateLimitersViaApi, cleanupTestUser, query } from '../testHelper.js';
 
 describe('Auth API', () => {
   let testUser = null;
@@ -235,6 +235,32 @@ describe('Auth API', () => {
         refreshToken: originalToken
       });
       assert.strictEqual(reuseRes.status, 401, 'Rotated-out token should be rejected');
+    });
+  });
+
+  describe('POST /api/auth/refresh for a banned user', () => {
+    it('refuses to rotate and revokes every session', async () => {
+      const regRes = await request('POST', '/api/auth/register', {
+        username: uniqueUsername(),
+        email: uniqueEmail(),
+        password: 'TestPassword123!'
+      });
+      assert.strictEqual(regRes.status, 201);
+      const userId = regRes.body.user.id;
+      createdUserIds.push(userId);
+
+      // A second session on another device
+      const refreshed = await request('POST', '/api/auth/refresh', { refreshToken: regRes.body.refreshToken });
+      assert.strictEqual(refreshed.status, 200);
+
+      await query('UPDATE users SET is_banned = TRUE WHERE id = $1', [userId]);
+
+      const banned = await request('POST', '/api/auth/refresh', { refreshToken: refreshed.body.refreshToken });
+      assert.strictEqual(banned.status, 403, JSON.stringify(banned.body));
+      assert.strictEqual(banned.body.accessToken, undefined);
+
+      const sessions = await query('SELECT COUNT(*)::int AS n FROM user_sessions WHERE user_id = $1', [userId]);
+      assert.strictEqual(sessions.rows[0].n, 0);
     });
   });
 

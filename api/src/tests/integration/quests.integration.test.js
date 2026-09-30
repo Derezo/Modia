@@ -248,6 +248,44 @@ describe('Quests API Integration', () => {
     });
   });
 
+  describe('Completion bonus on single claims (Finding 39)', () => {
+    it('grants and returns the daily completion bonus on the last one-at-a-time claim', async () => {
+      const bonusUser = await ctx.createUser();
+      const bonusChar = await ctx.createCharacter(bonusUser.accessToken);
+
+      const daily = await request('GET', `/api/quests/daily/${bonusChar.id}`, null, bonusUser.accessToken);
+      assert.strictEqual(daily.status, 200, JSON.stringify(daily.body));
+      const quests = daily.body.quests;
+      assert.ok(quests.length >= 3, `expected 3 daily quests, got ${quests.length}`);
+
+      await pool.query(
+        `UPDATE character_daily_quests SET is_completed = TRUE
+         WHERE character_id = $1 AND period = 'daily' AND period_start = get_daily_period_start()`,
+        [bonusChar.id]
+      );
+
+      const responses = [];
+      for (const quest of quests) {
+        const res = await request('POST', `/api/quests/${quest.id}/claim`,
+          { characterId: bonusChar.id }, bonusUser.accessToken);
+        assert.strictEqual(res.status, 200, JSON.stringify(res.body));
+        responses.push(res.body);
+      }
+
+      assert.ok(responses.slice(0, -1).every(r => r.completionBonus === null),
+        'no bonus before the last claim');
+      const lastBonus = responses.at(-1).completionBonus;
+      assert.ok(lastBonus && lastBonus.gold >= 0 && lastBonus.xp >= 0, JSON.stringify(lastBonus));
+
+      const granted = await pool.query(
+        `SELECT COUNT(*)::int AS n FROM character_completion_bonuses
+         WHERE character_id = $1 AND period_start = get_daily_period_start()`,
+        [bonusChar.id]
+      );
+      assert.strictEqual(granted.rows[0].n, 1);
+    });
+  });
+
   describe('POST /api/quests/claim-all', () => {
     it('should claim all completed quests', async () => {
       const response = await request('POST',

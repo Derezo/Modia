@@ -110,4 +110,14 @@ describe('character names on leaderboard and online list', () => {
     assert.equal(self.username, user.username);
     assert.equal(self.characterName, leader.name);
   });
+
+  it('rejects negative or non-numeric paging with 400 and caps an oversized limit', async () => {
+    for (const qs of ['limit=-3', 'offset=-1', 'limit=abc']) {
+      const res = await request('GET', `/api/leaderboard/level?${qs}`, null, user.accessToken);
+      assert.equal(res.status, 400, qs);
+    }
+    const capped = await request('GET', '/api/leaderboard/level?limit=500', null, user.accessToken);
+    assert.equal(capped.status, 200);
+    assert.equal(capped.body.pagination.limit, 100);
+  });
 });

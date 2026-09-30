@@ -7,6 +7,7 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import * as clanService from '../services/clanService.js';
+import { parseIdParam, parseLimit } from '../utils/parseParams.js';
 import { validateDisplayName, validateFreeText } from '../utils/nameValidation.js';
 import {
   clanCreateLimiter,
@@ -26,7 +27,7 @@ const router = express.Router();
  */
 router.get('/', authenticate, asyncHandler(async (req, res) => {
   const { q, limit = '20' } = req.query;
-  const parsedLimit = Math.min(parseInt(limit, 10) || 20, 50);
+  const parsedLimit = parseLimit(limit, 20, 50);
 
   const clans = await clanService.listClans(q?.trim(), parsedLimit);
 
@@ -121,11 +122,8 @@ router.get('/invites', authenticate, asyncHandler(async (req, res) => {
  * Get clan details and members
  */
 router.get('/:id', authenticate, asyncHandler(async (req, res) => {
-  const clanId = parseInt(req.params.id, 10);
+  const clanId = parseIdParam(req.params.id, 'clan ID');
 
-  if (isNaN(clanId)) {
-    throw new AppError('Invalid clan ID', 400);
-  }
 
   const clan = await clanService.getClanDetails(clanId);
 
@@ -144,11 +142,8 @@ router.get('/:id', authenticate, asyncHandler(async (req, res) => {
  * Leave the current clan
  */
 router.post('/:id/leave', authenticate, clanManageLimiter, asyncHandler(async (req, res) => {
-  const clanId = parseInt(req.params.id, 10);
+  const clanId = parseIdParam(req.params.id, 'clan ID');
 
-  if (isNaN(clanId)) {
-    throw new AppError('Invalid clan ID', 400);
-  }
 
   try {
     await clanService.leaveClan(req.user.userId, clanId);
@@ -173,11 +168,8 @@ router.post('/:id/leave', authenticate, clanManageLimiter, asyncHandler(async (r
  * Disband a clan (leader only)
  */
 router.delete('/:id', authenticate, clanManageLimiter, asyncHandler(async (req, res) => {
-  const clanId = parseInt(req.params.id, 10);
+  const clanId = parseIdParam(req.params.id, 'clan ID');
 
-  if (isNaN(clanId)) {
-    throw new AppError('Invalid clan ID', 400);
-  }
 
   try {
     await clanService.disbandClan(req.user.userId, clanId);
@@ -202,12 +194,9 @@ router.delete('/:id', authenticate, clanManageLimiter, asyncHandler(async (req, 
  * Invite a player to the clan
  */
 router.post('/:id/invite/:username', authenticate, clanInviteLimiter, asyncHandler(async (req, res) => {
-  const clanId = parseInt(req.params.id, 10);
+  const clanId = parseIdParam(req.params.id, 'clan ID');
   const { username } = req.params;
 
-  if (isNaN(clanId)) {
-    throw new AppError('Invalid clan ID', 400);
-  }
 
   if (!username || username.trim().length === 0) {
     throw new AppError('Username is required', 400);
@@ -237,11 +226,8 @@ router.post('/:id/invite/:username', authenticate, clanInviteLimiter, asyncHandl
  * Accept a clan invite
  */
 router.post('/invite/:inviteId/accept', authenticate, clanManageLimiter, asyncHandler(async (req, res) => {
-  const inviteId = parseInt(req.params.inviteId, 10);
+  const inviteId = parseIdParam(req.params.inviteId, 'invite ID');
 
-  if (isNaN(inviteId)) {
-    throw new AppError('Invalid invite ID', 400);
-  }
 
   try {
     const membership = await clanService.acceptInvite(req.user.userId, inviteId);
@@ -272,17 +258,11 @@ router.post('/invite/:inviteId/accept', authenticate, clanManageLimiter, asyncHa
  * Transfer clan leadership to another member (leader only)
  */
 router.post('/:id/transfer', authenticate, clanManageLimiter, asyncHandler(async (req, res) => {
-  const clanId = parseInt(req.params.id, 10);
+  const clanId = parseIdParam(req.params.id, 'clan ID');
   const { userId: targetUserId } = req.body;
 
-  if (isNaN(clanId)) {
-    throw new AppError('Invalid clan ID', 400);
-  }
 
-  const parsedTargetUserId = parseInt(targetUserId, 10);
-  if (isNaN(parsedTargetUserId)) {
-    throw new AppError('Invalid target user ID', 400);
-  }
+  const parsedTargetUserId = parseIdParam(targetUserId, 'target user ID');
 
   try {
     const result = await clanService.transferLeadership(req.user.userId, clanId, parsedTargetUserId);
@@ -305,11 +285,8 @@ router.post('/:id/transfer', authenticate, clanManageLimiter, asyncHandler(async
  * Decline a clan invite
  */
 router.post('/invite/:inviteId/decline', authenticate, clanManageLimiter, asyncHandler(async (req, res) => {
-  const inviteId = parseInt(req.params.inviteId, 10);
+  const inviteId = parseIdParam(req.params.inviteId, 'invite ID');
 
-  if (isNaN(inviteId)) {
-    throw new AppError('Invalid invite ID', 400);
-  }
 
   try {
     await clanService.declineInvite(req.user.userId, inviteId);
@@ -334,15 +311,11 @@ router.post('/invite/:inviteId/decline', authenticate, clanManageLimiter, asyncH
  *   - before: message ID for pagination
  */
 router.get('/:id/messages', authenticate, asyncHandler(async (req, res) => {
-  const clanId = parseInt(req.params.id, 10);
+  const clanId = parseIdParam(req.params.id, 'clan ID');
   const { limit = '50', before } = req.query;
 
-  if (isNaN(clanId)) {
-    throw new AppError('Invalid clan ID', 400);
-  }
-
-  const parsedLimit = Math.min(parseInt(limit, 10) || 50, 100);
-  const beforeId = before ? parseInt(before, 10) : null;
+  const parsedLimit = parseLimit(limit, 50, 100);
+  const beforeId = before ? parseIdParam(before, 'before') : null;
 
   try {
     const messages = await clanService.getClanMessages(
@@ -369,12 +342,9 @@ router.get('/:id/messages', authenticate, asyncHandler(async (req, res) => {
  * Send a clan chat message
  */
 router.post('/:id/messages', authenticate, clanMessageLimiter, asyncHandler(async (req, res) => {
-  const clanId = parseInt(req.params.id, 10);
+  const clanId = parseIdParam(req.params.id, 'clan ID');
   const { message } = req.body;
 
-  if (isNaN(clanId)) {
-    throw new AppError('Invalid clan ID', 400);
-  }
 
   // Type check before calling string methods (prevents TypeError on non-string input)
   if (typeof message !== 'string') {

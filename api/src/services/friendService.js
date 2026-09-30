@@ -33,14 +33,6 @@ export async function sendFriendRequest(fromUserId, toUsername) {
     throw new Error('Cannot send friend request to yourself');
   }
 
-  // Check if target user allows friend requests
-  const allowsFriendRequests = await userSettingsService.allowsFriendRequests(toUserId);
-  if (!allowsFriendRequests) {
-    const error = new Error('This user is not accepting friend requests');
-    error.statusCode = 403;
-    throw error;
-  }
-
   // Check if either user has blocked the other
   const blocked = await isBlocked(fromUserId, toUserId);
   if (blocked) {
@@ -72,6 +64,16 @@ export async function sendFriendRequest(fromUserId, toUsername) {
     if (existing.status === 'blocked') {
       throw new Error('Cannot send friend request to this user');
     }
+  }
+
+  // Check if target user allows new friend requests. This runs after the
+  // existing-friendship lookup so a pending request from them still
+  // auto-accepts: they asked us, so the setting does not apply.
+  const allowsFriendRequests = await userSettingsService.allowsFriendRequests(toUserId);
+  if (!allowsFriendRequests) {
+    const error = new Error('This user is not accepting friend requests');
+    error.statusCode = 403;
+    throw error;
   }
 
   // Create the friend request

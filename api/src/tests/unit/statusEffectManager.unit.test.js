@@ -1083,3 +1083,52 @@ describe('getDefenseMultiplier', () => {
     assert.strictEqual(multiplier, 1.0);
   });
 });
+
+describe('bleed / curse ticks and registry skill locks', () => {
+  test('bleed deals 3% and curse 2% of max HP per turn and count down', () => {
+    const unit = createMockPlayerUnit({
+      hp: 1000,
+      maxHp: 1000,
+      statusEffects: [
+        { type: 'bleed', duration: 3 },
+        { type: 'curse', duration: 2 }
+      ]
+    });
+
+    const results = processStatusEffects(unit);
+
+    assert.deepStrictEqual(
+      results.map(result => [result.type, result.damage]),
+      [['bleed_damage', 30], ['curse_damage', 20]]
+    );
+    assert.strictEqual(unit.hp, 950);
+    assert.deepStrictEqual(unit.statusEffects.map(e => e.duration), [2, 1]);
+  });
+
+  test('tick damage floors on small max HP', () => {
+    const unit = createMockPlayerUnit({
+      hp: 50,
+      maxHp: 50,
+      statusEffects: [{ type: 'bleed', duration: 1 }, { type: 'curse', duration: 1 }]
+    });
+    const results = processStatusEffects(unit);
+    // floor(50 * 0.03) = 1, floor(50 * 0.02) = 1
+    assert.deepStrictEqual(results.map(r => r.damage), [1, 1]);
+    assert.strictEqual(unit.hp, 48);
+  });
+
+  test('berserker (registry preventsSkills) blocks skills; rage does not', () => {
+    assert.strictEqual(
+      canUnitUseSkills(createMockPlayerUnit({ statusEffects: [{ type: 'berserker', duration: 2 }] })),
+      false
+    );
+    assert.strictEqual(
+      canUnitUseSkills(createMockPlayerUnit({ statusEffects: [{ type: 'rage', duration: 2 }] })),
+      true
+    );
+    // berserker only locks skills: the unit can still act and move
+    const berserk = createMockPlayerUnit({ statusEffects: [{ type: 'berserker', duration: 2 }] });
+    assert.strictEqual(canUnitAct(berserk), true);
+    assert.strictEqual(canUnitMove(berserk), true);
+  });
+});

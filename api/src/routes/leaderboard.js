@@ -7,6 +7,8 @@ import express from 'express';
 import { query } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { gameReadLimiter } from '../middleware/gameplayRateLimiter.js';
+import { asyncHandler } from '../middleware/errorHandler.js';
+import { parseBoundedInt, parseOffset } from '../utils/parseParams.js';
 
 const router = express.Router();
 
@@ -47,56 +49,55 @@ router.use(authenticate);
  * Categories: pvp, level, gold, battles
  * Query params: time (all|week|today), limit, offset, queue (for pvp only)
  */
-router.get('/:category', gameReadLimiter, async (req, res) => {
-  try {
-    const { category } = req.params;
-    const { time = 'all', limit = 50, offset = 0, queue = '1v1' } = req.query;
-    const userId = req.user.userId;
-    const parsedLimit = Math.min(parseInt(limit, 10) || 50, 100);
-    const parsedOffset = Math.max(parseInt(offset, 10) || 0, 0);
+router.get('/:category', gameReadLimiter, asyncHandler(async (req, res) => {
+  const { category } = req.params;
+  const { time = 'all', queue = '1v1' } = req.query;
+  const userId = req.user.userId;
+  // Negative or non-numeric paging is a 400; an oversized limit is capped.
+  const parsedLimit = Math.min(
+    parseBoundedInt(req.query.limit, { min: 1, default: 50, name: 'limit' }),
+    100
+  );
+  const parsedOffset = parseOffset(req.query.offset);
 
-    // Validate category
-    const validCategories = ['pvp', 'level', 'gold', 'battles'];
-    if (!validCategories.includes(category)) {
-      return res.status(400).json({ error: 'Invalid category. Valid options: pvp, level, gold, battles' });
-    }
-
-    let leaderboard;
-    let userEntry;
-    let total;
-
-    switch (category) {
-      case 'pvp':
-        ({ leaderboard, userEntry, total } = await getPvPLeaderboard(userId, queue, time, parsedLimit, parsedOffset));
-        break;
-      case 'level':
-        ({ leaderboard, userEntry, total } = await getLevelLeaderboard(userId, time, parsedLimit, parsedOffset));
-        break;
-      case 'gold':
-        ({ leaderboard, userEntry, total } = await getGoldLeaderboard(userId, time, parsedLimit, parsedOffset));
-        break;
-      case 'battles':
-        ({ leaderboard, userEntry, total } = await getBattleLeaderboard(userId, time, parsedLimit, parsedOffset));
-        break;
-    }
-
-    res.json({
-      category,
-      timeFilter: time,
-      leaderboard,
-      userEntry,
-      pagination: {
-        limit: parsedLimit,
-        offset: parsedOffset,
-        total,
-        hasMore: parsedOffset + parsedLimit < total
-      }
-    });
-  } catch (err) {
-    console.error('Error fetching leaderboard:', err);
-    res.status(500).json({ error: 'Failed to fetch leaderboard' });
+  // Validate category
+  const validCategories = ['pvp', 'level', 'gold', 'battles'];
+  if (!validCategories.includes(category)) {
+    return res.status(400).json({ error: 'Invalid category. Valid options: pvp, level, gold, battles' });
   }
-});
+
+  let leaderboard;
+  let userEntry;
+  let total;
+
+  switch (category) {
+    case 'pvp':
+      ({ leaderboard, userEntry, total } = await getPvPLeaderboard(userId, queue, time, parsedLimit, parsedOffset));
+      break;
+    case 'level':
+      ({ leaderboard, userEntry, total } = await getLevelLeaderboard(userId, time, parsedLimit, parsedOffset));
+      break;
+    case 'gold':
+      ({ leaderboard, userEntry, total } = await getGoldLeaderboard(userId, time, parsedLimit, parsedOffset));
+      break;
+    case 'battles':
+      ({ leaderboard, userEntry, total } = await getBattleLeaderboard(userId, time, parsedLimit, parsedOffset));
+      break;
+  }
+
+  res.json({
+    category,
+    timeFilter: time,
+    leaderboard,
+    userEntry,
+    pagination: {
+      limit: parsedLimit,
+      offset: parsedOffset,
+      total,
+      hasMore: parsedOffset + parsedLimit < total
+    }
+  });
+}));
 
 /**
  * Get PvP rating leaderboard

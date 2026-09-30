@@ -98,6 +98,14 @@ export async function releaseGold(client, orderId, amount = null) {
 }
 
 /**
+ * SQL predicate (for character_items) matching rows that carry no per-unit
+ * modifications. The transient 'listed' marker is ignored. Only such rows can
+ * enter the order book, which trades by template and quantity alone.
+ */
+export const UNMODIFIED_ITEM_ROW_SQL =
+  "(COALESCE(modifications, '{}'::jsonb) - 'listed') = '{}'::jsonb";
+
+/**
  * Escrow items for a sell order from user's shared pool
  * @param {Object} client - Database client
  * @param {number} orderId - Order ID to associate escrow with
@@ -108,7 +116,9 @@ export async function releaseGold(client, orderId, amount = null) {
  * @returns {Promise<number>} Quantity escrowed
  */
 export async function escrowItems(client, orderId, userId, characterId, itemTemplateId, quantity) {
-  // Check user has enough items in shared pool (not equipped, not listed, no character assigned)
+  // Check user has enough items in shared pool (not equipped, not listed, no
+  // character assigned, and no per-unit modifications: a rolled row would be
+  // returned as a plain template item and lose its rarity/augments)
   const itemResult = await client.query(
     `SELECT id, quantity
      FROM character_items
@@ -117,6 +127,7 @@ export async function escrowItems(client, orderId, userId, characterId, itemTemp
        AND equipped_slot IS NULL
        AND character_id IS NULL
        AND (listed IS NULL OR listed = FALSE)
+       AND ${UNMODIFIED_ITEM_ROW_SQL}
      ORDER BY quantity DESC
      FOR UPDATE`,
     [userId, itemTemplateId]
@@ -263,9 +274,10 @@ export async function consumeReservation(client, orderId, amount) {
  * @param {number} quantity - Quantity to add
  */
 export async function addItemToUser(client, userId, itemTemplateId, quantity) {
-  // Get item type to determine if stackable
+  // Stackability comes from the template, the same source the order paths
+  // use to refuse non-stackable items.
   const itemResult = await client.query(
-    'SELECT item_type FROM item_templates WHERE id = $1',
+    'SELECT is_stackable FROM item_templates WHERE id = $1',
     [itemTemplateId]
   );
 
@@ -273,16 +285,19 @@ export async function addItemToUser(client, userId, itemTemplateId, quantity) {
     throw new AppError('Item template not found', 404);
   }
 
-  const itemType = itemResult.rows[0].item_type;
-  const stackable = ['consumable', 'material'].includes(itemType);
+  const stackable = itemResult.rows[0].is_stackable === true;
 
   if (stackable) {
-    // Try to stack with existing item in shared pool
-    // (never into a rolled drop row: its rarity/augments belong to that unit only)
+    // Try to stack with an existing row in the shared pool: the same pool
+    // definition escrowItems and the market-sell path take from (no character
+    // bag row, not listed), and never a modified row, whose rarity/augments
+    // belong to that unit only.
     const existingResult = await client.query(
       `SELECT id, quantity FROM character_items
        WHERE user_id = $1 AND item_template_id = $2 AND equipped_slot IS NULL
-         AND (modifications IS NULL OR NOT (modifications ? 'rarity'))
+         AND character_id IS NULL
+         AND (listed IS NULL OR listed = FALSE)
+         AND ${UNMODIFIED_ITEM_ROW_SQL}
        ORDER BY id
        LIMIT 1`,
       [userId, itemTemplateId]

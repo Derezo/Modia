@@ -3,6 +3,8 @@ import { query, withTransaction } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { inventoryLimiter, gameReadLimiter } from '../middleware/gameplayRateLimiter.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
+import { parseIdParam } from '../utils/parseParams.js';
+import { getSlotMismatch, getRequirementFailure } from '../../../shared/equipmentRules.js';
 
 const router = express.Router();
 
@@ -44,6 +46,7 @@ function formatItem(item) {
     // Equipment requirements for filtering
     level_requirement: item.level_requirement || 0,
     class_restriction: item.class_restriction || [],
+    race_restriction: item.race_restriction || [],
     // Sprite ID for item icon display
     spriteId: item.sprite_id,
     // Equipment slot from template (for slot validation on client)
@@ -63,7 +66,7 @@ router.get('/shared', authenticate, gameReadLimiter, asyncHandler(async (req, re
   const itemsResult = await query(
     `SELECT ci.id as instance_id, ci.quantity, ci.modifications,
             it.id as template_id, it.name, it.item_type, it.rarity,
-            it.stat_bonuses, it.description, it.level_requirement, it.class_restriction,
+            it.stat_bonuses, it.description, it.level_requirement, it.class_restriction, it.race_restriction,
             it.sprite_id, it.equipment_slot, it.effect_type, it.effect_value
      FROM character_items ci
      JOIN item_templates it ON ci.item_template_id = it.id
@@ -96,7 +99,7 @@ router.get('/:characterId', authenticate, gameReadLimiter, asyncHandler(async (r
   const itemsResult = await query(
     `SELECT ci.id as instance_id, ci.quantity, ci.equipped_slot, ci.modifications,
             it.id as template_id, it.name, it.item_type, it.rarity,
-            it.stat_bonuses, it.description, it.level_requirement, it.class_restriction,
+            it.stat_bonuses, it.description, it.level_requirement, it.class_restriction, it.race_restriction,
             it.sprite_id, it.equipment_slot
      FROM character_items ci
      JOIN item_templates it ON ci.item_template_id = it.id
@@ -119,14 +122,8 @@ router.post('/equip', authenticate, inventoryLimiter, asyncHandler(async (req, r
   const { characterId, itemInstanceId, slot } = req.body;
 
   // Validate numeric inputs
-  const parsedCharacterId = parseInt(characterId, 10);
-  const parsedItemInstanceId = parseInt(itemInstanceId, 10);
-  if (isNaN(parsedCharacterId)) {
-    throw new AppError('Invalid character ID', 400);
-  }
-  if (isNaN(parsedItemInstanceId)) {
-    throw new AppError('Invalid item instance ID', 400);
-  }
+  const parsedCharacterId = parseIdParam(characterId, 'character ID');
+  const parsedItemInstanceId = parseIdParam(itemInstanceId, 'item instance ID');
 
   // Validate slot
   if (!EQUIPMENT_SLOTS.includes(slot)) {
@@ -180,39 +177,33 @@ router.post('/equip', authenticate, inventoryLimiter, asyncHandler(async (req, r
       throw new AppError('Item is already equipped', 400);
     }
 
-    // Validate level requirement
-    if (item.level_requirement && character.level < item.level_requirement) {
-      throw new AppError(`Requires level ${item.level_requirement} (you are level ${character.level})`, 400);
+    // Level, class and race requirements (shared/equipmentRules.js, the
+    // same rule the client uses to decide what it offers)
+    const requirementFailure = getRequirementFailure(
+      {
+        level: item.level_requirement,
+        classes: item.class_restriction,
+        races: item.race_restriction
+      },
+      character
+    );
+    if (requirementFailure?.reason === 'level') {
+      throw new AppError(`Requires level ${requirementFailure.level} (you are level ${character.level})`, 400);
+    }
+    if (requirementFailure) {
+      throw new AppError(`Only ${requirementFailure.allowed.join(', ')} can equip this item`, 400);
     }
 
-    // Validate class restriction
-    if (item.class_restriction && item.class_restriction.length > 0) {
-      if (!item.class_restriction.includes(character.class)) {
-        const allowedClasses = item.class_restriction.join(', ');
-        throw new AppError(`Only ${allowedClasses} can equip this item`, 400);
-      }
-    }
-
-    // Validate race restriction
-    if (item.race_restriction && item.race_restriction.length > 0) {
-      if (!item.race_restriction.includes(character.race)) {
-        const allowedRaces = item.race_restriction.join(', ');
-        throw new AppError(`Only ${allowedRaces} can equip this item`, 400);
-      }
-    }
-
-    // Validate item can be equipped in this slot
-    const validSlotsForItem = getValidSlotsForItem(item.item_type);
-    if (!validSlotsForItem.includes(slot)) {
+    // SECURITY: the item type must allow the slot, and an item whose template
+    // names a slot must go in exactly that slot. Dual-wield is a planned
+    // feature (CHARACTER_PROGRESSION.md) but not yet implemented; allowing
+    // main_hand weapons in off_hand would double weapon stats.
+    const slotMismatch = getSlotMismatch(item.item_type, item.equipment_slot, slot);
+    if (slotMismatch?.reason === 'type') {
       throw new AppError(`${item.item_type} cannot be equipped in ${slot}`, 400);
     }
-
-    // SECURITY: Validate template equipment_slot matches the requested slot
-    // All items (weapons, armor, accessories) must match exactly.
-    // Dual-wield is a planned feature (CHARACTER_PROGRESSION.md) but not yet implemented.
-    // Allowing main_hand weapons in off_hand would double weapon stats until the passive exists.
-    if (item.equipment_slot && item.equipment_slot !== slot) {
-      throw new AppError(`${item.name} can only be equipped in the ${item.equipment_slot} slot`, 400);
+    if (slotMismatch) {
+      throw new AppError(`${item.name} can only be equipped in the ${slotMismatch.slot} slot`, 400);
     }
 
     // Unequip any item currently in this slot - move to shared pool
@@ -242,10 +233,7 @@ router.post('/unequip', authenticate, inventoryLimiter, asyncHandler(async (req,
   const { characterId, slot } = req.body;
 
   // Validate numeric input
-  const parsedCharacterId = parseInt(characterId, 10);
-  if (isNaN(parsedCharacterId)) {
-    throw new AppError('Invalid character ID', 400);
-  }
+  const parsedCharacterId = parseIdParam(characterId, 'character ID');
 
   // Validate slot
   if (!EQUIPMENT_SLOTS.includes(slot)) {
@@ -290,14 +278,8 @@ router.post('/use', authenticate, inventoryLimiter, asyncHandler(async (req, res
   const userId = req.user.userId;
 
   // Validate numeric inputs
-  const parsedItemInstanceId = parseInt(itemInstanceId, 10);
-  const parsedTargetCharacterId = parseInt(targetCharacterId, 10);
-  if (isNaN(parsedItemInstanceId)) {
-    throw new AppError('Invalid item instance ID', 400);
-  }
-  if (isNaN(parsedTargetCharacterId)) {
-    throw new AppError('Target character ID is required', 400);
-  }
+  const parsedItemInstanceId = parseIdParam(itemInstanceId, 'item instance ID');
+  const parsedTargetCharacterId = parseIdParam(targetCharacterId, 'target character ID');
 
   const usedItem = await withTransaction(async (client) => {
     const targetResult = await client.query(
@@ -461,10 +443,7 @@ router.post('/discard', authenticate, inventoryLimiter, asyncHandler(async (req,
   const userId = req.user.userId;
 
   // Validate numeric input
-  const parsedItemInstanceId = parseInt(itemInstanceId, 10);
-  if (isNaN(parsedItemInstanceId)) {
-    throw new AppError('Invalid item instance ID', 400);
-  }
+  const parsedItemInstanceId = parseIdParam(itemInstanceId, 'item instance ID');
 
   // SECURITY: Strict quantity validation to prevent exploits
   // If quantity not provided, we'll discard all after checking ownership
@@ -527,23 +506,12 @@ router.post('/discard', authenticate, inventoryLimiter, asyncHandler(async (req,
   res.json({ success: true, discarded: result });
 }));
 
-// Helper: Get valid equipment slots for item type
-// Maps item_type enum to valid equipment_slot enum values
-function getValidSlotsForItem(itemType) {
-  const slotMap = {
-    weapon: ['main_hand', 'off_hand'],
-    armor: ['head', 'body', 'legs', 'feet'],
-    accessory: ['accessory']
-  };
-  return slotMap[itemType] || [];
-}
-
 // Helper: Get character inventory (for returning after updates)
 async function getCharacterInventory(characterId) {
   const itemsResult = await query(
     `SELECT ci.id as instance_id, ci.quantity, ci.equipped_slot, ci.modifications,
             it.id as template_id, it.name, it.item_type, it.rarity,
-            it.stat_bonuses, it.description, it.level_requirement, it.class_restriction,
+            it.stat_bonuses, it.description, it.level_requirement, it.class_restriction, it.race_restriction,
             it.sprite_id, it.equipment_slot
      FROM character_items ci
      JOIN item_templates it ON ci.item_template_id = it.id

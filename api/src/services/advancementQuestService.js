@@ -9,6 +9,7 @@
  */
 
 import { query, withTransaction } from '../config/database.js';
+import { AppError } from '../middleware/errorHandler.js';
 import {
   GUILD_ADVANCEMENT_TIERS,
   ADVANCEMENT_QUEST_MIN_LEVEL,
@@ -204,10 +205,10 @@ export async function acceptQuestWithClient(
 ) {
   requireQueryClient(client, 'acceptQuestWithClient');
   if (!Number.isSafeInteger(nodeId) || nodeId < 1) {
-    throw new Error('Valid nodeId is required');
+    throw new AppError('Valid nodeId is required', 400);
   }
   if (!Number.isSafeInteger(questTemplateId) || questTemplateId < 1) {
-    throw new Error('Valid questTemplateId is required');
+    throw new AppError('Valid questTemplateId is required', 400);
   }
 
   // Lock first, then derive eligibility exclusively from the locked row.
@@ -220,13 +221,13 @@ export async function acceptQuestWithClient(
   );
 
   if (lockResult.rows.length === 0) {
-    throw new Error('Character not found');
+    throw new AppError('Character not found', 404);
   }
 
   const character = lockResult.rows[0];
   const advancementStep = getNextAdvancementStep(character);
   if (!advancementStep) {
-    throw new Error('Quest not available for this character');
+    throw new AppError('Quest not available for this character', 400);
   }
 
   const activeCheck = await client.query(
@@ -236,7 +237,7 @@ export async function acceptQuestWithClient(
     [characterId]
   );
   if (activeCheck.rows.length > 0) {
-    throw new Error('Character already has an active quest');
+    throw new AppError('Character already has an active quest', 409);
   }
 
   const templateResult = await client.query(
@@ -256,7 +257,7 @@ export async function acceptQuestWithClient(
     ]
   );
   if (templateResult.rows.length === 0) {
-    throw new Error('Quest not available for this character');
+    throw new AppError('Quest not available for this character', 400);
   }
   const questTemplate = templateResult.rows[0];
 
@@ -273,7 +274,7 @@ export async function acceptQuestWithClient(
     advancementStep.guildId
   );
   if (locationError) {
-    throw new Error(locationError);
+    throw new AppError(locationError, 400);
   }
 
   const result = await client.query(

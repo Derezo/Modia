@@ -19,6 +19,7 @@ import { WebSocket } from 'ws';
 import chatService from '../services/chatService.js';
 import { verifyCharacterOwnership } from '../services/characterService.js';
 import presenceService from '../services/presenceService.js';
+import * as userSettingsService from '../services/userSettingsService.js';
 import { isBlocked } from '../services/friendService.js';
 import coliseumService from '../services/coliseumService.js';
 import { submitFormation } from '../services/coliseum/matchLifecycle.js';
@@ -375,10 +376,12 @@ async function handleAddReaction(ws, userId, username, payload) {
       }));
     }
   } catch (err) {
-    console.error('Add reaction error:', err);
+    // Validation and visibility failures (AppError 4xx) are safe to echo
+    const isClientError = err.statusCode >= 400 && err.statusCode < 500;
+    if (!isClientError) console.error('Add reaction error:', err);
     ws.send(JSON.stringify({
       type: 'error',
-      payload: { message: 'Failed to add reaction' }
+      payload: { message: isClientError ? err.message : 'Failed to add reaction' }
     }));
   }
 }
@@ -407,7 +410,12 @@ async function handleRemoveReaction(ws, userId, payload) {
       }));
     }
   } catch (err) {
-    console.error('Remove reaction error:', err);
+    const isClientError = err.statusCode >= 400 && err.statusCode < 500;
+    if (!isClientError) console.error('Remove reaction error:', err);
+    ws.send(JSON.stringify({
+      type: 'error',
+      payload: { message: isClientError ? err.message : 'Failed to remove reaction' }
+    }));
   }
 }
 
@@ -449,34 +457,86 @@ async function handleJoinRoom(ws, userId, username, payload) {
 
   addUserToRoom(roomName, userId);
 
-  broadcastToRoom(roomName, {
-    type: 'user_joined',
-    payload: { room: roomName, userId, username }
-  }, userId);
+  // PRIVACY: a user who hides their online status does not announce joining
+  // a public room (global, tavern, socialHub, ...), and is left out of other
+  // users' member lists, the same rule as presence_changed and node events
+  if (await isVisibleInRoom(roomName, userId)) {
+    broadcastToRoom(roomName, {
+      type: 'user_joined',
+      payload: { room: roomName, userId, username }
+    }, userId);
+  }
 
   ws.send(JSON.stringify({
     type: 'room_joined',
     payload: {
       room: roomName,
-      users: getRoomUsers(roomName)
+      users: await getVisibleRoomUsers(roomName, userId)
     }
   }));
 }
 
 /**
+ * Rooms whose members are a closed group (a party, a battle, a match or a
+ * clan) see each other regardless of showOnlineStatus; that setting hides
+ * presence from everyone else.
+ */
+const MEMBERSHIP_ROOM_PREFIXES = ['party:', 'battle:', 'coliseum:', 'clan:'];
+
+function isMembershipRoom(roomName) {
+  return typeof roomName === 'string' &&
+    MEMBERSHIP_ROOM_PREFIXES.some(prefix => roomName.startsWith(prefix));
+}
+
+/**
+ * Whether a user's join/leave in a room may be shown to its other members.
+ * Fails closed: if the setting cannot be read, the user is hidden.
+ * @param {string} roomName
+ * @param {number} userId
+ * @returns {Promise<boolean>}
+ */
+export async function isVisibleInRoom(roomName, userId) {
+  if (isMembershipRoom(roomName)) return true;
+  try {
+    return await userSettingsService.showsOnlineStatus(userId);
+  } catch (err) {
+    console.error('[WS] showOnlineStatus lookup failed:', err.message);
+    return false;
+  }
+}
+
+/**
+ * Room members visible to a requester: everyone in a membership room;
+ * otherwise users who show their online status, plus the requester.
+ * @param {string} roomName
+ * @param {number} requesterId
+ * @returns {Promise<number[]>}
+ */
+export async function getVisibleRoomUsers(roomName, requesterId) {
+  const users = getRoomUsers(roomName);
+  if (isMembershipRoom(roomName)) return users;
+  const visible = await Promise.all(
+    users.map(id => (id === requesterId ? true : isVisibleInRoom(roomName, id)))
+  );
+  return users.filter((_, index) => visible[index]);
+}
+
+/**
  * Handle leave room
  */
-function handleLeaveRoom(ws, userId, payload) {
+async function handleLeaveRoom(ws, userId, payload) {
   if (!userId) return;
 
   const leaveRoom = payload.room;
   if (isUserInRoom(leaveRoom, userId)) {
-    broadcastToRoom(leaveRoom, {
-      type: 'user_left',
-      payload: { room: leaveRoom, userId }
-    }, userId);
-
     removeUserFromRoom(leaveRoom, userId);
+    // PRIVACY: a hidden user never announced joining, so no leave either
+    if (await isVisibleInRoom(leaveRoom, userId)) {
+      broadcastToRoom(leaveRoom, {
+        type: 'user_left',
+        payload: { room: leaveRoom, userId }
+      }, userId);
+    }
   }
 
   ws.send(JSON.stringify({
@@ -1283,18 +1343,25 @@ async function handlePresenceUpdate(ws, userId, username, payload, broadcastPres
       return;
     }
 
-    await presenceService.setPresence(userId, status || 'online', {
-      customMessage: customMessage?.substring(0, 128)
+    const presence = await presenceService.setPresence(userId, status || 'online', {
+      customMessage: presenceService.normalizeCustomMessage(customMessage)
     });
+    // Broadcast and echo the stored value, never the raw payload
+    const storedMessage = presence.custom_message ?? null;
 
-    broadcastPresenceChange(userId, username, status || 'online', customMessage);
+    broadcastPresenceChange(userId, username, presence.status, storedMessage);
 
     ws.send(JSON.stringify({
       type: 'presence_updated',
-      payload: { status: status || 'online', customMessage }
+      payload: { status: presence.status, customMessage: storedMessage }
     }));
   } catch (err) {
-    console.error('Presence update error:', err);
+    const isClientError = err.statusCode >= 400 && err.statusCode < 500;
+    if (!isClientError) console.error('Presence update error:', err);
+    ws.send(JSON.stringify({
+      type: 'error',
+      payload: { message: isClientError ? err.message : 'Failed to update presence' }
+    }));
   }
 }
 

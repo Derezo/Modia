@@ -222,6 +222,46 @@ describe('BattleTerminalProgression', () => {
     );
   });
 
+  it('replays a receipt stored before partyCharacterIds existed', async () => {
+    const transactions = createTransactionHarness();
+    const quests = createQuestMocks();
+    const progression = createBattleTerminalProgression({
+      withTransaction: transactions.withTransaction,
+      ...quests
+    });
+    // A receipt written by the pre-Finding-41 normalizer: no partyCharacterIds key
+    const legacyPayload = pvePayload();
+    const storedResult = { kind: 'pve_victory', advancementComplete: null };
+    transactions.receipts.set('battle:77:battle.progression.v1', {
+      event_kind: 'pve_victory',
+      payload: legacyPayload,
+      result: storedResult
+    });
+
+    const replayed = await progression.apply('battle:77:battle.progression.v1', pvePayload());
+
+    assert.deepEqual(replayed, storedResult);
+    assert.equal(quests.calls.length, 0, 'a replay must not re-apply mutations');
+    assert.equal(
+      'partyCharacterIds' in validateBattleTerminalProgressionPayload(pvePayload()),
+      false
+    );
+  });
+
+  it('applies the leader fallback when partyCharacterIds is absent', async () => {
+    const transactions = createTransactionHarness();
+    const quests = createQuestMocks();
+    const progression = createBattleTerminalProgression({
+      withTransaction: transactions.withTransaction,
+      ...quests
+    });
+    await progression.apply('battle:78:battle.progression.v1', pvePayload());
+    assert.deepEqual(
+      [...new Set(quests.calls.filter(call => call.operation === 'enemy').map(call => call.args[0]))],
+      [7]
+    );
+  });
+
   it('validates terminal payloads before opening a transaction', () => {
     assert.throws(
       () => validateBattleTerminalProgressionPayload(

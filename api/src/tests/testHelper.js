@@ -485,10 +485,16 @@ function createTestContext() {
 // Simple HTTP client for testing
 async function sendRequest(method, path, body = null, token = null, bypassRateLimit = true) {
   const url = new URL(path, BASE_URL);
+  const payload = body ? JSON.stringify(body) : null;
 
   const headers = {
     'Content-Type': 'application/json'
   };
+  // Node sends a DELETE body with neither Content-Length nor chunked
+  // encoding, so the server would never see it. Always declare the length.
+  if (payload !== null) {
+    headers['Content-Length'] = Buffer.byteLength(payload);
+  }
 
   if (bypassRateLimit) {
     headers[TEST_BYPASS_HEADER] = TEST_BYPASS_SECRET;
@@ -526,8 +532,8 @@ async function sendRequest(method, path, body = null, token = null, bypassRateLi
       req.destroy(new Error(`Request timed out after ${REQUEST_TIMEOUT_MS}ms: ${method} ${path}`));
     });
 
-    if (body) {
-      req.write(JSON.stringify(body));
+    if (payload !== null) {
+      req.write(payload);
     }
 
     req.end();

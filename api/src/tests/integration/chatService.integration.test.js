@@ -191,6 +191,22 @@ describe('chatService', () => {
         chatService.getHistory('party', { partyId: 123 });
       });
     });
+
+    test('refuses party history without a partyId', async () => {
+      await assert.rejects(
+        chatService.getHistory('party', { limit: 5 }),
+        err => err.statusCode === 400
+      );
+    });
+
+    test('refuses room types other than global and party', async () => {
+      for (const roomType of ['dm', 'local']) {
+        await assert.rejects(
+          chatService.getHistory(roomType, { limit: 5 }),
+          err => err.statusCode === 400
+        );
+      }
+    });
   });
 
   describe('getDMHistory', () => {

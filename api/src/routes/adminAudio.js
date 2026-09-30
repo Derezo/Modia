@@ -25,6 +25,7 @@
 import express from 'express';
 import path from 'path';
 import { AppError, asyncHandler } from '../middleware/errorHandler.js';
+import { requireDevMode } from './admin/shared.js';
 import { loadJsonFile } from '../utils/jsonFileUtils.js';
 import {
   VALID_AUDIO_TYPES,
@@ -54,24 +55,8 @@ import {
 
 const router = express.Router();
 
-// SECURITY: Admin mode is STRICTLY disabled in production
-const isProduction = process.env.NODE_ENV === 'production';
-
-/**
- * Middleware to check admin mode is enabled
- * SECURITY: Explicitly blocks production even if DEBUG=true is set
- */
-function requireDevMode(req, res, next) {
-  if (isProduction) {
-    console.warn(`[SECURITY] Admin audio endpoint access attempted in production by IP: ${req.ip}`);
-    return res.status(403).json({
-      error: 'Admin endpoints are disabled in production'
-    });
-  }
-  next();
-}
-
-// Apply dev mode check to all routes (rate limiting removed - requireDevMode already blocks production)
+// SECURITY: the same fail-closed allow-list as the image admin routes
+// (NODE_ENV must be development or test; unset or staging is refused)
 router.use(requireDevMode);
 
 // ============================================================================

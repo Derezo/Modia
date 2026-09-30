@@ -18,8 +18,24 @@ async function getWebsocket() {
 const activeTimeouts = new Set();
 
 /**
+ * Deliver a message to one connected user (no-op when offline).
+ * @param {number} userId - Target user ID
+ * @param {Object} message - { type, payload }
+ * @param {string} ackKey - Reliability key for sendWithAck
+ */
+async function sendToUser(userId, message, ackKey) {
+  const ws = await getWebsocket();
+  const targetWs = ws.connections?.get(userId);
+  if (targetWs && targetWs.readyState === 1) {
+    sendWithAck(targetWs, message, ackKey, userId);
+  }
+}
+
+/**
  * Send a party invite to another player
- * Uses the DB invite ID passed from the REST route (no in-memory counter).
+ * Uses the DB invite ID passed from the REST route (no in-memory counter),
+ * and arms a timer that expires the invite (and tells both players) if it is
+ * still pending at expiresAt.
  *
  * @param {Object} params - Invite parameters
  * @param {number} params.inviteId - DB invite ID (from party_invites table)
@@ -32,38 +48,105 @@ const activeTimeouts = new Set();
  * @returns {Object} Invite result
  */
 async function sendInvite({ inviteId, expiresAt, fromUserId, fromUsername, toUserId, partyId, partyName }) {
-  // Send invite to target user with ACK tracking
-  const ws = await getWebsocket();
-  const targetWs = ws.connections?.get(toUserId);
-  if (targetWs && targetWs.readyState === 1) {
-    sendWithAck(targetWs, {
-      type: 'party:invite_received',
-      payload: {
-        inviteId,
-        fromUserId,
-        fromUsername,
-        partyId,
-        partyName,
-        expiresAt
-      }
-    }, `party:invite:${inviteId}`, toUserId);
-  }
+  await sendToUser(toUserId, {
+    type: 'party:invite_received',
+    payload: {
+      inviteId,
+      fromUserId,
+      fromUsername,
+      partyId,
+      partyName,
+      expiresAt
+    }
+  }, `party:invite:${inviteId}`);
+
+  scheduleInviteExpiry(inviteId, expiresAt);
 
   return { success: true, inviteId };
 }
 
 /**
- * Decline a party invite - just notifies the inviter via WebSocket.
- * The actual DB update is done by the REST route.
+ * Expire an invite that is still pending once its expiresAt passes, then
+ * notify both parties with party:invite_expired. An invite that was accepted
+ * or declined in the meantime is left alone (the conditional UPDATE matches
+ * no row).
+ * @param {number} inviteId - DB invite ID
+ * @param {Date|string} expiresAt - Expiration timestamp
+ */
+function scheduleInviteExpiry(inviteId, expiresAt) {
+  const expiresMs = new Date(expiresAt).getTime();
+  if (!inviteId || !Number.isFinite(expiresMs)) return;
+  const delayMs = Math.max(0, expiresMs - Date.now()) + 1000;
+  const timeoutId = setTimeout(() => {
+    activeTimeouts.delete(timeoutId);
+    expirePendingInvite(inviteId).catch(error => {
+      console.error('[partyWebsocket] Failed to expire invite', inviteId, error.message);
+    });
+  }, delayMs);
+  timeoutId.unref?.();
+  activeTimeouts.add(timeoutId);
+}
+
+/**
+ * Mark one pending, past-due invite expired and notify invitee and inviter.
+ * @param {number} inviteId - DB invite ID
+ * @returns {Promise<boolean>} Whether the invite was expired by this call
+ */
+async function expirePendingInvite(inviteId) {
+  const { query } = await import('../config/database.js');
+  const result = await query(
+    `UPDATE party_invites SET invite_status = 'expired'
+     WHERE id = $1 AND invite_status = 'pending' AND expires_at <= NOW()
+     RETURNING party_id, inviter_id, invitee_id`,
+    [inviteId]
+  );
+  if (result.rows.length === 0) return false;
+  await notifyInviteExpired({ inviteId, ...toInviteParties(result.rows[0]) });
+  return true;
+}
+
+function toInviteParties(row) {
+  return {
+    partyId: row.party_id,
+    inviterId: row.inviter_id,
+    inviteeId: row.invitee_id
+  };
+}
+
+/**
+ * Tell the invitee (and inviter) that an invite expired.
+ * @param {Object} params
+ * @param {number} params.inviteId - DB invite ID
+ * @param {number} params.partyId - Party ID
+ * @param {number} params.inviterId - Inviting user ID
+ * @param {number} params.inviteeId - Invited user ID
+ */
+async function notifyInviteExpired({ inviteId, partyId, inviterId, inviteeId }) {
+  const message = { type: 'party:invite_expired', payload: { inviteId, partyId } };
+  await sendToUser(inviteeId, message, `party:invite_expired:${inviteId}`);
+  if (inviterId) {
+    await sendToUser(inviterId, message, `party:invite_expired:${inviteId}`);
+  }
+}
+
+/**
+ * Tell the inviter that their invite was declined.
+ * The DB update is done by the REST route, which passes the inviter it read.
  *
- * @param {number} inviteId - Invite ID
- * @param {number} userId - Declining user ID
+ * @param {Object} params
+ * @param {number} params.inviteId - DB invite ID
+ * @param {number} params.partyId - Party ID
+ * @param {number} params.inviterId - Inviting user ID (notified)
+ * @param {number} params.userId - Declining user ID
+ * @param {string} params.username - Declining user's username
  * @returns {Object} Result
  */
-async function declineInvite(_inviteId, _userId) {
-  // Note: We can't get the inviter ID without a DB query here.
-  // The REST route already handles the notification by updating the DB.
-  // This function is kept for backwards compatibility but may not be needed.
+async function declineInvite({ inviteId, partyId, inviterId, userId, username }) {
+  if (!inviterId) return { success: false };
+  await sendToUser(inviterId, {
+    type: 'party:invite_declined',
+    payload: { inviteId, partyId, userId, username }
+  }, `party:invite_declined:${inviteId}`);
   return { success: true };
 }
 
@@ -211,6 +294,8 @@ function _clearAllTimeouts() {
 export {
   sendInvite,
   declineInvite,
+  notifyInviteExpired,
+  expirePendingInvite,
   broadcastMemberJoined,
   broadcastMemberLeft,
   broadcastPartyDisbanded,
@@ -223,6 +308,8 @@ export {
 export default {
   sendInvite,
   declineInvite,
+  notifyInviteExpired,
+  expirePendingInvite,
   broadcastMemberJoined,
   broadcastMemberLeft,
   broadcastPartyDisbanded,

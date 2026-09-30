@@ -240,7 +240,7 @@ function setupWebSocket(server) {
             break;
 
           case 'leave_room':
-            handleLeaveRoom(ws, userId, payload);
+            await handleLeaveRoom(ws, userId, payload);
             break;
 
           case 'chat_message':

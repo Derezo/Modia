@@ -178,29 +178,30 @@ export async function grantRelic(userId, relicKey) {
  * @param {{key:string, acquisition_type:string, acquisition_id:*}} template - relic_templates row
  * @returns {Promise<{canClaim: boolean, validationMessage: string}>}
  */
-async function checkRelicEligibility(userId, template) {
+export async function checkRelicEligibility(userId, template) {
   let canClaim = false;
   let validationMessage = '';
 
   switch (template.acquisition_type) {
     case 'quest':
-      // Quest relics are now class-agnostic: complete ANY tier-1 advancement quest.
-      // This makes relics obtainable by all players regardless of starting class.
-      // The acquisition_id (if set) specifies the tier required (default: tier 1).
+      // Quest relics are class-agnostic: complete any advancement quest of the
+      // required tier or higher, whatever the starting class.
+      // The acquisition_id (if set) is the minimum tier (default: tier 1); a
+      // lower-tier quest must not satisfy a higher requirement.
       {
-        const requiredTier = template.acquisition_id || 1;
+        const requiredTier = parseInt(template.acquisition_id, 10) || 1;
         const questResult = await query(
           `SELECT 1 FROM character_quests cq
            JOIN characters c ON c.id = cq.character_id
            JOIN advancement_quest_templates aqt ON aqt.id = cq.quest_template_id
            WHERE c.user_id = $1
-             AND aqt.tier <= $2
+             AND aqt.tier >= $2
              AND cq.status = 'completed'
            LIMIT 1`,
           [userId, requiredTier]
         );
         canClaim = questResult.rows.length > 0;
-        validationMessage = canClaim ? '' : `Complete any tier ${requiredTier} guild advancement quest to claim this relic`;
+        validationMessage = canClaim ? '' : `Complete a tier ${requiredTier} or higher guild advancement quest to claim this relic`;
       }
       break;
 
@@ -278,9 +279,14 @@ async function checkRelicEligibility(userId, template) {
       // Achievement relics: special case for merchants_seal (marketplace sales)
       // Other achievement relics use pvp_achievements table
       if (template.key === 'merchants_seal') {
-        // merchants_seal: complete at least 1 marketplace sale
+        // merchants_seal: complete at least 1 marketplace sale, through
+        // either the commodity order book (market_trades) or an equipment
+        // item listing (item_listing_sales)
         const salesResult = await query(
-          'SELECT 1 FROM market_trades WHERE seller_id = $1 LIMIT 1',
+          `SELECT 1 FROM market_trades WHERE seller_id = $1
+           UNION ALL
+           SELECT 1 FROM item_listing_sales WHERE seller_id = $1
+           LIMIT 1`,
           [userId]
         );
         canClaim = salesResult.rows.length > 0;

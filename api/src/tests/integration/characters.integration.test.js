@@ -215,6 +215,113 @@ describe('Characters API', () => {
     });
   });
 
+  describe('POST /api/characters - atomicity and parity (Finding 43)', () => {
+    it('creates exactly one character when first-character requests race', async () => {
+      const racer = await createTrackedUser();
+      const attempts = await Promise.all([1, 2, 3, 4].map(n => request('POST', '/api/characters', {
+        name: `Racer${n}`,
+        race: 'human',
+        characterClass: 'warrior'
+      }, racer.accessToken)));
+
+      const created = attempts.filter(r => r.status === 201);
+      assert.strictEqual(created.length, 1, JSON.stringify(attempts.map(r => [r.status, r.body.error])));
+      assert.ok(attempts.every(r => r.status === 201 || r.status === 400 || r.status === 409));
+
+      const rows = await query(
+        'SELECT party_slot FROM characters WHERE user_id = $1',
+        [racer.userId]
+      );
+      assert.deepStrictEqual(rows.rows.map(r => r.party_slot), [1]);
+    });
+
+    it('the database refuses a second party leader for one user', async () => {
+      const owner = await createTrackedUser();
+      const first = await request('POST', '/api/characters', {
+        name: 'SoleLeader',
+        race: 'human',
+        characterClass: 'warrior'
+      }, owner.accessToken);
+      assert.strictEqual(first.status, 201);
+
+      await assert.rejects(
+        query(
+          `INSERT INTO characters (
+             user_id, name, race, class, gender, level, experience,
+             hp_current, hp_max, mp_current, mp_max,
+             strength, intelligence, agility, vitality, luck,
+             party_slot, current_node_id, home_region_id
+           )
+           SELECT user_id, 'SecondLeader', race, class, gender, level, experience,
+                  hp_current, hp_max, mp_current, mp_max,
+                  strength, intelligence, agility, vitality, luck,
+                  1, current_node_id, home_region_id
+           FROM characters WHERE id = $1`,
+          [first.body.character.id]
+        ),
+        err => err.code === '23505'
+      );
+    });
+
+    it('grants the same start as register-with-character', async () => {
+      const manual = await createTrackedUser();
+      const manualRes = await request('POST', '/api/characters', {
+        name: 'ParityManual',
+        race: 'elf',
+        characterClass: 'wizard'
+      }, manual.accessToken);
+      assert.strictEqual(manualRes.status, 201, JSON.stringify(manualRes.body));
+
+      const suffix = `${Date.now()}${Math.random().toString(36).slice(2, 6)}`;
+      const registered = await request('POST', '/api/auth/register-with-character', {
+        username: `testparity_${suffix}`,
+        email: `test_parity_${suffix}@test.com`,
+        password: 'TestPassword123!',
+        characterName: 'ParityRegistered',
+        race: 'elf',
+        characterClass: 'wizard'
+      });
+      assert.strictEqual(registered.status, 201, JSON.stringify(registered.body));
+      createdUserIds.push(registered.body.user.id);
+
+      async function startingKit(userId, characterId) {
+        const shared = await query(
+          `SELECT item_template_id, quantity FROM character_items
+           WHERE user_id = $1 AND character_id IS NULL ORDER BY item_template_id`,
+          [userId]
+        );
+        const equipped = await query(
+          `SELECT item_template_id, equipped_slot FROM character_items
+           WHERE character_id = $1 ORDER BY item_template_id`,
+          [characterId]
+        );
+        const skills = await query(
+          'SELECT skill_id FROM character_skills WHERE character_id = $1 ORDER BY skill_id',
+          [characterId]
+        );
+        const traits = await query(
+          'SELECT trait_id FROM character_traits WHERE character_id = $1 ORDER BY trait_id',
+          [characterId]
+        );
+        return {
+          shared: shared.rows,
+          equipped: equipped.rows,
+          skills: skills.rows,
+          traits: traits.rows
+        };
+      }
+
+      const manualKit = await startingKit(manual.userId, manualRes.body.character.id);
+      const registeredKit = await startingKit(
+        registered.body.user.id,
+        registered.body.character.id
+      );
+      assert.ok(manualKit.shared.length > 0, 'starter consumables granted');
+      assert.ok(manualKit.equipped.length > 0, 'starter equipment granted');
+      assert.deepStrictEqual(manualKit, registeredKit);
+    });
+  });
+
   describe('GET /api/characters', () => {
     it('should return list of user characters', async () => {
       const res = await request('GET', '/api/characters', null, user.accessToken);

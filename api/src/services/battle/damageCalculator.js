@@ -16,36 +16,10 @@ import {
   calculateCritChance as sharedCalculateCritChance,
   calculateCritMultiplier as sharedCalculateCritMultiplier,
   calculateElementalModifier,
-  STATUS_EFFECT_REGISTRY
+  getStatusStatMultiplier
 } from '../../../../shared/battleMath.js';
 import { getZodiacCollectionModifier } from '../zodiacCollectionBonusService.js';
 import { getEquipmentAugmentEffect } from './equipmentAugmentEffects.js';
-
-/**
- * Combine object-form status modifiers for an effective combat stat.
- * Statuses are unique by type, while distinct active effects stack
- * multiplicatively. Invalid and negative values are ignored.
- *
- * Falls back to STATUS_EFFECT_REGISTRY only when an effect has NO
- * object-form modifiers at all, so legacy string-based effects (fortify,
- * rage, weaken, etc.) still affect combat. An effect that carries its own
- * modifiers object is used exactly as written: a partial object (e.g. an NPC
- * defense_up of { defense: 1.3 }) must not pick up the registry's other stats
- * (defense_up's magicDefense 1.2) one key at a time.
- */
-function getStatusStatMultiplier(unit, statName) {
-  if (!Array.isArray(unit?.statusEffects)) return 1;
-
-  return unit.statusEffects.reduce((multiplier, effect) => {
-    const mods = (effect?.modifiers && typeof effect.modifiers === 'object')
-      ? effect.modifiers
-      : STATUS_EFFECT_REGISTRY[effect?.type]?.modifiers;
-    const value = mods?.[statName];
-    return typeof value === 'number' && Number.isFinite(value) && value >= 0
-      ? multiplier * value
-      : multiplier;
-  }, 1);
-}
 
 /**
  * Calculate physical damage with diminishing returns defense

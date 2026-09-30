@@ -394,24 +394,36 @@ export function handlePlayerDisconnect(battleId, playerId) {
   // Cancel turn timer
   cancelTurnTimer(battleId);
 
+  // Track the disconnect synchronously, before the DB insert resolves, so a
+  // reconnect that lands in between finds this entry and marks it
+  // reconnected; the .then below then never arms the forfeit timer.
+  if (!disconnectTracking.has(battleId)) {
+    disconnectTracking.set(battleId, {});
+  }
+  const tracking = disconnectTracking.get(battleId);
+
+  // Clear any existing timer for this player to prevent pile-up
+  if (tracking[playerId]?.timerId) {
+    clearTimeout(tracking[playerId].timerId);
+  }
+  const entry = {
+    disconnectTime: Date.now(),
+    disconnectId: null,
+    timerId: null,
+    reconnected: false
+  };
+  tracking[playerId] = entry;
+
   // Record disconnect
   recordDisconnectEvent(playerId, null).then(disconnect => {
-    // Initialize disconnect tracking
-    if (!disconnectTracking.has(battleId)) {
-      disconnectTracking.set(battleId, {});
-    }
-
-    const tracking = disconnectTracking.get(battleId);
-
-    // Clear any existing timer for this player to prevent pile-up
-    if (tracking[playerId]?.timerId) {
-      clearTimeout(tracking[playerId].timerId);
-    }
+    entry.disconnectId = disconnect.id;
+    // Reconnected (or disconnected again) while the insert was in flight
+    if (entry.reconnected || tracking[playerId] !== entry) return;
 
     // Set forfeit timer
     const timerId = setTimeout(async () => {
       try {
-        if (tracking[playerId] && !tracking[playerId].reconnected) {
+        if (tracking[playerId] === entry && !entry.reconnected) {
           // Reload battle to verify it's still active before forfeiting
           let battle;
           try {
@@ -440,13 +452,7 @@ export function handlePlayerDisconnect(battleId, playerId) {
         console.error(`Failed to handle disconnect forfeit for battle ${battleId}:`, err);
       }
     }, DISCONNECT_FORFEIT_TIME);
-
-    tracking[playerId] = {
-      disconnectTime: Date.now(),
-      disconnectId: disconnect.id,
-      timerId,
-      reconnected: false
-    };
+    entry.timerId = timerId;
 
     // Notify opponent
     getWebsocket().then(ws => {
@@ -466,21 +472,32 @@ export function handlePlayerDisconnect(battleId, playerId) {
  * Handle player reconnection during battle
  * @param {number} battleId - Battle ID
  * @param {number} playerId - Player who reconnected
+ * @param {Object} [options]
+ * @param {boolean} [options.restartTimer=true] - Restart the turn timer now if
+ *   it is this player's turn. The HTTP reconnect path
+ *   (battleReconnection.handleReconnect) passes false because it owns the
+ *   restart and delays it by a grace period; restarting here as well would
+ *   install the timer first and the grace-period start would be a no-op.
  */
-export function handlePlayerReconnect(battleId, playerId) {
+export function handlePlayerReconnect(battleId, playerId, { restartTimer = true } = {}) {
   const tracking = disconnectTracking.get(battleId);
   if (tracking && tracking[playerId]) {
-    // Clear forfeit timer
+    // Clear forfeit timer (null while the disconnect insert is still in flight)
+    const wasAnnounced = tracking[playerId].timerId != null;
     clearTimeout(tracking[playerId].timerId);
     tracking[playerId].reconnected = true;
 
-    // Notify opponent
-    getWebsocket().then(ws => {
-      ws.broadcastToRoom(`battle:${battleId}`, {
-        type: 'battle:opponent_reconnected',
-        payload: { battleId, playerId }
-      });
-    }).catch(err => console.error('Failed to notify reconnect:', err));
+    // Notify opponent, unless the disconnect was never announced to them
+    if (wasAnnounced) {
+      getWebsocket().then(ws => {
+        ws.broadcastToRoom(`battle:${battleId}`, {
+          type: 'battle:opponent_reconnected',
+          payload: { battleId, playerId }
+        });
+      }).catch(err => console.error('Failed to notify reconnect:', err));
+    }
+
+    if (!restartTimer) return;
 
     // Restart turn timer if it's this player's turn
     battleStateRepository.loadBattle(battleId, { requireActive: true })

@@ -350,7 +350,13 @@ router.post('/multiplayer/decline/:inviteId', authenticate, asyncHandler(async (
   }
 
   // Notify inviter via WebSocket
-  partyWebsocket.declineInvite(inviteId, req.user.userId);
+  await partyWebsocket.declineInvite({
+    inviteId,
+    partyId: result.rows[0].party_id,
+    inviterId: result.rows[0].inviter_id,
+    userId: req.user.userId,
+    username: req.user.username
+  });
 
   res.json({ success: true });
 }));
@@ -537,8 +543,7 @@ router.post('/multiplayer/join/:inviteId', authenticate, asyncHandler(async (req
   // Get and validate invite
   const inviteResult = await query(
     `SELECT pi.id, pi.party_id, pi.inviter_id, pi.invitee_id, pi.invite_status, pi.expires_at,
-            p.name as party_name, p.status as party_status, p.max_members,
-            (SELECT COUNT(*) FROM party_members WHERE party_id = p.id) as member_count
+            p.name as party_name
      FROM party_invites pi
      JOIN parties p ON pi.party_id = p.id
      WHERE pi.id = $1`,
@@ -564,41 +569,69 @@ router.post('/multiplayer/join/:inviteId', authenticate, asyncHandler(async (req
       'UPDATE party_invites SET invite_status = \'expired\' WHERE id = $1',
       [inviteId]
     );
+    await partyWebsocket.notifyInviteExpired({
+      inviteId,
+      partyId: invite.party_id,
+      inviterId: invite.inviter_id,
+      inviteeId: invite.invitee_id
+    });
     throw new AppError('Invite has expired', 400);
   }
 
-  if (invite.party_status !== 'forming') {
-    throw new AppError('Party is no longer accepting members', 400);
-  }
+  // Re-check and write under locks. The reads above run in autocommit, so two
+  // invitees accepting the last slot, or one user accepting two invites, could
+  // both pass them. Lock order: the user row first (serializes this user's
+  // joins), then the party row; the member count is read by a later statement
+  // so it sees a join that committed while this one waited on the lock.
+  await withTransaction(async (client) => {
+    await client.query('SELECT id FROM users WHERE id = $1 FOR UPDATE', [req.user.userId]);
 
-  if (parseInt(invite.member_count) >= invite.max_members) {
-    throw new AppError('Party is full', 400);
-  }
+    const partyLock = await client.query(
+      'SELECT status, max_members FROM parties WHERE id = $1 FOR UPDATE',
+      [invite.party_id]
+    );
+    const party = partyLock.rows[0];
+    if (!party || party.status !== 'forming') {
+      throw new AppError('Party is no longer accepting members', 400);
+    }
 
-  // Check if user is already in a party
-  const existingParty = await query(
-    `SELECT p.id FROM parties p
-     JOIN party_members pm ON p.id = pm.party_id
-     WHERE pm.user_id = $1 AND p.status IN ('forming', 'ready')`,
-    [req.user.userId]
-  );
+    const countResult = await client.query(
+      'SELECT COUNT(*)::int AS member_count FROM party_members WHERE party_id = $1',
+      [invite.party_id]
+    );
+    if (countResult.rows[0].member_count >= party.max_members) {
+      throw new AppError('Party is full', 400);
+    }
 
-  if (existingParty.rows.length > 0) {
-    throw new AppError('You are already in a party', 400);
-  }
+    // Check if user is already in a party
+    const existingParty = await client.query(
+      `SELECT p.id FROM parties p
+       JOIN party_members pm ON p.id = pm.party_id
+       WHERE pm.user_id = $1 AND p.status IN ('forming', 'ready')`,
+      [req.user.userId]
+    );
+    if (existingParty.rows.length > 0) {
+      throw new AppError('You are already in a party', 400);
+    }
 
-  // Update invite status
-  await query(
-    'UPDATE party_invites SET invite_status = \'accepted\', responded_at = NOW() WHERE id = $1',
-    [inviteId]
-  );
+    // Accept only a still-pending, unexpired invite (a concurrent decline,
+    // expiry or second accept changes invite_status first)
+    const accepted = await client.query(
+      `UPDATE party_invites SET invite_status = 'accepted', responded_at = NOW()
+       WHERE id = $1 AND invite_status = 'pending' AND expires_at > NOW()
+       RETURNING id`,
+      [inviteId]
+    );
+    if (accepted.rowCount === 0) {
+      throw new AppError('Invite is no longer valid', 400);
+    }
 
-  // Add user to party
-  await query(
-    `INSERT INTO party_members (party_id, user_id, is_ready)
-     VALUES ($1, $2, false)`,
-    [invite.party_id, req.user.userId]
-  );
+    await client.query(
+      `INSERT INTO party_members (party_id, user_id, is_ready)
+       VALUES ($1, $2, false)`,
+      [invite.party_id, req.user.userId]
+    );
+  });
 
   // Join party WebSocket room
   partyWebsocket.joinPartyRoom(invite.party_id, req.user.userId);

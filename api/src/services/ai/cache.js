@@ -14,7 +14,8 @@ import {
 import {
   isBeneficialStatusEffect,
   CURE_ALL_EFFECTS,
-  CURE_POISON_EFFECTS
+  CURE_POISON_EFFECTS,
+  getStatusStatMultiplier
 } from '../../../../shared/battleMath.js';
 
 /**
@@ -769,12 +770,14 @@ function applyActionToState(state, unit, action) {
  */
 function estimateActionDamage(attacker, target, action) {
   const power = action.skill?.power ?? 100;
+  // Same status multipliers as damageCalculator, so lookahead sees
+  // fortify / rage / weaken / corrode and other registry buffs.
   const baseDamage = (
     (attacker.strength ?? 0) + (attacker.attack ?? 0)
-  ) * (power / 100);
+  ) * getStatusStatMultiplier(attacker, 'attack') * (power / 100);
   const defense = (
     (target.vitality ?? 0) + (target.defense ?? 0)
-  ) * 0.15;
+  ) * getStatusStatMultiplier(target, 'defense') * 0.15;
   return Math.max(1, Math.floor(baseDamage - defense));
 }
 

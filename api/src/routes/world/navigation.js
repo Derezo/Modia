@@ -17,8 +17,8 @@ import { travelLimiter } from '../../middleware/gameplayRateLimiter.js';
 import { asyncHandler, AppError } from '../../middleware/errorHandler.js';
 import presenceService from '../../services/presenceService.js';
 import * as staminaService from '../../services/staminaService.js';
-import * as dailyQuestService from '../../services/dailyQuestService.js';
 import { parseIntOrThrow } from '../../utils/validateNumericParam.js';
+import { trackTravelQuestProgress } from '../../services/world/travelQuestProgress.js';
 import { SHRINE_COOLDOWN_HOURS } from '../../../../shared/constants.js';
 import {
   getBlockedNodes,
@@ -838,29 +838,10 @@ router.post('/travel', authenticate, travelLimiter, asyncHandler(async (req, res
   // Get updated stamina info
   const staminaInfo = await staminaService.getStaminaInfo(characterId);
 
-  // Daily/Weekly quest progress hooks (fire-and-forget pattern)
-  // Finding 38 & 115: Loop over ALL nodes on the path (except origin) and track each one.
-  // This gives 'Visit 2 shrines' +1 per shrine passed, and 'Visit N nodes' counts all distinct.
-  // Deduplication (same node/region revisited) is handled by dailyQuestService.updateProgressWithClient.
-  const pathNodes = pathNodesResult.rows;
-
-  // Skip the origin node (index 0) - we're already there
-  for (let i = 1; i < pathNodes.length; i++) {
-    const node = pathNodes[i];
-    // Track node visit with nodeType for filtered quests (shrines, taverns) and nodeId for deduplication
-    dailyQuestService.updateProgress(characterId, 'visit_nodes', 1, {
-      nodeType: node.node_type,
-      nodeId: node.id
-    }).catch(err => console.warn('[Quest] visit_nodes progress failed:', err.message));
-  }
-
-  // Track region visits - destination region only, deduplication handled by service
-  const destNode = nodeResult.rows[0];
-  if (destNode.region_id) {
-    dailyQuestService.updateProgress(characterId, 'visit_regions', 1, {
-      regionId: destNode.region_id
-    }).catch(err => console.warn('[Quest] visit_regions progress failed:', err.message));
-  }
+  // Daily/Weekly quest progress (fire-and-forget as a whole; the updates
+  // inside run sequentially so none of them overwrites another)
+  trackTravelQuestProgress(characterId, pathNodesResult.rows, nodeResult.rows[0])
+    .catch(err => console.warn('[Quest] travel progress failed:', err.message));
 
   res.json({
     message: 'Traveled successfully',

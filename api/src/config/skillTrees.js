@@ -120,7 +120,7 @@ const SKILL_TREES = {
       {
         name: 'Utility',
         skills: [
-          { id: 'smoke_bomb', name: 'Smoke Bomb', description: 'Blind enemies in area (50% miss for 2 turns)', maxLevel: 100, baseCost: 50, type: 'active', icon: '💨', power: 0, range: 3, mpCost: 10, aoeRadius: 2, effect: 'blind', effectDuration: 2, effectChance: 0.8, visualCategory: 'debuff', scaling: { effectChance: 0.002, effectDuration: 0.01 } },
+          { id: 'smoke_bomb', name: 'Smoke Bomb', description: 'Blind enemies in area (-30% accuracy for 2 turns)', maxLevel: 100, baseCost: 50, type: 'active', icon: '💨', power: 0, range: 3, mpCost: 10, aoeRadius: 2, effect: 'blind', effectDuration: 2, effectChance: 0.8, visualCategory: 'debuff', scaling: { effectChance: 0.002, effectDuration: 0.01 } },
           { id: 'haste_potion', name: 'Haste Potion', description: 'Grant ally haste (+1 move for 3 turns)', maxLevel: 100, baseCost: 100, type: 'active', icon: '⏱️', power: 0, range: 3, mpCost: 12, targetAlly: true, effect: 'haste', effectDuration: 3, effectChance: 1.0, visualCategory: 'buff', scaling: { effectDuration: 0.02, range: 0.02 } }
         ]
       },

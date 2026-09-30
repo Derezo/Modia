@@ -234,6 +234,33 @@ describe('Friends Block API', () => {
       assert.ok(friendReqRes.body.error.includes('not accepting friend requests'), friendReqRes.body.error);
     });
 
+    it('should still auto-accept their own pending request when allowFriendRequests=false', async () => {
+      const enable = await request('PUT', '/api/settings', {
+        social: { allowFriendRequests: true }
+      }, userWithPrivacy.accessToken);
+      assert.strictEqual(enable.status, 200);
+
+      // The privacy user asks first, then closes new requests
+      const theirRequest = await request('POST', `/api/friends/request/${userSender.username}`, {}, userWithPrivacy.accessToken);
+      assert.strictEqual(theirRequest.status, 201, JSON.stringify(theirRequest.body));
+      const disable = await request('PUT', '/api/settings', {
+        social: { allowFriendRequests: false }
+      }, userWithPrivacy.accessToken);
+      assert.strictEqual(disable.status, 200);
+
+      const reply = await request('POST', `/api/friends/request/${userWithPrivacy.username}`, {}, userSender.accessToken);
+      assert.strictEqual(reply.status, 201, `Expected auto-accept but got ${reply.status}: ${JSON.stringify(reply.body)}`);
+
+      const friendship = await query(
+        `SELECT status FROM friendships
+         WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)`,
+        [userWithPrivacy.userId, userSender.userId]
+      );
+      // acceptRequest stores one accepted row per direction
+      assert.strictEqual(friendship.rows.length, 2);
+      assert.ok(friendship.rows.every(row => row.status === 'accepted'));
+    });
+
     it('should allow friend request when allowFriendRequests=true', async () => {
       // Ensure setting is enabled (default)
       const settingsRes = await request('PUT', '/api/settings', {

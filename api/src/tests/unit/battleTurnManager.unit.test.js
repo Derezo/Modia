@@ -2492,3 +2492,71 @@ describe('Database Update Pattern Tests', () => {
     }
   });
 });
+
+// =============================================================================
+// Boss phase transitions of enemy turns are announced after the commit
+// =============================================================================
+
+describe('enemy-turn boss phase transitions', () => {
+  function bossBattleState() {
+    return {
+      units: [{
+        id: 'boss1',
+        name: 'Test Boss',
+        type: 'enemy',
+        hp: 40,
+        maxHp: 100,
+        phases: [
+          { name: 'Phase 1', threshold: 1.0 },
+          { name: 'Phase 2', threshold: 0.5 }
+        ]
+      }],
+      bossStates: {
+        boss1: {
+          unitId: 'boss1',
+          templateId: 9,
+          currentPhase: 1,
+          maxPhases: 2,
+          phaseName: 'Phase 1',
+          baseStats: { attack: 10, defense: 5, magicAttack: 10, magicDefense: 5, agility: 10 }
+        }
+      }
+    };
+  }
+
+  test('collecting applies the transition in state without broadcasting or saving', async () => {
+    const { collectBossPhaseTransitions } = await import('../../services/battleTurnManager.js');
+    const state = bossBattleState();
+
+    const pending = collectBossPhaseTransitions(state);
+
+    assert.strictEqual(pending.length, 1);
+    assert.strictEqual(state.bossStates.boss1.currentPhase, 2);
+    assert.strictEqual(state.units[0].currentPhase, 2);
+    assert.strictEqual(pending[0].bossState.currentPhase, 2);
+    // A snapshot: later in-place changes do not leak into what gets saved
+    state.bossStates.boss1.currentPhase = 99;
+    assert.strictEqual(pending[0].bossState.currentPhase, 2);
+  });
+
+  test('flush broadcasts and saves each transition, and a save failure does not throw', async () => {
+    const { collectBossPhaseTransitions, flushBossPhaseTransitions } =
+      await import('../../services/battleTurnManager.js');
+    const pending = collectBossPhaseTransitions(bossBattleState());
+    const broadcasts = [];
+    const saves = [];
+
+    await flushBossPhaseTransitions(77, pending, {
+      broadcast: async (battleId, payload) => broadcasts.push([battleId, payload.bossId, payload.toPhase]),
+      save: async (row) => {
+        saves.push(row);
+        throw new Error('boss_encounters unavailable');
+      }
+    });
+
+    assert.deepStrictEqual(broadcasts, [[77, 'boss1', 2]]);
+    assert.strictEqual(saves.length, 1);
+    assert.strictEqual(saves[0].battleId, 77);
+    assert.strictEqual(saves[0].currentPhase, 2);
+  });
+});

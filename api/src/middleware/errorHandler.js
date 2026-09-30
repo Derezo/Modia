@@ -57,7 +57,8 @@ const errorHandler = (err, req, res, _next) => {
   // 22007/22008: invalid datetime format
   // 2201W/2201X: negative LIMIT/OFFSET
   // 23502: not_null_violation (missing required field)
-  if (['22P02', '22003', '22007', '22008', '2201W', '2201X', '23502'].includes(err.code)) {
+  // 23514: check_violation (value outside a column CHECK constraint)
+  if (['22P02', '22003', '22007', '22008', '2201W', '2201X', '23502', '23514'].includes(err.code)) {
     logger.warn('errorHandler', 'Invalid parameter', {
       path: req.path,
       code: err.code
