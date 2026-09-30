@@ -4,6 +4,7 @@ All notable changes to Modia.
 
 ## 0.5
 
+- 0.5.3: Re-release of 0.5.2. The v0.5.2 deploy failed its health check (production requires CORS_ORIGINS, which was never set in lsd-vault) and rolled back, and lsd keeps finalized releases immutable. CORS_ORIGINS is now in the vault and declared in deploy.yaml.
 - 0.5.2: Release hardening: about 100 verified defects fixed across economy, combat, social, realtime and UI
   - **Upgrade note:** migration 067 purges bcrypt-hashed refresh sessions, so every signed-in player logs in once more after deploy. Migrations 062-067 run in the post-deploy hook; 065 and 066 take short exclusive locks on users and characters (5 s lock timeout), so deploy in a quiet window.
   - **Economy:** complete marketplace fills no longer fail on the escrow CHECK constraint; a whole-stack rolled-price gold exploit and NPC-shop self-restocking are closed; listings, the Merchant's Seal fee, price-improvement refunds, rarity-aware NPC sell prices, potions, equip-slot validation and obtainable relics all work; characters with trade history can be deleted.
