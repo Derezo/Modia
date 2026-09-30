@@ -354,9 +354,21 @@ export class MarketplaceScene extends Scene {
     this.wsHandlers = null;
   }
 
+  /**
+   * True while the UI a load started for is still the live one. The player can
+   * leave (or re-enter) the marketplace while requests are pending; their
+   * results then belong to a removed UI.
+   * @param {HTMLElement|null} ui - this.uiElement captured before the await
+   */
+  isLoadCurrent(ui) {
+    return ui != null && this.uiElement === ui;
+  }
+
   async loadMyOrders() {
+    const ui = this.uiElement;
     try {
       const ordersData = await this.game.api.getMyOrders();
+      if (!this.isLoadCurrent(ui)) return;
       this.myOrders = ordersData.orders || [];
       this.updateTabs();
       this.renderContent();
@@ -366,8 +378,10 @@ export class MarketplaceScene extends Scene {
   }
 
   async loadMyListings() {
+    const ui = this.uiElement;
     try {
       const listingsData = await this.game.api.getMyListings();
+      if (!this.isLoadCurrent(ui)) return;
       this.myListings = listingsData.listings || [];
       this.updateTabs();
       this.renderContent();
@@ -377,6 +391,7 @@ export class MarketplaceScene extends Scene {
   }
 
   async loadInitialData() {
+    const ui = this.uiElement;
     try {
       const [searchData, ordersData, listingsData, sellableData] = await Promise.all([
         this.game.api.searchMarketItems('', null, null, 30),
@@ -384,6 +399,7 @@ export class MarketplaceScene extends Scene {
         this.game.api.getMyListings(),
         this.game.api.getSellableInventory()
       ]);
+      if (!this.isLoadCurrent(ui)) return;
 
       this.searchResults = searchData.items || [];
       this.myOrders = ordersData.orders || [];
@@ -394,6 +410,8 @@ export class MarketplaceScene extends Scene {
       this.updateTabs();
       this.renderContent();
     } catch (err) {
+      // No error toast over whatever scene the player has moved on to
+      if (!this.isLoadCurrent(ui)) return;
       console.error('Failed to load marketplace data:', err);
       parchmentToast.error('Load Failed', 'Failed to load marketplace data');
     }
@@ -559,6 +577,7 @@ export class MarketplaceScene extends Scene {
   }
 
   renderContent() {
+    if (!this.uiElement) return;
     // Close slide-out item panel when switching tabs
     if (this.itemPanel?.isOpen) {
       this.itemPanel.close();

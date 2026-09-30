@@ -158,8 +158,10 @@ describe('equipment rules', () => {
     assert.equal(matchesEquipmentSlot({ type: 'accessory', equipmentSlot: 'accessory' }, 'accessory'), true);
   });
 
-  it('lets main_hand weapons go in either hand but off_hand only in off_hand', () => {
-    assert.equal(matchesEquipmentSlot({ type: 'weapon', equipmentSlot: 'main_hand' }, 'off_hand'), true);
+  it('keeps weapons in their template hand, as the server does (no dual-wield)', () => {
+    assert.equal(matchesEquipmentSlot({ type: 'weapon', equipmentSlot: 'main_hand' }, 'main_hand'), true);
+    assert.equal(matchesEquipmentSlot({ type: 'weapon', equipmentSlot: 'main_hand' }, 'off_hand'), false);
+    assert.equal(matchesEquipmentSlot({ type: 'weapon', equipmentSlot: 'off_hand' }, 'off_hand'), true);
     assert.equal(matchesEquipmentSlot({ type: 'weapon', equipmentSlot: 'off_hand' }, 'main_hand'), false);
     assert.equal(matchesEquipmentSlot({ type: 'weapon', equipmentSlot: 'main_hand' }, 'head'), false);
   });
@@ -169,6 +171,14 @@ describe('equipment rules', () => {
     assert.equal(getEquipRestriction(item, { level: 3, class: 'warrior' }), 'Requires Lv 15');
     assert.equal(getEquipRestriction(item, { level: 20, class: 'mage' }), 'Warrior only');
     assert.equal(getEquipRestriction(item, { level: 20, class: 'Warrior' }), null);
+  });
+
+  it('applies the server race rule and reads Postgres enum-array literals', () => {
+    // GET /api/inventory returns class_type[] / race_type[] as '{a,b}' strings
+    const item = { level_requirement: 1, class_restriction: '{warrior,mage}', race_restriction: '{dwarf}' };
+    assert.equal(getEquipRestriction(item, { level: 5, class: 'mage', race: 'dwarf' }), null);
+    assert.equal(getEquipRestriction(item, { level: 5, class: 'rogue', race: 'dwarf' }), 'Warrior, Mage only');
+    assert.equal(getEquipRestriction(item, { level: 5, class: 'warrior', race: 'elf' }), 'Dwarf only');
   });
 });
 

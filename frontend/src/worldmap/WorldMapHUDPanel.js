@@ -109,8 +109,16 @@ export class WorldMapHUDPanel {
     this.targetHeight = BASE_HEIGHT;
   }
 
+  /**
+   * Apply the breakpoint layout: collapsed on phones, expanded otherwise.
+   * Collapsibility follows the same breakpoint, so a panel that becomes mobile
+   * after load can be folded back after expanding, and a desktop panel is not
+   * folded into the phone chip by a click.
+   * @param {boolean} value - true for the phone (collapsed, collapsible) layout
+   */
   setCollapsed(value) {
     this.collapsed = !!value;
+    this.collapsible = !!value;
   }
 
   /**
@@ -129,6 +137,17 @@ export class WorldMapHUDPanel {
   getUpscale() {
     const scale = this.displayScale || 1;
     return scale >= 1 ? 1 : Math.min(MAX_HUD_UPSCALE, 1 / scale);
+  }
+
+  /**
+   * Bottom edge of the drawn panel (chip when collapsed), in CSS pixels from
+   * the canvas top. DOM overlays anchored to the canvas (the quest HUD) use it
+   * to sit below the panel instead of covering it.
+   * @returns {number}
+   */
+  getBottomCssOffset() {
+    const height = this.collapsed ? COLLAPSED_HEIGHT : Math.ceil(this.currentHeight);
+    return (this.y + height * this.getUpscale()) * (this.displayScale || 1);
   }
 
   /**

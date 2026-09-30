@@ -8,6 +8,20 @@
  * - Prevents concurrent refresh attempts
  * - Cleans up on logout
  */
+/**
+ * Whether a refresh error means the server rejected the refresh token (the
+ * session is over), as opposed to a transient failure worth retrying.
+ * POST /auth/refresh answers 400 for a missing/malformed token and 401 for an
+ * invalid or expired one. Errors without an HTTP status never reached the
+ * server (network drop, timeout, unreadable body).
+ * @param {Error & {status?: number, isNetworkError?: boolean}} err
+ * @returns {boolean}
+ */
+export function isRefreshRejected(err) {
+  if (!err || err.isNetworkError) return false;
+  return err.status === 400 || err.status === 401 || err.status === 403;
+}
+
 export class TokenRefreshManager {
   constructor(game) {
     this.game = game;
@@ -164,14 +178,13 @@ export class TokenRefreshManager {
       return true;
 
     } catch (err) {
-      // Distinguish between network errors and auth errors
-      const isNetworkError = err.message === 'Unable to connect to server' ||
-                            err.message === 'Failed to fetch' ||
-                            (err.name === 'TypeError' && err.message.toLowerCase().includes('fetch'));
-
-      if (isNetworkError) {
-        // Network failure - don't clear tokens, retry later
-        console.warn('[TokenRefresh] Network error during refresh, will retry:', err.message);
+      // Only the server rejecting the refresh token ends the session. A
+      // network drop (any browser's wording: Chrome 'Failed to fetch', Safari
+      // 'Load failed', Firefox 'NetworkError ...'), a timeout, a rate limit or
+      // a server error must not log the player out.
+      if (!isRefreshRejected(err)) {
+        // Transient failure - don't clear tokens, retry later
+        console.warn('[TokenRefresh] Refresh failed transiently, will retry:', err?.message);
         // Schedule retry in 30 seconds
         this.refreshTimer = setTimeout(() => {
           this.performRefresh();

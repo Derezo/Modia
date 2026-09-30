@@ -21,6 +21,7 @@ import {
 import { escapeHtml } from '../utils/escapeHtml.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { Icon } from '../components/Icon.js';
+import { formatCompletionBonus } from './questBoard/completionBonus.js';
 
 const P = PARCHMENT_COLORS;
 
@@ -862,6 +863,12 @@ export class QuestBoardScene extends Scene {
 
       parchmentToast.success('Reward Claimed!', message);
 
+      // The last single claim of the day can also grant the completion bonus
+      const bonusText = formatCompletionBonus(result.completionBonus);
+      if (bonusText) {
+        parchmentToast.success('Daily Completion Bonus!', bonusText);
+      }
+
       // Show item drop notification if one occurred
       if (reward.itemDrop) {
         setTimeout(() => {
@@ -897,8 +904,9 @@ export class QuestBoardScene extends Scene {
 
       // Show reward toast
       let message = `${result.questsClaimed} quests: +${result.totalGold} gold, +${result.totalXp} XP`;
-      if (result.completionBonus) {
-        message += ` (Completion Bonus: +${result.completionBonus.gold}g, +${result.completionBonus.xp} XP!)`;
+      const bonusText = formatCompletionBonus(result.completionBonus);
+      if (bonusText) {
+        message += ` (Completion Bonus: ${bonusText}!)`;
       }
 
       parchmentToast.success('All Rewards Claimed!', message);

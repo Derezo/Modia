@@ -369,7 +369,7 @@ export class Icon {
     if (className) classes.push(className);
 
     // Build inline style for color
-    const style = color ? `style="--icon-color: ${color}"` : '';
+    const style = color ? `style="--icon-color: ${escapeHtmlAttribute(color)}"` : '';
 
     // Build label HTML
     const showLabels = responsive.showLabels();
@@ -377,7 +377,9 @@ export class Icon {
       ? `<span class="modia-icon__label">${escapeHtml(label)}</span>`
       : '';
 
-    const wrapperOpen = `<span class="${classes.join(' ')}" ${style} title="${escapeHtml(title)}">`;
+    // Attribute values need quote encoding: title can carry data-derived text
+    // (e.g. augment descriptions), which escapeHtml alone lets break out of the attribute.
+    const wrapperOpen = `<span class="${escapeHtmlAttribute(classes.join(' '))}" ${style} title="${escapeHtmlAttribute(title)}">`;
 
     // No icon to load: render the placeholder directly rather than a broken <img>
     if (!category || !name) {
@@ -396,7 +398,7 @@ export class Icon {
     // data-image-fallback: the CSP-safe capture-phase handler (utils/imageFallback.js)
     // hides the image and reveals the following placeholder if the file is missing.
     return `${wrapperOpen}
-      <img class="modia-icon__img" src="${escapeHtml(imgPath)}" alt="${escapeHtml(altText)}"
+      <img class="modia-icon__img" src="${escapeHtmlAttribute(imgPath)}" alt="${escapeHtmlAttribute(altText)}"
            style="width: ${pixelSize}px; height: ${pixelSize}px;" draggable="false"
            data-image-fallback data-fallback-display="inline-flex">${placeholderHtml(name, pixelSize, false)}
       ${labelHtml}
@@ -523,6 +525,6 @@ export class Icon {
   }
 }
 
-import { escapeHtml } from '../utils/escapeHtml.js';
+import { escapeHtml, escapeHtmlAttribute } from '../utils/escapeHtml.js';
 
 export default Icon;

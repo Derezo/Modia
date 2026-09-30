@@ -1680,3 +1680,40 @@ describe('BattleGrid retina source rendering', () => {
     ]]);
   });
 });
+
+describe('BattleGrid grid lines setting', () => {
+  function strokeCounter() {
+    let strokes = 0;
+    const ctx = new Proxy({}, {
+      get(_target, prop) {
+        if (prop === 'stroke') return () => { strokes++; };
+        return () => {};
+      },
+      set() { return true; }
+    });
+    return { ctx, count: () => strokes };
+  }
+
+  it('outlines a playable tile only when grid lines are enabled', () => {
+    const grid = createGrid();
+    const off = strokeCounter();
+    grid.showGridLines = false;
+    grid.renderTileGridLine(off.ctx, 100, 100, 0, 0);
+    assert.equal(off.count(), 0);
+
+    const on = strokeCounter();
+    grid.showGridLines = true;
+    grid.renderTileGridLine(on.ctx, 100, 100, 0, 0);
+    assert.equal(on.count(), 1);
+  });
+
+  it('keeps movement highlights when grid lines are disabled', () => {
+    const grid = createGrid();
+    grid.showGridLines = false;
+    const drawn = [];
+    grid.renderTileHighlight = (_ctx, _x, _y, color) => drawn.push(color);
+    const noopCtx = new Proxy({}, { get: () => () => {}, set: () => true });
+    grid.render(noopCtx, { '0,0': 'rgba(0, 128, 255, 0.4)' }, null, {});
+    assert.deepEqual(drawn, ['rgba(0, 128, 255, 0.4)']);
+  });
+});

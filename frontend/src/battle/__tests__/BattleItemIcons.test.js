@@ -504,3 +504,40 @@ describe('canonical battle item icons', () => {
     assert.equal(augmentRequests.some(path => path.includes('augment_augment_')), false);
   });
 });
+
+describe('BattleOutroSequence reward fallback', () => {
+  function outroWith(rewards) {
+    const scene = { game: { canvas: {}, targetWidth: 800, targetHeight: 600, scale: 1 } };
+    const outro = new BattleOutroSequence(scene);
+    outro.rewards = rewards;
+    outro.goldProgress = 1;
+    outro.xpProgress = 1;
+    const counters = [];
+    outro.renderGoldCounter = () => counters.push('gold');
+    outro.renderXPCounter = () => counters.push('xp');
+    return { outro, counters };
+  }
+
+  it('shows only the fallback sentence for a victory with no reward breakdown', () => {
+    const { outro, counters } = outroWith({});
+    const ctx = createCanvasContext();
+    outro.renderRewards(ctx, 800, 600);
+    assert.deepEqual(counters, []);
+    assert.ok(ctx.text.some(entry => entry.value === 'Your rewards have been added to your party.'));
+  });
+
+  it('treats null gold and experience as absent', () => {
+    const { outro, counters } = outroWith({ gold: null, experience: null, items: [] });
+    assert.equal(outro.hasRewardData(), false);
+    outro.renderRewards(createCanvasContext(), 800, 600);
+    assert.deepEqual(counters, []);
+  });
+
+  it('draws the counters when figures are present', () => {
+    const { outro, counters } = outroWith({ gold: 0, experience: 25, items: [] });
+    const ctx = createCanvasContext();
+    outro.renderRewards(ctx, 800, 600);
+    assert.deepEqual(counters, ['gold', 'xp']);
+    assert.ok(!ctx.text.some(entry => entry.value === 'Your rewards have been added to your party.'));
+  });
+});

@@ -1,3 +1,10 @@
+/**
+ * @module scenes/ShopScene
+ * @description Node shop and caravan screen: buy/sell tabs over an
+ * ItemDataTable, the item detail panel (stats, augments, Vs Equipped from
+ * shop/ShopEquipComparison.js), quantity and purchase/sell actions with
+ * in-flight and stale-scene guards, and the caravan refresh countdown.
+ */
 import { Scene } from './Scene.js';
 import { responsive } from '../core/Responsive.js';
 import {
@@ -20,6 +27,10 @@ import {
   normalizeRarity,
   RARITY_TEXT_COLORS
 } from '../utils/statDisplay.js';
+import {
+  getUnmetLevelRequirement,
+  renderEquippedComparison
+} from './shop/ShopEquipComparison.js';
 import {
   formatCaravanRefreshCountdown,
   normalizeCaravanShopData
@@ -58,6 +69,14 @@ export class ShopScene extends Scene {
     this.selectedItem = null;
     this.purchaseQuantity = 1;
 
+    // Transaction guards: one buy or sell request at a time
+    this.isBuying = false;
+    this.isSelling = false;
+    // Open sell confirmation, dismissed on exit
+    this.sellConfirm = null;
+    // Latest renderDetailPanel call; older calls drop their result
+    this.detailRenderSeq = 0;
+
     // ItemDataTable instance
     this.itemTable = null;
   }
@@ -72,6 +91,10 @@ export class ShopScene extends Scene {
     this.activeTab = 'buy';
     this.selectedItem = null;
     this.purchaseQuantity = 1;
+    this.isBuying = false;
+    this.isSelling = false;
+    this.sellConfirm = null;
+    this.detailRenderSeq = 0;
 
     if (!this.nodeId || !this.shopType) {
       parchmentToast.error('Invalid Shop', 'Could not open this shop');
@@ -98,6 +121,12 @@ export class ShopScene extends Scene {
   exit() {
     // Stop ambient sounds
     this.game.audio?.stopAmbient();
+
+    // Dismiss a pending sell confirmation (it resolves false, so no sale)
+    this.sellConfirm?.close();
+    this.sellConfirm = null;
+    // Invalidate any detail render still waiting on its icon
+    this.detailRenderSeq++;
 
     if (this.responsiveUnsubscribe) {
       this.responsiveUnsubscribe();
@@ -191,10 +220,15 @@ export class ShopScene extends Scene {
   }
 
   async loadShopData() {
+    // The scene can exit (or re-enter) while the requests are pending; the
+    // results then belong to a dead UI, and a countdown started now would leak
+    const ui = this.uiElement;
+    const isCurrent = () => ui !== null && this.uiElement === ui;
     try {
       if (this.isCaravan()) {
         // Caravan uses special endpoint and doesn't support selling
         const caravanData = await this.game.api.getCaravanInventory(this.nodeId);
+        if (!isCurrent()) return;
         const normalizedCaravan = normalizeCaravanShopData(caravanData);
         this.shopInventory = normalizedCaravan.items;
         this.sellableItems = []; // Caravans don't buy from players
@@ -207,6 +241,7 @@ export class ShopScene extends Scene {
           this.game.api.getShopInventory(this.nodeId, this.shopType),
           this.game.api.getSellableItems(this.nodeId, this.shopType)
         ]);
+        if (!isCurrent()) return;
 
         this.shopInventory = shopData.items || [];
         this.sellableItems = sellData.items || [];
@@ -214,6 +249,7 @@ export class ShopScene extends Scene {
 
       this.renderInventory();
     } catch (err) {
+      if (!isCurrent()) return;
       console.error('Failed to load shop data:', err);
       if (this.isCaravan()) this.updateRefreshCountdown();
       parchmentToast.error('Shop Error', 'Failed to load shop inventory');
@@ -677,6 +713,12 @@ export class ShopScene extends Scene {
         font-weight: normal;
         font-size: var(--font-size-sm, 12px);
       }
+
+      /* Vs Equipped rows (shop/ShopEquipComparison.js) */
+      .comparison-changes { text-align: right; font-size: var(--font-size-sm, 12px); }
+      .comparison-changes .stat-positive { color: ${P.state.success}; font-weight: bold; }
+      .comparison-changes .stat-negative { color: ${P.state.error}; font-weight: bold; }
+      .comparison-row .stat-neutral { color: ${P.text.muted}; font-size: var(--font-size-sm, 12px); }
 
       .detail-section-title {
         margin: 12px 0 6px;
@@ -1162,7 +1204,10 @@ export class ShopScene extends Scene {
   }
 
   async renderDetailPanel() {
+    if (!this.uiElement) return;
+    const renderSeq = ++this.detailRenderSeq;
     const detailEl = this.uiElement.querySelector('#detail-content');
+    if (!detailEl) return;
 
     if (!this.selectedItem) {
       detailEl.innerHTML = '<div class="empty-message">Select an item to view details</div>';
@@ -1184,6 +1229,9 @@ export class ShopScene extends Scene {
     const isSoldOut = isCaravan && !unlimited && (maxQty ?? 0) <= 0;
 
     const statsHtml = this.renderDetailStats(item);
+    const partyCharacters = this.game?.state?.get?.('characters') || [];
+    const comparisonHtml = isBuyMode ? renderEquippedComparison(item, partyCharacters) : '';
+    const unmetLevel = isBuyMode ? getUnmetLevelRequirement(item, partyCharacters) : 0;
     // Rarity was only conveyed by colour; spell it out
     const rarityName = normalizeRarity(item.rarity);
     const rarityLabel = rarityName.charAt(0).toUpperCase() + rarityName.slice(1);
@@ -1195,6 +1243,11 @@ export class ShopScene extends Scene {
       rarity: item.rarity,
       augments: item.augments || []
     });
+
+    // A newer selection (or quantity change, or scene exit) superseded this
+    // render while the icon was compositing; writing now would show the old
+    // item while the action button acts on this.selectedItem.
+    if (renderSeq !== this.detailRenderSeq || !this.uiElement || this.selectedItem !== item) return;
 
     // Build badges HTML
     let badgesHtml = '';
@@ -1219,6 +1272,8 @@ export class ShopScene extends Scene {
       ${item.description ? `<div class="detail-desc">${escapeHtml(item.description || '')}</div>` : ''}
 
       ${statsHtml ? `<div class="detail-stats">${statsHtml}</div>` : ''}
+
+      ${comparisonHtml}
 
       ${isSoldOut ? `
         <div class="detail-actions">
@@ -1245,7 +1300,7 @@ export class ShopScene extends Scene {
           <button class="action-btn ${isBuyMode ? 'buy-btn' : 'sell-btn'}"
                   id="action-btn"
                   ${(!canAfford || maxQty <= 0) ? 'disabled' : ''}>
-            ${isBuyMode ? 'Purchase' : 'Sell'}
+            ${isBuyMode ? (unmetLevel ? `Purchase (Requires Lv ${unmetLevel})` : 'Purchase') : 'Sell'}
           </button>
         </div>
       `}
@@ -1288,10 +1343,7 @@ export class ShopScene extends Scene {
 
     const levelRequirement = Number(item.levelRequirement ?? item.level_requirement) || 0;
     if (levelRequirement > 1) {
-      const characters = this.game?.state?.get?.('characters') || [];
-      const highestLevel = characters.reduce((max, c) => Math.max(max, Number(c.level) || 0), 0);
-      // Unknown party (no characters loaded) is not flagged as unmet
-      const unmet = characters.length > 0 && highestLevel < levelRequirement;
+      const unmet = getUnmetLevelRequirement(item, this.game?.state?.get?.('characters') || []) > 0;
       html += `
         <div class="detail-stat-row requirement-row${unmet ? ' unmet' : ''}"${unmet ? ' title="No party member meets this level yet"' : ''}>
           <span class="detail-stat-label">Required Level</span>
@@ -1313,29 +1365,28 @@ export class ShopScene extends Scene {
 
   async handleBuy() {
     if (!this.selectedItem) return;
+    // A double-click on Purchase must not send (and pay for) two requests
+    if (this.isBuying) return;
 
+    const item = this.selectedItem;
+    const quantity = this.purchaseQuantity;
+    this.isBuying = true;
     try {
       let result;
 
       if (this.isCaravan()) {
         // Use caravan-specific API
-        result = await this.game.api.buyFromCaravan(
-          this.nodeId,
-          this.selectedItem.id,
-          this.purchaseQuantity
-        );
+        result = await this.game.api.buyFromCaravan(this.nodeId, item.id, quantity);
       } else {
-        result = await this.game.api.buyFromShop(
-          this.nodeId,
-          this.shopType,
-          this.selectedItem.templateId,
-          this.purchaseQuantity
-        );
+        result = await this.game.api.buyFromShop(this.nodeId, this.shopType, item.templateId, quantity);
       }
 
+      // The purchase is committed: record the gold before touching the UI,
+      // which may be gone if the scene exited while the request was pending
       this.playerGold = result.remainingGold;
-      this.updateGoldDisplay();
       this.game.state.set('user', { ...this.game.state.get('user'), gold: this.playerGold });
+      if (!this.uiElement) return;
+      this.updateGoldDisplay();
 
       // Play purchase sound
       this.game.audio?.playInteraction('gold_spend');
@@ -1344,12 +1395,15 @@ export class ShopScene extends Scene {
 
       // Refresh shop data
       await this.loadShopData();
+      if (!this.uiElement) return;
       this.selectedItem = null;
       this.purchaseQuantity = 1;
       this.renderDetailPanel();
 
     } catch (err) {
       parchmentToast.error('Purchase Failed', err.message);
+    } finally {
+      this.isBuying = false;
     }
   }
 
@@ -1375,28 +1429,30 @@ export class ShopScene extends Scene {
       const rarityName = normalizeRarity(item.rarity);
       const rarityLabel = rarityName.charAt(0).toUpperCase() + rarityName.slice(1);
       const total = (item.sellPrice || 0) * quantity;
-      const confirmed = await parchmentConfirm({
+      const dialog = parchmentConfirm({
         title: 'Sell Item',
         message: `Sell ${quantity > 1 ? `${quantity} x ` : ''}${item.name} (${rarityLabel}) for ${total.toLocaleString()}g? This cannot be undone.`,
         confirmLabel: 'Sell',
         confirmVariant: 'danger'
       });
-      // The selection may have changed while the dialog was open
-      if (!confirmed || this.selectedItem !== item) return;
+      this.sellConfirm = dialog;
+      const confirmed = await dialog.promise;
+      if (this.sellConfirm === dialog) this.sellConfirm = null;
+      // The scene may have exited, or the selection or quantity changed, while
+      // the dialog was open; never sell something other than what was confirmed
+      if (!confirmed || !this.uiElement || this.selectedItem !== item || this.purchaseQuantity !== quantity) return;
     }
+    if (this.isSelling) return;
 
     this.isSelling = true;
     try {
-      const result = await this.game.api.sellToShop(
-        this.nodeId,
-        this.shopType,
-        this.selectedItem.instanceId,
-        this.purchaseQuantity
-      );
+      const result = await this.game.api.sellToShop(this.nodeId, this.shopType, item.instanceId, quantity);
 
+      // The sale is committed: record the gold before touching the UI
       this.playerGold = result.newGold;
-      this.updateGoldDisplay();
       this.game.state.set('user', { ...this.game.state.get('user'), gold: this.playerGold });
+      if (!this.uiElement) return;
+      this.updateGoldDisplay();
 
       // Play sell sound
       this.game.audio?.playInteraction('gold_receive');
@@ -1405,6 +1461,7 @@ export class ShopScene extends Scene {
 
       // Refresh shop data
       await this.loadShopData();
+      if (!this.uiElement) return;
       this.selectedItem = null;
       this.purchaseQuantity = 1;
       this.renderDetailPanel();
@@ -1417,7 +1474,7 @@ export class ShopScene extends Scene {
   }
 
   updateGoldDisplay() {
-    const goldEl = this.uiElement.querySelector('#player-gold');
+    const goldEl = this.uiElement?.querySelector('#player-gold');
     if (goldEl) {
       goldEl.textContent = this.playerGold.toLocaleString();
     }

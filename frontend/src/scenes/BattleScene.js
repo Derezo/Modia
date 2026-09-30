@@ -36,6 +36,7 @@ import {
 } from '../battle/BattleGrid.js';
 import { BattleUnit } from '../battle/BattleUnit.js';
 import { BattleUI } from '../battle/BattleUI.js';
+import { shouldAutoEndTurn, scheduleAutoEndTurn, cancelAutoEndTurn } from '../battle/autoEndTurn.js';
 import {
   BattleAnimations,
   getMovementPresentationDuration
@@ -187,6 +188,7 @@ export class BattleScene extends Scene {
     this.turnPhase = 'ready'; // 'ready' | 'partial' | 'done'
     this.inputEnabled = false;
     this.isActionSubmitting = false;
+    this.autoEndTurnTimer = null;
     this.stateRevision = null;
     this.retryableActionIntent = null;
     this.retryableZodiacIntent = null;
@@ -682,6 +684,7 @@ export class BattleScene extends Scene {
    */
   exit() {
     this.entryEpoch = (Number(this.entryEpoch) || 0) + 1;
+    this.cancelAutoEndTurn();
 
     // Close any open End Turn confirmation dialog
     this.closeWaitConfirmDialog();
@@ -980,19 +983,13 @@ export class BattleScene extends Scene {
     this.turnPhase = availableActions?.turnPhase ??
       (bothAvailable ? 'ready' : (neitherAvailable ? 'done' : 'partial'));
 
-    // Auto-end turn when move and act are both used and autoEndTurn setting is on
-    // Only for local player turns, not during animations or battle end
-    if (this.autoEndTurn &&
-        neitherAvailable &&
-        this.canWait &&
-        this.isLocalPlayerTurn() &&
-        !this.isActionSubmitting &&
-        !this.battleEnded &&
-        !this.isIntroPlaying) {
-      // Use setTimeout to avoid blocking the current call stack
-      setTimeout(() => this.submitAction('wait'), 0);
-    }
+    this.scheduleAutoEndTurn();
   }
+
+  // autoEndTurn setting: see battle/autoEndTurn.js
+  shouldAutoEndTurn() { return shouldAutoEndTurn(this); }
+  scheduleAutoEndTurn() { scheduleAutoEndTurn(this); }
+  cancelAutoEndTurn() { cancelAutoEndTurn(this); }
 
   getActionAvailability(actionType) {
     if (!this.serverAvailableActions) return false;
@@ -1728,8 +1725,10 @@ export class BattleScene extends Scene {
     }
 
     // Battle behavior settings (stored on scene for action handlers)
-    this.confirmEndTurn = this.game.getUserSetting('battle.confirmEndTurn', false);
-    this.autoEndTurn = this.game.getUserSetting('battle.autoEndTurn', true);
+    // Fallbacks mirror DEFAULT_SETTINGS.battle (SettingsStateManager.js) and
+    // the server defaults in api/src/routes/settings.js.
+    this.confirmEndTurn = this.game.getUserSetting('battle.confirmEndTurn', true);
+    this.autoEndTurn = this.game.getUserSetting('battle.autoEndTurn', false);
     this.showBattleGrid = this.game.getUserSetting('battle.showBattleGrid', true);
     this.showMissChance = this.game.getUserSetting('battle.showMissChance', true);
   }
@@ -2007,10 +2006,10 @@ export class BattleScene extends Scene {
 
     // Show on UI target card
     if (previewData) {
-      // If showMissChance is off, hide hit chance by setting it to 1.0
-      // This makes the card skip showing the percentage
-      if (!this.showMissChance && previewData.hitChance !== undefined) {
-        previewData = { ...previewData, hitChance: 1.0 };
+      // 'Show Miss Chance' off: the card omits the hit percentage entirely
+      // (never substitute a fake 100%)
+      if (this.showMissChance === false) {
+        previewData = { ...previewData, showHitChance: false };
       }
       this.ui.showDamagePreview(previewData);
     } else {
@@ -2517,6 +2516,7 @@ export class BattleScene extends Scene {
         this.isActionSubmitting = false;
         this.wsManager?.flushDeferredAuthoritativeState?.();
         this.refreshActionControls();
+        this.scheduleAutoEndTurn();
       }
     }
   }
@@ -2721,6 +2721,7 @@ export class BattleScene extends Scene {
       this.isActionSubmitting = false;
       this.wsManager?.flushDeferredAuthoritativeState?.();
       this.refreshActionControls();
+      this.scheduleAutoEndTurn();
     }
   }
 
@@ -2875,6 +2876,12 @@ export class BattleScene extends Scene {
             target.screenY - 32,
             actionPresentation?.descriptor.primaryColor || '#44ff88'
           );
+          continue;
+        }
+
+        // Per-target AoE miss (evasion, Blind, skill accuracy)
+        if (targetInfo.missed) {
+          this.animations.addMiss(target.screenX, target.screenY - 40);
           continue;
         }
 
@@ -4104,22 +4111,22 @@ export class BattleScene extends Scene {
       ? this.getUnitActiveSkills(activeUnit).find(s => s.id === this.selectedSkillId)
       : null;
 
-    // Build tile highlights for movement/targeting, unless showBattleGrid is off
-    const highlights = this.showBattleGrid
-      ? buildHighlights({
-        currentAction: this.currentAction,
-        validTiles: this.validTiles,
-        movementRange: this.movementRange,
-        selectedMoveTile: this.selectedMoveTile,
-        hoveredTile: this.hoveredTile,
-        pathfinding: this.pathfinding,
-        skill,
-        getUnitAt: (x, y) => this.getUnitAt(x, y),
-        isPvP: this.isPvP,
-        localUserId,
-        localTeamId
-      })
-      : {};
+    // Movement/targeting highlights are always shown; the showBattleGrid
+    // setting ('Show Battle Grid Lines') only toggles the tile outlines
+    const highlights = buildHighlights({
+      currentAction: this.currentAction,
+      validTiles: this.validTiles,
+      movementRange: this.movementRange,
+      selectedMoveTile: this.selectedMoveTile,
+      hoveredTile: this.hoveredTile,
+      pathfinding: this.pathfinding,
+      skill,
+      getUnitAt: (x, y) => this.getUnitAt(x, y),
+      isPvP: this.isPvP,
+      localUserId,
+      localTeamId
+    });
+    this.grid.showGridLines = this.showBattleGrid !== false;
 
     // Update occlusion only when the living-unit layout changes. Render can run
     // much more frequently than movement, so rebuilding it per frame is costly.

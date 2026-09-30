@@ -92,7 +92,8 @@ function createHarness(units) {
     skillSounds: [],
     statusSounds: [],
     zodiacPresentations: [],
-    battleEnds: []
+    battleEnds: [],
+    misses: []
   };
   const scene = {
     game: {},
@@ -110,7 +111,7 @@ function createHarness(units) {
       addParticleBurst(...args) { calls.particles.push(args); },
       addStatusEffect(...args) { calls.statuses.push(args); },
       addFlash() {},
-      addMiss() {}
+      addMiss(...args) { calls.misses.push(args); }
     },
     audioManager: {
       playSound() {},
@@ -494,6 +495,34 @@ describe('BattleWebSocketManager action presentation parity', () => {
     assert.equal(calls.damage.length, 1);
     assert.equal(calls.healing.length, 1);
     assert.equal(calls.particles.length, 2);
+  });
+
+  it('shows MISS for AoE targets that dodged and leaves their HP alone', async () => {
+    const actor = createUnit('caster');
+    const hit = createUnit('hit', { hp: 80, teamId: 2 });
+    const dodged = createUnit('dodged', { hp: 80, teamId: 2 });
+    const { manager, calls } = createHarness([actor, hit, dodged]);
+
+    await manager.processActionExecutedEvent({
+      actorId: actor.id,
+      actionType: 'skill',
+      result: {
+        skillId: 'firestorm',
+        isAoE: true,
+        targetId: hit.id,
+        damage: 30,
+        aoeTiles: [{ x: 4, y: 5, isCenter: true }],
+        aoeTargets: [
+          { targetId: hit.id, damage: 30 },
+          { targetId: dodged.id, damage: 0, missed: true }
+        ]
+      }
+    });
+
+    assert.equal(hit.hp, 50);
+    assert.equal(dodged.hp, 80);
+    assert.equal(calls.damage.length, 1);
+    assert.equal(calls.misses.length, 1);
   });
 
   it('uses result.targetTile for empty-tile observer presentations', async () => {
@@ -1484,9 +1513,15 @@ describe('BattleWebSocketManager stranded local turn recovery', () => {
     return { manager, scene, getRecoverArgs: () => recoverArgs };
   }
 
-  it('unlocks a local turn left locked after a queue timeout', () => {
+  it('unlocks a local turn left locked after a queue timeout, once the queue drains', async () => {
     const { manager, scene, getRecoverArgs } = strandedHarness();
-    manager.handleQueueTimeout({ type: 'turn_start' });
+    // Simulate the 5s presentation timeout firing for the only queued event
+    manager.processSingleTurnEventWithTimeout = async (event) => {
+      manager.handleQueueTimeout(event);
+      assert.equal(scene.inputEnabled, false, 'no recovery while the queue is still processing');
+    };
+    manager.turnEventQueue.push({ type: 'turn_start' });
+    await manager.processTurnEventQueue();
     assert.equal(scene.inputEnabled, true);
     assert.equal(getRecoverArgs().unitId, 'p1');
     assert.deepEqual(
@@ -1494,6 +1529,33 @@ describe('BattleWebSocketManager stranded local turn recovery', () => {
       { canMove: true, canAct: true },
       'availability is derived from the authoritative unit when none is cached'
     );
+  });
+
+  it('does not hand back a turn that a later queued event ends', async () => {
+    const { manager, scene, getRecoverArgs } = strandedHarness();
+    scene.units.set('e1', createUnit('e1', { type: 'enemy', ownerId: null }));
+    const processed = [];
+    manager.processSingleTurnEventWithTimeout = async (event) => {
+      processed.push(event.type);
+      if (event.type === 'turn_start' && event.unitId === 'p1') {
+        manager.handleQueueTimeout(event);
+      } else {
+        // The next event moves the turn to the enemy
+        scene.battleState.activeUnitId = 'e1';
+      }
+    };
+    manager.turnEventQueue.push({ type: 'turn_start', unitId: 'p1' }, { type: 'turn_start', unitId: 'e1' });
+    await manager.processTurnEventQueue();
+    assert.deepEqual(processed, ['turn_start', 'turn_start']);
+    assert.equal(getRecoverArgs(), null);
+    assert.equal(scene.inputEnabled, false);
+  });
+
+  it('does not recover while presentation is still queued', () => {
+    const { manager, getRecoverArgs } = strandedHarness();
+    manager.turnEventQueue.push({ type: 'turn_start' });
+    assert.equal(manager.recoverStrandedLocalTurn('test'), false);
+    assert.equal(getRecoverArgs(), null);
   });
 
   it('does nothing when input is already enabled or an enemy is active', () => {

@@ -212,8 +212,14 @@ export class ApiClient {
     const logData = shouldRedact && data ? { body: '[REDACTED]' } : (data ? { body: data } : {});
     debugLog('network.logAPIRequests', `${method} ${endpoint}`, logData);
 
+    // True while awaiting the network (fetch or reading the body). A TypeError
+    // there is a transport failure whatever the browser calls it ('Failed to
+    // fetch', Safari's 'Load failed', Firefox's 'NetworkError ...').
+    let inTransport = false;
     try {
+      inTransport = true;
       let response = await fetch(`${this.baseUrl}${endpoint}`, fetchOptions);
+      inTransport = false;
       const credentialRequest = isCredentialEndpoint(endpoint);
 
       // Handle 401 Unauthorized - attempt token refresh before failing.
@@ -231,15 +237,19 @@ export class ApiClient {
               'Authorization': `Bearer ${this.token}`
             };
 
+            inTransport = true;
             response = await fetch(`${this.baseUrl}${endpoint}`, {
               ...fetchOptions,
               headers: retryHeaders
             });
+            inTransport = false;
           }
         }
       }
 
+      inTransport = true;
       const { data: result, text: rawBody } = await readResponseBody(response);
+      inTransport = false;
 
       debugLog('network.logAPIRequests', `${method} ${endpoint} -> ${response.status}`, {
         response: result ?? (rawBody ? rawBody.slice(0, 200) : null)
@@ -279,7 +289,7 @@ export class ApiClient {
         timeoutError.isTimeout = true;
         throw timeoutError;
       }
-      if (err.name === 'TypeError' && err.message === 'Failed to fetch') {
+      if (inTransport && err?.name === 'TypeError') {
         const networkError = new ApiError('Unable to connect to server', {
           cause: err
         });

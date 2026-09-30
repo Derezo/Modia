@@ -563,7 +563,8 @@ export class BattleOutroSequence {
    */
   hasRewardData() {
     const r = this.rewards || {};
-    return r.gold !== undefined || r.experience !== undefined ||
+    // null counts as absent: it carries no figure and would render as +0
+    return r.gold != null || r.experience != null ||
       (Array.isArray(r.items) && r.items.length > 0);
   }
 
@@ -579,6 +580,12 @@ export class BattleOutroSequence {
     const itemCount = this.rewards.items?.length || 0;
     const layout = this.getRewardLayout(w, h, itemCount);
     this.renderRewardPanel(ctx, layout, itemCount);
+
+    // No breakdown (state-poll victory): the panel shows the fallback sentence
+    // where the counters would be; drawing 'GOLD +0' over it would contradict it
+    if (!this.hasRewardData()) {
+      return;
+    }
 
     // Gold counter
     if (this.goldProgress > 0) {

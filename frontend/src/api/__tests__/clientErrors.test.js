@@ -159,3 +159,33 @@ describe('ApiClient body read failures on a 2xx', () => {
     await assert.rejects(client.get('/battle/9/state'), { name: 'AbortError' });
   });
 });
+
+describe('ApiClient transport failures', () => {
+  for (const message of ['Failed to fetch', 'Load failed', 'NetworkError when attempting to fetch resource.']) {
+    it(`classifies a fetch TypeError '${message}' as a network error`, async () => {
+      const { client } = makeClient();
+      globalThis.fetch = async () => { throw new TypeError(message); };
+
+      await assert.rejects(client.post('/auth/refresh', { refreshToken: 'test-token' }), (err) => {
+        assert.ok(err instanceof ApiError);
+        assert.equal(err.isNetworkError, true);
+        assert.equal(err.status, null);
+        return true;
+      });
+    });
+  }
+
+  it('classifies a TypeError while reading the body as a network error', async () => {
+    const { client } = makeClient();
+    globalThis.fetch = async () => ({
+      status: 200,
+      ok: true,
+      text: async () => { throw new TypeError('Load failed'); }
+    });
+
+    await assert.rejects(client.get('/characters'), (err) => {
+      assert.equal(err.isNetworkError, true);
+      return true;
+    });
+  });
+});

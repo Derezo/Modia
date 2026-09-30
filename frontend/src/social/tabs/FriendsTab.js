@@ -701,7 +701,7 @@ export class FriendsTab {
 
       if (!partyResponse.party) {
         // Create a new party first
-        const createResponse = await this.game.api.createMultiplayerParty('Quick Party', 'pve', 5);
+        const createResponse = await this.game.api.createMultiplayerParty('Quick Party', 'adventure', 5);
         if (!createResponse.party) {
           throw new Error('Failed to create party');
         }

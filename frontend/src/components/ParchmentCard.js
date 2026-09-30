@@ -762,6 +762,8 @@ export class ParchmentCard {
    * @param {number} data.minDamage - Minimum damage (or minHeal for healing)
    * @param {number} data.maxDamage - Maximum damage (or maxHeal for healing)
    * @param {number} data.hitChance - Hit chance (0-1)
+   * @param {boolean} [data.showHitChance=true] - false hides the hit chance
+   *   (the 'Show Miss Chance' setting); an absent hitChance is also not shown
    * @param {number} data.critChance - Critical hit chance (0-1)
    * @param {number} data.critDamage - Damage on critical hit
    * @param {boolean} data.willKill - Whether this would kill the target
@@ -868,12 +870,13 @@ export class ParchmentCard {
         // Physical/Magical damage (original behavior)
         const min = data.minDamage;
         const max = data.maxDamage;
-        const hitPercent = Math.round(data.hitChance * 100);
+        const showHit = data.showHitChance !== false && Number.isFinite(data.hitChance);
+        const hitPercent = showHit ? Math.round(data.hitChance * 100) : null;
         const critPercent = Math.round((data.critChance || 0) * 100);
 
         let hitClass = '';
-        if (hitPercent < 70) hitClass = 'low';
-        else if (hitPercent < 90) hitClass = 'warning';
+        if (showHit && hitPercent < 70) hitClass = 'low';
+        else if (showHit && hitPercent < 90) hitClass = 'warning';
 
         html = '<div class="pc-dmg-row">';
         html += `<span class="pc-dmg-range ${data.willKill ? 'pc-dmg-range--kill' : ''}">${min}-${max}</span>`;
@@ -884,7 +887,9 @@ export class ParchmentCard {
         html += '</div>';
 
         html += '<div class="pc-dmg-secondary">';
-        html += `<span class="pc-dmg-hit ${hitClass}">${hitPercent}% hit</span>`;
+        if (showHit) {
+          html += `<span class="pc-dmg-hit ${hitClass}">${hitPercent}% hit</span>`;
+        }
         if (critPercent > 0) {
           html += `<span class="pc-dmg-crit">${critPercent}% crit \u2192 ${data.critDamage}</span>`;
         }

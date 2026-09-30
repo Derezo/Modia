@@ -297,7 +297,6 @@ export class FormationGrid {
 
     // Pulsing glow effect
     const pulseOpacity = 0.4 + Math.sin(this.highlightPhase * Math.PI * 2) * 0.2;
-    const glowColor = `rgba(255, 80, 80, ${pulseOpacity})`;
     const borderColor = `rgba(255, 60, 60, ${pulseOpacity + 0.3})`;
 
     // Draw glow shadow
@@ -316,17 +315,23 @@ export class FormationGrid {
     // Reset shadow for label
     ctx.shadowBlur = 0;
 
-    // Draw "ENEMY" label
-    const labelX = bottomCorner.x + hw + 20;
-    const labelY = (topCorner.y + bottomCorner.y) / 2;
-
-    ctx.fillStyle = glowColor;
+    // Draw "ENEMY" label. Solid fill with a dark outline so it stays legible
+    // on every theme (it used to share the pulsing 0.2-0.6 alpha glow), and
+    // kept inside the canvas on narrow (mobile) grids.
+    const label = '→ ENEMY';
     ctx.font = `bold ${responsive.getCanvasFontSize('sm')}px Arial`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
+    const labelWidth = ctx.measureText?.(label)?.width || 0;
+    const labelX = Math.max(0, Math.min(bottomCorner.x + hw + 20, this.logicalWidth - labelWidth - 4));
+    const labelY = (topCorner.y + bottomCorner.y) / 2;
 
-    // Arrow pointing right
-    ctx.fillText('→ ENEMY', labelX, labelY);
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(20, 10, 8, 0.85)';
+    ctx.strokeText(label, labelX, labelY);
+    ctx.fillStyle = '#ff8a80';
+    ctx.fillText(label, labelX, labelY);
 
     ctx.restore();
   }

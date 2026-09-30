@@ -10,7 +10,19 @@ globalThis.window ??= {
   removeEventListener: noop
 };
 globalThis.document ??= {
-  createElement: () => ({ style: { setProperty: noop }, classList: { add: noop, remove: noop, toggle: noop }, appendChild: noop, setAttribute: noop }),
+  createElement: () => {
+    // escapeHtml serializes textContent through innerHTML, which encodes & < > only
+    let text = '';
+    return {
+      style: { setProperty: noop },
+      classList: { add: noop, remove: noop, toggle: noop },
+      appendChild: noop,
+      setAttribute: noop,
+      set textContent(value) { text = String(value); },
+      get textContent() { return text; },
+      get innerHTML() { return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    };
+  },
   getElementById: () => null,
   head: { appendChild: noop },
   documentElement: { style: { setProperty: noop }, classList: { add: noop, remove: noop, toggle: noop } },
@@ -38,5 +50,18 @@ describe('Icon missing-image fallback', () => {
     assert.equal(iconPlaceholderGlyph('formation'), 'F');
     assert.equal(iconPlaceholderGlyph('_hp_potion'), 'H');
     assert.equal(iconPlaceholderGlyph(''), '•');
+  });
+});
+
+describe('Icon attribute escaping', () => {
+  it('encodes quotes in data-derived title text so it cannot add attributes', () => {
+    const html = Icon.html('augments', 'fire', { title: 'Blaze" onmouseover="alert(1)' });
+    assert.doesNotMatch(html, /onmouseover="/);
+    assert.match(html, /title="Blaze&quot; onmouseover=&quot;alert\(1\)"/);
+  });
+
+  it('encodes single quotes and angle brackets in the title', () => {
+    const html = Icon.html('augments', 'fire', { title: "it's <b>" });
+    assert.match(html, /title="it&#39;s &lt;b&gt;"/);
   });
 });

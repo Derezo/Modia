@@ -16,6 +16,7 @@
 import { Scene } from './Scene.js';
 import { ParchmentCard } from '../components/ParchmentCard.js';
 import { FormationGrid } from './formation/FormationGrid.js';
+import { computeFormationCanvasSize } from './formation/formationCanvasSize.js';
 import { StartBattleButton } from './formation/StartBattleButton.js';
 import { BattlefieldTheme } from './formation/themes/BattlefieldTheme.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
@@ -671,7 +672,7 @@ export class BattleFormationScene extends Scene {
           <div class="bf-enemy-portrait">
             <img class="bf-enemy-portrait-img" src="${portraitUrl}" alt="${escapeHtml(enemy.name || '')}"
                  data-image-fallback data-fallback-display="flex">
-            <div class="bf-enemy-icon" style="display: none;">${enemy.name.charAt(0)}</div>
+            <div class="bf-enemy-icon" style="display: none;">${escapeHtml((enemy.name || '?').charAt(0))}</div>
             ${isBoss ? '<div class="bf-boss-indicator">&#9760;</div>' : ''}
           </div>
           <div class="bf-enemy-info">
@@ -708,6 +709,13 @@ export class BattleFormationScene extends Scene {
     const gridArea = this.uiElement?.querySelector('.bf-grid-area');
     if (!gridArea || !this.gridCanvas) return;
 
+    // createUI runs again on a breakpoint flip (rebuildUI); drop the observer
+    // still watching the old, detached grid area
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
+    }
+
     this.resizeObserver = new ResizeObserver(() => {
       this.resizeCanvasForDPR();
     });
@@ -728,28 +736,15 @@ export class BattleFormationScene extends Scene {
 
     const dpr = window.devicePixelRatio || 1;
 
-    // Calculate logical dimensions based on available space
-    // Cap at reasonable max to prevent oversized canvas
-    const maxWidth = this.isMobile ? 360 : 600;
-    const maxHeight = this.isMobile ? 200 : 320;
-
-    // Use container size but cap to reasonable limits
-    const containerWidth = Math.min(gridArea.clientWidth - 32, maxWidth);
-    const containerHeight = Math.min(gridArea.clientHeight - 60, maxHeight);
-
-    // Maintain aspect ratio (approximately 2:1 for isometric grid)
-    const aspectRatio = 1.8;
-    let logicalW = containerWidth;
-    let logicalH = containerWidth / aspectRatio;
-
-    if (logicalH > containerHeight) {
-      logicalH = containerHeight;
-      logicalW = logicalH * aspectRatio;
-    }
-
-    // Round to whole pixels
-    logicalW = Math.round(logicalW);
-    logicalH = Math.round(logicalH);
+    // Logical size for the available space, clamped to a usable minimum
+    const size = computeFormationCanvasSize({
+      clientWidth: gridArea.clientWidth,
+      clientHeight: gridArea.clientHeight,
+      isMobile: this.isMobile
+    });
+    if (!size) return; // not laid out yet; keep the current size
+    const logicalW = size.width;
+    const logicalH = size.height;
 
     // Store logical dimensions for coordinate conversion
     this.logicalWidth = logicalW;

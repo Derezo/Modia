@@ -12,6 +12,7 @@
  */
 
 import { resolveAugmentOverlay } from '../../../shared/overlayMapping.js';
+import { getSlotMismatch, getRequirementFailure, parseRestrictionList } from '../../../shared/equipmentRules.js';
 
 // Full stat names mapping
 const STAT_FULL_NAMES = {
@@ -960,53 +961,38 @@ export function getDisplayMaterial(item) {
 
 /**
  * Whether an item's type and template slot fit an equipment slot.
- * Mirrors the server rule in POST /api/inventory/equip: armor and accessories
- * must match their template slot exactly; a main_hand weapon may go in either
- * hand; an off_hand item only in off_hand.
+ * Uses the same rule as POST /api/inventory/equip (shared/equipmentRules.js):
+ * the item type must allow the slot, and an item with a template slot must go
+ * in exactly that slot (no dual-wield, so a main_hand weapon never goes in the
+ * off hand).
  * @param {Object} item - Inventory item (type, equipmentSlot)
  * @param {string} slotKey - Target slot
  * @returns {boolean}
  */
 export function matchesEquipmentSlot(item, slotKey) {
   if (!item || !slotKey) return false;
-  const typeSlots = {
-    weapon: ['main_hand', 'off_hand'],
-    shield: ['off_hand'],
-    armor: ['head', 'body', 'legs', 'feet'],
-    accessory: ['accessory']
-  };
-  const type = String(item.type || item.item_type || '').toLowerCase();
-  if (!(typeSlots[type] || []).includes(slotKey)) return false;
-
+  const type = item.type || item.item_type || '';
   const templateSlot = item.equipmentSlot || item.equipment_slot || null;
-  if (!templateSlot) return true;
-
-  if (type === 'weapon' || type === 'shield') {
-    if (templateSlot === 'off_hand') return slotKey === 'off_hand';
-    return true; // main_hand weapons may be dual-wielded in off_hand
-  }
-  return templateSlot === slotKey;
+  return getSlotMismatch(type, templateSlot, slotKey) === null;
 }
 
 /**
- * Reason a character cannot use an item (level or class), or null if they can.
- * @param {Object} item - Item (level_requirement, class_restriction)
- * @param {Object} [character] - { level, class }
+ * Reason a character cannot use an item (level, class or race), or null if
+ * they can. Uses the server's rule (shared/equipmentRules.js).
+ * @param {Object} item - Item (level_requirement, class_restriction, race_restriction)
+ * @param {Object} [character] - { level, class, race }
  * @returns {string|null} e.g. "Requires Lv 15" or "Warrior, Mage only"
  */
 export function getEquipRestriction(item, character) {
-  if (!item) return null;
+  if (!item || !character) return null;
   const reqs = getItemRequirements(item);
-  if (reqs.level > 0 && character && Number(character.level || 0) < reqs.level) {
-    return `Requires Lv ${reqs.level}`;
-  }
-  if (reqs.classes.length > 0 && character) {
-    const charClass = String(character.class || character.className || '').toLowerCase();
-    if (!reqs.classes.some(c => String(c).toLowerCase() === charClass)) {
-      return `${reqs.classes.map(c => formatStatName(String(c))).join(', ')} only`;
-    }
-  }
-  return null;
+  const failure = getRequirementFailure(
+    { level: reqs.level, classes: reqs.classes, races: reqs.races },
+    { ...character, class: character.class || character.className }
+  );
+  if (!failure) return null;
+  if (failure.reason === 'level') return `Requires Lv ${failure.level}`;
+  return `${failure.allowed.map(c => formatStatName(String(c))).join(', ')} only`;
 }
 
 /**
@@ -1134,18 +1120,18 @@ export function hasEquipmentUpgrade(equipment, inventory, character, slots) {
 }
 
 /**
- * Normalized level and class requirements of an item
+ * Normalized level, class and race requirements of an item
  * @param {Object} item - Item
- * @returns {{level: number, classes: string[]}}
+ * @returns {{level: number, classes: string[], races: string[]}}
  */
 export function getItemRequirements(item) {
-  if (!item) return { level: 0, classes: [] };
+  if (!item) return { level: 0, classes: [], races: [] };
   const level = Number(item.level_requirement ?? item.levelRequirement ?? 0) || 0;
-  const rawClasses = item.class_restriction ?? item.classRestriction ?? item.classRestrictions ?? [];
-  const classes = Array.isArray(rawClasses)
-    ? rawClasses.filter(Boolean)
-    : (typeof rawClasses === 'string' && rawClasses ? [rawClasses] : []);
-  return { level, classes };
+  return {
+    level,
+    classes: parseRestrictionList(item.class_restriction ?? item.classRestriction ?? item.classRestrictions),
+    races: parseRestrictionList(item.race_restriction ?? item.raceRestriction)
+  };
 }
 
 export default {

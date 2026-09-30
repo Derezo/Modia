@@ -32,6 +32,8 @@ export class TavernChatManager {
     this.messages = [];
     this.hasMoreMessages = true;
     this.loadingMessages = false;
+    // Latest loadChatHistory call; an older one resolving later is dropped
+    this.historyLoadSeq = 0;
 
     // Typing state
     this.typingUsers = new Map(); // room -> Set of usernames
@@ -97,18 +99,35 @@ export class TavernChatManager {
   }
 
   /**
+   * Identifies the conversation currently shown (tab plus DM partner).
+   * @returns {string}
+   */
+  getChatViewKey() {
+    return this.activeTab === 'dm'
+      ? `dm:${this.activeDMUser?.userId ?? ''}`
+      : String(this.activeTab);
+  }
+
+  /**
    * Load chat history from API
    */
   async loadChatHistory() {
+    // The player can switch tab or DM partner while these requests are in
+    // flight; results for a view that is no longer showing are dropped
+    const seq = ++this.historyLoadSeq;
+    const viewKey = this.getChatViewKey();
+    const isCurrent = () => seq === this.historyLoadSeq && viewKey === this.getChatViewKey();
     try {
       let messages;
 
       if (this.activeTab === 'dm' && this.activeDMUser) {
         const result = await this.game.api.getDMHistory(this.activeDMUser.userId);
+        if (!isCurrent()) return;
         messages = result.messages;
       } else if (this.activeTab === 'party') {
         // For party chat, we need to get the partyId first
         const partyResponse = await this.game.api.getMultiplayerParty();
+        if (!isCurrent()) return;
         if (!partyResponse.party) {
           // Player has no party, skip loading party chat
           this.messages = [];
@@ -119,10 +138,12 @@ export class TavernChatManager {
         const result = await this.game.api.getChatHistory('party', {
           partyId: partyResponse.party.id
         });
+        if (!isCurrent()) return;
         messages = result.messages;
       } else {
         // Global chat
         const result = await this.game.api.getChatHistory('global');
+        if (!isCurrent()) return;
         messages = result.messages;
       }
 
@@ -131,6 +152,7 @@ export class TavernChatManager {
       this.renderMessages();
       this.scrollToBottom();
     } catch (err) {
+      if (!isCurrent()) return;
       console.error('Failed to load chat history:', err);
       this.messages = [];
       this.renderMessages();
@@ -145,6 +167,10 @@ export class TavernChatManager {
 
     this.loadingMessages = true;
     const oldestMessage = this.messages[0];
+    // Older messages belong to the view they were requested for; drop them if
+    // the player switched tab/DM (or the history was reloaded) meanwhile
+    const viewKey = this.getChatViewKey();
+    const isCurrent = () => viewKey === this.getChatViewKey() && this.messages[0] === oldestMessage;
 
     try {
       let result;
@@ -155,6 +181,7 @@ export class TavernChatManager {
       } else if (this.activeTab === 'party') {
         // For party chat, we need to get the partyId first
         const partyResponse = await this.game.api.getMultiplayerParty();
+        if (!isCurrent()) return;
         if (!partyResponse.party) {
           // Player has no party, nothing more to load
           this.hasMoreMessages = false;
@@ -171,6 +198,7 @@ export class TavernChatManager {
         });
       }
 
+      if (!isCurrent()) return;
       const newMessages = result.messages || [];
       this.hasMoreMessages = newMessages.length >= 50;
       this.messages = [...newMessages, ...this.messages];

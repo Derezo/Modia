@@ -263,3 +263,42 @@ describe('BattleInputHandler mouse tile cycling', () => {
     assert.deepEqual(calls.tileClicks, []);
   });
 });
+
+describe('BattleInputHandler unit body hover', () => {
+  // The pointer is over the sprite body of a unit standing on 4,4, while the
+  // tile drawn behind that body is 3,3.
+  function bodyHarness(candidates = [{ x: 3, y: 3, elevation: 0 }, { x: 5, y: 2, elevation: 1 }]) {
+    const harness = createHarness(candidates);
+    const unit = { gridX: 4, gridY: 4, screenX: 100, screenY: 130, isAlive: () => true };
+    harness.scene.units = new Map([['u1', unit]]);
+    harness.scene.camera.screenToWorld = (x, y) => ({ x, y });
+    harness.scene.currentAction = 'attack';
+    return harness;
+  }
+
+  it('hovers the same unit tile a click would target', () => {
+    const { handler, scene, calls } = bodyHarness();
+    handler.updatePointerInteraction({ x: 100, y: 100 });
+    assert.deepEqual(scene.hoveredTile, { x: 4, y: 4 });
+
+    scene.game.input.getPointerPosition = () => ({ x: 100, y: 100 });
+    handler.handleMouseUp({ clientX: 50, clientY: 50 });
+    assert.deepEqual(calls.tileClicks.map(({ x, y }) => ({ x, y })), [{ x: 4, y: 4 }]);
+  });
+
+  it('keeps the tile behind the body while choosing a move destination', () => {
+    const { handler, scene } = bodyHarness();
+    scene.currentAction = 'move';
+    handler.updatePointerInteraction({ x: 100, y: 100 });
+    assert.deepEqual(scene.hoveredTile, { x: 3, y: 3 });
+  });
+
+  it('honours Tab cycling over a unit body for hover and click', () => {
+    const { handler, scene } = bodyHarness();
+    handler.updatePointerInteraction({ x: 100, y: 100 });
+    handler.cycleTileManual();
+    handler.updatePointerInteraction({ x: 100, y: 100 });
+    assert.deepEqual(scene.hoveredTile, { x: 5, y: 2 });
+    assert.deepEqual(handler.getCycledTileAtPosition({ x: 100, y: 100 }), { x: 5, y: 2 });
+  });
+});

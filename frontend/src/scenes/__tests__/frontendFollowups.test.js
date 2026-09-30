@@ -169,7 +169,9 @@ describe('RegistrationWizard.fetchPreview', () => {
 describe('MarketplaceScene.loadInitialData', () => {
   it('refreshes the tab counts once orders and listings arrive', async () => {
     let tabUpdates = 0;
-    const scene = {
+    // A live scene: loads are dropped once uiElement is gone (exit)
+    const scene = Object.assign(Object.create(MarketplaceScene.prototype), {
+      uiElement: {},
       game: {
         api: {
           searchMarketItems: async () => ({ items: [] }),
@@ -180,9 +182,9 @@ describe('MarketplaceScene.loadInitialData', () => {
       },
       updateTabs() { tabUpdates++; },
       renderContent() {}
-    };
+    });
 
-    await MarketplaceScene.prototype.loadInitialData.call(scene);
+    await scene.loadInitialData();
 
     assert.equal(scene.myOrders.length, 2);
     assert.equal(scene.myListings.length, 1);

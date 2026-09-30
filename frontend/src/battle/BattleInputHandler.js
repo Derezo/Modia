@@ -160,14 +160,10 @@ export class BattleInputHandler {
       Math.max(0, candidates.length - 1)
     );
 
-    // Update hovered tile based on current cycle index (with bounds check)
-    if (candidates.length > 0) {
-      const safeIndex = Math.min(this.tileCycleIndex, candidates.length - 1);
-      const selectedCandidate = candidates[safeIndex];
-      scene.hoveredTile = { x: selectedCandidate.x, y: selectedCandidate.y };
-    } else {
-      scene.hoveredTile = null;
-    }
+    // Hover resolves exactly like a click (unit body first, then the cycled
+    // candidate), so the highlight and damage preview describe the tile a
+    // click would target
+    scene.hoveredTile = this.resolvePointerTile(pos, candidates);
 
     // Update target info if hovering over unit
     this.updateHoverTargetInfo(pos);
@@ -180,21 +176,32 @@ export class BattleInputHandler {
       return null;
     }
 
-    // A click on a unit's sprite body means that unit, not the tile drawn
-    // behind it (only the foot tile used to count). Not while choosing a
-    // move destination, where the tile behind a unit is the likely target.
-    if (this.scene.currentAction !== 'move') {
-      const bodyTile = this.getUnitBodyTileAt(pos);
-      if (bodyTile) return bodyTile;
-    }
-
     const candidates = this.scene.grid.getTileAtScreen(
       pos.x,
       pos.y,
       this.scene.camera,
       true
     ) || [];
-    if (candidates.length === 0) return null;
+    return this.resolvePointerTile(pos, candidates);
+  }
+
+  /**
+   * The tile a pointer position targets; shared by hover and click.
+   * A pointer on a unit's sprite body means that unit, not the tile drawn
+   * behind it, except while choosing a move destination (where the tile
+   * behind a unit is the likely target) or once the player has cycled
+   * (Tab / long-press) to another overlapping candidate.
+   * @param {{x: number, y: number}} pos - Canvas position
+   * @param {Array<{x: number, y: number}>} candidates - getTileAtScreen results
+   * @returns {{x: number, y: number}|null}
+   */
+  resolvePointerTile(pos, candidates) {
+    if (this.scene.currentAction !== 'move' && this.tileCycleIndex === 0) {
+      const bodyTile = this.getUnitBodyTileAt(pos);
+      if (bodyTile) return bodyTile;
+    }
+
+    if (!candidates || candidates.length === 0) return null;
 
     const selected = this.tileCandidates[this.tileCycleIndex];
     const matchingCandidate = selected && candidates.find(candidate =>

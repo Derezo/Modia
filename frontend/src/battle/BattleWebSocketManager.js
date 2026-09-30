@@ -1369,11 +1369,11 @@ export class BattleWebSocketManager {
       this.timeoutCount = 0;
     }
 
-    // A timed-out presentation event must never leave the local turn locked.
-    // The resync above may come back as a duplicate of the revision we
-    // already hold, which reconciles nothing, so recover from the state the
-    // client already has as well.
-    this.recoverStrandedLocalTurn('queue_timeout');
+    // Stranded-turn recovery is not attempted here: this runs mid-queue,
+    // with later events (e.g. the next unit's turn_start) possibly still
+    // queued and deferred authoritative state not yet applied, so the state
+    // on hand may already be stale. processTurnEventQueue's finally recovers
+    // once the queue has drained and the deferred state is flushed.
   }
 
   /**
@@ -1390,6 +1390,8 @@ export class BattleWebSocketManager {
         scene.isActionSubmitting === true || scene.isIntroPlaying) {
       return false;
     }
+    // Queued events or unapplied state may already have ended this turn
+    if (this.shouldDeferAuthoritativeState()) return false;
     const state = this.battleState || scene.battleState;
     if ((state?.status ?? 'active') !== 'active') return false;
     const activeUnitId = state?.activeUnitId;
@@ -2075,6 +2077,12 @@ export class BattleWebSocketManager {
               aoeTarget.screenY - 32,
               presentation?.descriptor.primaryColor || '#44ff88'
             );
+            continue;
+          }
+
+          // Per-target AoE miss (evasion, Blind, skill accuracy)
+          if (targetInfo.missed) {
+            this.animations.addMiss(aoeTarget.screenX, aoeTarget.screenY - 40);
             continue;
           }
 

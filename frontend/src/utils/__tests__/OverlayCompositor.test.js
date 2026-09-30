@@ -810,3 +810,31 @@ describe('Rarity normalization pattern', () => {
     });
   });
 });
+
+describe('overlay alpha budget', async () => {
+  const { getOverlayAlphas } = await import('../OverlayCompositor.js');
+
+  it('keeps a single augment on a plain item at the old strength', () => {
+    assert.deepStrictEqual(getOverlayAlphas('common', 1), { rarityAlpha: 0, augmentAlpha: 0.6 });
+  });
+
+  it('splits the augment share so stacked overlays do not wash out the sprite', () => {
+    for (const rarity of ['common', 'uncommon', 'rare', 'epic', 'legendary']) {
+      for (const count of [1, 2, 3, 4]) {
+        const { rarityAlpha, augmentAlpha } = getOverlayAlphas(rarity, count);
+        const total = rarityAlpha + augmentAlpha * count;
+        assert.ok(total <= 1.2 + 1e-9 || augmentAlpha * count <= 0.3 + 1e-9,
+          `${rarity} x${count}: total ${total}`);
+        assert.ok(augmentAlpha <= 0.6);
+      }
+    }
+    // A legendary 4-augment item used to add 0.85 + 4 x 0.6 = 3.25
+    const legendary = getOverlayAlphas('legendary', 4);
+    assert.ok(legendary.rarityAlpha + legendary.augmentAlpha * 4 <= 1.2 + 1e-9);
+  });
+
+  it('still shows augments on a legendary item', () => {
+    assert.ok(getOverlayAlphas('legendary', 2).augmentAlpha > 0);
+    assert.equal(getOverlayAlphas('epic', 0).augmentAlpha, 0);
+  });
+});

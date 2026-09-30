@@ -65,7 +65,7 @@ export class RecruitmentScene extends Scene {
   }
 
   async enter(data = {}) {
-    this.purchaseLifecycle.activateEntry();
+    const generation = this.purchaseLifecycle.activateEntry();
     this.nodeId = data.nodeId;
     this.guildClass = data.guildClass;
     this.playerGold = this.game.state.get('user')?.gold || 0;
@@ -83,6 +83,9 @@ export class RecruitmentScene extends Scene {
     this.createUI();
     this.setupEventListeners();
     await this.loadData();
+    // exit() (or a re-entry) during the load already cleared timers; starting
+    // the countdown now would leave an interval nothing ever clears
+    if (!this.purchaseLifecycle.active || this.purchaseLifecycle.generation !== generation) return;
     this.startCountdownTimer();
 
     // Play guild advancement music (same as guild advancement scene)
@@ -154,6 +157,7 @@ export class RecruitmentScene extends Scene {
   }
 
   startCountdownTimer() {
+    if (this.countdownInterval) clearInterval(this.countdownInterval);
     this.updateCountdown();
     this.countdownInterval = setInterval(() => {
       this.updateCountdown();

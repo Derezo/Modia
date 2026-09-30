@@ -403,7 +403,11 @@ export class ColiseumScene extends Scene {
         this.currentMatch = {
           matchId: payload.matchId,
           opponent: payload.opponent,
-          readyDeadline: payload.readyDeadline
+          readyDeadline: payload.readyDeadline,
+          // Ready check; formation_started moves it to 'formation_selection'.
+          // The reconnect handler clears a 'pending' match (the server cancels
+          // it on disconnect).
+          status: 'pending'
         };
         this.isReady = false;
         this.opponentReady = false;

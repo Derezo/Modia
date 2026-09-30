@@ -52,7 +52,7 @@ const STYLE_ID = 'character-modal-styles';
 // Equipment slot configuration.
 // No item template uses the legs slot (armor templates are head/body/feet
 // only), so it is not listed: an always-empty slot reads as missing gear.
-// Off Hand stays because main_hand weapons may be dual-wielded there.
+// Off Hand stays for off_hand templates such as the caravan Stonekin Shield.
 export const EQUIPMENT_SLOTS = [
   { key: 'head', name: 'Head' },
   { key: 'body', name: 'Body' },
@@ -941,6 +941,7 @@ export class CharacterModal {
       inventory: this.inventory,
       characterClass: this.character.class,
       characterLevel: this.character.level,
+      characterRace: this.character.race,
       onEquipmentChanged: async () => {
         await this.loadData();
         this.render();

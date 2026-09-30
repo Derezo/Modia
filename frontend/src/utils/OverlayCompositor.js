@@ -33,6 +33,32 @@ const RARITY_ALPHA = {
 };
 
 /**
+ * Additive-blend budget for everything drawn over the base sprite.
+ * Each augment overlay was drawn at 0.6 on top of the rarity glow, so a
+ * legendary (0.85) item with several augments summed to 2-3x full brightness
+ * and the sprite itself disappeared. Augments now share what the rarity glow
+ * leaves of this budget (never less than AUGMENT_ALPHA_FLOOR in total, never
+ * more than AUGMENT_ALPHA_MAX each).
+ */
+const OVERLAY_ALPHA_BUDGET = 1.2;
+const AUGMENT_ALPHA_MAX = 0.6;
+const AUGMENT_ALPHA_FLOOR = 0.3;
+
+/**
+ * Alpha for the rarity glow and for each augment overlay.
+ * @param {string} rarity - Normalized rarity name
+ * @param {number} augmentCount - Number of distinct augment overlays
+ * @returns {{rarityAlpha: number, augmentAlpha: number}}
+ */
+export function getOverlayAlphas(rarity, augmentCount) {
+  const rarityAlpha = RARITY_ALPHA[rarity] || 0;
+  if (!augmentCount || augmentCount < 1) return { rarityAlpha, augmentAlpha: 0 };
+  const augmentTotal = Math.max(AUGMENT_ALPHA_FLOOR, OVERLAY_ALPHA_BUDGET - rarityAlpha);
+  const augmentAlpha = Math.min(AUGMENT_ALPHA_MAX, augmentTotal / augmentCount);
+  return { rarityAlpha, augmentAlpha };
+}
+
+/**
  * Map rarity numbers to names
  */
 const RARITY_MAP = {
@@ -225,9 +251,10 @@ class OverlayCompositor {
     ctx.imageSmoothingEnabled = false; // Preserve pixel art
     ctx.drawImage(base, 0, 0, size, size);
 
+    const { rarityAlpha, augmentAlpha } = getOverlayAlphas(rarity, augmentOverlays.length);
+
     // Apply rarity overlay with additive blend
     if (rarityOverlay) {
-      const rarityAlpha = RARITY_ALPHA[rarity] || 0;
       if (rarityAlpha > 0) {
         ctx.globalAlpha = rarityAlpha;
         ctx.globalCompositeOperation = 'lighter';
@@ -235,9 +262,9 @@ class OverlayCompositor {
       }
     }
 
-    // Apply augment overlays with additive blend
+    // Apply augment overlays with additive blend, sharing the alpha budget
     for (const augmentOverlay of augmentOverlays) {
-      ctx.globalAlpha = 0.6;
+      ctx.globalAlpha = augmentAlpha;
       ctx.globalCompositeOperation = 'lighter';
       ctx.drawImage(augmentOverlay, 0, 0, size, size);
     }

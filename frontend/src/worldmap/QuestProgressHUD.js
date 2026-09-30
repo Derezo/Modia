@@ -64,6 +64,9 @@ export class QuestProgressHUD {
     /** @type {Function|null} Responsive change unsubscribe */
     this.responsiveUnsubscribe = null;
 
+    /** @type {number|null} Last published top offset (CSS px), see setTopOffset */
+    this.topOffset = null;
+
     this.injectStyles();
     this.createElement();
     this.setupResponsive();
@@ -83,8 +86,9 @@ export class QuestProgressHUD {
       /* Main container */
       .quest-progress-hud {
         position: absolute;
-        /* Anchored to the visible canvas (Game.publishCanvasAnchor) */
-        top: calc(var(--game-canvas-top, 0px) + 10px);
+        /* Anchored to the visible canvas (Game.publishCanvasAnchor), below the
+           canvas-drawn stamina/zodiac panel (setTopOffset) so it never covers it */
+        top: calc(var(--game-canvas-top, 0px) + var(--quest-hud-top, 10px));
         left: calc(var(--game-canvas-left, 0px) + 10px);
         min-width: 200px;
         max-width: 280px;
@@ -265,7 +269,7 @@ export class QuestProgressHUD {
         .quest-progress-hud {
           min-width: 180px;
           max-width: 240px;
-          top: calc(var(--game-canvas-top, 0px) + 8px);
+          top: calc(var(--game-canvas-top, 0px) + var(--quest-hud-top, 8px));
           left: calc(var(--game-canvas-left, 0px) + 8px);
         }
 
@@ -345,6 +349,19 @@ export class QuestProgressHUD {
    * Update the HUD with new quest data
    * @param {Array<Object>} quests - Array of quest objects from QuestMarkerManager
    */
+  /**
+   * Place the panel this many CSS pixels below the canvas top (the world map
+   * HUD panel's bottom edge plus a gap). Only writes when the value changes.
+   * @param {number} px - Offset from the canvas top in CSS pixels
+   */
+  setTopOffset(px) {
+    if (!this.element || !Number.isFinite(px)) return;
+    const rounded = Math.round(px);
+    if (rounded === this.topOffset) return;
+    this.topOffset = rounded;
+    this.element.style.setProperty('--quest-hud-top', `${rounded}px`);
+  }
+
   update(quests) {
     this.quests = quests || [];
 

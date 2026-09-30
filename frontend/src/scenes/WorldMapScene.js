@@ -2154,6 +2154,8 @@ export class WorldMapScene extends Scene {
       // Render HUD panel (enlarged on scaled-down phone canvases)
       this.hudPanel.setDisplayScale(this.game.scale);
       this.hudPanel.render(this.hudCtx);
+      // Keep the DOM quest panel clear of the canvas HUD panel (8px gap)
+      this.questProgressHUD?.setTopOffset(this.hudPanel.getBottomCssOffset() + 8);
       // Route guidance is UI, so keep it above fog and world objects.
       this.connectionRenderer.renderRouteLegend(this.hudCtx);
     }

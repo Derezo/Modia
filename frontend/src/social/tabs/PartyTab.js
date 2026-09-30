@@ -7,6 +7,7 @@ import {
 } from '../../ui/parchment/index.js';
 import { parchmentToast } from '../../ui/parchment/ParchmentToast.js';
 import { escapeHtml } from '../../utils/escapeHtml.js';
+import { formatPartyType } from '../partyTypeLabel.js';
 
 const P = PARCHMENT_COLORS;
 
@@ -468,7 +469,7 @@ export class PartyTab {
       <div class="party-current">
         <div class="party-current-header">
           <span class="party-current-name">${escapeHtml(this.party.name || 'Party')}</span>
-          <span class="party-current-type">${this.party.partyType || 'PvE'}</span>
+          <span class="party-current-type">${escapeHtml(formatPartyType(this.party.partyType))}</span>
         </div>
 
         <div class="party-members">
@@ -701,6 +702,9 @@ export class PartyTab {
       this.render();
     };
     this.wsHandlers['party:all_ready'] = () => this.render();
+    this.wsHandlers['party:invite_declined'] = (data) => {
+      parchmentToast.info('Invite Declined', `${data?.username || 'A player'} declined your party invite`);
+    };
 
     Object.entries(this.wsHandlers).forEach(([type, handler]) => {
       this.game.socket.on(type, handler);
@@ -737,7 +741,7 @@ export class PartyTab {
    */
   async createParty() {
     try {
-      const response = await this.game.api.createMultiplayerParty('Party', 'pve', 5);
+      const response = await this.game.api.createMultiplayerParty('Party', 'adventure', 5);
       if (response.party) {
         this.party = response.party;
         this.render();
@@ -848,7 +852,7 @@ export class PartyTab {
     try {
       // Create party if not in one
       if (!this.party) {
-        const response = await this.game.api.createMultiplayerParty('Party', 'pve', 5);
+        const response = await this.game.api.createMultiplayerParty('Party', 'adventure', 5);
         if (!response.party) throw new Error('Failed to create party');
         this.party = response.party;
       }

@@ -44,3 +44,44 @@ describe('WorldMapHUDPanel display scale', () => {
     assert.equal(panel.collapsed, false);
   });
 });
+
+describe('WorldMapHUDPanel collapsibility follows the breakpoint', () => {
+  // A point inside the expanded panel but outside the zodiac segment
+  function clickBody(panel) {
+    panel.zodiacSegment.containsPoint = () => false;
+    return panel.handleClick(20, 20);
+  }
+
+  it('a desktop panel that becomes mobile can be folded back after expanding', () => {
+    const panel = new WorldMapHUDPanel({ collapsed: false });
+    panel.setCollapsed(true); // resize to phone
+    assert.equal(clickBody(panel), true); // tap chip: expand
+    assert.equal(panel.collapsed, false);
+    assert.equal(clickBody(panel), true); // tap panel: fold
+    assert.equal(panel.collapsed, true);
+  });
+
+  it('a phone panel that becomes desktop is not folded by a click', () => {
+    const panel = new WorldMapHUDPanel({ collapsed: true });
+    panel.setCollapsed(false); // resize to desktop
+    assert.equal(clickBody(panel), false);
+    assert.equal(panel.collapsed, false);
+  });
+});
+
+describe('WorldMapHUDPanel bottom edge for DOM overlays', () => {
+  it('reports the expanded panel bottom in CSS pixels at desktop scale', () => {
+    const panel = new WorldMapHUDPanel({ collapsed: false });
+    panel.setDisplayScale(1);
+    assert.equal(panel.getBottomCssOffset(), 10 + Math.ceil(panel.currentHeight));
+  });
+
+  it('accounts for the phone upscale and the collapsed chip', () => {
+    const panel = new WorldMapHUDPanel({ collapsed: true });
+    panel.setDisplayScale(0.5);
+    const k = panel.getUpscale();
+    assert.equal(panel.getBottomCssOffset(), (10 + 50 * k) * 0.5);
+    panel.setCollapsed(false);
+    assert.ok(panel.getBottomCssOffset() > (10 + 50 * k) * 0.5);
+  });
+});

@@ -622,4 +622,118 @@ describe('BattleScene authoritative action gate', () => {
     assert.equal(scene.inputEnabled, true);
     assert.equal(scene.inEnemySequence, false);
   });
+
+  describe('autoEndTurn', () => {
+    const tick = () => new Promise(resolve => setTimeout(resolve, 5));
+
+    function autoEndHarness() {
+      const { scene, unit } = createSceneHarness();
+      const submitted = [];
+      scene.autoEndTurn = true;
+      scene.entryEpoch = 1;
+      scene.submitAction = async actionType => { submitted.push(actionType); };
+      return { scene, unit, submitted };
+    }
+
+    it('applying spent availability does not throw and queues exactly one wait', async () => {
+      const { scene, submitted } = autoEndHarness();
+      const spent = { canMove: false, canAct: false, canWait: true };
+
+      assert.doesNotThrow(() => scene.applyAuthoritativeAvailability(spent));
+      scene.applyAuthoritativeAvailability(spent);
+      await tick();
+
+      assert.deepEqual(submitted, ['wait']);
+      assert.equal(scene.autoEndTurnTimer, null);
+    });
+
+    it('fires after the submission settles when availability arrived mid-submit', async () => {
+      const { scene, submitted } = autoEndHarness();
+      scene.isActionSubmitting = true;
+      scene.applyAuthoritativeAvailability({ canMove: false, canAct: false, canWait: true });
+      await tick();
+      assert.deepEqual(submitted, []);
+
+      scene.isActionSubmitting = false;
+      scene.scheduleAutoEndTurn();
+      await tick();
+      assert.deepEqual(submitted, ['wait']);
+    });
+
+    it('does not fire when disabled, when actions remain, or for a non-local unit', async () => {
+      const disabled = autoEndHarness();
+      disabled.scene.autoEndTurn = false;
+      disabled.scene.applyAuthoritativeAvailability({ canMove: false, canAct: false, canWait: true });
+
+      const partial = autoEndHarness();
+      partial.scene.applyAuthoritativeAvailability({ canMove: false, canAct: true, canWait: true });
+
+      const enemyTurn = autoEndHarness();
+      enemyTurn.unit.type = 'enemy';
+      enemyTurn.scene.applyAuthoritativeAvailability({ canMove: false, canAct: false, canWait: true });
+
+      await tick();
+      assert.deepEqual(disabled.submitted, []);
+      assert.deepEqual(partial.submitted, []);
+      assert.deepEqual(enemyTurn.submitted, []);
+    });
+
+    it('drops a queued wait when the scene exits or the active unit changes', async () => {
+      const exited = autoEndHarness();
+      exited.scene.applyAuthoritativeAvailability({ canMove: false, canAct: false, canWait: true });
+      exited.scene.cancelAutoEndTurn();
+
+      const switched = autoEndHarness();
+      switched.scene.applyAuthoritativeAvailability({ canMove: false, canAct: false, canWait: true });
+      switched.scene.units.set('ally', { id: 'ally', type: 'player' });
+      switched.scene.battleState.activeUnitId = 'ally';
+
+      const reentered = autoEndHarness();
+      reentered.scene.applyAuthoritativeAvailability({ canMove: false, canAct: false, canWait: true });
+      reentered.scene.entryEpoch++;
+
+      await tick();
+      assert.deepEqual(exited.submitted, []);
+      assert.deepEqual(switched.submitted, []);
+      assert.deepEqual(reentered.submitted, []);
+    });
+  });
+
+  describe('damage preview hit chance setting', () => {
+    function previewHarness(showMissChance) {
+      const attacker = { id: 'player', type: 'player', gridX: 0, gridY: 0 };
+      const target = { id: 'enemy', type: 'enemy', gridX: 1, gridY: 0 };
+      const shown = [];
+      const scene = Object.create(BattleScene.prototype);
+      Object.assign(scene, {
+        game: { getUserSetting: (_key, fallback) => fallback },
+        showMissChance,
+        currentAction: 'attack',
+        validTiles: [{ x: 1, y: 0 }],
+        selectedSkillId: null,
+        ui: {
+          hideDamagePreview() { shown.push(null); },
+          setTargetSticky() {},
+          showDamagePreview(data) { shown.push(data); }
+        }
+      });
+      scene.getActiveUnit = () => attacker;
+      scene.getUnitAt = (x, y) => (x === 1 && y === 0 ? target : null);
+      scene.calculateDamagePreviewData = () => ({ type: 'physical', minDamage: 5, maxDamage: 7, hitChance: 0.55 });
+      scene.updateDamagePreview({ x: 1, y: 0 });
+      return shown;
+    }
+
+    it('keeps the real hit chance when Show Miss Chance is on', () => {
+      const [data] = previewHarness(true);
+      assert.equal(data.hitChance, 0.55);
+      assert.notEqual(data.showHitChance, false);
+    });
+
+    it('hides the hit chance rather than reporting a fake 100% when it is off', () => {
+      const [data] = previewHarness(false);
+      assert.equal(data.showHitChance, false);
+      assert.equal(data.hitChance, 0.55);
+    });
+  });
 });

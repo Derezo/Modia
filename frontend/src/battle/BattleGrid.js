@@ -657,6 +657,9 @@ export class BattleGrid {
     this.canvas = canvas;
     this.width = width;
     this.height = height;
+    // Faint per-tile outlines ('Show Battle Grid Lines' setting). Movement and
+    // targeting highlights are drawn regardless of this flag.
+    this.showGridLines = false;
     this.tileWidth = TILE_WIDTH;
     this.tileHeight = TILE_HEIGHT;
     // Logical draw size. Source sprites are 2x retina assets (128x128), but
@@ -1395,6 +1398,24 @@ export class BattleGrid {
     const b = Math.round(parseInt(result[3], 16) * factor);
 
     return `rgb(${r},${g},${b})`;
+  }
+
+  /**
+   * Outline a playable tile's top face when grid lines are enabled.
+   */
+  renderTileGridLine(ctx, screenX, screenY, gridX, gridY) {
+    if (!this.showGridLines || !this.isPlayable(gridX, gridY)) return;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(screenX, screenY - this.tileHeight / 2);
+    ctx.lineTo(screenX + this.tileWidth / 2, screenY);
+    ctx.lineTo(screenX, screenY + this.tileHeight / 2);
+    ctx.lineTo(screenX - this.tileWidth / 2, screenY);
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(20, 16, 10, 0.22)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
   }
 
   /**
@@ -2411,6 +2432,7 @@ export class BattleGrid {
       const tile = command.tile;
       const highlight = combinedHighlights[`${tile.x},${tile.y}`] || null;
       this.renderTileUnified(ctx, tile.screenX, tile.screenY, tile.x, tile.y, highlight);
+      this.renderTileGridLine(ctx, tile.screenX, tile.screenY, tile.x, tile.y);
 
       const obstacle = this.getObstacle(tile.x, tile.y);
       if (obstacle) {
@@ -2496,6 +2518,13 @@ export class BattleGrid {
       }
       if (command.kind === 'surface') {
         this.renderBattleMapV3Tile(
+          ctx,
+          command.tile.screenX,
+          command.tile.screenY,
+          command.tile.x,
+          command.tile.y
+        );
+        this.renderTileGridLine(
           ctx,
           command.tile.screenX,
           command.tile.screenY,

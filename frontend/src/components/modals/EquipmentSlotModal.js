@@ -63,6 +63,7 @@ export class EquipmentSlotModal {
    * @param {Array} options.inventory - Shared inventory items
    * @param {string} options.characterClass - Character's class for filtering
    * @param {number} [options.characterLevel] - Character's level for requirements
+   * @param {string} [options.characterRace] - Character's race for race-restricted items
    * @param {Function} [options.onEquipmentChanged] - Callback when equipment changes
    * @param {Function} [options.onClose] - Callback when modal closes
    */
@@ -75,6 +76,7 @@ export class EquipmentSlotModal {
     this.inventory = options.inventory || [];
     this.characterClass = options.characterClass;
     this.characterLevel = options.characterLevel || 1;
+    this.characterRace = options.characterRace || null;
     this.onEquipmentChanged = options.onEquipmentChanged || (() => {});
     this.onClose = options.onClose || (() => {});
 
@@ -665,7 +667,11 @@ export class EquipmentSlotModal {
    * @returns {string|null}
    */
   getIneligibilityReason(item) {
-    return getEquipRestriction(item, { level: this.characterLevel, class: this.characterClass });
+    return getEquipRestriction(item, {
+      level: this.characterLevel,
+      class: this.characterClass,
+      race: this.characterRace
+    });
   }
 
   /**
@@ -914,7 +920,7 @@ export class EquipmentSlotModal {
 
     } catch (error) {
       console.error('Failed to unequip item:', error);
-      parchmentToast.error('Failed to unequip item');
+      parchmentToast.error('Failed to unequip item', error?.message);
     } finally {
       this.isProcessing = false;
       if (btn) {
@@ -947,7 +953,8 @@ export class EquipmentSlotModal {
 
     } catch (error) {
       console.error('Failed to equip item:', error);
-      parchmentToast.error('Failed to equip item');
+      // The server's validation reason (slot, level, class, race) tells the player why
+      parchmentToast.error('Failed to equip item', error?.message);
     } finally {
       this.isProcessing = false;
       if (btn) {

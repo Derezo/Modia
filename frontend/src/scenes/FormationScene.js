@@ -1,7 +1,7 @@
 import { Scene } from './Scene.js';
 import { CharacterCard } from '../components/CharacterCard.js';
 import { PartyStatsSummary } from '../components/PartyStatsSummary.js';
-import { CharacterModal } from '../components/modals/CharacterModal.js';
+import { CharacterModal, EQUIPMENT_SLOTS } from '../components/modals/CharacterModal.js';
 import { ItemsModal } from '../components/modals/ItemsModal.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { PARCHMENT_COLORS, PARCHMENT_SPACING, getParchmentGradient, getParchmentScrollbarCSS } from '../ui/parchment/ParchmentTheme.js';
@@ -9,8 +9,8 @@ import { responsive } from '../core/Responsive.js';
 import { Icon } from '../components/Icon.js';
 import { hasEquipmentUpgrade } from '../utils/statDisplay.js';
 
-/** Equipment slots that item templates use; checked for the upgrade badge */
-const UPGRADE_SLOTS = ['head', 'body', 'main_hand', 'feet', 'accessory'];
+/** Equipment slots checked for the upgrade badge: the slots the character modal shows */
+const UPGRADE_SLOTS = EQUIPMENT_SLOTS.map(slot => slot.key);
 
 /**
  * FormationScene - Unified party management hub
@@ -493,7 +493,6 @@ export class FormationScene extends Scene {
       return false;
     }
 
-    // Slots that item templates actually use (no legs or off_hand templates exist)
     return hasEquipmentUpgrade(equipment, this.inventory || [], character, UPGRADE_SLOTS);
   }
 
