@@ -34,7 +34,7 @@ fail() {
 # Change to project root directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-cd "$PROJECT_ROOT"
+cd "$PROJECT_ROOT" || exit 1
 
 echo "Checking development environment..."
 echo ""
@@ -118,6 +118,7 @@ check_db_connection() {
     if [ -f ".env" ]; then
         # Export env vars, handling comments and empty lines
         set -a
+        # shellcheck source=/dev/null
         source <(grep -v '^#' .env | grep -v '^$' | sed 's/\r$//')
         set +a
     fi
@@ -185,6 +186,7 @@ check_env_vars() {
 
     # Load .env
     set -a
+    # shellcheck source=/dev/null
     source <(grep -v '^#' .env | grep -v '^$' | sed 's/\r$//')
     set +a
 

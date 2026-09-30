@@ -18,7 +18,7 @@ CROSS="${RED}✗${NC}"
 # Change to project root directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-cd "$PROJECT_ROOT"
+cd "$PROJECT_ROOT" || exit 1
 
 # Header
 echo ""
@@ -32,6 +32,7 @@ echo ""
 load_env() {
     if [ -f ".env" ]; then
         set -a
+        # shellcheck source=/dev/null
         source <(grep -v '^#' .env | grep -v '^$' | sed 's/\r$//')
         set +a
     fi
@@ -245,8 +246,7 @@ check_migrations() {
     echo -e "${YELLOW}${PENDING_COUNT} pending${NC}"
     echo -ne "[Migrations] Running migrations... "
 
-    MIGRATE_OUTPUT=$(npm run db:migrate 2>&1)
-    if [ $? -eq 0 ]; then
+    if MIGRATE_OUTPUT=$(npm run db:migrate 2>&1); then
         echo -e "${GREEN}done${NC} ${CHECK}"
     else
         echo -e "${CROSS} ${RED}failed${NC}"
@@ -393,8 +393,7 @@ check_seed() {
     echo -e "${YELLOW}seeding${NC}"
     echo -ne "[Seed] Running seed script... "
 
-    SEED_OUTPUT=$(npm run db:seed 2>&1)
-    if [ $? -eq 0 ]; then
+    if SEED_OUTPUT=$(npm run db:seed 2>&1); then
         echo -e "${GREEN}done${NC} ${CHECK}"
     else
         echo -e "${CROSS} ${RED}failed${NC}"

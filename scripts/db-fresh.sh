@@ -8,11 +8,9 @@
 
 # Colors and symbols
 GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 CHECK="${GREEN}✓${NC}"
-WARN="${YELLOW}!${NC}"
 
 # Initialize USE_DOCKER flag
 USE_DOCKER=0
@@ -20,11 +18,12 @@ USE_DOCKER=0
 # Change to project root directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-cd "$PROJECT_ROOT"
+cd "$PROJECT_ROOT" || exit 1
 
 # Load .env if it exists
 if [ -f ".env" ]; then
     set -a
+    # shellcheck source=/dev/null
     source <(grep -v '^#' .env | grep -v '^$' | sed 's/\r$//')
     set +a
 fi
@@ -46,7 +45,7 @@ echo ""
 if [ "${1:-}" == "--force" ] || [ "${1:-}" == "-y" ]; then
     CONFIRM="yes"
 else
-    read -p "Are you sure? Type 'yes' to continue: " CONFIRM
+    read -r -p "Are you sure? Type 'yes' to continue: " CONFIRM
 fi
 
 if [ "$CONFIRM" != "yes" ]; then
@@ -92,8 +91,9 @@ if [ "$USE_DOCKER" == "1" ]; then
 else
     psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "$DROP_SQL" &>/dev/null
 fi
+DROP_STATUS=$?
 
-if [ $? -eq 0 ]; then
+if [ "$DROP_STATUS" -eq 0 ]; then
     echo -e "${CHECK} Tables dropped"
 else
     echo -e "${RED}Error:${NC} Failed to drop tables"

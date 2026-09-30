@@ -16,7 +16,7 @@ PENDING="${YELLOW}○${NC}"
 # Change to project root directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-cd "$PROJECT_ROOT"
+cd "$PROJECT_ROOT" || exit 1
 
 # Preserve an explicitly selected target. Loading .env must provide defaults,
 # not silently redirect a status check away from caller-supplied connection
@@ -35,6 +35,7 @@ CALLER_DB_PASSWORD="${DB_PASSWORD-}"
 # Load .env if it exists.
 if [ -f ".env" ]; then
     set -a
+    # shellcheck source=/dev/null
     source <(grep -v '^#' .env | grep -v '^$' | sed 's/\r$//')
     set +a
 fi
