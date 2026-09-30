@@ -112,15 +112,21 @@ When players sell items to NPCs:
 **NPC sell pricing** (`calculateSellPrice()` in `api/src/services/shopPricing.js`, used by both `GET .../sell-inventory` and `POST .../sell`, so the shown and paid prices always agree):
 
 ```
-plain template item (no rolled rarity, no augments):
+consumables, materials and any other non-equipment type (always, whatever their modifications):
   sell_price = floor(base_price × 0.50)
 
-rolled drop (modifications.rarity set, or any augments):
-  value      = floor(base_price × rarityMultiplier × (1 + 0.15 × Σ augment category values))
+weapon / armor / accessory with no rolled rarity and no augments:
+  sell_price = floor(base_price × 0.50)
+
+weapon / armor / accessory with modifications.rarity set, or any augments:
+  base       = max(base_price, statBlockValue(modifications.baseStats))   // stat floor only when rarity is rolled
+  value      = floor(base × rarityMultiplier × (1 + 0.15 × Σ augment category values))
   sell_price = floor(value × 0.50)
 ```
 
-`value` is the marketplace suggested price (`calculateSuggestedPrice()`, `services/marketplace/itemListings.js`). Rarity multipliers are 1 / 1.5 / 2.5 / 5 / 10 for Common to Legendary; augment category values come from `AUGMENT_VALUES` in `services/marketplace/constants.js` (unknown categories count 0.5).
+Only the equipment types in `ROLLED_VALUE_ITEM_TYPES` (`weapon`, `armor`, `accessory`) are priced on their rolls; an unknown or missing type gets the plain price. Stackable consumables and materials share one stack across every add-to-inventory path, so pricing them on one rolled unit would let a player buy at list price and sell the whole stack back at the rolled value.
+
+`value` is the marketplace suggested price (`calculateSuggestedPrice()`, `services/marketplace/itemListings.js`; see [Suggested Price Calculation](#suggested-price-calculation) for the stat-block floor). Rarity multipliers are 1 / 1.5 / 2.5 / 5 / 10 for Common to Legendary; augment category values come from `AUGMENT_VALUES` in `services/marketplace/constants.js` (unknown categories count 0.5).
 
 **Rules:**
 - Equipped items, items listed on the marketplace and non-tradeable items cannot be sold. Any shop type buys any item; there is no specialty check on selling
@@ -129,7 +135,8 @@ rolled drop (modifications.rarity set, or any augments):
 
 **Example:**
 - Player sells a plain "Steel Sword" (base price 500g): 500 × 0.50 = 250g
-- A Rare Steel Sword with one `fire` augment (0.8): value = 500 × 2.5 × 1.12 = 1,400g, sells for 700g
+- A Rare Steel Sword with one `fire` augment (0.8) whose stat block is worth less than 500g: value = 500 × 2.5 × 1.12 = 1,400g, sells for 700g
+- A potion with a rolled rarity still sells at 50% of its `base_price`
 
 ### 2.3 NPC Selling (Dynamic Supply-Based Pricing)
 
@@ -857,19 +864,23 @@ The marketplace supports two trading mechanisms:
 
 #### Suggested Price Calculation
 
-Unique items receive a calculated suggested price based on rarity and augments:
+Unique items receive a calculated suggested price based on the rolled stat block, rarity and augments:
 
 ```javascript
-// api/src/services/marketplaceService.js:1320
+// api/src/services/marketplace/itemListings.js — calculateSuggestedPrice()
 function calculateSuggestedPrice(item) {
-  const basePrice = item.basePrice;
+  const templatePrice = item.basePrice || 10;
+  // A rolled drop is worth at least its rolled stat block
+  const basePrice = max(templatePrice, statBlockValue(item.baseStats));
   const rarityMult = RARITY_MULTIPLIERS[rarity]; // 1.0 to 10.0
-  const augmentValue = sum(augments.map(a => AUGMENT_VALUES[a.category]));
+  const augmentValue = sum(augments.map(a => AUGMENT_VALUES[a.category] ?? 0.5));
   const augmentMult = 1.0 + (augmentValue * 0.15);
 
   return floor(basePrice * rarityMult * augmentMult);
 }
 ```
+
+`statBlockValue()` (`api/src/services/marketplace/constants.js`) values the positive numeric entries of `modifications.baseStats`: `floor(points × STAT_POINT_GOLD)` with `STAT_POINT_GOLD = 18`, where HP/MP pool stats (`hp_max`, `mp_max`, `hp`, `mp`, `maxHp`, `maxMp`) count as `value / 5` points (`POOL_POINT_DIVISOR`). Without the floor, a high-level drop rolled on a 2g starter template was priced at a few gold. The same function prices NPC buy-back (see [NPC sell pricing](#npc-sell-pricing)).
 
 **Rarity Multipliers:**
 
@@ -892,7 +903,7 @@ function calculateSuggestedPrice(item) {
 #### Creating a Listing
 
 ```javascript
-// api/src/services/marketplaceService.js:1442
+// api/src/services/marketplace/itemListings.js — createItemListing()
 const listing = await createItemListing(client, userId, characterId, itemId, price);
 // Returns: { listingId, itemTemplateId, itemName, price, suggestedPrice, createdAt }
 ```
@@ -908,7 +919,7 @@ const listing = await createItemListing(client, userId, characterId, itemId, pri
 The buyer pays the full listing price; seller receives 95% (5% tax):
 
 ```javascript
-// api/src/services/marketplaceService.js:1522
+// api/src/services/marketplace/itemListings.js — buyItemListing()
 const result = await buyItemListing(client, buyerUserId, buyerCharId, listingId);
 // Returns: { listingId, itemName, price, netPrice, taxAmount, ... }
 ```
@@ -923,7 +934,7 @@ Seller Receives: 950g
 #### Cancelling a Listing
 
 ```javascript
-// api/src/services/marketplaceService.js:1632
+// api/src/services/marketplace/itemListings.js — cancelItemListing()
 const result = await cancelItemListing(client, userId, listingId);
 // Item returned to user's shared pool, "listed" flag removed
 ```

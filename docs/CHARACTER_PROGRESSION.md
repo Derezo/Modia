@@ -144,15 +144,16 @@ The Formation Screen is the central hub for party and character management.
 
 ### 3.1 Equipment Slots
 
-| Slot | Display Position | Accepts |
-|------|------------------|---------|
-| Main Hand | Left side | Weapons |
-| Off Hand | Right side | Shields, Orbs, Secondary |
-| Head | Top center | Helmets, Hats |
-| Body | Center | Armor, Robes |
-| Feet | Bottom center | Boots |
-| Accessory 1 | Bottom left | Any accessory |
-| Accessory 2 | Bottom right | Any accessory |
+| Slot | Accepts |
+|------|---------|
+| Main Hand | Weapons whose template slot is `main_hand` |
+| Off Hand | Weapons whose template slot is `off_hand` (e.g. the caravan Stonekin Shield) |
+| Head | Armor whose template slot is `head` |
+| Body | Armor whose template slot is `body` |
+| Feet | Armor whose template slot is `feet` |
+| Accessory | Accessories (one slot) |
+
+An item must go in exactly its template slot: a `main_hand` weapon cannot go in Off Hand (dual-wielding is not implemented). The item must also meet its level, class and race requirements. The server (`POST /api/inventory/equip`) and the client slot pickers, Quick Equip and GEAR badge use the same rule, `shared/equipmentRules.js`. The database enum also has a `legs` slot, but no template uses it, so the client does not show it.
 
 ### 3.2 Equip Screen Layout
 

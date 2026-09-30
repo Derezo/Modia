@@ -276,6 +276,7 @@ POST /api/auth/refresh
 | 400 | Refresh token must be a string |
 | 401 | Invalid refresh token |
 | 401 | Invalid or expired refresh token (also returned for an already-rotated token) |
+| 403 | Account has been banned (every session of the user is deleted; no new tokens are issued) |
 
 ---
 
@@ -3150,7 +3151,7 @@ POST /api/shops/:nodeId/:shopType/buy
 
 ### 12.3 Sell Item
 
-Sell an item to a shop. The unit price is `calculateSellPrice()`: 50% of `base_price` for a plain template item, or 50% of the rarity- and augment-adjusted value for a rolled drop. `GET .../sell-inventory` shows the same `sellPrice`. See [ECONOMY_SYSTEM.md](ECONOMY_SYSTEM.md#npc-sell-pricing).
+Sell an item to a shop. The unit price is `calculateSellPrice()`: 50% of `base_price` for a plain template item and for every consumable, material or other non-equipment type; for a weapon, armor or accessory with a rolled rarity or augments, 50% of the marketplace suggested price (stat-block floor, rarity and augments). `GET .../sell-inventory` shows the same `sellPrice`. See [ECONOMY_SYSTEM.md](ECONOMY_SYSTEM.md#npc-sell-pricing).
 
 ```
 POST /api/shops/:nodeId/:shopType/sell
@@ -3932,7 +3933,7 @@ PUT /api/settings
 |---------|---------------------|
 | `allowFriendRequests` | `POST /api/friends/request/:username` to this user returns 403 |
 | `allowPartyInvites` | `POST /api/party/multiplayer/:partyId/invite` to this user returns 403 |
-| `showOnlineStatus` | Friend lists, player search, `/api/chat/online` and `/api/chat/presence/:userId` show the user as offline. Node player lists (`playersAtNode` in world travel and location responses, and the WebSocket `join_node` presence) do not yet apply this setting |
+| `showOnlineStatus` | Friend lists, player search, `/api/chat/online` and `/api/chat/presence/:userId` show the user as offline. Node player lists (`playersAtNode` in world travel and location responses, and the WebSocket `join_node` presence) leave the user out, except in their own list (`presenceService.getPlayersAtNodeWithPrivacy`). Their `player:entered_node` / `player:left_node` broadcasts are suppressed, and their presence changes are not broadcast to the tavern, social hub or global rooms (a disconnect is sent as `offline`) (`api/src/websocket/roomManager.js`) |
 
 A successful update clears the user's entry in the 30-second `userSettingsService` cache, so the change applies immediately.
 
@@ -3961,13 +3962,28 @@ Activity node fishing using the cast protocol (`api/src/routes/fishing.js`). See
 
 ## 17. Ruins Endpoints
 
-Activity node for sliding puzzle minigame with regional themes.
+Activity node for the sliding puzzle minigame with regional themes (`api/src/routes/ruins.js`). See [ACTIVITY_NODES.md](ACTIVITY_NODES.md#3-ruins-puzzles) for tiers, par and rewards.
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/ruins/:nodeId` | Get ruins puzzle state |
-| POST | `/api/ruins/:nodeId/start` | Start new puzzle attempt |
-| POST | `/api/ruins/:nodeId/move` | Submit puzzle move |
+| GET | `/api/ruins/:nodeId/puzzle` | Puzzle config and state for the node |
+| POST | `/api/ruins/:nodeId/solve` | Submit a full move sequence (rate limited) |
+| GET | `/api/ruins/completions` | The user's solved ruins |
+
+**GET /api/ruins/:nodeId/puzzle** returns `nodeId`, `nodeName`, `tier`, `puzzleVersion`, `gridSize`, `parMoves`, `theme` (`name`, `description`, `race`), `puzzleState` (tile positions, `null` once solved), `isCompleted`, `completedAt` and `rewards` (`gold`, `underParGold`, `parBonus`). `parMoves` is computed per puzzle from the shuffled board, not fixed per tier.
+
+**POST /api/ruins/:nodeId/solve** body:
+```json
+{ "moves": [5, 8, 7], "puzzleVersion": 1 }
+```
+`moves` is the ordered list of moves (1 to 4096); each is the board index of a tile next to the empty cell, which slides into it. The server replays them from the node's seeded start position. Gold is `rewards.underParGold` when `moves.length <= parMoves`, otherwise `rewards.gold`.
+
+| Status | Error |
+|--------|-------|
+| 400 | Invalid move sequence, invalid node ID, sequence does not solve the puzzle, or already solved |
+| 409 | `puzzleVersion` is not current; reload the puzzle |
+
+**GET /api/ruins/completions** returns `{ completions: [{ node_id, node_name, completed_at }], totalCompleted }`.
 
 ---
 
@@ -4016,7 +4032,7 @@ Account-wide relics that unlock features (fast travel, stamina restore, reduced 
 |------|---------|
 | 400 | Invalid relic ID |
 | 400 | You already own this relic |
-| 400 | The unmet requirement, e.g. "Complete any tier 1 guild advancement quest to claim this relic", "Visit any watchtower to claim this relic", "This relic is not yet obtainable" |
+| 400 | The unmet requirement, e.g. "Complete a tier 1 or higher guild advancement quest to claim this relic", "Visit any watchtower to claim this relic", "This relic is not yet obtainable" |
 | 404 | Relic not found |
 | 429 | Too many relic claim attempts. Please wait a moment. |
 

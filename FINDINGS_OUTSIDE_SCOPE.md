@@ -105,6 +105,33 @@ Operational release gates (human-owned: migration dry-runs, deploy windows, moni
 - **Effort:** Low.
 - **References:** `frontend/src/scenes/__tests__/BattleScene*.test.js`, `frontend/vite.config.js`, `api/package.json` (`dev` script).
 
+### Most gear augment effect types are not applied in combat
+
+- **Status:** Open
+- **Surfaced:** 2026-09-29 (0.5.2 plan validation, roadmap finding 110)
+- **Reproducer:** Equip an item with a `damage_reduction`, `damage_bonus`, `physical_attack`/`defense`, `magic_defense`, `heal_on_hit`, elemental, `damage_vs` or proc augment and fight: none change combat. Only `stat_bonus`, `crit_chance`, `crit_damage` and `lifesteal` are wired (`api/src/services/battle/equipmentAugmentEffects.js`). The UI marks the rest "not yet active" via `ACTIVE_AUGMENT_EFFECT_TYPES`.
+- **Why deferred:** Each effect type needs combat design and balance tests; the UI already tells players which augments are inactive.
+- **Effort:** Medium to large.
+- **References:** `api/src/services/battle/equipmentAugmentEffects.js`, `api/src/services/battle/damageCalculator.js`, `frontend/src/utils/statDisplay.js` (`ACTIVE_AUGMENT_EFFECT_TYPES`), `docs/ITEM_SYSTEM.md` section 5.4.
+
+### Tests that copy logic instead of importing it
+
+- **Status:** Open
+- **Surfaced:** 2026-09-29 (0.5.2 plan validation, test-quality review)
+- **Reproducer:** These pass even if the real code is deleted, because they exercise hand-written copies: `api/src/tests/unit/websocket/sessionReplacement.unit.test.js:65`, `frontend/src/api/__tests__/websocket.test.js:42` (TestableGameWebSocket), the five reconnect tests in `api/src/tests/unit/turnTimer.unit.test.js:957`, and the "Battle Scene Integration Pattern" block in `frontend/src/ui/parchment/__tests__/parchmentConfirm.test.js:229`. Real behaviour is partly covered by `coliseumDisconnectReconnect.integration.test.js`, `tokenRefreshReconnect.test.js` and the e2e battle spec.
+- **Why deferred:** Rewriting them needs small extractions (e.g. `shouldSkipDisconnectCleanup` out of `api/src/websocket/index.js`) and is test work, not a release defect.
+- **Effort:** Medium.
+- **References:** the files above.
+
+### Frontend and API compute equipment stats with different rules
+
+- **Status:** Open
+- **Surfaced:** 2026-09-29 (0.5.2 plan validation, dedup review)
+- **Reproducer:** `frontend/src/utils/effectiveStats.js` `sumItemStats` merges `magic_attack`/`magicAttack` and falls back per object, while the API (`api/src/services/equipmentStats.js` `resolveItemBaseStats`) falls back per key. An item with partial `baseStats` can show a different number in the Formation or Character modal than battle uses.
+- **Why deferred:** The server side was consolidated in 0.5.2 (parity test `equipmentStatsParity.integration.test.js`); making the client consume one shared rule (e.g. from `shared/`) is a cross-cutting refactor.
+- **Effort:** Medium.
+- **References:** `frontend/src/utils/effectiveStats.js`, `frontend/src/utils/statDisplay.js` (`sumItemStats`), `api/src/services/equipmentStats.js`.
+
 ### PM2 daemon does not auto-recover; 8-day silent outage on 2026-05-07
 
 - **Status:** Open

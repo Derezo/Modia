@@ -70,21 +70,24 @@ Each item is defined with the following properties:
 
 ### 2.2 Equipment Slots
 
-Characters have 5 equipment slots in the current implementation:
+Characters have 6 equipment slots in the current implementation:
 
 | Slot | ID | Item Types | Description |
 |------|----|------------|-------------|
 | Main Hand | `main_hand` | Weapons | Primary weapon (swords, staves, fists) |
+| Off Hand | `off_hand` | Weapons with an `off_hand` template slot | Only off-hand templates such as the caravan Stonekin Shield; no dual-wield |
 | Body | `body` | Armor, Robes | Chest armor |
 | Head | `head` | Helmets, Hats | Head armor |
 | Feet | `feet` | Boots, Greaves | Foot armor |
 | Accessory | `accessory` | Rings, Amulets, Charms | Single accessory slot |
 
+An item goes only in its template's `equipment_slot`, and the character must meet its level, class and race requirements. `shared/equipmentRules.js` holds this rule for both the server (`POST /api/inventory/equip`) and the client.
+
 ### 2.3 Item Types
 
 | Type | Description | Has Equipment Slot |
 |------|-------------|-------------------|
-| `weapon` | Equippable weapons | Yes (`main_hand`) |
+| `weapon` | Equippable weapons | Yes (`main_hand`, or `off_hand` for off-hand templates) |
 | `armor` | Equippable armor pieces | Yes (`body`, `head`, `feet`) |
 | `accessory` | Equippable accessories | Yes (`accessory`) |
 | `consumable` | Single-use items | No |
@@ -403,7 +406,7 @@ Source of truth: `relic_templates` (seeded by `api/src/migrations/033_relic_syst
 | `wayfarers_compass` | Wayfarer's Compass | rare | quest | `unlock: fast_travel` | `GET /api/world/fast-travel/destinations` and `POST /api/world/fast-travel` to a region castle. Cost is 100g + 50g per region of distance (`routes/world/progression.js`). |
 | `vitality_charm` | Vitality Charm | rare | quest | `unlock: stamina_restore`, `cost_per_point: 100` | `POST /api/world/stamina/restore` at a castle, city, village, keep or palace node, 100g per stamina point. |
 | `merchants_seal` | Merchant's Seal | epic | achievement | `unlock: reduced_marketplace_fee`, `fee_rate: 0.03` | Seller fee on marketplace fills drops from 5% to 3% (`getMarketplaceFeeRate`). See [ECONOMY_SYSTEM.md](ECONOMY_SYSTEM.md). |
-| `cartographers_eye` | Cartographer's Eye | uncommon | node | `unlock: extended_watchtower`, `reveal_bonus: 2` | Claimable, but no server or client code reads `reveal_bonus` yet, so owning it has no gameplay effect today. |
+| `cartographers_eye` | Cartographer's Eye | uncommon | node | `unlock: extended_watchtower`, `reveal_bonus: 2` | `GET /api/world/watchtower-view/:nodeId` adds `reveal_bonus` to the tower's radius multiplier, so a default tower reveals 1500px x 4 instead of x 2 (`routes/world/activities.js`). See [ACTIVITY_NODES.md](ACTIVITY_NODES.md#5-watchtower). |
 
 ### 4.3 Acquisition Conditions
 
@@ -411,10 +414,10 @@ Claims are validated server-side by `checkRelicEligibility()` in `relicService.j
 
 | Relic | Condition to claim |
 |-------|--------------------|
-| Wayfarer's Compass | Any character on the account has completed a guild advancement quest of tier <= 1 (`acquisition_id = 1` is the required tier). |
+| Wayfarer's Compass | Any character on the account has completed a guild advancement quest of the required tier or higher (`acquisition_id` is the minimum tier; 1 here). |
 | Vitality Charm | Same as the Compass: any completed tier-1 advancement quest. |
 | Cartographer's Eye | The user has travelled to (not merely revealed) any `watchtower` node. |
-| Merchant's Seal | The user has at least one completed marketplace sale (`market_trades.seller_id`). |
+| Merchant's Seal | The user has at least one completed marketplace sale: an order-book fill (`market_trades.seller_id`) or an item-listing sale (`item_listing_sales.seller_id`). |
 
 A relic with no usable condition (no special case and a NULL `acquisition_id`) is reported as "not yet obtainable" and cannot be claimed. `shop`-type relics are never claimable through the claim endpoint. There is no longer an unconditional claim path; `POST /api/relics/grant/:key` only works when `NODE_ENV` is `development` or `test`.
 
@@ -510,7 +513,7 @@ Example: `Exalted Venomous Mythril Greaves of the Guardian`.
 
 Generation value: `floor(base_price * rarityMultiplier * (1 + level * 0.05))` with the multipliers in 5.3.
 
-Marketplace suggested price and NPC buy-back use `calculateSuggestedPrice()` (`services/marketplace/itemListings.js`): `floor(base_price * rarityMultiplier * (1 + 0.15 * sum(augment category values)))`. NPC sell pricing is described in [ECONOMY_SYSTEM.md](ECONOMY_SYSTEM.md#npc-sell-pricing).
+Marketplace suggested price and NPC buy-back use `calculateSuggestedPrice()` (`services/marketplace/itemListings.js`): `floor(max(base_price, statBlockValue(baseStats)) * rarityMultiplier * (1 + 0.15 * sum(augment category values)))`. `statBlockValue()` (`services/marketplace/constants.js`) is 18 gold per rolled stat point, with HP/MP pool stats counting one fifth. NPC buy-back applies this only to weapon, armor and accessory items; every other type sells at 50% of `base_price`. See [ECONOMY_SYSTEM.md](ECONOMY_SYSTEM.md#npc-sell-pricing).
 
 ---
 
@@ -518,7 +521,6 @@ Marketplace suggested price and NPC buy-back use `calculateSuggestedPrice()` (`s
 
 - **Weapon and armor variety:** swords, axes, maces, polearms, daggers, crossbows; shields, orbs and tomes in an off-hand slot; heavy/medium/light armor classes with movement or MP trade-offs. Current templates use the five slots in 2.2.
 - **Remaining augment effects:** the equipment and consumable augment effects marked "No" in 5.4.
-- **Cartographer's Eye reveal bonus:** the `reveal_bonus` effect is defined but not read by the watchtower reveal.
 
 ---
 

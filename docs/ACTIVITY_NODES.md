@@ -121,19 +121,27 @@ Ruins nodes contain sliding tile puzzles that reward gold upon completion. Each 
 
 ### 3.1 Puzzle Tiers
 
-| Tier | Grid Size | Minimum Moves | Par Moves | Gold Range |
-|------|-----------|---------------|-----------|------------|
-| 1 | 3x3 | 8 | 15 | 50-100 |
-| 2 | 4x4 | 15 | 30 | 150-300 |
-| 3 | 5x5 | 30 | 50 | 400-800 |
+| Tier | Grid Size | Minimum Moves | Par Formula | Gold Range |
+|------|-----------|---------------|-------------|------------|
+| 1 | 3x3 | 8 | `ceil(L x 1.3) + 3` | 50-100 |
+| 2 | 4x4 | 15 | `ceil(L x 1.4) + 5` | 150-300 |
+| 3 | 5x5 | 30 | `ceil(L x 1.5) + 8` | 400-800 |
+
+Par is not a fixed number per tier. `computePar()` (`api/src/routes/ruins.js`)
+computes it for each puzzle from `L`, the Manhattan distance plus linear
+conflicts of the shuffled board (an admissible lower bound on the optimal
+solution), with the multiplier and slack above so that par is always
+achievable. `GET /api/ruins/:nodeId/puzzle` returns it as `parMoves`, and
+`POST /api/ruins/:nodeId/solve` recomputes it from the same seed.
 
 ### 3.2 Par Bonus
 
-Completing a puzzle at or under par moves awards a **+25% gold bonus**.
+Completing a puzzle at or under `parMoves` awards a **+25% gold bonus**.
 
-Example: Tier 2 puzzle solved in 28 moves (under par of 30)
+Example: a Tier 2 (4x4) puzzle whose board has `L = 18` has par
+`ceil(18 x 1.4) + 5 = 31`. Solving it in 28 moves is under par:
 - Base reward: 225 gold
-- With par bonus: 281 gold (225 * 1.25)
+- With par bonus: 281 gold (floor(225 * 1.25))
 
 ### 3.3 Regional Themes
 
@@ -237,14 +245,15 @@ Watchtowers provide extended vision to reveal undiscovered nodes on the world ma
 | Parameter | Value | Notes |
 |-----------|-------|-------|
 | Base Reveal Radius | 1,500 pixels | ~50 worldgen units |
-| Radius Multiplier | 2x (default) | Stored per-node |
-| Total Reveal Diameter | 6,000 pixels | Standard watchtower |
+| Radius Multiplier | 2x (default) | Stored per-node (`watchtower_reveal_radius`) |
+| Cartographer's Eye | +2 to the multiplier | Relic `reveal_bonus`, added when the viewer owns it |
+| Total Reveal Diameter | 6,000 pixels | Standard watchtower (12,000 with Cartographer's Eye) |
 | Cost | Free | No gold or stamina cost |
 | Cooldown | None | Can view anytime |
 
 ### 5.2 Reveal Behavior
 
-- Returns all nodes within circular radius from watchtower position
+- Returns all nodes within circular radius from watchtower position: `1500 x (watchtower_reveal_radius + reveal_bonus)` pixels, where `reveal_bonus` is the Cartographer's Eye relic effect (0 without it). The response carries `watchtowerNode.reveal_radius_pixels` and `watchtowerNode.relic_reveal_bonus`
 - Includes node names for all revealed nodes (even undiscovered)
 - Shows connections between revealed nodes
 - Does not permanently discover nodes (just reveals for viewing)
